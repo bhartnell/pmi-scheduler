@@ -44,6 +44,8 @@ interface Evaluation {
   minimum_points: number | null;
   at_risk: boolean;
   critical_fail: boolean;
+  is_retake: boolean;
+  original_evaluation_id: string | null;
 }
 
 interface StudentResult {
@@ -273,20 +275,35 @@ export default function SkillResultsPage() {
     const rows: Record<string, string>[] = [];
     for (const student of students) {
       const row: Record<string, string> = { student_name: student.name, email: student.email };
+      const skillBestMap = new Map<string, string>();
       for (const skill of skills) {
-        const ev = student.evaluations.find(e => e.skill_id === skill.id);
-        if (ev) {
-          row[skill.skill_name] = ev.points_possible > 0 ? `${ev.points_earned}/${ev.points_possible}` : ev.result;
-          row[`${skill.skill_name} Result`] = ev.result;
-          row[`${skill.skill_name} Email`] = ev.email_status;
+        // Get best eval for this skill (pass wins)
+        const allSkillEvals = student.evaluations.filter(e => e.skill_id === skill.id);
+        const passEv = allSkillEvals.find(e => e.result === 'pass');
+        const bestEv = passEv || allSkillEvals[allSkillEvals.length - 1];
+        const hasRetake = allSkillEvals.some(e => e.is_retake);
+        if (bestEv) {
+          const scoreStr = bestEv.points_possible > 0 ? `${bestEv.points_earned}/${bestEv.points_possible}` : bestEv.result;
+          row[skill.skill_name] = hasRetake ? `${scoreStr} (R)` : scoreStr;
+          row[`${skill.skill_name} Result`] = hasRetake ? `${bestEv.result} (retake)` : bestEv.result;
+          row[`${skill.skill_name} Email`] = bestEv.email_status;
+          skillBestMap.set(skill.id, bestEv.result);
+          // Add retake columns if applicable
+          if (hasRetake) {
+            const firstAttempt = allSkillEvals.find(e => !e.is_retake);
+            const retakeAttempt = allSkillEvals.find(e => e.is_retake);
+            row[`${skill.skill_name} 1st`] = firstAttempt ? firstAttempt.result : 'N/A';
+            row[`${skill.skill_name} Retake`] = retakeAttempt ? retakeAttempt.result : 'N/A';
+            row[`${skill.skill_name} Final`] = bestEv.result;
+          }
         } else {
           row[skill.skill_name] = 'N/A';
           row[`${skill.skill_name} Result`] = 'N/A';
           row[`${skill.skill_name} Email`] = 'N/A';
         }
       }
-      const total = student.evaluations.length;
-      const passed = student.evaluations.filter(e => e.result === 'pass').length;
+      const total = skillBestMap.size;
+      const passed = Array.from(skillBestMap.values()).filter(r => r === 'pass').length;
       row['Pass Rate'] = total > 0 ? `${Math.round((passed / total) * 100)}%` : 'N/A';
       rows.push(row);
     }
@@ -559,8 +576,16 @@ function CohortOverviewTab({
           </thead>
           <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
             {sortedStudents.map((student) => {
-              const total = student.evaluations.length;
-              const passed = student.evaluations.filter(e => e.result === 'pass').length;
+              // Count unique skills and best result per skill
+              const skillBest = new Map<string, string>();
+              for (const ev of student.evaluations) {
+                const current = skillBest.get(ev.skill_id);
+                if (!current || (current !== 'pass' && ev.result === 'pass')) {
+                  skillBest.set(ev.skill_id, ev.result);
+                }
+              }
+              const total = skillBest.size;
+              const passed = Array.from(skillBest.values()).filter(r => r === 'pass').length;
               const passRate = total > 0 ? Math.round((passed / total) * 100) : 0;
               const hasCriticalFail = student.evaluations.some(e => e.critical_fail);
               const hasUnsent = student.evaluations.some(
@@ -582,11 +607,26 @@ function CohortOverviewTab({
                     <div className="text-xs text-gray-500 dark:text-gray-400">{student.email}</div>
                   </td>
                   {skills.map((skill) => {
-                    const ev = student.evaluations.find(e => e.skill_id === skill.id);
+                    // Get all evals for this skill (first attempt + retakes)
+                    const allEvals = student.evaluations.filter(e => e.skill_id === skill.id);
+                    // Best result: prefer pass over fail
+                    const passEval = allEvals.find(e => e.result === 'pass');
+                    const bestEval = passEval || allEvals[allEvals.length - 1]; // Latest if no pass
+                    const hasRetake = allEvals.some(e => e.is_retake);
                     return (
                       <td key={skill.id} className="px-4 py-3 text-center">
-                        {ev ? (
-                          <ScoreCell evaluation={ev} />
+                        {bestEval ? (
+                          <div className="relative inline-block">
+                            <ScoreCell evaluation={bestEval} />
+                            {hasRetake && (
+                              <span
+                                className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[8px] font-bold flex items-center justify-center"
+                                title={`Retake attempted — First: ${allEvals.find(e => !e.is_retake)?.result || 'N/A'}, Retake: ${allEvals.find(e => e.is_retake)?.result || 'N/A'}`}
+                              >
+                                R
+                              </span>
+                            )}
+                          </div>
                         ) : (
                           <Minus className="w-4 h-4 text-gray-300 dark:text-gray-600 mx-auto" />
                         )}

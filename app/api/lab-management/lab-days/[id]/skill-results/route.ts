@@ -19,7 +19,7 @@ export async function GET(
       .from('student_skill_evaluations')
       .select(`
         id, evaluation_type, result, email_status, attempt_number, team_role, notes, created_at,
-        step_marks, critical_fail, critical_fail_notes, flagged_items,
+        step_marks, critical_fail, critical_fail_notes, flagged_items, is_retake, original_evaluation_id,
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name, email),
         skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, steps:skill_sheet_steps(step_number, possible_points, is_critical, sub_items)),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name)
@@ -84,6 +84,8 @@ export async function GET(
         minimum_points: number | null;
         at_risk: boolean;
         critical_fail: boolean;
+        is_retake: boolean;
+        original_evaluation_id: string | null;
       }>;
     }>();
 
@@ -170,6 +172,8 @@ export async function GET(
         minimum_points: minimumPoints,
         at_risk: atRisk,
         critical_fail: criticalFail,
+        is_retake: (ev as Record<string, unknown>).is_retake === true,
+        original_evaluation_id: (ev as Record<string, unknown>).original_evaluation_id as string | null || null,
       });
     }
 

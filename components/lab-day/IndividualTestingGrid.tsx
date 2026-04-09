@@ -35,6 +35,12 @@ interface GridStation {
   scenario?: { id: string; title: string } | null;
 }
 
+interface SkillColumn {
+  skillName: string;
+  stationIds: string[];
+  skillSheetId: string | null;
+}
+
 interface EvalSummary {
   stepsCompleted: number;
   stepsTotal: number;
@@ -63,6 +69,8 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
   const [students, setStudents] = useState<Student[]>([]);
   const [stations, setStations] = useState<GridStation[]>([]);
   const [cells, setCells] = useState<Record<string, CellData>>({});
+  const [skillColumns, setSkillColumns] = useState<SkillColumn[]>([]);
+  const [skillCells, setSkillCells] = useState<Record<string, CellData>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -99,6 +107,8 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
         setStudents(data.students || []);
         setStations(data.stations || []);
         setCells(data.cells || {});
+        setSkillColumns(data.skillColumns || []);
+        setSkillCells(data.skillCells || {});
       }
     } catch (err) {
       console.error('Error fetching grid:', err);
@@ -121,14 +131,25 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
     return () => clearInterval(interval);
   }, [fetchGrid]);
 
+  // ─── Helpers: find a station for a skill ────────────────────────────────
+
+  /** Pick the first station that runs a given skill (for queue actions) */
+  const findStationForSkill = (skillName: string): GridStation | null => {
+    const col = skillColumns.find(c => c.skillName === skillName);
+    if (!col) return null;
+    return stations.find(s => col.stationIds.includes(s.id)) || null;
+  };
+
   // ─── Actions ────────────────────────────────────────────────────────────
 
-  const handleCellClick = async (studentId: string, stationId: string) => {
-    const key = `${studentId}_${stationId}`;
-    const cell = cells[key];
+  const handleSkillCellClick = async (studentId: string, skillName: string) => {
+    const key = `${studentId}_${skillName}`;
+    const cell = skillCells[key];
 
-    // Empty cell → send to station (mark in_progress)
+    // Empty cell → send to first available station for this skill
     if (!cell || !cell.status) {
+      const station = findStationForSkill(skillName);
+      if (!station) return;
       setActionLoading(key);
       try {
         const res = await fetch('/api/lab-management/student-queue', {
@@ -137,12 +158,12 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
           body: JSON.stringify({
             lab_day_id: labDayId,
             student_id: studentId,
-            station_id: stationId,
+            station_id: station.id,
           }),
         });
         const data = await res.json();
         if (data.success) {
-          setCells(prev => ({
+          setSkillCells(prev => ({
             ...prev,
             [key]: {
               queueId: data.entry?.id || null,
@@ -169,7 +190,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
   };
 
   const handleOverrideResult = async (key: string, result: 'pass' | 'fail') => {
-    const cell = cells[key];
+    const cell = skillCells[key];
     if (!cell?.queueId) return;
 
     setActionLoading(key);
@@ -185,7 +206,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
       });
       const data = await res.json();
       if (data.success) {
-        setCells(prev => ({
+        setSkillCells(prev => ({
           ...prev,
           [key]: { ...prev[key], status: 'completed', result },
         }));
@@ -198,8 +219,10 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
     }
   };
 
-  const handleNewAttempt = async (studentId: string, stationId: string) => {
-    const key = `${studentId}_${stationId}`;
+  const handleNewAttempt = async (studentId: string, skillName: string) => {
+    const key = `${studentId}_${skillName}`;
+    const station = findStationForSkill(skillName);
+    if (!station) return;
     setActionLoading(key);
     try {
       const res = await fetch('/api/lab-management/student-queue', {
@@ -208,12 +231,12 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
         body: JSON.stringify({
           lab_day_id: labDayId,
           student_id: studentId,
-          station_id: stationId,
+          station_id: station.id,
         }),
       });
       const data = await res.json();
       if (data.success) {
-        setCells(prev => ({
+        setSkillCells(prev => ({
           ...prev,
           [key]: {
             queueId: data.entry?.id || null,
@@ -235,57 +258,58 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
 
   // ─── Helpers ────────────────────────────────────────────────────────────
 
-  const getStationTitle = (station: GridStation) => {
-    if (station.custom_title) return station.custom_title;
-    if (station.scenario) return station.scenario.title;
-    if (station.skill_name) return station.skill_name;
-    return `Station ${station.station_number}`;
+  /** Abbreviate a skill name for column headers */
+  const abbreviateSkill = (name: string): string => {
+    // Common abbreviations for NREMT skills
+    const abbrevMap: Record<string, string> = {
+      'Cardiac Arrest Management / AED': 'Cardiac Arrest',
+      'Patient Assessment - Medical': 'Medical Assess.',
+      'Patient Assessment - Trauma': 'Trauma Assess.',
+      'Spinal Immobilization (Supine Patient)': 'Spinal (Supine)',
+      'Spinal Immobilization (Seated Patient)': 'Spinal (Seated)',
+      'BVM Ventilation of an Apneic Adult Patient': 'BVM',
+      'Oxygen Administration by Non-Rebreather Mask': 'O2/NRB',
+      'Bleeding Control/Shock Management': 'Bleeding Ctrl',
+      'Joint Immobilization': 'Joint Immob.',
+      'Long Bone Immobilization': 'Long Bone Immob.',
+    };
+    return abbrevMap[name] || name;
   };
 
-  const formatInstructor = (name: string | null) => {
-    if (!name) return null;
-    // "Benjamin Hartnell" → "B. Hartnell"
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return `${parts[0][0]}. ${parts[parts.length - 1]}`;
-    }
-    return name;
-  };
+  // ─── Summary calculations (skill-based) ────────────────────────────────
 
-  // ─── Summary calculations ──────────────────────────────────────────────
+  const totalCompleted = Object.values(skillCells).filter(c => c.status === 'completed').length;
+  const totalCells = students.length * skillColumns.length;
 
-  const totalCompleted = Object.values(cells).filter(c => c.status === 'completed').length;
-  const totalCells = students.length * stations.length;
-
-  const stationSummary = stations.map(station => {
+  const skillSummary = skillColumns.map(col => {
     let completed = 0, passed = 0, failed = 0;
     for (const student of students) {
-      const cell = cells[`${student.id}_${station.id}`];
+      const cell = skillCells[`${student.id}_${col.skillName}`];
       if (cell?.status === 'completed') {
         completed++;
         if (cell.result === 'pass') passed++;
         else if (cell.result === 'fail') failed++;
       }
     }
-    return { stationId: station.id, completed, passed, failed, total: students.length };
+    return { skillName: col.skillName, completed, passed, failed, total: students.length };
   });
 
   const studentSummary = students.map(student => {
     let completed = 0;
-    for (const station of stations) {
-      const cell = cells[`${student.id}_${station.id}`];
+    for (const col of skillColumns) {
+      const cell = skillCells[`${student.id}_${col.skillName}`];
       if (cell?.status === 'completed') completed++;
     }
-    return { studentId: student.id, completed, total: stations.length };
+    return { studentId: student.id, completed, total: skillColumns.length };
   });
 
   const studentsFullyDone = studentSummary.filter(s => s.completed === s.total && s.total > 0).length;
 
-  // ─── Cell rendering ────────────────────────────────────────────────────
+  // ─── Cell rendering (skill-based) ───────────────────────────────────────
 
-  const renderBadge = (studentId: string, stationId: string) => {
-    const key = `${studentId}_${stationId}`;
-    const cell = cells[key];
+  const renderBadge = (studentId: string, skillName: string) => {
+    const key = `${studentId}_${skillName}`;
+    const cell = skillCells[key];
     const isLoading = actionLoading === key;
 
     if (isLoading) {
@@ -299,7 +323,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
     if (!cell || !cell.status) {
       return (
         <button
-          onClick={() => handleCellClick(studentId, stationId)}
+          onClick={() => handleSkillCellClick(studentId, skillName)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-300 border border-transparent dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
           title="Click to send to station"
         >
@@ -312,7 +336,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
     if (cell.status === 'in_progress') {
       return (
         <button
-          onClick={() => handleCellClick(studentId, stationId)}
+          onClick={() => handleSkillCellClick(studentId, skillName)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 cursor-pointer"
           title="In Progress"
         >
@@ -332,7 +356,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
       if (cell.result === 'pass') {
         return (
           <button
-            onClick={() => handleCellClick(studentId, stationId)}
+            onClick={() => handleSkillCellClick(studentId, skillName)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 cursor-pointer"
             title={cell.teamRole ? `Pass (Team ${cell.teamRole})` : 'Pass'}
           >
@@ -345,7 +369,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
       if (cell.result === 'fail') {
         return (
           <button
-            onClick={() => handleCellClick(studentId, stationId)}
+            onClick={() => handleSkillCellClick(studentId, skillName)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 cursor-pointer"
             title={cell.teamRole ? `Fail (Team ${cell.teamRole})` : 'Fail'}
           >
@@ -358,7 +382,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
       // Completed but no pass/fail
       return (
         <button
-          onClick={() => handleCellClick(studentId, stationId)}
+          onClick={() => handleSkillCellClick(studentId, skillName)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-pointer"
           title="Completed"
         >
@@ -374,11 +398,11 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
 
   // ─── Popover ────────────────────────────────────────────────────────────
 
-  const renderPopover = (studentId: string, stationId: string) => {
-    const key = `${studentId}_${stationId}`;
+  const renderPopover = (studentId: string, skillName: string) => {
+    const key = `${studentId}_${skillName}`;
     if (popoverCell !== key) return null;
 
-    const cell = cells[key];
+    const cell = skillCells[key];
     if (!cell) return null;
 
     return (
@@ -416,7 +440,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
             <div className="space-y-1 pt-1">
               {cell.evaluationId && (
                 <a
-                  href={`/academics/skill-sheets/evaluations/${cell.evaluationId}`}
+                  href={`/student/skill-evaluations/${cell.evaluationId}`}
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -425,7 +449,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
               )}
               {cell.evaluationId && (
                 <a
-                  href={`/api/academics/skill-sheets/evaluations/print?id=${cell.evaluationId}`}
+                  href={`/api/skill-sheets/evaluations/print?evaluation_id=${cell.evaluationId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg"
@@ -435,7 +459,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
                 </a>
               )}
               <button
-                onClick={(e) => { e.stopPropagation(); handleNewAttempt(studentId, stationId); }}
+                onClick={(e) => { e.stopPropagation(); handleNewAttempt(studentId, skillName); }}
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg"
               >
                 <RotateCcw className="w-4 h-4" /> New Attempt
@@ -526,28 +550,25 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
 
       {/* Grid */}
       <div className="overflow-x-auto max-w-full">
-        <table className="w-full" style={{ minWidth: `${180 + stations.length * 140 + 80}px` }}>
-          {/* Column headers: station info */}
+        <table className="w-full" style={{ minWidth: `${180 + skillColumns.length * 140 + 80}px` }}>
+          {/* Column headers: skill names */}
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
                 Student
               </th>
-              {stations.map(station => (
+              {skillColumns.map(col => (
                 <th
-                  key={station.id}
+                  key={col.skillName}
                   className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[140px]"
                 >
                   <div className="space-y-0.5">
-                    <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                      Station {station.station_number}
+                    <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[140px] mx-auto" title={col.skillName}>
+                      {abbreviateSkill(col.skillName)}
                     </div>
-                    <div className="text-xs font-normal text-gray-500 dark:text-gray-400 truncate max-w-[140px] mx-auto" title={getStationTitle(station)}>
-                      {getStationTitle(station)}
-                    </div>
-                    {station.instructorName && (
+                    {col.stationIds.length > 1 && (
                       <div className="text-[11px] font-normal text-blue-500 dark:text-blue-400">
-                        {formatInstructor(station.instructorName)}
+                        {col.stationIds.length} stations
                       </div>
                     )}
                   </div>
@@ -584,11 +605,11 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
                     {student.last_name}, {student.first_name.charAt(0)}.
                   </td>
 
-                  {/* Station cells */}
-                  {stations.map(station => (
-                    <td key={station.id} className="px-3 py-2 text-center relative">
-                      {renderBadge(student.id, station.id)}
-                      {renderPopover(student.id, station.id)}
+                  {/* Skill cells */}
+                  {skillColumns.map(col => (
+                    <td key={col.skillName} className="px-3 py-2 text-center relative">
+                      {renderBadge(student.id, col.skillName)}
+                      {renderPopover(student.id, col.skillName)}
                     </td>
                   ))}
 
@@ -613,8 +634,8 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
               <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
                 Summary
               </td>
-              {stationSummary.map(s => (
-                <td key={s.stationId} className="px-3 py-2.5 text-center">
+              {skillSummary.map(s => (
+                <td key={s.skillName} className="px-3 py-2.5 text-center">
                   <div className="space-y-0.5">
                     <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                       {s.completed}/{s.total} done
@@ -660,7 +681,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
           Fail
         </span>
         <span className="ml-auto text-gray-400 dark:text-gray-500">
-          All stations complete: <strong>{studentsFullyDone}/{students.length}</strong> students
+          All skills complete: <strong>{studentsFullyDone}/{students.length}</strong> students
         </span>
       </div>
     </div>

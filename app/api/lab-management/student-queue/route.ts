@@ -92,10 +92,10 @@ export async function GET(request: NextRequest) {
       .select('id, student_id, station_id, status, result, evaluation_id, started_at, completed_at')
       .eq('lab_day_id', labDayId);
 
-    // 6. Get evaluations for this lab day (with step counts)
+    // 6. Get evaluations for this lab day (with step counts + retake info)
     const { data: evaluations } = await supabase
       .from('student_skill_evaluations')
-      .select('id, student_id, skill_sheet_id, result, step_marks, created_at, team_role, evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(name)')
+      .select('id, student_id, skill_sheet_id, result, step_marks, created_at, team_role, is_retake, attempt_number, evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(name)')
       .eq('lab_day_id', labDayId);
 
     // 7. Get station-to-skill-sheet mapping (via station_skills table)
@@ -195,6 +195,8 @@ export async function GET(request: NextRequest) {
         evaluatorName: string | null;
       } | null;
       teamRole: string | null;
+      hasRetake: boolean;
+      bestResult: string | null;
     }> = {};
 
     // First populate from queue entries
@@ -207,8 +209,13 @@ export async function GET(request: NextRequest) {
         evaluationId: entry.evaluation_id,
         evalSummary: entry.evaluation_id ? (evalSummaryMap[entry.evaluation_id] || null) : null,
         teamRole: null,
+        hasRetake: false,
+        bestResult: entry.result,
       };
     }
+
+    // Track all results per student+station for best-result logic
+    const allResults: Record<string, { results: string[]; hasRetake: boolean }> = {};
 
     // Overlay evaluation results (evaluations take precedence for completed status)
     for (const evalItem of (evaluations || [])) {
@@ -217,28 +224,160 @@ export async function GET(request: NextRequest) {
         if (skillSheetId === evalItem.skill_sheet_id) {
           const key = `${evalItem.student_id}_${stationId}`;
           const existing = cells[key];
+
+          // Track results for best-result logic
+          if (!allResults[key]) {
+            allResults[key] = { results: [], hasRetake: false };
+          }
+          allResults[key].results.push(evalItem.result === 'pass' ? 'pass' : 'fail');
+          if ((evalItem as Record<string, unknown>).is_retake) {
+            allResults[key].hasRetake = true;
+          }
+
+          // Best result: pass wins over fail
+          const bestResult = allResults[key].results.includes('pass') ? 'pass' : 'fail';
+
           cells[key] = {
             queueId: existing?.queueId || null,
             status: 'completed',
-            result: evalItem.result === 'pass' ? 'pass' : 'fail',
+            result: bestResult,
             evaluationId: evalItem.id,
             evalSummary: evalSummaryMap[evalItem.id] || null,
             teamRole: (evalItem as Record<string, unknown>).team_role as string | null || null,
+            hasRetake: allResults[key].hasRetake,
+            bestResult,
           };
         }
       }
+    }
+
+    // ─── Build skill-based columns and cells ───────────────────────────
+    // Group stations by skill_name so multiple stations running the same skill
+    // collapse into one column.  Keys are the skill_name strings.
+    const stationList = ((stations || []) as Array<Record<string, unknown>>).map(s => ({
+      id: s.id as string,
+      station_number: s.station_number as number,
+      station_type: s.station_type as string,
+      custom_title: s.custom_title as string | null,
+      skill_name: s.skill_name as string | null,
+      scenario: Array.isArray(s.scenario) ? (s.scenario[0] as { id: string; title: string } | undefined) || null : s.scenario as { id: string; title: string } | null,
+    }));
+
+    // Build a mapping: skillName -> list of station ids that run it
+    const skillToStationIds: Record<string, string[]> = {};
+    const skillColumnOrder: string[] = []; // unique skill names in station_number order
+    for (const s of stationList) {
+      const skillName = s.skill_name || s.custom_title || s.scenario?.title || `Station ${s.station_number}`;
+      if (!skillToStationIds[skillName]) {
+        skillToStationIds[skillName] = [];
+        skillColumnOrder.push(skillName);
+      }
+      skillToStationIds[skillName].push(s.id);
+    }
+
+    // Build skillColumns array for the UI
+    const skillColumns = skillColumnOrder.map(skillName => ({
+      skillName,
+      stationIds: skillToStationIds[skillName],
+      // Include the skillSheetId from any of the mapped stations
+      skillSheetId: skillToStationIds[skillName]
+        .map(sid => stationSkillMap[sid])
+        .find(id => !!id) || null,
+    }));
+
+    // Build skillCells: key = `${studentId}_${skillName}`
+    // For each student x skill, merge results from all stations running that skill.
+    // Priority: pass > in_progress > fail > not_started
+    // If multiple completed evals exist, pass wins over fail.
+    const skillCells: Record<string, {
+      queueId: string | null;
+      status: string;
+      result: string | null;
+      evaluationId: string | null;
+      evalSummary: {
+        stepsCompleted: number;
+        stepsTotal: number;
+        criticalCompleted: number;
+        criticalTotal: number;
+        evaluatorName: string | null;
+      } | null;
+      teamRole: string | null;
+      hasRetake: boolean;
+      bestResult: string | null;
+    }> = {};
+
+    for (const student of (students || [])) {
+      for (const skillName of skillColumnOrder) {
+        const sids = skillToStationIds[skillName];
+        const skillKey = `${student.id}_${skillName}`;
+
+        // Gather all cell data from station-based cells for this skill
+        let bestCell: typeof skillCells[string] | null = null;
+
+        let anyRetake = false;
+        for (const sid of sids) {
+          const stationKey = `${student.id}_${sid}`;
+          const cell = cells[stationKey];
+          if (!cell) continue;
+
+          if (cell.hasRetake) anyRetake = true;
+
+          if (!bestCell) {
+            bestCell = { ...cell };
+            continue;
+          }
+
+          // Merge: pass > in_progress > fail > anything else
+          if (cell.status === 'completed' && cell.result === 'pass') {
+            // Pass always wins
+            bestCell = { ...cell };
+          } else if (cell.status === 'in_progress' && bestCell.status !== 'completed') {
+            // In progress wins over non-completed
+            bestCell = { ...cell };
+          } else if (cell.status === 'completed' && bestCell.status !== 'completed') {
+            // Any completion wins over non-completed
+            bestCell = { ...cell };
+          }
+          // Merge hasRetake
+          if (cell.hasRetake) bestCell.hasRetake = true;
+          // Otherwise keep existing bestCell
+        }
+
+        if (bestCell) {
+          if (anyRetake) bestCell.hasRetake = true;
+          skillCells[skillKey] = bestCell;
+        }
+      }
+    }
+
+    // Build per-student "needs" list: skill names student hasn't passed yet
+    const studentNeeds: Record<string, string[]> = {};
+    for (const student of (students || [])) {
+      const needs: string[] = [];
+      for (const skillName of skillColumnOrder) {
+        const skillKey = `${student.id}_${skillName}`;
+        const cell = skillCells[skillKey];
+        if (!cell || cell.status !== 'completed' || cell.result !== 'pass') {
+          needs.push(skillName);
+        }
+      }
+      studentNeeds[student.id] = needs;
     }
 
     return NextResponse.json({
       success: true,
       labMode: labDay.lab_mode || 'group_rotations',
       students: students || [],
-      stations: (stations || []).map((s: Record<string, unknown>) => ({
+      stations: stationList.map((s) => ({
         ...s,
-        skillSheetId: stationSkillMap[s.id as string] || null,
-        instructorName: stationInstructorMap[s.id as string]?.name || null,
+        skillSheetId: stationSkillMap[s.id] || null,
+        instructorName: stationInstructorMap[s.id]?.name || null,
       })),
       cells,
+      // New skill-based data
+      skillColumns,
+      skillCells,
+      studentNeeds,
     });
   } catch (err) {
     console.error('Error fetching student queue:', err);
