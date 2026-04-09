@@ -525,8 +525,8 @@ const REPEAT_OPTIONS: { value: RepeatType; label: string }[] = [
 
 const DURATION_OPTIONS: { value: DurationType; label: string }[] = [
   { value: 'full', label: 'Full semester (15 weeks)' },
-  { value: 'first_half', label: 'First half (weeks 1-8)' },
-  { value: 'second_half', label: 'Second half (weeks 8-15)' },
+  { value: 'first_half', label: 'First half (7.5 weeks)' },
+  { value: 'second_half', label: 'Second half (7.5 weeks)' },
   { value: 'custom', label: 'Custom end date' },
 ];
 
@@ -1501,8 +1501,8 @@ function GenerateWizard({
     .map(t => {
       const mappedDay = wizard.dayMapping[t.day_index];
       let weeks = 15;
-      if (t.duration_type === 'first_half') weeks = 8;
-      else if (t.duration_type === 'second_half') weeks = 8;
+      if (t.duration_type === 'first_half') weeks = 7.5;
+      else if (t.duration_type === 'second_half') weeks = 7.5;
       return { ...t, mappedDay, weeks };
     })
     .filter(t => t.mappedDay !== undefined)
@@ -1836,12 +1836,12 @@ function GenerateWizard({
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
                           {t.course_code} {t.course_name}
-                          {t.duration_type === 'first_half' && <span className="text-xs text-orange-500 ml-1">(Wks 1-8)</span>}
-                          {t.duration_type === 'second_half' && <span className="text-xs text-orange-500 ml-1">(Wks 9-15)</span>}
+                          {t.duration_type === 'first_half' && <span className="text-xs text-orange-500 ml-1">(1st Half)</span>}
+                          {t.duration_type === 'second_half' && <span className="text-xs text-orange-500 ml-1">(2nd Half)</span>}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400">
                           {DAY_NAMES[t.mappedDay!]} {formatTime(t.start_time)}-{formatTime(t.end_time)}
-                          {' · '}{t.weeks} weeks · {t.block_type}
+                          {' · '}{t.weeks % 1 === 0 ? t.weeks : t.weeks.toFixed(1)} weeks · {t.block_type}
                         </div>
                       </div>
                     </div>
