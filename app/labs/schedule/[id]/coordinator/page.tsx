@@ -26,6 +26,10 @@ import {
   Send,
   RotateCcw,
   Ban,
+  Eye,
+  Edit2,
+  Trash2,
+  ExternalLink,
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -366,10 +370,46 @@ export default function CoordinatorViewPage() {
   const [proctorName, setProctorName] = useState('');
   const [localProctorOverrides, setLocalProctorOverrides] = useState<Record<string, string>>({});
 
+  // Cell popover (for clickable cells in progress table)
+  const [popoverCell, setPopoverCell] = useState<string | null>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Student detail side panel
+  const [sidePanelStudentId, setSidePanelStudentId] = useState<string | null>(null);
+
+  // User role (for admin-only actions)
+  const [userRole, setUserRole] = useState<string | null>(null);
+
   // Auth redirect
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin');
   }, [status, router]);
+
+  // Close popover on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setPopoverCell(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Fetch user role
+  useEffect(() => {
+    if (!session) return;
+    (async () => {
+      try {
+        const res = await fetch('/api/instructor/me');
+        const data = await res.json();
+        if (data.success && data.user) setUserRole(data.user.role);
+      } catch (error) {
+        console.error('Error fetching user role:', error);
+      }
+    })();
+  }, [session]);
 
   // Fetch lab day info
   const fetchLabDayInfo = useCallback(async () => {
@@ -700,9 +740,9 @@ export default function CoordinatorViewPage() {
     students.some(st => cells[`${st.id}_${s.id}`]?.status === 'in_progress')
   ).length;
 
-  // Average completion per student
+  // Average completion per student (prefer skill-based when available)
   const avgCompletion = totalStudents > 0
-    ? (totalCompleted / totalStudents).toFixed(1)
+    ? ((totalSkills > 0 ? skillTotalCompleted : totalCompleted) / totalStudents).toFixed(1)
     : '0';
 
   // Estimated time remaining - FIXED calculation using NREMT skill times
@@ -877,6 +917,130 @@ export default function CoordinatorViewPage() {
     }
   };
 
+  // ─── Cell popover actions (progress table) ─────────────────────────────
+
+  const handleCellClick = (studentId: string, skillName: string) => {
+    const key = `${studentId}_${skillName}`;
+    setPopoverCell(popoverCell === key ? null : key);
+  };
+
+  const handleOverrideToPass = async (studentId: string, skillName: string) => {
+    const key = `${studentId}_${skillName}`;
+    const cell = skillCells[key];
+    if (!cell?.queueId) return;
+    setActionLoading(key);
+    try {
+      const res = await fetch('/api/lab-management/student-queue', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: cell.queueId, status: 'completed', result: 'pass' }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSkillCells(prev => ({ ...prev, [key]: { ...prev[key], status: 'completed', result: 'pass' } }));
+      }
+    } catch (err) {
+      console.error('Error overriding result:', err);
+    } finally {
+      setActionLoading(null);
+      setPopoverCell(null);
+    }
+  };
+
+  const handleResetToNotStarted = async (studentId: string, skillName: string) => {
+    const key = `${studentId}_${skillName}`;
+    const cell = skillCells[key];
+    if (!cell?.evaluationId && cell?.queueId) {
+      // Delete the queue entry to reset
+      setActionLoading(key);
+      try {
+        const res = await fetch('/api/lab-management/student-queue', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: cell.queueId }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setSkillCells(prev => {
+            const next = { ...prev };
+            delete next[key];
+            return next;
+          });
+        }
+      } catch (err) {
+        console.error('Error resetting entry:', err);
+      } finally {
+        setActionLoading(null);
+        setPopoverCell(null);
+      }
+    }
+  };
+
+  const handleNewAttemptFromPopover = async (studentId: string, skillName: string) => {
+    const key = `${studentId}_${skillName}`;
+    // Find a station for this skill
+    const col = skillColumns.find(c => c.skillName === skillName);
+    if (!col) return;
+    const station = stations.find(s => col.stationIds.includes(s.id));
+    if (!station) return;
+    setActionLoading(key);
+    try {
+      const res = await fetch('/api/lab-management/student-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lab_day_id: labDayId,
+          student_id: studentId,
+          station_id: station.id,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Open grading view in new tab
+        window.open(`/labs/grade/station/${station.id}`, '_blank');
+        setSkillCells(prev => ({
+          ...prev,
+          [key]: {
+            queueId: data.entry?.id || null,
+            status: 'in_progress',
+            result: null,
+            evaluationId: null,
+            evalSummary: null,
+            teamRole: null,
+          },
+        }));
+      }
+    } catch (err) {
+      console.error('Error creating new attempt:', err);
+    } finally {
+      setActionLoading(null);
+      setPopoverCell(null);
+    }
+  };
+
+  // ─── Side panel data ───────────────────────────────────────────────────
+
+  const sidePanelStudent = useMemo(() => {
+    if (!sidePanelStudentId) return null;
+    const student = students.find(s => s.id === sidePanelStudentId);
+    if (!student) return null;
+
+    const evaluations = skillColumns.map(col => {
+      const key = `${sidePanelStudentId}_${col.skillName}`;
+      const cell = skillCells[key];
+      return {
+        skillName: col.skillName,
+        status: cell?.status || 'not_started',
+        result: cell?.result || null,
+        evaluationId: cell?.evaluationId || null,
+        evalSummary: cell?.evalSummary || null,
+        hasRetake: cell?.hasRetake || false,
+      };
+    });
+
+    return { student, evaluations };
+  }, [sidePanelStudentId, students, skillColumns, skillCells]);
+
   // ─── Retake queue computed data ────────────────────────────────────────────
 
   const retakeQueueData = useMemo(() => {
@@ -961,6 +1125,16 @@ export default function CoordinatorViewPage() {
                 <Timer className="w-3.5 h-3.5" />
                 {secondsAgo < 5 ? 'Just now' : `${secondsAgo}s ago`}
               </span>
+              <a
+                href={`/labs/schedule/${labDayId}/results`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600 min-h-[44px]"
+              >
+                <BarChart3 className="w-4 h-4" />
+                <span className="hidden sm:inline">Full Results</span>
+                <ExternalLink className="w-3 h-3 opacity-50" />
+              </a>
               <button
                 onClick={() => fetchGridData(true)}
                 disabled={refreshing}
@@ -1039,7 +1213,7 @@ export default function CoordinatorViewPage() {
             <div className="flex items-center gap-2">
               <BarChart3 className="w-4 h-4 text-purple-600 dark:text-purple-400" />
               <div>
-                <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">{avgCompletion}/{totalStations}</div>
+                <div className="text-base font-bold text-gray-900 dark:text-white leading-tight">{avgCompletion}/{totalSkills > 0 ? totalSkills : totalStations}</div>
                 <div className="text-[11px] text-gray-500 dark:text-gray-400">Avg Completion</div>
               </div>
             </div>
@@ -1094,7 +1268,7 @@ export default function CoordinatorViewPage() {
                 <div className="flex items-start justify-between mb-2">
                   <div className="min-w-0 flex-1">
                     <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1">
-                      Station {station.station_number}
+                      {!labDayInfo?.is_nremt_testing && <>Station {station.station_number}</>}
                       {isAddedDuringExam && (
                         <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded-full normal-case">
                           Added
@@ -1220,7 +1394,7 @@ export default function CoordinatorViewPage() {
                               key={student.id}
                               value={student.id}
                             >
-                              {student.first_name} {student.last_name} ({completions}/{totalStations}){needsLabel}
+                              {student.first_name} {student.last_name} ({completions}/{totalSkills > 0 ? totalSkills : totalStations}){needsLabel}
                             </option>
                           );
                         })}
@@ -1438,23 +1612,27 @@ export default function CoordinatorViewPage() {
                   >
                     Student {progressSort === 'name' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
                   </th>
-                  {skillColumns.map(col => (
-                    <th
-                      key={col.skillName}
-                      className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[100px]"
-                    >
-                      <div className="space-y-0.5">
-                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[100px] mx-auto" title={col.skillName}>
-                          {abbreviateSkill(col.skillName)}
-                        </div>
-                        {col.stationIds.length > 1 && (
-                          <div className="text-[11px] font-normal text-blue-500 dark:text-blue-400">
-                            {col.stationIds.length} stations
+                  {skillColumns.map(col => {
+                    const abbreviated = abbreviateSkill(col.skillName);
+                    const isLong = abbreviated.length > 15;
+                    return (
+                      <th
+                        key={col.skillName}
+                        className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[100px]"
+                      >
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[100px] mx-auto" title={col.skillName}>
+                            {isLong ? `${abbreviated.slice(0, 15)}…` : abbreviated}
                           </div>
-                        )}
-                      </div>
-                    </th>
-                  ))}
+                          {!labDayInfo?.is_nremt_testing && col.stationIds.length > 1 && (
+                            <div className="text-[11px] font-normal text-blue-500 dark:text-blue-400">
+                              {col.stationIds.length} stations
+                            </div>
+                          )}
+                        </div>
+                      </th>
+                    );
+                  })}
                   <th
                     className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[60px] cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                     onClick={() => handleProgressSort('completions')}
@@ -1478,62 +1656,193 @@ export default function CoordinatorViewPage() {
                       idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-750/30'
                     } hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-colors`}
                   >
-                    {/* Student name - sticky */}
+                    {/* Student name - sticky, clickable for side panel */}
                     <td
-                      className={`px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100 text-sm sticky left-0 z-10 whitespace-nowrap min-w-[140px] max-w-[180px] overflow-hidden text-ellipsis ${
+                      className={`px-4 py-2.5 font-medium text-sm sticky left-0 z-10 whitespace-nowrap min-w-[140px] max-w-[180px] overflow-hidden text-ellipsis ${
                         idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800'
                       }`}
                       style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}
-                      title={`${row.student.last_name}, ${row.student.first_name}`}
                     >
-                      {row.student.last_name}, {row.student.first_name.charAt(0)}.
+                      <button
+                        onClick={() => setSidePanelStudentId(row.student.id)}
+                        className="text-left text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 hover:underline cursor-pointer"
+                        title={`View details for ${row.student.last_name}, ${row.student.first_name}`}
+                      >
+                        {row.student.last_name}, {row.student.first_name.charAt(0)}.
+                      </button>
                     </td>
 
-                    {/* Skill cells */}
+                    {/* Skill cells - clickable with popover */}
                     {skillColumns.map(col => {
                       const r = row.skillResults[col.skillName];
-                      if (r?.status === 'completed' && r.result === 'pass') {
-                        return (
-                          <td key={col.skillName} className="px-3 py-2 text-center">
-                            <div className="relative inline-flex items-center justify-center">
-                              <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-300 border border-green-200 dark:border-green-800" title={r.hasRetake ? 'Passed on retake' : 'Pass'}>
-                                <Check className="w-4 h-4 stroke-[3]" />
-                              </span>
-                              {r.hasRetake && (
-                                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[8px] font-bold flex items-center justify-center" title="Result from retake">R</span>
-                              )}
-                            </div>
-                          </td>
+                      const cellKey = `${row.student.id}_${col.skillName}`;
+                      const cell = skillCells[cellKey];
+                      const isPopoverOpen = popoverCell === cellKey;
+                      const isLoading = actionLoading === cellKey;
+                      const isAdmin = userRole === 'admin' || userRole === 'superadmin';
+
+                      // Determine badge content
+                      let badge: React.ReactNode;
+                      if (isLoading) {
+                        badge = (
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-gray-100 dark:bg-gray-700 text-gray-400">
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          </span>
                         );
-                      }
-                      if (r?.status === 'completed' && r.result === 'fail') {
-                        return (
-                          <td key={col.skillName} className="px-3 py-2 text-center">
-                            <div className="relative inline-flex items-center justify-center">
-                              <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300 border border-red-200 dark:border-red-800" title={r.hasRetake ? 'Failed on retake also' : 'Fail'}>
-                                <X className="w-4 h-4 stroke-[3]" />
-                              </span>
-                              {r.hasRetake && (
-                                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[8px] font-bold flex items-center justify-center" title="Retake attempted">R</span>
-                              )}
-                            </div>
-                          </td>
-                        );
-                      }
-                      if (r?.status === 'in_progress') {
-                        return (
-                          <td key={col.skillName} className="px-3 py-2 text-center">
-                            <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
-                              <Clock className="w-4 h-4 animate-pulse" />
+                      } else if (r?.status === 'completed' && r.result === 'pass') {
+                        badge = (
+                          <div className="relative inline-flex items-center justify-center">
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-300 border border-green-200 dark:border-green-800" title={r.hasRetake ? 'Passed on retake' : 'Pass'}>
+                              <Check className="w-4 h-4 stroke-[3]" />
                             </span>
-                          </td>
+                            {r.hasRetake && (
+                              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[8px] font-bold flex items-center justify-center" title="Result from retake">R</span>
+                            )}
+                          </div>
                         );
-                      }
-                      return (
-                        <td key={col.skillName} className="px-3 py-2 text-center">
+                      } else if (r?.status === 'completed' && r.result === 'fail') {
+                        badge = (
+                          <div className="relative inline-flex items-center justify-center">
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300 border border-red-200 dark:border-red-800" title={r.hasRetake ? 'Failed on retake also' : 'Fail'}>
+                              <X className="w-4 h-4 stroke-[3]" />
+                            </span>
+                            {r.hasRetake && (
+                              <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[8px] font-bold flex items-center justify-center" title="Retake attempted">R</span>
+                            )}
+                          </div>
+                        );
+                      } else if (r?.status === 'in_progress') {
+                        badge = (
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                            <Clock className="w-4 h-4 animate-pulse" />
+                          </span>
+                        );
+                      } else {
+                        badge = (
                           <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-300 border border-transparent dark:border-gray-600">
                             <Circle className="w-4 h-4" />
                           </span>
+                        );
+                      }
+
+                      return (
+                        <td key={col.skillName} className="px-3 py-2 text-center relative">
+                          <button
+                            onClick={() => handleCellClick(row.student.id, col.skillName)}
+                            className="cursor-pointer hover:opacity-80 transition-opacity"
+                            title="Click for options"
+                          >
+                            {badge}
+                          </button>
+
+                          {/* Popover */}
+                          {isPopoverOpen && (
+                            <div
+                              ref={popoverRef}
+                              className="absolute z-50 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 min-w-[220px]"
+                              style={{ top: '100%', left: '50%', transform: 'translateX(-50%)' }}
+                            >
+                              {/* Completed cell popover */}
+                              {cell?.status === 'completed' && (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 pb-2 border-b border-gray-100 dark:border-gray-700">
+                                    <span className={`text-sm font-semibold ${cell.result === 'pass' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                                      Result: {cell.result === 'pass' ? 'Pass' : 'Fail'}
+                                    </span>
+                                  </div>
+                                  {cell.evalSummary && (
+                                    <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                                      {cell.evalSummary.stepsTotal > 0 && (
+                                        <div>Score: {cell.evalSummary.stepsCompleted}/{cell.evalSummary.stepsTotal} steps</div>
+                                      )}
+                                      {cell.evalSummary.criticalTotal > 0 && (
+                                        <div>Critical: {cell.evalSummary.criticalCompleted}/{cell.evalSummary.criticalTotal}</div>
+                                      )}
+                                      {cell.evalSummary.evaluatorName && (
+                                        <div>Evaluator: {cell.evalSummary.evaluatorName}</div>
+                                      )}
+                                    </div>
+                                  )}
+                                  <div className="space-y-1 pt-1">
+                                    {cell.evaluationId && (
+                                      <a
+                                        href={`/student/skill-evaluations/${cell.evaluationId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <Eye className="w-4 h-4" /> View Full Score Sheet
+                                      </a>
+                                    )}
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleNewAttemptFromPopover(row.student.id, col.skillName); }}
+                                      className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg"
+                                    >
+                                      <RotateCcw className="w-4 h-4" /> New Attempt
+                                    </button>
+                                    {isAdmin && (
+                                      <>
+                                        <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+                                        {cell.result !== 'pass' && (
+                                          <button
+                                            onClick={(e) => { e.stopPropagation(); handleOverrideToPass(row.student.id, col.skillName); }}
+                                            className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded-lg"
+                                          >
+                                            <Edit2 className="w-4 h-4" /> Override to Pass
+                                          </button>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* In-progress cell popover */}
+                              {cell?.status === 'in_progress' && (
+                                <div className="space-y-2">
+                                  <div className="pb-2 border-b border-gray-100 dark:border-gray-700">
+                                    <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">In Progress</span>
+                                    {cell.evalSummary?.evaluatorName && (
+                                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Evaluator: {cell.evalSummary.evaluatorName}</div>
+                                    )}
+                                  </div>
+                                  <div className="space-y-1">
+                                    {cell.evaluationId && (
+                                      <a
+                                        href={`/student/skill-evaluations/${cell.evaluationId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <Eye className="w-4 h-4" /> View Score Sheet
+                                      </a>
+                                    )}
+                                    <button
+                                      onClick={(e) => { e.stopPropagation(); handleResetToNotStarted(row.student.id, col.skillName); }}
+                                      className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
+                                    >
+                                      <Trash2 className="w-4 h-4" /> Reset to Not Started
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Not started cell popover */}
+                              {(!cell || !cell.status || cell.status === 'not_started') && (
+                                <div className="space-y-1">
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Not started yet</p>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); handleNewAttemptFromPopover(row.student.id, col.skillName); }}
+                                    className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg"
+                                  >
+                                    <Plus className="w-4 h-4" /> Start Evaluation
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </td>
                       );
                     })}
@@ -1637,6 +1946,98 @@ export default function CoordinatorViewPage() {
         {/* ─── Footer spacer ────────────────────────────────────────── */}
         <div className="h-8" />
       </main>
+
+      {/* ─── Student Detail Side Panel ──────────────────────────────── */}
+      {sidePanelStudent && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
+            onClick={() => setSidePanelStudentId(null)}
+          />
+          {/* Panel */}
+          <div className="relative w-full max-w-md bg-white dark:bg-gray-800 shadow-xl border-l border-gray-200 dark:border-gray-700 overflow-y-auto animate-in slide-in-from-right">
+            <div className="sticky top-0 bg-white dark:bg-gray-800 px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between z-10">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                {sidePanelStudent.student.last_name}, {sidePanelStudent.student.first_name}
+              </h3>
+              <button
+                onClick={() => setSidePanelStudentId(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 min-w-[44px] min-h-[44px] flex items-center justify-center"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-3">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Evaluations for this lab day ({skillColumns.length} skills)
+              </p>
+
+              {sidePanelStudent.evaluations.map(ev => {
+                const statusLabel =
+                  ev.status === 'completed' ? (ev.result === 'pass' ? 'Pass' : ev.result === 'fail' ? 'Fail' : 'Completed') :
+                  ev.status === 'in_progress' ? 'In Progress' : 'Not Started';
+                const statusColor =
+                  ev.result === 'pass' ? 'text-green-600 dark:text-green-400' :
+                  ev.result === 'fail' ? 'text-red-500 dark:text-red-400' :
+                  ev.status === 'in_progress' ? 'text-amber-600 dark:text-amber-400' :
+                  'text-gray-400 dark:text-gray-500';
+                const statusBg =
+                  ev.result === 'pass' ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' :
+                  ev.result === 'fail' ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800' :
+                  ev.status === 'in_progress' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800' :
+                  'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700';
+
+                return (
+                  <div
+                    key={ev.skillName}
+                    className={`rounded-lg border p-3 ${statusBg}`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-sm font-semibold text-gray-900 dark:text-white truncate" title={ev.skillName}>
+                          {abbreviateSkill(ev.skillName)}
+                        </div>
+                        <div className={`text-sm font-medium mt-0.5 ${statusColor}`}>
+                          {statusLabel}
+                          {ev.hasRetake && <span className="ml-1 text-xs text-amber-600 dark:text-amber-400">(Retake)</span>}
+                        </div>
+                      </div>
+                      {ev.evaluationId && (
+                        <a
+                          href={`/student/skill-evaluations/${ev.evaluationId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-shrink-0 p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg"
+                          title="View Score Sheet"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </a>
+                      )}
+                    </div>
+
+                    {/* Details */}
+                    {ev.evalSummary && (
+                      <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
+                        {ev.evalSummary.stepsTotal > 0 && (
+                          <div>Score: {ev.evalSummary.stepsCompleted}/{ev.evalSummary.stepsTotal} steps</div>
+                        )}
+                        {ev.evalSummary.criticalTotal > 0 && (
+                          <div>Critical: {ev.evalSummary.criticalCompleted}/{ev.evalSummary.criticalTotal}</div>
+                        )}
+                        {ev.evalSummary.evaluatorName && (
+                          <div>Evaluator: {ev.evalSummary.evaluatorName}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ─── Add Station Modal ──────────────────────────────────────── */}
       {showAddStationModal && (

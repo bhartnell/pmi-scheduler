@@ -14,7 +14,9 @@ import {
   Users,
   BarChart3,
   Printer,
+  Trash2,
 } from 'lucide-react';
+import { findMinimumPoints } from '@/lib/nremt-instructions';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -75,6 +77,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [popoverCell, setPopoverCell] = useState<string | null>(null);
+  const [confirmResetKey, setConfirmResetKey] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close popover on outside click
@@ -142,51 +145,10 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
 
   // ─── Actions ────────────────────────────────────────────────────────────
 
-  const handleSkillCellClick = async (studentId: string, skillName: string) => {
+  const handleSkillCellClick = (studentId: string, skillName: string) => {
     const key = `${studentId}_${skillName}`;
-    const cell = skillCells[key];
-
-    // Empty cell → send to first available station for this skill
-    if (!cell || !cell.status) {
-      const station = findStationForSkill(skillName);
-      if (!station) return;
-      setActionLoading(key);
-      try {
-        const res = await fetch('/api/lab-management/student-queue', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            lab_day_id: labDayId,
-            student_id: studentId,
-            station_id: station.id,
-          }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          setSkillCells(prev => ({
-            ...prev,
-            [key]: {
-              queueId: data.entry?.id || null,
-              status: 'in_progress',
-              result: null,
-              evaluationId: null,
-              evalSummary: null,
-              teamRole: null,
-            },
-          }));
-        }
-      } catch (err) {
-        console.error('Error starting queue entry:', err);
-      } finally {
-        setActionLoading(null);
-      }
-      return;
-    }
-
-    // Completed or in_progress → show popover
-    if (cell.status === 'completed' || cell.status === 'in_progress') {
-      setPopoverCell(popoverCell === key ? null : key);
-    }
+    // Toggle popover for any cell — never auto-create records
+    setPopoverCell(popoverCell === key ? null : key);
   };
 
   const handleOverrideResult = async (key: string, result: 'pass' | 'fail') => {
@@ -253,6 +215,48 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
     } finally {
       setActionLoading(null);
       setPopoverCell(null);
+    }
+  };
+
+  const handleResetToNotStarted = async (studentId: string, skillName: string) => {
+    const key = `${studentId}_${skillName}`;
+    const cell = skillCells[key];
+    if (!cell) return;
+
+    setActionLoading(key);
+    try {
+      // Delete the evaluation record if one exists
+      if (cell.evaluationId) {
+        const col = skillColumns.find(c => c.skillName === skillName);
+        const skillSheetId = col?.skillSheetId;
+        if (skillSheetId) {
+          await fetch(`/api/skill-sheets/${skillSheetId}/evaluations?evaluation_id=${cell.evaluationId}`, {
+            method: 'DELETE',
+          });
+        }
+      }
+
+      // Delete the queue entry if one exists
+      if (cell.queueId) {
+        await fetch('/api/lab-management/student-queue', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: cell.queueId }),
+        });
+      }
+
+      // Reset cell to empty (not started)
+      setSkillCells(prev => {
+        const updated = { ...prev };
+        delete updated[key];
+        return updated;
+      });
+    } catch (err) {
+      console.error('Error resetting evaluation:', err);
+    } finally {
+      setActionLoading(null);
+      setPopoverCell(null);
+      setConfirmResetKey(null);
     }
   };
 
@@ -403,7 +407,20 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
     if (popoverCell !== key) return null;
 
     const cell = skillCells[key];
-    if (!cell) return null;
+    const minPoints = findMinimumPoints(skillName);
+
+    // Not started — no cell or no status
+    if (!cell || !cell.status) {
+      return (
+        <div
+          ref={popoverRef}
+          className="absolute z-50 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 min-w-[220px]"
+          style={{ top: '100%', left: '50%', transform: 'translateX(-50%)' }}
+        >
+          <p className="text-xs text-gray-500 dark:text-gray-400">No evaluation recorded yet</p>
+        </div>
+      );
+    }
 
     return (
       <div
@@ -422,10 +439,13 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
             </div>
 
             {/* Eval summary */}
-            {cell.evalSummary && (
+            {cell.evalSummary ? (
               <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5">
                 {cell.evalSummary.stepsTotal > 0 && (
-                  <div>Score: {cell.evalSummary.stepsCompleted}/{cell.evalSummary.stepsTotal} steps</div>
+                  <div>
+                    Score: {cell.evalSummary.stepsCompleted} pts
+                    {minPoints !== null && <> &mdash; Minimum required: {minPoints} pts</>}
+                  </div>
                 )}
                 {cell.evalSummary.criticalTotal > 0 && (
                   <div>Critical: {cell.evalSummary.criticalCompleted}/{cell.evalSummary.criticalTotal}</div>
@@ -434,6 +454,8 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
                   <div>Evaluator: {cell.evalSummary.evaluatorName}</div>
                 )}
               </div>
+            ) : (
+              <p className="text-xs text-gray-500 dark:text-gray-400">No evaluation recorded yet</p>
             )}
 
             {/* Actions */}
@@ -475,9 +497,24 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
           </div>
         )}
 
-        {/* In-progress popover: mark pass/fail */}
+        {/* In-progress popover: mark pass/fail + reset */}
         {cell.status === 'in_progress' && (
           <div className="space-y-1">
+            {cell.evalSummary ? (
+              <div className="text-xs text-gray-500 dark:text-gray-400 space-y-0.5 mb-2">
+                {cell.evalSummary.stepsTotal > 0 && (
+                  <div>
+                    Score: {cell.evalSummary.stepsCompleted} pts
+                    {minPoints !== null && <> &mdash; Minimum required: {minPoints} pts</>}
+                  </div>
+                )}
+                {cell.evalSummary.evaluatorName && (
+                  <div>Evaluator: {cell.evalSummary.evaluatorName}</div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">No evaluation recorded yet</p>
+            )}
             <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Manual override:</p>
             <button
               onClick={(e) => { e.stopPropagation(); handleOverrideResult(key, 'pass'); }}
@@ -491,6 +528,40 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
             >
               <X className="w-4 h-4" /> Mark Fail
             </button>
+            {/* Reset to Not Started — only for in-progress with no submitted result */}
+            {!cell.result && (
+              <>
+                <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
+                {confirmResetKey === key ? (
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-red-600 dark:text-red-400 font-medium">
+                      Remove this in-progress evaluation? This cannot be undone.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleResetToNotStarted(studentId, skillName); }}
+                        className="flex-1 px-3 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setConfirmResetKey(null); }}
+                        className="flex-1 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setConfirmResetKey(key); }}
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg"
+                  >
+                    <Trash2 className="w-4 h-4" /> Reset to Not Started
+                  </button>
+                )}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -557,23 +628,30 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
                 Student
               </th>
-              {skillColumns.map(col => (
-                <th
-                  key={col.skillName}
-                  className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[140px]"
-                >
-                  <div className="space-y-0.5">
-                    <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[140px] mx-auto" title={col.skillName}>
-                      {abbreviateSkill(col.skillName)}
-                    </div>
-                    {col.stationIds.length > 1 && (
-                      <div className="text-[11px] font-normal text-blue-500 dark:text-blue-400">
-                        {col.stationIds.length} stations
+              {skillColumns.map(col => {
+                const abbreviated = abbreviateSkill(col.skillName);
+                const isLong = abbreviated.length > 15;
+                return (
+                  <th
+                    key={col.skillName}
+                    className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[140px]"
+                  >
+                    <div className="space-y-0.5">
+                      <div
+                        className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[140px] mx-auto"
+                        title={col.skillName}
+                      >
+                        {isLong ? `${abbreviated.slice(0, 15)}…` : abbreviated}
                       </div>
-                    )}
-                  </div>
-                </th>
-              ))}
+                      {!isNremtTesting && col.stationIds.length > 1 && (
+                        <div className="text-[11px] font-normal text-blue-500 dark:text-blue-400">
+                          {col.stationIds.length} stations
+                        </div>
+                      )}
+                    </div>
+                  </th>
+                );
+              })}
               <th className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[80px]">
                 Progress
               </th>
