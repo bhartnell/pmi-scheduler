@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('lab_users')
-      .select('id, name, email, role, created_at, last_login, is_active, is_part_time', { count: 'exact' })
+      .select('id, name, email, role, created_at, last_login, is_active, is_part_time, primary_cohort_id', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -104,7 +104,7 @@ export async function PATCH(request: NextRequest) {
     const { user } = auth;
 
     const body = await request.json();
-    const { userId, role, is_active, is_part_time } = body;
+    const { userId, role, is_active, is_part_time, primary_cohort_id } = body;
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
@@ -162,6 +162,10 @@ export async function PATCH(request: NextRequest) {
 
     if (is_part_time !== undefined) {
       updates.is_part_time = is_part_time;
+    }
+
+    if (primary_cohort_id !== undefined) {
+      updates.primary_cohort_id = primary_cohort_id || null; // allow clearing with empty string
     }
 
     const { data, error } = await supabase

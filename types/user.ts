@@ -21,6 +21,7 @@ export interface User {
   role: Role;
   is_active: boolean;
   is_part_time: boolean;
+  primary_cohort_id: string | null;
   approved_at: string | null;
   approved_by: string | null;
   created_at: string;
