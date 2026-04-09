@@ -19,12 +19,16 @@ interface NremtStickyNotesPanelProps {
   onCriticalFailNotesChange: (notes: string) => void;
   onNeedAssistance: () => void;
   assistanceRequested?: boolean;
+  /** FIX 6: Callback to clear an active assistance alert */
+  onClearAssistance?: () => void;
   /** FIX 3: List of critical failure criteria from the skill sheet */
   criticalCriteria?: string[];
   /** FIX 3: Which criteria are currently checked (by index) */
   checkedCriteria?: string[];
   /** FIX 3: Callback when criteria checks change */
   onCheckedCriteriaChange?: (checked: string[]) => void;
+  /** Whether the current result is fail — used to show red border on comments */
+  resultIsFail?: boolean;
 }
 
 function PanelContent({
@@ -36,9 +40,11 @@ function PanelContent({
   onCriticalFailNotesChange,
   onNeedAssistance,
   assistanceRequested,
+  onClearAssistance,
   criticalCriteria = [],
   checkedCriteria = [],
   onCheckedCriteriaChange,
+  resultIsFail,
 }: NremtStickyNotesPanelProps) {
   const notesRef = useRef<HTMLTextAreaElement>(null);
 
@@ -79,6 +85,7 @@ function PanelContent({
           className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
         >
           Examiner Comments
+          {resultIsFail && <span className="text-red-500 ml-1">* required</span>}
         </label>
         <textarea
           ref={notesRef}
@@ -88,7 +95,11 @@ function PanelContent({
           onChange={(e) => onNotesChange(e.target.value)}
           onInput={autoResize}
           placeholder="Add observations, comments, or feedback..."
-          className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 resize-none"
+          className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-1 resize-none ${
+            resultIsFail && !notes.trim()
+              ? 'border-red-400 dark:border-red-600 focus:border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-950/20'
+              : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-800'
+          }`}
         />
       </div>
 
@@ -192,11 +203,23 @@ function PanelContent({
 
       {/* Need Assistance */}
       {assistanceRequested ? (
-        <div className="flex items-center justify-center gap-2 rounded-md border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/30 px-4 py-3">
-          <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
-          <span className="text-sm font-medium text-green-700 dark:text-green-400">
-            Assistance Requested
-          </span>
+        <div className="flex items-center justify-between gap-2 rounded-md border border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-950/30 px-4 py-3">
+          <div className="flex items-center gap-2">
+            <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <span className="text-sm font-medium text-green-700 dark:text-green-400">
+              Assistance Requested
+            </span>
+          </div>
+          {onClearAssistance && (
+            <button
+              type="button"
+              onClick={onClearAssistance}
+              className="flex items-center gap-1 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear Alert
+            </button>
+          )}
         </div>
       ) : (
         <button
@@ -256,7 +279,7 @@ export default function NremtStickyNotesPanel(
       <button
         type="button"
         onClick={() => setMobileOpen(true)}
-        className="md:hidden fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg hover:bg-amber-600 active:bg-amber-700 transition-colors"
+        className="md:hidden fixed bottom-20 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg hover:bg-amber-600 active:bg-amber-700 transition-colors"
         aria-label="Open examiner notes"
       >
         <StickyNote className="h-6 w-6" />
