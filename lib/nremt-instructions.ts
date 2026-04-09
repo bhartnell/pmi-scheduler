@@ -293,3 +293,66 @@ export const PROCTOR_GENERAL_RESPONSIBILITIES = `Thank you for serving as a Skil
 - Assuring professional conduct of all personnel involved with the particular skill throughout the examination.
 
 - Maintaining the security of all issued examination material during the examination and ensuring the return of all material to the State EMS Official or approved agent.`;
+
+// ─── NREMT Minimum Point Thresholds ────────────────────────────
+
+/**
+ * Minimum points required to pass each NREMT skill.
+ * Keys are canonical names; use findMinimumPoints() for fuzzy matching.
+ */
+export const NREMT_MINIMUM_POINTS: Record<string, number> = {
+  'Patient assessment and management — medical': 33,
+  'Patient assessment and management — trauma': 33,
+  'BVM of Adult Apneic Patient': 12,
+  'O2 Administration by NRB': 8,
+  'Cardiac Arrest/AED': 13,
+  'Supine Spinal Immobilization': 11,
+  'Spinal Immobilization (Seated Patient)': 9,
+  'Bleeding Control / Shock Management': 5,
+  'Long Bone Immobilization': 8,
+  'Joint Immobilization': 7,
+};
+
+/**
+ * Find the NREMT minimum passing points for a skill.
+ * Uses case-insensitive partial matching since DB names may vary
+ * (e.g., "Patient assessment and management -- medical" vs "— medical").
+ * Returns null if no match found.
+ */
+export function findMinimumPoints(skillName: string): number | null {
+  const lower = skillName.toLowerCase();
+
+  // Exact match first
+  for (const [key, val] of Object.entries(NREMT_MINIMUM_POINTS)) {
+    if (key.toLowerCase() === lower) return val;
+  }
+
+  // Partial / substring match
+  for (const [key, val] of Object.entries(NREMT_MINIMUM_POINTS)) {
+    const keyLower = key.toLowerCase();
+    if (lower.includes(keyLower) || keyLower.includes(lower)) return val;
+  }
+
+  // Keyword overlap - normalize dashes and special chars
+  const normalize = (s: string) =>
+    s.toLowerCase().replace(/[—–\-\/]/g, ' ').replace(/[^a-z0-9\s]/g, '').trim();
+  const targetWords = new Set(normalize(skillName).split(/\s+/).filter(w => w.length > 2));
+
+  let bestMatch: number | null = null;
+  let bestOverlap = 0;
+
+  for (const [key, val] of Object.entries(NREMT_MINIMUM_POINTS)) {
+    const keyWords = new Set(normalize(key).split(/\s+/).filter(w => w.length > 2));
+    let overlap = 0;
+    for (const word of targetWords) {
+      if (keyWords.has(word)) overlap++;
+    }
+    const ratio = overlap / Math.max(keyWords.size, 1);
+    if (overlap >= 2 && ratio > bestOverlap) {
+      bestOverlap = ratio;
+      bestMatch = val;
+    }
+  }
+
+  return bestOverlap >= 0.5 ? bestMatch : null;
+}

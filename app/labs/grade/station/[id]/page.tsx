@@ -708,6 +708,8 @@ export default function GradeStationPage() {
               embedded={true}
               nremtMode={!!station?.lab_day?.is_nremt_testing}
               defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
+              isNremtTesting={!!station?.lab_day?.is_nremt_testing}
+              criticalFail={criticalFail}
             />
           </div>
 
@@ -943,6 +945,8 @@ export default function GradeStationPage() {
           onEvaluationSaved={handleEvaluationSaved}
           nremtMode={!!station?.lab_day?.is_nremt_testing}
           defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
+          isNremtTesting={!!station?.lab_day?.is_nremt_testing}
+          criticalFail={criticalFail}
         />
       )}
     </div>
