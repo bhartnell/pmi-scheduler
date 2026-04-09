@@ -24,9 +24,33 @@ import {
   AlertTriangle,
   Undo2,
   Send,
+  RotateCcw,
+  Ban,
 } from 'lucide-react';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
+
+interface RetakeFailedSkill {
+  skill_sheet_id: string;
+  skill_name: string;
+  original_evaluation_id: string;
+  retake_used: boolean;
+  retake_result: string | null;
+}
+
+interface RetakeStatus {
+  student_id: string;
+  student_name: string;
+  total_skills: number;
+  first_attempt_count: number;
+  all_first_attempts_done: boolean;
+  failed_skills: RetakeFailedSkill[];
+  fail_count: number;
+  eligible: boolean;
+  must_reschedule: boolean;
+  status: 'testing' | 'retake_eligible' | 'must_reschedule' | 'all_passed' | 'retakes_complete';
+}
+
 
 interface Student {
   id: string;
@@ -46,6 +70,12 @@ interface GridStation {
   addedDuringExam?: boolean;
 }
 
+interface SkillColumn {
+  skillName: string;
+  stationIds: string[];
+  skillSheetId: string | null;
+}
+
 interface EvalSummary {
   stepsCompleted: number;
   stepsTotal: number;
@@ -61,6 +91,8 @@ interface CellData {
   evaluationId: string | null;
   evalSummary: EvalSummary | null;
   teamRole: string | null;
+  hasRetake?: boolean;
+  bestResult?: string | null;
 }
 
 interface LabDayInfo {
@@ -126,6 +158,31 @@ const AVG_SKILL_TIME = 10; // ~70 min total / 7 skills
 
 function getStationDisplayName(station: GridStation): string {
   return station.skill_name || station.custom_title || station.scenario?.title || `Station ${station.station_number}`;
+}
+
+/** Abbreviate a skill name for column headers */
+function abbreviateSkill(name: string): string {
+  const abbrevMap: Record<string, string> = {
+    'Cardiac Arrest Management / AED': 'Cardiac Arrest',
+    'Patient Assessment - Medical': 'Medical Assess.',
+    'Patient Assessment - Trauma': 'Trauma Assess.',
+    'Spinal Immobilization (Supine Patient)': 'Spinal (Supine)',
+    'Spinal Immobilization (Seated Patient)': 'Spinal (Seated)',
+    'BVM Ventilation of an Apneic Adult Patient': 'BVM',
+    'Oxygen Administration by Non-Rebreather Mask': 'O2/NRB',
+    'Bleeding Control/Shock Management': 'Bleeding Ctrl',
+    'Joint Immobilization': 'Joint Immob.',
+    'Long Bone Immobilization': 'Long Bone Immob.',
+  };
+  return abbrevMap[name] || name;
+}
+
+/** Abbreviate a list of needed skills for dropdown display */
+function abbreviateNeeds(needs: string[]): string {
+  if (needs.length === 0) return '';
+  const abbreviated = needs.map(n => abbreviateSkill(n));
+  if (abbreviated.length <= 2) return abbreviated.join(', ');
+  return `${abbreviated.slice(0, 2).join(', ')} +${abbreviated.length - 2}`;
 }
 
 function getStationStatus(
@@ -269,6 +326,9 @@ export default function CoordinatorViewPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [stations, setStations] = useState<GridStation[]>([]);
   const [cells, setCells] = useState<Record<string, CellData>>({});
+  const [skillColumns, setSkillColumns] = useState<SkillColumn[]>([]);
+  const [skillCells, setSkillCells] = useState<Record<string, CellData>>({});
+  const [studentNeeds, setStudentNeeds] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -291,6 +351,11 @@ export default function CoordinatorViewPage() {
   const [addStationExaminer, setAddStationExaminer] = useState('');
   const [addStationRoom, setAddStationRoom] = useState('');
   const [addingStation, setAddingStation] = useState(false);
+
+  // Retake queue
+  const [retakeStatuses, setRetakeStatuses] = useState<RetakeStatus[]>([]);
+  const [assigningRetake, setAssigningRetake] = useState<string | null>(null); // "studentId_skillSheetId"
+  const retakePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Progress table
   const [progressSort, setProgressSort] = useState<ProgressSortKey>('completions');
@@ -338,6 +403,9 @@ export default function CoordinatorViewPage() {
         setStudents(data.students || []);
         setStations(data.stations || []);
         setCells(data.cells || {});
+        setSkillColumns(data.skillColumns || []);
+        setSkillCells(data.skillCells || {});
+        setStudentNeeds(data.studentNeeds || {});
         setLastUpdated(new Date());
       }
     } catch (err) {
@@ -363,6 +431,53 @@ export default function CoordinatorViewPage() {
     }
   }, [labDayId]);
 
+  // Fetch retake status
+  const fetchRetakeStatus = useCallback(async () => {
+    if (!labDayInfo?.is_nremt_testing) return;
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/retake-status`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setRetakeStatuses(data.retake_statuses || []);
+        }
+      }
+    } catch {
+      // Silently ignore retake status fetch errors
+    }
+  }, [labDayId, labDayInfo?.is_nremt_testing]);
+
+  // Handle assign retake - opens grading view in a new tab
+  const handleAssignRetake = async (studentId: string, studentName: string, failedSkill: RetakeFailedSkill) => {
+    const retakeKey = `${studentId}_${failedSkill.skill_sheet_id}`;
+    setAssigningRetake(retakeKey);
+
+    try {
+      // Find a station that has this skill sheet
+      const matchStation = stations.find(station => {
+        // We need to match station to skill sheet - use station skill_name
+        return station.skill_name?.toLowerCase().includes(failedSkill.skill_name.toLowerCase().substring(0, 15));
+      });
+
+      if (matchStation) {
+        // Open grading view with retake params
+        const retakeParams = new URLSearchParams({
+          retake: 'true',
+          student_id: studentId,
+          student_name: studentName,
+          skill_sheet_id: failedSkill.skill_sheet_id,
+          original_evaluation_id: failedSkill.original_evaluation_id,
+        });
+        window.open(`/labs/grade/station/${matchStation.id}?${retakeParams.toString()}`, '_blank');
+      } else {
+        // Fallback: open any station (coordinator will need to set up)
+        alert(`No station found for "${failedSkill.skill_name}". Open a station for this skill and start the retake manually.`);
+      }
+    } finally {
+      setAssigningRetake(null);
+    }
+  };
+
   // Resolve an assistance alert
   const handleResolveAlert = async (alertId: string) => {
     try {
@@ -387,6 +502,24 @@ export default function CoordinatorViewPage() {
       fetchAlerts();
     }
   }, [session, labDayId, fetchLabDayInfo, fetchGridData, fetchAlerts]);
+
+  // Fetch retake status when labDayInfo is loaded (for NREMT days)
+  useEffect(() => {
+    if (labDayInfo?.is_nremt_testing) {
+      fetchRetakeStatus();
+    }
+  }, [labDayInfo?.is_nremt_testing, fetchRetakeStatus]);
+
+  // Poll retake status every 30 seconds for NREMT days
+  useEffect(() => {
+    if (!labDayInfo?.is_nremt_testing) return;
+    retakePollRef.current = setInterval(() => {
+      fetchRetakeStatus();
+    }, 30000);
+    return () => {
+      if (retakePollRef.current) clearInterval(retakePollRef.current);
+    };
+  }, [labDayInfo?.is_nremt_testing, fetchRetakeStatus]);
 
   // Polling every 30 seconds with visibility check
   useEffect(() => {
@@ -545,14 +678,22 @@ export default function CoordinatorViewPage() {
 
   const totalStudents = students.length;
   const totalStations = stations.length;
+  const totalSkills = skillColumns.length;
 
-  // Overall completion: total cells completed / (students * stations)
+  // Overall completion: total cells completed / (students * stations) -- station-level for station board
   const totalPossible = totalStudents * totalStations;
   let totalCompleted = 0;
   for (const key of Object.keys(cells)) {
     if (cells[key].status === 'completed') totalCompleted++;
   }
   const overallPercent = totalPossible > 0 ? Math.round((totalCompleted / totalPossible) * 100) : 0;
+
+  // Skill-level completion for the progress table
+  const skillTotalPossible = totalStudents * totalSkills;
+  let skillTotalCompleted = 0;
+  for (const key of Object.keys(skillCells)) {
+    if (skillCells[key].status === 'completed') skillTotalCompleted++;
+  }
 
   // Active stations (ones with in_progress students)
   const activeStationCount = stations.filter(s =>
@@ -656,7 +797,7 @@ export default function CoordinatorViewPage() {
     return { eligible, topSuggestionId };
   }, [students, stations, cells, enRouteStudents, totalStations]);
 
-  // ─── Progress table data ─────────────────────────────────────────────────
+  // ─── Progress table data (skill-based) ───────────────────────────────────
 
   const progressTableData = useMemo(() => {
     const rows = students.map(student => {
@@ -665,30 +806,30 @@ export default function CoordinatorViewPage() {
       let hasFail = false;
       let allComplete = true;
 
-      const stationResults: Record<string, { status: string; result: string | null }> = {};
+      const skillResults: Record<string, { status: string; result: string | null; hasRetake?: boolean }> = {};
 
-      for (const station of stations) {
-        const key = `${student.id}_${station.id}`;
-        const cell = cells[key];
+      for (const col of skillColumns) {
+        const key = `${student.id}_${col.skillName}`;
+        const cell = skillCells[key];
         if (cell?.status === 'completed') {
           completions++;
           if (cell.result === 'fail') {
             failures++;
             hasFail = true;
           }
-          stationResults[station.id] = { status: 'completed', result: cell.result };
+          skillResults[col.skillName] = { status: 'completed', result: cell.result, hasRetake: cell.hasRetake };
         } else if (cell?.status === 'in_progress') {
           allComplete = false;
-          stationResults[station.id] = { status: 'in_progress', result: null };
+          skillResults[col.skillName] = { status: 'in_progress', result: null };
         } else {
           allComplete = false;
-          stationResults[station.id] = { status: 'not_started', result: null };
+          skillResults[col.skillName] = { status: 'not_started', result: null };
         }
       }
 
-      if (stations.length === 0) allComplete = false;
+      if (skillColumns.length === 0) allComplete = false;
 
-      return { student, completions, failures, hasFail, allComplete, stationResults };
+      return { student, completions, failures, hasFail, allComplete, skillResults };
     });
 
     // Sort
@@ -706,26 +847,26 @@ export default function CoordinatorViewPage() {
       return progressSortAsc ? cmp : -cmp;
     });
 
-    // Summary row
+    // Summary row (keyed by skill name)
     const summary: Record<string, { pass: number; fail: number; inProgress: number; notStarted: number }> = {};
-    for (const station of stations) {
-      summary[station.id] = { pass: 0, fail: 0, inProgress: 0, notStarted: 0 };
+    for (const col of skillColumns) {
+      summary[col.skillName] = { pass: 0, fail: 0, inProgress: 0, notStarted: 0 };
       for (const student of students) {
-        const key = `${student.id}_${station.id}`;
-        const cell = cells[key];
+        const key = `${student.id}_${col.skillName}`;
+        const cell = skillCells[key];
         if (cell?.status === 'completed') {
-          if (cell.result === 'fail') summary[station.id].fail++;
-          else summary[station.id].pass++;
+          if (cell.result === 'fail') summary[col.skillName].fail++;
+          else summary[col.skillName].pass++;
         } else if (cell?.status === 'in_progress') {
-          summary[station.id].inProgress++;
+          summary[col.skillName].inProgress++;
         } else {
-          summary[station.id].notStarted++;
+          summary[col.skillName].notStarted++;
         }
       }
     }
 
     return { rows, summary };
-  }, [students, stations, cells, progressSort, progressSortAsc]);
+  }, [students, skillColumns, skillCells, progressSort, progressSortAsc]);
 
   const handleProgressSort = (key: ProgressSortKey) => {
     if (progressSort === key) {
@@ -735,6 +876,22 @@ export default function CoordinatorViewPage() {
       setProgressSortAsc(true);
     }
   };
+
+  // ─── Retake queue computed data ────────────────────────────────────────────
+
+  const retakeQueueData = useMemo(() => {
+    if (!labDayInfo?.is_nremt_testing) return { eligible: [], mustReschedule: [], retakesComplete: [] };
+
+    const eligible = retakeStatuses.filter(s => s.status === 'retake_eligible');
+    const mustReschedule = retakeStatuses.filter(s => s.status === 'must_reschedule');
+    const retakesComplete = retakeStatuses.filter(s => s.status === 'retakes_complete');
+
+    return { eligible, mustReschedule, retakesComplete };
+  }, [retakeStatuses, labDayInfo?.is_nremt_testing]);
+
+  const hasRetakeQueue = retakeQueueData.eligible.length > 0
+    || retakeQueueData.mustReschedule.length > 0
+    || retakeQueueData.retakesComplete.length > 0;
 
   // ─── Status colors ────────────────────────────────────────────────────────
 
@@ -1056,12 +1213,14 @@ export default function CoordinatorViewPage() {
                         <option value="">-- Select student --</option>
                         {eligible.map(student => {
                           const completions = getStudentCompletionCount(student, stations, cells);
+                          const needs = studentNeeds[student.id] || [];
+                          const needsLabel = needs.length > 0 ? ` -- needs: ${abbreviateNeeds(needs)}` : '';
                           return (
                             <option
                               key={student.id}
                               value={student.id}
                             >
-                              {student.first_name} {student.last_name} ({completions}/{totalStations})
+                              {student.first_name} {student.last_name} ({completions}/{totalStations}){needsLabel}
                             </option>
                           );
                         })}
@@ -1113,6 +1272,129 @@ export default function CoordinatorViewPage() {
           )}
         </div>
 
+        {/* ─── Section 3b: RETAKE QUEUE (NREMT only) ────────────── */}
+        {labDayInfo?.is_nremt_testing && hasRetakeQueue && (
+          <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border-2 border-amber-300 dark:border-amber-700 shadow-sm overflow-hidden mb-6">
+            <div className="flex items-center justify-between px-4 py-3 bg-amber-100 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-700">
+              <h3 className="text-base font-bold text-amber-900 dark:text-amber-200 flex items-center gap-2">
+                <RotateCcw className="w-5 h-5" />
+                RETAKE QUEUE
+              </h3>
+              <button
+                onClick={() => fetchRetakeStatus()}
+                className="text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 font-medium"
+              >
+                Refresh
+              </button>
+            </div>
+            <div className="p-4 space-y-4">
+              {retakeQueueData.eligible.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
+                    Eligible for Retake ({retakeQueueData.eligible.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {retakeQueueData.eligible.map(student => (
+                      <div key={student.student_id} className="bg-white dark:bg-gray-800 rounded-lg border border-amber-200 dark:border-amber-700 p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="font-medium text-gray-900 dark:text-white text-sm">{student.student_name}</span>
+                          <span className="text-xs text-amber-700 dark:text-amber-300 font-medium">
+                            {student.fail_count} failed skill{student.fail_count !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="space-y-1.5">
+                          {student.failed_skills.map(skill => (
+                            <div key={skill.skill_sheet_id} className="flex items-center justify-between gap-2">
+                              <span className="text-xs text-gray-700 dark:text-gray-300 truncate flex-1">{skill.skill_name}</span>
+                              {skill.retake_used ? (
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${
+                                  skill.retake_result === 'pass'
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                                    : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                                }`}>
+                                  {skill.retake_result === 'pass' ? <><Check className="w-3 h-3" /> Retake Passed</> : <><X className="w-3 h-3" /> Retake Failed</>}
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => handleAssignRetake(student.student_id, student.student_name, skill)}
+                                  disabled={assigningRetake === `${student.student_id}_${skill.skill_sheet_id}`}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg disabled:opacity-50 transition-colors min-h-[28px]"
+                                >
+                                  {assigningRetake === `${student.student_id}_${skill.skill_sheet_id}` ? (
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                  ) : (
+                                    <RotateCcw className="w-3 h-3" />
+                                  )}
+                                  Assign Retake
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {retakeQueueData.mustReschedule.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-red-800 dark:text-red-300 mb-2 flex items-center gap-1.5">
+                    <Ban className="w-4 h-4 text-red-600 dark:text-red-400" />
+                    Must Reschedule ({retakeQueueData.mustReschedule.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {retakeQueueData.mustReschedule.map(student => (
+                      <div key={student.student_id} className="bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-700 p-3">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium text-gray-900 dark:text-white text-sm">{student.student_name}</span>
+                          <span className="text-xs text-red-700 dark:text-red-300 font-medium">
+                            {student.fail_count} fails -- not eligible for same-day retake
+                          </span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {student.failed_skills.map(skill => (
+                            <span key={skill.skill_sheet_id} className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
+                              {skill.skill_name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {retakeQueueData.retakesComplete.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-400 mb-2 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-4 h-4" />
+                    Retakes Complete ({retakeQueueData.retakesComplete.length})
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {retakeQueueData.retakesComplete.map(student => {
+                      const allRetakesPassed = student.failed_skills.every(s => s.retake_result === 'pass');
+                      return (
+                        <span key={student.student_id} className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
+                          allRetakesPassed
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                            : 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400'
+                        }`}>
+                          {student.student_name}
+                          {allRetakesPassed ? (
+                            <Check className="w-3 h-3" />
+                          ) : (
+                            <span className="text-[10px]">({student.failed_skills.filter(s => s.retake_result === 'pass').length}/{student.fail_count} passed)</span>
+                          )}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* ─── Section 4: Compact Status Bar ───────────────────────── */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm px-4 py-2.5 mb-6 flex items-center justify-center gap-6 text-sm">
           <span className="flex items-center gap-1.5">
@@ -1140,13 +1422,13 @@ export default function CoordinatorViewPage() {
               Individual Testing Tracker
             </h3>
             <span className="text-sm text-gray-500 dark:text-gray-400">
-              <strong className="text-gray-700 dark:text-gray-300">{totalCompleted}/{totalPossible}</strong> complete
+              <strong className="text-gray-700 dark:text-gray-300">{skillTotalCompleted}/{skillTotalPossible}</strong> complete
             </span>
           </div>
 
           {/* Grid */}
           <div className="overflow-x-auto max-w-full">
-            <table className="w-full" style={{ minWidth: `${180 + stations.length * 100 + 80 + 60}px` }}>
+            <table className="w-full" style={{ minWidth: `${180 + skillColumns.length * 100 + 80 + 60}px` }}>
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
                   <th
@@ -1156,18 +1438,20 @@ export default function CoordinatorViewPage() {
                   >
                     Student {progressSort === 'name' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
                   </th>
-                  {stations.map(station => (
+                  {skillColumns.map(col => (
                     <th
-                      key={station.id}
+                      key={col.skillName}
                       className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[100px]"
                     >
                       <div className="space-y-0.5">
-                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
-                          Station {station.station_number}
+                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[100px] mx-auto" title={col.skillName}>
+                          {abbreviateSkill(col.skillName)}
                         </div>
-                        <div className="text-xs font-normal text-gray-500 dark:text-gray-400 truncate max-w-[100px] mx-auto" title={getStationDisplayName(station)}>
-                          {getStationDisplayName(station)}
-                        </div>
+                        {col.stationIds.length > 1 && (
+                          <div className="text-[11px] font-normal text-blue-500 dark:text-blue-400">
+                            {col.stationIds.length} stations
+                          </div>
+                        )}
                       </div>
                     </th>
                   ))}
@@ -1205,30 +1489,40 @@ export default function CoordinatorViewPage() {
                       {row.student.last_name}, {row.student.first_name.charAt(0)}.
                     </td>
 
-                    {/* Station cells */}
-                    {stations.map(station => {
-                      const r = row.stationResults[station.id];
+                    {/* Skill cells */}
+                    {skillColumns.map(col => {
+                      const r = row.skillResults[col.skillName];
                       if (r?.status === 'completed' && r.result === 'pass') {
                         return (
-                          <td key={station.id} className="px-3 py-2 text-center">
-                            <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-300 border border-green-200 dark:border-green-800">
-                              <Check className="w-4 h-4 stroke-[3]" />
-                            </span>
+                          <td key={col.skillName} className="px-3 py-2 text-center">
+                            <div className="relative inline-flex items-center justify-center">
+                              <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-300 border border-green-200 dark:border-green-800" title={r.hasRetake ? 'Passed on retake' : 'Pass'}>
+                                <Check className="w-4 h-4 stroke-[3]" />
+                              </span>
+                              {r.hasRetake && (
+                                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[8px] font-bold flex items-center justify-center" title="Result from retake">R</span>
+                              )}
+                            </div>
                           </td>
                         );
                       }
                       if (r?.status === 'completed' && r.result === 'fail') {
                         return (
-                          <td key={station.id} className="px-3 py-2 text-center">
-                            <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300 border border-red-200 dark:border-red-800">
-                              <X className="w-4 h-4 stroke-[3]" />
-                            </span>
+                          <td key={col.skillName} className="px-3 py-2 text-center">
+                            <div className="relative inline-flex items-center justify-center">
+                              <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300 border border-red-200 dark:border-red-800" title={r.hasRetake ? 'Failed on retake also' : 'Fail'}>
+                                <X className="w-4 h-4 stroke-[3]" />
+                              </span>
+                              {r.hasRetake && (
+                                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[8px] font-bold flex items-center justify-center" title="Retake attempted">R</span>
+                              )}
+                            </div>
                           </td>
                         );
                       }
                       if (r?.status === 'in_progress') {
                         return (
-                          <td key={station.id} className="px-3 py-2 text-center">
+                          <td key={col.skillName} className="px-3 py-2 text-center">
                             <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
                               <Clock className="w-4 h-4 animate-pulse" />
                             </span>
@@ -1236,7 +1530,7 @@ export default function CoordinatorViewPage() {
                         );
                       }
                       return (
-                        <td key={station.id} className="px-3 py-2 text-center">
+                        <td key={col.skillName} className="px-3 py-2 text-center">
                           <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-300 border border-transparent dark:border-gray-600">
                             <Circle className="w-4 h-4" />
                           </span>
@@ -1275,12 +1569,12 @@ export default function CoordinatorViewPage() {
                   <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
                     Summary
                   </td>
-                  {stations.map(station => {
-                    const s = progressTableData.summary[station.id];
+                  {skillColumns.map(col => {
+                    const s = progressTableData.summary[col.skillName];
                     const total = (s?.pass || 0) + (s?.fail || 0);
                     const passRate = total > 0 ? Math.round(((s?.pass || 0) / total) * 100) : 0;
                     return (
-                      <td key={station.id} className="px-3 py-2.5 text-center">
+                      <td key={col.skillName} className="px-3 py-2.5 text-center">
                         <div className="space-y-0.5">
                           <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                             {total}/{totalStudents} done
@@ -1300,7 +1594,7 @@ export default function CoordinatorViewPage() {
                   })}
                   <td className="px-3 py-2.5 text-center">
                     <div className="text-xs font-semibold text-gray-600 dark:text-gray-400">
-                      {totalCompleted}
+                      {skillTotalCompleted}
                     </div>
                   </td>
                   <td className="px-3 py-2.5 text-center">
@@ -1331,6 +1625,12 @@ export default function CoordinatorViewPage() {
               <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300"><X className="w-3 h-3 stroke-[3]" /></span>
               Fail
             </span>
+            {labDayInfo?.is_nremt_testing && (
+              <span className="flex items-center gap-1.5">
+                <span className="inline-flex items-center justify-center w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[8px] font-bold">R</span>
+                Retake attempted
+              </span>
+            )}
           </div>
         </div>
 

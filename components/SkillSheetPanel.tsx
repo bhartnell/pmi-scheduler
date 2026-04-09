@@ -153,6 +153,10 @@ interface SkillSheetPanelProps {
   checkedCriticalCriteria?: string[];
   /** Critical fail notes from the NREMT sticky panel */
   criticalFailNotes?: string;
+  /** When true, this evaluation is a retake attempt */
+  isRetake?: boolean;
+  /** The original evaluation ID this retake links to */
+  originalEvaluationId?: string;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -298,6 +302,8 @@ export default function SkillSheetPanel({
   examinerNotes = '',
   checkedCriticalCriteria = [],
   criticalFailNotes: externalCriticalFailNotes = '',
+  isRetake = false,
+  originalEvaluationId,
 }: SkillSheetPanelProps) {
   const [sheet, setSheet] = useState<SkillSheet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -588,6 +594,11 @@ export default function SkillSheetPanel({
             critical_fail: true,
             critical_fail_notes: externalCriticalFailNotes?.trim() || null,
             critical_criteria_checked: checkedCriticalCriteria,
+          } : {}),
+          // Retake fields
+          ...(isRetake ? {
+            is_retake: true,
+            original_evaluation_id: originalEvaluationId || null,
           } : {}),
         }),
       });

@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import {
@@ -45,7 +45,15 @@ export default function GradeStationPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const stationId = params?.id as string;
+
+  // Retake mode detection from URL params
+  const isRetakeMode = searchParams?.get('retake') === 'true';
+  const retakeStudentId = searchParams?.get('student_id') || null;
+  const retakeStudentName = searchParams?.get('student_name') || null;
+  const retakeSkillSheetId = searchParams?.get('skill_sheet_id') || null;
+  const retakeOriginalEvalId = searchParams?.get('original_evaluation_id') || null;
 
   const [station, setStation] = useState<Station | null>(null);
   const [labGroups, setLabGroups] = useState<LabGroup[]>([]);
@@ -203,6 +211,13 @@ export default function GradeStationPage() {
       }
     }
   }, [station]);
+
+  // Auto-select student when in retake mode
+  useEffect(() => {
+    if (isRetakeMode && retakeStudentId && allStudents.length > 0) {
+      setSelectedStudentId(retakeStudentId);
+    }
+  }, [isRetakeMode, retakeStudentId, allStudents]);
 
   useEffect(() => {
     // Initialize critical actions checkboxes when scenario loads
@@ -730,6 +745,23 @@ export default function GradeStationPage() {
         </div>
       )}
 
+      {/* RETAKE ATTEMPT Banner */}
+      {isRetakeMode && (
+        <div className="bg-amber-500 text-white border-b border-amber-600">
+          <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+            <svg className="w-6 h-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <div>
+              <div className="font-bold text-lg">RETAKE ATTEMPT</div>
+              <div className="text-sm text-amber-100">
+                {retakeStudentName ? `Student: ${retakeStudentName}` : 'Retake evaluation'} — This is a second attempt. Result will be compared with first attempt.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <GradingHeader
         station={station}
@@ -847,6 +879,8 @@ export default function GradeStationPage() {
                       examinerNotes={examinerNotes}
                       checkedCriticalCriteria={checkedCriticalCriteria}
                       criticalFailNotes={criticalFailNotes}
+                      isRetake={isRetakeMode}
+                      originalEvaluationId={retakeOriginalEvalId || undefined}
                     />
                   </div>
                 ))}
@@ -873,6 +907,8 @@ export default function GradeStationPage() {
                 examinerNotes={examinerNotes}
                 checkedCriticalCriteria={checkedCriticalCriteria}
                 criticalFailNotes={criticalFailNotes}
+                isRetake={isRetakeMode}
+                originalEvaluationId={retakeOriginalEvalId || undefined}
               />
             )}
           </div>
@@ -1130,6 +1166,8 @@ export default function GradeStationPage() {
           examinerNotes={examinerNotes}
           checkedCriticalCriteria={checkedCriticalCriteria}
           criticalFailNotes={criticalFailNotes}
+          isRetake={isRetakeMode}
+          originalEvaluationId={retakeOriginalEvalId || undefined}
         />
       )}
     </div>

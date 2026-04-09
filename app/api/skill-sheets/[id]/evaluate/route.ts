@@ -70,6 +70,9 @@ export async function POST(
       critical_fail_notes,
       // Team evaluation fields
       team_members,
+      // Retake fields
+      is_retake,
+      original_evaluation_id,
     } = body;
 
     // -----------------------------------------------
@@ -174,6 +177,12 @@ export async function POST(
 
     const resolvedResult = isInProgress ? (result || 'pass') : result;
 
+    // For retakes, force attempt_number to 2 and validate original_evaluation_id
+    const isRetake = is_retake === true;
+    if (isRetake) {
+      attemptNumber = 2;
+    }
+
     // Create the evaluation record
     const { data: evaluation, error: evalError } = await supabase
       .from('student_skill_evaluations')
@@ -193,6 +202,8 @@ export async function POST(
         status: isInProgress ? 'in_progress' : 'complete',
         critical_fail: critical_fail ?? false,
         critical_fail_notes: critical_fail_notes || null,
+        is_retake: isRetake,
+        original_evaluation_id: isRetake && original_evaluation_id ? original_evaluation_id : null,
       })
       .select('*')
       .single();
