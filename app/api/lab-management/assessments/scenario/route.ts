@@ -113,6 +113,7 @@ export async function POST(request: NextRequest) {
 
       // Comments and scores
       overall_comments: body.overall_comments || null,
+      scenario_notes: body.scenario_notes || null,
       overall_score: body.overall_score ?? body.satisfactory_count ?? 0,
 
       // Flagging fields
