@@ -54,6 +54,7 @@ import {
   MyTasksWidget,
   CertExpiryWidget,
   AtRiskStudentsWidget,
+  MyCohortWidget,
   ROLE_DEFAULTS,
   WIDGET_DEFINITIONS,
   filterWidgetsByRole,
@@ -312,6 +313,9 @@ export default function HomePage() {
         break;
       case 'at_risk_students':
         content = <AtRiskStudentsWidget />;
+        break;
+      case 'my_cohort':
+        content = <MyCohortWidget />;
         break;
       default:
         return null;

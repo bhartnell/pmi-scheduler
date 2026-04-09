@@ -48,6 +48,7 @@ export default function UserManagementPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [cohorts, setCohorts] = useState<{ id: string; cohort_number: string; program_abbreviation: string }[]>([]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -72,6 +73,7 @@ export default function UserManagementPage() {
         }
         setCurrentUser(data.user);
         fetchUsers();
+        fetchCohorts();
       }
     } catch (error) {
       console.error('Error fetching user:', error);
@@ -166,6 +168,45 @@ export default function UserManagementPage() {
     } catch (error) {
       console.error('Error updating user:', error);
       showToast('Failed to update user', 'error');
+    }
+  };
+
+  const fetchCohorts = async () => {
+    try {
+      const res = await fetch('/api/academics/cohorts');
+      const data = await res.json();
+      if (data.success && data.cohorts) {
+        setCohorts(
+          data.cohorts.map((c: any) => ({
+            id: c.id,
+            cohort_number: c.cohort_number,
+            program_abbreviation: c.program?.abbreviation || c.program_abbreviation || '',
+          }))
+        );
+      }
+    } catch (error) {
+      console.error('Error fetching cohorts:', error);
+    }
+  };
+
+  const handleCohortChange = async (userId: string, cohortId: string) => {
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, primary_cohort_id: cohortId || null })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setUsers(users.map(u => u.id === userId ? { ...u, primary_cohort_id: cohortId || null } : u));
+        showToast(`Primary cohort ${cohortId ? 'updated' : 'cleared'}`, 'success');
+      } else {
+        showToast(data.error || 'Failed to update cohort', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating cohort:', error);
+      showToast('Failed to update cohort', 'error');
     }
   };
 
@@ -346,6 +387,9 @@ export default function UserManagementPage() {
                   Status
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                  Primary Cohort
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                   Last Login
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -356,7 +400,7 @@ export default function UserManagementPage() {
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {filteredUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                     No users found
                   </td>
                 </tr>
@@ -422,6 +466,30 @@ export default function UserManagementPage() {
                           <span className="flex items-center gap-1 text-gray-500 dark:text-gray-400 text-sm">
                             <Clock className="w-4 h-4" />
                             Inactive
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {canModify && !isProtected && ['instructor', 'lead_instructor', 'admin', 'superadmin'].includes(user.role) ? (
+                          <select
+                            value={user.primary_cohort_id || ''}
+                            onChange={(e) => handleCohortChange(user.id, e.target.value)}
+                            className="text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white max-w-[140px]"
+                          >
+                            <option value="">None</option>
+                            {cohorts.map(c => (
+                              <option key={c.id} value={c.id}>
+                                {c.program_abbreviation} Group {c.cohort_number}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                            {user.primary_cohort_id
+                              ? cohorts.find(c => c.id === user.primary_cohort_id)
+                                ? `${cohorts.find(c => c.id === user.primary_cohort_id)!.program_abbreviation} Group ${cohorts.find(c => c.id === user.primary_cohort_id)!.cohort_number}`
+                                : 'Set'
+                              : '\u2014'}
                           </span>
                         )}
                       </td>

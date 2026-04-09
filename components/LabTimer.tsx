@@ -305,13 +305,15 @@ export default function LabTimer({
         lastAlertRotationRef.current = 0;
         setShowRotateAlert(false);
         setShowDebriefAlert(false);
+        // Close the timer modal after ending lab
+        onClose();
       } else {
         console.error('[LabTimer] endLab failed:', data.error);
       }
     } catch (error) {
       console.error('[LabTimer] Error ending lab:', error);
     }
-  }, [labDayId]);
+  }, [labDayId, onClose]);
 
   // Send action to server
   const sendAction = useCallback(async (action: string, updates?: any) => {

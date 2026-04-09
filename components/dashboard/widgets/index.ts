@@ -12,6 +12,7 @@ export { default as QuickStatsWidget } from './QuickStatsWidget';
 export { default as MyTasksWidget } from './MyTasksWidget';
 export { default as CertExpiryWidget } from './CertExpiryWidget';
 export { default as AtRiskStudentsWidget } from './AtRiskStudentsWidget';
+export { default as MyCohortWidget } from './MyCohortWidget';
 
 // Widget configuration for the customize modal
 export const WIDGET_DEFINITIONS = {
@@ -100,6 +101,13 @@ export const WIDGET_DEFINITIONS = {
     description: 'Students with 2+ absences or 3+ consecutive missed labs',
     defaultFor: ['admin', 'superadmin', 'lead_instructor'],
   },
+  my_cohort: {
+    id: 'my_cohort',
+    name: 'My Cohort',
+    description: 'Quick access to your primary cohort students',
+    defaultFor: ['instructor', 'lead_instructor'],
+    conditional: true, // Only shows if user has a primary_cohort_id set
+  },
 } as const;
 
 export type WidgetId = keyof typeof WIDGET_DEFINITIONS;
@@ -114,7 +122,7 @@ export const WIDGET_WHITELIST: Record<string, string[]> = {
   admin: Object.keys(WIDGET_DEFINITIONS),
   lead_instructor: Object.keys(WIDGET_DEFINITIONS),
   agency_liaison: ['notifications', 'quick_links'],
-  instructor: ['my_labs', 'my_tasks', 'notifications', 'overdue_tasks', 'quick_links', 'open_stations', 'cert_expiry', 'onboarding', 'quick_stats'],
+  instructor: ['my_labs', 'my_tasks', 'notifications', 'overdue_tasks', 'quick_links', 'open_stations', 'cert_expiry', 'onboarding', 'quick_stats', 'my_cohort'],
   volunteer_instructor: ['my_labs', 'notifications'],
   program_director: ['notifications'],
   agency_observer: ['notifications', 'quick_links'],
@@ -173,7 +181,7 @@ export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: stri
     quickLinks: ['lvfr_dashboard', 'lvfr_calendar', 'lvfr_scheduling', 'lvfr_pharm'],
   },
   instructor: {
-    widgets: ['my_tasks', 'my_labs', 'notifications', 'overdue_tasks', 'open_stations', 'cert_expiry', 'quick_links'],
+    widgets: ['my_cohort', 'my_tasks', 'my_labs', 'notifications', 'overdue_tasks', 'open_stations', 'cert_expiry', 'quick_links'],
     quickLinks: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding'],
   },
   volunteer_instructor: {

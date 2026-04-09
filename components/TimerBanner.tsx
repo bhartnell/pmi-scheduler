@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Clock, Wifi, WifiOff, Volume2, VolumeX, AlertTriangle, CheckCircle, Circle } from 'lucide-react';
+import { Clock, Wifi, WifiOff, Volume2, VolumeX, AlertTriangle, CheckCircle, Circle, X } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
 import { formatTime } from '@/lib/utils';
@@ -46,6 +46,9 @@ export default function TimerBanner({
   const [isReady, setIsReady] = useState(false);
   const [settingReady, setSettingReady] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [isDismissed, setIsDismissed] = useState(false);
+  // Track whether we ever saw an active timer — if it disappears, lab ended
+  const hadTimerRef = useRef(false);
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const versionRef = useRef<number>(0);
@@ -106,9 +109,15 @@ export default function TimerBanner({
           versionRef.current = data.version;
         }
         if (data.timer) {
+          hadTimerRef.current = true;
           setTimerState(data.timer);
+          // Un-dismiss when a new timer appears
+          setIsDismissed(false);
         } else {
-          // No timer record yet - that's OK, waiting for coordinator to start
+          // Timer record gone — if we previously had one, lab was ended
+          if (hadTimerRef.current) {
+            setIsDismissed(true);
+          }
           setTimerState(null);
         }
       } else {
@@ -347,6 +356,11 @@ export default function TimerBanner({
   const isStopped = !timerState || timerState.status === 'stopped';
   const hasNotStarted = isStopped && (!timerState?.started_at);
 
+  // Hide completely if dismissed (lab ended or user dismissed)
+  if (isDismissed) {
+    return null;
+  }
+
   // Show waiting state if timer hasn't started
   if (hasNotStarted || !timerState) {
     return (
@@ -396,19 +410,28 @@ export default function TimerBanner({
               </div>
             )}
 
-            {/* Connection status */}
-            <div className={`flex items-center gap-1 text-sm ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
-              {isConnected ? (
-                <>
-                  <Wifi className="w-4 h-4" />
-                  <span>Connected</span>
-                </>
-              ) : (
-                <>
-                  <WifiOff className="w-4 h-4" />
-                  <span>Disconnected</span>
-                </>
-              )}
+            {/* Connection status & dismiss */}
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center gap-1 text-sm ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
+                {isConnected ? (
+                  <>
+                    <Wifi className="w-4 h-4" />
+                    <span>Connected</span>
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="w-4 h-4" />
+                    <span>Disconnected</span>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setIsDismissed(true)}
+                className="p-1 hover:bg-white/20 rounded transition-colors text-gray-400 hover:text-white"
+                title="Dismiss timer banner"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
