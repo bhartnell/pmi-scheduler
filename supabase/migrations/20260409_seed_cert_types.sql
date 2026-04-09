@@ -4,7 +4,7 @@
 -- Add a unique constraint on cert_type so we can use ON CONFLICT DO NOTHING
 DO $$ BEGIN
   ALTER TABLE ce_requirements ADD CONSTRAINT ce_requirements_cert_type_key UNIQUE (cert_type);
-EXCEPTION WHEN duplicate_object THEN NULL;
+EXCEPTION WHEN duplicate_table OR duplicate_object THEN NULL;
 END $$;
 
 INSERT INTO ce_requirements (cert_type, display_name, issuing_body, cycle_years, total_hours_required)
