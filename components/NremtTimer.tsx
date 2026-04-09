@@ -16,14 +16,14 @@ const NREMT_TIME_LIMITS: Record<string, number> = {
 const DEFAULT_TIME_LIMIT = 15;
 
 // Dual station phases (seconds)
-const DUAL_PHASES = [
+export const DUAL_PHASES = [
   { name: 'O2 Prep', seconds: 2 * 60 },
   { name: 'O2 Evaluation', seconds: 5 * 60 },
   { name: 'BVM Prep', seconds: 2 * 60 },
   { name: 'BVM Evaluation', seconds: 5 * 60 },
 ];
 
-function isDualStation(name: string): boolean {
+export function isDualStation(name: string): boolean {
   const lower = name.toLowerCase();
   return lower.includes('bvm') || lower.includes('oxygen');
 }
@@ -78,9 +78,13 @@ type TimerStatus = 'ready' | 'running' | 'expired';
 interface NremtTimerProps {
   stationName: string;
   instructionsRead: boolean;
+  /** When true, renders as a fixed bottom bar instead of inline */
+  stickyBottom?: boolean;
+  /** Callback fired when the dual-station timer transitions to a new phase (0-based index) */
+  onPhaseChange?: (phaseIndex: number, phaseName: string) => void;
 }
 
-export default function NremtTimer({ stationName, instructionsRead }: NremtTimerProps) {
+export default function NremtTimer({ stationName, instructionsRead, stickyBottom = false, onPhaseChange }: NremtTimerProps) {
   const dual = isDualStation(stationName);
 
   // Standard timer state
@@ -165,10 +169,16 @@ export default function NremtTimer({ stationName, instructionsRead }: NremtTimer
     playBeep(880, 200, 2);
   }, [clearTimer]);
 
+  // Ref to keep latest onPhaseChange callback accessible inside intervals
+  const onPhaseChangeRef = useRef(onPhaseChange);
+  useEffect(() => { onPhaseChangeRef.current = onPhaseChange; }, [onPhaseChange]);
+
   const startDual = useCallback(() => {
     if (dualStatus !== 'ready') return;
     setDualStatus('running');
     phaseAlertFired.current = false;
+    // Notify phase 0 started
+    onPhaseChangeRef.current?.(0, DUAL_PHASES[0].name);
 
     intervalRef.current = setInterval(() => {
       setPhaseRemaining(prev => {
@@ -191,6 +201,8 @@ export default function NremtTimer({ stationName, instructionsRead }: NremtTimer
             phaseAlertFired.current = false;
             playBeep(880, 200, 2);
             setPhaseRemaining(DUAL_PHASES[nextPhase].seconds);
+            // Notify parent of phase change
+            onPhaseChangeRef.current?.(nextPhase, DUAL_PHASES[nextPhase].name);
             return nextPhase;
           });
           return 0;
@@ -222,6 +234,8 @@ export default function NremtTimer({ stationName, instructionsRead }: NremtTimer
     setPhaseRemaining(DUAL_PHASES[nextIdx].seconds);
     phaseAlertFired.current = false;
     playBeep(880, 200, 1);
+    // Notify parent of manual phase advance
+    onPhaseChangeRef.current?.(nextIdx, DUAL_PHASES[nextIdx].name);
 
     // Restart interval
     intervalRef.current = setInterval(() => {
@@ -243,6 +257,8 @@ export default function NremtTimer({ stationName, instructionsRead }: NremtTimer
             phaseAlertFired.current = false;
             playBeep(880, 200, 2);
             setPhaseRemaining(DUAL_PHASES[np].seconds);
+            // Notify parent of phase change
+            onPhaseChangeRef.current?.(np, DUAL_PHASES[np].name);
             return np;
           });
           return 0;
@@ -274,6 +290,74 @@ export default function NremtTimer({ stationName, instructionsRead }: NremtTimer
     const currentPhase = DUAL_PHASES[phaseIndex];
     const phaseTotalSeconds = currentPhase?.seconds ?? 0;
     const progress = phaseTotalSeconds > 0 ? ((phaseTotalSeconds - phaseRemaining) / phaseTotalSeconds) * 100 : 100;
+
+    if (stickyBottom) {
+      const bgColor = isExpired ? 'bg-red-900' : isRunning ? (phaseRemaining <= 30 ? 'bg-red-800' : phaseRemaining <= 120 ? 'bg-yellow-700' : 'bg-gray-900') : 'bg-gray-900';
+      return (
+        <div className={`fixed bottom-0 left-0 right-0 z-50 ${bgColor} text-white shadow-lg ${isExpired ? 'animate-pulse' : ''}`}>
+          {isRunning && (
+            <div className="h-1 bg-black/20">
+              <div
+                className={`h-full transition-all duration-1000 ${isExpired ? 'bg-red-500' : getBarColor(phaseRemaining, phaseTotalSeconds, true)}`}
+                style={{ width: `${isExpired ? 100 : progress}%` }}
+              />
+            </div>
+          )}
+          <div className="max-w-5xl mx-auto px-4 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <Clock className="w-5 h-5 shrink-0 opacity-70" />
+                <div className="truncate">
+                  <span className="font-semibold text-sm truncate">{stationName}</span>
+                  {isRunning && (
+                    <span className="ml-2 text-xs opacity-70">
+                      {currentPhase?.name} ({phaseIndex + 1}/{DUAL_PHASES.length})
+                    </span>
+                  )}
+                </div>
+              </div>
+              <span className={`text-3xl font-mono font-bold tabular-nums shrink-0 ${isExpired ? 'text-red-300' : ''}`}>
+                {isExpired ? 'TIME EXPIRED' : formatMmSs(phaseRemaining)}
+              </span>
+              <div className="flex items-center gap-2 shrink-0">
+                {dualStatus === 'ready' && (
+                  <button
+                    onClick={startDual}
+                    disabled={!instructionsRead}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                      instructionsRead
+                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    <Play className="w-4 h-4" />
+                    Start Timer
+                  </button>
+                )}
+                {isRunning && (
+                  <button
+                    onClick={manualAdvance}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+                  >
+                    <SkipForward className="w-4 h-4" />
+                    Next
+                  </button>
+                )}
+                {(isRunning || isExpired) && (
+                  <button
+                    onClick={resetDual}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm bg-white/10 hover:bg-white/20 text-white transition-colors"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                    Reset
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div className={`rounded-lg shadow overflow-hidden ${isExpired ? 'animate-pulse ring-2 ring-red-500' : ''} bg-white dark:bg-gray-800`}>
@@ -375,6 +459,62 @@ export default function NremtTimer({ stationName, instructionsRead }: NremtTimer
   const isRunning = status === 'running';
   const isExpired = status === 'expired';
   const progress = totalSeconds > 0 ? ((totalSeconds - remaining) / totalSeconds) * 100 : 100;
+
+  if (stickyBottom) {
+    const bgColor = isExpired ? 'bg-red-900' : isRunning ? (remaining <= 30 ? 'bg-red-800' : remaining <= 120 ? 'bg-yellow-700' : 'bg-gray-900') : 'bg-gray-900';
+    return (
+      <div className={`fixed bottom-0 left-0 right-0 z-50 ${bgColor} text-white shadow-lg ${isExpired ? 'animate-pulse' : ''}`}>
+        {isRunning && (
+          <div className="h-1 bg-black/20">
+            <div
+              className={`h-full transition-all duration-1000 ${isExpired ? 'bg-red-500' : getBarColor(remaining, totalSeconds, true)}`}
+              style={{ width: `${isExpired ? 100 : progress}%` }}
+            />
+          </div>
+        )}
+        <div className="max-w-5xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <Clock className="w-5 h-5 shrink-0 opacity-70" />
+              <span className="font-semibold text-sm truncate">{stationName}</span>
+              <span className="text-xs opacity-50">({getTimeLimit(stationName)} min)</span>
+            </div>
+            <span className={`text-3xl font-mono font-bold tabular-nums shrink-0 ${isExpired ? 'text-red-300' : ''}`}>
+              {isExpired ? 'TIME EXPIRED' : formatMmSs(remaining)}
+            </span>
+            <div className="flex items-center gap-2 shrink-0">
+              {status === 'ready' && (
+                <button
+                  onClick={startStandard}
+                  disabled={!instructionsRead}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-colors ${
+                    instructionsRead
+                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                      : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  <Play className="w-4 h-4" />
+                  Start Timer
+                </button>
+              )}
+              {(isRunning || isExpired) && (
+                <button
+                  onClick={resetStandard}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg font-medium text-sm bg-white/10 hover:bg-white/20 text-white transition-colors"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  Reset
+                </button>
+              )}
+              {isExpired && (
+                <span className="text-sm font-bold text-red-300 ml-1">EXPIRED</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`rounded-lg shadow overflow-hidden ${isExpired ? 'animate-pulse ring-2 ring-red-500' : ''} bg-white dark:bg-gray-800`}>

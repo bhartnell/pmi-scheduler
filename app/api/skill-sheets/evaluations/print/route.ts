@@ -169,7 +169,14 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
     <div class="eval-page" ${includePageBreak ? 'style="page-break-before: always;"' : ''}>
       <!-- Header -->
       <div style="border-bottom: 3px solid #2563eb; padding-bottom: 12px; margin-bottom: 16px;">
-        <h1 style="margin: 0 0 4px 0; font-size: 18px; color: #111827;">PMI Paramedic Program — Skill Evaluation</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <h1 style="margin: 0 0 4px 0; font-size: 18px; color: #111827;">PMI Paramedic Program — Skill Evaluation</h1>
+          ${skillSheet?.source === 'nremt' ? `
+            <span style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 9999px; font-size: 12px; font-weight: 600;">
+              &#10003; NREMT Official${skillSheet?.nremt_code ? ` — Code: ${escapeHtml(skillSheet.nremt_code)}` : ''}
+            </span>
+          ` : ''}
+        </div>
         <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6b7280;">
           <span>Pima Medical Institute</span>
           <span>${evalDate}</span>
@@ -272,7 +279,7 @@ export async function GET(request: NextRequest) {
       .select(`
         id, evaluation_type, result, notes, flagged_items, step_marks, created_at,
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name),
-        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, phase, instruction, is_critical, possible_points, sub_items, section_header)),
+        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, nremt_code, steps:skill_sheet_steps(step_number, phase, instruction, is_critical, possible_points, sub_items, section_header)),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name),
         lab_day:lab_days!student_skill_evaluations_lab_day_id_fkey(id, date, title)
       `)

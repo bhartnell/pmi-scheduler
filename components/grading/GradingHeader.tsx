@@ -21,6 +21,8 @@ interface GradingHeaderProps {
   selectedGroupId: string;
   teamLeaderId: string;
   onSave: () => void;
+  isNremtSheet?: boolean;
+  nremtCode?: string | null;
 }
 
 export default function GradingHeader({
@@ -33,6 +35,8 @@ export default function GradingHeader({
   selectedGroupId,
   teamLeaderId,
   onSave,
+  isNremtSheet,
+  nremtCode,
 }: GradingHeaderProps) {
   const labDay = station.lab_day;
 
@@ -52,12 +56,24 @@ export default function GradingHeader({
         </div>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-gray-900 dark:text-white">
-              Station {station.station_number} - Grade Rotation
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-lg font-bold text-gray-900 dark:text-white">
+                Station {station.station_number} - Grade Rotation
+              </h1>
+              {isNremtSheet && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 rounded-full text-sm font-semibold border border-amber-200 dark:border-amber-700">
+                  &#10003; NREMT Official
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {labDay.cohort.program.abbreviation} Group {formatCohortNumber(labDay.cohort.cohort_number)}
             </p>
+            {nremtCode && (
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                NREMT Code: {nremtCode}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-3">
             {/* Auto-save status indicator */}

@@ -30,6 +30,7 @@ import {
   Users,
   Star,
   User,
+  Megaphone,
 } from 'lucide-react';
 import { findMinimumPoints } from '@/lib/nremt-instructions';
 
@@ -50,6 +51,7 @@ interface Step {
   possible_points: number | null;
   sub_items: SubItem[] | null;
   section_header: string | null;
+  proctor_prompt: string | null;
 }
 
 interface CanonicalSkill {
@@ -976,6 +978,12 @@ export default function SkillSheetPanel({
       // Block: critical fail + pass
       if (criticalFail && result === 'pass') {
         setShowCriticalFailBlock(true);
+        return;
+      }
+
+      // FIX 3: Require examiner comments when result is fail on NREMT days
+      if (result === 'fail' && !examinerNotes?.trim()) {
+        showToast('Examiner comments are required for a Fail result on NREMT testing days', 'error');
         return;
       }
 
@@ -2737,44 +2745,84 @@ function PanelStepRow({
     </span>
   ) : null;
 
+  // Proctor prompt banner — shown after the step when it has been marked/completed
+  const isStepCompleted = mode === 'formative'
+    ? (hasSubItems ? checkedCount === possiblePts : sequenceNumber != null)
+    : mark === 'pass' || mark === 'fail' || (hasSubItems && checkedCount > 0);
+  const proctorPromptBanner = step.proctor_prompt && isStepCompleted ? (
+    <div className="mx-1 mt-2 mb-1 rounded-lg border-2 border-amber-400 dark:border-amber-500 bg-amber-50 dark:bg-amber-900/30 px-3 py-2.5 shadow-sm">
+      <div className="flex items-start gap-2">
+        <Megaphone className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1">
+            Proctor Prompt — Read to Candidate
+          </p>
+          <p className="text-xs text-amber-900 dark:text-amber-200 italic leading-relaxed">
+            &ldquo;{step.proctor_prompt}&rdquo;
+          </p>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+  // Teaching mode proctor prompt (always visible since teaching is read-only reference)
+  const teachingProctorPrompt = step.proctor_prompt ? (
+    <div className="mx-1 mt-1 mb-1 rounded-lg border-2 border-amber-400 dark:border-amber-500 bg-amber-50 dark:bg-amber-900/30 px-3 py-2.5 shadow-sm">
+      <div className="flex items-start gap-2">
+        <Megaphone className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+        <div>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1">
+            Proctor Prompt — Read to Candidate
+          </p>
+          <p className="text-xs text-amber-900 dark:text-amber-200 italic leading-relaxed">
+            &ldquo;{step.proctor_prompt}&rdquo;
+          </p>
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   // Teaching mode - read-only
   if (mode === 'teaching') {
     return (
-      <div className={`px-3 py-2 ${isCritical ? 'border-l-4 border-red-500' : ''}`}>
-        <div className="flex items-start gap-2">
-          <span className="text-xs font-mono text-gray-400 mt-0.5 w-5 text-right flex-shrink-0">
-            {step.step_number}.
-          </span>
-          <div className="flex-1">
-            <div className="flex items-start gap-1.5">
-              <p className="text-xs text-gray-900 dark:text-white">{step.instruction}</p>
-              {isCritical && (
-                <span className="flex-shrink-0 px-1 py-0.5 rounded text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30">
-                  CRITICAL
-                </span>
-              )}
-              {detailNotesIcon}
-              {isMultiPoint && (
-                <span className="text-[10px] text-gray-400 flex-shrink-0 whitespace-nowrap">({possiblePts} pts)</span>
-              )}
-            </div>
-            {step.detail_notes && (
-              <>
-                <button
-                  onClick={() => setNoteExpanded(!noteExpanded)}
-                  className="mt-0.5 text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  {noteExpanded ? 'Hide notes' : 'Show notes'}
-                </button>
-                {noteExpanded && (
-                  <p className="mt-0.5 text-[10px] italic text-gray-500 dark:text-gray-400">{step.detail_notes}</p>
+      <>
+        <div className={`px-3 py-2 ${isCritical ? 'border-l-4 border-red-500' : ''}`}>
+          <div className="flex items-start gap-2">
+            <span className="text-xs font-mono text-gray-400 mt-0.5 w-5 text-right flex-shrink-0">
+              {step.step_number}.
+            </span>
+            <div className="flex-1">
+              <div className="flex items-start gap-1.5">
+                <p className="text-xs text-gray-900 dark:text-white">{step.instruction}</p>
+                {isCritical && (
+                  <span className="flex-shrink-0 px-1 py-0.5 rounded text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30">
+                    CRITICAL
+                  </span>
                 )}
-              </>
-            )}
-            {subItemsTeaching}
+                {detailNotesIcon}
+                {isMultiPoint && (
+                  <span className="text-[10px] text-gray-400 flex-shrink-0 whitespace-nowrap">({possiblePts} pts)</span>
+                )}
+              </div>
+              {step.detail_notes && (
+                <>
+                  <button
+                    onClick={() => setNoteExpanded(!noteExpanded)}
+                    className="mt-0.5 text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
+                  >
+                    {noteExpanded ? 'Hide notes' : 'Show notes'}
+                  </button>
+                  {noteExpanded && (
+                    <p className="mt-0.5 text-[10px] italic text-gray-500 dark:text-gray-400">{step.detail_notes}</p>
+                  )}
+                </>
+              )}
+              {subItemsTeaching}
+            </div>
           </div>
         </div>
-      </div>
+        {teachingProctorPrompt}
+      </>
     );
   }
 
@@ -2787,6 +2835,7 @@ function PanelStepRow({
   if (mode === 'formative') {
     const isComplete = hasSubItems ? checkedCount === possiblePts : sequenceNumber != null;
     return (
+    <>
       <div className={`px-3 py-2 transition-colors ${isCritical ? 'bg-red-50 dark:bg-red-900/20' : ''} ${isComplete ? 'bg-green-50 dark:bg-green-900/10' : ''}`}>
         <div className="flex items-start gap-2">
           <span className="text-xs font-mono text-gray-400 mt-0.5 w-5 text-right flex-shrink-0">
@@ -2849,64 +2898,69 @@ function PanelStepRow({
           </div>
         </div>
       </div>
+      {proctorPromptBanner}
+    </>
     );
   }
 
   // Final mode - pass/fail icons (for simple steps) or sub-item checkboxes (for multi-point)
   return (
-    <div className={`px-3 py-2 ${isCritical ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
-      <div className="flex items-start gap-2">
-        <span className="text-xs font-mono text-gray-400 mt-0.5 w-5 text-right flex-shrink-0">
-          {step.step_number}.
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start gap-1.5">
-                <p className="text-xs text-gray-900 dark:text-white">{step.instruction}</p>
-                {isCritical && (
-                  <span className="flex-shrink-0 px-1 py-0.5 rounded text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30">
-                    CRITICAL
-                  </span>
+    <>
+      <div className={`px-3 py-2 ${isCritical ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
+        <div className="flex items-start gap-2">
+          <span className="text-xs font-mono text-gray-400 mt-0.5 w-5 text-right flex-shrink-0">
+            {step.step_number}.
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start gap-1.5">
+                  <p className="text-xs text-gray-900 dark:text-white">{step.instruction}</p>
+                  {isCritical && (
+                    <span className="flex-shrink-0 px-1 py-0.5 rounded text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30">
+                      CRITICAL
+                    </span>
+                  )}
+                  {detailNotesIcon}
+                </div>
+              </div>
+              {/* Final mode: Pass/Fail buttons for simple steps, point badge for sub-item steps */}
+              <div className="flex items-center gap-0.5 flex-shrink-0">
+                {pointsBadge}
+                {!hasSubItems && (
+                  <>
+                    <button
+                      onClick={() => onSetMark('pass')}
+                      className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                        mark === 'pass'
+                          ? 'bg-green-500 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-green-100 dark:hover:bg-green-900/30'
+                      }`}
+                      title="Pass"
+                    >
+                      <CheckCircle className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => onSetMark('fail')}
+                      className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                        mark === 'fail'
+                          ? 'bg-red-500 text-white'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/30'
+                      }`}
+                      title="Fail"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                    </button>
+                  </>
                 )}
-                {detailNotesIcon}
               </div>
             </div>
-            {/* Final mode: Pass/Fail buttons for simple steps, point badge for sub-item steps */}
-            <div className="flex items-center gap-0.5 flex-shrink-0">
-              {pointsBadge}
-              {!hasSubItems && (
-                <>
-                  <button
-                    onClick={() => onSetMark('pass')}
-                    className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
-                      mark === 'pass'
-                        ? 'bg-green-500 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-green-100 dark:hover:bg-green-900/30'
-                    }`}
-                    title="Pass"
-                  >
-                    <CheckCircle className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={() => onSetMark('fail')}
-                    className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
-                      mark === 'fail'
-                        ? 'bg-red-500 text-white'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/30'
-                    }`}
-                    title="Fail"
-                  >
-                    <XCircle className="w-3.5 h-3.5" />
-                  </button>
-                </>
-              )}
-            </div>
+            {subItemsBlock}
           </div>
-          {subItemsBlock}
         </div>
       </div>
-    </div>
+      {proctorPromptBanner}
+    </>
   );
 }
 

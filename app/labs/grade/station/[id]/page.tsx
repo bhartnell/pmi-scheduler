@@ -8,12 +8,13 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
-  Save
+  Save,
+  Lock,
 } from 'lucide-react';
 import TimerBanner from '@/components/TimerBanner';
 import SkillSheetPanel from '@/components/SkillSheetPanel';
 import NremtCandidateInstructions from '@/components/NremtCandidateInstructions';
-import NremtTimer from '@/components/NremtTimer';
+import NremtTimer, { isDualStation } from '@/components/NremtTimer';
 import NremtStickyNotesPanel from '@/components/NremtStickyNotesPanel';
 
 // Sub-components
@@ -92,9 +93,19 @@ export default function GradeStationPage() {
   const [criticalFail, setCriticalFail] = useState(false);
   const [criticalFailNotes, setCriticalFailNotes] = useState('');
   const [assistanceRequested, setAssistanceRequested] = useState(false);
+  const [assistanceAlertId, setAssistanceAlertId] = useState<string | null>(null);
   // FIX 3: Per-criterion critical failure tracking
   const [checkedCriticalCriteria, setCheckedCriticalCriteria] = useState<string[]>([]);
   const [skillSheetCriticalCriteria, setSkillSheetCriticalCriteria] = useState<string[]>([]);
+
+  // NREMT skill sheet badge info
+  const [nremtSheetSource, setNremtSheetSource] = useState<string | null>(null);
+  const [nremtSheetCode, setNremtSheetCode] = useState<string | null>(null);
+
+  // Dual-skill station state (O2/NRB + BVM tabbed interface)
+  const [dualSkillActiveTab, setDualSkillActiveTab] = useState<number>(0);
+  const [dualSkillTab2Unlocked, setDualSkillTab2Unlocked] = useState(false);
+  const [dualSkillToast, setDualSkillToast] = useState<string | null>(null);
 
   // Handle need assistance - send alert to coordinator
   const handleNeedAssistance = useCallback(async () => {
@@ -110,14 +121,33 @@ export default function GradeStationPage() {
         }),
       });
       if (res.ok) {
+        const resData = await res.json();
         setAssistanceRequested(true);
-        // Reset after 60 seconds so they can request again
-        setTimeout(() => setAssistanceRequested(false), 60000);
+        if (resData.alert?.id) setAssistanceAlertId(resData.alert.id);
       }
     } catch (err) {
       console.error('Failed to send assistance alert:', err);
     }
   }, [station, stationId, examinerNotes]);
+
+  // FIX 6: Clear an active assistance alert
+  const handleClearAssistance = useCallback(async () => {
+    if (!station?.lab_day?.id || !assistanceAlertId) {
+      setAssistanceRequested(false);
+      return;
+    }
+    try {
+      await fetch(`/api/lab-management/lab-days/${station.lab_day.id}/assistance-alerts`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alert_id: assistanceAlertId, resolve: true }),
+      });
+    } catch (err) {
+      console.error('Failed to clear assistance alert:', err);
+    }
+    setAssistanceRequested(false);
+    setAssistanceAlertId(null);
+  }, [station, assistanceAlertId]);
 
   // Evaluation tracking for auto-advance
   const [evaluatedStudents, setEvaluatedStudents] = useState<Record<string, string>>({});
@@ -145,6 +175,12 @@ export default function GradeStationPage() {
     evaluationId: evaluatedStudents[s.id] || inProgressStudents[s.id] || undefined,
     inProgress: !!inProgressStudents[s.id] && !evaluatedStudents[s.id],
   }));
+
+  // Dual-skill station detection: when station has 2+ skill sheets available
+  const skillSheetEntries = Object.entries(skillSheetIds);
+  const isDualSkillStation = isSkillsStation && skillSheetEntries.length >= 2 &&
+    isDualStation(station?.custom_title || station?.skill_name || '');
+  const dualSkillSheets = isDualSkillStation ? skillSheetEntries.slice(0, 2) : [];
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -244,21 +280,42 @@ export default function GradeStationPage() {
   }, [isSkillsStation, station, skillSheetIds]);
 
   // FIX 3: Fetch critical criteria from the skill sheet for the NREMT examiner panel
+  // Also fetches NREMT badge info (source, nremt_code) for any skill sheet
   useEffect(() => {
-    if (!panelSheetId || !station?.lab_day?.is_nremt_testing) return;
+    if (!panelSheetId) return;
     (async () => {
       try {
         const res = await fetch(`/api/skill-sheets/${panelSheetId}`);
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.sheet) {
-            const critFailures = data.sheet.critical_failures || [];
-            setSkillSheetCriticalCriteria(critFailures);
+            // Store NREMT badge info
+            if (data.sheet.source) setNremtSheetSource(data.sheet.source);
+            if (data.sheet.nremt_code) setNremtSheetCode(data.sheet.nremt_code);
+            // Critical criteria only needed for NREMT testing mode
+            if (station?.lab_day?.is_nremt_testing) {
+              const critFailures = data.sheet.critical_failures || [];
+              setSkillSheetCriticalCriteria(critFailures);
+            }
           }
         }
       } catch { /* ignore */ }
     })();
   }, [panelSheetId, station?.lab_day?.is_nremt_testing]);
+
+  // Dual-skill timer phase change handler
+  const handleTimerPhaseChange = useCallback((phaseIdx: number, phaseName: string) => {
+    // Phases: 0=O2 Prep, 1=O2 Eval, 2=BVM Prep, 3=BVM Eval
+    // Unlock Tab 2 when BVM Prep starts (phase 2)
+    if (phaseIdx >= 2 && !dualSkillTab2Unlocked) {
+      setDualSkillTab2Unlocked(true);
+      setDualSkillToast('O2/NRB time complete — BVM Ventilation now active');
+      // Auto-switch to Tab 2
+      setDualSkillActiveTab(1);
+      // Clear toast after 5 seconds
+      setTimeout(() => setDualSkillToast(null), 5000);
+    }
+  }, [dualSkillTab2Unlocked]);
 
   const fetchStation = async () => {
     try {
@@ -663,7 +720,7 @@ export default function GradeStationPage() {
         />
       )}
 
-      {/* NREMT Candidate Instructions — FIX 4: Timer moved below, between instructions and skill checklist */}
+      {/* NREMT Candidate Instructions */}
       {station?.lab_day?.is_nremt_testing && (
         <div className="max-w-7xl mx-auto px-4 pt-2 space-y-2">
           <NremtCandidateInstructions
@@ -684,21 +741,33 @@ export default function GradeStationPage() {
         selectedGroupId={selectedGroupId}
         teamLeaderId={teamLeaderId}
         onSave={() => handleSave()}
+        isNremtSheet={nremtSheetSource === 'nremt'}
+        nremtCode={nremtSheetCode}
       />
 
-      {/* FIX 4: NREMT Timer ribbon — between instructions and the skill checklist, always visible */}
+      {/* FIX 1: NREMT Timer — sticky bottom bar */}
       {station?.lab_day?.is_nremt_testing && (
-        <div className="max-w-7xl mx-auto px-4 pt-2">
-          <NremtTimer
-            stationName={station.custom_title || station.skill_name || ''}
-            instructionsRead={nremtInstructionsRead}
-          />
+        <NremtTimer
+          stationName={station.custom_title || station.skill_name || ''}
+          instructionsRead={nremtInstructionsRead}
+          stickyBottom
+          onPhaseChange={isDualSkillStation ? handleTimerPhaseChange : undefined}
+        />
+      )}
+
+      {/* Dual-skill toast notification */}
+      {dualSkillToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] animate-bounce">
+          <div className="bg-purple-600 text-white px-6 py-3 rounded-lg shadow-lg font-medium text-sm flex items-center gap-2">
+            <CheckCircle className="w-5 h-5" />
+            {dualSkillToast}
+          </div>
         </div>
       )}
 
       {/* Embedded Skill Sheet Mode: Skills station with skill sheet available */}
       {useEmbeddedSkillSheet && panelSheetId ? (
-        <main className="flex gap-6 max-w-7xl mx-auto px-4 py-4 pb-4">
+        <main className={`flex gap-6 max-w-7xl mx-auto px-4 py-4 ${station?.lab_day?.is_nremt_testing ? 'pb-20' : 'pb-4'}`}>
           {/* Left: Student panel */}
           <div className="w-80 shrink-0 sticky top-0 max-h-screen overflow-y-auto pt-2 space-y-4">
             <StudentSelection
@@ -720,29 +789,92 @@ export default function GradeStationPage() {
             />
           </div>
 
-          {/* Center: Skill sheet */}
+          {/* Center: Skill sheet(s) — tabbed if dual-skill station */}
           <div className="flex-1 min-h-[60vh]">
-            <SkillSheetPanel
-              sheetId={panelSheetId}
-              onClose={() => {
-                setUseEmbeddedSkillSheet(false);
-                setPanelSheetId(null);
-              }}
-              studentId={selectedStudentId || undefined}
-              studentName={selectedStudentName}
-              labDayId={station?.lab_day?.id}
-              stationPoolId={stationId}
-              studentQueue={studentQueue}
-              onEvaluationSaved={handleEvaluationSaved}
-              embedded={true}
-              nremtMode={!!station?.lab_day?.is_nremt_testing}
-              defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
-              isNremtTesting={!!station?.lab_day?.is_nremt_testing}
-              criticalFail={criticalFail}
-              examinerNotes={examinerNotes}
-              checkedCriticalCriteria={checkedCriticalCriteria}
-              criticalFailNotes={criticalFailNotes}
-            />
+            {isDualSkillStation && dualSkillSheets.length === 2 ? (
+              <>
+                {/* Dual-skill tab bar */}
+                <div className="flex border-b border-gray-200 dark:border-gray-700 mb-4">
+                  {dualSkillSheets.map(([name], idx) => {
+                    const isActive = dualSkillActiveTab === idx;
+                    const isLocked = idx === 1 && !dualSkillTab2Unlocked;
+                    return (
+                      <button
+                        key={name}
+                        onClick={() => {
+                          if (!isLocked) setDualSkillActiveTab(idx);
+                        }}
+                        disabled={isLocked}
+                        className={`relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${
+                          isActive
+                            ? 'text-purple-700 dark:text-purple-300 border-b-2 border-purple-600 dark:border-purple-400'
+                            : isLocked
+                              ? 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
+                              : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 border-b-2 border-transparent'
+                        }`}
+                        title={isLocked ? 'Unlocks after Skill 1 timer completes' : `Skill ${idx + 1}: ${name}`}
+                      >
+                        {isLocked && <Lock className="w-3.5 h-3.5" />}
+                        <span>Skill {idx + 1}: {name}</span>
+                        {isActive && (
+                          <span className="absolute -bottom-px left-0 right-0 h-0.5 bg-purple-600 dark:bg-purple-400" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Render both panels but only show the active one */}
+                {dualSkillSheets.map(([name, sheetId], idx) => (
+                  <div key={sheetId} className={dualSkillActiveTab === idx ? '' : 'hidden'}>
+                    <SkillSheetPanel
+                      sheetId={sheetId}
+                      onClose={() => {
+                        setUseEmbeddedSkillSheet(false);
+                        setPanelSheetId(null);
+                      }}
+                      studentId={selectedStudentId || undefined}
+                      studentName={selectedStudentName}
+                      labDayId={station?.lab_day?.id}
+                      stationPoolId={stationId}
+                      studentQueue={studentQueue}
+                      onEvaluationSaved={handleEvaluationSaved}
+                      embedded={true}
+                      nremtMode={!!station?.lab_day?.is_nremt_testing}
+                      defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
+                      isNremtTesting={!!station?.lab_day?.is_nremt_testing}
+                      criticalFail={criticalFail}
+                      examinerNotes={examinerNotes}
+                      checkedCriticalCriteria={checkedCriticalCriteria}
+                      criticalFailNotes={criticalFailNotes}
+                    />
+                  </div>
+                ))}
+              </>
+            ) : (
+              /* Single skill sheet — original behavior */
+              <SkillSheetPanel
+                sheetId={panelSheetId}
+                onClose={() => {
+                  setUseEmbeddedSkillSheet(false);
+                  setPanelSheetId(null);
+                }}
+                studentId={selectedStudentId || undefined}
+                studentName={selectedStudentName}
+                labDayId={station?.lab_day?.id}
+                stationPoolId={stationId}
+                studentQueue={studentQueue}
+                onEvaluationSaved={handleEvaluationSaved}
+                embedded={true}
+                nremtMode={!!station?.lab_day?.is_nremt_testing}
+                defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
+                isNremtTesting={!!station?.lab_day?.is_nremt_testing}
+                criticalFail={criticalFail}
+                examinerNotes={examinerNotes}
+                checkedCriticalCriteria={checkedCriticalCriteria}
+                criticalFailNotes={criticalFailNotes}
+              />
+            )}
           </div>
 
           {/* Right: NREMT Examiner Panel (sticky notes, critical fail, assistance) */}
@@ -756,9 +888,11 @@ export default function GradeStationPage() {
               onCriticalFailNotesChange={setCriticalFailNotes}
               onNeedAssistance={handleNeedAssistance}
               assistanceRequested={assistanceRequested}
+              onClearAssistance={handleClearAssistance}
               criticalCriteria={skillSheetCriticalCriteria}
               checkedCriteria={checkedCriticalCriteria}
               onCheckedCriteriaChange={setCheckedCriticalCriteria}
+              resultIsFail={criticalFail}
             />
           )}
         </main>
@@ -968,9 +1102,11 @@ export default function GradeStationPage() {
             onCriticalFailNotesChange={setCriticalFailNotes}
             onNeedAssistance={handleNeedAssistance}
             assistanceRequested={assistanceRequested}
+            onClearAssistance={handleClearAssistance}
             criticalCriteria={skillSheetCriticalCriteria}
             checkedCriteria={checkedCriticalCriteria}
             onCheckedCriteriaChange={setCheckedCriticalCriteria}
+            resultIsFail={criticalFail}
           />
         )}
       </main>
