@@ -227,23 +227,37 @@ function groupStepsBySectionHeader(steps: Step[]): Array<{ header: string | null
   return sections;
 }
 
+/** Effective possible points for a step: use sub_items length when present
+ *  to stay consistent with earned-point counting (which counts checked sub-items). */
+function effectivePossiblePoints(step: Step): number {
+  if (step.sub_items && step.sub_items.length > 0) {
+    return step.sub_items.length;
+  }
+  return step.possible_points || 1;
+}
+
 /** Get earned points for a step based on sub-item marks or pass/fail mark */
 function getStepEarnedPoints(
   step: Step,
   mark: StepMark,
   subItemChecks?: boolean[],
 ): number {
-  const possiblePts = step.possible_points || 1;
-  if (step.sub_items && step.sub_items.length > 0 && subItemChecks) {
-    return subItemChecks.filter(Boolean).length;
+  // Sub-item steps: earned = number of checked sub-items
+  if (step.sub_items && step.sub_items.length > 0) {
+    if (subItemChecks) {
+      return subItemChecks.filter(Boolean).length;
+    }
+    // Sub-item step with no checks yet → 0 (don't fall through to mark-based logic)
+    return 0;
   }
   // Simple step: pass = full points, anything else = 0
+  const possiblePts = step.possible_points || 1;
   return mark === 'pass' ? possiblePts : 0;
 }
 
 /** Calculate total possible points across all steps */
 function getTotalPossiblePoints(steps: Step[]): number {
-  return steps.reduce((sum, s) => sum + (s.possible_points || 1), 0);
+  return steps.reduce((sum, s) => sum + effectivePossiblePoints(s), 0);
 }
 
 /** Calculate total earned points */
@@ -309,6 +323,9 @@ export default function SkillSheetPanel({
   const [evalViewMode, setEvalViewMode] = useState<'new' | 'existing'>('new');
   const [expandedEvalId, setExpandedEvalId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [sendingResultsId, setSendingResultsId] = useState<string | null>(null);
+  const [sentResultsIds, setSentResultsIds] = useState<Set<string>>(new Set());
+  const [sendErrorId, setSendErrorId] = useState<string | null>(null);
 
   // Team grading state
   const [gradeMode, setGradeMode] = useState<GradeMode>('individual');
@@ -491,15 +508,17 @@ export default function SkillSheetPanel({
         const subs = subItemMarks[step.step_number];
         if (step.sub_items && step.sub_items.length > 0 && subs) {
           const pts = subs.filter(Boolean).length;
+          const effPossible = effectivePossiblePoints(step);
           stepMarksToSave[String(step.step_number)] = {
-            completed: pts === (step.possible_points || step.sub_items.length),
+            completed: pts === effPossible,
             sub_items: subs,
             points: pts,
           };
         } else if (mark) {
+          const effPossible = effectivePossiblePoints(step);
           stepMarksToSave[String(step.step_number)] = {
             completed: mark === 'pass',
-            points: mark === 'pass' ? (step.possible_points || 1) : 0,
+            points: mark === 'pass' ? effPossible : 0,
           };
         }
       }
@@ -674,6 +693,30 @@ export default function SkillSheetPanel({
     }
   };
 
+  const handleSendResults = async (evalId: string) => {
+    if (!labDayId) return;
+    setSendingResultsId(evalId);
+    setSendErrorId(null);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/skill-results/resend`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ evaluation_ids: [evalId] }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSentResultsIds(prev => new Set(prev).add(evalId));
+        setExistingEvals(prev => prev.map(e => e.id === evalId ? { ...e, email_status: 'sent' } : e));
+      } else {
+        setSendErrorId(evalId);
+      }
+    } catch {
+      setSendErrorId(evalId);
+    } finally {
+      setSendingResultsId(null);
+    }
+  };
+
   const handleEditEval = (evalItem: ExistingEvaluation) => {
     if (evalItem.step_marks) {
       const marks: Record<number, StepMark> = {};
@@ -779,15 +822,17 @@ export default function SkillSheetPanel({
         const subs = subItemMarks[step.step_number];
         if (step.sub_items && step.sub_items.length > 0 && subs) {
           const pts = subs.filter(Boolean).length;
+          const effPossible = effectivePossiblePoints(step);
           stepMarksToSave[String(step.step_number)] = {
-            completed: pts === (step.possible_points || step.sub_items.length),
+            completed: pts === effPossible,
             sub_items: subs,
             points: pts,
           };
         } else if (mark) {
+          const effPossible = effectivePossiblePoints(step);
           stepMarksToSave[String(step.step_number)] = {
             completed: mark === 'pass',
-            points: mark === 'pass' ? (step.possible_points || 1) : 0,
+            points: mark === 'pass' ? effPossible : 0,
           };
         }
       }
@@ -1631,6 +1676,11 @@ export default function SkillSheetPanel({
                   onConfirmDelete={handleDeleteEval}
                   onCancelDelete={() => setConfirmDeleteId(null)}
                   sheet={sheet}
+                  labDayId={labDayId}
+                  onSendResults={handleSendResults}
+                  sendingResultsId={sendingResultsId}
+                  sentResultsIds={sentResultsIds}
+                  sendErrorId={sendErrorId}
                 />
               )}
 
@@ -2145,6 +2195,11 @@ export default function SkillSheetPanel({
                   onConfirmDelete={handleDeleteEval}
                   onCancelDelete={() => setConfirmDeleteId(null)}
                   sheet={sheet}
+                  labDayId={labDayId}
+                  onSendResults={handleSendResults}
+                  sendingResultsId={sendingResultsId}
+                  sentResultsIds={sentResultsIds}
+                  sendErrorId={sendErrorId}
                 />
               )}
 
@@ -2537,7 +2592,7 @@ function PanelStepRow({
   const isCritical = step.is_critical;
   const [noteExpanded, setNoteExpanded] = useState(false);
   const hasSubItems = step.sub_items && step.sub_items.length > 0;
-  const possiblePts = step.possible_points || 1;
+  const possiblePts = effectivePossiblePoints(step);
   const isMultiPoint = possiblePts > 1 || hasSubItems;
 
   // Compute checked count for sub-items
@@ -2779,6 +2834,11 @@ function ExistingEvalSummary({
   onConfirmDelete,
   onCancelDelete,
   sheet,
+  labDayId,
+  onSendResults,
+  sendingResultsId,
+  sentResultsIds,
+  sendErrorId,
 }: {
   evaluations: ExistingEvaluation[];
   expandedId: string | null;
@@ -2790,6 +2850,11 @@ function ExistingEvalSummary({
   onConfirmDelete: (id: string) => void;
   onCancelDelete: () => void;
   sheet: SkillSheet;
+  labDayId?: string;
+  onSendResults: (evalId: string) => void;
+  sendingResultsId: string | null;
+  sentResultsIds: Set<string>;
+  sendErrorId: string | null;
 }) {
   const completedEvals = evaluations.filter(e => e.status === 'complete');
   const totalSteps = sheet.steps.length;
@@ -2823,7 +2888,7 @@ function ExistingEvalSummary({
               // Old format
               if (val === 'pass') {
                 passedSteps++;
-                earnedPts += stepDef?.possible_points || 1;
+                earnedPts += stepDef ? effectivePossiblePoints(stepDef) : 1;
                 if (stepDef?.is_critical) criticalPassed++;
               }
             } else if (typeof val === 'object' && val !== null) {
@@ -2937,6 +3002,34 @@ function ExistingEvalSummary({
                       Delete
                     </span>
                   </button>
+                  {/* Send Results button — shown when email not yet sent */}
+                  {labDayId && ev.email_status && ev.email_status !== 'sent' && ev.email_status !== 'do_not_send' && !sentResultsIds.has(ev.id) && (
+                    <button
+                      onClick={() => onSendResults(ev.id)}
+                      disabled={sendingResultsId === ev.id}
+                      className="px-2 py-1 border border-emerald-300 dark:border-emerald-600 rounded text-[10px] font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 disabled:opacity-50"
+                    >
+                      <span className="flex items-center gap-1">
+                        {sendingResultsId === ev.id ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <Mail className="w-3 h-3" />
+                        )}
+                        {sendingResultsId === ev.id ? 'Sending...' : 'Send'}
+                      </span>
+                    </button>
+                  )}
+                  {sentResultsIds.has(ev.id) && (
+                    <span className="px-2 py-1 rounded text-[10px] font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20">
+                      <span className="flex items-center gap-1">
+                        <CheckCircle className="w-3 h-3" />
+                        Sent
+                      </span>
+                    </span>
+                  )}
+                  {sendErrorId === ev.id && !sentResultsIds.has(ev.id) && (
+                    <span className="text-[10px] text-red-500">Send failed</span>
+                  )}
                 </div>
               )}
             </div>

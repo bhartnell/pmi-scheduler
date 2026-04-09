@@ -25,7 +25,8 @@ function renderEvaluationPage(evaluation: any, includePageBreak: boolean = false
   const steps = (skillSheet?.steps || []).sort((a: any, b: any) => a.step_number - b.step_number);
   const totalSteps = steps.length;
   const isMultiPoint = steps.some((s: any) => (s.possible_points && s.possible_points > 1) || (s.sub_items && s.sub_items.length > 0));
-  const totalPossiblePoints = steps.reduce((sum: number, s: any) => sum + (s.possible_points || 1), 0);
+  const effPts = (s: any) => (s.sub_items && s.sub_items.length > 0) ? s.sub_items.length : (s.possible_points || 1);
+  const totalPossiblePoints = steps.reduce((sum: number, s: any) => sum + effPts(s), 0);
 
   let passedSteps = 0;
   let earnedPoints = 0;
@@ -36,7 +37,7 @@ function renderEvaluationPage(evaluation: any, includePageBreak: boolean = false
   for (const [key, val] of Object.entries(rawMarks)) {
     if (typeof val === 'string') {
       const step = steps.find((s: any) => String(s.step_number) === key);
-      const pts = val === 'pass' ? (step?.possible_points || 1) : 0;
+      const pts = val === 'pass' ? (step ? effPts(step) : 1) : 0;
       stepMarkLookup[key] = { mark: val, points: pts };
       if (val === 'pass') { passedSteps++; earnedPoints += pts; }
       if (step?.is_critical && val === 'pass') criticalPassed++;
@@ -91,7 +92,7 @@ function renderEvaluationPage(evaluation: any, includePageBreak: boolean = false
       const flagged = flaggedItems.find((f) => f.step_number === step.step_number);
       const statusSymbol = mark === 'pass' ? '&#10003;' : mark === 'fail' ? '&#10007;' : flagged?.status === 'fail' ? '&#10007;' : flagged?.status === 'caution' ? '&#9888;' : '&mdash;';
       const statusColor = mark === 'pass' ? '#10b981' : mark === 'fail' ? '#ef4444' : flagged?.status === 'caution' ? '#f59e0b' : '#9ca3af';
-      const possiblePts = step.possible_points || 1;
+      const possiblePts = effPts(step);
       const earnedPts = markData?.points || 0;
       stepRows += `<tr style="border-bottom: 1px solid #f3f4f6;"><td style="padding: 5px 10px; font-size: 11px; color: #6b7280; text-align: center; width: 30px;">${stepNum}</td><td style="padding: 5px 10px; font-size: 11px; color: #111827;">${escapeHtml(step.instruction)}${step.is_critical ? ' <span style="color: #ef4444; font-weight: 700; font-size: 9px;">[CRIT]</span>' : ''}</td>${isMultiPoint ? `<td style="padding: 5px 10px; font-size: 10px; text-align: center; width: 40px; color: #6b7280;">${earnedPts}/${possiblePts}</td>` : ''}<td style="padding: 5px 10px; font-size: 14px; text-align: center; width: 40px; color: ${statusColor}; font-weight: 700;">${statusSymbol}</td></tr>`;
       if (step.sub_items && Array.isArray(step.sub_items) && markData?.subItems) {

@@ -86,7 +86,8 @@ export async function POST(request: NextRequest) {
     const rawMarks = (evaluation.step_marks || {}) as Record<string, unknown>;
     const stepsArr = skillSheet?.steps || [];
     const isMultiPoint = stepsArr.some((s: any) => (s.possible_points && s.possible_points > 1) || (s.sub_items && s.sub_items.length > 0));
-    const totalPossiblePoints = stepsArr.reduce((sum: number, s: any) => sum + (s.possible_points || 1), 0);
+    const effPts = (s: any) => (s.sub_items && s.sub_items.length > 0) ? s.sub_items.length : (s.possible_points || 1);
+    const totalPossiblePoints = stepsArr.reduce((sum: number, s: any) => sum + effPts(s), 0);
 
     let passedSteps = 0;
     let earnedPoints = 0;
@@ -96,7 +97,7 @@ export async function POST(request: NextRequest) {
     for (const [key, val] of Object.entries(rawMarks)) {
       if (typeof val === 'string') {
         const step = stepsArr.find((s: any) => String(s.step_number) === key);
-        if (val === 'pass') { passedSteps++; earnedPoints += step?.possible_points || 1; }
+        if (val === 'pass') { passedSteps++; earnedPoints += step ? effPts(step) : 1; }
         if (step?.is_critical && val === 'pass') criticalPassed++;
       } else if (typeof val === 'object' && val !== null) {
         const obj = val as { completed?: boolean; points?: number };

@@ -20,7 +20,7 @@ export async function GET(
       .select(`
         id, evaluation_type, result, email_status, attempt_number, team_role, notes, created_at,
         step_marks, critical_fail, critical_fail_notes, flagged_items,
-        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, steps:skill_sheet_steps(step_number, possible_points, is_critical)),
+        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, steps:skill_sheet_steps(step_number, possible_points, is_critical, sub_items)),
         lab_day:lab_days!student_skill_evaluations_lab_day_id_fkey(id, title, date),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name)
       `)
@@ -54,19 +54,20 @@ export async function GET(
       const skillName = skillSheet?.skill_name || 'Unknown';
 
       // Calculate points
+      const effPts = (s: any) => (s.sub_items && s.sub_items.length > 0) ? s.sub_items.length : (s.possible_points || 1);
       let earnedPoints = 0;
       const marks = (ev.step_marks || {}) as Record<string, unknown>;
       for (const [key, val] of Object.entries(marks)) {
         if (typeof val === 'string') {
           if (val === 'pass') {
             const step = steps.find((s: any) => String(s.step_number) === key);
-            earnedPoints += step?.possible_points || 1;
+            earnedPoints += step ? effPts(step) : 1;
           }
         } else if (typeof val === 'object' && val !== null) {
           earnedPoints += (val as any).points || 0;
         }
       }
-      const totalPossible = steps.reduce((sum: number, s: any) => sum + (s.possible_points || 1), 0);
+      const totalPossible = steps.reduce((sum: number, s: any) => sum + effPts(s), 0);
       const minimumPoints = findMinimumPoints(skillName);
       const criticalFail = ev.critical_fail === true;
 
