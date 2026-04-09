@@ -60,7 +60,8 @@ export default function GradeStationPage() {
   const [criticalActions, setCriticalActions] = useState<Record<string, boolean>>({});
   const [criteriaRatings, setCriteriaRatings] = useState<CriteriaRating[]>([]);
   const [overallComments, setOverallComments] = useState('');
-  const [showScenarioDetails, setShowScenarioDetails] = useState(false);
+  const [scenarioNotes, setScenarioNotes] = useState('');
+  const [showScenarioDetails, setShowScenarioDetails] = useState(true);
 
   // Determine which criteria to use based on station type
   const isSkillsStation = station?.station_type === 'skills';
@@ -437,6 +438,7 @@ export default function GradeStationPage() {
         graded_by: session?.user?.email,
         criteria_ratings: criteriaRatings,
         overall_comments: overallComments,
+        scenario_notes: scenarioNotes || null,
         overall_score: satisfactoryCount,
         issue_level: issueLevel,
         flag_categories: flagCategories.length > 0 ? flagCategories : null,
@@ -515,6 +517,7 @@ export default function GradeStationPage() {
         graded_by: session?.user?.email,
         criteria_ratings: criteriaRatings,
         overall_comments: overallComments,
+        scenario_notes: scenarioNotes || null,
         overall_score: satisfactoryCount,
         issue_level: issueLevel,
         flag_categories: flagCategories.length > 0 ? flagCategories : null,
@@ -736,6 +739,12 @@ export default function GradeStationPage() {
           onToggleScenarioDetails={() => setShowScenarioDetails(!showScenarioDetails)}
           skillSheetIds={skillSheetIds}
           onOpenSkillSheet={(sheetId) => setPanelSheetId(sheetId)}
+          scenarioNotes={scenarioNotes}
+          onScenarioNotesChange={(notes) => {
+            setScenarioNotes(notes);
+            triggerAutoSave();
+          }}
+          isNremtTesting={!!station?.lab_day?.is_nremt_testing}
         />
 
         {/* Student/Group Selection */}
