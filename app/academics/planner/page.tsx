@@ -2325,22 +2325,39 @@ function SemesterPlannerPage() {
         setRooms(safeArray(roomData.rooms));
         setInstructors(safeArray(instData.instructors));
 
-        const active = semList.find(s => s.is_active);
-        if (active) {
-          setSelectedSemesterId(active.id);
-          // Navigate to today if within semester, otherwise semester start
-          if (active.start_date) {
-            const today = new Date();
-            const semStart = new Date(active.start_date + 'T00:00:00');
-            const semEnd = active.end_date ? new Date(active.end_date + 'T00:00:00') : null;
+        // Pick the best semester (semList is sorted by start_date DESC from the API):
+        // 1. Latest active semester (most relevant for planning)
+        // 2. Semester whose date range includes today
+        // 3. Next upcoming semester
+        // 4. First in list
+        const today = new Date();
+        const todayStr = today.toISOString().slice(0, 10);
+
+        const latestActive = semList.find(s => s.is_active);
+
+        const current = semList.find(s => {
+          if (!s.start_date) return false;
+          return s.start_date <= todayStr && (!s.end_date || s.end_date >= todayStr);
+        });
+
+        const upcoming = semList
+          .filter(s => s.start_date && s.start_date > todayStr)
+          .sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''))
+          [0];
+
+        const best = latestActive || current || upcoming || semList[0];
+
+        if (best) {
+          setSelectedSemesterId(best.id);
+          if (best.start_date) {
+            const semStart = new Date(best.start_date + 'T00:00:00');
+            const semEnd = best.end_date ? new Date(best.end_date + 'T00:00:00') : null;
             if (today >= semStart && (!semEnd || today <= semEnd)) {
               setCurrentWeekStart(getMonday(today));
             } else {
               setCurrentWeekStart(getMonday(semStart));
             }
           }
-        } else if (semList.length > 0) {
-          setSelectedSemesterId(semList[0].id);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load data');

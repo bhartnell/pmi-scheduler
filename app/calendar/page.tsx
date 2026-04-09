@@ -200,6 +200,22 @@ function layoutEvents(events: CalendarEvent[]): (CalendarEvent & LayoutInfo)[] {
 
 // ── Export Dropdown ────────────────────────────────────────────────────
 
+interface CohortOption {
+  id: string;
+  cohort_number: number;
+  program?: { abbreviation?: string; name?: string };
+  start_date?: string;
+  end_date?: string;
+}
+
+interface SemesterOption {
+  id: string;
+  name: string;
+  start_date: string;
+  end_date: string;
+  is_active: boolean;
+}
+
 interface ExportDropdownProps {
   dateRange: { start: string; end: string };
   activePrograms: Set<string>;
@@ -209,16 +225,59 @@ interface ExportDropdownProps {
 }
 
 function ExportDropdown({ dateRange, activePrograms, activeEventTypes, selectedInstructor, onClose }: ExportDropdownProps) {
-  const [exportMode, setExportMode] = useState<'current' | 'custom'>('current');
+  const [exportMode, setExportMode] = useState<'current' | 'cohort' | 'all-cohorts' | 'semester' | 'custom'>('current');
   const [exportStartDate, setExportStartDate] = useState(dateRange.start);
   const [exportEndDate, setExportEndDate] = useState(dateRange.end);
   const [exportPrograms, setExportPrograms] = useState<Set<string>>(new Set(activePrograms));
+
+  // Cohort and semester data for quick-export options
+  const [cohorts, setCohorts] = useState<CohortOption[]>([]);
+  const [semesters, setSemesters] = useState<SemesterOption[]>([]);
+  const [selectedCohortId, setSelectedCohortId] = useState<string>('');
+  const [selectedSemesterId, setSelectedSemesterId] = useState<string>('');
+  const [loadingOptions, setLoadingOptions] = useState(true);
 
   useEffect(() => {
     setExportStartDate(dateRange.start);
     setExportEndDate(dateRange.end);
     setExportPrograms(new Set(activePrograms));
   }, [dateRange, activePrograms]);
+
+  // Fetch cohorts and semesters when dropdown opens
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchOptions() {
+      setLoadingOptions(true);
+      try {
+        const [cohortRes, semesterRes] = await Promise.all([
+          fetch('/api/lab-management/cohorts?activeOnly=true'),
+          fetch('/api/scheduling/planner/semesters?active_only=false'),
+        ]);
+        const cohortData = await cohortRes.json();
+        const semesterData = await semesterRes.json();
+        if (cancelled) return;
+        if (cohortData.cohorts) {
+          setCohorts(cohortData.cohorts);
+          if (cohortData.cohorts.length > 0) {
+            setSelectedCohortId(cohortData.cohorts[0].id);
+          }
+        }
+        if (semesterData.semesters) {
+          setSemesters(semesterData.semesters);
+          // Default to the active semester or most recent
+          const active = semesterData.semesters.find((s: SemesterOption) => s.is_active);
+          if (active) setSelectedSemesterId(active.id);
+          else if (semesterData.semesters.length > 0) setSelectedSemesterId(semesterData.semesters[0].id);
+        }
+      } catch {
+        // Options unavailable — fall back to current/custom modes
+      } finally {
+        if (!cancelled) setLoadingOptions(false);
+      }
+    }
+    fetchOptions();
+    return () => { cancelled = true; };
+  }, []);
 
   const toggleExportProgram = (prog: string) => {
     setExportPrograms(prev => {
@@ -230,33 +289,84 @@ function ExportDropdown({ dateRange, activePrograms, activeEventTypes, selectedI
   };
 
   const handleDownload = () => {
-    const params = new URLSearchParams({
-      start_date: exportMode === 'current' ? dateRange.start : exportStartDate,
-      end_date: exportMode === 'current' ? dateRange.end : exportEndDate,
-    });
+    const params = new URLSearchParams();
 
-    const progs = exportMode === 'current' ? activePrograms : exportPrograms;
-    if (progs.size > 0) {
-      params.set('programs', Array.from(progs).join(','));
-    }
-
-    if (exportMode === 'current' && activeEventTypes.size > 0 && activeEventTypes.size < EVENT_TYPES.length) {
-      params.set('event_types', Array.from(activeEventTypes).join(','));
-    }
-
-    if (exportMode === 'current' && selectedInstructor) {
-      params.set('instructor_id', selectedInstructor);
+    if (exportMode === 'cohort') {
+      // Export lab days for a specific cohort — use wide date range
+      const cohort = cohorts.find(c => c.id === selectedCohortId);
+      params.set('start_date', cohort?.start_date || '2020-01-01');
+      params.set('end_date', cohort?.end_date || '2030-12-31');
+      params.set('cohort_id', selectedCohortId);
+      params.set('event_types', 'lab');
+    } else if (exportMode === 'all-cohorts') {
+      // Export all active cohort lab days — use wide date range covering all active cohorts
+      const today = new Date().toISOString().split('T')[0];
+      const yearFromNow = new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0];
+      // Find earliest start and latest end across all active cohorts
+      let earliest = today;
+      let latest = yearFromNow;
+      for (const c of cohorts) {
+        if (c.start_date && c.start_date < earliest) earliest = c.start_date;
+        if (c.end_date && c.end_date > latest) latest = c.end_date;
+      }
+      params.set('start_date', earliest);
+      params.set('end_date', latest);
+      params.set('event_types', 'lab');
+    } else if (exportMode === 'semester') {
+      const semester = semesters.find(s => s.id === selectedSemesterId);
+      if (semester) {
+        params.set('start_date', semester.start_date);
+        params.set('end_date', semester.end_date);
+      }
+    } else if (exportMode === 'custom') {
+      params.set('start_date', exportStartDate);
+      params.set('end_date', exportEndDate);
+      const progs = exportPrograms;
+      if (progs.size > 0) {
+        params.set('programs', Array.from(progs).join(','));
+      }
+    } else {
+      // Current view
+      params.set('start_date', dateRange.start);
+      params.set('end_date', dateRange.end);
+      const progs = activePrograms;
+      if (progs.size > 0) {
+        params.set('programs', Array.from(progs).join(','));
+      }
+      if (activeEventTypes.size > 0 && activeEventTypes.size < EVENT_TYPES.length) {
+        params.set('event_types', Array.from(activeEventTypes).join(','));
+      }
+      if (selectedInstructor) {
+        params.set('instructor_id', selectedInstructor);
+      }
     }
 
     window.open(`/api/calendar/export-ics?${params}`, '_blank');
     onClose();
   };
 
+  const selectedCohort = cohorts.find(c => c.id === selectedCohortId);
+  const selectedSemester = semesters.find(s => s.id === selectedSemesterId);
+
+  const cohortLabel = (c: CohortOption) => {
+    const abbr = c.program?.abbreviation || c.program?.name || '';
+    return `${abbr} C${c.cohort_number}`.trim();
+  };
+
+  type ExportModeType = typeof exportMode;
+  const modeButtons: { key: ExportModeType; label: string; show: boolean }[] = [
+    { key: 'current', label: 'Current View', show: true },
+    { key: 'cohort', label: 'Cohort Labs', show: cohorts.length > 0 },
+    { key: 'all-cohorts', label: 'All Cohorts', show: cohorts.length > 0 },
+    { key: 'semester', label: 'Semester', show: semesters.length > 0 },
+    { key: 'custom', label: 'Custom', show: true },
+  ];
+
   return (
     <>
       {/* Click-away backdrop */}
       <div className="fixed inset-0 z-30" onClick={onClose} />
-      <div className="absolute right-0 top-full mt-2 z-40 w-72 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4">
+      <div className="absolute right-0 top-full mt-2 z-40 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 p-4">
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Export Calendar</h3>
           <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700">
@@ -265,29 +375,82 @@ function ExportDropdown({ dateRange, activePrograms, activeEventTypes, selectedI
         </div>
 
         {/* Mode selector */}
-        <div className="flex gap-2 mb-3">
-          <button
-            onClick={() => setExportMode('current')}
-            className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${
-              exportMode === 'current'
-                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-          >
-            Current View
-          </button>
-          <button
-            onClick={() => setExportMode('custom')}
-            className={`flex-1 text-xs py-1.5 rounded-md font-medium transition-colors ${
-              exportMode === 'custom'
-                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-                : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
-            }`}
-          >
-            Custom Range
-          </button>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {modeButtons.filter(b => b.show).map(b => (
+            <button
+              key={b.key}
+              onClick={() => setExportMode(b.key)}
+              className={`text-xs py-1 px-2.5 rounded-md font-medium transition-colors ${
+                exportMode === b.key
+                  ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              {b.label}
+            </button>
+          ))}
         </div>
 
+        {/* Cohort selector */}
+        {exportMode === 'cohort' && (
+          <div className="mb-3">
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Select Cohort</label>
+            {loadingOptions ? (
+              <div className="text-xs text-gray-400">Loading cohorts...</div>
+            ) : (
+              <select
+                value={selectedCohortId}
+                onChange={e => setSelectedCohortId(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                {cohorts.map(c => (
+                  <option key={c.id} value={c.id}>{cohortLabel(c)}</option>
+                ))}
+              </select>
+            )}
+            {selectedCohort && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Exports all lab days for {cohortLabel(selectedCohort)}.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* All active cohorts info */}
+        {exportMode === 'all-cohorts' && (
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+            Exports lab days for all {cohorts.length} active cohort{cohorts.length !== 1 ? 's' : ''}.
+          </div>
+        )}
+
+        {/* Semester selector */}
+        {exportMode === 'semester' && (
+          <div className="mb-3">
+            <label className="text-xs text-gray-500 dark:text-gray-400 mb-1 block">Select Semester</label>
+            {loadingOptions ? (
+              <div className="text-xs text-gray-400">Loading semesters...</div>
+            ) : (
+              <select
+                value={selectedSemesterId}
+                onChange={e => setSelectedSemesterId(e.target.value)}
+                className="w-full px-2 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              >
+                {semesters.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}{s.is_active ? ' (current)' : ''}
+                  </option>
+                ))}
+              </select>
+            )}
+            {selectedSemester && (
+              <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {selectedSemester.start_date} to {selectedSemester.end_date} — all event types.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Custom range options */}
         {exportMode === 'custom' && (
           <div className="space-y-2 mb-3">
             <div>

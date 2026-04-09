@@ -797,9 +797,14 @@ export default function WorkloadTrackerPage() {
       setSemesters(sems);
 
       if (sems.length > 0) {
-        const activeSem = sems.find(s => s.is_active) || sems[0];
-        setSelectedSemesterId(activeSem.id);
-        await fetchWorkload(activeSem.id);
+        // Pick best semester: latest active > current (today in range) > next upcoming > first
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const latestActive = sems.find(s => s.is_active);
+        const current = sems.find(s => s.start_date && s.start_date <= todayStr && (!s.end_date || s.end_date >= todayStr));
+        const upcoming = sems.filter(s => s.start_date && s.start_date > todayStr).sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''))[0];
+        const best = latestActive || current || upcoming || sems[0];
+        setSelectedSemesterId(best.id);
+        await fetchWorkload(best.id);
       }
     } catch (err) {
       console.error('Fetch data error:', err);
