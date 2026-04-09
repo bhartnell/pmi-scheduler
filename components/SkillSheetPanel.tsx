@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   X,
   FileText,
@@ -31,6 +31,7 @@ import {
   Star,
   User,
 } from 'lucide-react';
+import { findMinimumPoints } from '@/lib/nremt-instructions';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -140,6 +141,10 @@ interface SkillSheetPanelProps {
   defaultMode?: DisplayMode;
   /** When true, hide Teaching and Formative tabs (NREMT mode) */
   nremtMode?: boolean;
+  /** When true, this is an NREMT testing day — enables threshold checking */
+  isNremtTesting?: boolean;
+  /** Critical fail flag from the examiner panel (grading page state) */
+  criticalFail?: boolean;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -266,6 +271,8 @@ export default function SkillSheetPanel({
   embedded = false,
   defaultMode,
   nremtMode = false,
+  isNremtTesting = false,
+  criticalFail = false,
 }: SkillSheetPanelProps) {
   const [sheet, setSheet] = useState<SkillSheet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -309,6 +316,11 @@ export default function SkillSheetPanel({
   const [showTeamAddDropdown, setShowTeamAddDropdown] = useState(false);
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
   const [teamCompletionResults, setTeamCompletionResults] = useState<TeamEvalResult[] | null>(null);
+
+  // NREMT threshold warning modal state
+  const [showThresholdWarning, setShowThresholdWarning] = useState(false);
+  const [showCriticalFailBlock, setShowCriticalFailBlock] = useState(false);
+  const pendingSaveRef = useRef<{ emailPref: EmailPreference; saveStatus: 'complete' | 'in_progress' } | null>(null);
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
 
@@ -857,8 +869,8 @@ export default function SkillSheetPanel({
     setSaving(false);
   };
 
-  // Dispatch save: team or individual
-  const dispatchSave = (emailPref: EmailPreference = 'queued', saveStatus: 'complete' | 'in_progress' = 'complete') => {
+  // Dispatch save: team or individual (with NREMT threshold checks)
+  const doSave = (emailPref: EmailPreference = 'queued', saveStatus: 'complete' | 'in_progress' = 'complete') => {
     if (gradeMode === 'team') {
       handleTeamSave(emailPref, saveStatus);
     } else {
@@ -866,10 +878,77 @@ export default function SkillSheetPanel({
     }
   };
 
+  const dispatchSave = (emailPref: EmailPreference = 'queued', saveStatus: 'complete' | 'in_progress' = 'complete') => {
+    // For non-complete saves (Finish Later), skip threshold checks
+    if (saveStatus !== 'complete') {
+      doSave(emailPref, saveStatus);
+      return;
+    }
+
+    // NREMT threshold checks on final submit
+    if (isNremtTesting && mode === 'final') {
+      // Block: critical fail + pass
+      if (criticalFail && result === 'pass') {
+        setShowCriticalFailBlock(true);
+        return;
+      }
+
+      // Warn: below minimum + pass
+      if (sheet && result === 'pass') {
+        const minPts = findMinimumPoints(sheet.skill_name);
+        if (minPts !== null) {
+          const earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
+          if (earned < minPts) {
+            pendingSaveRef.current = { emailPref, saveStatus };
+            setShowThresholdWarning(true);
+            return;
+          }
+        }
+      }
+    }
+
+    doSave(emailPref, saveStatus);
+  };
+
+  // Confirm override from threshold warning modal
+  const confirmThresholdOverride = () => {
+    setShowThresholdWarning(false);
+    if (pendingSaveRef.current) {
+      doSave(pendingSaveRef.current.emailPref, pendingSaveRef.current.saveStatus);
+      pendingSaveRef.current = null;
+    }
+  };
+
   // Can save? For individual mode: needs studentId. For team mode: needs 2+ members.
   const canSave = gradeMode === 'team'
     ? teamMembers.length >= 2 && teamMembers.some(m => m.team_role === 'leader')
     : !!studentId;
+
+  // ─── NREMT Auto-Suggest Result ──────────────────────────────────────────
+  // When NREMT testing + final mode, auto-suggest result based on score threshold and critical fail
+  const prevAutoSuggestRef = useRef<{ earned: number; minPts: number | null; critFail: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!isNremtTesting || mode !== 'final' || !sheet) return;
+
+    const earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
+    const minPts = findMinimumPoints(sheet.skill_name);
+
+    // Only auto-suggest when the relevant inputs change
+    const prev = prevAutoSuggestRef.current;
+    if (prev && prev.earned === earned && prev.minPts === minPts && prev.critFail === criticalFail) return;
+    prevAutoSuggestRef.current = { earned, minPts, critFail: criticalFail };
+
+    if (criticalFail) {
+      setResult('fail');
+    } else if (minPts !== null) {
+      if (earned >= minPts) {
+        setResult('pass');
+      } else {
+        setResult('fail');
+      }
+    }
+  }, [isNremtTesting, mode, sheet, stepMarks, subItemMarks, criticalFail]);
 
   // ─── Render ─────────────────────────────────────────────────────────────
 
@@ -1276,6 +1355,76 @@ export default function SkillSheetPanel({
     </>
   );
 
+  // ─── NREMT Threshold Warning Modals ─────────────────────────────────────
+  const nremtThresholdModals = (
+    <>
+      {/* Threshold warning — below minimum but examiner wants to pass */}
+      {showThresholdWarning && sheet && (() => {
+        const earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
+        const total = getTotalPossiblePoints(sheet.steps);
+        const minPts = findMinimumPoints(sheet.skill_name);
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Score Below NREMT Minimum</h3>
+                  <div className="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-300">
+                    <p>This student scored <strong>{earned}/{total}</strong> points.</p>
+                    <p>The NREMT minimum is <strong>{minPts}</strong> points.</p>
+                  </div>
+                  <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
+                    Are you sure you want to mark this as Pass?
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => { setShowThresholdWarning(false); pendingSaveRef.current = null; }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmThresholdOverride}
+                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700"
+                >
+                  Override — Mark as Pass
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Critical fail block — cannot pass with critical failure */}
+      {showCriticalFailBlock && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <XCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Cannot Pass with Critical Failure</h3>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                  A critical failure has been recorded. Only Fail or Remediation results are allowed.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowCriticalFailBlock(false)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+              >
+                OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+
   // ─── Embedded mode ────────────────────────────────────────────────────────
   if (embedded) {
     // Completion screen for embedded mode
@@ -1398,7 +1547,48 @@ export default function SkillSheetPanel({
                   })() : `${Object.keys(stepSequence).length}/${sheet.steps.length} completed`}
                 </span>
               )}
+              {mode === 'final' && !isNremtTesting && sheet.steps.length > 0 && (
+                <span className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                  {(() => {
+                    const earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
+                    const total = getTotalPossiblePoints(sheet.steps);
+                    return `Points: ${earned}/${total}`;
+                  })()}
+                </span>
+              )}
             </div>
+            {/* NREMT threshold indicator */}
+            {isNremtTesting && mode === 'final' && sheet.steps.length > 0 && (() => {
+              const earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
+              const total = getTotalPossiblePoints(sheet.steps);
+              const minPts = findMinimumPoints(sheet.skill_name);
+              if (minPts === null) return null;
+              const meetsMin = earned >= minPts;
+              const nearMin = !meetsMin && earned >= minPts - 3;
+              return (
+                <div className={`mt-1 text-xs font-medium flex items-center gap-1.5 ${
+                  criticalFail
+                    ? 'text-red-600 dark:text-red-400'
+                    : meetsMin
+                    ? 'text-green-600 dark:text-green-400'
+                    : nearMin
+                    ? 'text-amber-600 dark:text-amber-400'
+                    : 'text-red-600 dark:text-red-400'
+                }`}>
+                  <span>Points: {earned}/{total} — Minimum required: {minPts}</span>
+                  <span className="ml-1">
+                    {criticalFail
+                      ? '— Critical Failure'
+                      : meetsMin
+                      ? '— Meets minimum'
+                      : nearMin
+                      ? '— Near minimum threshold'
+                      : `— Below minimum (${minPts} required)`
+                    }
+                  </span>
+                </div>
+              );
+            })()}
             {(mode === 'formative' || mode === 'final') && gradeMode === 'individual' && !studentId && (
               <p className="mt-2 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertTriangle className="w-3.5 h-3.5" />
@@ -1778,6 +1968,7 @@ export default function SkillSheetPanel({
             </div>
           ) : null}
         </div>
+        {nremtThresholdModals}
       </div>
     );
   }
@@ -2305,6 +2496,8 @@ export default function SkillSheetPanel({
           ) : null}
         </div>
       </div>
+
+      {nremtThresholdModals}
 
       {/* Slide-in animation */}
       <style jsx global>{`

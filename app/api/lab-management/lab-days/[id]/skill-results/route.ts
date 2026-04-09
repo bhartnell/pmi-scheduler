@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { findMinimumPoints } from '@/lib/nremt-instructions';
 
 export async function GET(
   _request: Request,
@@ -13,13 +14,14 @@ export async function GET(
     const { id: labDayId } = await params;
     const supabase = getSupabaseAdmin();
 
-    // Fetch all complete evaluations for this lab day
+    // Fetch all complete evaluations for this lab day, including step_marks and skill steps
     const { data: evaluations, error } = await supabase
       .from('student_skill_evaluations')
       .select(`
         id, evaluation_type, result, email_status, attempt_number, team_role, notes, created_at,
+        step_marks, critical_fail, critical_fail_notes, flagged_items,
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name, email),
-        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name),
+        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, steps:skill_sheet_steps(step_number, possible_points, is_critical)),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name)
       `)
       .eq('lab_day_id', labDayId)
@@ -40,6 +42,24 @@ export async function GET(
       });
     }
 
+    // Helper to calculate points from step_marks
+    function calcPoints(stepMarks: unknown, steps: Array<{ step_number: number; possible_points: number; is_critical: boolean }>) {
+      let earnedPoints = 0;
+      const marks = (stepMarks || {}) as Record<string, unknown>;
+      for (const [key, val] of Object.entries(marks)) {
+        if (typeof val === 'string') {
+          if (val === 'pass') {
+            const step = steps.find((s) => String(s.step_number) === key);
+            earnedPoints += step?.possible_points || 1;
+          }
+        } else if (typeof val === 'object' && val !== null) {
+          earnedPoints += (val as { points?: number }).points || 0;
+        }
+      }
+      const totalPossible = steps.reduce((sum, s) => sum + (s.possible_points || 1), 0);
+      return { earnedPoints, totalPossible };
+    }
+
     // Group by student
     const studentMap = new Map<string, {
       id: string;
@@ -57,13 +77,25 @@ export async function GET(
         team_role: string | null;
         notes: string | null;
         created_at: string;
+        points_earned: number;
+        points_possible: number;
+        minimum_points: number | null;
+        at_risk: boolean;
+        critical_fail: boolean;
       }>;
     }>();
 
     const skillMap = new Map<string, string>(); // id -> skill_name
     let passCount = 0;
     let failCount = 0;
-    const skillStats = new Map<string, { skill_name: string; pass_count: number; total: number }>();
+    const skillStats = new Map<string, {
+      skill_name: string;
+      pass_count: number;
+      total: number;
+      total_points_earned: number;
+      total_possible: number;
+      minimum_required: number | null;
+    }>();
 
     for (const ev of evaluations) {
       const student = ev.student as any;
@@ -76,6 +108,13 @@ export async function GET(
       const studentName = `${student.last_name}, ${student.first_name}`;
       const skillId = skillSheet.id as string;
       const skillName = skillSheet.skill_name as string;
+      const steps = skillSheet.steps || [];
+
+      // Calculate points
+      const { earnedPoints, totalPossible } = calcPoints(ev.step_marks, steps);
+      const minimumPoints = findMinimumPoints(skillName);
+      const atRisk = ev.result === 'pass' && minimumPoints !== null && earnedPoints <= minimumPoints + 3 && earnedPoints >= minimumPoints;
+      const criticalFail = ev.critical_fail === true;
 
       // Track unique skills
       if (!skillMap.has(skillId)) {
@@ -88,10 +127,18 @@ export async function GET(
 
       // Per-skill stats
       if (!skillStats.has(skillId)) {
-        skillStats.set(skillId, { skill_name: skillName, pass_count: 0, total: 0 });
+        skillStats.set(skillId, {
+          skill_name: skillName,
+          pass_count: 0,
+          total: 0,
+          total_points_earned: 0,
+          total_possible: totalPossible,
+          minimum_required: minimumPoints,
+        });
       }
       const stat = skillStats.get(skillId)!;
       stat.total++;
+      stat.total_points_earned += earnedPoints;
       if (ev.result === 'pass') stat.pass_count++;
 
       // Build student entry
@@ -116,6 +163,11 @@ export async function GET(
         team_role: ev.team_role,
         notes: ev.notes,
         created_at: ev.created_at,
+        points_earned: earnedPoints,
+        points_possible: totalPossible,
+        minimum_points: minimumPoints,
+        at_risk: atRisk,
+        critical_fail: criticalFail,
       });
     }
 
@@ -137,6 +189,9 @@ export async function GET(
         pass_count: s.pass_count,
         total: s.total,
         pass_rate: s.total > 0 ? Math.round((s.pass_count / s.total) * 100) : 0,
+        avg_points: s.total > 0 ? Math.round((s.total_points_earned / s.total) * 10) / 10 : 0,
+        total_possible: s.total_possible,
+        minimum_required: s.minimum_required,
       })),
     };
 

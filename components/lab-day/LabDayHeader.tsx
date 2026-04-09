@@ -16,6 +16,7 @@ import {
   Copy,
   CalendarPlus,
   Monitor,
+  ClipboardCheck,
 } from 'lucide-react';
 import InlineTimerWidget from '@/components/InlineTimerWidget';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -123,6 +124,14 @@ export default function LabDayHeader({
                 <span className="hidden sm:inline">Timer Display</span>
                 <span className="sm:hidden">Display</span>
               </button>
+              <Link
+                href={`/labs/schedule/${labDayId}/results`}
+                className="inline-flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                title="View skill evaluation results"
+              >
+                <ClipboardCheck className="w-4 h-4" />
+                Results
+              </Link>
               <button
                 onClick={onPrint}
                 className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
