@@ -24,8 +24,8 @@ const BLOCK_TYPE_OPTIONS = [
 
 const DURATION_TYPES = [
   { value: 'full', label: 'Full Semester (15 wks)' },
-  { value: 'first_half', label: 'First Half (Wks 1-8)' },
-  { value: 'second_half', label: 'Second Half (Wks 9-15)' },
+  { value: 'first_half', label: 'First Half (7.5 wks)' },
+  { value: 'second_half', label: 'Second Half (7.5 wks)' },
 ];
 
 function formatTime(time: string): string {
@@ -362,7 +362,7 @@ export default function TemplateEditorPage() {
                                       ? 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'
                                       : 'bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400'
                                   }`}>
-                                    {t.duration_type === 'first_half' ? 'Wks 1-8' : 'Wks 9-15'}
+                                    {t.duration_type === 'first_half' ? '1st Half · 7.5 wks' : '2nd Half · 7.5 wks'}
                                   </span>
                                 )}
                               </div>
