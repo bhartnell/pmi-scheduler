@@ -39,7 +39,8 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
   const steps = (skillSheet?.steps || []).sort((a: any, b: any) => a.step_number - b.step_number);
   const totalSteps = steps.length;
   const isMultiPoint = steps.some((s: any) => (s.possible_points && s.possible_points > 1) || (s.sub_items && s.sub_items.length > 0));
-  const totalPossiblePoints = steps.reduce((sum: number, s: any) => sum + (s.possible_points || 1), 0);
+  const effPts = (s: any) => (s.sub_items && s.sub_items.length > 0) ? s.sub_items.length : (s.possible_points || 1);
+  const totalPossiblePoints = steps.reduce((sum: number, s: any) => sum + effPts(s), 0);
 
   // Calculate stats handling both old (string) and new (object) step_marks formats
   let passedSteps = 0;
@@ -53,7 +54,7 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
     if (typeof val === 'string') {
       // Old format: simple string
       const step = steps.find((s: any) => String(s.step_number) === key);
-      const pts = val === 'pass' ? (step?.possible_points || 1) : 0;
+      const pts = val === 'pass' ? (step ? effPts(step) : 1) : 0;
       stepMarkLookup[key] = { mark: val, points: pts };
       if (val === 'pass') { passedSteps++; earnedPoints += pts; }
       if (step?.is_critical && val === 'pass') criticalPassed++;
@@ -127,7 +128,7 @@ function renderEvaluationPage(evaluation: EvalData, includePageBreak: boolean = 
       const statusColor = mark === 'pass' ? '#10b981' : mark === 'fail' ? '#ef4444' : flagged?.status === 'caution' ? '#f59e0b' : '#9ca3af';
 
       // Points column for multi-point steps
-      const possiblePts = step.possible_points || 1;
+      const possiblePts = effPts(step);
       const earnedPts = markData?.points || 0;
       const pointsDisplay = isMultiPoint ? `${earnedPts}/${possiblePts}` : '';
 

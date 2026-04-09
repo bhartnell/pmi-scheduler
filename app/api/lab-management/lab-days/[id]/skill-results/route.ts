@@ -21,7 +21,7 @@ export async function GET(
         id, evaluation_type, result, email_status, attempt_number, team_role, notes, created_at,
         step_marks, critical_fail, critical_fail_notes, flagged_items,
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name, email),
-        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, steps:skill_sheet_steps(step_number, possible_points, is_critical)),
+        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, steps:skill_sheet_steps(step_number, possible_points, is_critical, sub_items)),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name)
       `)
       .eq('lab_day_id', labDayId)
@@ -43,20 +43,22 @@ export async function GET(
     }
 
     // Helper to calculate points from step_marks
-    function calcPoints(stepMarks: unknown, steps: Array<{ step_number: number; possible_points: number; is_critical: boolean }>) {
+    function calcPoints(stepMarks: unknown, steps: Array<{ step_number: number; possible_points: number; is_critical: boolean; sub_items?: any[] | null }>) {
+      const effPts = (s: { sub_items?: any[] | null; possible_points: number }) =>
+        (s.sub_items && s.sub_items.length > 0) ? s.sub_items.length : (s.possible_points || 1);
       let earnedPoints = 0;
       const marks = (stepMarks || {}) as Record<string, unknown>;
       for (const [key, val] of Object.entries(marks)) {
         if (typeof val === 'string') {
           if (val === 'pass') {
             const step = steps.find((s) => String(s.step_number) === key);
-            earnedPoints += step?.possible_points || 1;
+            earnedPoints += step ? effPts(step) : 1;
           }
         } else if (typeof val === 'object' && val !== null) {
           earnedPoints += (val as { points?: number }).points || 0;
         }
       }
-      const totalPossible = steps.reduce((sum, s) => sum + (s.possible_points || 1), 0);
+      const totalPossible = steps.reduce((sum, s) => sum + effPts(s), 0);
       return { earnedPoints, totalPossible };
     }
 
