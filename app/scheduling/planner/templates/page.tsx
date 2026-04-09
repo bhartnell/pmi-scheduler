@@ -332,7 +332,8 @@ export default function TemplateEditorPage() {
             ) : (
               <div className="space-y-6">
                 {dayIndices.map(di => {
-                  const dayTemplates = onGround.filter(t => t.day_index === di);
+                  const dayTemplates = onGround.filter(t => t.day_index === di)
+                    .sort((a, b) => a.start_time.localeCompare(b.start_time));
                   return (
                     <div key={di} className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                       <div className="bg-gray-50 dark:bg-gray-800/50 px-4 py-2.5 border-b border-gray-200 dark:border-gray-700">
@@ -549,16 +550,7 @@ export default function TemplateEditorPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Sort Order</label>
-                  <input
-                    type="number"
-                    value={formData.sort_order}
-                    onChange={(e) => setField('sort_order', parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
-                  />
-                </div>
+              <div className="grid grid-cols-1 gap-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Color</label>
                   <input

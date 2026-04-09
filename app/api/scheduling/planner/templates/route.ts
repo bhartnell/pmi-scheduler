@@ -16,9 +16,9 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('pmi_course_templates')
       .select('*')
-      .order('sort_order')
       .order('day_index')
-      .order('start_time');
+      .order('start_time')
+      .order('course_code');
 
     if (programType) {
       query = query.eq('program_type', programType);

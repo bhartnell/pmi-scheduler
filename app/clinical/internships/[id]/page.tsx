@@ -29,7 +29,8 @@ import {
   ExternalLink,
   X,
   Copy,
-  Check
+  Check,
+  Phone
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, hasMinRole, type Role } from '@/lib/permissions';
 import { parseDateSafe } from '@/lib/utils';
@@ -200,6 +201,26 @@ const CLOSEOUT_ITEMS: ChecklistItem[] = [
   { key: 'cleared_for_nremt', label: 'NREMT Clearance', dateKey: 'nremt_clearance_date', required: true },
   { key: 'closeout_completed', label: 'Closeout Meeting Completed', dateKey: 'closeout_meeting_date', required: true },
 ];
+
+// Known agency clinical representatives
+const AGENCY_REPS: Record<string, { name: string }> = {
+  'AMR': { name: 'Aaron Goldstein' },
+  'MWA': { name: 'Kady Dabash' },
+  'Community Ambulance': { name: 'John Osborn' },
+  'LVFR': { name: 'Sun Kang' },
+};
+
+// Lookup agency rep by agency name or abbreviation
+function getAgencyRep(agencyName: string | null | undefined, agencyAbbr: string | null | undefined): { name: string } | null {
+  if (agencyName && AGENCY_REPS[agencyName]) return AGENCY_REPS[agencyName];
+  if (agencyAbbr && AGENCY_REPS[agencyAbbr]) return AGENCY_REPS[agencyAbbr];
+  // Try case-insensitive partial match
+  const search = (agencyName || agencyAbbr || '').toLowerCase();
+  for (const [key, val] of Object.entries(AGENCY_REPS)) {
+    if (key.toLowerCase() === search || search.includes(key.toLowerCase())) return val;
+  }
+  return null;
+}
 
 export default function InternshipDetailPage() {
   const { data: session, status: sessionStatus } = useSession();
@@ -796,18 +817,56 @@ export default function InternshipDetailPage() {
           const primaryAssignment = preceptorAssignments.find((a: any) => a.is_active && a.role === 'primary');
           const anyActiveAssignment = preceptorAssignments.find((a: any) => a.is_active);
           const preceptorContact = primaryAssignment?.preceptor || anyActiveAssignment?.preceptor || internship.field_preceptors;
-          const preceptorEmail = preceptorContact?.email as string | null | undefined;
-          const preceptorLabel = preceptorContact
-            ? `${preceptorContact.first_name} ${preceptorContact.last_name}`
+          const preceptorName = preceptorContact
+            ? `${preceptorContact.last_name}, ${preceptorContact.first_name}`
             : null;
+<<<<<<< HEAD
           // Legacy preceptor: has preceptor_id but no resolved contact (FK join failed)
           const isLegacyPreceptor = !preceptorContact && !!formData.preceptor_id;
           return (student?.email || preceptorEmail || isLegacyPreceptor || internship.agencies) ? (
+=======
+          const preceptorEmail = preceptorContact?.email as string | null | undefined;
+          const preceptorPhone = preceptorContact?.phone as string | null | undefined;
+          const agencyRep = getAgencyRep(internship.agencies?.name, internship.agencies?.abbreviation);
+          const agencyLabel = internship.agencies?.abbreviation || internship.agencies?.name || 'Agency';
+
+          // Helper: copy button for a single field value
+          const CopyBtn = ({ value }: { value: string }) => (
+            <button
+              onClick={(e) => { e.stopPropagation(); handleCopyEmail(value); }}
+              className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex-shrink-0"
+              title="Copy to clipboard"
+            >
+              {copiedEmail === value ? (
+                <Check className="w-3.5 h-3.5 text-green-500" />
+              ) : (
+                <Copy className="w-3.5 h-3.5 text-gray-400" />
+              )}
+            </button>
+          );
+
+          // Helper: email link button
+          const EmailBtn = ({ email }: { email: string }) => (
+            <a
+              href={`mailto:${email}`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center justify-center w-6 h-6 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors flex-shrink-0"
+              title="Send email"
+            >
+              <Mail className="w-3.5 h-3.5 text-teal-600 dark:text-teal-400" />
+            </a>
+          );
+
+          const hasAnyContact = student || preceptorContact || internship.agencies || agencyRep;
+
+          return hasAnyContact ? (
+>>>>>>> claude/focused-goodall
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 mb-6">
             <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-              <Mail className="w-4 h-4" />
+              <Users className="w-4 h-4" />
               Quick Contacts
             </h3>
+<<<<<<< HEAD
             <div className="flex flex-wrap gap-3">
               {student?.email && (
                 <button
@@ -882,6 +941,109 @@ export default function InternshipDetailPage() {
                   )}
                 </button>
               )}
+=======
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Student */}
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-teal-600 dark:text-teal-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" /> Student
+                </div>
+                {student && (
+                  <>
+                    <div className="flex items-center gap-1 text-sm">
+                      <span className="text-gray-900 dark:text-white truncate">{student.last_name}, {student.first_name}</span>
+                      <CopyBtn value={`${student.last_name}, ${student.first_name}`} />
+                    </div>
+                    {student.email && (
+                      <div className="flex items-center gap-1 text-sm">
+                        <span className="text-gray-600 dark:text-gray-400 truncate">{student.email}</span>
+                        <CopyBtn value={student.email} />
+                        <EmailBtn email={student.email} />
+                      </div>
+                    )}
+                  </>
+                )}
+                {!student && <span className="text-xs text-gray-400 italic">No student linked</span>}
+              </div>
+
+              {/* Field Preceptor (FTO) */}
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5" /> Field Preceptor (FTO)
+                </div>
+                {preceptorContact ? (
+                  <>
+                    <div className="flex items-center gap-1 text-sm">
+                      <span className="text-gray-900 dark:text-white truncate">{preceptorName}</span>
+                      <CopyBtn value={preceptorName!} />
+                    </div>
+                    {preceptorEmail && (
+                      <div className="flex items-center gap-1 text-sm">
+                        <span className="text-gray-600 dark:text-gray-400 truncate">{preceptorEmail}</span>
+                        <CopyBtn value={preceptorEmail} />
+                        <EmailBtn email={preceptorEmail} />
+                      </div>
+                    )}
+                    {preceptorPhone && (
+                      <div className="flex items-center gap-1 text-sm">
+                        <Phone className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-600 dark:text-gray-400 truncate">{preceptorPhone}</span>
+                        <CopyBtn value={preceptorPhone} />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-xs text-gray-400 italic">No preceptor assigned</span>
+                )}
+              </div>
+
+              {/* Agency */}
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5" /> Agency
+                </div>
+                {internship.agencies ? (
+                  <>
+                    <div className="flex items-center gap-1 text-sm">
+                      <span className="text-gray-900 dark:text-white truncate">{internship.agencies.name}</span>
+                    </div>
+                    {internship.agencies.phone && (
+                      <div className="flex items-center gap-1 text-sm">
+                        <Phone className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                        <span className="text-gray-600 dark:text-gray-400 truncate">{internship.agencies.phone}</span>
+                        <CopyBtn value={internship.agencies.phone} />
+                      </div>
+                    )}
+                    {internship.agencies.clinical_coordinator_email && (
+                      <div className="flex items-center gap-1 text-sm">
+                        <span className="text-gray-600 dark:text-gray-400 truncate">
+                          {internship.agencies.clinical_coordinator_name || 'Coordinator'}: {internship.agencies.clinical_coordinator_email}
+                        </span>
+                        <CopyBtn value={internship.agencies.clinical_coordinator_email} />
+                        <EmailBtn email={internship.agencies.clinical_coordinator_email} />
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <span className="text-xs text-gray-400 italic">No agency assigned</span>
+                )}
+              </div>
+
+              {/* Agency Clinical Rep */}
+              <div className="space-y-1">
+                <div className="text-xs font-semibold text-orange-600 dark:text-orange-400 uppercase tracking-wide flex items-center gap-1.5">
+                  <Building2 className="w-3.5 h-3.5" /> Agency Rep {internship.agencies ? `(${agencyLabel})` : ''}
+                </div>
+                {agencyRep ? (
+                  <div className="flex items-center gap-1 text-sm">
+                    <span className="text-gray-900 dark:text-white truncate">{agencyRep.name}</span>
+                    <CopyBtn value={agencyRep.name} />
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-400 italic">Contact coordinator for agency rep info</span>
+                )}
+              </div>
+>>>>>>> claude/focused-goodall
             </div>
           </div>
         ) : null;
@@ -1708,37 +1870,50 @@ export default function InternshipDetailPage() {
             </div>
 
             {/* Contact Info */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                <Users className="w-5 h-5 text-gray-500" />
-                Contact Information
-              </h3>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Student</div>
-                  {student?.email && (
-                    <a href={`mailto:${student.email}`} className="flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:underline">
-                      <Mail className="w-3 h-3" /> {student.email}
-                    </a>
-                  )}
-                </div>
-
-                {internship.field_preceptors && (
+            {(() => {
+              const pa = preceptorAssignments.find((a: any) => a.is_active && a.role === 'primary');
+              const aa = preceptorAssignments.find((a: any) => a.is_active);
+              const pc = pa?.preceptor || aa?.preceptor || internship.field_preceptors;
+              return (
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                  <Users className="w-5 h-5 text-gray-500" />
+                  Contact Information
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Preceptor</div>
-                    <div className="text-gray-900 dark:text-white">
-                      {internship.field_preceptors.first_name} {internship.field_preceptors.last_name}
-                    </div>
-                    {internship.field_preceptors.email && (
-                      <a href={`mailto:${internship.field_preceptors.email}`} className="flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:underline">
-                        <Mail className="w-3 h-3" /> Email
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Student</div>
+                    {student && (
+                      <div className="text-gray-900 dark:text-white">{student.last_name}, {student.first_name}</div>
+                    )}
+                    {student?.email && (
+                      <a href={`mailto:${student.email}`} className="flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:underline text-xs">
+                        <Mail className="w-3 h-3" /> {student.email}
                       </a>
                     )}
                   </div>
-                )}
+                  {pc && (
+                    <div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">Preceptor</div>
+                      <div className="text-gray-900 dark:text-white">
+                        {pc.last_name}, {pc.first_name}
+                      </div>
+                      {pc.email && (
+                        <a href={`mailto:${pc.email}`} className="flex items-center gap-1 text-teal-600 dark:text-teal-400 hover:underline text-xs">
+                          <Mail className="w-3 h-3" /> {pc.email}
+                        </a>
+                      )}
+                      {pc.phone && (
+                        <div className="flex items-center gap-1 text-gray-600 dark:text-gray-400 text-xs mt-0.5">
+                          <Phone className="w-3 h-3" /> {pc.phone}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
+              );
+            })()}
 
             {/* Meeting Scheduling */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
