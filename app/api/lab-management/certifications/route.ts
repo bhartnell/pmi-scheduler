@@ -59,13 +59,29 @@ export async function POST(request: NextRequest) {
       instructorId = body.instructor_id;
     }
 
+    // Auto-calculate expiration_date from issue_date + cycle_years if not manually set
+    let expirationDate = body.expiration_date;
+    if (!expirationDate && body.issue_date && body.ce_requirement_id) {
+      const { data: ceReq } = await supabase
+        .from('ce_requirements')
+        .select('cycle_years')
+        .eq('id', body.ce_requirement_id)
+        .single();
+
+      if (ceReq?.cycle_years) {
+        const issue = new Date(body.issue_date + 'T12:00:00');
+        issue.setDate(issue.getDate() + ceReq.cycle_years * 365);
+        expirationDate = issue.toISOString().split('T')[0];
+      }
+    }
+
     const certData = {
       instructor_id: instructorId,
       cert_name: body.cert_name,
       cert_number: body.cert_number || null,
       issuing_body: body.issuing_body || null,
       issue_date: body.issue_date || null,
-      expiration_date: body.expiration_date,
+      expiration_date: expirationDate,
       card_image_url: body.card_image_url || null,
       ce_requirement_id: body.ce_requirement_id || null,
     };

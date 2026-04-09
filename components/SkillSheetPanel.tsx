@@ -304,6 +304,9 @@ export default function SkillSheetPanel({
   // Sub-item checkbox state: { [stepNumber]: [true, false, true, ...] }
   const [subItemMarks, setSubItemMarks] = useState<Record<number, boolean[]>>({});
 
+  // Per-step sub-item notes: { [stepNumber]: "missed medications, last oral intake" }
+  const [subItemNotes, setSubItemNotes] = useState<Record<number, string>>({});
+
   // ===== FORMATIVE NUMBERED COMPLETION =====
   // DO NOT REPLACE with pass/fail/caution icons.
   // Each step gets a single tap target that assigns a sequence number.
@@ -472,6 +475,7 @@ export default function SkillSheetPanel({
     setStepMarks({});
     setStepSequence({});
     setSubItemMarks({});
+    setSubItemNotes({});
     setNotes('');
     setResult('pass');
   };
@@ -509,10 +513,12 @@ export default function SkillSheetPanel({
         if (step.sub_items && step.sub_items.length > 0 && subs) {
           const pts = subs.filter(Boolean).length;
           const effPossible = effectivePossiblePoints(step);
+          const noteText = subItemNotes[step.step_number]?.trim() || undefined;
           stepMarksToSave[String(step.step_number)] = {
             completed: pts === effPossible,
             sub_items: subs,
             points: pts,
+            ...(noteText ? { sub_item_notes: noteText } : {}),
           };
         } else if (mark) {
           const effPossible = effectivePossiblePoints(step);
@@ -721,22 +727,27 @@ export default function SkillSheetPanel({
     if (evalItem.step_marks) {
       const marks: Record<number, StepMark> = {};
       const subs: Record<number, boolean[]> = {};
+      const restoredNotes: Record<number, string> = {};
       for (const [key, val] of Object.entries(evalItem.step_marks)) {
         const stepNum = parseInt(key);
         if (typeof val === 'string') {
           // Old format: simple string mark
           marks[stepNum] = val as StepMark;
         } else if (typeof val === 'object' && val !== null) {
-          // New format: { completed, sub_items, points }
-          const obj = val as { completed?: boolean; sub_items?: boolean[]; points?: number };
+          // New format: { completed, sub_items, points, sub_item_notes }
+          const obj = val as { completed?: boolean; sub_items?: boolean[]; points?: number; sub_item_notes?: string };
           marks[stepNum] = obj.completed ? 'pass' : null;
           if (obj.sub_items) {
             subs[stepNum] = obj.sub_items;
+          }
+          if (obj.sub_item_notes) {
+            restoredNotes[stepNum] = obj.sub_item_notes;
           }
         }
       }
       setStepMarks(marks);
       setSubItemMarks(subs);
+      setSubItemNotes(restoredNotes);
     }
     if (evalItem.step_details && Array.isArray(evalItem.step_details)) {
       const seq: Record<number, number> = {};
@@ -823,10 +834,12 @@ export default function SkillSheetPanel({
         if (step.sub_items && step.sub_items.length > 0 && subs) {
           const pts = subs.filter(Boolean).length;
           const effPossible = effectivePossiblePoints(step);
+          const noteText = subItemNotes[step.step_number]?.trim() || undefined;
           stepMarksToSave[String(step.step_number)] = {
             completed: pts === effPossible,
             sub_items: subs,
             points: pts,
+            ...(noteText ? { sub_item_notes: noteText } : {}),
           };
         } else if (mark) {
           const effPossible = effectivePossiblePoints(step);
@@ -1762,6 +1775,8 @@ export default function SkillSheetPanel({
                                 return { ...prev, [step.step_number]: next };
                               });
                             }}
+                            subItemNote={subItemNotes[step.step_number]}
+                            onSubItemNoteChange={(note) => setSubItemNotes(prev => ({ ...prev, [step.step_number]: note }))}
                           />
                         ))}
                       </div>
@@ -1815,6 +1830,8 @@ export default function SkillSheetPanel({
                                       return { ...prev, [step.step_number]: next };
                                     });
                                   }}
+                                  subItemNote={subItemNotes[step.step_number]}
+                                  onSubItemNoteChange={(note) => setSubItemNotes(prev => ({ ...prev, [step.step_number]: note }))}
                                 />
                               </div>
                             ))}
@@ -2281,6 +2298,8 @@ export default function SkillSheetPanel({
                                 return { ...prev, [step.step_number]: next };
                               });
                             }}
+                            subItemNote={subItemNotes[step.step_number]}
+                            onSubItemNoteChange={(note) => setSubItemNotes(prev => ({ ...prev, [step.step_number]: note }))}
                           />
                         ))}
                       </div>
@@ -2334,6 +2353,8 @@ export default function SkillSheetPanel({
                                       return { ...prev, [step.step_number]: next };
                                     });
                                   }}
+                                  subItemNote={subItemNotes[step.step_number]}
+                                  onSubItemNoteChange={(note) => setSubItemNotes(prev => ({ ...prev, [step.step_number]: note }))}
                                 />
                               </div>
                             ))}
@@ -2579,6 +2600,8 @@ function PanelStepRow({
   onToggleComplete,
   subItemChecks,
   onSubItemToggle,
+  subItemNote,
+  onSubItemNoteChange,
 }: {
   step: Step;
   mode: DisplayMode;
@@ -2588,6 +2611,8 @@ function PanelStepRow({
   onToggleComplete?: () => void;
   subItemChecks?: boolean[];
   onSubItemToggle?: (index: number) => void;
+  subItemNote?: string;
+  onSubItemNoteChange?: (note: string) => void;
 }) {
   const isCritical = step.is_critical;
   const [noteExpanded, setNoteExpanded] = useState(false);
@@ -2602,6 +2627,21 @@ function PanelStepRow({
   const detailNotesIcon = step.detail_notes ? (
     <span className="text-gray-400 dark:text-gray-500 cursor-help flex-shrink-0" title={step.detail_notes}>
       <Info className="w-3 h-3" />
+    </span>
+  ) : null;
+
+  // Partial indicator for sub-item groups
+  const totalSubItems = step.sub_items?.length || 0;
+  const isPartial = checkedCount > 0 && checkedCount < totalSubItems;
+  const isAllChecked = checkedCount === totalSubItems && totalSubItems > 0;
+
+  const partialBadge = hasSubItems && mode !== 'teaching' && checkedCount > 0 ? (
+    <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
+      isAllChecked
+        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+        : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+    }`}>
+      {isPartial ? `Partial (${checkedCount}/${totalSubItems})` : `${checkedCount}/${totalSubItems}`}
     </span>
   ) : null;
 
@@ -2624,6 +2664,18 @@ function PanelStepRow({
           </label>
         );
       })}
+      {checkedCount > 0 && onSubItemNoteChange && (
+        <div className="ml-6 mt-1">
+          <input
+            type="text"
+            value={subItemNote || ''}
+            onChange={(e) => onSubItemNoteChange(e.target.value)}
+            placeholder="e.g., missed medications, last oral intake"
+            className="w-full px-2 py-1 text-[10px] border border-gray-200 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          />
+          <span className="text-[9px] text-gray-400 dark:text-gray-500 mt-0.5">Notes (optional)</span>
+        </div>
+      )}
     </div>
   ) : null;
 
@@ -2643,8 +2695,11 @@ function PanelStepRow({
 
   // Point display for multi-point steps
   const pointsBadge = isMultiPoint && mode !== 'teaching' ? (
-    <span className="text-[10px] text-gray-500 dark:text-gray-400 flex-shrink-0 whitespace-nowrap">
-      {hasSubItems ? checkedCount : (mark === 'pass' ? possiblePts : 0)}/{possiblePts} pts
+    <span className="flex items-center gap-1.5 flex-shrink-0">
+      {partialBadge}
+      <span className="text-[10px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        {hasSubItems ? checkedCount : (mark === 'pass' ? possiblePts : 0)}/{possiblePts} pts
+      </span>
     </span>
   ) : null;
 
@@ -3040,8 +3095,20 @@ function ExistingEvalSummary({
                 <div className="space-y-1">
                   {[...ev.step_details]
                     .sort((a, b) => (a.sequence_number || 999) - (b.sequence_number || 999))
-                    .map((detail) => (
-                      <div key={detail.step_number} className="flex items-center gap-2 text-[10px]">
+                    .map((detail) => {
+                      const stepDef = sheet.steps.find(s => s.step_number === detail.step_number);
+                      const stepMarkVal = rawMarks?.[String(detail.step_number)];
+                      const stepMarkObj = typeof stepMarkVal === 'object' && stepMarkVal !== null
+                        ? stepMarkVal as { sub_items?: boolean[]; sub_item_notes?: string }
+                        : null;
+                      const hasStepSubItems = stepDef?.sub_items && stepDef.sub_items.length > 0;
+                      const subChecked = stepMarkObj?.sub_items?.filter(Boolean).length || 0;
+                      const subTotal = stepDef?.sub_items?.length || 0;
+                      const isStepPartial = hasStepSubItems && subChecked > 0 && subChecked < subTotal;
+                      const isStepComplete = hasStepSubItems && subChecked === subTotal && subTotal > 0;
+                      return (
+                      <div key={detail.step_number}>
+                        <div className="flex items-center gap-2 text-[10px]">
                         {detail.completed ? (
                           <span className="w-4 h-4 rounded-full bg-green-600 text-white text-[8px] font-bold flex items-center justify-center flex-shrink-0">
                             {detail.sequence_number}
@@ -3049,14 +3116,32 @@ function ExistingEvalSummary({
                         ) : (
                           <span className="w-4 h-4 rounded-full bg-gray-200 dark:bg-gray-700 flex-shrink-0" />
                         )}
-                        <span className={`${detail.completed ? 'text-gray-500 line-through' : 'text-gray-900 dark:text-white'} ${detail.is_critical ? 'font-medium' : ''}`}>
-                          {detail.step_number}. {sheet.steps.find(s => s.step_number === detail.step_number)?.instruction || `Step ${detail.step_number}`}
+                        <span className={`flex-1 ${detail.completed ? 'text-gray-500 line-through' : 'text-gray-900 dark:text-white'} ${detail.is_critical ? 'font-medium' : ''}`}>
+                          {detail.step_number}. {stepDef?.instruction || `Step ${detail.step_number}`}
                         </span>
+                        {hasStepSubItems && subChecked > 0 && (
+                          <span className={`px-1 py-0.5 rounded text-[9px] font-medium ${
+                            isStepComplete
+                              ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                              : isStepPartial
+                              ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                              : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                          }`}>
+                            {subChecked}/{subTotal} sub-items
+                          </span>
+                        )}
                         {detail.is_critical && (
                           <span className="px-1 rounded text-[8px] font-bold text-red-600 bg-red-50 dark:bg-red-900/30 dark:text-red-400">C</span>
                         )}
+                        </div>
+                        {stepMarkObj?.sub_item_notes && (
+                          <p className="ml-6 mt-0.5 text-[9px] italic text-gray-500 dark:text-gray-400">
+                            {stepMarkObj.sub_item_notes}
+                          </p>
+                        )}
                       </div>
-                    ))}
+                      );
+                    })}
                 </div>
                 {ev.notes && (
                   <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
@@ -3071,20 +3156,44 @@ function ExistingEvalSummary({
               <div className="px-3 py-2 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
                 <div className="space-y-1">
                   {sheet.steps.map(step => {
-                    const mark = (ev.step_marks as Record<string, string>)?.[String(step.step_number)];
+                    const rawVal = (ev.step_marks as Record<string, unknown>)?.[String(step.step_number)];
+                    const isObjMark = typeof rawVal === 'object' && rawVal !== null;
+                    const objMark = isObjMark ? rawVal as { completed?: boolean; sub_items?: boolean[]; points?: number; sub_item_notes?: string } : null;
+                    const mark = typeof rawVal === 'string' ? rawVal : (objMark?.completed ? 'pass' : null);
+                    const hasStepSubItems = step.sub_items && step.sub_items.length > 0;
+                    const subChecked = objMark?.sub_items?.filter(Boolean).length || 0;
+                    const subTotal = step.sub_items?.length || 0;
+                    const isStepPartial = hasStepSubItems && subChecked > 0 && subChecked < subTotal;
+                    const isStepComplete = hasStepSubItems && subChecked === subTotal && subTotal > 0;
                     return (
-                      <div key={step.step_number} className="flex items-center gap-2 text-[10px]">
-                        <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[8px] ${
-                          mark === 'pass' ? 'bg-green-500 text-white' :
-                          mark === 'fail' ? 'bg-red-500 text-white' :
-                          mark === 'caution' ? 'bg-amber-500 text-white' :
-                          'bg-gray-200 dark:bg-gray-700'
-                        }`}>
-                          {mark === 'pass' ? '\u2713' : mark === 'fail' ? '\u2717' : mark === 'caution' ? '!' : ''}
-                        </span>
-                        <span className={step.is_critical ? 'font-medium' : ''}>
-                          {step.step_number}. {step.instruction.substring(0, 60)}{step.instruction.length > 60 ? '...' : ''}
-                        </span>
+                      <div key={step.step_number}>
+                        <div className="flex items-center gap-2 text-[10px]">
+                          <span className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 text-[8px] ${
+                            mark === 'pass' || isStepComplete ? 'bg-green-500 text-white' :
+                            mark === 'fail' ? 'bg-red-500 text-white' :
+                            mark === 'caution' || isStepPartial ? 'bg-amber-500 text-white' :
+                            'bg-gray-200 dark:bg-gray-700'
+                          }`}>
+                            {mark === 'pass' || isStepComplete ? '\u2713' : mark === 'fail' ? '\u2717' : mark === 'caution' || isStepPartial ? '!' : ''}
+                          </span>
+                          <span className={`flex-1 ${step.is_critical ? 'font-medium' : ''}`}>
+                            {step.step_number}. {step.instruction.substring(0, 60)}{step.instruction.length > 60 ? '...' : ''}
+                          </span>
+                          {hasStepSubItems && subChecked > 0 && (
+                            <span className={`px-1 py-0.5 rounded text-[9px] font-medium ${
+                              isStepComplete
+                                ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                                : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                            }`}>
+                              {subChecked}/{subTotal} sub-items
+                            </span>
+                          )}
+                        </div>
+                        {objMark?.sub_item_notes && (
+                          <p className="ml-6 mt-0.5 text-[9px] italic text-gray-500 dark:text-gray-400">
+                            {objMark.sub_item_notes}
+                          </p>
+                        )}
                       </div>
                     );
                   })}
