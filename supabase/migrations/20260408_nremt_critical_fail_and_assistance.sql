@@ -10,12 +10,12 @@ ADD COLUMN IF NOT EXISTS critical_fail_notes TEXT;
 CREATE TABLE IF NOT EXISTS station_assistance_alerts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   lab_day_id UUID NOT NULL REFERENCES lab_days(id) ON DELETE CASCADE,
-  station_id UUID REFERENCES stations(id) ON DELETE SET NULL,
+  station_id UUID REFERENCES lab_stations(id) ON DELETE SET NULL,
   station_name TEXT NOT NULL,
-  requested_by UUID REFERENCES auth_users(id) ON DELETE SET NULL,
+  requested_by UUID REFERENCES lab_users(id) ON DELETE SET NULL,
   requested_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   resolved_at TIMESTAMPTZ,
-  resolved_by UUID REFERENCES auth_users(id) ON DELETE SET NULL,
+  resolved_by UUID REFERENCES lab_users(id) ON DELETE SET NULL,
   notes TEXT
 );
 
