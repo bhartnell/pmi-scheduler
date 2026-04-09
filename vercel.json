@@ -49,6 +49,10 @@
       "schedule": "0 8 * * 1"
     },
     {
+      "path": "/api/cron/cert-expiry-notifications",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/affiliation-expiry",
       "schedule": "0 14 * * *"
     },

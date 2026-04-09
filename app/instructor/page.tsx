@@ -18,6 +18,7 @@ import {
   History,
   BarChart3,
   Timer,
+  Mail,
 } from 'lucide-react';
 import { canAccessAdmin, hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
@@ -455,6 +456,13 @@ export default function InstructorDashboard() {
             >
               <BarChart3 className="w-8 h-8 text-teal-600 dark:text-teal-400" />
               <span className="text-sm font-medium text-gray-900 dark:text-white">My Stats</span>
+            </Link>
+            <Link
+              href="/instructor/email-history"
+              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition"
+            >
+              <Mail className="w-8 h-8 text-rose-600 dark:text-rose-400" />
+              <span className="text-sm font-medium text-gray-900 dark:text-white">Email History</span>
             </Link>
           </div>
         </div>
