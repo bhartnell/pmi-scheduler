@@ -110,6 +110,12 @@ export async function DELETE(
       .update({ evaluation_id: null })
       .eq('evaluation_id', evaluationId);
 
+    // Clear self-referencing team_evaluation_id FK before deleting
+    await supabase
+      .from('student_skill_evaluations')
+      .update({ team_evaluation_id: null })
+      .eq('team_evaluation_id', evaluationId);
+
     const { error } = await supabase
       .from('student_skill_evaluations')
       .delete()

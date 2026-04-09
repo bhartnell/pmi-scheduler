@@ -1,8 +1,8 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { useStudents } from '@/hooks/useStudents';
 import { useCohorts } from '@/hooks/useCohorts';
 import Link from 'next/link';
@@ -50,12 +50,58 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function StudentsPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    }>
+      <StudentsPageContent />
+    </Suspense>
+  );
+}
+
+function StudentsPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Restore cohort filter from URL > sessionStorage > default
+  const getInitialCohort = () => {
+    const fromUrl = searchParams.get('cohort');
+    if (fromUrl) return fromUrl;
+    if (typeof window !== 'undefined') {
+      const fromStorage = sessionStorage.getItem('students-cohort-filter');
+      if (fromStorage) return fromStorage;
+    }
+    return '';
+  };
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCohort, setSelectedCohort] = useState('');
+  const [selectedCohort, setSelectedCohort] = useState(getInitialCohort);
   const [selectedStatus, setSelectedStatus] = useState('active');
+
+  // Sync cohort selection to URL and sessionStorage
+  const handleCohortChange = useCallback((cohortId: string) => {
+    setSelectedCohort(cohortId);
+    // Update sessionStorage
+    if (typeof window !== 'undefined') {
+      if (cohortId) {
+        sessionStorage.setItem('students-cohort-filter', cohortId);
+      } else {
+        sessionStorage.removeItem('students-cohort-filter');
+      }
+    }
+    // Update URL query parameter
+    const params = new URLSearchParams(searchParams.toString());
+    if (cohortId) {
+      params.set('cohort', cohortId);
+    } else {
+      params.delete('cohort');
+    }
+    const query = params.toString();
+    router.replace(`/academics/students${query ? `?${query}` : ''}`, { scroll: false });
+  }, [searchParams, router]);
   const [studentFlags, setStudentFlags] = useState<Record<string, 'yellow' | 'red'>>({});
 
   // React Query hooks for cohorts and students
@@ -198,7 +244,7 @@ export default function StudentsPage() {
             {/* Cohort Filter */}
             <select
               value={selectedCohort}
-              onChange={(e) => setSelectedCohort(e.target.value)}
+              onChange={(e) => handleCohortChange(e.target.value)}
               className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
             >
               <option value="">All Cohorts</option>

@@ -2847,7 +2847,7 @@ function ExistingEvalSummary({
   onNewAttempt: () => void;
   onDelete: (id: string) => void;
   confirmDeleteId: string | null;
-  onConfirmDelete: (id: string) => void;
+  onConfirmDelete: (id: string) => Promise<void> | void;
   onCancelDelete: () => void;
   sheet: SkillSheet;
   labDayId?: string;
@@ -2961,7 +2961,7 @@ function ExistingEvalSummary({
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-red-600 dark:text-red-400 flex-1">Delete this evaluation?</span>
                   <button
-                    onClick={() => onConfirmDelete(ev.id)}
+                    onClick={() => { void onConfirmDelete(ev.id); }}
                     className="px-2 py-1 bg-red-600 text-white rounded text-[10px] font-medium hover:bg-red-700"
                   >
                     Yes, Delete
