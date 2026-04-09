@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     const includeDocuments = searchParams.get('includeDocuments') === 'true';
     const safeSearch = search ? search.replace(/[%_,.()\\/]/g, '') : null;
 
-    const baseColumns = 'id, name, category, description, certification_levels, required_count, display_order, is_active';
+    const baseColumns = 'id, name, category, description, certification_levels, required_count, display_order, is_active, is_nremt';
 
     const buildQuery = (withDocuments: boolean, docSelect?: string) => {
       let selectStr = baseColumns;

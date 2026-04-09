@@ -56,6 +56,7 @@ export default function EditStationModal({
   const [scenarioFilterCategory, setScenarioFilterCategory] = useState('');
   const [scenarioFilterDifficulty, setScenarioFilterDifficulty] = useState('');
   const [certLevelFilter, setCertLevelFilter] = useState<string>('');
+  const [nremtOnlyFilter, setNremtOnlyFilter] = useState(false);
   const [editCustomSkills, setEditCustomSkills] = useState<string[]>([]);
   const [selectedInstructor, setSelectedInstructor] = useState('');
   const [isCustomInstructor, setIsCustomInstructor] = useState(false);
@@ -252,19 +253,44 @@ export default function EditStationModal({
     setStationInstructors(prev => prev.map(i => ({ ...i, is_primary: i.user_email === email })));
   };
 
+  const isNremtDay = !!labDay.is_nremt_testing;
+
   const filteredSkills = skills.filter(skill => {
     const matchesSearch = !skillSearch ||
       skill.name.toLowerCase().includes(skillSearch.toLowerCase()) ||
       skill.category.toLowerCase().includes(skillSearch.toLowerCase());
     const matchesLevel = !certLevelFilter || skill.certification_levels?.includes(certLevelFilter);
-    return matchesSearch && matchesLevel;
+    const matchesNremt = !nremtOnlyFilter || skill.is_nremt;
+    return matchesSearch && matchesLevel && matchesNremt;
   });
 
-  const skillsByCategory = filteredSkills.reduce((acc, skill) => {
-    if (!acc[skill.category]) acc[skill.category] = [];
-    acc[skill.category].push(skill);
-    return acc;
-  }, {} as Record<string, Skill[]>);
+  // Sort NREMT skills to top when on an NREMT testing day
+  const sortedSkills = isNremtDay
+    ? [...filteredSkills].sort((a, b) => {
+        if (a.is_nremt && !b.is_nremt) return -1;
+        if (!a.is_nremt && b.is_nremt) return 1;
+        return 0;
+      })
+    : filteredSkills;
+
+  const skillsByCategory = isNremtDay
+    ? (() => {
+        const nremtSkills = sortedSkills.filter(s => s.is_nremt);
+        const formativeSkills = sortedSkills.filter(s => !s.is_nremt);
+        const groups: Record<string, Skill[]> = {};
+        if (nremtSkills.length > 0) groups['NREMT Skills'] = nremtSkills;
+        for (const skill of formativeSkills) {
+          const cat = skill.category || 'Other';
+          if (!groups[cat]) groups[cat] = [];
+          groups[cat].push(skill);
+        }
+        return groups;
+      })()
+    : sortedSkills.reduce((acc, skill) => {
+        if (!acc[skill.category]) acc[skill.category] = [];
+        acc[skill.category].push(skill);
+        return acc;
+      }, {} as Record<string, Skill[]>);
 
   const handleSaveStation = async () => {
     setSavingStation(true);
@@ -415,14 +441,36 @@ export default function EditStationModal({
             </div>
             <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
               <span>{editForm.selectedSkills.length} selected</span>
-              <span>{filteredSkills.length} skills shown</span>
+              <div className="flex items-center gap-3">
+                {isNremtDay && (
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={nremtOnlyFilter}
+                      onChange={(e) => setNremtOnlyFilter(e.target.checked)}
+                      className="w-3.5 h-3.5 text-green-600 rounded"
+                    />
+                    <span className="text-xs font-medium text-green-700 dark:text-green-400">Show NREMT skills only</span>
+                  </label>
+                )}
+                <span>{filteredSkills.length} skills shown</span>
+              </div>
             </div>
           </div>
 
           <div className="p-4 overflow-y-auto max-h-[50vh]">
-            {Object.entries(skillsByCategory).map(([category, categorySkills]) => (
+            {Object.entries(skillsByCategory).map(([category, categorySkills], catIdx) => (
               <div key={category} className="mb-4">
-                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{category}</h4>
+                {isNremtDay && category !== 'NREMT Skills' && catIdx > 0 && Object.keys(skillsByCategory)[0] === 'NREMT Skills' && catIdx === 1 && (
+                  <div className="border-t-2 border-gray-200 dark:border-gray-600 my-3 pt-1">
+                    <span className="text-xs text-gray-400 dark:text-gray-500 uppercase tracking-wide">Formative Skills</span>
+                  </div>
+                )}
+                <h4 className={`text-sm font-medium mb-2 ${
+                  category === 'NREMT Skills'
+                    ? 'text-green-700 dark:text-green-400'
+                    : 'text-gray-700 dark:text-gray-300'
+                }`}>{category}</h4>
                 <div className="space-y-1">
                   {categorySkills.map(skill => {
                     const isSelected = editForm.selectedSkills.includes(skill.id);
@@ -435,6 +483,16 @@ export default function EditStationModal({
                       >
                         <input type="checkbox" checked={isSelected} onChange={() => toggleSkill(skill.id)} className="w-4 h-4 text-green-600" />
                         <span className="text-sm text-gray-900 dark:text-white">{skill.name}</span>
+                        {isNremtDay && skill.is_nremt && (
+                          <span className="ml-auto text-xs font-semibold px-2 py-0.5 rounded-full bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 border border-green-300 dark:border-green-700">
+                            NREMT ✓
+                          </span>
+                        )}
+                        {isNremtDay && !skill.is_nremt && (
+                          <span className="ml-auto text-xs px-2 py-0.5 text-gray-400 dark:text-gray-500">
+                            (Formative)
+                          </span>
+                        )}
                       </label>
                     );
                   })}

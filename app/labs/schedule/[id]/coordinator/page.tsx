@@ -17,10 +17,7 @@ import {
   Circle,
   Timer,
   Plus,
-  ChevronDown,
-  ChevronUp,
   ArrowRight,
-  UserCheck,
   Edit3,
   X,
   Check,
@@ -83,6 +80,7 @@ interface LabDayInfo {
 
 interface AssistanceAlert {
   id: string;
+  station_id: string;
   station_name: string;
   requested_at: string;
   notes: string | null;
@@ -133,10 +131,10 @@ function getStationDisplayName(station: GridStation): string {
 function getStationStatus(
   station: GridStation,
   students: Student[],
-  cells: Record<string, CellData>
+  cells: Record<string, CellData>,
+  alertStationIds?: Set<string>
 ): 'available' | 'in_progress' | 'needs_attention' | 'complete' {
   let hasInProgress = false;
-  let hasNeedsAttention = false;
   let completedCount = 0;
 
   for (const student of students) {
@@ -144,11 +142,11 @@ function getStationStatus(
     const cell = cells[key];
     if (!cell) continue;
     if (cell.status === 'in_progress') hasInProgress = true;
-    if (cell.status === 'completed' && cell.result === 'fail') hasNeedsAttention = true;
     if (cell.status === 'completed') completedCount++;
   }
 
-  if (hasNeedsAttention) return 'needs_attention';
+  // Only show needs_attention if there's an unresolved assistance alert for this station
+  if (alertStationIds?.has(station.id)) return 'needs_attention';
   if (hasInProgress) return 'in_progress';
   if (completedCount === students.length && students.length > 0) return 'complete';
   return 'available';
@@ -287,9 +285,6 @@ export default function CoordinatorViewPage() {
   const [stationDropdownSelections, setStationDropdownSelections] = useState<Record<string, string>>({});
   const undoTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  // Section 4: Next Up Queue collapsible
-  const [showNextUpQueue, setShowNextUpQueue] = useState(true);
-
   // Add station modal
   const [showAddStationModal, setShowAddStationModal] = useState(false);
   const [addStationSkill, setAddStationSkill] = useState(NREMT_SKILLS[0]);
@@ -298,7 +293,6 @@ export default function CoordinatorViewPage() {
   const [addingStation, setAddingStation] = useState(false);
 
   // Progress table
-  const [showProgressTable, setShowProgressTable] = useState(false);
   const [progressSort, setProgressSort] = useState<ProgressSortKey>('completions');
   const [progressSortAsc, setProgressSortAsc] = useState(true);
 
@@ -577,14 +571,14 @@ export default function CoordinatorViewPage() {
     ? Math.ceil((remainingTests * AVG_SKILL_TIME) / effectiveStations)
     : 0;
 
-  // Set of student IDs that are en route to any station
-  const enRouteStudentIds = useMemo(() => {
+  // Set of station IDs with unresolved assistance alerts
+  const alertStationIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const entry of Object.values(enRouteStudents)) {
-      ids.add(entry.studentId);
+    for (const alert of alerts) {
+      if (alert.station_id) ids.add(alert.station_id);
     }
     return ids;
-  }, [enRouteStudents]);
+  }, [alerts]);
 
   // ─── Student list with categories ────────────────────────────────────────
 
@@ -920,7 +914,7 @@ export default function CoordinatorViewPage() {
         {/* ─── Section 3: Station Board (PRIMARY WORKFLOW) ────────── */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {stations.map(station => {
-            const stationStatus = getStationStatus(station, students, cells);
+            const stationStatus = getStationStatus(station, students, cells, alertStationIds);
             const config = statusConfig[stationStatus];
             const StatusIcon = config.icon;
             const currentStudent = getCurrentStudentAtStation(station, students, cells);
@@ -931,7 +925,7 @@ export default function CoordinatorViewPage() {
             const isAddedDuringExam = station.custom_title?.includes('(Added)') || station.addedDuringExam;
             const enRouteEntry = enRouteStudents[station.id];
             const hasCurrentStudent = !!currentStudent;
-            const { eligible, topSuggestionId } = getEligibleStudentsForStation(station);
+            const { eligible } = getEligibleStudentsForStation(station);
             const selectedStudentId = stationDropdownSelections[station.id] || '';
 
             return (
@@ -1062,14 +1056,12 @@ export default function CoordinatorViewPage() {
                         <option value="">-- Select student --</option>
                         {eligible.map(student => {
                           const completions = getStudentCompletionCount(student, stations, cells);
-                          const isTopSuggestion = student.id === topSuggestionId;
                           return (
                             <option
                               key={student.id}
                               value={student.id}
-                              className={isTopSuggestion ? 'bg-amber-100' : ''}
                             >
-                              {isTopSuggestion ? '\u2605 ' : ''}{student.first_name} {student.last_name} ({completions}/{totalStations})
+                              {student.first_name} {student.last_name} ({completions}/{totalStations})
                             </option>
                           );
                         })}
@@ -1121,269 +1113,225 @@ export default function CoordinatorViewPage() {
           )}
         </div>
 
-        {/* ─── Section 4: Next Up Queue (compact, collapsible) ───────── */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
-          <button
-            onClick={() => setShowNextUpQueue(!showNextUpQueue)}
-            className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-h-[44px]"
-          >
-            <h2 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-              Next Up ({studentListData.waiting.length} waiting)
-            </h2>
-            {showNextUpQueue ? (
-              <ChevronUp className="w-5 h-5 text-gray-500" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-500" />
-            )}
-          </button>
-
-          {showNextUpQueue && (
-            <>
-              {/* Currently Testing (compact summary) */}
-              {studentListData.testing.length > 0 && (
-                <div className="border-b border-gray-100 dark:border-gray-700">
-                  <div className="px-4 py-1.5 bg-yellow-50/50 dark:bg-yellow-900/10">
-                    <span className="text-xs font-semibold text-yellow-700 dark:text-yellow-400 uppercase tracking-wide">
-                      Testing ({studentListData.testing.length})
-                    </span>
-                  </div>
-                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {studentListData.testing.map(({ student, completedCount, testingStation }) => (
-                      <div
-                        key={student.id}
-                        className="px-4 py-2 flex items-center gap-3"
-                      >
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-yellow-100 dark:bg-yellow-900/40 text-yellow-700 dark:text-yellow-300 flex items-center justify-center">
-                          <Clock className="w-3 h-3" />
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                            {student.first_name} {student.last_name}
-                          </span>
-                          <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                            {completedCount}/{totalStations}
-                          </span>
-                        </div>
-                        <span className="text-xs font-medium text-yellow-700 dark:text-yellow-300 whitespace-nowrap">
-                          Stn {testingStation.station_number}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Waiting / Next Up */}
-              {studentListData.waiting.length > 0 && (
-                <div className="border-b border-gray-100 dark:border-gray-700">
-                  <div className="px-4 py-1.5 bg-blue-50/50 dark:bg-blue-900/10">
-                    <span className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase tracking-wide">
-                      Waiting ({studentListData.waiting.length})
-                    </span>
-                  </div>
-                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {studentListData.waiting.map(({ student, completedCount }) => {
-                      // Check if this student is en route somewhere
-                      const enRouteStation = Object.entries(enRouteStudents).find(
-                        ([, entry]) => entry.studentId === student.id
-                      );
-                      const enRouteStationObj = enRouteStation
-                        ? stations.find(s => s.id === enRouteStation[0])
-                        : null;
-
-                      return (
-                        <div
-                          key={student.id}
-                          className="px-4 py-2 flex items-center gap-3"
-                        >
-                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 flex items-center justify-center text-xs font-bold">
-                            {completedCount}
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                              {student.first_name} {student.last_name}
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-                              {completedCount}/{totalStations} done
-                            </span>
-                          </div>
-                          {enRouteStationObj && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/40 rounded-full whitespace-nowrap">
-                              <ArrowRight className="w-3 h-3" />
-                              Stn {enRouteStationObj.station_number}
-                            </span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* Completed Students */}
-              {studentListData.complete.length > 0 && (
-                <div>
-                  <div className="px-4 py-1.5 bg-green-50/50 dark:bg-green-900/10">
-                    <span className="text-xs font-semibold text-green-700 dark:text-green-400 uppercase tracking-wide">
-                      Complete ({studentListData.complete.length})
-                    </span>
-                  </div>
-                  <div className="divide-y divide-gray-100 dark:divide-gray-700">
-                    {studentListData.complete.map(({ student, completedCount }) => (
-                      <div
-                        key={student.id}
-                        className="px-4 py-2 flex items-center gap-3 opacity-75"
-                      >
-                        <span className="flex-shrink-0 w-6 h-6 rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 flex items-center justify-center">
-                          <CheckCircle2 className="w-3 h-3" />
-                        </span>
-                        <span className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {student.first_name} {student.last_name}
-                        </span>
-                        <span className="text-xs text-gray-500 ml-auto">{completedCount}/{totalStations}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Empty state */}
-              {studentListData.testing.length === 0 && studentListData.waiting.length === 0 && studentListData.complete.length === 0 && (
-                <div className="p-6 text-center text-gray-500 dark:text-gray-400">
-                  <Users className="w-10 h-10 mx-auto mb-2 text-gray-400" />
-                  <p className="font-medium">No students loaded yet.</p>
-                </div>
-              )}
-            </>
-          )}
+        {/* ─── Section 4: Compact Status Bar ───────────────────────── */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm px-4 py-2.5 mb-6 flex items-center justify-center gap-6 text-sm">
+          <span className="flex items-center gap-1.5">
+            <Clock className="w-4 h-4 text-amber-500" />
+            <span className="font-semibold text-gray-900 dark:text-white">Testing: {studentListData.testing.length}</span>
+          </span>
+          <span className="text-gray-300 dark:text-gray-600">|</span>
+          <span className="flex items-center gap-1.5">
+            <Users className="w-4 h-4 text-blue-500" />
+            <span className="font-semibold text-gray-900 dark:text-white">Waiting: {studentListData.waiting.length}</span>
+          </span>
+          <span className="text-gray-300 dark:text-gray-600">|</span>
+          <span className="flex items-center gap-1.5">
+            <CheckCircle2 className="w-4 h-4 text-green-500" />
+            <span className="font-semibold text-gray-900 dark:text-white">Complete: {studentListData.complete.length}</span>
+          </span>
         </div>
 
-        {/* ─── Section 5: Progress Table ─────────────────────────────── */}
+        {/* ─── Section 5: Progress Table (matches IndividualTestingGrid style) */}
         <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden mb-6">
-          <button
-            onClick={() => setShowProgressTable(!showProgressTable)}
-            className="w-full px-4 py-3 flex items-center justify-between bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors min-h-[44px]"
-          >
-            <h2 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              {showProgressTable ? 'Hide Progress Table' : 'Show Progress Table'}
-            </h2>
-            {showProgressTable ? (
-              <ChevronUp className="w-5 h-5 text-gray-500" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-500" />
-            )}
-          </button>
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+            <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-blue-500" />
+              Individual Testing Tracker
+            </h3>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              <strong className="text-gray-700 dark:text-gray-300">{totalCompleted}/{totalPossible}</strong> complete
+            </span>
+          </div>
 
-          {showProgressTable && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-750 border-b border-gray-200 dark:border-gray-700">
+          {/* Grid */}
+          <div className="overflow-x-auto max-w-full">
+            <table className="w-full" style={{ minWidth: `${180 + stations.length * 100 + 80 + 60}px` }}>
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
+                  <th
+                    className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[140px] max-w-[180px] cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                    style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}
+                    onClick={() => handleProgressSort('name')}
+                  >
+                    Student {progressSort === 'name' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
+                  </th>
+                  {stations.map(station => (
                     <th
-                      className="px-3 py-2 text-left font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 min-w-[140px] whitespace-nowrap"
-                      onClick={() => handleProgressSort('name')}
+                      key={station.id}
+                      className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[100px]"
                     >
-                      Student {progressSort === 'name' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
+                      <div className="space-y-0.5">
+                        <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">
+                          Station {station.station_number}
+                        </div>
+                        <div className="text-xs font-normal text-gray-500 dark:text-gray-400 truncate max-w-[100px] mx-auto" title={getStationDisplayName(station)}>
+                          {getStationDisplayName(station)}
+                        </div>
+                      </div>
                     </th>
-                    {stations.map(station => (
-                      <th
-                        key={station.id}
-                        className="px-2 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 whitespace-nowrap min-w-[60px]"
-                        title={getStationDisplayName(station)}
-                      >
-                        <div className="text-xs">Stn {station.station_number}</div>
-                      </th>
-                    ))}
-                    <th
-                      className="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap"
-                      onClick={() => handleProgressSort('completions')}
-                    >
-                      Done {progressSort === 'completions' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
-                    </th>
-                    <th
-                      className="px-3 py-2 text-center font-semibold text-gray-700 dark:text-gray-300 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 whitespace-nowrap"
-                      onClick={() => handleProgressSort('failures')}
-                    >
-                      Fail {progressSort === 'failures' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {progressTableData.rows.map(row => {
-                    let rowBg = '';
-                    if (row.hasFail) rowBg = 'bg-red-50/50 dark:bg-red-900/10';
-                    else if (row.allComplete) rowBg = 'bg-green-50/50 dark:bg-green-900/10';
+                  ))}
+                  <th
+                    className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[60px] cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                    onClick={() => handleProgressSort('completions')}
+                  >
+                    Done {progressSort === 'completions' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
+                  </th>
+                  <th
+                    className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[60px] cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                    onClick={() => handleProgressSort('failures')}
+                  >
+                    Fail {progressSort === 'failures' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
+                  </th>
+                </tr>
+              </thead>
 
-                    return (
-                      <tr
-                        key={row.student.id}
-                        className={`border-b border-gray-100 dark:border-gray-700 ${rowBg}`}
-                      >
-                        <td className="px-3 py-2 text-gray-900 dark:text-white font-medium whitespace-nowrap">
-                          {row.student.last_name}, {row.student.first_name}
-                        </td>
-                        {stations.map(station => {
-                          const r = row.stationResults[station.id];
-                          let cellContent = '';
-                          let cellColor = 'text-gray-300 dark:text-gray-600';
-                          if (r?.status === 'completed' && r.result === 'pass') {
-                            cellContent = '\u2705';
-                          } else if (r?.status === 'completed' && r.result === 'fail') {
-                            cellContent = '\u274C';
-                          } else if (r?.status === 'in_progress') {
-                            cellContent = '\uD83D\uDFE1';
-                          } else {
-                            cellContent = '\u25CB';
-                            cellColor = 'text-gray-400 dark:text-gray-500';
-                          }
-                          return (
-                            <td key={station.id} className={`px-2 py-2 text-center ${cellColor}`}>
-                              {cellContent}
-                            </td>
-                          );
-                        })}
-                        <td className="px-3 py-2 text-center font-medium text-gray-700 dark:text-gray-300">
-                          {row.completions}
-                        </td>
-                        <td className={`px-3 py-2 text-center font-medium ${row.failures > 0 ? 'text-red-600 dark:text-red-400' : 'text-gray-400 dark:text-gray-500'}`}>
-                          {row.failures}
-                        </td>
-                      </tr>
-                    );
-                  })}
-
-                  {/* Summary row */}
-                  <tr className="bg-gray-100 dark:bg-gray-700 font-semibold border-t-2 border-gray-300 dark:border-gray-600">
-                    <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
-                      Summary
+              <tbody>
+                {progressTableData.rows.map((row, idx) => (
+                  <tr
+                    key={row.student.id}
+                    className={`border-b border-gray-100 dark:border-gray-700/50 ${
+                      idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-750/30'
+                    } hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-colors`}
+                  >
+                    {/* Student name - sticky */}
+                    <td
+                      className={`px-4 py-2.5 font-medium text-gray-900 dark:text-gray-100 text-sm sticky left-0 z-10 whitespace-nowrap min-w-[140px] max-w-[180px] overflow-hidden text-ellipsis ${
+                        idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800'
+                      }`}
+                      style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}
+                      title={`${row.student.last_name}, ${row.student.first_name}`}
+                    >
+                      {row.student.last_name}, {row.student.first_name.charAt(0)}.
                     </td>
+
+                    {/* Station cells */}
                     {stations.map(station => {
-                      const s = progressTableData.summary[station.id];
+                      const r = row.stationResults[station.id];
+                      if (r?.status === 'completed' && r.result === 'pass') {
+                        return (
+                          <td key={station.id} className="px-3 py-2 text-center">
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-300 border border-green-200 dark:border-green-800">
+                              <Check className="w-4 h-4 stroke-[3]" />
+                            </span>
+                          </td>
+                        );
+                      }
+                      if (r?.status === 'completed' && r.result === 'fail') {
+                        return (
+                          <td key={station.id} className="px-3 py-2 text-center">
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300 border border-red-200 dark:border-red-800">
+                              <X className="w-4 h-4 stroke-[3]" />
+                            </span>
+                          </td>
+                        );
+                      }
+                      if (r?.status === 'in_progress') {
+                        return (
+                          <td key={station.id} className="px-3 py-2 text-center">
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                              <Clock className="w-4 h-4 animate-pulse" />
+                            </span>
+                          </td>
+                        );
+                      }
                       return (
-                        <td key={station.id} className="px-2 py-2 text-center">
-                          <div className="text-xs leading-tight">
-                            <span className="text-green-600 dark:text-green-400">{s?.pass || 0}P</span>
-                            {' / '}
-                            <span className="text-red-600 dark:text-red-400">{s?.fail || 0}F</span>
-                            {' / '}
-                            <span className="text-gray-400">{s?.notStarted || 0}W</span>
-                          </div>
+                        <td key={station.id} className="px-3 py-2 text-center">
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-300 border border-transparent dark:border-gray-600">
+                            <Circle className="w-4 h-4" />
+                          </span>
                         </td>
                       );
                     })}
-                    <td className="px-3 py-2 text-center text-gray-700 dark:text-gray-300">
-                      {totalCompleted}
+
+                    {/* Done count */}
+                    <td className="px-3 py-2 text-center">
+                      <span className={`inline-flex items-center justify-center text-sm font-mono font-semibold px-2 py-0.5 rounded ${
+                        row.allComplete
+                          ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                      }`}>
+                        {row.completions}
+                      </span>
                     </td>
-                    <td className="px-3 py-2 text-center text-red-600 dark:text-red-400">
-                      {progressTableData.rows.reduce((sum, r) => sum + r.failures, 0)}
+
+                    {/* Fail count */}
+                    <td className="px-3 py-2 text-center">
+                      <span className={`inline-flex items-center justify-center text-sm font-mono font-semibold px-2 py-0.5 rounded ${
+                        row.failures > 0
+                          ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
+                      }`}>
+                        {row.failures}
+                      </span>
                     </td>
                   </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
+                ))}
+              </tbody>
+
+              {/* Summary footer */}
+              <tfoot>
+                <tr className="bg-gray-50 dark:bg-gray-750 border-t-2 border-gray-200 dark:border-gray-600">
+                  <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
+                    Summary
+                  </td>
+                  {stations.map(station => {
+                    const s = progressTableData.summary[station.id];
+                    const total = (s?.pass || 0) + (s?.fail || 0);
+                    const passRate = total > 0 ? Math.round(((s?.pass || 0) / total) * 100) : 0;
+                    return (
+                      <td key={station.id} className="px-3 py-2.5 text-center">
+                        <div className="space-y-0.5">
+                          <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            {total}/{totalStudents} done
+                          </div>
+                          <div className="text-[11px] text-gray-500 dark:text-gray-400">
+                            {total > 0 ? (
+                              <span className={passRate >= 80 ? 'text-green-600 dark:text-green-400' : passRate >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-red-500 dark:text-red-400'}>
+                                {passRate}% pass
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">--</span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    );
+                  })}
+                  <td className="px-3 py-2.5 text-center">
+                    <div className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                      {totalCompleted}
+                    </div>
+                  </td>
+                  <td className="px-3 py-2.5 text-center">
+                    <div className="text-xs font-semibold text-red-600 dark:text-red-400">
+                      {progressTableData.rows.reduce((sum, r) => sum + r.failures, 0)}
+                    </div>
+                  </td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+
+          {/* Legend */}
+          <div className="px-4 py-2.5 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
+            <span className="flex items-center gap-1.5">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-300 border border-transparent dark:border-gray-600"><Circle className="w-3 h-3" /></span>
+              Not started
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600"><Clock className="w-3 h-3" /></span>
+              In progress
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-300"><Check className="w-3 h-3 stroke-[3]" /></span>
+              Pass
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300"><X className="w-3 h-3 stroke-[3]" /></span>
+              Fail
+            </span>
+          </div>
         </div>
 
         {/* ─── Footer spacer ────────────────────────────────────────── */}
