@@ -19,6 +19,12 @@ interface NremtStickyNotesPanelProps {
   onCriticalFailNotesChange: (notes: string) => void;
   onNeedAssistance: () => void;
   assistanceRequested?: boolean;
+  /** FIX 3: List of critical failure criteria from the skill sheet */
+  criticalCriteria?: string[];
+  /** FIX 3: Which criteria are currently checked (by index) */
+  checkedCriteria?: string[];
+  /** FIX 3: Callback when criteria checks change */
+  onCheckedCriteriaChange?: (checked: string[]) => void;
 }
 
 function PanelContent({
@@ -30,6 +36,9 @@ function PanelContent({
   onCriticalFailNotesChange,
   onNeedAssistance,
   assistanceRequested,
+  criticalCriteria = [],
+  checkedCriteria = [],
+  onCheckedCriteriaChange,
 }: NremtStickyNotesPanelProps) {
   const notesRef = useRef<HTMLTextAreaElement>(null);
 
@@ -46,15 +55,30 @@ function PanelContent({
     autoResize();
   }, [notes, autoResize]);
 
+  // FIX 3: Toggle a specific critical criterion
+  const toggleCriterion = (criterion: string) => {
+    if (!onCheckedCriteriaChange) return;
+    const isChecked = checkedCriteria.includes(criterion);
+    const updated = isChecked
+      ? checkedCriteria.filter(c => c !== criterion)
+      : [...checkedCriteria, criterion];
+    onCheckedCriteriaChange(updated);
+    // Auto-set criticalFail based on whether any criterion is checked
+    onCriticalFailChange(updated.length > 0);
+  };
+
+  // FIX 3: Determine if we're using per-criterion mode or legacy single checkbox
+  const hasPerCriterionMode = criticalCriteria.length > 0;
+
   return (
     <div className="flex flex-col gap-4">
-      {/* Examiner Notes */}
+      {/* Examiner Comments */}
       <div>
         <label
           htmlFor="examiner-notes"
           className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
         >
-          Examiner Notes
+          Examiner Comments
         </label>
         <textarea
           ref={notesRef}
@@ -68,46 +92,103 @@ function PanelContent({
         />
       </div>
 
-      {/* Critical Fail */}
-      <div
-        className={`rounded-md border p-3 transition-colors ${
-          criticalFail
-            ? 'border-red-400 dark:border-red-600 border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/30'
-            : 'border-gray-300 dark:border-gray-600'
-        }`}
-      >
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            checked={criticalFail}
-            onChange={(e) => onCriticalFailChange(e.target.checked)}
-            className="h-5 w-5 rounded border-red-400 text-red-600 focus:ring-red-500 accent-red-600"
-          />
-          <AlertTriangle className="h-4 w-4 text-red-500" />
-          <span className="text-sm font-semibold text-red-700 dark:text-red-400">
-            Critical Failure
-          </span>
-        </label>
-
-        {criticalFail && (
-          <div className="mt-3">
-            <label
-              htmlFor="critical-fail-notes"
-              className="block text-xs font-medium text-red-600 dark:text-red-400 mb-1"
-            >
-              Explain the critical failure (required)
-            </label>
-            <textarea
-              id="critical-fail-notes"
-              rows={3}
-              value={criticalFailNotes}
-              onChange={(e) => onCriticalFailNotesChange(e.target.value)}
-              placeholder="Describe what happened..."
-              className="w-full rounded-md border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/20 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-red-300 dark:placeholder-red-700 focus:border-red-500 focus:ring-1 focus:ring-red-500 resize-none"
-            />
+      {/* FIX 3: Critical Fail — Per-criterion checkboxes when criteria available */}
+      {hasPerCriterionMode ? (
+        <div
+          className={`rounded-md border p-3 transition-colors ${
+            criticalFail
+              ? 'border-red-400 dark:border-red-600 border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/30'
+              : 'border-gray-300 dark:border-gray-600'
+          }`}
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <span className="text-sm font-semibold text-red-700 dark:text-red-400">
+              Critical Failure Criteria
+            </span>
           </div>
-        )}
-      </div>
+          <div className="space-y-2">
+            {criticalCriteria.map((criterion, idx) => (
+              <label key={idx} className="flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={checkedCriteria.includes(criterion)}
+                  onChange={() => toggleCriterion(criterion)}
+                  className="mt-0.5 h-4 w-4 rounded border-red-400 text-red-600 focus:ring-red-500 accent-red-600"
+                />
+                <span className={`text-xs ${
+                  checkedCriteria.includes(criterion)
+                    ? 'text-red-700 dark:text-red-300 font-medium'
+                    : 'text-gray-700 dark:text-gray-300'
+                }`}>
+                  {criterion}
+                </span>
+              </label>
+            ))}
+          </div>
+
+          {/* Mandatory notes when any criterion is checked */}
+          {criticalFail && (
+            <div className="mt-3">
+              <label
+                htmlFor="critical-fail-notes"
+                className="block text-xs font-medium text-red-600 dark:text-red-400 mb-1"
+              >
+                Critical Failure Notes (required)
+              </label>
+              <textarea
+                id="critical-fail-notes"
+                rows={3}
+                value={criticalFailNotes}
+                onChange={(e) => onCriticalFailNotesChange(e.target.value)}
+                placeholder="Describe what happened..."
+                className="w-full rounded-md border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/20 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-red-300 dark:placeholder-red-700 focus:border-red-500 focus:ring-1 focus:ring-red-500 resize-none"
+              />
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Legacy single checkbox mode (non-NREMT or no criteria) */
+        <div
+          className={`rounded-md border p-3 transition-colors ${
+            criticalFail
+              ? 'border-red-400 dark:border-red-600 border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/30'
+              : 'border-gray-300 dark:border-gray-600'
+          }`}
+        >
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={criticalFail}
+              onChange={(e) => onCriticalFailChange(e.target.checked)}
+              className="h-5 w-5 rounded border-red-400 text-red-600 focus:ring-red-500 accent-red-600"
+            />
+            <AlertTriangle className="h-4 w-4 text-red-500" />
+            <span className="text-sm font-semibold text-red-700 dark:text-red-400">
+              Critical Failure
+            </span>
+          </label>
+
+          {criticalFail && (
+            <div className="mt-3">
+              <label
+                htmlFor="critical-fail-notes"
+                className="block text-xs font-medium text-red-600 dark:text-red-400 mb-1"
+              >
+                Explain the critical failure (required)
+              </label>
+              <textarea
+                id="critical-fail-notes"
+                rows={3}
+                value={criticalFailNotes}
+                onChange={(e) => onCriticalFailNotesChange(e.target.value)}
+                placeholder="Describe what happened..."
+                className="w-full rounded-md border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/20 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-red-300 dark:placeholder-red-700 focus:border-red-500 focus:ring-1 focus:ring-red-500 resize-none"
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Need Assistance */}
       {assistanceRequested ? (

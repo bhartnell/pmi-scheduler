@@ -145,6 +145,12 @@ interface SkillSheetPanelProps {
   isNremtTesting?: boolean;
   /** Critical fail flag from the examiner panel (grading page state) */
   criticalFail?: boolean;
+  /** Examiner notes from the NREMT sticky panel — saved as the evaluation's notes field */
+  examinerNotes?: string;
+  /** Critical failure criteria checked from the NREMT sticky panel */
+  checkedCriticalCriteria?: string[];
+  /** Critical fail notes from the NREMT sticky panel */
+  criticalFailNotes?: string;
 }
 
 // ─── Constants ──────────────────────────────────────────────────────────────
@@ -287,6 +293,9 @@ export default function SkillSheetPanel({
   nremtMode = false,
   isNremtTesting = false,
   criticalFail = false,
+  examinerNotes = '',
+  checkedCriticalCriteria = [],
+  criticalFailNotes: externalCriticalFailNotes = '',
 }: SkillSheetPanelProps) {
   const [sheet, setSheet] = useState<SkillSheet | null>(null);
   const [loading, setLoading] = useState(true);
@@ -330,9 +339,17 @@ export default function SkillSheetPanel({
   const [sentResultsIds, setSentResultsIds] = useState<Set<string>>(new Set());
   const [sendErrorId, setSendErrorId] = useState<string | null>(null);
 
-  // Team grading state
+  // Team grading state — forced to 'individual' on NREMT testing days
   const [gradeMode, setGradeMode] = useState<GradeMode>('individual');
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+
+  // FIX 1: Force individual mode when NREMT testing
+  useEffect(() => {
+    if (isNremtTesting) {
+      setGradeMode('individual');
+      setTeamMembers([]);
+    }
+  }, [isNremtTesting]);
   const [showTeamAddDropdown, setShowTeamAddDropdown] = useState(false);
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
   const [teamCompletionResults, setTeamCompletionResults] = useState<TeamEvalResult[] | null>(null);
@@ -486,7 +503,10 @@ export default function SkillSheetPanel({
       return;
     }
 
-    if (saveStatus === 'complete' && mode === 'final' && result !== 'pass' && !notes.trim()) {
+    // FIX 2: On NREMT days, use examiner notes from sticky panel instead of local notes
+    const effectiveNotes = isNremtTesting ? examinerNotes : notes;
+
+    if (saveStatus === 'complete' && mode === 'final' && result !== 'pass' && !isNremtTesting && !notes.trim()) {
       showToast('Remediation plan is required for non-pass results', 'error');
       return;
     }
@@ -554,13 +574,19 @@ export default function SkillSheetPanel({
           lab_day_id: labDayId || null,
           evaluation_type: evaluationType,
           result: evaluationResult,
-          notes: notes.trim() || null,
+          notes: effectiveNotes.trim() || null,
           flagged_items: flaggedItems,
           station_id: stationPoolId || null,
           email_status: saveStatus === 'in_progress' ? 'pending' : (mode === 'final' ? 'do_not_send' : (emailPref === 'sent' ? 'queued' : emailPref)),
           step_marks: Object.keys(stepMarksToSave).length > 0 ? stepMarksToSave : null,
           step_details: stepDetails || null,
           status: saveStatus,
+          // FIX 3: Include critical fail data from NREMT examiner panel
+          ...(isNremtTesting && criticalFail ? {
+            critical_fail: true,
+            critical_fail_notes: externalCriticalFailNotes?.trim() || null,
+            critical_criteria_checked: checkedCriticalCriteria,
+          } : {}),
         }),
       });
 
@@ -812,7 +838,9 @@ export default function SkillSheetPanel({
       return;
     }
 
-    if (saveStatus === 'complete' && mode === 'final' && result !== 'pass' && !notes.trim()) {
+    const effectiveTeamNotes = isNremtTesting ? examinerNotes : notes;
+
+    if (saveStatus === 'complete' && mode === 'final' && result !== 'pass' && !isNremtTesting && !notes.trim()) {
       showToast('Remediation plan is required for non-pass results', 'error');
       return;
     }
@@ -874,7 +902,7 @@ export default function SkillSheetPanel({
           lab_day_id: labDayId || null,
           evaluation_type: evaluationType,
           result: evaluationResult,
-          notes: notes.trim() || null,
+          notes: effectiveTeamNotes.trim() || null,
           flagged_items: flaggedItems,
           station_id: stationPoolId || null,
           email_status: saveStatus === 'in_progress' ? 'pending' : (mode === 'final' ? 'do_not_send' : (emailPref === 'sent' ? 'queued' : emailPref)),
@@ -1336,7 +1364,8 @@ export default function SkillSheetPanel({
   );
 
   // ─── Grade Mode Selector ────────────────────────────────────────────────
-  const gradeModeSelector = (mode === 'formative' || mode === 'final') && studentQueue && studentQueue.length > 1 && (
+  // FIX 1: Hide team toggle entirely on NREMT testing days
+  const gradeModeSelector = !isNremtTesting && (mode === 'formative' || mode === 'final') && studentQueue && studentQueue.length > 1 && (
     <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
       <div className="flex items-center gap-2">
         <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Grade Mode:</span>
@@ -1983,6 +2012,8 @@ export default function SkillSheetPanel({
                       ))}
                     </div>
                   </div>
+                  {/* FIX 2: Hide notes/remediation on NREMT days — examiner panel handles notes */}
+                  {!isNremtTesting && (
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                       {result !== 'pass' ? <>Remediation Plan <span className="text-red-500">*</span></> : 'Notes'}
@@ -1997,6 +2028,7 @@ export default function SkillSheetPanel({
                       }`}
                     />
                   </div>
+                  )}
                   <div className="space-y-2">
                     <button
                       onClick={() => dispatchSave('pending', 'in_progress')}
@@ -2510,7 +2542,8 @@ export default function SkillSheetPanel({
                     </div>
                   </div>
 
-                  {/* Notes */}
+                  {/* FIX 2: Hide notes/remediation on NREMT days — examiner panel handles notes */}
+                  {!isNremtTesting && (
                   <div>
                     <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                       {result !== 'pass' ? <>Remediation Plan <span className="text-red-500">*</span></> : 'Notes'}
@@ -2527,6 +2560,7 @@ export default function SkillSheetPanel({
                       }`}
                     />
                   </div>
+                  )}
 
                   <div className="space-y-2">
                     <button

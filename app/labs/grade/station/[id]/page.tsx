@@ -92,6 +92,9 @@ export default function GradeStationPage() {
   const [criticalFail, setCriticalFail] = useState(false);
   const [criticalFailNotes, setCriticalFailNotes] = useState('');
   const [assistanceRequested, setAssistanceRequested] = useState(false);
+  // FIX 3: Per-criterion critical failure tracking
+  const [checkedCriticalCriteria, setCheckedCriticalCriteria] = useState<string[]>([]);
+  const [skillSheetCriticalCriteria, setSkillSheetCriticalCriteria] = useState<string[]>([]);
 
   // Handle need assistance - send alert to coordinator
   const handleNeedAssistance = useCallback(async () => {
@@ -239,6 +242,23 @@ export default function GradeStationPage() {
       }
     }
   }, [isSkillsStation, station, skillSheetIds]);
+
+  // FIX 3: Fetch critical criteria from the skill sheet for the NREMT examiner panel
+  useEffect(() => {
+    if (!panelSheetId || !station?.lab_day?.is_nremt_testing) return;
+    (async () => {
+      try {
+        const res = await fetch(`/api/skill-sheets/${panelSheetId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.sheet) {
+            const critFailures = data.sheet.critical_failures || [];
+            setSkillSheetCriticalCriteria(critFailures);
+          }
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [panelSheetId, station?.lab_day?.is_nremt_testing]);
 
   const fetchStation = async () => {
     try {
@@ -632,8 +652,8 @@ export default function GradeStationPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Timer Banner */}
-      {station?.lab_day?.id && (
+      {/* Timer Banner — FIX 4: Hidden on NREMT testing days (rotation timer irrelevant) */}
+      {station?.lab_day?.id && !station?.lab_day?.is_nremt_testing && (
         <TimerBanner
           labDayId={station.lab_day.id}
           stationId={stationId}
@@ -643,16 +663,12 @@ export default function GradeStationPage() {
         />
       )}
 
-      {/* NREMT Candidate Instructions & Timer */}
+      {/* NREMT Candidate Instructions — FIX 4: Timer moved below, between instructions and skill checklist */}
       {station?.lab_day?.is_nremt_testing && (
         <div className="max-w-7xl mx-auto px-4 pt-2 space-y-2">
           <NremtCandidateInstructions
             stationName={station.custom_title || station.skill_name || ''}
             onInstructionsRead={setNremtInstructionsRead}
-          />
-          <NremtTimer
-            stationName={station.custom_title || station.skill_name || ''}
-            instructionsRead={nremtInstructionsRead}
           />
         </div>
       )}
@@ -669,6 +685,16 @@ export default function GradeStationPage() {
         teamLeaderId={teamLeaderId}
         onSave={() => handleSave()}
       />
+
+      {/* FIX 4: NREMT Timer ribbon — between instructions and the skill checklist, always visible */}
+      {station?.lab_day?.is_nremt_testing && (
+        <div className="max-w-7xl mx-auto px-4 pt-2">
+          <NremtTimer
+            stationName={station.custom_title || station.skill_name || ''}
+            instructionsRead={nremtInstructionsRead}
+          />
+        </div>
+      )}
 
       {/* Embedded Skill Sheet Mode: Skills station with skill sheet available */}
       {useEmbeddedSkillSheet && panelSheetId ? (
@@ -713,6 +739,9 @@ export default function GradeStationPage() {
               defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
               isNremtTesting={!!station?.lab_day?.is_nremt_testing}
               criticalFail={criticalFail}
+              examinerNotes={examinerNotes}
+              checkedCriticalCriteria={checkedCriticalCriteria}
+              criticalFailNotes={criticalFailNotes}
             />
           </div>
 
@@ -727,6 +756,9 @@ export default function GradeStationPage() {
               onCriticalFailNotesChange={setCriticalFailNotes}
               onNeedAssistance={handleNeedAssistance}
               assistanceRequested={assistanceRequested}
+              criticalCriteria={skillSheetCriticalCriteria}
+              checkedCriteria={checkedCriticalCriteria}
+              onCheckedCriteriaChange={setCheckedCriticalCriteria}
             />
           )}
         </main>
@@ -936,6 +968,9 @@ export default function GradeStationPage() {
             onCriticalFailNotesChange={setCriticalFailNotes}
             onNeedAssistance={handleNeedAssistance}
             assistanceRequested={assistanceRequested}
+            criticalCriteria={skillSheetCriticalCriteria}
+            checkedCriteria={checkedCriticalCriteria}
+            onCheckedCriteriaChange={setCheckedCriticalCriteria}
           />
         )}
       </main>
@@ -956,6 +991,9 @@ export default function GradeStationPage() {
           defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
           isNremtTesting={!!station?.lab_day?.is_nremt_testing}
           criticalFail={criticalFail}
+          examinerNotes={examinerNotes}
+          checkedCriticalCriteria={checkedCriticalCriteria}
+          criticalFailNotes={criticalFailNotes}
         />
       )}
     </div>

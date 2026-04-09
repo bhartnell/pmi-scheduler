@@ -90,6 +90,7 @@ export interface Skill {
   name: string;
   category: string;
   certification_levels?: string[];
+  is_nremt?: boolean;
   documents?: SkillDocument[];
 }
 
