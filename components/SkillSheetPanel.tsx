@@ -1063,6 +1063,11 @@ export default function SkillSheetPanel({
   const isSequential = sheet ? useSequentialDisplay(sheet) : false;
   const sectionGroups = sheet && isSequential ? groupStepsBySectionHeader(sheet.steps) : [];
 
+  // NREMT desktop section header styling — larger, more prominent on lg screens
+  const nremtSectionHeaderClass = isNremtTesting
+    ? 'bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600 lg:px-4 lg:py-3 lg:text-base lg:border-l-4 lg:border-l-blue-500 dark:lg:border-l-blue-400 lg:bg-blue-50 dark:lg:bg-blue-900/20 lg:text-blue-900 dark:lg:text-blue-200 lg:mt-3 lg:mb-1'
+    : 'bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600';
+
   // Completion screen
   if (showCompletionScreen) {
     const completedCount = studentQueue?.filter(s => s.evaluated).length || 0;
@@ -1663,7 +1668,7 @@ export default function SkillSheetPanel({
                 </span>
               )}
             </div>
-            {/* NREMT threshold indicator */}
+            {/* NREMT threshold indicator — prominent at top of center column on desktop */}
             {isNremtTesting && mode === 'final' && sheet.steps.length > 0 && (() => {
               const earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
               const total = getTotalPossiblePoints(sheet.steps);
@@ -1671,26 +1676,34 @@ export default function SkillSheetPanel({
               if (minPts === null) return null;
               const meetsMin = earned >= minPts;
               const nearMin = !meetsMin && earned >= minPts - 3;
+              const colorClass = criticalFail
+                ? 'text-red-600 dark:text-red-400'
+                : meetsMin
+                ? 'text-green-600 dark:text-green-400'
+                : nearMin
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-red-600 dark:text-red-400';
+              const statusLabel = criticalFail
+                ? 'Critical Failure'
+                : meetsMin
+                ? 'Meets minimum'
+                : nearMin
+                ? 'Near minimum threshold'
+                : `Below minimum (${minPts} required)`;
               return (
-                <div className={`mt-1 text-xs font-medium flex items-center gap-1.5 ${
-                  criticalFail
-                    ? 'text-red-600 dark:text-red-400'
-                    : meetsMin
-                    ? 'text-green-600 dark:text-green-400'
-                    : nearMin
-                    ? 'text-amber-600 dark:text-amber-400'
-                    : 'text-red-600 dark:text-red-400'
-                }`}>
-                  <span>Points: {earned}/{total} — Minimum required: {minPts}</span>
-                  <span className="ml-1">
-                    {criticalFail
-                      ? '— Critical Failure'
-                      : meetsMin
-                      ? '— Meets minimum'
-                      : nearMin
-                      ? '— Near minimum threshold'
-                      : `— Below minimum (${minPts} required)`
-                    }
+                <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 lg:text-2xl">
+                  <span className="text-sm lg:text-lg font-semibold text-gray-700 dark:text-gray-200">
+                    Points:
+                  </span>
+                  <span className={`font-bold text-lg lg:text-3xl tabular-nums ${colorClass}`}>
+                    {earned}
+                    <span className="text-gray-400 dark:text-gray-500 font-normal">/{total}</span>
+                  </span>
+                  <span className="text-sm lg:text-lg font-semibold text-gray-700 dark:text-gray-200">
+                    Min: <span className="tabular-nums">{minPts}</span>
+                  </span>
+                  <span className={`text-xs lg:text-sm font-medium ${colorClass}`}>
+                    — {statusLabel}
                   </span>
                 </div>
               );
@@ -1801,7 +1814,7 @@ export default function SkillSheetPanel({
                     {sectionGroups.map((section, sIdx) => (
                       <div key={sIdx}>
                         {section.header && (
-                          <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
+                          <div className={nremtSectionHeaderClass}>
                             {section.header}
                           </div>
                         )}
@@ -1825,6 +1838,7 @@ export default function SkillSheetPanel({
                             }}
                             subItemNote={subItemNotes[step.step_number]}
                             onSubItemNoteChange={(note) => setSubItemNotes(prev => ({ ...prev, [step.step_number]: note }))}
+                            isNremtTesting={isNremtTesting}
                           />
                         ))}
                       </div>
@@ -1858,7 +1872,7 @@ export default function SkillSheetPanel({
                             {phaseSteps.map(step => (
                               <div key={step.id}>
                                 {step.section_header && (
-                                  <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
+                                  <div className={nremtSectionHeaderClass}>
                                     {step.section_header}
                                   </div>
                                 )}
@@ -1880,6 +1894,7 @@ export default function SkillSheetPanel({
                                   }}
                                   subItemNote={subItemNotes[step.step_number]}
                                   onSubItemNoteChange={(note) => setSubItemNotes(prev => ({ ...prev, [step.step_number]: note }))}
+                                  isNremtTesting={isNremtTesting}
                                 />
                               </div>
                             ))}
@@ -2010,10 +2025,10 @@ export default function SkillSheetPanel({
 
               {/* Final competency action area */}
               {mode === 'final' && (
-                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3 lg:p-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Result</label>
-                    <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+                    <label className={`block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 ${isNremtTesting ? 'lg:text-sm lg:mb-2' : ''}`}>Result</label>
+                    <div className={`inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden ${isNremtTesting ? 'lg:w-full' : ''}`}>
                       {([
                         { key: 'pass' as const, label: 'Pass', color: 'bg-green-600' },
                         { key: 'fail' as const, label: 'Fail', color: 'bg-red-600' },
@@ -2023,6 +2038,8 @@ export default function SkillSheetPanel({
                           key={key}
                           onClick={() => setResult(key)}
                           className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                            isNremtTesting ? 'lg:flex-1 lg:px-5 lg:py-3 lg:text-base lg:min-h-[48px]' : ''
+                          } ${
                             result === key ? `${color} text-white` : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                           } ${key !== 'pass' ? 'border-l border-gray-300 dark:border-gray-600' : ''}`}
                         >
@@ -2031,6 +2048,20 @@ export default function SkillSheetPanel({
                       ))}
                     </div>
                   </div>
+                  {/* NREMT below-minimum warning when Fail is selected */}
+                  {isNremtTesting && result === 'fail' && sheet && (() => {
+                    const earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
+                    const minPts = findMinimumPoints(sheet.skill_name);
+                    if (minPts === null || earned >= minPts) return null;
+                    return (
+                      <div className="rounded-md border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-2 flex items-start gap-2">
+                        <AlertTriangle className="w-4 h-4 lg:w-5 lg:h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                        <p className="text-xs lg:text-sm text-red-700 dark:text-red-300">
+                          <span className="font-semibold">Below NREMT minimum:</span> {earned} points scored, {minPts} required. Candidate did not meet the minimum threshold.
+                        </p>
+                      </div>
+                    );
+                  })()}
                   {/* FIX 2: Hide notes/remediation on NREMT days — examiner panel handles notes */}
                   {!isNremtTesting && (
                   <div>
@@ -2048,11 +2079,13 @@ export default function SkillSheetPanel({
                     />
                   </div>
                   )}
-                  <div className="space-y-2">
+                  <div className="space-y-2 lg:space-y-3">
                     <button
                       onClick={() => dispatchSave('pending', 'in_progress')}
                       disabled={saving || !canSave}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                      className={`w-full flex items-center justify-center gap-2 px-4 py-2 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium ${
+                        isNremtTesting ? 'lg:py-3 lg:text-base lg:min-h-[48px]' : ''
+                      }`}
                     >
                       <Save className="w-4 h-4" />
                       Finish Later
@@ -2061,6 +2094,8 @@ export default function SkillSheetPanel({
                       onClick={() => dispatchSave('do_not_send')}
                       disabled={saving || !canSave}
                       className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white rounded-lg disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium ${
+                        isNremtTesting ? 'lg:py-4 lg:text-lg lg:min-h-[56px] lg:font-semibold' : ''
+                      } ${
                         result === 'fail' ? 'bg-red-600 hover:bg-red-700' : result === 'remediation' ? 'bg-amber-600 hover:bg-amber-700' : 'bg-green-600 hover:bg-green-700'
                       }`}
                     >
@@ -2327,7 +2362,7 @@ export default function SkillSheetPanel({
                     {sectionGroups.map((section, sIdx) => (
                       <div key={sIdx}>
                         {section.header && (
-                          <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
+                          <div className={nremtSectionHeaderClass}>
                             {section.header}
                           </div>
                         )}
@@ -2351,6 +2386,7 @@ export default function SkillSheetPanel({
                             }}
                             subItemNote={subItemNotes[step.step_number]}
                             onSubItemNoteChange={(note) => setSubItemNotes(prev => ({ ...prev, [step.step_number]: note }))}
+                            isNremtTesting={isNremtTesting}
                           />
                         ))}
                       </div>
@@ -2384,7 +2420,7 @@ export default function SkillSheetPanel({
                             {phaseSteps.map(step => (
                               <div key={step.id}>
                                 {step.section_header && (
-                                  <div className="bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600">
+                                  <div className={nremtSectionHeaderClass}>
                                     {step.section_header}
                                   </div>
                                 )}
@@ -2406,6 +2442,7 @@ export default function SkillSheetPanel({
                                   }}
                                   subItemNote={subItemNotes[step.step_number]}
                                   onSubItemNoteChange={(note) => setSubItemNotes(prev => ({ ...prev, [step.step_number]: note }))}
+                                  isNremtTesting={isNremtTesting}
                                 />
                               </div>
                             ))}
@@ -2655,6 +2692,7 @@ function PanelStepRow({
   onSubItemToggle,
   subItemNote,
   onSubItemNoteChange,
+  isNremtTesting = false,
 }: {
   step: Step;
   mode: DisplayMode;
@@ -2666,7 +2704,13 @@ function PanelStepRow({
   onSubItemToggle?: (index: number) => void;
   subItemNote?: string;
   onSubItemNoteChange?: (note: string) => void;
+  isNremtTesting?: boolean;
 }) {
+  // NREMT desktop styling classes — apply only at lg+ when NREMT testing
+  const nremtRowPadding = isNremtTesting ? 'lg:px-4 lg:py-3' : '';
+  const nremtInstructionText = isNremtTesting ? 'lg:text-[15px] lg:leading-relaxed' : '';
+  const nremtBtnSize = isNremtTesting ? 'lg:w-11 lg:h-11 lg:min-h-[44px] lg:min-w-[44px]' : '';
+  const nremtBtnIconSize = isNremtTesting ? 'lg:w-5 lg:h-5' : '';
   const isCritical = step.is_critical;
   const [noteExpanded, setNoteExpanded] = useState(false);
   const hasSubItems = step.sub_items && step.sub_items.length > 0;
@@ -2917,16 +2961,16 @@ function PanelStepRow({
   // Final mode - pass/fail icons (for simple steps) or sub-item checkboxes (for multi-point)
   return (
     <>
-      <div className={`px-3 py-2 ${isCritical ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
+      <div className={`px-3 py-2 ${nremtRowPadding} ${isCritical ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
         <div className="flex items-start gap-2">
-          <span className="text-xs font-mono text-gray-400 mt-0.5 w-5 text-right flex-shrink-0">
+          <span className={`text-xs font-mono text-gray-400 mt-0.5 w-5 text-right flex-shrink-0 ${isNremtTesting ? 'lg:text-sm lg:w-7' : ''}`}>
             {step.step_number}.
           </span>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-start gap-1.5">
-                  <p className="text-xs text-gray-900 dark:text-white">{step.instruction}</p>
+                  <p className={`text-xs text-gray-900 dark:text-white ${nremtInstructionText}`}>{step.instruction}</p>
                   {isCritical && (
                     <span className="flex-shrink-0 px-1 py-0.5 rounded text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30">
                       CRITICAL
@@ -2936,31 +2980,31 @@ function PanelStepRow({
                 </div>
               </div>
               {/* Final mode: Pass/Fail buttons for simple steps, point badge for sub-item steps */}
-              <div className="flex items-center gap-0.5 flex-shrink-0">
+              <div className="flex items-center gap-0.5 lg:gap-1.5 flex-shrink-0">
                 {pointsBadge}
                 {!hasSubItems && (
                   <>
                     <button
                       onClick={() => onSetMark('pass')}
-                      className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                      className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${nremtBtnSize} ${
                         mark === 'pass'
                           ? 'bg-green-500 text-white'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-green-100 dark:hover:bg-green-900/30'
                       }`}
                       title="Pass"
                     >
-                      <CheckCircle className="w-3.5 h-3.5" />
+                      <CheckCircle className={`w-3.5 h-3.5 ${nremtBtnIconSize}`} />
                     </button>
                     <button
                       onClick={() => onSetMark('fail')}
-                      className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${
+                      className={`w-7 h-7 rounded flex items-center justify-center transition-colors ${nremtBtnSize} ${
                         mark === 'fail'
                           ? 'bg-red-500 text-white'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-400 hover:bg-red-100 dark:hover:bg-red-900/30'
                       }`}
                       title="Fail"
                     >
-                      <XCircle className="w-3.5 h-3.5" />
+                      <XCircle className={`w-3.5 h-3.5 ${nremtBtnIconSize}`} />
                     </button>
                   </>
                 )}

@@ -799,9 +799,22 @@ export default function GradeStationPage() {
 
       {/* Embedded Skill Sheet Mode: Skills station with skill sheet available */}
       {useEmbeddedSkillSheet && panelSheetId ? (
-        <main className={`flex gap-6 max-w-7xl mx-auto px-4 py-4 ${station?.lab_day?.is_nremt_testing ? 'pb-20' : 'pb-4'}`}>
+        <main
+          className={
+            station?.lab_day?.is_nremt_testing
+              ? // NREMT: mobile stacked (<lg) becomes 3-col grid at lg+
+                'max-w-[1600px] mx-auto px-4 py-4 pb-24 flex flex-col gap-4 lg:grid lg:grid-cols-[12rem_minmax(0,1fr)_18rem] lg:gap-4 lg:items-start'
+              : 'flex gap-6 max-w-7xl mx-auto px-4 py-4 pb-4'
+          }
+        >
           {/* Left: Student panel */}
-          <div className="w-80 shrink-0 sticky top-0 max-h-screen overflow-y-auto pt-2 space-y-4">
+          <div
+            className={
+              station?.lab_day?.is_nremt_testing
+                ? 'lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto pt-2 space-y-3'
+                : 'w-80 shrink-0 sticky top-0 max-h-screen overflow-y-auto pt-2 space-y-4'
+            }
+          >
             <StudentSelection
               isSkillsStation={isSkillsStation}
               station={station}
@@ -822,7 +835,13 @@ export default function GradeStationPage() {
           </div>
 
           {/* Center: Skill sheet(s) — tabbed if dual-skill station */}
-          <div className="flex-1 min-h-[60vh]">
+          <div
+            className={
+              station?.lab_day?.is_nremt_testing
+                ? 'min-h-[60vh] min-w-0'
+                : 'flex-1 min-h-[60vh]'
+            }
+          >
             {isDualSkillStation && dualSkillSheets.length === 2 ? (
               <>
                 {/* Dual-skill tab bar */}
@@ -915,21 +934,45 @@ export default function GradeStationPage() {
 
           {/* Right: NREMT Examiner Panel (sticky notes, critical fail, assistance) */}
           {station?.lab_day?.is_nremt_testing && (
-            <NremtStickyNotesPanel
-              notes={examinerNotes}
-              onNotesChange={setExaminerNotes}
-              criticalFail={criticalFail}
-              onCriticalFailChange={setCriticalFail}
-              criticalFailNotes={criticalFailNotes}
-              onCriticalFailNotesChange={setCriticalFailNotes}
-              onNeedAssistance={handleNeedAssistance}
-              assistanceRequested={assistanceRequested}
-              onClearAssistance={handleClearAssistance}
-              criticalCriteria={skillSheetCriticalCriteria}
-              checkedCriteria={checkedCriticalCriteria}
-              onCheckedCriteriaChange={setCheckedCriticalCriteria}
-              resultIsFail={criticalFail}
-            />
+            <>
+              {/* Desktop (lg+): inline column in 3-col grid */}
+              <div className="hidden lg:block lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto pt-2">
+                <NremtStickyNotesPanel
+                  mode="desktop-inline"
+                  notes={examinerNotes}
+                  onNotesChange={setExaminerNotes}
+                  criticalFail={criticalFail}
+                  onCriticalFailChange={setCriticalFail}
+                  criticalFailNotes={criticalFailNotes}
+                  onCriticalFailNotesChange={setCriticalFailNotes}
+                  onNeedAssistance={handleNeedAssistance}
+                  assistanceRequested={assistanceRequested}
+                  onClearAssistance={handleClearAssistance}
+                  criticalCriteria={skillSheetCriticalCriteria}
+                  checkedCriteria={checkedCriticalCriteria}
+                  onCheckedCriteriaChange={setCheckedCriticalCriteria}
+                  resultIsFail={criticalFail}
+                />
+              </div>
+              {/* Mobile (<lg): floating drawer */}
+              <div className="lg:hidden">
+                <NremtStickyNotesPanel
+                  notes={examinerNotes}
+                  onNotesChange={setExaminerNotes}
+                  criticalFail={criticalFail}
+                  onCriticalFailChange={setCriticalFail}
+                  criticalFailNotes={criticalFailNotes}
+                  onCriticalFailNotesChange={setCriticalFailNotes}
+                  onNeedAssistance={handleNeedAssistance}
+                  assistanceRequested={assistanceRequested}
+                  onClearAssistance={handleClearAssistance}
+                  criticalCriteria={skillSheetCriticalCriteria}
+                  checkedCriteria={checkedCriticalCriteria}
+                  onCheckedCriteriaChange={setCheckedCriticalCriteria}
+                  resultIsFail={criticalFail}
+                />
+              </div>
+            </>
           )}
         </main>
       ) : (
