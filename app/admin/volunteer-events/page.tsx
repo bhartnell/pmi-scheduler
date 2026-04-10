@@ -17,6 +17,8 @@ import {
   X,
   BarChart3,
   Send,
+  Pencil,
+  Mail,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
@@ -55,8 +57,8 @@ interface CalendarEvent {
   id: string;
   title: string;
   date: string;
-  start_time: string;
-  end_time: string;
+  start_time: string | null;
+  end_time: string | null;
   linked_lab_day_id?: string;
   linked_id?: string;
   source: string;
@@ -109,6 +111,32 @@ export default function VolunteerEventsPage() {
 
   // Modals
   const [showCreateEvent, setShowCreateEvent] = useState(false);
+  const [showEditEvent, setShowEditEvent] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<VolunteerEvent | null>(null);
+  const [editForm, setEditForm] = useState<CreateEventForm & { linked_lab_day_id: string }>({
+    name: '',
+    event_type: 'other',
+    date: '',
+    start_time: '',
+    end_time: '',
+    location: '',
+    description: '',
+    max_volunteers: '',
+    linked_lab_day_id: '',
+  });
+  const [labDayOptions, setLabDayOptions] = useState<{ id: string; label: string }[]>([]);
+  const [needsTimeEntry, setNeedsTimeEntry] = useState<
+    Array<{ cal: CalendarEvent; start_time: string; end_time: string }>
+  >([]);
+  const [showTimeEntryModal, setShowTimeEntryModal] = useState(false);
+  // Correction email modal state
+  const [showCorrectionModal, setShowCorrectionModal] = useState(false);
+  const [correctionEvent, setCorrectionEvent] = useState<VolunteerEvent | null>(null);
+  const [correctionSubject, setCorrectionSubject] = useState('');
+  const [correctionBody, setCorrectionBody] = useState('');
+  const [correctionSending, setCorrectionSending] = useState(false);
+  const [correctionRecipients, setCorrectionRecipients] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [correctionSelected, setCorrectionSelected] = useState<Set<string>>(new Set());
   const [showCreateInvite, setShowCreateInvite] = useState(false);
   const [showCalendarPicker, setShowCalendarPicker] = useState(false);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([]);
@@ -264,8 +292,13 @@ export default function VolunteerEventsPage() {
 
     try {
       const selected = calendarEvents.filter((e) => selectedCalendarEvents.has(e.id));
+      const missingTimes: Array<{ cal: CalendarEvent; start_time: string; end_time: string }> = [];
 
       for (const cal of selected) {
+        if (!cal.start_time || !cal.end_time) {
+          missingTimes.push({ cal, start_time: '08:00', end_time: '17:00' });
+          continue;
+        }
         const volEventType = cal.event_type === 'lab' ? 'lab_day' : 'other';
         const linkedLabId = cal.source === 'lab_day' ? cal.linked_id : (cal.linked_lab_day_id || null);
         await fetch('/api/volunteer/events', {
@@ -300,10 +333,219 @@ export default function VolunteerEventsPage() {
       setSelectedCalendarEvents(new Set());
       setNremtDate('');
       await fetchData();
+
+      if (missingTimes.length > 0) {
+        setNeedsTimeEntry(missingTimes);
+        setShowTimeEntryModal(true);
+      }
     } catch {
       setError('Failed to import calendar events');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSubmitManualTimes = async () => {
+    setSubmitting(true);
+    try {
+      for (const item of needsTimeEntry) {
+        if (!item.start_time || !item.end_time) continue;
+        const volEventType = item.cal.event_type === 'lab' ? 'lab_day' : 'other';
+        const linkedLabId = item.cal.source === 'lab_day' ? item.cal.linked_id : (item.cal.linked_lab_day_id || null);
+        await fetch('/api/volunteer/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: item.cal.title,
+            event_type: volEventType,
+            date: item.cal.date,
+            start_time: item.start_time,
+            end_time: item.end_time,
+            linked_lab_day_id: linkedLabId,
+          }),
+        });
+      }
+      setShowTimeEntryModal(false);
+      setNeedsTimeEntry([]);
+      await fetchData();
+    } catch {
+      setError('Failed to create events with manual times');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ─── Edit Event ─────────────────────────────────────────────────────────────
+
+  const openEditModal = async (event: VolunteerEvent) => {
+    setEditingEvent(event);
+    setEditForm({
+      name: event.name,
+      event_type: event.event_type,
+      date: event.date,
+      start_time: event.start_time ? event.start_time.slice(0, 5) : '',
+      end_time: event.end_time ? event.end_time.slice(0, 5) : '',
+      location: event.location || '',
+      description: event.description || '',
+      max_volunteers: event.max_volunteers != null ? String(event.max_volunteers) : '',
+      linked_lab_day_id: event.linked_lab_day_id || '',
+    });
+    setShowEditEvent(true);
+
+    // Fetch lab day options for dropdown (best-effort)
+    try {
+      const now = new Date();
+      const start = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const end = new Date(now.getFullYear(), now.getMonth() + 4, 0);
+      const res = await fetch(
+        `/api/calendar/unified?start_date=${start.toISOString().split('T')[0]}&end_date=${end.toISOString().split('T')[0]}&include=labs`
+      );
+      const data = await res.json();
+      if (data.events) {
+        const opts = (data.events as CalendarEvent[])
+          .filter((e) => e.source === 'lab_day' && e.linked_id)
+          .map((e) => ({
+            id: e.linked_id as string,
+            label: `${e.date} — ${e.title}`,
+          }));
+        setLabDayOptions(opts);
+      }
+    } catch {
+      // silent
+    }
+  };
+
+  const handleUpdateEvent = async () => {
+    if (!editingEvent) return;
+    if (!editForm.name || !editForm.date) return;
+    if (editForm.start_time && editForm.end_time && editForm.end_time <= editForm.start_time) {
+      setError('End time must be after start time');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const body = {
+        name: editForm.name,
+        event_type: editForm.event_type,
+        date: editForm.date,
+        start_time: editForm.start_time || null,
+        end_time: editForm.end_time || null,
+        location: editForm.location || null,
+        description: editForm.description || null,
+        max_volunteers: editForm.max_volunteers ? parseInt(editForm.max_volunteers) : null,
+        linked_lab_day_id: editForm.linked_lab_day_id || null,
+      };
+      const res = await fetch(`/api/volunteer/events/${editingEvent.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error);
+
+      setShowEditEvent(false);
+      setEditingEvent(null);
+      await fetchData();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to update event');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ─── Correction Email ───────────────────────────────────────────────────────
+
+  const openCorrectionModal = async (event: VolunteerEvent) => {
+    setCorrectionEvent(event);
+    setCorrectionSending(false);
+
+    const formattedDate = new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+    const start = event.start_time ? event.start_time.slice(0, 5) : '';
+    const end = event.end_time ? event.end_time.slice(0, 5) : '';
+    const timeRange = start && end ? `${start}-${end}` : '(time TBD)';
+
+    setCorrectionSubject(`Update: ${event.name} — Time Correction`);
+    setCorrectionBody(
+      `Hi {Name},\n\n` +
+        `We wanted to let you know that the time for ${event.name} on ${formattedDate} has been updated.\n\n` +
+        `The correct time is ${timeRange}.\n\n` +
+        `We apologize for any confusion. Please update your calendar accordingly.\n\n` +
+        `If you have any questions, contact bhartnell@pmi.edu.\n\n` +
+        `Thank you for volunteering!`
+    );
+
+    // Fetch registrations for this event
+    try {
+      const res = await fetch(`/api/volunteer/events/${event.id}`);
+      const data = await res.json();
+      if (data.success && data.data?.registrations) {
+        const regs = (data.data.registrations as Array<{ id: string; name: string; email: string }>)
+          .map((r) => ({ id: r.id, name: r.name, email: r.email }));
+        setCorrectionRecipients(regs);
+        setCorrectionSelected(new Set(regs.map((r) => r.email)));
+      } else {
+        setCorrectionRecipients([]);
+        setCorrectionSelected(new Set());
+      }
+    } catch {
+      setCorrectionRecipients([]);
+      setCorrectionSelected(new Set());
+    }
+
+    setShowCorrectionModal(true);
+  };
+
+  const toggleCorrectionRecipient = (email: string) => {
+    setCorrectionSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(email)) next.delete(email);
+      else next.add(email);
+      return next;
+    });
+  };
+
+  const handleSendCorrection = async () => {
+    if (!correctionEvent) return;
+    if (!correctionSubject.trim() || !correctionBody.trim()) {
+      setError('Subject and message are required');
+      return;
+    }
+    const selectedEmails = Array.from(correctionSelected);
+    if (selectedEmails.length === 0) {
+      setError('Select at least one recipient');
+      return;
+    }
+    setCorrectionSending(true);
+    try {
+      const res = await fetch(
+        `/api/volunteer/events/${correctionEvent.id}/send-correction`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject: correctionSubject,
+            message: correctionBody,
+            recipientEmails: selectedEmails,
+          }),
+        }
+      );
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'Failed to send');
+      alert(`Sent ${data.sent} correction email${data.sent === 1 ? '' : 's'}${data.failed ? ` (${data.failed} failed)` : ''}.`);
+      setShowCorrectionModal(false);
+      setCorrectionEvent(null);
+      setCorrectionRecipients([]);
+      setCorrectionSelected(new Set());
+      await fetchData();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to send correction email');
+    } finally {
+      setCorrectionSending(false);
     }
   };
 
@@ -547,6 +789,22 @@ export default function VolunteerEventsPage() {
                       {event.max_volunteers ? `/${event.max_volunteers}` : ''}
                     </span>
                     <button
+                      onClick={() => openEditModal(event)}
+                      className="p-1.5 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition"
+                      title="Edit event"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    {event.registration_count > 0 && (
+                      <button
+                        onClick={() => openCorrectionModal(event)}
+                        className="p-1.5 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded transition"
+                        title="Send correction email"
+                      >
+                        <Mail className="h-4 w-4" />
+                      </button>
+                    )}
+                    <button
                       onClick={() => handleDeleteEvent(event.id)}
                       className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition"
                       title="Delete event"
@@ -783,6 +1041,341 @@ export default function VolunteerEventsPage() {
                 >
                   {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
                   Create Event
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Edit Event Modal ────────────────────────────────────────────── */}
+        {showEditEvent && editingEvent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Edit Volunteer Event
+                </h3>
+                <button onClick={() => { setShowEditEvent(false); setEditingEvent(null); }}>
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Event Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.name}
+                    onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Event Type
+                  </label>
+                  <select
+                    value={editForm.event_type}
+                    onChange={(e) => setEditForm({ ...editForm, event_type: e.target.value as CreateEventForm['event_type'] })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="nremt_testing">NREMT Testing</option>
+                    <option value="lab_day">Lab Day</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={editForm.date}
+                      onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Max Volunteers
+                    </label>
+                    <input
+                      type="number"
+                      value={editForm.max_volunteers}
+                      onChange={(e) => setEditForm({ ...editForm, max_volunteers: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                      placeholder="No limit"
+                    />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Start Time
+                    </label>
+                    <input
+                      type="time"
+                      value={editForm.start_time}
+                      onChange={(e) => setEditForm({ ...editForm, start_time: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      End Time
+                    </label>
+                    <input
+                      type="time"
+                      value={editForm.end_time}
+                      onChange={(e) => setEditForm({ ...editForm, end_time: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Linked Lab Day
+                  </label>
+                  <select
+                    value={editForm.linked_lab_day_id}
+                    onChange={(e) => setEditForm({ ...editForm, linked_lab_day_id: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  >
+                    <option value="">None</option>
+                    {editForm.linked_lab_day_id &&
+                      !labDayOptions.find((o) => o.id === editForm.linked_lab_day_id) && (
+                        <option value={editForm.linked_lab_day_id}>
+                          (current: {editForm.linked_lab_day_id.slice(0, 8)}…)
+                        </option>
+                      )}
+                    {labDayOptions.map((o) => (
+                      <option key={o.id} value={o.id}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.location}
+                    onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Editing does not affect existing registrations.
+                </p>
+              </div>
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+                <button
+                  onClick={() => { setShowEditEvent(false); setEditingEvent(null); }}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateEvent}
+                  disabled={!editForm.name || !editForm.date || submitting}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Manual Time Entry Modal ─────────────────────────────────────── */}
+        {showTimeEntryModal && needsTimeEntry.length > 0 && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Enter times for {needsTimeEntry.length} event{needsTimeEntry.length !== 1 ? 's' : ''}
+                </h3>
+                <button onClick={() => { setShowTimeEntryModal(false); setNeedsTimeEntry([]); }}>
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+              <div className="p-4 space-y-3">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  These calendar events have no start/end times. Enter times to create them.
+                </p>
+                {needsTimeEntry.map((item, idx) => (
+                  <div key={item.cal.id} className="p-3 border border-gray-200 dark:border-gray-600 rounded-lg">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+                      {item.cal.title}
+                    </div>
+                    <div className="text-xs text-gray-500 mb-2">
+                      {new Date(item.cal.date + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="time"
+                        value={item.start_time}
+                        onChange={(e) => {
+                          const next = [...needsTimeEntry];
+                          next[idx] = { ...next[idx], start_time: e.target.value };
+                          setNeedsTimeEntry(next);
+                        }}
+                        className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                      />
+                      <input
+                        type="time"
+                        value={item.end_time}
+                        onChange={(e) => {
+                          const next = [...needsTimeEntry];
+                          next[idx] = { ...next[idx], end_time: e.target.value };
+                          setNeedsTimeEntry(next);
+                        }}
+                        className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+                <button
+                  onClick={() => { setShowTimeEntryModal(false); setNeedsTimeEntry([]); }}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                >
+                  Skip
+                </button>
+                <button
+                  onClick={handleSubmitManualTimes}
+                  disabled={submitting}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                  Create Events
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ─── Correction Email Modal ──────────────────────────────────────── */}
+        {showCorrectionModal && correctionEvent && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+              <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Mail className="h-5 w-5 text-amber-500" />
+                  Send Correction Email — {correctionEvent.name}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowCorrectionModal(false);
+                    setCorrectionEvent(null);
+                  }}
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+              <div className="p-4 space-y-4">
+                <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm text-amber-800 dark:text-amber-200">
+                  This will send to {correctionSelected.size} of {correctionRecipients.length} registered volunteer{correctionRecipients.length === 1 ? '' : 's'}.
+                  The placeholder <code>{'{Name}'}</code> is replaced with each recipient&apos;s name.
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Recipients
+                  </label>
+                  {correctionRecipients.length === 0 ? (
+                    <div className="text-sm text-gray-500 dark:text-gray-400 italic">
+                      No registered volunteers found for this event.
+                    </div>
+                  ) : (
+                    <div className="max-h-40 overflow-y-auto border border-gray-200 dark:border-gray-600 rounded-lg divide-y divide-gray-200 dark:divide-gray-700">
+                      {correctionRecipients.map((r) => (
+                        <label
+                          key={r.id}
+                          className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={correctionSelected.has(r.email)}
+                            onChange={() => toggleCorrectionRecipient(r.email)}
+                            className="h-4 w-4"
+                          />
+                          <span className="text-sm text-gray-900 dark:text-white flex-1">
+                            {r.name}
+                          </span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {r.email}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    value={correctionSubject}
+                    onChange={(e) => setCorrectionSubject(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Message
+                  </label>
+                  <textarea
+                    value={correctionBody}
+                    onChange={(e) => setCorrectionBody(e.target.value)}
+                    rows={10}
+                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"
+                  />
+                </div>
+              </div>
+              <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setShowCorrectionModal(false);
+                    setCorrectionEvent(null);
+                  }}
+                  className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendCorrection}
+                  disabled={
+                    correctionSending ||
+                    correctionSelected.size === 0 ||
+                    !correctionSubject.trim() ||
+                    !correctionBody.trim()
+                  }
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition disabled:opacity-50 flex items-center gap-2"
+                >
+                  {correctionSending && <Loader2 className="h-4 w-4 animate-spin" />}
+                  <Mail className="h-4 w-4" />
+                  Send Correction
                 </button>
               </div>
             </div>

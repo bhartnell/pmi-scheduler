@@ -7,8 +7,8 @@ export interface CalendarEvent {
   source: 'planner' | 'lab_day' | 'lvfr' | 'clinical' | 'shift' | 'meeting' | 'ride_along';
   title: string;
   date: string;
-  start_time: string;
-  end_time: string;
+  start_time: string | null;
+  end_time: string | null;
   program?: 'paramedic' | 'emt' | 'aemt' | 'lvfr' | 'other';
   color: string;
   cohort_number?: number;
@@ -226,8 +226,8 @@ export async function GET(request: NextRequest) {
               source: 'lab_day',
               title: ld.title || `Lab Day - C${cohort?.cohort_number || '?'}`,
               date: ld.date,
-              start_time: ld.start_time || '08:00:00',
-              end_time: ld.end_time || '17:00:00',
+              start_time: ld.start_time ?? null,
+              end_time: ld.end_time ?? null,
               program,
               color: getColor(program, 'lab'),
               cohort_number: cohort?.cohort_number,
@@ -500,7 +500,7 @@ export async function GET(request: NextRequest) {
     events.sort((a, b) => {
       const dateCmp = a.date.localeCompare(b.date);
       if (dateCmp !== 0) return dateCmp;
-      return a.start_time.localeCompare(b.start_time);
+      return (a.start_time || '').localeCompare(b.start_time || '');
     });
 
     return NextResponse.json({ events });
