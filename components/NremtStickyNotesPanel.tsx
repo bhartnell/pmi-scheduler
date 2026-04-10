@@ -15,7 +15,9 @@ interface NremtStickyNotesPanelProps {
   onNotesChange: (notes: string) => void;
   criticalFail: boolean;
   onCriticalFailChange: (fail: boolean) => void;
+  /** @deprecated — merged into examiner comments; prop retained for caller compatibility */
   criticalFailNotes: string;
+  /** @deprecated — merged into examiner comments; prop retained for caller compatibility */
   onCriticalFailNotesChange: (notes: string) => void;
   onNeedAssistance: () => void;
   assistanceRequested?: boolean;
@@ -42,8 +44,6 @@ function PanelContent({
   onNotesChange,
   criticalFail,
   onCriticalFailChange,
-  criticalFailNotes,
-  onCriticalFailNotesChange,
   onNeedAssistance,
   assistanceRequested,
   onClearAssistance,
@@ -105,14 +105,23 @@ function PanelContent({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Examiner Comments */}
+      {/* Examiner Comments — unified field (also captures critical failure explanation) */}
       <div>
         <label
           htmlFor="examiner-notes"
           className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
         >
-          Examiner Comments
-          {resultIsFail && <span className="text-red-500 ml-1">* required</span>}
+          {criticalFail ? (
+            <>
+              Examiner Comments — Critical failure explanation required
+              <span className="text-red-500 ml-1">*</span>
+            </>
+          ) : (
+            <>
+              Examiner Comments
+              {resultIsFail && <span className="text-red-500 ml-1">* required</span>}
+            </>
+          )}
         </label>
         <textarea
           ref={notesRef}
@@ -121,9 +130,9 @@ function PanelContent({
           value={notes}
           onChange={(e) => onNotesChange(e.target.value)}
           onInput={autoResize}
-          placeholder="Add observations, comments, or feedback..."
+          placeholder={criticalFail ? 'Describe what happened...' : 'Add observations, comments, or feedback...'}
           className={`w-full rounded-md border px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-1 resize-none ${
-            resultIsFail && !notes.trim()
+            (resultIsFail || criticalFail) && !notes.trim()
               ? 'border-red-400 dark:border-red-600 focus:border-red-500 focus:ring-red-500 bg-red-50 dark:bg-red-950/20'
               : 'border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-800'
           }`}
@@ -169,25 +178,6 @@ function PanelContent({
             })}
           </div>
 
-          {/* Mandatory notes when any criterion is checked */}
-          {criticalFail && (
-            <div className="mt-3">
-              <label
-                htmlFor="critical-fail-notes"
-                className="block text-xs font-medium text-red-600 dark:text-red-400 mb-1"
-              >
-                Critical Failure Notes (required)
-              </label>
-              <textarea
-                id="critical-fail-notes"
-                rows={3}
-                value={criticalFailNotes}
-                onChange={(e) => onCriticalFailNotesChange(e.target.value)}
-                placeholder="Describe what happened..."
-                className="w-full rounded-md border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/20 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-red-300 dark:placeholder-red-700 focus:border-red-500 focus:ring-1 focus:ring-red-500 resize-none"
-              />
-            </div>
-          )}
         </div>
       ) : (
         /* Legacy single checkbox mode (non-NREMT or no criteria) */
@@ -211,24 +201,6 @@ function PanelContent({
             </span>
           </label>
 
-          {criticalFail && (
-            <div className="mt-3">
-              <label
-                htmlFor="critical-fail-notes"
-                className="block text-xs font-medium text-red-600 dark:text-red-400 mb-1"
-              >
-                Explain the critical failure (required)
-              </label>
-              <textarea
-                id="critical-fail-notes"
-                rows={3}
-                value={criticalFailNotes}
-                onChange={(e) => onCriticalFailNotesChange(e.target.value)}
-                placeholder="Describe what happened..."
-                className="w-full rounded-md border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/20 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 placeholder-red-300 dark:placeholder-red-700 focus:border-red-500 focus:ring-1 focus:ring-red-500 resize-none"
-              />
-            </div>
-          )}
         </div>
       )}
 

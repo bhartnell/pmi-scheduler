@@ -322,7 +322,7 @@ export default function SkillSheetPanel({
   criticalFail = false,
   examinerNotes = '',
   checkedCriticalCriteria = [],
-  criticalFailNotes: externalCriticalFailNotes = '',
+  criticalFailNotes: _externalCriticalFailNotes = '',
   isRetake = false,
   originalEvaluationId,
 }: SkillSheetPanelProps) {
@@ -611,9 +611,10 @@ export default function SkillSheetPanel({
           step_details: stepDetails || null,
           status: saveStatus,
           // FIX 3: Include critical fail data from NREMT examiner panel
+          // Note: critical fail notes are now merged into examiner comments (single field)
           ...(isNremtTesting && criticalFail ? {
             critical_fail: true,
-            critical_fail_notes: externalCriticalFailNotes?.trim() || null,
+            critical_fail_notes: effectiveNotes.trim() || null,
             critical_criteria_checked: checkedCriticalCriteria,
           } : {}),
           // Retake fields
