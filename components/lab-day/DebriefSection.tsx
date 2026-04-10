@@ -118,14 +118,21 @@ export default function DebriefSection({ labDayId }: DebriefSectionProps) {
                             {evalItem.skill_sheet?.skill_name} &mdash; evaluated by {evalItem.evaluator?.name || 'Unknown'}
                           </p>
                           <div className="flex flex-wrap gap-1">
-                            {(evalItem.flagged_items || []).map((item: string, j: number) => (
-                              <span
-                                key={j}
-                                className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded"
-                              >
-                                {item}
-                              </span>
-                            ))}
+                            {(evalItem.flagged_items || []).map((item: unknown, j: number) => {
+                              const itemText = typeof item === 'string'
+                                ? item
+                                : item && typeof item === 'object' && 'step_number' in item
+                                  ? `Step ${(item as { step_number: number }).step_number}${'status' in item ? `: ${(item as { status: string }).status}` : ''}`
+                                  : String(item);
+                              return (
+                                <span
+                                  key={j}
+                                  className="text-xs bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded"
+                                >
+                                  {itemText}
+                                </span>
+                              );
+                            })}
                           </div>
                         </div>
                       ))}

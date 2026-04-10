@@ -1213,12 +1213,19 @@ export default function StudentProgressPage() {
                                 )}
                                 {flaggedItems.length > 0 && (
                                   <div className="mt-1.5 space-y-0.5">
-                                    {flaggedItems.map((flag: string, fi: number) => (
-                                      <div key={fi} className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
-                                        <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                                        <span>{flag}</span>
-                                      </div>
-                                    ))}
+                                    {flaggedItems.map((flag: unknown, fi: number) => {
+                                      const flagText = typeof flag === 'string'
+                                        ? flag
+                                        : flag && typeof flag === 'object' && 'step_number' in flag
+                                          ? `Step ${(flag as { step_number: number }).step_number}${'status' in flag ? `: ${(flag as { status: string }).status}` : ''}`
+                                          : String(flag);
+                                      return (
+                                        <div key={fi} className="flex items-start gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+                                          <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                          <span>{flagText}</span>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </div>
