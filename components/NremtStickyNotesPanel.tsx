@@ -29,6 +29,12 @@ interface NremtStickyNotesPanelProps {
   onCheckedCriteriaChange?: (checked: string[]) => void;
   /** Whether the current result is fail — used to show red border on comments */
   resultIsFail?: boolean;
+  /**
+   * Render mode:
+   * - "floating" (default): existing behavior — desktop sticky + mobile floating drawer
+   * - "desktop-inline": render as a plain inline column for the desktop NREMT 3-column layout
+   */
+  mode?: 'floating' | 'desktop-inline';
 }
 
 function PanelContent({
@@ -238,7 +244,21 @@ function PanelContent({
 export default function NremtStickyNotesPanel(
   props: NremtStickyNotesPanelProps
 ) {
+  const { mode = 'floating', ...panelProps } = props;
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Desktop-inline mode: render as a plain column (no sticky, no floating button)
+  if (mode === 'desktop-inline') {
+    return (
+      <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-sm p-4">
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3 flex items-center gap-2">
+          <StickyNote className="h-4 w-4 text-amber-500" />
+          Examiner Panel
+        </h3>
+        <PanelContent {...panelProps} />
+      </div>
+    );
+  }
 
   // Close on Escape
   useEffect(() => {
