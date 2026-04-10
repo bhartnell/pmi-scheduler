@@ -72,6 +72,13 @@ interface GridStation {
   instructorName: string | null;
   scenario?: { id: string; title: string } | null;
   addedDuringExam?: boolean;
+  stationSuffix?: string | null;
+}
+
+interface InstructorOption {
+  id: string;
+  name: string;
+  email: string;
 }
 
 interface SkillColumn {
@@ -130,6 +137,7 @@ interface EnRouteEntry {
 
 // ─── Constants ─────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const NREMT_SKILLS = [
   'Cardiac Arrest Management / AED',
   'Patient Assessment - Medical',
@@ -351,10 +359,13 @@ export default function CoordinatorViewPage() {
 
   // Add station modal
   const [showAddStationModal, setShowAddStationModal] = useState(false);
-  const [addStationSkill, setAddStationSkill] = useState(NREMT_SKILLS[0]);
-  const [addStationExaminer, setAddStationExaminer] = useState('');
+  // NREMT flow: duplicate existing station (selected by station id)
+  const [addStationSourceStationId, setAddStationSourceStationId] = useState<string>('');
+  const [addStationExaminerId, setAddStationExaminerId] = useState<string>('');
   const [addStationRoom, setAddStationRoom] = useState('');
   const [addingStation, setAddingStation] = useState(false);
+  const [instructorOptions, setInstructorOptions] = useState<InstructorOption[]>([]);
+  const [skillSheetCodeMap, setSkillSheetCodeMap] = useState<Record<string, string>>({});
 
   // Retake queue
   const [retakeStatuses, setRetakeStatuses] = useState<RetakeStatus[]>([]);
@@ -550,6 +561,41 @@ export default function CoordinatorViewPage() {
     }
   }, [labDayInfo?.is_nremt_testing, fetchRetakeStatus]);
 
+  // Fetch instructor options + skill sheet nremt codes (NREMT days only)
+  useEffect(() => {
+    if (!labDayInfo?.is_nremt_testing) return;
+    (async () => {
+      try {
+        const [instrRes, sheetsRes] = await Promise.all([
+          fetch('/api/lab-management/instructors'),
+          fetch('/api/skill-sheets'),
+        ]);
+        const instrData = await instrRes.json();
+        if (instrData.success && Array.isArray(instrData.instructors)) {
+          setInstructorOptions(
+            instrData.instructors.map((i: { id: string; name: string; email: string }) => ({
+              id: i.id,
+              name: i.name,
+              email: i.email,
+            }))
+          );
+        }
+        const sheetsData = await sheetsRes.json();
+        if (sheetsData.success && Array.isArray(sheetsData.sheets)) {
+          const map: Record<string, string> = {};
+          for (const sheet of sheetsData.sheets) {
+            if (sheet.id && sheet.nremt_code) {
+              map[sheet.id] = sheet.nremt_code;
+            }
+          }
+          setSkillSheetCodeMap(map);
+        }
+      } catch (err) {
+        console.error('Error fetching add-station options:', err);
+      }
+    })();
+  }, [labDayInfo?.is_nremt_testing]);
+
   // Poll retake status every 30 seconds for NREMT days
   useEffect(() => {
     if (!labDayInfo?.is_nremt_testing) return;
@@ -623,34 +669,124 @@ export default function CoordinatorViewPage() {
 
   // ─── Add Station Handler ────────────────────────────────────────────────
 
+  /** Compute longest queue among existing stations (most students still needing that skill). */
+  const findLongestQueueStationId = useCallback((): string => {
+    if (stations.length === 0) return '';
+    // Count how many students still need each skillName
+    const needsCountByStation: Record<string, number> = {};
+    for (const station of stations) {
+      const skillName = station.skill_name || station.custom_title || station.scenario?.title || '';
+      if (!skillName) continue;
+      let count = 0;
+      for (const student of students) {
+        const needs = studentNeeds[student.id] || [];
+        if (needs.includes(skillName)) count++;
+      }
+      needsCountByStation[station.id] = count;
+    }
+    // Pick station with max count; tiebreak by lowest station_number
+    let bestId = stations[0].id;
+    let bestCount = needsCountByStation[bestId] ?? -1;
+    for (const station of stations) {
+      const c = needsCountByStation[station.id] ?? 0;
+      if (c > bestCount) {
+        bestCount = c;
+        bestId = station.id;
+      }
+    }
+    return bestId;
+  }, [stations, students, studentNeeds]);
+
+  /** Open the add-station modal and pre-select longest-queue skill. */
+  const openAddStationModal = useCallback(() => {
+    if (labDayInfo?.is_nremt_testing) {
+      const preselect = findLongestQueueStationId();
+      setAddStationSourceStationId(preselect);
+    }
+    setShowAddStationModal(true);
+  }, [labDayInfo?.is_nremt_testing, findLongestQueueStationId]);
+
   const handleAddStation = async () => {
     setAddingStation(true);
     try {
-      const nextNumber = stations.length > 0
-        ? Math.max(...stations.map(s => s.station_number)) + 1
-        : 1;
+      const isNremt = !!labDayInfo?.is_nremt_testing;
 
-      const res = await fetch('/api/lab-management/stations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lab_day_id: labDayId,
-          station_type: 'skills',
-          station_number: nextNumber,
-          custom_title: `${addStationSkill} (Added)`,
-          skill_name: addStationSkill,
-          instructor_name: addStationExaminer || null,
-          room: addStationRoom || null,
-          notes: 'Added during exam',
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setShowAddStationModal(false);
-        setAddStationSkill(NREMT_SKILLS[0]);
-        setAddStationExaminer('');
-        setAddStationRoom('');
-        await fetchGridData(true);
+      if (isNremt) {
+        // NREMT flow: duplicate an existing station (same skill_sheet_id, suffix label)
+        const source = stations.find(s => s.id === addStationSourceStationId);
+        if (!source) {
+          console.error('No source station selected');
+          setAddingStation(false);
+          return;
+        }
+
+        // Derive suffix letter based on how many stations already share this skill name
+        const sourceSkillName = source.skill_name || source.custom_title || '';
+        const siblings = stations.filter(s =>
+          (s.skill_name || s.custom_title || '') === sourceSkillName
+        );
+        // Existing count includes the source station; suffix letter = 'a' + siblings.length
+        // (source is 'a' implicitly, first duplicate becomes 'b', etc.)
+        const suffixLetter = String.fromCharCode('a'.charCodeAt(0) + siblings.length);
+        const baseNumber = source.station_number;
+        const displayLabel = `Station ${baseNumber}${suffixLetter} — ${sourceSkillName}`;
+
+        const nextNumber = stations.length > 0
+          ? Math.max(...stations.map(s => s.station_number)) + 1
+          : 1;
+
+        const examiner = instructorOptions.find(i => i.id === addStationExaminerId);
+
+        const res = await fetch('/api/lab-management/stations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lab_day_id: labDayId,
+            station_type: 'skills',
+            station_number: nextNumber,
+            custom_title: displayLabel,
+            skill_name: sourceSkillName,
+            skill_sheet_id: source.skillSheetId || null,
+            instructor_name: examiner?.name || null,
+            instructor_email: examiner?.email || null,
+            room: addStationRoom || null,
+            notes: 'Added during exam',
+            added_during_exam: true,
+            duplicate_of_station_id: source.id,
+            station_suffix: `${baseNumber}${suffixLetter}`,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setShowAddStationModal(false);
+          setAddStationSourceStationId('');
+          setAddStationExaminerId('');
+          setAddStationRoom('');
+          await fetchGridData(true);
+        }
+      } else {
+        // Non-NREMT flow: original blank station behavior
+        const nextNumber = stations.length > 0
+          ? Math.max(...stations.map(s => s.station_number)) + 1
+          : 1;
+
+        const res = await fetch('/api/lab-management/stations', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            lab_day_id: labDayId,
+            station_type: 'skills',
+            station_number: nextNumber,
+            custom_title: 'New Station',
+            room: addStationRoom || null,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setShowAddStationModal(false);
+          setAddStationRoom('');
+          await fetchGridData(true);
+        }
       }
     } catch (err) {
       console.error('Error adding station:', err);
@@ -1253,7 +1389,7 @@ export default function CoordinatorViewPage() {
             const progressPercent = totalStudents > 0 ? Math.round((completedCount / totalStudents) * 100) : 0;
             const displayProctor = getDisplayProctor(station);
             const allStudentsDone = completedCount === totalStudents && totalStudents > 0;
-            const isAddedDuringExam = station.custom_title?.includes('(Added)') || station.addedDuringExam;
+            const isAddedDuringExam = station.addedDuringExam || station.custom_title?.includes('(Added)');
             const enRouteEntry = enRouteStudents[station.id];
             const hasCurrentStudent = !!currentStudent;
             const { eligible } = getEligibleStudentsForStation(station);
@@ -1271,7 +1407,7 @@ export default function CoordinatorViewPage() {
                       {!labDayInfo?.is_nremt_testing && <>Station {station.station_number}</>}
                       {isAddedDuringExam && (
                         <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded-full normal-case">
-                          Added
+                          Additional Station
                         </span>
                       )}
                     </div>
@@ -1437,7 +1573,7 @@ export default function CoordinatorViewPage() {
           {/* Add Station Button */}
           {labDayInfo?.is_nremt_testing && (
             <button
-              onClick={() => setShowAddStationModal(true)}
+              onClick={openAddStationModal}
               className="rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600 p-3 sm:p-4 flex flex-col items-center justify-center gap-2 text-gray-500 dark:text-gray-400 hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400 transition-colors min-h-[160px] cursor-pointer"
             >
               <Plus className="w-8 h-8" />
@@ -1604,9 +1740,9 @@ export default function CoordinatorViewPage() {
           <div className="overflow-x-auto max-w-full">
             <table className="w-full" style={{ minWidth: `${180 + skillColumns.length * 100 + 80 + 60}px` }}>
               <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
+                <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/70">
                   <th
-                    className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[140px] max-w-[180px] cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                    className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-200 sticky left-0 bg-gray-50 dark:bg-gray-800/70 z-10 min-w-[140px] max-w-[180px] cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                     style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}
                     onClick={() => handleProgressSort('name')}
                   >
@@ -1618,7 +1754,7 @@ export default function CoordinatorViewPage() {
                     return (
                       <th
                         key={col.skillName}
-                        className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[100px]"
+                        className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-200 min-w-[100px]"
                       >
                         <div className="space-y-0.5">
                           <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[100px] mx-auto" title={col.skillName}>
@@ -1634,13 +1770,13 @@ export default function CoordinatorViewPage() {
                     );
                   })}
                   <th
-                    className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[60px] cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                    className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-200 min-w-[60px] cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                     onClick={() => handleProgressSort('completions')}
                   >
                     Done {progressSort === 'completions' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
                   </th>
                   <th
-                    className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[60px] cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
+                    className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-200 min-w-[60px] cursor-pointer hover:text-blue-600 dark:hover:text-blue-400"
                     onClick={() => handleProgressSort('failures')}
                   >
                     Fail {progressSort === 'failures' ? (progressSortAsc ? '\u2191' : '\u2193') : ''}
@@ -1653,13 +1789,13 @@ export default function CoordinatorViewPage() {
                   <tr
                     key={row.student.id}
                     className={`border-b border-gray-100 dark:border-gray-700/50 ${
-                      idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-750/30'
+                      idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-800/40'
                     } hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-colors`}
                   >
                     {/* Student name - sticky, clickable for side panel */}
                     <td
-                      className={`px-4 py-2.5 font-medium text-sm sticky left-0 z-10 whitespace-nowrap min-w-[140px] max-w-[180px] overflow-hidden text-ellipsis ${
-                        idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800'
+                      className={`px-4 py-2.5 font-medium text-sm text-gray-900 dark:text-gray-100 sticky left-0 z-10 whitespace-nowrap min-w-[140px] max-w-[180px] overflow-hidden text-ellipsis ${
+                        idx % 2 === 0 ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-800/50'
                       }`}
                       style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}
                     >
@@ -1685,14 +1821,14 @@ export default function CoordinatorViewPage() {
                       let badge: React.ReactNode;
                       if (isLoading) {
                         badge = (
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-gray-100 dark:bg-gray-700 text-gray-400">
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-300">
                             <Loader2 className="w-4 h-4 animate-spin" />
                           </span>
                         );
                       } else if (r?.status === 'completed' && r.result === 'pass') {
                         badge = (
                           <div className="relative inline-flex items-center justify-center">
-                            <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-300 border border-green-200 dark:border-green-800" title={r.hasRetake ? 'Passed on retake' : 'Pass'}>
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-green-50 dark:bg-green-900/50 text-green-600 dark:text-green-200 border border-green-200 dark:border-green-700" title={r.hasRetake ? 'Passed on retake' : 'Pass'}>
                               <Check className="w-4 h-4 stroke-[3]" />
                             </span>
                             {r.hasRetake && (
@@ -1703,7 +1839,7 @@ export default function CoordinatorViewPage() {
                       } else if (r?.status === 'completed' && r.result === 'fail') {
                         badge = (
                           <div className="relative inline-flex items-center justify-center">
-                            <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300 border border-red-200 dark:border-red-800" title={r.hasRetake ? 'Failed on retake also' : 'Fail'}>
+                            <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-red-50 dark:bg-red-900/50 text-red-500 dark:text-red-200 border border-red-200 dark:border-red-700" title={r.hasRetake ? 'Failed on retake also' : 'Fail'}>
                               <X className="w-4 h-4 stroke-[3]" />
                             </span>
                             {r.hasRetake && (
@@ -1713,13 +1849,13 @@ export default function CoordinatorViewPage() {
                         );
                       } else if (r?.status === 'in_progress') {
                         badge = (
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-amber-50 dark:bg-amber-900/50 text-amber-600 dark:text-amber-200 border border-amber-200 dark:border-amber-700">
                             <Clock className="w-4 h-4 animate-pulse" />
                           </span>
                         );
                       } else {
                         badge = (
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-300 border border-transparent dark:border-gray-600">
+                          <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-400 border border-transparent dark:border-gray-600">
                             <Circle className="w-4 h-4" />
                           </span>
                         );
@@ -1851,8 +1987,8 @@ export default function CoordinatorViewPage() {
                     <td className="px-3 py-2 text-center">
                       <span className={`inline-flex items-center justify-center text-sm font-mono font-semibold px-2 py-0.5 rounded ${
                         row.allComplete
-                          ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                          ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-200'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                       }`}>
                         {row.completions}
                       </span>
@@ -1862,8 +1998,8 @@ export default function CoordinatorViewPage() {
                     <td className="px-3 py-2 text-center">
                       <span className={`inline-flex items-center justify-center text-sm font-mono font-semibold px-2 py-0.5 rounded ${
                         row.failures > 0
-                          ? 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'
-                          : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500'
+                          ? 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-200'
+                          : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-400'
                       }`}>
                         {row.failures}
                       </span>
@@ -1874,8 +2010,8 @@ export default function CoordinatorViewPage() {
 
               {/* Summary footer */}
               <tfoot>
-                <tr className="bg-gray-50 dark:bg-gray-750 border-t-2 border-gray-200 dark:border-gray-600">
-                  <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
+                <tr className="bg-gray-50 dark:bg-gray-800/70 border-t-2 border-gray-200 dark:border-gray-600">
+                  <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-200 text-sm sticky left-0 bg-gray-50 dark:bg-gray-800/70 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
                     Summary
                   </td>
                   {skillColumns.map(col => {
@@ -1885,16 +2021,16 @@ export default function CoordinatorViewPage() {
                     return (
                       <td key={col.skillName} className="px-3 py-2.5 text-center">
                         <div className="space-y-0.5">
-                          <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                          <div className="text-xs font-semibold text-gray-700 dark:text-gray-200">
                             {total}/{totalStudents} done
                           </div>
                           <div className="text-[11px] text-gray-500 dark:text-gray-400">
                             {total > 0 ? (
-                              <span className={passRate >= 80 ? 'text-green-600 dark:text-green-400' : passRate >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-red-500 dark:text-red-400'}>
+                              <span className={passRate >= 80 ? 'text-green-600 dark:text-green-300' : passRate >= 50 ? 'text-amber-600 dark:text-amber-300' : 'text-red-500 dark:text-red-300'}>
                                 {passRate}% pass
                               </span>
                             ) : (
-                              <span className="text-gray-400">--</span>
+                              <span className="text-gray-400 dark:text-gray-500">--</span>
                             )}
                           </div>
                         </div>
@@ -1902,12 +2038,12 @@ export default function CoordinatorViewPage() {
                     );
                   })}
                   <td className="px-3 py-2.5 text-center">
-                    <div className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                    <div className="text-xs font-semibold text-gray-600 dark:text-gray-200">
                       {skillTotalCompleted}
                     </div>
                   </td>
                   <td className="px-3 py-2.5 text-center">
-                    <div className="text-xs font-semibold text-red-600 dark:text-red-400">
+                    <div className="text-xs font-semibold text-red-600 dark:text-red-300">
                       {progressTableData.rows.reduce((sum, r) => sum + r.failures, 0)}
                     </div>
                   </td>
@@ -1919,19 +2055,19 @@ export default function CoordinatorViewPage() {
           {/* Legend */}
           <div className="px-4 py-2.5 border-t border-gray-200 dark:border-gray-700 flex flex-wrap items-center gap-4 text-xs text-gray-500 dark:text-gray-400">
             <span className="flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-300 border border-transparent dark:border-gray-600"><Circle className="w-3 h-3" /></span>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-400 border border-transparent dark:border-gray-600"><Circle className="w-3 h-3" /></span>
               Not started
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600"><Clock className="w-3 h-3" /></span>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-amber-50 dark:bg-amber-900/50 text-amber-600 dark:text-amber-200"><Clock className="w-3 h-3" /></span>
               In progress
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-300"><Check className="w-3 h-3 stroke-[3]" /></span>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-green-50 dark:bg-green-900/50 text-green-600 dark:text-green-200"><Check className="w-3 h-3 stroke-[3]" /></span>
               Pass
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300"><X className="w-3 h-3 stroke-[3]" /></span>
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-red-50 dark:bg-red-900/50 text-red-500 dark:text-red-200"><X className="w-3 h-3 stroke-[3]" /></span>
               Fail
             </span>
             {labDayInfo?.is_nremt_testing && (
@@ -2056,49 +2192,91 @@ export default function CoordinatorViewPage() {
             </div>
 
             <div className="p-4 space-y-4">
-              {/* Skill selection */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Skill Type
-                </label>
-                <select
-                  value={addStationSkill}
-                  onChange={e => setAddStationSkill(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-h-[44px]"
-                >
-                  {NREMT_SKILLS.map(skill => (
-                    <option key={skill} value={skill}>{skill}</option>
-                  ))}
-                </select>
-              </div>
+              {labDayInfo?.is_nremt_testing ? (
+                <>
+                  {/* Which skill needs another station? */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Which skill do you need another station for?
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      Select skill to duplicate
+                    </p>
+                    <select
+                      value={addStationSourceStationId}
+                      onChange={e => setAddStationSourceStationId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-h-[44px]"
+                    >
+                      <option value="">-- Select a skill --</option>
+                      {stations.map(s => {
+                        const skillName = s.skill_name || s.custom_title || s.scenario?.title || `Station ${s.station_number}`;
+                        const code = s.skillSheetId ? skillSheetCodeMap[s.skillSheetId] : null;
+                        // Count students still needing this skill for queue indicator
+                        const waiting = students.filter(st => (studentNeeds[st.id] || []).includes(skillName)).length;
+                        const codeLabel = code ? ` [${code}]` : '';
+                        const queueLabel = waiting > 0 ? ` — ${waiting} waiting` : '';
+                        return (
+                          <option key={s.id} value={s.id}>
+                            {skillName}{codeLabel}{queueLabel}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
 
-              {/* Examiner name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Examiner / Proctor Name (optional)
-                </label>
-                <input
-                  type="text"
-                  value={addStationExaminer}
-                  onChange={e => setAddStationExaminer(e.target.value)}
-                  placeholder="e.g. Dr. Smith"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-h-[44px]"
-                />
-              </div>
+                  {/* Assign examiner */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Assign examiner (optional)
+                    </label>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      Can be set later
+                    </p>
+                    <select
+                      value={addStationExaminerId}
+                      onChange={e => setAddStationExaminerId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-h-[44px]"
+                    >
+                      <option value="">-- No examiner assigned --</option>
+                      {instructorOptions.map(instr => (
+                        <option key={instr.id} value={instr.id}>
+                          {instr.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              {/* Room */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Room / Location (optional)
-                </label>
-                <input
-                  type="text"
-                  value={addStationRoom}
-                  onChange={e => setAddStationRoom(e.target.value)}
-                  placeholder="e.g. Room 204"
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-h-[44px]"
-                />
-              </div>
+                  {/* Room/Location */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Room / Location (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={addStationRoom}
+                      onChange={e => setAddStationRoom(e.target.value)}
+                      placeholder="e.g. Room 204"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-h-[44px]"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Non-NREMT: simple blank station */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Room / Location (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={addStationRoom}
+                      onChange={e => setAddStationRoom(e.target.value)}
+                      placeholder="e.g. Room 204"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm min-h-[44px]"
+                    />
+                  </div>
+                </>
+              )}
             </div>
 
             <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
@@ -2110,7 +2288,10 @@ export default function CoordinatorViewPage() {
               </button>
               <button
                 onClick={handleAddStation}
-                disabled={addingStation}
+                disabled={
+                  addingStation ||
+                  (!!labDayInfo?.is_nremt_testing && !addStationSourceStationId)
+                }
                 className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 min-h-[44px]"
               >
                 {addingStation ? (
@@ -2118,7 +2299,7 @@ export default function CoordinatorViewPage() {
                 ) : (
                   <Plus className="w-4 h-4" />
                 )}
-                Create Station
+                {labDayInfo?.is_nremt_testing ? 'Open Additional Station' : 'Create Station'}
               </button>
             </div>
           </div>
