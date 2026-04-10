@@ -318,7 +318,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
 
     if (isLoading) {
       return (
-        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-400">
+        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-300">
           <Loader2 className="w-4 h-4 animate-spin" />
         </span>
       );
@@ -341,7 +341,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
       return (
         <button
           onClick={() => handleSkillCellClick(studentId, skillName)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-50 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 border border-amber-200 dark:border-amber-700 cursor-pointer"
           title="In Progress"
         >
           <Clock className="w-4 h-4 animate-pulse" />
@@ -361,7 +361,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
         return (
           <button
             onClick={() => handleSkillCellClick(studentId, skillName)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 dark:bg-green-900/40 text-green-700 dark:text-green-300 border border-green-200 dark:border-green-800 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 dark:bg-green-900/50 text-green-700 dark:text-green-200 border border-green-200 dark:border-green-700 cursor-pointer"
             title={cell.teamRole ? `Pass (Team ${cell.teamRole})` : 'Pass'}
           >
             <Check className="w-4 h-4 stroke-[3]" />
@@ -374,7 +374,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
         return (
           <button
             onClick={() => handleSkillCellClick(studentId, skillName)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 dark:bg-red-900/40 text-red-600 dark:text-red-300 border border-red-200 dark:border-red-800 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-200 border border-red-200 dark:border-red-700 cursor-pointer"
             title={cell.teamRole ? `Fail (Team ${cell.teamRole})` : 'Fail'}
           >
             <X className="w-4 h-4 stroke-[3]" />
@@ -387,7 +387,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
       return (
         <button
           onClick={() => handleSkillCellClick(studentId, skillName)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-200 cursor-pointer"
           title="Completed"
         >
           <Check className="w-4 h-4" />
@@ -624,8 +624,8 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
         <table className="w-full" style={{ minWidth: `${180 + skillColumns.length * 140 + 80}px` }}>
           {/* Column headers: skill names */}
           <thead>
-            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750">
-              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
+            <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/70">
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400 sticky left-0 bg-gray-50 dark:bg-gray-800/70 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
                 Student
               </th>
               {skillColumns.map(col => {
@@ -669,7 +669,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
                 <tr
                   key={student.id}
                   className={`border-b border-gray-100 dark:border-gray-700/50 ${
-                    idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-750/30'
+                    idx % 2 === 0 ? '' : 'bg-gray-50/50 dark:bg-gray-800/40'
                   } hover:bg-blue-50/40 dark:hover:bg-blue-900/10 transition-colors`}
                 >
                   {/* Student name */}
@@ -695,8 +695,8 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
                   <td className="px-3 py-2 text-center">
                     <span className={`inline-flex items-center justify-center text-sm font-mono font-semibold px-2 py-0.5 rounded ${
                       done === total && total > 0
-                        ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
-                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                        ? 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-200'
+                        : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
                     }`}>
                       [{done}/{total}]
                     </span>
@@ -708,8 +708,8 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
 
           {/* Summary footer */}
           <tfoot>
-            <tr className="bg-gray-50 dark:bg-gray-750 border-t-2 border-gray-200 dark:border-gray-600">
-              <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-750 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
+            <tr className="bg-gray-50 dark:bg-gray-800/70 border-t-2 border-gray-200 dark:border-gray-600">
+              <td className="px-4 py-2.5 font-semibold text-gray-700 dark:text-gray-300 text-sm sticky left-0 bg-gray-50 dark:bg-gray-800/70 z-10 min-w-[140px] max-w-[180px]" style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}>
                 Summary
               </td>
               {skillSummary.map(s => (
@@ -719,19 +719,19 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
                       {s.completed}/{s.total} done
                     </div>
                     <div className="text-[11px] text-gray-500 dark:text-gray-400">
-                      <span className="text-green-600 dark:text-green-400">{s.passed} pass</span>
+                      <span className="text-green-600 dark:text-green-300">{s.passed} pass</span>
                       {s.failed > 0 && (
-                        <span className="text-red-500 dark:text-red-400 ml-1">{s.failed} fail</span>
+                        <span className="text-red-500 dark:text-red-300 ml-1">{s.failed} fail</span>
                       )}
                     </div>
                   </div>
                 </td>
               ))}
               <td className="px-3 py-2.5 text-center">
-                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400">
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-200">
                   {studentsFullyDone}/{students.length}
                 </div>
-                <div className="text-[11px] text-gray-400 dark:text-gray-500">
+                <div className="text-[11px] text-gray-400 dark:text-gray-400">
                   all done
                 </div>
               </td>
@@ -747,18 +747,18 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
           Not started
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-amber-50 dark:bg-amber-900/30 text-amber-600"><Clock className="w-3 h-3" /></span>
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-amber-50 dark:bg-amber-900/50 text-amber-600 dark:text-amber-200"><Clock className="w-3 h-3" /></span>
           In progress
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-green-50 dark:bg-green-900/40 text-green-600 dark:text-green-300"><Check className="w-3 h-3 stroke-[3]" /></span>
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-green-50 dark:bg-green-900/50 text-green-600 dark:text-green-200"><Check className="w-3 h-3 stroke-[3]" /></span>
           Pass
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-red-50 dark:bg-red-900/40 text-red-500 dark:text-red-300"><X className="w-3 h-3 stroke-[3]" /></span>
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-red-50 dark:bg-red-900/50 text-red-500 dark:text-red-200"><X className="w-3 h-3 stroke-[3]" /></span>
           Fail
         </span>
-        <span className="ml-auto text-gray-400 dark:text-gray-500">
+        <span className="ml-auto text-gray-400 dark:text-gray-400">
           All skills complete: <strong>{studentsFullyDone}/{students.length}</strong> students
         </span>
       </div>

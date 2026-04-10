@@ -194,6 +194,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'lab_day_id is required' }, { status: 400 });
     }
 
+    // Build metadata: merge skill_sheet_id and added_during_exam if provided
+    const metadata: Record<string, unknown> = {};
+    if (body.skill_sheet_id) metadata.skill_sheet_id = body.skill_sheet_id;
+    if (body.added_during_exam) metadata.added_during_exam = true;
+    if (body.duplicate_of_station_id) metadata.duplicate_of_station_id = body.duplicate_of_station_id;
+    if (body.station_suffix) metadata.station_suffix = body.station_suffix;
+
     // Insert station with simple select to avoid join issues
     const { data, error } = await supabase
       .from('lab_stations')
@@ -204,6 +211,7 @@ export async function POST(request: NextRequest) {
         scenario_id: body.scenario_id || null,
         drill_ids: Array.isArray(body.drill_ids) && body.drill_ids.length > 0 ? body.drill_ids : null,
         custom_title: body.custom_title || null,
+        skill_name: body.skill_name || null,
         instructor_name: body.instructor_name || null,
         instructor_email: body.instructor_email || null,
         room: body.room || null,
@@ -213,7 +221,8 @@ export async function POST(request: NextRequest) {
         // Skills station document fields
         skill_sheet_url: body.skill_sheet_url || null,
         instructions_url: body.instructions_url || null,
-        station_notes: body.station_notes || null
+        station_notes: body.station_notes || null,
+        metadata: Object.keys(metadata).length > 0 ? metadata : null,
       })
       .select('*')
       .single();

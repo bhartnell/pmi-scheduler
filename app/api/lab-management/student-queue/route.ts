@@ -100,6 +100,8 @@ export async function GET(request: NextRequest) {
 
     // 7. Get station-to-skill-sheet mapping (via station_skills table)
     let stationSkillMap: Record<string, string> = {};
+    const stationAddedDuringExamMap: Record<string, boolean> = {};
+    const stationSuffixMap: Record<string, string> = {};
     if (stationIds.length > 0) {
       const { data: stationSkills } = await supabase
         .from('station_skills')
@@ -117,6 +119,12 @@ export async function GET(request: NextRequest) {
           const meta = s.metadata as Record<string, unknown> | null;
           if (meta?.skill_sheet_id) {
             stationSkillMap[s.id] = meta.skill_sheet_id as string;
+          }
+          if (meta?.added_during_exam) {
+            stationAddedDuringExamMap[s.id] = true;
+          }
+          if (meta?.station_suffix) {
+            stationSuffixMap[s.id] = meta.station_suffix as string;
           }
         }
       }
@@ -252,8 +260,12 @@ export async function GET(request: NextRequest) {
     }
 
     // ─── Build skill-based columns and cells ───────────────────────────
-    // Group stations by skill_name so multiple stations running the same skill
-    // collapse into one column.  Keys are the skill_name strings.
+    // Dynamic skill-based grouping: columns are derived from the UNION of
+    // (stations on this lab day) ∪ (any evaluations recorded for this lab day
+    // that reference a skill_sheet_id). This ensures evaluations performed at
+    // stations added mid-day — or at any station that's since been removed —
+    // still appear in the correct skill column on the next poll cycle.
+
     const stationList = ((stations || []) as Array<Record<string, unknown>>).map(s => ({
       id: s.id as string,
       station_number: s.station_number as number,
@@ -263,26 +275,100 @@ export async function GET(request: NextRequest) {
       scenario: Array.isArray(s.scenario) ? (s.scenario[0] as { id: string; title: string } | undefined) || null : s.scenario as { id: string; title: string } | null,
     }));
 
-    // Build a mapping: skillName -> list of station ids that run it
-    const skillToStationIds: Record<string, string[]> = {};
-    const skillColumnOrder: string[] = []; // unique skill names in station_number order
+    // Gather all skill_sheet_ids referenced anywhere: stations' metadata mapping
+    // AND any evaluation for this lab day.
+    const allSkillSheetIds = new Set<string>();
+    for (const sid of Object.values(stationSkillMap)) {
+      if (sid) allSkillSheetIds.add(sid);
+    }
+    for (const evalItem of (evaluations || [])) {
+      if (evalItem.skill_sheet_id) allSkillSheetIds.add(evalItem.skill_sheet_id);
+    }
+
+    // Fetch skill_sheet display names for every referenced sheet (so evaluations
+    // whose skill_sheet_id is not represented by any current station still get a
+    // human-readable column header).
+    const skillSheetIdToName: Record<string, string> = {};
+    if (allSkillSheetIds.size > 0) {
+      const { data: sheetRows } = await supabase
+        .from('skill_sheets')
+        .select('id, skill_name')
+        .in('id', Array.from(allSkillSheetIds));
+      if (sheetRows) {
+        for (const row of sheetRows as Array<{ id: string; skill_name: string | null }>) {
+          if (row.skill_name) skillSheetIdToName[row.id] = row.skill_name;
+        }
+      }
+    }
+
+    // Column identity resolver: given a skill_sheet_id (may be null), produce the
+    // skillName used as the column key. Prefer station skill_name when a station
+    // backs this sheet (matches existing conventions); otherwise fall back to the
+    // skill sheet's own name.
+    const skillSheetIdToStationSkillName: Record<string, string> = {};
     for (const s of stationList) {
-      const skillName = s.skill_name || s.custom_title || s.scenario?.title || `Station ${s.station_number}`;
+      const sheetId = stationSkillMap[s.id];
+      if (sheetId && s.skill_name && !skillSheetIdToStationSkillName[sheetId]) {
+        skillSheetIdToStationSkillName[sheetId] = s.skill_name;
+      }
+    }
+    const resolveSkillName = (skillSheetId: string | null, fallbackStation?: typeof stationList[number]): string => {
+      if (skillSheetId) {
+        return (
+          skillSheetIdToStationSkillName[skillSheetId] ||
+          skillSheetIdToName[skillSheetId] ||
+          (fallbackStation?.skill_name || fallbackStation?.custom_title || fallbackStation?.scenario?.title) ||
+          `Skill ${skillSheetId.slice(0, 8)}`
+        );
+      }
+      if (fallbackStation) {
+        return fallbackStation.skill_name || fallbackStation.custom_title || fallbackStation.scenario?.title || `Station ${fallbackStation.station_number}`;
+      }
+      return 'Unknown skill';
+    };
+
+    // Build mapping: skillName -> list of station ids that run it
+    // Station-backed columns come first (in station_number order), then
+    // any evaluation-only skill columns are appended.
+    const skillToStationIds: Record<string, string[]> = {};
+    const skillNameToSheetId: Record<string, string | null> = {};
+    const skillColumnOrder: string[] = [];
+
+    // Pass 1: stations define initial columns
+    for (const s of stationList) {
+      const sheetId = stationSkillMap[s.id] || null;
+      const skillName = resolveSkillName(sheetId, s);
       if (!skillToStationIds[skillName]) {
         skillToStationIds[skillName] = [];
         skillColumnOrder.push(skillName);
+        skillNameToSheetId[skillName] = sheetId;
+      } else if (!skillNameToSheetId[skillName] && sheetId) {
+        skillNameToSheetId[skillName] = sheetId;
       }
       skillToStationIds[skillName].push(s.id);
+    }
+
+    // Pass 2: evaluations for skill_sheet_ids that aren't represented by any
+    // station-derived column yet — add a new column for them.
+    for (const evalItem of (evaluations || [])) {
+      if (!evalItem.skill_sheet_id) continue;
+      const existingColumnName = Object.keys(skillNameToSheetId).find(
+        name => skillNameToSheetId[name] === evalItem.skill_sheet_id
+      );
+      if (existingColumnName) continue;
+      const skillName = resolveSkillName(evalItem.skill_sheet_id);
+      if (!skillToStationIds[skillName]) {
+        skillToStationIds[skillName] = [];
+        skillColumnOrder.push(skillName);
+        skillNameToSheetId[skillName] = evalItem.skill_sheet_id;
+      }
     }
 
     // Build skillColumns array for the UI
     const skillColumns = skillColumnOrder.map(skillName => ({
       skillName,
-      stationIds: skillToStationIds[skillName],
-      // Include the skillSheetId from any of the mapped stations
-      skillSheetId: skillToStationIds[skillName]
-        .map(sid => stationSkillMap[sid])
-        .find(id => !!id) || null,
+      stationIds: skillToStationIds[skillName] || [],
+      skillSheetId: skillNameToSheetId[skillName] || null,
     }));
 
     // Build skillCells: key = `${studentId}_${skillName}`
@@ -306,41 +392,102 @@ export async function GET(request: NextRequest) {
       bestResult: string | null;
     }> = {};
 
+    // Group evaluations by student + skill_sheet_id → best evaluation cell.
+    // This is the authoritative source for "completed" state: any evaluation
+    // linked to skill_sheet_id X becomes part of the column for X regardless
+    // of which station (if any) it was graded at, or when that station was
+    // created.
+    type SkillCellValue = typeof skillCells[string];
+    const evalCellByStudentSheet: Record<string, SkillCellValue & { _hasPass?: boolean; _anyRetake?: boolean }> = {};
+    for (const evalItem of (evaluations || [])) {
+      if (!evalItem.skill_sheet_id) continue;
+      const key = `${evalItem.student_id}__${evalItem.skill_sheet_id}`;
+      const summary = evalSummaryMap[evalItem.id] || null;
+      const isRetake = Boolean((evalItem as Record<string, unknown>).is_retake);
+      const teamRole = ((evalItem as Record<string, unknown>).team_role as string | null) || null;
+      const thisResult = evalItem.result === 'pass' ? 'pass' : 'fail';
+
+      const existing = evalCellByStudentSheet[key];
+      if (!existing) {
+        evalCellByStudentSheet[key] = {
+          queueId: null,
+          status: 'completed',
+          result: thisResult,
+          evaluationId: evalItem.id,
+          evalSummary: summary,
+          teamRole,
+          hasRetake: isRetake,
+          bestResult: thisResult,
+          _hasPass: thisResult === 'pass',
+          _anyRetake: isRetake,
+        };
+      } else {
+        existing._anyRetake = existing._anyRetake || isRetake;
+        existing.hasRetake = existing._anyRetake || false;
+        // Pass wins over fail. Prefer the most-informative eval (pass) as the
+        // canonical evaluationId so the UI can open the correct sheet.
+        if (thisResult === 'pass' && !existing._hasPass) {
+          existing.evaluationId = evalItem.id;
+          existing.evalSummary = summary;
+          existing.teamRole = teamRole;
+          existing._hasPass = true;
+          existing.result = 'pass';
+          existing.bestResult = 'pass';
+        } else if (thisResult === 'fail' && !existing._hasPass) {
+          // Keep latest fail summary so the UI shows the most recent attempt.
+          existing.evaluationId = evalItem.id;
+          existing.evalSummary = summary;
+          existing.teamRole = teamRole;
+        }
+      }
+    }
+
     for (const student of (students || [])) {
       for (const skillName of skillColumnOrder) {
-        const sids = skillToStationIds[skillName];
         const skillKey = `${student.id}_${skillName}`;
+        const sheetId = skillNameToSheetId[skillName];
+        const sids = skillToStationIds[skillName] || [];
 
-        // Gather all cell data from station-based cells for this skill
-        let bestCell: typeof skillCells[string] | null = null;
+        // 1. Prefer evaluation-derived cell (grouped by skill_sheet_id directly).
+        let bestCell: SkillCellValue | null = null;
+        if (sheetId) {
+          const evalCell = evalCellByStudentSheet[`${student.id}__${sheetId}`];
+          if (evalCell) {
+            // Strip internal bookkeeping fields before returning.
+            const { _hasPass: _hp, _anyRetake: _ar, ...clean } = evalCell;
+            void _hp; void _ar;
+            bestCell = clean;
+          }
+        }
 
-        let anyRetake = false;
+        // 2. Overlay per-station queue state (in_progress / not_started) from
+        //    station-based cells only if we don't already have a completed
+        //    evaluation. This preserves "student is currently at station X"
+        //    badges for stations that back this skill.
+        let anyRetake = bestCell?.hasRetake || false;
         for (const sid of sids) {
-          const stationKey = `${student.id}_${sid}`;
-          const cell = cells[stationKey];
+          const cell = cells[`${student.id}_${sid}`];
           if (!cell) continue;
-
           if (cell.hasRetake) anyRetake = true;
+
+          if (bestCell && bestCell.status === 'completed' && bestCell.result === 'pass') {
+            // Already passed — nothing a station cell can improve.
+            continue;
+          }
 
           if (!bestCell) {
             bestCell = { ...cell };
             continue;
           }
 
-          // Merge: pass > in_progress > fail > anything else
+          // Merge precedence: pass > completed(fail) > in_progress > other
           if (cell.status === 'completed' && cell.result === 'pass') {
-            // Pass always wins
             bestCell = { ...cell };
           } else if (cell.status === 'in_progress' && bestCell.status !== 'completed') {
-            // In progress wins over non-completed
             bestCell = { ...cell };
           } else if (cell.status === 'completed' && bestCell.status !== 'completed') {
-            // Any completion wins over non-completed
             bestCell = { ...cell };
           }
-          // Merge hasRetake
-          if (cell.hasRetake) bestCell.hasRetake = true;
-          // Otherwise keep existing bestCell
         }
 
         if (bestCell) {
@@ -372,6 +519,8 @@ export async function GET(request: NextRequest) {
         ...s,
         skillSheetId: stationSkillMap[s.id] || null,
         instructorName: stationInstructorMap[s.id]?.name || null,
+        addedDuringExam: stationAddedDuringExamMap[s.id] || false,
+        stationSuffix: stationSuffixMap[s.id] || null,
       })),
       cells,
       // New skill-based data
