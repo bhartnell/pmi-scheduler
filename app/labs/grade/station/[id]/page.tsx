@@ -161,6 +161,14 @@ export default function GradeStationPage() {
   const [evaluatedStudents, setEvaluatedStudents] = useState<Record<string, string>>({});
   const [inProgressStudents, setInProgressStudents] = useState<Record<string, string>>({});
 
+  // Dual-station (O2/NRB E204 -> BVM E203) handoff state
+  const [bvmStationId, setBvmStationId] = useState<string | null>(null);
+  const [dualStationPrompt, setDualStationPrompt] = useState<null | {
+    studentName: string;
+    studentId: string;
+    bvmStationId: string;
+  }>(null);
+
   // Computed values
   const selectedGroup = labGroups.find(g => g.id === selectedGroupId);
   const satisfactoryCount = criteriaRatings.filter(r => r.rating === 'S').length;
@@ -218,6 +226,44 @@ export default function GradeStationPage() {
       setSelectedStudentId(retakeStudentId);
     }
   }, [isRetakeMode, retakeStudentId, allStudents]);
+
+  // Dual-station handoff: when grading an O2/NRB (E204) station, look up the
+  // sibling BVM (E203) station on the same lab day so we can prompt the
+  // examiner to continue with the same student.
+  useEffect(() => {
+    const labDayId = station?.lab_day?.id;
+    if (!labDayId || nremtSheetCode !== 'E204') {
+      setBvmStationId(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/lab-management/lab-days/${labDayId}/station-by-nremt-code?code=E203`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data.success && data.station?.id) {
+          setBvmStationId(data.station.id);
+        }
+      } catch {
+        /* ignore — fall through to normal auto-advance */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [station?.lab_day?.id, nremtSheetCode]);
+
+  // Handoff target: when navigating from a paired station with ?student=...,
+  // pre-select that student once the roster is loaded.
+  useEffect(() => {
+    const handoffStudentId = searchParams?.get('student');
+    if (handoffStudentId && allStudents.some(s => s.id === handoffStudentId)) {
+      setSelectedStudentId(handoffStudentId);
+    }
+  }, [searchParams, allStudents]);
 
   useEffect(() => {
     // Initialize critical actions checkboxes when scenario loads
@@ -446,6 +492,19 @@ export default function GradeStationPage() {
     triggerAutoSave();
   };
 
+  // Advance to the next unevaluated, unstarted student at this station.
+  const advanceToNextStudent = useCallback((justSavedStudentId: string, evaluationId: string) => {
+    const updatedEvaluated = { ...evaluatedStudents, [justSavedStudentId]: evaluationId };
+    const nextStudent = allStudents.find(s =>
+      !updatedEvaluated[s.id] && !inProgressStudents[s.id] && s.id !== justSavedStudentId
+    );
+    if (nextStudent) {
+      setTimeout(() => {
+        setSelectedStudentId(nextStudent.id);
+      }, 500);
+    }
+  }, [allStudents, evaluatedStudents, inProgressStudents]);
+
   // Handle evaluation saved from SkillSheetPanel — auto-advance to next student
   const handleEvaluationSaved = useCallback((savedStudentId: string, evaluationId: string, evalStatus: 'complete' | 'in_progress') => {
     if (evalStatus === 'in_progress') {
@@ -463,17 +522,24 @@ export default function GradeStationPage() {
       return next;
     });
 
-    // Auto-advance to next unevaluated, unstarted student (skip in-progress)
-    const updatedEvaluated = { ...evaluatedStudents, [savedStudentId]: evaluationId };
-    const nextStudent = allStudents.find(s =>
-      !updatedEvaluated[s.id] && !inProgressStudents[s.id] && s.id !== savedStudentId
-    );
-    if (nextStudent) {
-      setTimeout(() => {
-        setSelectedStudentId(nextStudent.id);
-      }, 500);
+    // Dual-station handoff: if this is the O2/NRB (E204) station and a paired
+    // BVM (E203) station exists on this lab day, prompt the examiner to
+    // continue with the same student rather than silently advancing.
+    if (nremtSheetCode === 'E204' && bvmStationId) {
+      const savedStudent = allStudents.find(s => s.id === savedStudentId);
+      const studentName = savedStudent
+        ? `${savedStudent.first_name} ${savedStudent.last_name}`
+        : 'this student';
+      setDualStationPrompt({
+        studentName,
+        studentId: savedStudentId,
+        bvmStationId,
+      });
+      return;
     }
-  }, [allStudents, evaluatedStudents, inProgressStudents]);
+
+    advanceToNextStudent(savedStudentId, evaluationId);
+  }, [allStudents, nremtSheetCode, bvmStationId, advanceToNextStudent]);
 
   const handleSave = async (emailPref: string = 'queued', saveAsStatus: string = 'complete') => {
     const isInProgress = saveAsStatus === 'in_progress';
@@ -1189,6 +1255,55 @@ export default function GradeStationPage() {
           />
         )}
       </main>
+      )}
+
+      {/* Dual-station handoff prompt: O2/NRB (E204) -> BVM (E203) */}
+      {dualStationPrompt && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="dual-station-prompt-title"
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full p-6 border border-gray-200 dark:border-gray-700">
+            <h2
+              id="dual-station-prompt-title"
+              className="text-lg font-semibold text-gray-900 dark:text-white mb-2"
+            >
+              O2/NRB complete for {dualStationPrompt.studentName}
+            </h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+              Proceed to BVM Ventilation?
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2 sm:justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  const { studentId, evaluationId } = {
+                    studentId: dualStationPrompt.studentId,
+                    evaluationId: evaluatedStudents[dualStationPrompt.studentId] || '',
+                  };
+                  setDualStationPrompt(null);
+                  advanceToNextStudent(studentId, evaluationId);
+                }}
+                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 font-medium"
+              >
+                Next Student
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  const { bvmStationId: targetId, studentId } = dualStationPrompt;
+                  setDualStationPrompt(null);
+                  router.push(`/labs/grade/station/${targetId}?student=${studentId}`);
+                }}
+                className="px-4 py-2 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-medium shadow"
+              >
+                Open BVM Station
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Skill Sheet Slide-Out Panel (only in non-embedded mode) */}
