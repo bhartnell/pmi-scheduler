@@ -67,13 +67,34 @@ function PanelContent({
     autoResize();
   }, [notes, autoResize]);
 
-  // FIX 3: Toggle a specific critical criterion
-  const toggleCriterion = (criterion: string) => {
+  // Coerce any criterion shape to a display/identity string. Defends against
+  // DB rows that store objects like { description } or { step_number, status }
+  // instead of plain strings.
+  const criterionToText = (c: unknown): string => {
+    if (typeof c === 'string') return c;
+    if (c && typeof c === 'object') {
+      const o = c as Record<string, unknown>;
+      if (typeof o.description === 'string') return o.description;
+      if (typeof o.text === 'string') return o.text;
+      if (typeof o.label === 'string') return o.label;
+      if (typeof o.criterion === 'string') return o.criterion;
+      if ('step_number' in o) {
+        const sn = o.step_number;
+        const st = 'status' in o ? String(o.status) : '';
+        return st ? `Step ${sn}: ${st}` : `Step ${sn}`;
+      }
+      try { return JSON.stringify(o); } catch { return String(o); }
+    }
+    return String(c);
+  };
+
+  // FIX 3: Toggle a specific critical criterion (by its text key)
+  const toggleCriterion = (criterionKey: string) => {
     if (!onCheckedCriteriaChange) return;
-    const isChecked = checkedCriteria.includes(criterion);
+    const isChecked = checkedCriteria.includes(criterionKey);
     const updated = isChecked
-      ? checkedCriteria.filter(c => c !== criterion)
-      : [...checkedCriteria, criterion];
+      ? checkedCriteria.filter(c => c !== criterionKey)
+      : [...checkedCriteria, criterionKey];
     onCheckedCriteriaChange(updated);
     // Auto-set criticalFail based on whether any criterion is checked
     onCriticalFailChange(updated.length > 0);
@@ -125,23 +146,27 @@ function PanelContent({
             </span>
           </div>
           <div className="space-y-2">
-            {criticalCriteria.map((criterion, idx) => (
-              <label key={idx} className="flex items-start gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={checkedCriteria.includes(criterion)}
-                  onChange={() => toggleCriterion(criterion)}
-                  className="mt-0.5 h-4 w-4 rounded border-red-400 text-red-600 focus:ring-red-500 accent-red-600"
-                />
-                <span className={`text-xs ${
-                  checkedCriteria.includes(criterion)
-                    ? 'text-red-700 dark:text-red-300 font-medium'
-                    : 'text-gray-700 dark:text-gray-300'
-                }`}>
-                  {criterion}
-                </span>
-              </label>
-            ))}
+            {criticalCriteria.map((criterion, idx) => {
+              const text = criterionToText(criterion);
+              const isChecked = checkedCriteria.includes(text);
+              return (
+                <label key={idx} className="flex items-start gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => toggleCriterion(text)}
+                    className="mt-0.5 h-4 w-4 rounded border-red-400 text-red-600 focus:ring-red-500 accent-red-600"
+                  />
+                  <span className={`text-xs ${
+                    isChecked
+                      ? 'text-red-700 dark:text-red-300 font-medium'
+                      : 'text-gray-700 dark:text-gray-300'
+                  }`}>
+                    {text}
+                  </span>
+                </label>
+              );
+            })}
           </div>
 
           {/* Mandatory notes when any criterion is checked */}

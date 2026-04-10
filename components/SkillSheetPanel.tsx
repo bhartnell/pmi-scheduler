@@ -248,6 +248,27 @@ function effectivePossiblePoints(step: Step): number {
   return step.possible_points || 1;
 }
 
+/** Coerce any critical-failure shape to a display string. Some rows store
+ *  strings; others may store { description, ... } or { step_number, status }
+ *  objects. Returning a string prevents React render error #31. */
+function cfToText(cf: unknown): string {
+  if (typeof cf === 'string') return cf;
+  if (cf && typeof cf === 'object') {
+    const o = cf as Record<string, unknown>;
+    if (typeof o.description === 'string') return o.description;
+    if (typeof o.text === 'string') return o.text;
+    if (typeof o.label === 'string') return o.label;
+    if (typeof o.criterion === 'string') return o.criterion;
+    if ('step_number' in o) {
+      const sn = o.step_number;
+      const st = 'status' in o ? String(o.status) : '';
+      return st ? `Step ${sn}: ${st}` : `Step ${sn}`;
+    }
+    try { return JSON.stringify(o); } catch { return String(o); }
+  }
+  return String(cf);
+}
+
 /** Get earned points for a step based on sub-item marks or pass/fail mark */
 function getStepEarnedPoints(
   step: Step,
@@ -1778,7 +1799,7 @@ export default function SkillSheetPanel({
                     {sheet.critical_failures.map((cf, i) => (
                       <li key={i} className="flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
                         <span className="mt-1 w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-                        {cf}
+                        {cfToText(cf)}
                       </li>
                     ))}
                   </ul>
@@ -1935,7 +1956,7 @@ export default function SkillSheetPanel({
                     {sheet.critical_failures.map((cf, i) => (
                       <li key={i} className="flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
                         <span className="mt-1 w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-                        {cf}
+                        {cfToText(cf)}
                       </li>
                     ))}
                   </ul>
@@ -2326,7 +2347,7 @@ export default function SkillSheetPanel({
                     {sheet.critical_failures.map((cf, i) => (
                       <li key={i} className="flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
                         <span className="mt-1 w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-                        {cf}
+                        {cfToText(cf)}
                       </li>
                     ))}
                   </ul>
@@ -2483,7 +2504,7 @@ export default function SkillSheetPanel({
                     {sheet.critical_failures.map((cf, i) => (
                       <li key={i} className="flex items-start gap-2 text-xs text-red-700 dark:text-red-300">
                         <span className="mt-1 w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-                        {cf}
+                        {cfToText(cf)}
                       </li>
                     ))}
                   </ul>
