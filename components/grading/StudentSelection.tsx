@@ -56,15 +56,15 @@ export default function StudentSelection({
             Select Student
           </h2>
           {(completedCount > 0 || inProgressCount > 0) && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-nowrap shrink-0">
               {inProgressCount > 0 && (
-                <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 whitespace-nowrap">
                   <Clock className="w-3.5 h-3.5" />
                   {inProgressCount} in progress
                 </span>
               )}
               {completedCount > 0 && (
-                <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1 whitespace-nowrap">
                   <CheckCircle className="w-3.5 h-3.5" />
                   {completedCount}/{allStudents.length}
                 </span>
@@ -111,25 +111,26 @@ export default function StudentSelection({
                       onSetSelectedStudentId(student.id);
                       triggerAutoSave();
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded text-left text-sm ${
+                    title={`${student.first_name} ${student.last_name}`}
+                    className={`w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded text-left text-sm ${
                       isSelected
                         ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700'
                         : 'hover:bg-gray-50 dark:hover:bg-gray-700'
                     }`}
                   >
-                    <span className={`${isEvaluated ? 'text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>
+                    <span className={`truncate min-w-0 lg:text-base lg:font-semibold ${isEvaluated ? 'text-gray-400 line-through' : 'text-gray-900 dark:text-white'}`}>
                       {student.first_name} {student.last_name}
                     </span>
                     {isEvaluated ? (
-                      <span className="text-green-500 flex items-center gap-1 text-xs">
+                      <span className="text-green-500 flex items-center gap-1 text-xs whitespace-nowrap shrink-0">
                         <CheckCircle className="w-3.5 h-3.5" /> completed
                       </span>
                     ) : isInProgress ? (
-                      <span className="text-amber-500 flex items-center gap-1 text-xs">
+                      <span className="text-amber-500 flex items-center gap-1 text-xs whitespace-nowrap shrink-0">
                         <Clock className="w-3.5 h-3.5" /> in progress
                       </span>
                     ) : (
-                      <span className="w-3 h-3 rounded-full border-2 border-gray-300 dark:border-gray-600" />
+                      <span className="w-3 h-3 rounded-full border-2 border-gray-300 dark:border-gray-600 shrink-0" />
                     )}
                   </button>
                 );
@@ -140,10 +141,10 @@ export default function StudentSelection({
 
         {/* Rotation Number (optional for skills) */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 whitespace-nowrap">
             Rotation <span className="text-gray-400 font-normal">(optional)</span>
           </label>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-nowrap">
             {[1, 2, 3, 4].map(num => (
               <button
                 key={num}
@@ -152,7 +153,7 @@ export default function StudentSelection({
                   onSetRotationNumber(num);
                   triggerAutoSave();
                 }}
-                className={`w-12 h-12 rounded-lg font-medium ${
+                className={`w-12 h-12 rounded-lg font-medium whitespace-nowrap shrink-0 ${
                   rotationNumber === num
                     ? 'bg-green-600 text-white'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
