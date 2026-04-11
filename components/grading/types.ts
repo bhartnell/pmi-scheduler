@@ -222,6 +222,7 @@ export interface Station {
       program: { abbreviation: string };
     };
   };
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface SubItem {
