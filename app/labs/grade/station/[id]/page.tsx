@@ -115,6 +115,14 @@ export default function GradeStationPage() {
   const [dualSkillTab2Unlocked, setDualSkillTab2Unlocked] = useState(false);
   const [dualSkillToast, setDualSkillToast] = useState<string | null>(null);
 
+  // Reset signal for SkillSheetPanel — incremented to force its form to reset
+  // from the outside (used when we defer reset for the dual-station handoff modal).
+  const [skillSheetResetSignal, setSkillSheetResetSignal] = useState<number>(0);
+
+  // Key for NremtCandidateInstructions — incremented to re-mount the component
+  // (resets its local "expanded" / "read" state to defaults).
+  const [nremtInstructionsKey, setNremtInstructionsKey] = useState<number>(0);
+
   // Handle need assistance - send alert to coordinator
   const handleNeedAssistance = useCallback(async () => {
     if (!station?.lab_day?.id || !stationId) return;
@@ -492,54 +500,66 @@ export default function GradeStationPage() {
     triggerAutoSave();
   };
 
-  // Advance to the next unevaluated, unstarted student at this station.
-  const advanceToNextStudent = useCallback((justSavedStudentId: string, evaluationId: string) => {
-    const updatedEvaluated = { ...evaluatedStudents, [justSavedStudentId]: evaluationId };
-    const nextStudent = allStudents.find(s =>
-      !updatedEvaluated[s.id] && !inProgressStudents[s.id] && s.id !== justSavedStudentId
-    );
-    if (nextStudent) {
-      setTimeout(() => {
-        setSelectedStudentId(nextStudent.id);
-      }, 500);
-    }
-  }, [allStudents, evaluatedStudents, inProgressStudents]);
+  // Clear all parent-owned evaluation state after a submit so a fresh selection
+  // starts clean. Does NOT auto-advance to the next student — the examiner
+  // must explicitly pick the next student from the dropdown.
+  const resetParentEvaluationState = useCallback(() => {
+    setSelectedStudentId('');
+    setExaminerNotes('');
+    setCriticalFail(false);
+    setCriticalFailNotes('');
+    setCheckedCriticalCriteria([]);
+    setAssistanceRequested(false);
+    setAssistanceAlertId(null);
+    // Re-mount the "Read to Candidate" instructions card so it returns to
+    // its default expanded state for the next student.
+    setNremtInstructionsKey(k => k + 1);
+    setNremtInstructionsRead(false);
+  }, []);
 
-  // Handle evaluation saved from SkillSheetPanel — auto-advance to next student
+  // Handle evaluation saved from SkillSheetPanel. We no longer auto-advance —
+  // the form is simply reset (via onAfterSubmit) and the examiner selects the
+  // next student manually.
   const handleEvaluationSaved = useCallback((savedStudentId: string, evaluationId: string, evalStatus: 'complete' | 'in_progress') => {
     if (evalStatus === 'in_progress') {
-      // Track as in-progress, don't advance
       setInProgressStudents(prev => ({ ...prev, [savedStudentId]: evaluationId }));
       return;
     }
 
     // Mark as completed
     setEvaluatedStudents(prev => ({ ...prev, [savedStudentId]: evaluationId }));
-    // Remove from in-progress if it was there
     setInProgressStudents(prev => {
       const next = { ...prev };
       delete next[savedStudentId];
       return next;
     });
+  }, []);
 
+  // Called from SkillSheetPanel AFTER a successful complete save. Returning
+  // true tells the panel to DEFER its internal form reset — the parent will
+  // trigger the reset later (via resetSignal) after dismissing a modal.
+  const handleAfterSkillSheetSubmit = useCallback((): boolean => {
     // Dual-station handoff: if this is the O2/NRB (E204) station and a paired
-    // BVM (E203) station exists on this lab day, prompt the examiner to
-    // continue with the same student rather than silently advancing.
-    if (nremtSheetCode === 'E204' && bvmStationId) {
-      const savedStudent = allStudents.find(s => s.id === savedStudentId);
+    // BVM (E203) station exists, show the prompt BEFORE clearing anything.
+    // The prompt's buttons will complete the reset.
+    if (nremtSheetCode === 'E204' && bvmStationId && selectedStudentId) {
+      const savedStudent = allStudents.find(s => s.id === selectedStudentId);
       const studentName = savedStudent
         ? `${savedStudent.first_name} ${savedStudent.last_name}`
         : 'this student';
       setDualStationPrompt({
         studentName,
-        studentId: savedStudentId,
+        studentId: selectedStudentId,
         bvmStationId,
       });
-      return;
+      return true; // defer reset until modal is dismissed
     }
 
-    advanceToNextStudent(savedStudentId, evaluationId);
-  }, [allStudents, nremtSheetCode, bvmStationId, advanceToNextStudent]);
+    // Normal path: clear parent state immediately. Panel will reset its own
+    // internal form state (since we return false).
+    resetParentEvaluationState();
+    return false;
+  }, [nremtSheetCode, bvmStationId, selectedStudentId, allStudents, resetParentEvaluationState]);
 
   const handleSave = async (emailPref: string = 'queued', saveAsStatus: string = 'complete') => {
     const isInProgress = saveAsStatus === 'in_progress';
@@ -805,6 +825,7 @@ export default function GradeStationPage() {
       {station?.lab_day?.is_nremt_testing && (
         <div className="max-w-7xl mx-auto px-4 pt-2 space-y-2">
           <NremtCandidateInstructions
+            key={nremtInstructionsKey}
             stationName={station.custom_title || station.skill_name || ''}
             onInstructionsRead={setNremtInstructionsRead}
           />
@@ -869,7 +890,7 @@ export default function GradeStationPage() {
           className={
             station?.lab_day?.is_nremt_testing
               ? // NREMT: mobile stacked (<lg) becomes 3-col grid at lg+
-                'max-w-[1600px] mx-auto px-4 py-4 pb-24 flex flex-col gap-4 lg:grid lg:grid-cols-[12rem_minmax(0,1fr)_18rem] lg:gap-4 lg:items-start'
+                'max-w-[1800px] mx-auto px-4 py-4 pb-24 flex flex-col gap-4 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)_20rem] lg:gap-4 lg:items-start'
               : 'flex gap-6 max-w-7xl mx-auto px-4 py-4 pb-4'
           }
         >
@@ -956,6 +977,8 @@ export default function GradeStationPage() {
                       stationPoolId={stationId}
                       studentQueue={studentQueue}
                       onEvaluationSaved={handleEvaluationSaved}
+                      onAfterSubmit={handleAfterSkillSheetSubmit}
+                      resetSignal={skillSheetResetSignal}
                       embedded={true}
                       nremtMode={!!station?.lab_day?.is_nremt_testing}
                       defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
@@ -1279,12 +1302,11 @@ export default function GradeStationPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const { studentId, evaluationId } = {
-                    studentId: dualStationPrompt.studentId,
-                    evaluationId: evaluatedStudents[dualStationPrompt.studentId] || '',
-                  };
                   setDualStationPrompt(null);
-                  advanceToNextStudent(studentId, evaluationId);
+                  // Now complete the deferred reset: clear parent state and
+                  // signal the SkillSheetPanel to reset its internal form.
+                  resetParentEvaluationState();
+                  setSkillSheetResetSignal(n => n + 1);
                 }}
                 className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-100 dark:hover:bg-gray-600 font-medium"
               >
@@ -1317,6 +1339,8 @@ export default function GradeStationPage() {
           stationPoolId={stationId}
           studentQueue={isSkillsStation ? studentQueue : undefined}
           onEvaluationSaved={handleEvaluationSaved}
+          onAfterSubmit={handleAfterSkillSheetSubmit}
+          resetSignal={skillSheetResetSignal}
           nremtMode={!!station?.lab_day?.is_nremt_testing}
           defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
           isNremtTesting={!!station?.lab_day?.is_nremt_testing}
