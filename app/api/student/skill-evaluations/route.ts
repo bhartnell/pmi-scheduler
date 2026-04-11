@@ -31,6 +31,8 @@ export async function GET(request: NextRequest) {
 
     let studentId: string | null = null;
     const queryStudentId = request.nextUrl.searchParams.get('student_id');
+    const queryEvaluationId = request.nextUrl.searchParams.get('evaluation_id');
+    const isInstructor = ['instructor', 'admin', 'superadmin'].includes(labUser.role);
 
     if (labUser.role === 'student') {
       // Find the student record by email
@@ -44,8 +46,12 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ success: false, error: 'Student record not found' }, { status: 404 });
       }
       studentId = student.id;
-    } else if (['instructor', 'admin', 'superadmin'].includes(labUser.role) && queryStudentId) {
+    } else if (isInstructor && queryStudentId) {
       studentId = queryStudentId;
+    } else if (isInstructor && queryEvaluationId) {
+      // Instructors can look up a single evaluation by id without knowing the student
+      // (used by coordinator view "View Full Score Sheet" link)
+      studentId = null;
     } else {
       return NextResponse.json({ success: false, error: 'Student access only' }, { status: 403 });
     }
@@ -59,8 +65,13 @@ export async function GET(request: NextRequest) {
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name),
         lab_day:lab_days!student_skill_evaluations_lab_day_id_fkey(id, date, title)
       `)
-      .eq('student_id', studentId)
       .order('created_at', { ascending: false });
+
+    if (studentId) {
+      query = query.eq('student_id', studentId);
+    } else if (queryEvaluationId) {
+      query = query.eq('id', queryEvaluationId);
+    }
 
     // Students only see evaluations that were shared with them
     if (labUser.role === 'student') {
