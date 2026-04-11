@@ -201,17 +201,25 @@ export async function POST(request: NextRequest) {
     if (body.duplicate_of_station_id) metadata.duplicate_of_station_id = body.duplicate_of_station_id;
     if (body.station_suffix) metadata.station_suffix = body.station_suffix;
 
+    // Default station_type: if a skill_sheet_id is provided, this is a skills station.
+    // Otherwise fall back to scenario (legacy default).
+    const resolvedStationType =
+      body.station_type || (body.skill_sheet_id ? 'skills' : 'scenario');
+
     // Insert station with simple select to avoid join issues
     const { data, error } = await supabase
       .from('lab_stations')
       .insert({
         lab_day_id: body.lab_day_id,
         station_number: body.station_number || 1,
-        station_type: body.station_type || 'scenario',
+        station_type: resolvedStationType,
         scenario_id: body.scenario_id || null,
         drill_ids: Array.isArray(body.drill_ids) && body.drill_ids.length > 0 ? body.drill_ids : null,
         custom_title: body.custom_title || null,
         skill_name: body.skill_name || null,
+        // Persist skill_sheet_id on the column as well (not just metadata) so the
+        // grading view and tracker queries can resolve it directly.
+        skill_sheet_id: body.skill_sheet_id || null,
         instructor_name: body.instructor_name || null,
         instructor_email: body.instructor_email || null,
         room: body.room || null,
