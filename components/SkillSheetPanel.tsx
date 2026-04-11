@@ -1615,7 +1615,10 @@ export default function SkillSheetPanel({
     }
 
     return (
-      <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
+      // NREMT desktop (lg+): un-cap height + remove overflow so the center
+      // column participates in the normal page scroll (no scroll trap).
+      // Mobile/non-NREMT: keep the original fixed-height internal-scroll behavior.
+      <div className={`flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden ${isNremtTesting ? 'lg:h-auto lg:overflow-visible' : ''}`}>
         {panelInner}
 
         {/* Student queue progress (individual mode only) */}
@@ -1745,8 +1748,8 @@ export default function SkillSheetPanel({
         {/* Team Member Selector */}
         {teamMemberSelector}
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto overscroll-contain">
+        {/* Scrollable Content — on NREMT desktop (lg+) this flows with the page scroll instead of trapping wheel events */}
+        <div className={`flex-1 overflow-y-auto overscroll-contain ${isNremtTesting ? 'lg:flex-none lg:overflow-visible lg:overscroll-auto' : ''}`}>
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
@@ -2765,19 +2768,34 @@ function PanelStepRow({
   ) : null;
 
   // Sub-items rendering (for formative and final modes)
+  // NREMT desktop: larger text, 44x44 tap targets, more row padding
+  const subItemRowClass = isNremtTesting
+    ? 'flex items-center gap-2 ml-6 py-0.5 cursor-pointer lg:gap-3 lg:ml-8 lg:px-4 lg:py-2 lg:min-h-[44px] lg:rounded-md lg:hover:bg-gray-50 lg:dark:hover:bg-gray-800/40'
+    : 'flex items-center gap-2 ml-6 py-0.5 cursor-pointer';
+  const subItemInputWrapClass = isNremtTesting
+    ? 'flex items-center justify-center lg:p-2 lg:-m-2'
+    : '';
+  const subItemInputClass = isNremtTesting
+    ? 'w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 lg:w-5 lg:h-5'
+    : 'w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500';
+  const subItemTextClass = isNremtTesting
+    ? 'text-xs lg:text-[14px] lg:leading-relaxed'
+    : 'text-xs';
   const subItemsBlock = hasSubItems && mode !== 'teaching' && onSubItemToggle ? (
-    <div className="mt-1 space-y-0.5">
+    <div className="mt-1 space-y-0.5 lg:space-y-1">
       {step.sub_items!.map((item, i) => {
         const isChecked = subItemChecks ? subItemChecks[i] || false : false;
         return (
-          <label key={i} className="flex items-center gap-2 ml-6 py-0.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={isChecked}
-              onChange={() => onSubItemToggle(i)}
-              className="w-3.5 h-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-            />
-            <span className={`text-xs ${isChecked ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-700 dark:text-gray-300'}`}>
+          <label key={i} className={subItemRowClass}>
+            <span className={subItemInputWrapClass}>
+              <input
+                type="checkbox"
+                checked={isChecked}
+                onChange={() => onSubItemToggle(i)}
+                className={subItemInputClass}
+              />
+            </span>
+            <span className={`${subItemTextClass} ${isChecked ? 'text-gray-500 dark:text-gray-400 line-through' : 'text-gray-700 dark:text-gray-300'}`}>
               {item.label || item.description || String(item)}
             </span>
           </label>
