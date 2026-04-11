@@ -61,6 +61,7 @@ import LabDaySkillSignoffs from '@/components/lab-day/LabDaySkillSignoffs';
 import LabDayCheckInSection from '@/components/lab-day/LabDayCheckInSection';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import ScenarioRoleModal from '@/components/lab-day/ScenarioRoleModal';
+import ScenarioPickerModal from '@/components/lab-day/ScenarioPickerModal';
 import DuplicateModals from '@/components/lab-day/DuplicateModals';
 import LabDayPrintView from '@/components/lab-day/LabDayPrintView';
 import LabDayVolunteers from '@/components/lab-day/LabDayVolunteers';
@@ -82,6 +83,9 @@ export default function LabDayPage() {
   const [labDayRoles, setLabDayRoles] = useState<LabDayRole[]>([]);
   const [stationSkillDocs, setStationSkillDocs] = useState<Record<string, SkillDocument[]>>({});
   const [stationSkillSheetIds, setStationSkillSheetIds] = useState<Record<string, string>>({});
+  const [stationNremtCodes, setStationNremtCodes] = useState<Record<string, 'E201' | 'E202' | undefined>>({});
+  const [nremtScenarioTitles, setNremtScenarioTitles] = useState<Record<string, string>>({});
+  const [scenarioPickerState, setScenarioPickerState] = useState<{ station: Station; code: 'E201' | 'E202' } | null>(null);
   const [cohortStudents, setCohortStudents] = useState<Student[]>([]);
   const [scenarioParticipation, setScenarioParticipation] = useState<ScenarioParticipation[]>([]);
   const [instructors, setInstructors] = useState<Instructor[]>([]);
@@ -174,13 +178,39 @@ export default function LabDayPage() {
 
   const lookupSkillSheets = async (stations: any[], program: string) => {
     const results: Record<string, string> = {};
+    const nremtCodes: Record<string, 'E201' | 'E202' | undefined> = {};
+    let anyNremt = false;
     for (const station of stations) {
       const skillName = station.skill_name || station.scenario?.title || station.custom_title;
       if (!skillName) continue;
-      try { const res = await fetch(`/api/skill-sheets/by-skill-name?name=${encodeURIComponent(skillName)}&program=${encodeURIComponent(program.toLowerCase())}`); const data = await res.json(); if (data.success && data.sheets?.length > 0) results[station.id] = data.sheets[0].id; }
-      catch { /* ignore */ }
+      try {
+        const res = await fetch(`/api/skill-sheets/by-skill-name?name=${encodeURIComponent(skillName)}&program=${encodeURIComponent(program.toLowerCase())}`);
+        const data = await res.json();
+        if (data.success && data.sheets?.length > 0) {
+          const sheet = data.sheets[0];
+          results[station.id] = sheet.id;
+          const code = sheet.nremt_code as string | null | undefined;
+          if (code === 'E201' || code === 'E202') {
+            nremtCodes[station.id] = code;
+            anyNremt = true;
+          }
+        }
+      } catch { /* ignore */ }
     }
     setStationSkillSheetIds(results);
+    setStationNremtCodes(nremtCodes);
+    if (anyNremt) {
+      // Fetch all active NREMT scenarios once so we can label assigned ones on the cards
+      try {
+        const res = await fetch('/api/nremt-scenarios');
+        const data = await res.json();
+        if (data.success && Array.isArray(data.scenarios)) {
+          const titles: Record<string, string> = {};
+          for (const sc of data.scenarios) titles[sc.id] = sc.title;
+          setNremtScenarioTitles(titles);
+        }
+      } catch { /* ignore */ }
+    }
   };
 
   const fetchCohortStudents = async () => {
@@ -379,7 +409,7 @@ export default function LabDayPage() {
 
         {labMode === 'individual_testing' && (<div className="mt-6 print:hidden"><IndividualTestingGrid labDayId={labDayId as string} isNremtTesting={!!labDay.is_nremt_testing} /></div>)}
 
-        <StationCards stations={labDay.stations} stationSkillDocs={stationSkillDocs} stationSkillSheetIds={stationSkillSheetIds} calendarAvailability={calendarAvailability} labDayId={labDayId as string} getStationTitle={getStationTitle} onEditStation={(station) => setEditingStation(station)} onOpenRoleModal={(station) => setRoleModalStation(station)} />
+        <StationCards stations={labDay.stations} stationSkillDocs={stationSkillDocs} stationSkillSheetIds={stationSkillSheetIds} stationNremtCodes={stationNremtCodes} stationScenarioTitles={nremtScenarioTitles} canSelectScenario={!!userRole && hasMinRole(userRole, 'lead_instructor')} calendarAvailability={calendarAvailability} labDayId={labDayId as string} getStationTitle={getStationTitle} onEditStation={(station) => setEditingStation(station)} onOpenRoleModal={(station) => setRoleModalStation(station)} onOpenScenarioPicker={(station, code) => setScenarioPickerState({ station, code })} />
 
         <ChecklistSection labDayId={labDayId} />
         <EquipmentSection labDayId={labDayId} stations={labDay.stations} />
@@ -401,6 +431,17 @@ export default function LabDayPage() {
       {editingStation && (<EditStationModal station={editingStation} labDay={labDay} instructors={instructors} locations={locations} calendarAvailability={calendarAvailability} session={session} onClose={() => setEditingStation(null)} onSaved={() => { setEditingStation(null); fetchLabDay(); }} />)}
       {showTimer && <LabTimer labDayId={labDayId} numRotations={labDay.num_rotations} rotationMinutes={labDay.rotation_duration} onClose={() => setShowTimer(false)} isController={true} />}
       {roleModalStation?.scenario && (<ScenarioRoleModal station={roleModalStation} labDayId={labDayId} labDayDate={labDay.date} cohortStudents={cohortStudents} scenarioParticipation={scenarioParticipation} onClose={() => setRoleModalStation(null)} onSaved={async () => { await fetchScenarioParticipation(); setRoleModalStation(null); }} />)}
+      {scenarioPickerState && (
+        <ScenarioPickerModal
+          station={scenarioPickerState.station}
+          skillCode={scenarioPickerState.code}
+          skillName={getStationTitle(scenarioPickerState.station)}
+          allStations={labDay.stations}
+          stationNremtCodes={stationNremtCodes}
+          onClose={() => setScenarioPickerState(null)}
+          onSaved={async () => { await fetchLabDay(); setScenarioPickerState(null); }}
+        />
+      )}
       <DuplicateModals labDay={labDay} labDayId={labDayId} showDuplicateModal={showDuplicateModal} showNextWeekConfirm={showNextWeekConfirm} showBulkDuplicateModal={showBulkDuplicateModal} onCloseDuplicate={() => setShowDuplicateModal(false)} onCloseNextWeek={() => setShowNextWeekConfirm(false)} onCloseBulkDuplicate={() => setShowBulkDuplicateModal(false)} onDuplicated={(newId) => { setCopySuccessToast(true); setTimeout(() => setCopySuccessToast(false), 3000); router.push(`/labs/schedule/${newId}/edit`); }} formatDate={formatDate} />
       {showDiffModal && labDay.source_template && (<TemplateDiffModal labDayId={labDay.id} templateId={labDay.source_template.id} templateName={labDay.source_template.name} onClose={() => setShowDiffModal(false)} onApplied={() => { setShowDiffModal(false); toast.success('Template updated successfully'); fetchLabDay(); }} />)}
     </div>

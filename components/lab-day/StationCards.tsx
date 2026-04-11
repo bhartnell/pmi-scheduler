@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   Edit2,
   Plus,
+  ClipboardList,
 } from 'lucide-react';
 import type { Station, SkillDocument } from './types';
 import { STATION_TYPE_COLORS, STATION_TYPE_BADGES } from './types';
@@ -19,22 +20,30 @@ interface StationCardsProps {
   stations: Station[];
   stationSkillDocs: Record<string, SkillDocument[]>;
   stationSkillSheetIds: Record<string, string>;
+  stationNremtCodes?: Record<string, 'E201' | 'E202' | undefined>;
+  stationScenarioTitles?: Record<string, string>;
+  canSelectScenario?: boolean;
   calendarAvailability: Map<string, { status: 'free' | 'partial' | 'busy' | 'disconnected'; events: { title: string; start: string; end: string }[] }>;
   labDayId: string;
   getStationTitle: (station: Station) => string;
   onEditStation: (station: Station) => void;
   onOpenRoleModal: (station: Station) => void;
+  onOpenScenarioPicker?: (station: Station, skillCode: 'E201' | 'E202') => void;
 }
 
 export default function StationCards({
   stations,
   stationSkillDocs,
   stationSkillSheetIds,
+  stationNremtCodes,
+  stationScenarioTitles,
+  canSelectScenario,
   calendarAvailability,
   labDayId,
   getStationTitle,
   onEditStation,
   onOpenRoleModal,
+  onOpenScenarioPicker,
 }: StationCardsProps) {
   if (stations.length === 0) {
     return (
@@ -181,6 +190,35 @@ export default function StationCards({
                 <TemplateGuideSection metadata={station.metadata} />
               </div>
             )}
+
+            {/* NREMT Scenario Selector */}
+            {canSelectScenario && stationNremtCodes?.[station.id] && onOpenScenarioPicker && (() => {
+              const code = stationNremtCodes[station.id]!;
+              const selectedId = (station.metadata as Record<string, unknown> | undefined)?.selected_scenario_id as string | undefined;
+              const selectedTitle = selectedId ? stationScenarioTitles?.[selectedId] : undefined;
+              return (
+                <div className="mb-3 print:hidden">
+                  <button
+                    onClick={() => onOpenScenarioPicker(station, code)}
+                    className={`w-full inline-flex items-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+                      selectedId
+                        ? 'border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200 hover:bg-blue-100 dark:hover:bg-blue-900/50'
+                        : 'border-dashed border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                    }`}
+                  >
+                    <ClipboardList className="w-4 h-4 flex-shrink-0" />
+                    <span className="flex-1 text-left truncate">
+                      {selectedId
+                        ? selectedTitle || 'Scenario assigned'
+                        : `Select Scenario (${code})`}
+                    </span>
+                    {selectedId && (
+                      <span className="text-xs text-blue-600 dark:text-blue-400 opacity-70">change</span>
+                    )}
+                  </button>
+                </div>
+              );
+            })()}
 
             {/* Actions */}
             <div className="flex gap-2 pt-3 border-t dark:border-gray-700 print:hidden">

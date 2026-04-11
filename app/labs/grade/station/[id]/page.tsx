@@ -23,6 +23,7 @@ import ScenarioGrading from '@/components/grading/ScenarioGrading';
 import EvaluationCriteria from '@/components/grading/EvaluationCriteria';
 import StudentSelection from '@/components/grading/StudentSelection';
 import FlaggingPanel from '@/components/grading/FlaggingPanel';
+import ScenarioReferencePanel from '@/components/grading/ScenarioReferencePanel';
 
 // Types and constants from shared module
 import {
@@ -109,6 +110,14 @@ export default function GradeStationPage() {
   // NREMT skill sheet badge info
   const [nremtSheetSource, setNremtSheetSource] = useState<string | null>(null);
   const [nremtSheetCode, setNremtSheetCode] = useState<string | null>(null);
+
+  // NREMT scenario reference (E201 trauma, E202 medical)
+  const [nremtScenario, setNremtScenario] = useState<{
+    id: string;
+    title: string;
+    skill_code: string;
+    scenario_data: Record<string, unknown>;
+  } | null>(null);
 
   // Dual-skill station state (O2/NRB + BVM tabbed interface)
   const [dualSkillActiveTab, setDualSkillActiveTab] = useState<number>(0);
@@ -371,6 +380,47 @@ export default function GradeStationPage() {
       } catch { /* ignore */ }
     })();
   }, [panelSheetId, station?.lab_day?.is_nremt_testing]);
+
+  // Fetch NREMT scenario reference when station + nremt_code are available
+  // and a selected_scenario_id is stored on the station metadata.
+  useEffect(() => {
+    const code = nremtSheetCode;
+    if (!station || !code) {
+      setNremtScenario(null);
+      return;
+    }
+    if (code !== 'E201' && code !== 'E202') {
+      setNremtScenario(null);
+      return;
+    }
+    const metadata = (station.metadata ?? null) as Record<string, unknown> | null;
+    const selectedId = metadata && typeof metadata.selected_scenario_id === 'string'
+      ? (metadata.selected_scenario_id as string)
+      : null;
+    if (!selectedId) {
+      setNremtScenario(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/nremt-scenarios/${selectedId}`);
+        if (!res.ok) {
+          if (!cancelled) setNremtScenario(null);
+          return;
+        }
+        const data = await res.json();
+        if (!cancelled && data.success && data.scenario) {
+          setNremtScenario(data.scenario);
+        }
+      } catch {
+        if (!cancelled) setNremtScenario(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [station, nremtSheetCode]);
 
   // Dual-skill timer phase change handler
   const handleTimerPhaseChange = useCallback((phaseIdx: number, phaseName: string) => {
@@ -929,6 +979,10 @@ export default function GradeStationPage() {
                 : 'flex-1 min-h-[60vh]'
             }
           >
+            {/* NREMT scenario reference (E201/E202) — shown above skill sheet */}
+            {nremtScenario && (
+              <ScenarioReferencePanel scenario={nremtScenario} />
+            )}
             {isDualSkillStation && dualSkillSheets.length === 2 ? (
               <>
                 {/* Dual-skill tab bar */}
