@@ -137,6 +137,15 @@ interface SkillSheetPanelProps {
   studentQueue?: StudentInfo[];
   /** Callback when evaluation is saved — parent can update its state */
   onEvaluationSaved?: (studentId: string, evaluationId: string, status: 'complete' | 'in_progress') => void;
+  /** Callback fired after a successful complete save.
+   *  Parent should clear its student selection and any parent-owned state
+   *  (examiner notes, critical fail flags, etc.) so the next selection starts fresh.
+   *  Return true to indicate the reset should be deferred (e.g. a modal will be shown
+   *  and the parent will trigger reset later via the resetSignal prop). */
+  onAfterSubmit?: () => boolean | void;
+  /** Increment to force SkillSheetPanel to reset its form state. Used by parents
+   *  that deferred the post-save reset (e.g. dual-station handoff modal). */
+  resetSignal?: number;
   /** When true, renders as full-width embedded content instead of slide-out panel */
   embedded?: boolean;
   /** Default display mode — use 'final' for NREMT testing days */
@@ -315,6 +324,8 @@ export default function SkillSheetPanel({
   stationPoolId,
   studentQueue,
   onEvaluationSaved,
+  onAfterSubmit,
+  resetSignal,
   embedded = false,
   defaultMode,
   nremtMode = false,
@@ -341,6 +352,12 @@ export default function SkillSheetPanel({
 
   // Sub-item checkbox state: { [stepNumber]: [true, false, true, ...] }
   const [subItemMarks, setSubItemMarks] = useState<Record<number, boolean[]>>({});
+
+  // Tracks whether the examiner has actually started evaluating this student.
+  // Becomes true on the first checklist interaction (stepMarks / subItemMarks /
+  // stepSequence). Until then, we do NOT POST an in_progress queue row — mere
+  // selection from the student dropdown should not create a draft evaluation.
+  const [evaluationTouched, setEvaluationTouched] = useState(false);
 
   // Per-step sub-item notes: { [stepNumber]: "missed medications, last oral intake" }
   const [subItemNotes, setSubItemNotes] = useState<Record<number, string>>({});
@@ -440,9 +457,44 @@ export default function SkillSheetPanel({
     fetchExistingEvals();
   }, [fetchExistingEvals]);
 
-  // Track student queue: mark as in_progress when panel opens with a student for a station
+  // Watch checklist state: once any step/sub-item has been marked, flag the
+  // evaluation as "touched" so the in-progress queue row can be created.
   useEffect(() => {
-    if (studentId && labDayId && stationPoolId) {
+    if (evaluationTouched) return;
+    const hasStepMark = Object.values(stepMarks).some(v => v != null);
+    const hasSubItemMark = Object.values(subItemMarks).some(arr => Array.isArray(arr) && arr.some(Boolean));
+    const hasSeq = Object.keys(stepSequence).length > 0;
+    if (hasStepMark || hasSubItemMark || hasSeq) {
+      setEvaluationTouched(true);
+    }
+  }, [stepMarks, subItemMarks, stepSequence, evaluationTouched]);
+
+  // External reset trigger: parent increments resetSignal to force a form reset
+  // (used after a deferred reset like the dual-station handoff modal is dismissed).
+  const didMountResetSignalRef = useRef(false);
+  useEffect(() => {
+    if (!didMountResetSignalRef.current) {
+      didMountResetSignalRef.current = true;
+      return;
+    }
+    if (resetSignal !== undefined) {
+      resetForm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resetSignal]);
+
+  // Reset the "touched" flag whenever the selected student changes.
+  // A fresh selection should NOT create an in_progress row; only explicit
+  // examiner interaction (first checklist mark) does.
+  useEffect(() => {
+    setEvaluationTouched(false);
+  }, [studentId]);
+
+  // Track student queue: mark as in_progress ONLY after the examiner has
+  // actually started grading (first checklist interaction). This prevents
+  // a draft/in-progress row from being created on mere student selection.
+  useEffect(() => {
+    if (evaluationTouched && studentId && labDayId && stationPoolId) {
       fetch('/api/lab-management/student-queue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -454,7 +506,7 @@ export default function SkillSheetPanel({
         }),
       }).catch(() => { /* non-blocking */ });
     }
-  }, [studentId, labDayId, stationPoolId]);
+  }, [evaluationTouched, studentId, labDayId, stationPoolId]);
 
   // Close on Escape key
   useEffect(() => {
@@ -524,6 +576,10 @@ export default function SkillSheetPanel({
     setSubItemNotes({});
     setNotes('');
     setResult('pass');
+    setEvaluationTouched(false);
+    setCollapsedPhases(new Set());
+    setShowThresholdWarning(false);
+    setShowCriticalFailBlock(false);
   };
 
   const handleSave = async (emailPref: EmailPreference = 'queued', saveStatus: 'complete' | 'in_progress' = 'complete') => {
@@ -657,7 +713,7 @@ export default function SkillSheetPanel({
         showToast(
           saveStatus === 'in_progress'
             ? `Progress saved — ${studentName || 'Student'}`
-            : `Saved — ${studentName || 'Student'}, ${sheet?.skill_name || 'Skill'}`,
+            : `\u2713 Evaluation submitted for ${studentName || 'student'}`,
           'success'
         );
 
@@ -678,7 +734,13 @@ export default function SkillSheetPanel({
 
         // Only reset and advance for complete saves
         if (saveStatus === 'complete') {
-          resetForm();
+          // Let the parent decide whether to defer the reset (e.g. to show a
+          // dual-station handoff modal). If onAfterSubmit returns truthy the
+          // parent will trigger the reset later via the resetSignal prop.
+          const defer = onAfterSubmit ? onAfterSubmit() === true : false;
+          if (!defer) {
+            resetForm();
+          }
         }
 
         // Check if all students done (only for complete saves)
