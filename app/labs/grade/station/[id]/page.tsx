@@ -15,6 +15,7 @@ import TimerBanner from '@/components/TimerBanner';
 import SkillSheetPanel from '@/components/SkillSheetPanel';
 import NremtCandidateInstructions from '@/components/NremtCandidateInstructions';
 import NremtTimer, { isDualStation } from '@/components/NremtTimer';
+import type { NremtTimerHandle } from '@/components/NremtTimer';
 import NremtStickyNotesPanel from '@/components/NremtStickyNotesPanel';
 
 // Sub-components
@@ -96,6 +97,8 @@ export default function GradeStationPage() {
 
   // NREMT candidate instructions state
   const [nremtInstructionsRead, setNremtInstructionsRead] = useState(false);
+  const [showTimerPrompt, setShowTimerPrompt] = useState(false);
+  const nremtTimerRef = useRef<NremtTimerHandle>(null);
 
   // NREMT examiner panel state (sticky notes, critical fail, need assistance)
   const [examinerNotes, setExaminerNotes] = useState('');
@@ -565,6 +568,7 @@ export default function GradeStationPage() {
     // its default expanded state for the next student.
     setNremtInstructionsKey(k => k + 1);
     setNremtInstructionsRead(false);
+    setShowTimerPrompt(false);
   }, []);
 
   // Handle evaluation saved from SkillSheetPanel. We no longer auto-advance —
@@ -877,7 +881,12 @@ export default function GradeStationPage() {
           <NremtCandidateInstructions
             key={nremtInstructionsKey}
             stationName={station.custom_title || station.skill_name || ''}
-            onInstructionsRead={setNremtInstructionsRead}
+            onInstructionsRead={(read) => {
+              setNremtInstructionsRead(read);
+              if (read && !nremtTimerRef.current?.isRunning) {
+                setShowTimerPrompt(true);
+              }
+            }}
           />
         </div>
       )}
@@ -917,11 +926,48 @@ export default function GradeStationPage() {
       {/* FIX 1: NREMT Timer — sticky bottom bar */}
       {station?.lab_day?.is_nremt_testing && (
         <NremtTimer
+          ref={nremtTimerRef}
           stationName={station.custom_title || station.skill_name || ''}
           instructionsRead={nremtInstructionsRead}
           stickyBottom
           onPhaseChange={isDualSkillStation ? handleTimerPhaseChange : undefined}
         />
+      )}
+
+      {/* Auto-timer prompt after instructions read */}
+      {showTimerPrompt && station?.lab_day?.is_nremt_testing && (
+        <div className="fixed inset-0 bg-black/50 z-[70] flex items-end sm:items-center justify-center" onClick={() => setShowTimerPrompt(false)}>
+          <div
+            className="bg-white dark:bg-gray-800 w-full sm:w-auto sm:min-w-[400px] sm:max-w-md sm:rounded-xl rounded-t-xl shadow-2xl p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Ready to Begin?</h3>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
+              Instructions complete. Start the timer for{' '}
+              <span className="font-semibold text-gray-900 dark:text-white">
+                {station.custom_title || station.skill_name || 'this station'}
+              </span>{' '}
+              ({nremtTimerRef.current?.timeLimitMinutes ?? 15} minutes)?
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  nremtTimerRef.current?.start();
+                  setShowTimerPrompt(false);
+                }}
+                className="flex-1 py-3 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors min-h-[48px]"
+              >
+                Start Timer
+              </button>
+              <button
+                onClick={() => setShowTimerPrompt(false)}
+                className="flex-1 py-3 px-4 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg transition-colors min-h-[48px]"
+              >
+                Not Yet
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Dual-skill toast notification */}
@@ -954,6 +1000,7 @@ export default function GradeStationPage() {
           >
             <StudentSelection
               isSkillsStation={isSkillsStation}
+              isNremtTesting={!!station?.lab_day?.is_nremt_testing}
               station={station}
               allStudents={allStudents}
               labGroups={labGroups}
@@ -1138,6 +1185,7 @@ export default function GradeStationPage() {
         {/* Student/Group Selection */}
         <StudentSelection
           isSkillsStation={isSkillsStation}
+          isNremtTesting={!!station?.lab_day?.is_nremt_testing}
           station={station}
           allStudents={allStudents}
           labGroups={labGroups}
