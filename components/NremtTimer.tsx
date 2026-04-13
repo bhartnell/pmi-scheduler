@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { Play, RotateCcw, SkipForward, Clock } from 'lucide-react';
 
 // Time limits in minutes per station
@@ -75,6 +75,15 @@ function playBeep(frequency: number = 880, durationMs: number = 200, count: numb
 
 type TimerStatus = 'ready' | 'running' | 'expired';
 
+export interface NremtTimerHandle {
+  /** Programmatically start the timer (standard or dual depending on station) */
+  start: () => void;
+  /** Whether the timer is currently running */
+  isRunning: boolean;
+  /** Time limit in minutes for this station */
+  timeLimitMinutes: number;
+}
+
 interface NremtTimerProps {
   stationName: string;
   instructionsRead: boolean;
@@ -84,7 +93,7 @@ interface NremtTimerProps {
   onPhaseChange?: (phaseIndex: number, phaseName: string) => void;
 }
 
-export default function NremtTimer({ stationName, instructionsRead, stickyBottom = false, onPhaseChange }: NremtTimerProps) {
+const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtTimer({ stationName, instructionsRead, stickyBottom = false, onPhaseChange }: NremtTimerProps, ref) {
   const dual = isDualStation(stationName);
 
   // Standard timer state
@@ -219,6 +228,21 @@ export default function NremtTimer({ stationName, instructionsRead, stickyBottom
     setPhaseRemaining(DUAL_PHASES[0].seconds);
     phaseAlertFired.current = false;
   }, [clearTimer]);
+
+  // Expose imperative handle for parent components
+  useImperativeHandle(ref, () => ({
+    start: () => {
+      if (dual) {
+        startDual();
+      } else {
+        startStandard();
+      }
+    },
+    get isRunning() {
+      return dual ? dualStatus === 'running' : status === 'running';
+    },
+    timeLimitMinutes: getTimeLimit(stationName),
+  }), [dual, startDual, startStandard, dualStatus, status, stationName]);
 
   const manualAdvance = useCallback(() => {
     if (dualStatus !== 'running') return;
@@ -582,4 +606,6 @@ export default function NremtTimer({ stationName, instructionsRead, stickyBottom
       </div>
     </div>
   );
-}
+});
+
+export default NremtTimer;
