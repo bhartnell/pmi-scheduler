@@ -1902,7 +1902,7 @@ export default function CoordinatorViewPage() {
                                   <div className="space-y-1 pt-1">
                                     {cell.evaluationId && (
                                       <a
-                                        href={`/student/skill-evaluations/${cell.evaluationId}`}
+                                        href={`/skill-evaluations/${cell.evaluationId}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
@@ -1946,7 +1946,7 @@ export default function CoordinatorViewPage() {
                                   <div className="space-y-1">
                                     {cell.evaluationId && (
                                       <a
-                                        href={`/student/skill-evaluations/${cell.evaluationId}`}
+                                        href={`/skill-evaluations/${cell.evaluationId}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
@@ -2142,7 +2142,7 @@ export default function CoordinatorViewPage() {
                       </div>
                       {ev.evaluationId && (
                         <a
-                          href={`/student/skill-evaluations/${ev.evaluationId}`}
+                          href={`/skill-evaluations/${ev.evaluationId}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-shrink-0 p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-lg"

@@ -462,7 +462,7 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
             <div className="space-y-1 pt-1">
               {cell.evaluationId && (
                 <a
-                  href={`/student/skill-evaluations/${cell.evaluationId}`}
+                  href={`/skill-evaluations/${cell.evaluationId}`}
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg"
                   onClick={(e) => e.stopPropagation()}
                 >
