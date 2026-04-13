@@ -7,6 +7,7 @@ import type { Student, LabGroup, Station } from './types';
 
 interface StudentSelectionProps {
   isSkillsStation: boolean;
+  isNremtTesting?: boolean;
   station: Station;
   allStudents: Student[];
   labGroups: LabGroup[];
@@ -27,6 +28,7 @@ interface StudentSelectionProps {
 
 export default function StudentSelection({
   isSkillsStation,
+  isNremtTesting = false,
   station,
   allStudents,
   labGroups,
@@ -139,31 +141,33 @@ export default function StudentSelection({
           </div>
         )}
 
-        {/* Rotation Number (optional for skills) */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 whitespace-nowrap">
-            Rotation <span className="text-gray-400 font-normal">(optional)</span>
-          </label>
-          <div className="flex gap-2 flex-nowrap">
-            {[1, 2, 3, 4].map(num => (
-              <button
-                key={num}
-                type="button"
-                onClick={() => {
-                  onSetRotationNumber(num);
-                  triggerAutoSave();
-                }}
-                className={`w-12 h-12 rounded-lg font-medium whitespace-nowrap shrink-0 ${
-                  rotationNumber === num
-                    ? 'bg-green-600 text-white'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-                }`}
-              >
-                {num}
-              </button>
-            ))}
+        {/* Rotation Number (optional for skills) — hidden on NREMT testing days */}
+        {!isNremtTesting && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 whitespace-nowrap">
+              Rotation <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <div className="flex gap-2 flex-nowrap">
+              {[1, 2, 3, 4].map(num => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => {
+                    onSetRotationNumber(num);
+                    triggerAutoSave();
+                  }}
+                  className={`w-12 h-12 rounded-lg font-medium whitespace-nowrap shrink-0 ${
+                    rotationNumber === num
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     );
   }
@@ -176,29 +180,31 @@ export default function StudentSelection({
         Select Group & Team Lead
       </h2>
 
-      {/* Rotation Number */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rotation Number</label>
-        <div className="flex gap-2">
-          {[1, 2, 3, 4].map(num => (
-            <button
-              key={num}
-              type="button"
-              onClick={() => {
-                onSetRotationNumber(num);
-                triggerAutoSave();
-              }}
-              className={`w-12 h-12 rounded-lg font-medium ${
-                rotationNumber === num
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              {num}
-            </button>
-          ))}
+      {/* Rotation Number — hidden on NREMT testing days */}
+      {!isNremtTesting && (
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rotation Number</label>
+          <div className="flex gap-2">
+            {[1, 2, 3, 4].map(num => (
+              <button
+                key={num}
+                type="button"
+                onClick={() => {
+                  onSetRotationNumber(num);
+                  triggerAutoSave();
+                }}
+                className={`w-12 h-12 rounded-lg font-medium ${
+                  rotationNumber === num
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
+                }`}
+              >
+                {num}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Lab Group Selection */}
       <div>
