@@ -206,10 +206,13 @@ export const COST_CATEGORY_COLORS: Record<string, string> = {
 };
 
 export const STATION_TYPES = [
-  { value: 'scenario', label: 'Scenario', description: 'Full scenario with grading' },
-  { value: 'skills', label: 'Skills', description: 'Skills practice station' },
+  { value: 'scenario', label: 'Scenario', description: 'Rubric-based grading' },
+  { value: 'skills', label: 'Skills', description: 'Skill sheet checklist' },
   { value: 'skill_drill', label: 'Skill Drill', description: 'Student-led practice' },
-  { value: 'documentation', label: 'Documentation', description: 'Documentation/PCR station' }
+  { value: 'documentation', label: 'Documentation', description: 'Documentation/PCR station' },
+  { value: 'warmup', label: 'Warm-up', description: 'Warm-up activity' },
+  { value: 'debrief', label: 'Debrief', description: 'Debrief session' },
+  { value: 'briefing', label: 'Briefing', description: 'Pre-lab briefing' },
 ];
 
 export const STATION_TYPE_COLORS: Record<string, string> = {
@@ -220,6 +223,9 @@ export const STATION_TYPE_COLORS: Record<string, string> = {
   documentation: 'border-purple-200 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/30',
   lecture: 'border-yellow-200 bg-yellow-50 dark:border-yellow-700 dark:bg-yellow-900/30',
   testing: 'border-red-200 bg-red-50 dark:border-red-700 dark:bg-red-900/30',
+  warmup: 'border-teal-200 bg-teal-50 dark:border-teal-700 dark:bg-teal-900/30',
+  debrief: 'border-indigo-200 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-900/30',
+  briefing: 'border-cyan-200 bg-cyan-50 dark:border-cyan-700 dark:bg-cyan-900/30',
 };
 
 export const STATION_TYPE_BADGES: Record<string, string> = {
@@ -230,4 +236,7 @@ export const STATION_TYPE_BADGES: Record<string, string> = {
   documentation: 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
   lecture: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/50 dark:text-yellow-300',
   testing: 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
+  warmup: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300',
+  debrief: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300',
+  briefing: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-300',
 };

@@ -293,6 +293,15 @@ export default function EditStationModal({
       }, {} as Record<string, Skill[]>);
 
   const handleSaveStation = async () => {
+    // Warn if station_type changed from a gradeable type (may have evaluations)
+    const originalType = station.station_type || 'scenario';
+    if (editForm.station_type !== originalType && (originalType === 'skills' || originalType === 'scenario')) {
+      const confirmed = window.confirm(
+        'This station has a type that supports evaluations. Changing the type may affect how existing evaluations display. Continue?'
+      );
+      if (!confirmed) return;
+    }
+
     setSavingStation(true);
     try {
       let workingInstructors = [...stationInstructors];
