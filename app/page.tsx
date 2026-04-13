@@ -30,6 +30,10 @@ import {
   LayoutGrid,
   Check,
   Flame,
+  Package,
+  Printer,
+  ExternalLink,
+  DoorOpen,
 } from 'lucide-react';
 import { canAccessAdmin, canAccessClinical, canAccessScheduling, canAccessAffiliations, canAccessLVFR, hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
@@ -699,6 +703,29 @@ export default function HomePage() {
             </Link>
           )}
 
+          {/* Open Lab Card - instructor+ only */}
+          {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
+            <Link
+              href="/admin/open-labs"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 transition-colors">
+                  <DoorOpen className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Open Lab</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                  Manage weekly open lab sessions, signups, and QR flyer.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 text-xs">
+                  <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">Sessions</span>
+                  <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">Signups</span>
+                  <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">QR Code</span>
+                </div>
+              </div>
+            </Link>
+          )}
+
           {/* Lab Schedule (Read-Only) Card - For volunteer instructors only */}
           {currentUser && effectiveRole === 'volunteer_instructor' && (
             <Link
@@ -1024,6 +1051,104 @@ export default function HomePage() {
         </div>
         </nav>
         </ErrorBoundary>
+
+        {/* PMI Operations Hub - instructor+ only */}
+        {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
+          <section className="mt-10 max-w-7xl mx-auto">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">PMI Operations Hub</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Managed by Josh Lomonaco &mdash;{' '}
+                <a
+                  href="https://pmi-ops.vercel.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  pmi-ops.vercel.app
+                </a>
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+              {/* Inventory */}
+              <a
+                href="https://pmi-ops.vercel.app/inventory"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
+                    <Package className="w-7 h-7 text-blue-600 dark:text-blue-400" />
+                  </div>
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-1">Inventory</h4>
+                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-3">Track equipment, supplies, and consumables</p>
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
+                    Open in PMI Ops <ExternalLink className="w-3 h-3" />
+                  </span>
+                </div>
+              </a>
+
+              {/* Print Hub */}
+              <a
+                href="https://pmi-ops.vercel.app/print-hub"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-14 h-14 bg-violet-100 dark:bg-violet-900/30 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-violet-200 dark:group-hover:bg-violet-900/50 transition-colors">
+                    <Printer className="w-7 h-7 text-violet-600 dark:text-violet-400" />
+                  </div>
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-1">Print Hub</h4>
+                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-3">Submit and manage print requests</p>
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
+                    Open in PMI Ops <ExternalLink className="w-3 h-3" />
+                  </span>
+                </div>
+              </a>
+
+              {/* Library */}
+              <a
+                href="https://pmi-ops.vercel.app/library"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
+                    <BookOpen className="w-7 h-7 text-amber-600 dark:text-amber-400" />
+                  </div>
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-1">Library</h4>
+                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-3">Browse and check out program resources</p>
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
+                    Open in PMI Ops <ExternalLink className="w-3 h-3" />
+                  </span>
+                </div>
+              </a>
+
+              {/* Certifications */}
+              <a
+                href="https://pmi-ops.vercel.app/certifications"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+              >
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 transition-colors">
+                    <Award className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-1">Certifications</h4>
+                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-3">Manage instructor and student certifications</p>
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
+                    Open in PMI Ops <ExternalLink className="w-3 h-3" />
+                  </span>
+                </div>
+              </a>
+            </div>
+          </section>
+        )}
+
         </PageErrorBoundary>
       </main>
 
