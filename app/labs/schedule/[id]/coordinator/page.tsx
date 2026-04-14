@@ -31,6 +31,7 @@ import {
   Trash2,
   ExternalLink,
 } from 'lucide-react';
+import LabDayChat from '@/components/lab-day/LabDayChat';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -2304,6 +2305,16 @@ export default function CoordinatorViewPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {session?.user && (
+        <LabDayChat
+          labDayId={labDayId}
+          senderName={session.user.name || 'Unknown'}
+          senderEmail={session.user.email || ''}
+          senderRole="coordinator"
+          bottomOffset={24}
+        />
       )}
     </div>
   );

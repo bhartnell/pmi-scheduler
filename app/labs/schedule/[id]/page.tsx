@@ -65,6 +65,7 @@ import ScenarioPickerModal from '@/components/lab-day/ScenarioPickerModal';
 import DuplicateModals from '@/components/lab-day/DuplicateModals';
 import LabDayPrintView from '@/components/lab-day/LabDayPrintView';
 import LabDayVolunteers from '@/components/lab-day/LabDayVolunteers';
+import LabDayChat from '@/components/lab-day/LabDayChat';
 
 export default function LabDayPage() {
   const { data: session, status } = useSession();
@@ -430,6 +431,16 @@ export default function LabDayPage() {
       )}
       <DuplicateModals labDay={labDay} labDayId={labDayId} showDuplicateModal={showDuplicateModal} showNextWeekConfirm={showNextWeekConfirm} showBulkDuplicateModal={showBulkDuplicateModal} onCloseDuplicate={() => setShowDuplicateModal(false)} onCloseNextWeek={() => setShowNextWeekConfirm(false)} onCloseBulkDuplicate={() => setShowBulkDuplicateModal(false)} onDuplicated={(newId) => { setCopySuccessToast(true); setTimeout(() => setCopySuccessToast(false), 3000); router.push(`/labs/schedule/${newId}/edit`); }} formatDate={formatDate} />
       {showDiffModal && labDay.source_template && (<TemplateDiffModal labDayId={labDay.id} templateId={labDay.source_template.id} templateName={labDay.source_template.name} onClose={() => setShowDiffModal(false)} onApplied={() => { setShowDiffModal(false); toast.success('Template updated successfully'); fetchLabDay(); }} />)}
+
+      {session?.user && (
+        <LabDayChat
+          labDayId={labDayId}
+          senderName={session.user.name || 'Unknown'}
+          senderEmail={session.user.email || ''}
+          senderRole={userRole || 'user'}
+          bottomOffset={24}
+        />
+      )}
     </div>
   );
 }
