@@ -1463,7 +1463,7 @@ export default function GradeStationPage() {
           senderEmail={session.user.email || ''}
           senderRole="instructor"
           stationContext={`Station ${station.station_number} — ${station.skill_name || station.custom_title || 'Unknown'}`}
-          bottomOffset={80}
+          bottomOffset={120}
         />
       )}
     </div>

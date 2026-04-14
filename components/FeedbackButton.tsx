@@ -13,6 +13,9 @@ export default function FeedbackButton() {
   const { data: session } = useSession();
   const pathname = usePathname();
 
+  // On NREMT grading view, move to bottom-left to reduce clutter on the right
+  const isGradingView = pathname?.startsWith('/labs/grade/station/');
+
   const [isOpen, setIsOpen] = useState(false);
   const [reportType, setReportType] = useState<ReportType>('bug');
   const [description, setDescription] = useState('');
@@ -176,7 +179,9 @@ export default function FeedbackButton() {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-4 z-[60] flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all hover:shadow-xl print:hidden"
+        className={`fixed bottom-6 z-[60] flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all hover:shadow-xl print:hidden ${
+          isGradingView ? 'left-4' : 'right-4'
+        }`}
         aria-label="Submit Feedback"
       >
         <MessageSquare className="w-5 h-5" aria-hidden="true" />
