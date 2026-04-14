@@ -14,11 +14,17 @@ export async function GET(request: NextRequest) {
     const { user } = auth;
 
     // Fetch users with instructor role or higher
-    // Include all roles that can grade/teach at stations
+    // Include all roles that can grade/teach at stations.
+    //
+    // Filter out deactivated accounts (is_active = false). Volunteers
+    // sometimes have multiple accounts (e.g. old personal gmail + new
+    // @my.pmi.edu) and the old one gets deactivated — without this
+    // filter they show up twice in the station instructor dropdown.
     const { data, error } = await supabase
       .from('lab_users')
       .select('id, name, email, role, is_active')
       .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin', 'volunteer_instructor'])
+      .eq('is_active', true)
       .order('name');
 
     if (error) throw error;
