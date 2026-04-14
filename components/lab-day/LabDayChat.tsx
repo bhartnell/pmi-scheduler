@@ -137,11 +137,35 @@ export default function LabDayChat({
     return () => { cancelled = true; };
   }, [labDayId, buildHeaders]);
 
-  // Realtime subscription + presence
+  // Realtime subscription + presence.
+  //
+  // NOTES ON THE SHAPE OF THIS EFFECT (fixes NREMT-day "0 connected" bug):
+  //   1. `channel.track()` MUST be called inside the `.subscribe()` status
+  //      callback after status === 'SUBSCRIBED'. Calling it synchronously
+  //      right after `.subscribe()` is a race — the WebSocket isn't joined
+  //      yet and the track is dropped, which is why presence count stuck
+  //      at 0 on production.
+  //   2. We also wire a `presence` 'sync' event handler so the
+  //      connectedUsers count updates immediately when anyone joins or
+  //      leaves. The previous polling-only approach worked but was lagged
+  //      by up to 5 seconds.
+  //   3. The subscribe callback logs every status transition. If Realtime
+  //      breaks again in production we can see CHANNEL_ERROR / TIMED_OUT /
+  //      CLOSED in the browser console without instrumenting a redeploy.
+  //   4. Realtime evaluates postgres_changes against RLS using the client
+  //      JWT — which for this project is the anon key since NextAuth does
+  //      not flow a Supabase JWT. The companion migration
+  //      20260414_lab_day_chat_realtime_rls.sql adds an anon SELECT policy
+  //      so the filter actually returns rows to the subscriber.
   useEffect(() => {
     const supabase = getSupabase();
+    const channelName = `lab-day-chat-${labDayId}`;
+    console.log('[LabDayChat] subscribing to channel', channelName);
+
     const channel = supabase
-      .channel(`lab-day-chat-${labDayId}`)
+      .channel(channelName, {
+        config: { presence: { key: senderEmail || senderName || 'anon' } },
+      })
       .on(
         'postgres_changes',
         {
@@ -151,28 +175,54 @@ export default function LabDayChat({
           filter: `lab_day_id=eq.${labDayId}`,
         },
         (payload) => {
+          console.log('[LabDayChat] postgres_changes INSERT', payload.new);
           const newMsg = payload.new as ChatMessage;
-          setMessages((prev) => [...prev, newMsg]);
+          setMessages((prev) => {
+            // Guard against duplicate inserts (optimistic + realtime)
+            if (prev.some((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg];
+          });
           if (!isOpenRef.current && newMsg.sender_email !== senderEmail) {
             setUnreadCount((c) => c + 1);
           }
         }
       )
-      .subscribe();
+      .on('presence', { event: 'sync' }, () => {
+        const state = channel.presenceState();
+        const count = Object.keys(state).length;
+        console.log('[LabDayChat] presence sync, connected=', count, state);
+        setConnectedUsers(count);
+      })
+      .on('presence', { event: 'join' }, ({ key }) => {
+        console.log('[LabDayChat] presence join', key);
+      })
+      .on('presence', { event: 'leave' }, ({ key }) => {
+        console.log('[LabDayChat] presence leave', key);
+      })
+      .subscribe(async (status, err) => {
+        console.log('[LabDayChat] subscribe status=', status, err || '');
+        if (status === 'SUBSCRIBED') {
+          // Now it's safe to track presence
+          const trackRes = await channel.track({
+            name: senderName,
+            email: senderEmail,
+            role: senderRole,
+            online_at: new Date().toISOString(),
+          });
+          console.log('[LabDayChat] track result=', trackRes);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.error('[LabDayChat] subscription failed with status:', status, err);
+        }
+      });
 
-    // Presence tracking
-    channel.track({
-      name: senderName,
-      role: senderRole,
-      online_at: new Date().toISOString(),
-    });
-
+    // Backup poll in case the sync event is missed
     const presenceInterval = setInterval(() => {
       const state = channel.presenceState();
       setConnectedUsers(Object.keys(state).length);
     }, 5000);
 
     return () => {
+      console.log('[LabDayChat] cleanup channel', channelName);
       clearInterval(presenceInterval);
       supabase.removeChannel(channel);
     };
