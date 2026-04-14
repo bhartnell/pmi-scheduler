@@ -1464,6 +1464,7 @@ export default function GradeStationPage() {
           senderRole="instructor"
           stationContext={`Station ${station.station_number} — ${station.skill_name || station.custom_title || 'Unknown'}`}
           bottomOffset={120}
+          defaultOpen={!!station.lab_day.is_nremt_testing}
         />
       )}
     </div>

@@ -14,7 +14,17 @@ interface LabDayChatProps {
   stationContext?: string;
   volunteerToken?: string;
   bottomOffset?: number;
+  /**
+   * Default open state used ONLY on first mount when the user has no
+   * explicit localStorage preference yet. Grading pages pass `true` on
+   * NREMT days so the chat surfaces automatically, while still respecting
+   * a user who has explicitly closed it before (we persist the choice).
+   */
+  defaultOpen?: boolean;
 }
+
+// localStorage key for persisting open/closed state across navigations.
+const CHAT_OPEN_KEY = 'labday-chat-open';
 
 interface ChatMessage {
   id: string;
@@ -76,8 +86,36 @@ export default function LabDayChat({
   stationContext,
   volunteerToken,
   bottomOffset = 24,
+  defaultOpen = false,
 }: LabDayChatProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  // Persist open/closed across page navigations (NREMT-day fix: chat was
+  // closing every time an instructor moved to the next student). On first
+  // mount we read the localStorage value; if none exists yet the caller's
+  // `defaultOpen` wins — which lets the grading view auto-open on NREMT
+  // days while still respecting a user who has explicitly closed it.
+  const [isOpen, setIsOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return defaultOpen;
+    try {
+      const stored = window.localStorage.getItem(CHAT_OPEN_KEY);
+      if (stored === 'true') return true;
+      if (stored === 'false') return false;
+    } catch {
+      // localStorage may be unavailable (Safari private mode, etc.)
+    }
+    return defaultOpen;
+  });
+
+  // Wrap the setter so we always persist to localStorage.
+  const setChatOpen = useCallback((next: boolean) => {
+    setIsOpen(next);
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(CHAT_OPEN_KEY, next ? 'true' : 'false');
+      } catch {
+        // noop — storage quota / private mode
+      }
+    }
+  }, []);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
@@ -316,7 +354,7 @@ export default function LabDayChat({
       {/* Floating button */}
       {!isOpen && (
         <button
-          onClick={() => setIsOpen(true)}
+          onClick={() => setChatOpen(true)}
           className="fixed z-40 w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-700 text-white shadow-lg flex items-center justify-center transition-colors print:hidden"
           style={{ bottom: `${bottomOffset}px`, right: '16px' }}
           aria-label="Open chat"
@@ -355,7 +393,7 @@ export default function LabDayChat({
               </span>
             </div>
             <button
-              onClick={() => setIsOpen(false)}
+              onClick={() => setChatOpen(false)}
               className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
               aria-label="Close chat"
             >
@@ -396,18 +434,18 @@ export default function LabDayChat({
                       key={msg.id}
                       className="w-full bg-amber-50 dark:bg-amber-900/20 border-l-4 border-amber-500 rounded-r-lg px-3 py-2"
                     >
-                      <div className="flex items-center gap-1 mb-0.5">
-                        <span className="text-[13px] font-medium text-gray-900 dark:text-gray-100">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className="text-[13px] font-bold text-gray-900 dark:text-gray-100">
                           {msg.sender_name}
                         </span>
                         <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded-full ${roleBadgeColor(msg.sender_role)}`}
+                          className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${roleBadgeColor(msg.sender_role)}`}
                         >
                           {msg.sender_role}
                         </span>
                       </div>
                       {msg.station_context && (
-                        <div className="text-[11px] text-gray-500 dark:text-gray-400 italic">
+                        <div className="text-[11px] text-gray-600 dark:text-gray-400 italic mb-1">
                           {msg.station_context}
                         </div>
                       )}
@@ -434,22 +472,24 @@ export default function LabDayChat({
                           : 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 mr-auto'
                       }`}
                     >
-                      {!isOwn && (
-                        <div className="flex items-center gap-1 mb-0.5">
-                          <span className="text-[13px] font-medium">
-                            {msg.sender_name}
-                          </span>
-                          <span
-                            className={`text-[10px] px-1.5 py-0.5 rounded-full ${roleBadgeColor(msg.sender_role)}`}
-                          >
-                            {msg.sender_role}
-                          </span>
-                        </div>
-                      )}
+                      {/* Sender identity header — shown for every message so
+                          any reader can tell at a glance WHO sent it and from
+                          WHERE, even for their own messages on a shared
+                          device. */}
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <span className={`text-[13px] font-bold ${isOwn ? 'text-white' : 'text-gray-900 dark:text-gray-100'}`}>
+                          {msg.sender_name}
+                        </span>
+                        <span
+                          className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full ${roleBadgeColor(msg.sender_role)}`}
+                        >
+                          {msg.sender_role}
+                        </span>
+                      </div>
                       {msg.station_context && (
                         <div
-                          className={`text-[11px] italic ${
-                            isOwn ? 'text-blue-200' : 'text-gray-500 dark:text-gray-400'
+                          className={`text-[11px] italic mb-1 ${
+                            isOwn ? 'text-blue-100' : 'text-gray-600 dark:text-gray-400'
                           }`}
                         >
                           {msg.station_context}
