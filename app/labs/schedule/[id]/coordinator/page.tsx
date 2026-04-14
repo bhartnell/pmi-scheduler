@@ -6,6 +6,8 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import {
   ChevronLeft,
+  ChevronDown,
+  ChevronRight,
   RefreshCw,
   Clock,
   Users,
@@ -135,6 +137,18 @@ interface EnRouteEntry {
   studentId: string;
   studentName: string;
   sentAt: number;
+}
+
+type VolunteerAvailabilityKind = 'full' | 'am' | 'pm' | 'half' | 'unknown';
+
+interface VolunteerAvailabilityRow {
+  name: string;
+  email: string | null;
+  notes: string | null;
+  availability: VolunteerAvailabilityKind;
+  startHour: number;
+  endHour: number;
+  assignedStation: string | null;
 }
 
 // ─── Constants ─────────────────────────────────────────────────────────────
@@ -395,6 +409,11 @@ export default function CoordinatorViewPage() {
   // Student detail side panel
   const [sidePanelStudentId, setSidePanelStudentId] = useState<string | null>(null);
 
+  // Volunteer availability (NREMT-only section)
+  const [volunteers, setVolunteers] = useState<VolunteerAvailabilityRow[]>([]);
+  const [volunteersExpanded, setVolunteersExpanded] = useState(false);
+  const [volunteersLoaded, setVolunteersLoaded] = useState(false);
+
   // User role (for admin-only actions)
   const [userRole, setUserRole] = useState<string | null>(null);
 
@@ -504,6 +523,25 @@ export default function CoordinatorViewPage() {
     }
   }, [labDayId, labDayInfo?.is_nremt_testing]);
 
+  // Fetch volunteer availability (NREMT only — fires once on mount, station
+  // assignments don't change often enough to warrant polling, but we refresh
+  // whenever the grid refetches so station-assignment changes appear.)
+  const fetchVolunteers = useCallback(async () => {
+    if (!labDayInfo?.is_nremt_testing) return;
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/volunteer-availability`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setVolunteers(data.volunteers || []);
+          setVolunteersLoaded(true);
+        }
+      }
+    } catch {
+      // Silently ignore — this section is supplementary
+    }
+  }, [labDayId, labDayInfo?.is_nremt_testing]);
+
   // Handle assign retake - opens grading view in a new tab
   const handleAssignRetake = async (studentId: string, studentName: string, failedSkill: RetakeFailedSkill) => {
     const retakeKey = `${studentId}_${failedSkill.skill_sheet_id}`;
@@ -566,6 +604,14 @@ export default function CoordinatorViewPage() {
       fetchRetakeStatus();
     }
   }, [labDayInfo?.is_nremt_testing, fetchRetakeStatus]);
+
+  // Fetch volunteer availability once labDayInfo is loaded (NREMT days only).
+  // Re-fires on grid refresh so station-assignment changes reflect quickly.
+  useEffect(() => {
+    if (labDayInfo?.is_nremt_testing) {
+      fetchVolunteers();
+    }
+  }, [labDayInfo?.is_nremt_testing, fetchVolunteers, lastUpdated]);
 
   // Fetch instructor options + skill sheet nremt codes (NREMT days only)
   useEffect(() => {
@@ -2208,6 +2254,177 @@ export default function CoordinatorViewPage() {
             )}
           </div>
         </div>
+
+        {/* ─── Section 6: Volunteer Availability (NREMT only) ───────── */}
+        {labDayInfo?.is_nremt_testing && volunteersLoaded && volunteers.length > 0 && (() => {
+          // Timeline constants: 9am to 5pm = 8 hours
+          const START_HOUR = 9;
+          const END_HOUR = 17;
+          const TOTAL_HOURS = END_HOUR - START_HOUR; // 8
+          const HOUR_LABELS = [9, 10, 11, 12, 1, 2, 3, 4, 5]; // 9 columns (fence posts)
+
+          // Convert an absolute hour (9..17) to a left-% in [0, 100]
+          const hourToPct = (h: number) => {
+            const clamped = Math.max(START_HOUR, Math.min(END_HOUR, h));
+            return ((clamped - START_HOUR) / TOTAL_HOURS) * 100;
+          };
+
+          // Summary counts for collapsed header
+          const fullCount = volunteers.filter(v => v.availability === 'full').length;
+          const amCount = volunteers.filter(v => v.availability === 'am').length;
+          const pmCount = volunteers.filter(v => v.availability === 'pm').length;
+          const halfCount = volunteers.filter(v => v.availability === 'half').length;
+          const total = volunteers.length;
+
+          const summaryParts: string[] = [`${total} volunteer${total === 1 ? '' : 's'}`];
+          if (amCount > 0) summaryParts.push(`${amCount} AM only`);
+          if (pmCount > 0) summaryParts.push(`${pmCount} PM only`);
+          if (halfCount > 0 && amCount === 0) summaryParts.push(`${halfCount} half day`);
+
+          // Bar color per availability kind — secondary palette, lighter
+          // than the primary station board above.
+          const barClass = (kind: VolunteerAvailabilityKind): string => {
+            switch (kind) {
+              case 'full':
+                return 'bg-green-300/80 dark:bg-green-600/50 border border-green-400/60 dark:border-green-500/40';
+              case 'am':
+                return 'bg-blue-300/80 dark:bg-blue-600/50 border border-blue-400/60 dark:border-blue-500/40';
+              case 'half':
+                return 'bg-blue-300/80 dark:bg-blue-600/50 border border-blue-400/60 dark:border-blue-500/40';
+              case 'pm':
+                return 'bg-amber-300/80 dark:bg-amber-600/50 border border-amber-400/60 dark:border-amber-500/40';
+              default:
+                return 'bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600';
+            }
+          };
+
+          return (
+            <div className="mt-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-hidden">
+              {/* Collapsible header */}
+              <button
+                onClick={() => setVolunteersExpanded(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800/70 transition-colors"
+                aria-expanded={volunteersExpanded}
+              >
+                <div className="flex items-center gap-2">
+                  {volunteersExpanded ? (
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4 text-gray-400" />
+                  )}
+                  <Clock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    Volunteer Availability
+                  </span>
+                </div>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {summaryParts.join(' • ')}
+                </span>
+              </button>
+
+              {/* Gantt timeline — only rendered when expanded */}
+              {volunteersExpanded && (
+                <div className="border-t border-gray-100 dark:border-gray-700/50 px-4 py-3">
+                  {/* Time axis labels */}
+                  <div
+                    className="relative h-4 mb-1"
+                    style={{ marginLeft: '200px', marginRight: '8px' }}
+                  >
+                    {HOUR_LABELS.map((label, i) => {
+                      const pct = (i / TOTAL_HOURS) * 100;
+                      return (
+                        <span
+                          key={i}
+                          className="absolute text-[10px] text-gray-400 dark:text-gray-500 -translate-x-1/2"
+                          style={{ left: `${pct}%` }}
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
+                  </div>
+
+                  {/* Rows */}
+                  <div className="space-y-1">
+                    {volunteers.map((v, idx) => {
+                      const leftPct = hourToPct(v.startHour);
+                      const rightPct = hourToPct(v.endHour);
+                      const widthPct = Math.max(0, rightPct - leftPct);
+
+                      return (
+                        <div
+                          key={`${v.email || v.name}-${idx}`}
+                          className="flex items-center gap-2 h-[28px]"
+                        >
+                          {/* Name + station (fixed column) */}
+                          <div
+                            className="flex-shrink-0 w-[200px] flex flex-col justify-center leading-tight"
+                          >
+                            <span className="text-xs text-gray-700 dark:text-gray-200 truncate" title={v.name}>
+                              {v.name}
+                            </span>
+                            {v.assignedStation && (
+                              <span className="text-[10px] text-gray-400 dark:text-gray-500 truncate" title={v.assignedStation}>
+                                {v.assignedStation}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Timeline track */}
+                          <div className="relative flex-1 h-full" style={{ marginRight: '8px' }}>
+                            {/* Hour gridlines (very subtle) */}
+                            {HOUR_LABELS.slice(1, -1).map((_, i) => {
+                              const pct = ((i + 1) / TOTAL_HOURS) * 100;
+                              return (
+                                <div
+                                  key={i}
+                                  className="absolute top-0 bottom-0 w-px bg-gray-100 dark:bg-gray-700/60"
+                                  style={{ left: `${pct}%` }}
+                                />
+                              );
+                            })}
+                            {/* Availability bar */}
+                            <div
+                              className={`absolute top-1/2 -translate-y-1/2 h-4 rounded ${barClass(v.availability)}`}
+                              style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                              title={
+                                v.notes
+                                  ? `${v.name}: ${v.notes}`
+                                  : v.availability === 'full'
+                                    ? `${v.name}: full day`
+                                    : `${v.name}: availability unknown`
+                              }
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Mini legend */}
+                  <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/50 flex flex-wrap items-center gap-3 text-[10px] text-gray-500 dark:text-gray-400">
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-2 rounded-sm bg-green-300/80 dark:bg-green-600/50 border border-green-400/60 dark:border-green-500/40" />
+                      Full day ({fullCount})
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-2 rounded-sm bg-blue-300/80 dark:bg-blue-600/50 border border-blue-400/60 dark:border-blue-500/40" />
+                      AM / half ({amCount + halfCount})
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-2 rounded-sm bg-amber-300/80 dark:bg-amber-600/50 border border-amber-400/60 dark:border-amber-500/40" />
+                      PM ({pmCount})
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <span className="w-3 h-2 rounded-sm bg-gray-200 dark:bg-gray-700 border border-gray-300 dark:border-gray-600" />
+                      Unknown
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         {/* ─── Footer spacer ────────────────────────────────────────── */}
         <div className="h-8" />

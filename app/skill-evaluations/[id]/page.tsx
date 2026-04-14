@@ -25,13 +25,17 @@ interface EvalStep {
   is_critical: boolean;
 }
 
+// step_marks may come back in either the legacy string form ('pass' | 'fail')
+// or the newer object form ({ completed: boolean, points?: number }).
+type StepMarkValue = string | { completed?: boolean; points?: number };
+
 interface Evaluation {
   id: string;
   evaluation_type: string;
   result: string;
   notes: string | null;
   flagged_items: { step_number: number; status: string }[] | null;
-  step_marks: Record<string, string> | null;
+  step_marks: Record<string, StepMarkValue> | null;
   email_status: string;
   created_at: string;
   skill_sheet: {
@@ -56,6 +60,25 @@ function formatInstructorName(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length < 2) return name;
   return `${parts[0][0]}. ${parts.slice(1).join(' ')}`;
+}
+
+/**
+ * Accept either the legacy string form ('pass'/'fail') or the newer JSONB
+ * object form ({ completed: true, points: 1 }) and return whether this step
+ * was marked as completed/passed.
+ */
+function isStepPassed(val: StepMarkValue | undefined): boolean {
+  if (val == null) return false;
+  if (typeof val === 'string') return val === 'pass';
+  if (typeof val === 'object') return val.completed === true;
+  return false;
+}
+
+function isStepFailed(val: StepMarkValue | undefined): boolean {
+  if (val == null) return false;
+  if (typeof val === 'string') return val === 'fail';
+  if (typeof val === 'object') return val.completed === false;
+  return false;
 }
 
 export default function EvaluationDetailPage() {
@@ -146,9 +169,9 @@ export default function EvaluationDetailPage() {
   const flaggedItems = evaluation.flagged_items || [];
 
   const totalSteps = steps.length;
-  const passedSteps = Object.values(stepMarks).filter(m => m === 'pass').length;
+  const passedSteps = Object.values(stepMarks).filter(m => isStepPassed(m)).length;
   const criticalSteps = steps.filter(s => s.is_critical);
-  const criticalPassed = criticalSteps.filter(s => stepMarks[String(s.step_number)] === 'pass').length;
+  const criticalPassed = criticalSteps.filter(s => isStepPassed(stepMarks[String(s.step_number)])).length;
 
   const stepsByPhase: Record<string, EvalStep[]> = {};
   for (const step of steps) {
@@ -238,7 +261,7 @@ export default function EvaluationDetailPage() {
               const phaseSteps = stepsByPhase[phase];
               const isCollapsed = collapsedPhases.has(phase);
               const phaseLabel = PHASE_LABELS[phase] || phase.charAt(0).toUpperCase() + phase.slice(1);
-              const phasePassed = phaseSteps.filter(s => stepMarks[String(s.step_number)] === 'pass').length;
+              const phasePassed = phaseSteps.filter(s => isStepPassed(stepMarks[String(s.step_number)])).length;
 
               return (
                 <div key={phase} className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
@@ -258,6 +281,8 @@ export default function EvaluationDetailPage() {
                     <div className="divide-y divide-gray-100 dark:divide-gray-700">
                       {phaseSteps.map(step => {
                         const mark = stepMarks[String(step.step_number)];
+                        const passed = isStepPassed(mark);
+                        const failed = isStepFailed(mark);
                         const flagged = flaggedItems.find(f => f.step_number === step.step_number);
                         return (
                           <div key={step.step_number} className={`px-4 py-2.5 flex items-start gap-3 ${step.is_critical ? 'border-l-4 border-red-500' : ''}`}>
@@ -275,9 +300,9 @@ export default function EvaluationDetailPage() {
                               </div>
                             </div>
                             <div className="shrink-0">
-                              {mark === 'pass' ? (
+                              {passed ? (
                                 <CheckCircle className="w-5 h-5 text-green-500" />
-                              ) : mark === 'fail' || flagged?.status === 'fail' ? (
+                              ) : failed || flagged?.status === 'fail' ? (
                                 <XCircle className="w-5 h-5 text-red-500" />
                               ) : flagged?.status === 'caution' ? (
                                 <AlertTriangle className="w-5 h-5 text-amber-500" />

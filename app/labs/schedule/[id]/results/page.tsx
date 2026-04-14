@@ -25,7 +25,7 @@ import {
   ChevronDown,
   FileDown,
 } from 'lucide-react';
-import { downloadStudentPDF, downloadAllStudentPDFs } from '@/lib/nremtExport';
+import { downloadStudentPDF } from '@/lib/nremtExport';
 
 /* ─── Interfaces ──────────────────────────────────────────────── */
 
@@ -145,7 +145,6 @@ export default function SkillResultsPage() {
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   // PDF download state
-  const [pdfProgress, setPdfProgress] = useState<{ current: number; total: number } | null>(null);
 
   const fetchResults = useCallback(async () => {
     try {
@@ -337,23 +336,6 @@ export default function SkillResultsPage() {
     });
   };
 
-  const handleDownloadAllPDFs = async () => {
-    if (!students.length || !labDay) return;
-    const dateStr = labDay.date || new Date().toISOString().split('T')[0];
-    try {
-      await downloadAllStudentPDFs(
-        labDayId,
-        students.map(s => ({ id: s.id, name: s.name })),
-        dateStr,
-        (current, total) => setPdfProgress({ current, total })
-      );
-    } catch (err) {
-      setToastMessage('Failed to download PDFs');
-    } finally {
-      setPdfProgress(null);
-    }
-  };
-
   // Toast auto-dismiss
   useEffect(() => {
     if (toastMessage) {
@@ -430,20 +412,6 @@ export default function SkillResultsPage() {
             >
               <Download className="w-4 h-4" />
               Export Excel
-            </button>
-            <button
-              onClick={handleDownloadAllPDFs}
-              disabled={!students.length || !!pdfProgress}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors text-sm font-medium"
-            >
-              {pdfProgress ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <FileDown className="w-4 h-4" />
-              )}
-              {pdfProgress
-                ? `Downloading ${pdfProgress.current} of ${pdfProgress.total}...`
-                : 'Download All PDFs'}
             </button>
           </div>
         </div>
