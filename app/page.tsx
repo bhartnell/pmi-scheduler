@@ -1129,7 +1129,7 @@ export default function HomePage() {
 
               {/* Certifications */}
               <a
-                href="https://pmi-ops.vercel.app/certifications"
+                href="https://gridsquares.app/certifications"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"

@@ -74,6 +74,7 @@ interface GridStation {
   scenario?: { id: string; title: string } | null;
   addedDuringExam?: boolean;
   stationSuffix?: string | null;
+  coordinatorStatus?: 'open' | 'closed' | 'break';
 }
 
 interface InstructorOption {
@@ -382,6 +383,10 @@ export default function CoordinatorViewPage() {
   const [proctorName, setProctorName] = useState('');
   const [localProctorOverrides, setLocalProctorOverrides] = useState<Record<string, string>>({});
 
+  // Station status menu (close / break / reopen)
+  const [statusMenuStationId, setStatusMenuStationId] = useState<string | null>(null);
+  const [statusSaving, setStatusSaving] = useState<string | null>(null);
+
   // Cell popover (for clickable cells in progress table)
   const [popoverCell, setPopoverCell] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
@@ -672,10 +677,14 @@ export default function CoordinatorViewPage() {
 
   /** Compute longest queue among existing stations (most students still needing that skill). */
   const findLongestQueueStationId = useCallback((): string => {
-    if (stations.length === 0) return '';
+    // Exclude stations that are closed or on break from routing suggestions
+    const activeStations = stations.filter(
+      s => !s.coordinatorStatus || s.coordinatorStatus === 'open'
+    );
+    if (activeStations.length === 0) return '';
     // Count how many students still need each skillName
     const needsCountByStation: Record<string, number> = {};
-    for (const station of stations) {
+    for (const station of activeStations) {
       const skillName = station.skill_name || station.custom_title || station.scenario?.title || '';
       if (!skillName) continue;
       let count = 0;
@@ -686,9 +695,9 @@ export default function CoordinatorViewPage() {
       needsCountByStation[station.id] = count;
     }
     // Pick station with max count; tiebreak by lowest station_number
-    let bestId = stations[0].id;
+    let bestId = activeStations[0].id;
     let bestCount = needsCountByStation[bestId] ?? -1;
-    for (const station of stations) {
+    for (const station of activeStations) {
       const c = needsCountByStation[station.id] ?? 0;
       if (c > bestCount) {
         bestCount = c;
@@ -808,6 +817,42 @@ export default function CoordinatorViewPage() {
 
   const getDisplayProctor = (station: GridStation): string | null => {
     return localProctorOverrides[station.id] || station.instructorName || null;
+  };
+
+  // ─── Station coordinator status handler ─────────────────────────────────
+
+  const handleSetStationStatus = async (
+    stationId: string,
+    status: 'open' | 'closed' | 'break'
+  ) => {
+    setStatusSaving(stationId);
+    setStatusMenuStationId(null);
+    try {
+      const res = await fetch(`/api/lab-management/stations/${stationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ coordinator_status: status }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        console.error('Failed to update station status:', data);
+        alert(`Failed to update station status: ${data.error || 'Unknown error'}`);
+        return;
+      }
+      // Optimistically update local state so UI feels instant
+      setStations(prev =>
+        prev.map(s =>
+          s.id === stationId ? { ...s, coordinatorStatus: status } : s
+        )
+      );
+      // Refetch shortly to sync with other clients
+      fetchGridData();
+    } catch (err) {
+      console.error('Error updating station status:', err);
+      alert('Failed to update station status');
+    } finally {
+      setStatusSaving(null);
+    }
   };
 
   // ─── En Route Handlers ──────────────────────────────────────────────────
@@ -1395,20 +1440,42 @@ export default function CoordinatorViewPage() {
             const hasCurrentStudent = !!currentStudent;
             const { eligible } = getEligibleStudentsForStation(station);
             const selectedStudentId = stationDropdownSelections[station.id] || '';
+            const coordStatus: 'open' | 'closed' | 'break' = station.coordinatorStatus || 'open';
+            const isStationClosed = coordStatus === 'closed';
+            const isStationBreak = coordStatus === 'break';
+            const isStationUnavailable = isStationClosed || isStationBreak;
 
             return (
               <div
                 key={station.id}
-                className={`rounded-xl border-2 ${config.border} ${config.bg} p-3 sm:p-4 shadow-sm transition-all`}
+                className={`relative rounded-xl border-2 ${
+                  isStationClosed
+                    ? 'border-gray-400 bg-gray-100 dark:border-gray-600 dark:bg-gray-800/60 opacity-70'
+                    : isStationBreak
+                    ? 'border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20'
+                    : `${config.border} ${config.bg}`
+                } p-3 sm:p-4 shadow-sm transition-all`}
               >
                 {/* Station header */}
-                <div className="flex items-start justify-between mb-2">
+                <div className="flex items-start justify-between mb-2 gap-2">
                   <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1">
+                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1 flex-wrap">
                       {!labDayInfo?.is_nremt_testing && <>Station {station.station_number}</>}
                       {isAddedDuringExam && (
                         <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded-full normal-case">
                           Additional Station
+                        </span>
+                      )}
+                      {isStationClosed && (
+                        <span className="text-[10px] font-semibold text-gray-700 dark:text-gray-300 bg-gray-300 dark:bg-gray-600 px-1.5 py-0.5 rounded-full normal-case inline-flex items-center gap-0.5">
+                          <Ban className="w-2.5 h-2.5" />
+                          Closed
+                        </span>
+                      )}
+                      {isStationBreak && (
+                        <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-200 dark:bg-amber-900/60 px-1.5 py-0.5 rounded-full normal-case inline-flex items-center gap-0.5">
+                          <Clock className="w-2.5 h-2.5" />
+                          On Break
                         </span>
                       )}
                     </div>
@@ -1416,10 +1483,66 @@ export default function CoordinatorViewPage() {
                       {getStationDisplayName(station)}
                     </div>
                   </div>
-                  <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${config.badge}`}>
-                    <StatusIcon className="w-3 h-3" />
-                    <span className="hidden sm:inline">{config.label}</span>
-                  </span>
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${config.badge}`}>
+                      <StatusIcon className="w-3 h-3" />
+                      <span className="hidden sm:inline">{config.label}</span>
+                    </span>
+                    {/* Station status menu (close / break / reopen) */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setStatusMenuStationId(prev => prev === station.id ? null : station.id)}
+                        disabled={statusSaving === station.id}
+                        className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 min-w-[28px] min-h-[28px] flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                        title="Station availability"
+                        aria-label="Station availability menu"
+                      >
+                        {statusSaving === station.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        ) : (
+                          <Ban className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                      {statusMenuStationId === station.id && (
+                        <>
+                          {/* Backdrop to close menu on outside click */}
+                          <div
+                            className="fixed inset-0 z-40"
+                            onClick={() => setStatusMenuStationId(null)}
+                          />
+                          <div className="absolute right-0 top-full mt-1 z-50 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1">
+                            {isStationUnavailable && (
+                              <button
+                                onClick={() => handleSetStationStatus(station.id, 'open')}
+                                className="w-full text-left px-3 py-2 text-sm text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/30 flex items-center gap-2"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                Reopen
+                              </button>
+                            )}
+                            {!isStationClosed && (
+                              <button
+                                onClick={() => handleSetStationStatus(station.id, 'closed')}
+                                className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                              >
+                                <Ban className="w-4 h-4" />
+                                Temporarily Closed
+                              </button>
+                            )}
+                            {!isStationBreak && (
+                              <button
+                                onClick={() => handleSetStationStatus(station.id, 'break')}
+                                className="w-full text-left px-3 py-2 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 flex items-center gap-2"
+                              >
+                                <Clock className="w-4 h-4" />
+                                On Break (5–10 min)
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 {/* Current student or en route */}
@@ -1515,43 +1638,49 @@ export default function CoordinatorViewPage() {
                     <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5 block">
                       Send Student:
                     </label>
-                    <div className="flex items-center gap-1">
-                      <select
-                        value={selectedStudentId}
-                        onChange={e => setStationDropdownSelections(prev => ({ ...prev, [station.id]: e.target.value }))}
-                        className="flex-1 text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-w-0 min-h-[32px]"
-                      >
-                        <option value="">-- Select student --</option>
-                        {eligible.map(student => {
-                          const completions = getStudentCompletionCount(student, stations, cells);
-                          const needs = studentNeeds[student.id] || [];
-                          const needsLabel = needs.length > 0 ? ` -- needs: ${abbreviateNeeds(needs)}` : '';
-                          return (
-                            <option
-                              key={student.id}
-                              value={student.id}
-                            >
-                              {student.first_name} {student.last_name} ({completions}/{totalSkills > 0 ? totalSkills : totalStations}){needsLabel}
-                            </option>
-                          );
-                        })}
-                      </select>
-                      <button
-                        onClick={() => {
-                          if (selectedStudentId) {
-                            const student = students.find(s => s.id === selectedStudentId);
-                            if (student) {
-                              handleSendStudent(station.id, student.id, `${student.first_name} ${student.last_name}`);
+                    {isStationUnavailable ? (
+                      <div className="text-xs italic text-gray-500 dark:text-gray-400 px-2 py-1.5 border border-dashed border-gray-300 dark:border-gray-600 rounded">
+                        {isStationClosed ? 'Station temporarily closed' : 'Examiner on break — back soon'}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={selectedStudentId}
+                          onChange={e => setStationDropdownSelections(prev => ({ ...prev, [station.id]: e.target.value }))}
+                          className="flex-1 text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-w-0 min-h-[32px]"
+                        >
+                          <option value="">-- Select student --</option>
+                          {eligible.map(student => {
+                            const completions = getStudentCompletionCount(student, stations, cells);
+                            const needs = studentNeeds[student.id] || [];
+                            const needsLabel = needs.length > 0 ? ` -- needs: ${abbreviateNeeds(needs)}` : '';
+                            return (
+                              <option
+                                key={student.id}
+                                value={student.id}
+                              >
+                                {student.first_name} {student.last_name} ({completions}/{totalSkills > 0 ? totalSkills : totalStations}){needsLabel}
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <button
+                          onClick={() => {
+                            if (selectedStudentId) {
+                              const student = students.find(s => s.id === selectedStudentId);
+                              if (student) {
+                                handleSendStudent(station.id, student.id, `${student.first_name} ${student.last_name}`);
+                              }
                             }
-                          }
-                        }}
-                        disabled={!selectedStudentId}
-                        className="flex-shrink-0 p-1.5 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:text-gray-300 dark:disabled:text-gray-600 min-w-[28px] min-h-[28px] flex items-center justify-center"
-                        title="Send student to this station"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                          }}
+                          disabled={!selectedStudentId}
+                          className="flex-shrink-0 p-1.5 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:text-gray-300 dark:disabled:text-gray-600 min-w-[28px] min-h-[28px] flex items-center justify-center"
+                          title="Send student to this station"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 

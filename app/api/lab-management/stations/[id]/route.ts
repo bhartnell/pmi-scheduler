@@ -147,6 +147,24 @@ export async function PATCH(
     if (body.station_notes !== undefined) updateData.station_notes = body.station_notes;
     if (body.drill_ids !== undefined) updateData.drill_ids = Array.isArray(body.drill_ids) && body.drill_ids.length > 0 ? body.drill_ids : null;
 
+    // Coordinator status: merge into metadata (read-modify-write)
+    if (body.coordinator_status !== undefined) {
+      const validStatuses = ['open', 'closed', 'break'];
+      if (!validStatuses.includes(body.coordinator_status)) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid coordinator_status value' },
+          { status: 400 }
+        );
+      }
+      const { data: currentMeta } = await supabase
+        .from('lab_stations')
+        .select('metadata')
+        .eq('id', id)
+        .single();
+      const meta = (currentMeta?.metadata as Record<string, unknown> | null) || {};
+      updateData.metadata = { ...meta, coordinator_status: body.coordinator_status };
+    }
+
     // Check if this is a new instructor assignment (for notification)
     const isNewAssignment = body.instructor_email !== undefined;
     let previousInstructor: string | null = null;

@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
     // 2. Get stations for this lab day
     const { data: stations } = await supabase
       .from('lab_stations')
-      .select('id, station_number, station_type, custom_title, skill_name, scenario:scenarios(id, title)')
+      .select('id, station_number, station_type, custom_title, skill_name, metadata, scenario:scenarios(id, title)')
       .eq('lab_day_id', labDayId)
       .order('station_number');
 
@@ -272,6 +272,7 @@ export async function GET(request: NextRequest) {
       station_type: s.station_type as string,
       custom_title: s.custom_title as string | null,
       skill_name: s.skill_name as string | null,
+      metadata: (s.metadata as Record<string, unknown> | null) || null,
       scenario: Array.isArray(s.scenario) ? (s.scenario[0] as { id: string; title: string } | undefined) || null : s.scenario as { id: string; title: string } | null,
     }));
 
@@ -515,13 +516,18 @@ export async function GET(request: NextRequest) {
       success: true,
       labMode: labDay.lab_mode || 'group_rotations',
       students: students || [],
-      stations: stationList.map((s) => ({
-        ...s,
-        skillSheetId: stationSkillMap[s.id] || null,
-        instructorName: stationInstructorMap[s.id]?.name || null,
-        addedDuringExam: stationAddedDuringExamMap[s.id] || false,
-        stationSuffix: stationSuffixMap[s.id] || null,
-      })),
+      stations: stationList.map((s) => {
+        const meta = (s as { metadata?: Record<string, unknown> }).metadata || {};
+        const coordinatorStatus = (meta.coordinator_status as string | undefined) || 'open';
+        return {
+          ...s,
+          skillSheetId: stationSkillMap[s.id] || null,
+          instructorName: stationInstructorMap[s.id]?.name || null,
+          addedDuringExam: stationAddedDuringExamMap[s.id] || false,
+          stationSuffix: stationSuffixMap[s.id] || null,
+          coordinatorStatus,
+        };
+      }),
       cells,
       // New skill-based data
       skillColumns,

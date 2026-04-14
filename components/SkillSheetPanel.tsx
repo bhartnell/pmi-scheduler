@@ -278,6 +278,51 @@ function cfToText(cf: unknown): string {
   return String(cf);
 }
 
+/**
+ * Determine whether a step instruction is semantically linked to any critical-failure
+ * criterion for the skill sheet. Used to highlight matching steps in red on the NREMT
+ * grading view so proctors can identify them at a glance.
+ *
+ * Uses keyword-overlap fuzzy matching: tokenizes both strings to meaningful words
+ * (4+ chars, not stopwords) and returns true if at least 2 significant words overlap
+ * OR if one string contains a distinctive phrase from the other.
+ */
+const STEP_MATCH_STOPWORDS = new Set([
+  'with', 'that', 'this', 'from', 'have', 'will', 'when', 'been', 'were', 'their',
+  'they', 'them', 'what', 'does', 'such', 'each', 'into', 'upon', 'which', 'would',
+  'should', 'could', 'before', 'after', 'while', 'within', 'about', 'being', 'other',
+  'also', 'then', 'than', 'your', 'these', 'those', 'more', 'most', 'some', 'very',
+  'patient', 'candidate', 'examiner',
+]);
+
+function tokenizeForMatch(s: string): Set<string> {
+  const tokens = s
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length >= 4 && !STEP_MATCH_STOPWORDS.has(w));
+  return new Set(tokens);
+}
+
+function stepMatchesCriticalFailure(stepText: string, criticalFailures: string[]): boolean {
+  if (!stepText || !criticalFailures || criticalFailures.length === 0) return false;
+  const stepTokens = tokenizeForMatch(stepText);
+  if (stepTokens.size === 0) return false;
+  for (const cfRaw of criticalFailures) {
+    const cfText = cfToText(cfRaw);
+    if (!cfText) continue;
+    const cfTokens = tokenizeForMatch(cfText);
+    if (cfTokens.size === 0) continue;
+    // Count overlapping significant tokens
+    let overlap = 0;
+    for (const t of stepTokens) {
+      if (cfTokens.has(t)) overlap++;
+      if (overlap >= 2) return true;
+    }
+  }
+  return false;
+}
+
 /** Get earned points for a step based on sub-item marks or pass/fail mark */
 function getStepEarnedPoints(
   step: Step,
@@ -1147,6 +1192,21 @@ export default function SkillSheetPanel({
   const isSequential = sheet ? useSequentialDisplay(sheet) : false;
   const sectionGroups = sheet && isSequential ? groupStepsBySectionHeader(sheet.steps) : [];
 
+  // Pre-compute which step numbers correlate to critical failure criteria.
+  // Only relevant for NREMT testing mode; empty Set otherwise.
+  const criticalFailureStepNumbers = (() => {
+    if (!isNremtTesting || !sheet?.critical_failures?.length || !sheet?.steps?.length) {
+      return new Set<number>();
+    }
+    const matches = new Set<number>();
+    for (const step of sheet.steps) {
+      if (stepMatchesCriticalFailure(step.instruction, sheet.critical_failures)) {
+        matches.add(step.step_number);
+      }
+    }
+    return matches;
+  })();
+
   // NREMT desktop section header styling — larger, more prominent on lg screens
   const nremtSectionHeaderClass = isNremtTesting
     ? 'bg-gray-100 dark:bg-gray-700 px-3 py-2 font-bold text-sm uppercase tracking-wider border-b border-gray-200 dark:border-gray-600 lg:px-4 lg:py-3 lg:text-base lg:border-l-4 lg:border-l-blue-500 dark:lg:border-l-blue-400 lg:bg-blue-50 dark:lg:bg-blue-900/20 lg:text-blue-900 dark:lg:text-blue-200 lg:mt-3 lg:mb-1'
@@ -1926,6 +1986,7 @@ export default function SkillSheetPanel({
                             subItemNote={subItemNotes[step.step_number]}
                             onSubItemNoteChange={(note) => setSubItemNotes(prev => ({ ...prev, [step.step_number]: note }))}
                             isNremtTesting={isNremtTesting}
+                            matchesCriticalFailure={criticalFailureStepNumbers.has(step.step_number)}
                           />
                         ))}
                       </div>
@@ -1982,6 +2043,7 @@ export default function SkillSheetPanel({
                                   subItemNote={subItemNotes[step.step_number]}
                                   onSubItemNoteChange={(note) => setSubItemNotes(prev => ({ ...prev, [step.step_number]: note }))}
                                   isNremtTesting={isNremtTesting}
+                                  matchesCriticalFailure={criticalFailureStepNumbers.has(step.step_number)}
                                 />
                               </div>
                             ))}
@@ -2474,6 +2536,7 @@ export default function SkillSheetPanel({
                             subItemNote={subItemNotes[step.step_number]}
                             onSubItemNoteChange={(note) => setSubItemNotes(prev => ({ ...prev, [step.step_number]: note }))}
                             isNremtTesting={isNremtTesting}
+                            matchesCriticalFailure={criticalFailureStepNumbers.has(step.step_number)}
                           />
                         ))}
                       </div>
@@ -2530,6 +2593,7 @@ export default function SkillSheetPanel({
                                   subItemNote={subItemNotes[step.step_number]}
                                   onSubItemNoteChange={(note) => setSubItemNotes(prev => ({ ...prev, [step.step_number]: note }))}
                                   isNremtTesting={isNremtTesting}
+                                  matchesCriticalFailure={criticalFailureStepNumbers.has(step.step_number)}
                                 />
                               </div>
                             ))}
@@ -2780,6 +2844,7 @@ function PanelStepRow({
   subItemNote,
   onSubItemNoteChange,
   isNremtTesting = false,
+  matchesCriticalFailure = false,
 }: {
   step: Step;
   mode: DisplayMode;
@@ -2792,7 +2857,20 @@ function PanelStepRow({
   subItemNote?: string;
   onSubItemNoteChange?: (note: string) => void;
   isNremtTesting?: boolean;
+  matchesCriticalFailure?: boolean;
 }) {
+  // NREMT: highlight steps linked to critical failure criteria
+  const highlightCriticalFail = isNremtTesting && matchesCriticalFailure;
+  const criticalFailTextClass = highlightCriticalFail
+    ? 'text-red-600 dark:text-red-400 font-medium'
+    : '';
+  const criticalFailDot = highlightCriticalFail ? (
+    <span
+      className="inline-block w-2 h-2 rounded-full bg-red-500 dark:bg-red-400 flex-shrink-0 mr-1.5"
+      aria-label="Critical failure linked"
+      title="Critical failure criterion — failing this step may result in a critical failure"
+    />
+  ) : null;
   // NREMT desktop styling classes — apply only at lg+ when NREMT testing
   const nremtRowPadding = isNremtTesting ? 'lg:px-4 lg:py-3' : '';
   const nremtInstructionText = isNremtTesting ? 'lg:text-[15px] lg:leading-relaxed' : '';
@@ -3065,6 +3143,7 @@ function PanelStepRow({
     <>
       <div className={`px-3 py-2 ${nremtRowPadding} ${isCritical ? 'bg-red-50 dark:bg-red-900/20' : ''}`}>
         <div className="flex items-start gap-2">
+          {criticalFailDot}
           <span className={`text-xs font-mono text-gray-400 mt-0.5 w-5 text-right flex-shrink-0 ${isNremtTesting ? 'lg:text-sm lg:w-7' : ''}`}>
             {step.step_number}.
           </span>
@@ -3072,7 +3151,7 @@ function PanelStepRow({
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-start gap-1.5">
-                  <p className={`text-xs text-gray-900 dark:text-white ${nremtInstructionText}`}>{step.instruction}</p>
+                  <p className={`text-xs ${criticalFailTextClass || 'text-gray-900 dark:text-white'} ${nremtInstructionText}`}>{step.instruction}</p>
                   {isCritical && (
                     <span className="flex-shrink-0 px-1 py-0.5 rounded text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30">
                       CRITICAL
