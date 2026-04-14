@@ -15,7 +15,9 @@ import {
   BarChart3,
   Printer,
   Trash2,
+  FileDown,
 } from 'lucide-react';
+import { downloadStudentPDF } from '@/lib/nremtExport';
 import { findMinimumPoints } from '@/lib/nremt-instructions';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -62,12 +64,13 @@ interface CellData {
 
 interface IndividualTestingGridProps {
   labDayId: string;
+  labDayDate?: string;
   isNremtTesting?: boolean;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export default function IndividualTestingGrid({ labDayId, isNremtTesting = false }: IndividualTestingGridProps) {
+export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTesting = false }: IndividualTestingGridProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [stations, setStations] = useState<GridStation[]>([]);
   const [cells, setCells] = useState<Record<string, CellData>>({});
@@ -480,6 +483,21 @@ export default function IndividualTestingGrid({ labDayId, isNremtTesting = false
                   <Printer className="w-4 h-4" /> Print Score Sheet
                 </a>
               )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const student = students.find(s => s.id === studentId);
+                  if (student) {
+                    const name = `${student.first_name} ${student.last_name}`;
+                    const dateStr = labDayDate || new Date().toISOString().split('T')[0];
+                    downloadStudentPDF(labDayId, studentId, name, dateStr);
+                  }
+                  setPopoverCell(null);
+                }}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg"
+              >
+                <FileDown className="w-4 h-4" /> Download Student PDF
+              </button>
               <button
                 onClick={(e) => { e.stopPropagation(); handleNewAttempt(studentId, skillName); }}
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg"

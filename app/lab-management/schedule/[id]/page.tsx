@@ -15,7 +15,9 @@ import {
   Loader2,
   Layers,
   RefreshCw,
+  FileDown,
 } from 'lucide-react';
+import { downloadAllStudentPDFs } from '@/lib/nremtExport';
 import LabTimer from '@/components/LabTimer';
 import AttendanceSection from '@/components/AttendanceSection';
 import LearningStyleDistribution from '@/components/LearningStyleDistribution';
@@ -104,6 +106,7 @@ export default function LabDayPage() {
   const [labModeLoading, setLabModeLoading] = useState(false);
   const [editingStation, setEditingStation] = useState<Station | null>(null);
   const [roleModalStation, setRoleModalStation] = useState<Station | null>(null);
+  const [pdfProgress, setPdfProgress] = useState<{ current: number; total: number } | null>(null);
 
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/signin'); }, [status, router]);
   useEffect(() => { if (session && labDayId) { fetchLabDay(); fetchScenarioParticipation(); fetchCurrentUserRole(); fetchSkillsForSignoffs(); } }, [session, labDayId]);
@@ -292,9 +295,31 @@ export default function LabDayPage() {
           <button onClick={() => handleToggleLabMode('group_rotations')} disabled={labModeLoading} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${labMode === 'group_rotations' ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-750'}`}><Layers className="w-3.5 h-3.5" /> Group Rotations</button>
           <button onClick={() => handleToggleLabMode('individual_testing')} disabled={labModeLoading} className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors ${labMode === 'individual_testing' ? 'bg-blue-600 text-white border-blue-600 dark:bg-blue-500 dark:border-blue-500' : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-750'}`}><ClipboardCheck className="w-3.5 h-3.5" /> Individual Testing</button>
           {labModeLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />}
+          {labMode === 'individual_testing' && (
+            <button
+              onClick={async () => {
+                if (!labDay || !cohortStudents.length) return;
+                const dateStr = labDay.date || new Date().toISOString().split('T')[0];
+                try {
+                  await downloadAllStudentPDFs(
+                    labDayId as string,
+                    cohortStudents.map(s => ({ id: s.id, name: `${s.first_name} ${s.last_name}` })),
+                    dateStr,
+                    (current, total) => setPdfProgress({ current, total })
+                  );
+                } catch { /* handled */ }
+                finally { setPdfProgress(null); }
+              }}
+              disabled={!!pdfProgress || !cohortStudents.length}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border transition-colors bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-750 disabled:opacity-50"
+            >
+              {pdfProgress ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <FileDown className="w-3.5 h-3.5" />}
+              {pdfProgress ? `Downloading ${pdfProgress.current}/${pdfProgress.total}...` : 'Download All PDFs'}
+            </button>
+          )}
         </div>
 
-        {labMode === 'individual_testing' && (<div className="mt-6 print:hidden"><IndividualTestingGrid labDayId={labDayId as string} /></div>)}
+        {labMode === 'individual_testing' && (<div className="mt-6 print:hidden"><IndividualTestingGrid labDayId={labDayId as string} labDayDate={labDay?.date} /></div>)}
 
         <StationCards stations={labDay.stations} stationSkillDocs={stationSkillDocs} stationSkillSheetIds={stationSkillSheetIds} calendarAvailability={calendarAvailability} labDayId={labDayId as string} getStationTitle={getStationTitle} onEditStation={(station) => setEditingStation(station)} onOpenRoleModal={(station) => setRoleModalStation(station)} />
 
