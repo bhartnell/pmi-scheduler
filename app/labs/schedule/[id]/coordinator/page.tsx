@@ -2313,7 +2313,7 @@ export default function CoordinatorViewPage() {
           senderName={session.user.name || 'Unknown'}
           senderEmail={session.user.email || ''}
           senderRole="coordinator"
-          bottomOffset={24}
+          bottomOffset={80}
         />
       )}
     </div>

@@ -133,14 +133,15 @@ export default function QuickActionsMenu() {
     [router]
   );
 
-  // Don't render on auth/signin pages
+  // Don't render on auth/signin pages or NREMT grading view (too cluttered)
   if (!mounted || pathname.startsWith('/auth')) return null;
+  if (pathname.startsWith('/labs/grade/station/')) return null;
 
   // Only show for instructor and above
   if (!effectiveRole || !hasMinRole(effectiveRole, 'instructor')) return null;
 
   return (
-    <div ref={menuRef} className="fixed bottom-[5.5rem] right-6 z-40 flex flex-col items-end gap-3 print:hidden">
+    <div ref={menuRef} className="fixed bottom-[9rem] right-6 z-40 flex flex-col items-end gap-3 print:hidden">
       {/* Action buttons - stagger upward when open */}
       <div
         className={`flex flex-col items-end gap-2 transition-all duration-200 ${

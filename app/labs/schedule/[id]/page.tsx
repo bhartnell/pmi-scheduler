@@ -438,7 +438,7 @@ export default function LabDayPage() {
           senderName={session.user.name || 'Unknown'}
           senderEmail={session.user.email || ''}
           senderRole={userRole || 'user'}
-          bottomOffset={24}
+          bottomOffset={80}
         />
       )}
     </div>
