@@ -17,6 +17,7 @@ import NremtCandidateInstructions from '@/components/NremtCandidateInstructions'
 import NremtTimer, { isDualStation } from '@/components/NremtTimer';
 import type { NremtTimerHandle } from '@/components/NremtTimer';
 import NremtStickyNotesPanel from '@/components/NremtStickyNotesPanel';
+import LabDayChat from '@/components/lab-day/LabDayChat';
 
 // Sub-components
 import GradingHeader from '@/components/grading/GradingHeader';
@@ -1452,6 +1453,17 @@ export default function GradeStationPage() {
           criticalFailNotes={criticalFailNotes}
           isRetake={isRetakeMode}
           originalEvaluationId={retakeOriginalEvalId || undefined}
+        />
+      )}
+
+      {session?.user && station?.lab_day?.id && (
+        <LabDayChat
+          labDayId={station.lab_day.id}
+          senderName={session.user.name || 'Unknown'}
+          senderEmail={session.user.email || ''}
+          senderRole="instructor"
+          stationContext={`Station ${station.station_number} — ${station.skill_name || station.custom_title || 'Unknown'}`}
+          bottomOffset={80}
         />
       )}
     </div>
