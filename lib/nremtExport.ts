@@ -59,17 +59,32 @@ export async function downloadStudentPDF(
 
     const target = doc.body;
 
-    // Belt-and-suspenders: the server HTML explicitly sets body/html
-    // background to #ffffff, and html2canvas is also told to use a white
-    // backgroundColor. Without the explicit backgroundColor option
-    // html2canvas defaults to 'transparent', which jsPDF then renders as
-    // black in the saved PDF — that was the "black background rough
-    // version" symptom reported on NREMT day.
+    // IMPORTANT: image.type MUST be 'png', not 'jpeg'.
+    //
+    // html2pdf.js slices the html2canvas output into letter-sized pages.
+    // When a section ends mid-page (e.g. a short skill fits in 3/4 of a
+    // page, or the cover page ends at 50%), the bottom portion of the
+    // slice is empty canvas — pixels that were never painted. Those
+    // pixels are transparent (alpha = 0).
+    //
+    // JPEG has no alpha channel, so transparent canvas pixels get
+    // flattened to BLACK during encoding. That's exactly the "black
+    // boxes on the bottom of pages" bug reported from the exported
+    // student packet: every page that wasn't completely filled had a
+    // black rectangle wherever content didn't reach.
+    //
+    // PNG preserves alpha, so transparent areas stay transparent and
+    // the PDF viewer renders them as white. Quality 0.98 is irrelevant
+    // for PNG (lossless), so we drop it.
+    //
+    // backgroundColor on html2canvas is still set so the _top_ of each
+    // slice has a guaranteed white fill even if the body bg fails to
+    // apply for any reason.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await html2pdf().set({
       margin: [10, 10, 10, 10],
       filename,
-      image: { type: 'jpeg', quality: 0.98 },
+      image: { type: 'png' },
       html2canvas: {
         scale: 2,
         useCORS: true,
