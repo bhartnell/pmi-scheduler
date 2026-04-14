@@ -59,12 +59,23 @@ export async function downloadStudentPDF(
 
     const target = doc.body;
 
+    // Belt-and-suspenders: the server HTML explicitly sets body/html
+    // background to #ffffff, and html2canvas is also told to use a white
+    // backgroundColor. Without the explicit backgroundColor option
+    // html2canvas defaults to 'transparent', which jsPDF then renders as
+    // black in the saved PDF — that was the "black background rough
+    // version" symptom reported on NREMT day.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await html2pdf().set({
       margin: [10, 10, 10, 10],
       filename,
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, logging: false },
+      html2canvas: {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: '#ffffff',
+      },
       jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' },
       pagebreak: { mode: ['css', 'legacy'], before: '.page-break-before' },
     } as any).from(target).save();
