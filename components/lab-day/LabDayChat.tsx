@@ -84,6 +84,7 @@ export default function LabDayChat({
   const [connectedUsers, setConnectedUsers] = useState(0);
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [sendError, setSendError] = useState<string | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -184,6 +185,7 @@ export default function LabDayChat({
       if (!msg || sending) return;
 
       setSending(true);
+      setSendError(null);
       try {
         const body: Record<string, string> = {
           message: msg,
@@ -199,23 +201,49 @@ export default function LabDayChat({
             body: JSON.stringify(body),
           }
         );
-        if (!res.ok) throw new Error('Failed to send');
+        if (!res.ok) {
+          let errBody: { error?: string } = {};
+          try { errBody = await res.json(); } catch { /* noop */ }
+          const errMsg = errBody.error || `HTTP ${res.status}`;
+          console.error('Chat: message POST failed', res.status, errMsg);
+          throw new Error(errMsg);
+        }
         if (!text) setNewMessage('');
 
-        // Fire-and-forget assistance alert
+        // Fire assistance alert so coordinator gets a flash banner.
+        // Endpoint: /api/lab-management/lab-days/[id]/assistance-alerts
+        // (not a no-op — previous code posted to a non-existent route)
         if (type === 'alert' && stationContext) {
-          fetch('/api/lab-management/station-assistance', {
-            method: 'POST',
-            headers: buildHeaders(),
-            body: JSON.stringify({
-              lab_day_id: labDayId,
-              station_context: stationContext,
-              sender_name: senderName,
-            }),
-          }).catch(() => {});
+          try {
+            const alertRes = await fetch(
+              `/api/lab-management/lab-days/${labDayId}/assistance-alerts`,
+              {
+                method: 'POST',
+                headers: buildHeaders(),
+                body: JSON.stringify({
+                  station_name: stationContext,
+                  sender_name: senderName,
+                  notes: `Need assistance requested by ${senderName}${stationContext ? ` at ${stationContext}` : ''}`,
+                }),
+              }
+            );
+            if (!alertRes.ok) {
+              let errBody: { error?: string } = {};
+              try { errBody = await alertRes.json(); } catch { /* noop */ }
+              console.error(
+                'Chat: assistance-alert POST failed',
+                alertRes.status,
+                errBody.error || ''
+              );
+            }
+          } catch (alertErr) {
+            console.error('Chat: assistance-alert fetch threw', alertErr);
+          }
         }
       } catch (err) {
+        const errMsg = err instanceof Error ? err.message : 'Send failed';
         console.error('Chat: send failed', err);
+        setSendError(errMsg);
       } finally {
         setSending(false);
       }
@@ -410,6 +438,21 @@ export default function LabDayChat({
               ))}
             </div>
           </div>
+
+          {/* Send error banner */}
+          {sendError && (
+            <div className="shrink-0 px-3 py-1.5 border-t border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-900/20 flex items-center justify-between">
+              <span className="text-[11px] text-red-700 dark:text-red-300">
+                Send failed: {sendError}
+              </span>
+              <button
+                onClick={() => setSendError(null)}
+                className="text-[11px] text-red-600 dark:text-red-400 hover:underline"
+              >
+                dismiss
+              </button>
+            </div>
+          )}
 
           {/* Input area */}
           <div className="shrink-0 px-3 py-2 border-t border-gray-200 dark:border-gray-700">

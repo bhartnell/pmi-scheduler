@@ -30,15 +30,20 @@ export function getSupabaseAdmin(): SupabaseClient {
   );
 }
 
-// Legacy export - uses getter to defer initialization
-// This allows existing code to work without changes
+// Legacy export - proxies to the singleton getSupabase() so we never end up
+// with two GoTrueClient instances (which breaks Realtime auth and triggers
+// "Multiple GoTrueClient instances detected" warnings).
+// Accessing any property goes through the lazy singleton.
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 
-export const supabase = supabaseUrl && supabaseAnonKey
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : (new Proxy({} as SupabaseClient, {
-      get: () => {
-        throw new Error('Supabase client not initialized - missing environment variables');
-      }
-    }));
+export const supabase: SupabaseClient = new Proxy({} as SupabaseClient, {
+  get: (_target, prop) => {
+    if (!supabaseUrl || !supabaseAnonKey) {
+      throw new Error('Supabase client not initialized - missing environment variables');
+    }
+    const client = getSupabase() as unknown as Record<string | symbol, unknown>;
+    const value = client[prop];
+    return typeof value === 'function' ? (value as (...args: unknown[]) => unknown).bind(client) : value;
+  },
+});

@@ -146,25 +146,42 @@ export async function GET(request: NextRequest) {
     for (const e of (evaluations || [])) {
       if (e.skill_sheet_id) skillSheetIdsSet.add(e.skill_sheet_id);
     }
-    let skillSheetStepCounts: Record<string, { total: number; critical: number }> = {};
+    // sheetId -> { total, critical, criticalByStepNum: Set<step_number> }
+    let skillSheetStepCounts: Record<string, {
+      total: number;
+      critical: number;
+      criticalStepNums: Set<number>;
+    }> = {};
     if (skillSheetIdsSet.size > 0) {
       const { data: steps } = await supabase
         .from('skill_sheet_steps')
-        .select('skill_sheet_id, is_critical')
+        .select('skill_sheet_id, step_number, is_critical')
         .in('skill_sheet_id', Array.from(skillSheetIdsSet));
 
       if (steps) {
         for (const step of steps) {
           if (!skillSheetStepCounts[step.skill_sheet_id]) {
-            skillSheetStepCounts[step.skill_sheet_id] = { total: 0, critical: 0 };
+            skillSheetStepCounts[step.skill_sheet_id] = {
+              total: 0,
+              critical: 0,
+              criticalStepNums: new Set<number>(),
+            };
           }
           skillSheetStepCounts[step.skill_sheet_id].total++;
-          if (step.is_critical) skillSheetStepCounts[step.skill_sheet_id].critical++;
+          if (step.is_critical) {
+            skillSheetStepCounts[step.skill_sheet_id].critical++;
+            if (typeof step.step_number === 'number') {
+              skillSheetStepCounts[step.skill_sheet_id].criticalStepNums.add(step.step_number);
+            }
+          }
         }
       }
     }
 
     // Build evaluation summary map: evalId -> summary data
+    // Handles BOTH step_marks formats:
+    //   Old: { "1": "pass", "2": "fail" }
+    //   New: { "1": { completed: true, points: 1, sub_items?: [...] } }
     const evalSummaryMap: Record<string, {
       stepsCompleted: number;
       stepsTotal: number;
@@ -173,17 +190,40 @@ export async function GET(request: NextRequest) {
       evaluatorName: string | null;
     }> = {};
     for (const evalItem of (evaluations || [])) {
-      const stepCounts = skillSheetStepCounts[evalItem.skill_sheet_id] || { total: 0, critical: 0 };
-      const stepMarks = (evalItem.step_marks || {}) as Record<string, string>;
-      const passedSteps = Object.values(stepMarks).filter(v => v === 'pass').length;
+      const stepCounts = skillSheetStepCounts[evalItem.skill_sheet_id] || {
+        total: 0,
+        critical: 0,
+        criticalStepNums: new Set<number>(),
+      };
+      const stepMarks = (evalItem.step_marks || {}) as Record<string, unknown>;
 
-      // For critical steps, we'd need the step data; approximate from step_marks
+      let passedSteps = 0;
+      let criticalPassed = 0;
+      for (const [key, val] of Object.entries(stepMarks)) {
+        const stepNum = parseInt(key, 10);
+        let stepPassed = false;
+        if (typeof val === 'string') {
+          // Old format: "pass" | "fail" | "caution"
+          stepPassed = val === 'pass';
+        } else if (val && typeof val === 'object') {
+          // New format: { completed: boolean, points?: number, sub_items?: boolean[] }
+          const obj = val as { completed?: boolean };
+          stepPassed = obj.completed === true;
+        }
+        if (stepPassed) {
+          passedSteps++;
+          if (!Number.isNaN(stepNum) && stepCounts.criticalStepNums.has(stepNum)) {
+            criticalPassed++;
+          }
+        }
+      }
+
       const rawEvaluator = evalItem.evaluator as unknown;
       const evaluator = (Array.isArray(rawEvaluator) ? rawEvaluator[0] : rawEvaluator) as { name: string } | null;
       evalSummaryMap[evalItem.id] = {
         stepsCompleted: passedSteps,
         stepsTotal: stepCounts.total,
-        criticalCompleted: 0, // Will be refined below
+        criticalCompleted: criticalPassed,
         criticalTotal: stepCounts.critical,
         evaluatorName: evaluator?.name || null,
       };
