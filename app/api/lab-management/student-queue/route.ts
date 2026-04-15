@@ -50,9 +50,18 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. Get stations for this lab day
+    //
+    // IMPORTANT: include `skill_sheet_id` (the typed FK column on
+    // lab_stations). NREMT assessment stations are linked to their
+    // skill sheet via this column, NOT via metadata.skill_sheet_id or
+    // station_skills. Leaving it off the select caused the tracker to
+    // render 13 columns (7 stations + 6 evaluation-derived) because
+    // stationSkillMap ended up empty for every NREMT station, so the
+    // Pass-2 evaluation-column builder below failed to match any
+    // evaluation back to an existing station column.
     const { data: stations } = await supabase
       .from('lab_stations')
-      .select('id, station_number, station_type, custom_title, skill_name, metadata, scenario:scenarios(id, title)')
+      .select('id, station_number, station_type, custom_title, skill_name, skill_sheet_id, metadata, scenario:scenarios(id, title)')
       .eq('lab_day_id', labDayId)
       .order('station_number');
 
@@ -98,38 +107,48 @@ export async function GET(request: NextRequest) {
       .select('id, student_id, skill_sheet_id, result, step_marks, created_at, team_role, is_retake, attempt_number, evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(name)')
       .eq('lab_day_id', labDayId);
 
-    // 7. Get station-to-skill-sheet mapping (via station_skills table)
+    // 7. Build station-to-skill-sheet mapping.
+    //
+    // Resolution order (first wins):
+    //   1. lab_stations.skill_sheet_id (typed FK column) — NREMT stations
+    //   2. lab_stations.metadata.skill_sheet_id (legacy metadata path)
+    //   3. station_skills → skills.skill_sheet_ids[0] (station-pick path)
+    //
+    // Historically only (2) and (3) were checked, so NREMT stations
+    // (which only populate the typed column) produced an empty
+    // stationSkillMap and the tracker duplicated every skill column.
     let stationSkillMap: Record<string, string> = {};
     const stationAddedDuringExamMap: Record<string, boolean> = {};
     const stationSuffixMap: Record<string, string> = {};
+
+    // (1) Typed column — already available on `stations` from step 2.
+    for (const s of (stations || [])) {
+      const sheetId = (s as { skill_sheet_id?: string | null }).skill_sheet_id;
+      if (sheetId) stationSkillMap[(s as { id: string }).id] = sheetId;
+    }
+
     if (stationIds.length > 0) {
       const { data: stationSkills } = await supabase
         .from('station_skills')
         .select('station_id, skill:skills!station_skills_skill_id_fkey(id, skill_sheet_ids)')
         .in('station_id', stationIds);
 
-      // Also check lab_station metadata for skill_sheet_id
-      const { data: stationsWithMeta } = await supabase
-        .from('lab_stations')
-        .select('id, metadata')
-        .in('id', stationIds);
-
-      if (stationsWithMeta) {
-        for (const s of stationsWithMeta) {
-          const meta = s.metadata as Record<string, unknown> | null;
-          if (meta?.skill_sheet_id) {
-            stationSkillMap[s.id] = meta.skill_sheet_id as string;
-          }
-          if (meta?.added_during_exam) {
-            stationAddedDuringExamMap[s.id] = true;
-          }
-          if (meta?.station_suffix) {
-            stationSuffixMap[s.id] = meta.station_suffix as string;
-          }
+      // (2) Metadata fallback + collect added_during_exam / suffix flags.
+      for (const s of (stations || [])) {
+        const meta = (s as { metadata?: Record<string, unknown> | null }).metadata || null;
+        const sid = (s as { id: string }).id;
+        if (!stationSkillMap[sid] && meta?.skill_sheet_id) {
+          stationSkillMap[sid] = meta.skill_sheet_id as string;
+        }
+        if (meta?.added_during_exam) {
+          stationAddedDuringExamMap[sid] = true;
+        }
+        if (meta?.station_suffix) {
+          stationSuffixMap[sid] = meta.station_suffix as string;
         }
       }
 
-      // station_skills mapping as fallback
+      // (3) station_skills mapping as final fallback.
       if (stationSkills) {
         for (const ss of stationSkills) {
           const skill = ss.skill as unknown as { id: string; skill_sheet_ids?: string[] } | null;
@@ -312,6 +331,7 @@ export async function GET(request: NextRequest) {
       station_type: s.station_type as string,
       custom_title: s.custom_title as string | null,
       skill_name: s.skill_name as string | null,
+      skill_sheet_id: (s.skill_sheet_id as string | null) || null,
       metadata: (s.metadata as Record<string, unknown> | null) || null,
       scenario: Array.isArray(s.scenario) ? (s.scenario[0] as { id: string; title: string } | undefined) || null : s.scenario as { id: string; title: string } | null,
     }));
@@ -368,16 +388,28 @@ export async function GET(request: NextRequest) {
       return 'Unknown skill';
     };
 
-    // Build mapping: skillName -> list of station ids that run it
-    // Station-backed columns come first (in station_number order), then
-    // any evaluation-only skill columns are appended.
+    // Build mapping: skillName -> list of station ids that run it.
+    //
+    // Station-backed columns are the canonical source for this lab day.
+    // Evaluations are matched back to an existing station column by
+    // skill_sheet_id. An evaluation only produces a new column if its
+    // skill_sheet_id is NOT backed by any station on this lab day
+    // (e.g. a station was removed mid-day after evals were recorded).
+    //
+    // Dedup is keyed on a reverse index (sheetId -> skillName) so a
+    // resolveSkillName variance between passes can never create a
+    // duplicate column for the same skill_sheet_id. This closes the
+    // NREMT-day bug where 7 stations rendered as 13 columns because
+    // Pass 1 stored `null` sheetIds and Pass 2 then re-added columns
+    // for every evaluation.
     const skillToStationIds: Record<string, string[]> = {};
     const skillNameToSheetId: Record<string, string | null> = {};
+    const sheetIdToSkillName: Record<string, string> = {};
     const skillColumnOrder: string[] = [];
 
-    // Pass 1: stations define initial columns
+    // Pass 1: stations define initial columns.
     for (const s of stationList) {
-      const sheetId = stationSkillMap[s.id] || null;
+      const sheetId = stationSkillMap[s.id] || s.skill_sheet_id || null;
       const skillName = resolveSkillName(sheetId, s);
       if (!skillToStationIds[skillName]) {
         skillToStationIds[skillName] = [];
@@ -386,22 +418,24 @@ export async function GET(request: NextRequest) {
       } else if (!skillNameToSheetId[skillName] && sheetId) {
         skillNameToSheetId[skillName] = sheetId;
       }
+      if (sheetId && !sheetIdToSkillName[sheetId]) {
+        sheetIdToSkillName[sheetId] = skillName;
+      }
       skillToStationIds[skillName].push(s.id);
     }
 
-    // Pass 2: evaluations for skill_sheet_ids that aren't represented by any
-    // station-derived column yet — add a new column for them.
+    // Pass 2: evaluations whose skill_sheet_id is NOT already represented
+    // by a station column on this lab day. Matched by sheet_id via the
+    // reverse index — no string comparison on resolved names.
     for (const evalItem of (evaluations || [])) {
       if (!evalItem.skill_sheet_id) continue;
-      const existingColumnName = Object.keys(skillNameToSheetId).find(
-        name => skillNameToSheetId[name] === evalItem.skill_sheet_id
-      );
-      if (existingColumnName) continue;
+      if (sheetIdToSkillName[evalItem.skill_sheet_id]) continue; // already has a column
       const skillName = resolveSkillName(evalItem.skill_sheet_id);
       if (!skillToStationIds[skillName]) {
         skillToStationIds[skillName] = [];
         skillColumnOrder.push(skillName);
         skillNameToSheetId[skillName] = evalItem.skill_sheet_id;
+        sheetIdToSkillName[evalItem.skill_sheet_id] = skillName;
       }
     }
 
