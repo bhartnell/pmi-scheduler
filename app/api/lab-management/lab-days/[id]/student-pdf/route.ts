@@ -35,6 +35,11 @@ export async function GET(
 
     const { id: labDayId } = await params;
     const studentId = request.nextUrl.searchParams.get('student_id');
+    // print=1 → append a no-op Print/Save bar at top + auto-trigger
+    // window.print() after paint. Used by lib/nremtExport.ts so that
+    // opening the URL in a new tab brings up the browser's native
+    // print-to-PDF dialog immediately.
+    const autoPrint = request.nextUrl.searchParams.get('print') === '1';
     if (!studentId) {
       return NextResponse.json({ success: false, error: 'student_id is required' }, { status: 400 });
     }
@@ -229,9 +234,25 @@ export async function GET(
     }
 
     // 8. Wrap cover + all sections in a single white-background document.
+    //    Prepend a .no-print Print/Save bar (matches the single-skill
+    //    print endpoint style) and, when print=1 was passed, append an
+    //    inline <script> that triggers window.print() on load. Using
+    //    <script> inside wrapPrintHtml is safe because wrapPrintHtml
+    //    emits a full HTML document shell.
+    const printBar = `
+  <div class="no-print" style="max-width: 820px; margin: 0 auto 16px auto; text-align: right;">
+    <button onclick="window.print()" style="padding: 8px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
+      Print / Save as PDF
+    </button>
+  </div>`;
+    const autoPrintScript = autoPrint
+      ? `<script>window.addEventListener('load', function() { setTimeout(function() { window.print(); }, 400); });</script>`
+      : '';
     const body = `
+  ${printBar}
   ${coverSection}
   ${evalSections}
+  ${autoPrintScript}
 `;
     const html = wrapPrintHtml(
       `NREMT Results — ${student.first_name} ${student.last_name}`,

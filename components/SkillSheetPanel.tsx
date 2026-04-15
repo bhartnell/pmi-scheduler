@@ -441,6 +441,31 @@ export default function SkillSheetPanel({
       setTeamMembers([]);
     }
   }, [isNremtTesting]);
+
+  // NREMT MODE LOCK — root-cause fix for the 2026-04-15 "stations reverting
+  // to formative" bug.
+  //
+  // The `mode` state is initialized once at mount via useState. If the
+  // SkillSheetPanel ever ends up with `mode !== 'final'` on an NREMT
+  // testing day (race on initial prop propagation, a stray setMode from
+  // a handler path we missed, or — the one that burned us in prod —
+  // loading an existing formative practice attempt from earlier in the
+  // week), the checklist silently renders the formative template, the
+  // tracker shows nothing, and the submit flow falls into the
+  // formative→send-email path that fires a 500 from Resend.
+  //
+  // Once we've observed nremtMode=true, we latch it in a ref and force
+  // mode back to 'final' whenever it drifts away. The UI already hides
+  // the teaching/formative tabs on NREMT day (see filter on `nremtMode`
+  // in the mode-tab render), so this lock doesn't block any legitimate
+  // user action — it only closes accidental state transitions.
+  const nremtModeLockedRef = useRef(false);
+  useEffect(() => {
+    if (nremtMode) nremtModeLockedRef.current = true;
+    if (nremtModeLockedRef.current && mode !== 'final') {
+      setMode('final');
+    }
+  }, [nremtMode, mode]);
   const [showTeamAddDropdown, setShowTeamAddDropdown] = useState(false);
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
   const [teamCompletionResults, setTeamCompletionResults] = useState<TeamEvalResult[] | null>(null);
@@ -928,13 +953,21 @@ export default function SkillSheetPanel({
     }
     setNotes(evalItem.notes || '');
     setResult(evalItem.result as 'pass' | 'fail' | 'remediation');
-    setMode(evalItem.evaluation_type === 'formative' ? 'formative' : 'final');
+    // IMPORTANT: checklist mode must follow lab_day.is_nremt_testing, NOT
+    // the loaded evaluation's evaluation_type. If a student had a
+    // formative practice attempt earlier today and we're now on NREMT
+    // day, loading that eval was flipping the panel back into formative
+    // mode — instructors landed on the wrong checklist for retakes.
+    setMode(nremtMode ? 'final' : (evalItem.evaluation_type === 'formative' ? 'formative' : 'final'));
     setEvalViewMode('new');
   };
 
   const handleNewAttempt = () => {
     resetForm();
-    setMode('formative');
+    // On NREMT day, "new attempt" must stay in final/NREMT mode — it
+    // was previously hard-coded to 'formative', which dropped retakes
+    // onto the practice checklist. See bug 2 from 2026-04-15 lab day.
+    setMode(nremtMode ? 'final' : 'formative');
     setEvalViewMode('new');
   };
 

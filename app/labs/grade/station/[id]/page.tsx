@@ -426,6 +426,60 @@ export default function GradeStationPage() {
     };
   }, [station, nremtSheetCode]);
 
+  // ── NREMT retake: auto-rotate E201/E202 scenario ──────────────────────
+  //
+  // When an instructor opens the grade page in retake mode for an E201
+  // (medical) or E202 (trauma) station, call the /scenario/rotate
+  // endpoint once so the station swaps to a scenario the student did
+  // NOT see on their first attempt. The endpoint excludes the station's
+  // currently-selected scenario and prefers ones not already in use by
+  // sibling stations.
+  //
+  // Guarded by a ref so hitting Refresh doesn't keep rotating every
+  // reload. Only fires after station + nremtSheetCode are loaded.
+  //
+  // Added 2026-04-15: failed students at station 2 (E202) and station 3
+  // (E201) were getting the same scenario twice because the station
+  // metadata never updated between attempts.
+  const retakeRotateRunRef = useRef(false);
+  useEffect(() => {
+    if (retakeRotateRunRef.current) return;
+    if (!isRetakeMode) return;
+    if (!station?.id) return;
+    if (!nremtSheetCode || (nremtSheetCode !== 'E201' && nremtSheetCode !== 'E202')) return;
+
+    retakeRotateRunRef.current = true;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/lab-management/stations/${station.id}/scenario/rotate`,
+          { method: 'POST' }
+        );
+        const data = await res.json().catch(() => null);
+        if (data?.success && data.scenario) {
+          // Update local state + station.metadata so the scenario panel
+          // re-renders with the new dispatch without a page reload.
+          setNremtScenario(data.scenario);
+          setStation((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  metadata: {
+                    ...(prev.metadata as Record<string, unknown> | null ?? {}),
+                    selected_scenario_id: data.scenario.id,
+                  },
+                }
+              : prev
+          );
+        } else if (data?.error) {
+          console.warn('[retake-rotate]', data.error);
+        }
+      } catch (e) {
+        console.warn('[retake-rotate] failed to rotate scenario:', e);
+      }
+    })();
+  }, [isRetakeMode, station?.id, nremtSheetCode]);
+
   // Dual-skill timer phase change handler
   const handleTimerPhaseChange = useCallback((phaseIdx: number, phaseName: string) => {
     // Phases: 0=O2 Prep, 1=O2 Eval, 2=BVM Prep, 3=BVM Eval

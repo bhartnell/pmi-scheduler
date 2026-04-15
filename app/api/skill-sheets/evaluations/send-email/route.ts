@@ -45,13 +45,27 @@ export async function POST(request: NextRequest) {
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name, email),
         skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, steps:skill_sheet_steps(step_number, is_critical, possible_points, sub_items)),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name),
-        lab_day:lab_days!student_skill_evaluations_lab_day_id_fkey(id, date, title)
+        lab_day:lab_days!student_skill_evaluations_lab_day_id_fkey(id, date, title, is_nremt_testing)
       `)
       .eq('id', evaluation_id)
       .single();
 
     if (evalError || !evaluation) {
       return NextResponse.json({ success: false, error: 'Evaluation not found' }, { status: 404 });
+    }
+
+    // BLOCK: no automatic result emails during NREMT testing days.
+    // On NREMT day the program sends a formal packet and does NOT want
+    // students to receive partial/per-skill emails that could leak
+    // pass/fail status before the official results go out. This guard
+    // fires as early as possible (before any Resend call) so instructors
+    // get a clear 403 if a stray "Email Results" button is clicked.
+    const labDayForGuard = evaluation.lab_day as { is_nremt_testing?: boolean } | null;
+    if (labDayForGuard?.is_nremt_testing) {
+      return NextResponse.json(
+        { success: false, error: 'Email results are disabled during NREMT testing.' },
+        { status: 403 }
+      );
     }
 
     // Check email_status
