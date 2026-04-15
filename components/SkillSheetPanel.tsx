@@ -473,6 +473,7 @@ export default function SkillSheetPanel({
   // NREMT threshold warning modal state
   const [showThresholdWarning, setShowThresholdWarning] = useState(false);
   const [showCriticalFailBlock, setShowCriticalFailBlock] = useState(false);
+  const [showMissingExaminerNotesBlock, setShowMissingExaminerNotesBlock] = useState(false);
   const pendingSaveRef = useRef<{ emailPref: EmailPreference; saveStatus: 'complete' | 'in_progress' } | null>(null);
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
@@ -1154,9 +1155,14 @@ export default function SkillSheetPanel({
         return;
       }
 
-      // FIX 3: Require examiner comments when result is fail on NREMT days
+      // FIX 3: Require examiner comments when result is fail on NREMT days.
+      // Blocking modal (not a 3s toast) because on 2026-04-15 Aly silently
+      // lost two E201 fail submissions to an unnoticed toast — the sticky
+      // notes panel is in a collapsed drawer on mobile, so the examiner
+      // had no idea what the failure meant. The modal is loud and stays
+      // up until acknowledged.
       if (result === 'fail' && !examinerNotes?.trim()) {
-        showToast('Examiner comments are required for a Fail result on NREMT testing days', 'error');
+        setShowMissingExaminerNotesBlock(true);
         return;
       }
 
@@ -1705,6 +1711,44 @@ export default function SkillSheetPanel({
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
               >
                 OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Missing examiner notes block — NREMT fail result needs a reason.
+          This replaces the prior 3-second toast that was silently swallowing
+          fail submissions on NREMT day. The modal explicitly names the
+          "Examiner Notes" panel so the grader knows where to go, because
+          on mobile that panel is behind a collapsed drawer tab. */}
+      {showMissingExaminerNotesBlock && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <XCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Examiner Notes Required
+                </h3>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                  A <strong>Fail</strong> result on an NREMT testing day needs a
+                  written reason before it can be saved.
+                </p>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                  Open the <strong>Examiner Notes</strong> panel (right column
+                  on desktop, floating drawer tab on mobile) and type a short
+                  explanation of why the student failed — e.g. which critical
+                  criteria were missed. Then press Save again.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setShowMissingExaminerNotesBlock(false)}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+              >
+                Got it
               </button>
             </div>
           </div>
