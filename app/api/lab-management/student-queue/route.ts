@@ -390,24 +390,25 @@ export async function GET(request: NextRequest) {
 
     // Build mapping: skillName -> list of station ids that run it.
     //
-    // Station-backed columns are the canonical source for this lab day.
-    // Evaluations are matched back to an existing station column by
-    // skill_sheet_id. An evaluation only produces a new column if its
-    // skill_sheet_id is NOT backed by any station on this lab day
-    // (e.g. a station was removed mid-day after evals were recorded).
+    // Columns are derived EXCLUSIVELY from lab_stations on this lab day.
+    // Student_skill_evaluations are NEVER a column source — they only
+    // populate cell values inside existing columns, matched back to
+    // stations by skill_sheet_id in the cell-building pass below.
     //
-    // Dedup is keyed on a reverse index (sheetId -> skillName) so a
-    // resolveSkillName variance between passes can never create a
-    // duplicate column for the same skill_sheet_id. This closes the
-    // NREMT-day bug where 7 stations rendered as 13 columns because
-    // Pass 1 stored `null` sheetIds and Pass 2 then re-added columns
-    // for every evaluation.
+    // Previously this function ran a second pass that appended a new
+    // column for every evaluation whose skill_sheet_id wasn't already
+    // represented. That path produced duplicate columns with diverging
+    // display names (station.skill_name vs skill_sheet.skill_name) on
+    // NREMT day when stations' sheet_id couldn't be resolved from the
+    // station record, and it's no longer worth the edge case it solved
+    // (evals for deleted stations). If a station is removed mid-day,
+    // its evaluations will simply not render on the tracker until the
+    // station is restored — that's acceptable; the data is preserved
+    // in student_skill_evaluations either way.
     const skillToStationIds: Record<string, string[]> = {};
     const skillNameToSheetId: Record<string, string | null> = {};
-    const sheetIdToSkillName: Record<string, string> = {};
     const skillColumnOrder: string[] = [];
 
-    // Pass 1: stations define initial columns.
     for (const s of stationList) {
       const sheetId = stationSkillMap[s.id] || s.skill_sheet_id || null;
       const skillName = resolveSkillName(sheetId, s);
@@ -418,25 +419,7 @@ export async function GET(request: NextRequest) {
       } else if (!skillNameToSheetId[skillName] && sheetId) {
         skillNameToSheetId[skillName] = sheetId;
       }
-      if (sheetId && !sheetIdToSkillName[sheetId]) {
-        sheetIdToSkillName[sheetId] = skillName;
-      }
       skillToStationIds[skillName].push(s.id);
-    }
-
-    // Pass 2: evaluations whose skill_sheet_id is NOT already represented
-    // by a station column on this lab day. Matched by sheet_id via the
-    // reverse index — no string comparison on resolved names.
-    for (const evalItem of (evaluations || [])) {
-      if (!evalItem.skill_sheet_id) continue;
-      if (sheetIdToSkillName[evalItem.skill_sheet_id]) continue; // already has a column
-      const skillName = resolveSkillName(evalItem.skill_sheet_id);
-      if (!skillToStationIds[skillName]) {
-        skillToStationIds[skillName] = [];
-        skillColumnOrder.push(skillName);
-        skillNameToSheetId[skillName] = evalItem.skill_sheet_id;
-        sheetIdToSkillName[evalItem.skill_sheet_id] = skillName;
-      }
     }
 
     // Build skillColumns array for the UI
