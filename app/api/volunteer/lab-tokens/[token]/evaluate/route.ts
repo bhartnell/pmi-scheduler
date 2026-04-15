@@ -66,6 +66,29 @@ export async function POST(
       );
     }
 
+    // NREMT KILL SWITCH — same guard as the main /api/skill-sheets/[id]/evaluate
+    // route. Volunteers land here via token URL; the client page defaults to
+    // 'formative', so on NREMT days we must coerce server-side. Fails OPEN
+    // on DB error so submits still go through on network blips.
+    let effectiveEvaluationType: 'formative' | 'final_competency' = evaluation_type;
+    if (tokenData.lab_day_id) {
+      try {
+        const { data: labDayRow } = await supabase
+          .from('lab_days')
+          .select('is_nremt_testing')
+          .eq('id', tokenData.lab_day_id)
+          .single();
+        if (labDayRow?.is_nremt_testing && effectiveEvaluationType !== 'final_competency') {
+          console.warn(
+            `[volunteer evaluate guard] NREMT testing active for lab_day ${tokenData.lab_day_id} — coerced evaluation_type from '${effectiveEvaluationType}' to 'final_competency'`
+          );
+          effectiveEvaluationType = 'final_competency';
+        }
+      } catch (e) {
+        console.warn('[volunteer evaluate guard] failed to check is_nremt_testing:', e);
+      }
+    }
+
     const validResults = ['pass', 'fail', 'remediation'];
     if (!result || !validResults.includes(result)) {
       return NextResponse.json(
@@ -113,7 +136,7 @@ export async function POST(
         skill_sheet_id,
         student_id,
         lab_day_id: tokenData.lab_day_id,
-        evaluation_type,
+        evaluation_type: effectiveEvaluationType,
         result,
         evaluator_id: null,
         evaluator_type: 'volunteer',
@@ -155,7 +178,7 @@ export async function POST(
               completed_at: new Date().toISOString(),
               logged_by: null,
               lab_day_id: tokenData.lab_day_id,
-              notes: `Volunteer (${tokenData.volunteer_name}): ${sheet.skill_name} — ${evaluation_type} ${result}`,
+              notes: `Volunteer (${tokenData.volunteer_name}): ${sheet.skill_name} — ${effectiveEvaluationType} ${result}`,
             },
             { onConflict: 'student_id,station_id,lab_day_id' }
           )

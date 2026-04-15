@@ -105,6 +105,42 @@ export async function POST(
       );
     }
 
+    // NREMT KILL SWITCH — root-cause fix for the 2026-04-15 "E215 saving as
+    // formative after client-side lock" bug. Multiple client paths write to
+    // this endpoint (SkillSheetPanel, standalone /skill-sheets/[id] page,
+    // volunteer lab flow, and any future path). The client-side
+    // nremtModeLockedRef in SkillSheetPanel covers SOME of them but not all,
+    // and for at least one station on NREMT day we observed evaluations
+    // arriving as evaluation_type='formative' after the client fix deployed.
+    //
+    // Server-side we short-circuit: if the target lab day is flagged
+    // is_nremt_testing = true, any incoming 'formative' is coerced to
+    // 'final_competency' before the insert. This is belt-and-suspenders next
+    // to the client lock and the email guard in lib/email.ts.
+    //
+    // Fails OPEN on DB error (we'd rather accept the client value than 500
+    // the entire submit during a live NREMT day). Logs loudly so we can
+    // audit in Vercel logs.
+    let effectiveEvaluationType: 'formative' | 'final_competency' = evaluation_type;
+    if (lab_day_id) {
+      try {
+        const nremtSupabase = getSupabaseAdmin();
+        const { data: labDayRow } = await nremtSupabase
+          .from('lab_days')
+          .select('is_nremt_testing')
+          .eq('id', lab_day_id)
+          .single();
+        if (labDayRow?.is_nremt_testing && effectiveEvaluationType !== 'final_competency') {
+          console.warn(
+            `[evaluate guard] NREMT testing active for lab_day ${lab_day_id} — coerced evaluation_type from '${effectiveEvaluationType}' to 'final_competency'`
+          );
+          effectiveEvaluationType = 'final_competency';
+        }
+      } catch (e) {
+        console.warn('[evaluate guard] failed to check is_nremt_testing, allowing original evaluation_type:', e);
+      }
+    }
+
     // For in_progress saves, result defaults to 'pass' (provisional)
     const isInProgress = evalStatus === 'in_progress';
 
@@ -117,7 +153,7 @@ export async function POST(
     }
 
     // If final_competency and not a pass, notes (remediation plan) is required (skip for in_progress)
-    if (!isInProgress && evaluation_type === 'final_competency' && result !== 'pass' && !notes) {
+    if (!isInProgress && effectiveEvaluationType === 'final_competency' && result !== 'pass' && !notes) {
       return NextResponse.json(
         { success: false, error: 'notes (remediation plan) are required when final_competency result is not "pass"' },
         { status: 400 }
@@ -169,7 +205,7 @@ export async function POST(
     // Determine email_status: final_competency always do_not_send, in_progress always pending
     const resolvedEmailStatus = isInProgress
       ? 'pending'
-      : evaluation_type === 'final_competency'
+      : effectiveEvaluationType === 'final_competency'
         ? 'do_not_send'
         : (email_status && ['pending', 'sent', 'do_not_send', 'queued'].includes(email_status))
           ? email_status
@@ -190,7 +226,7 @@ export async function POST(
         skill_sheet_id: skillSheetId,
         student_id,
         lab_day_id: lab_day_id || null,
-        evaluation_type,
+        evaluation_type: effectiveEvaluationType,
         result: resolvedResult,
         evaluator_id: effectiveUser.id,
         notes: notes || null,
@@ -238,7 +274,7 @@ export async function POST(
             completed_at: new Date().toISOString(),
             logged_by: effectiveUser.id,
             lab_day_id: lab_day_id || null,
-            notes: `Skill sheet: ${sheet?.skill_name || 'Unknown'} — ${evaluation_type} ${result}${notes ? '. ' + notes : ''}`,
+            notes: `Skill sheet: ${sheet?.skill_name || 'Unknown'} — ${effectiveEvaluationType} ${result}${notes ? '. ' + notes : ''}`,
           }, { onConflict: 'student_id,station_id,lab_day_id' })
           .select('id')
           .single();
@@ -304,6 +340,30 @@ async function handleTeamEvaluation({
     );
   }
 
+  // NREMT KILL SWITCH (team path) — mirror the individual-path guard above.
+  // If the lab day has is_nremt_testing = true, coerce any incoming
+  // 'formative' to 'final_competency' before inserting. Fails OPEN on DB
+  // error.
+  let effectiveEvaluationType: 'formative' | 'final_competency' =
+    (evaluation_type as 'formative' | 'final_competency');
+  if (lab_day_id) {
+    try {
+      const { data: labDayRow } = await supabase
+        .from('lab_days')
+        .select('is_nremt_testing')
+        .eq('id', lab_day_id as string)
+        .single();
+      if (labDayRow?.is_nremt_testing && effectiveEvaluationType !== 'final_competency') {
+        console.warn(
+          `[evaluate guard team] NREMT testing active for lab_day ${lab_day_id} — coerced evaluation_type from '${effectiveEvaluationType}' to 'final_competency'`
+        );
+        effectiveEvaluationType = 'final_competency';
+      }
+    } catch (e) {
+      console.warn('[evaluate guard team] failed to check is_nremt_testing, allowing original evaluation_type:', e);
+    }
+  }
+
   const isInProgress = evalStatus === 'in_progress';
   const validResults = ['pass', 'fail', 'remediation'];
   if (!isInProgress && (!result || !validResults.includes(result as string))) {
@@ -338,7 +398,7 @@ async function handleTeamEvaluation({
 
   const resolvedEmailStatus = isInProgress
     ? 'pending'
-    : evaluation_type === 'final_competency'
+    : effectiveEvaluationType === 'final_competency'
       ? 'do_not_send'
       : (email_status && ['pending', 'sent', 'do_not_send', 'queued'].includes(email_status as string))
         ? email_status
@@ -371,7 +431,7 @@ async function handleTeamEvaluation({
       skill_sheet_id: skillSheetId,
       student_id: leader.student_id,
       lab_day_id: (lab_day_id as string) || null,
-      evaluation_type,
+      evaluation_type: effectiveEvaluationType,
       result: resolvedResult,
       evaluator_id: currentUser.id,
       notes: (notes as string) || null,
@@ -421,7 +481,7 @@ async function handleTeamEvaluation({
         skill_sheet_id: skillSheetId,
         student_id: assistant.student_id,
         lab_day_id: (lab_day_id as string) || null,
-        evaluation_type,
+        evaluation_type: effectiveEvaluationType,
         result: resolvedResult,
         evaluator_id: currentUser.id,
         notes: (notes as string) || null,
@@ -464,7 +524,7 @@ async function handleTeamEvaluation({
             completed_at: new Date().toISOString(),
             logged_by: currentUser.id,
             lab_day_id: (lab_day_id as string) || null,
-            notes: `Team skill sheet: ${sheet?.skill_name || 'Unknown'} — ${evaluation_type} ${result} (${member.team_role})`,
+            notes: `Team skill sheet: ${sheet?.skill_name || 'Unknown'} — ${effectiveEvaluationType} ${result} (${member.team_role})`,
           }, { onConflict: 'student_id,station_id,lab_day_id' })
           .select('id')
           .single();
