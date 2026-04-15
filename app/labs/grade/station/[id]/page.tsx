@@ -448,6 +448,16 @@ export default function GradeStationPage() {
     if (!station?.id) return;
     if (!nremtSheetCode || (nremtSheetCode !== 'E201' && nremtSheetCode !== 'E202')) return;
 
+    // Skip auto-rotate on overflow stations (added_during_exam). These are
+    // dedicated retake stations with deliberately-chosen scenarios — rotating
+    // them overwrites the coordinator's choice. Auto-rotate only applies to
+    // original stations where retakes land because no overflow exists.
+    const meta = (station.metadata ?? null) as Record<string, unknown> | null;
+    if (meta?.added_during_exam) {
+      retakeRotateRunRef.current = true;
+      return;
+    }
+
     retakeRotateRunRef.current = true;
     (async () => {
       try {

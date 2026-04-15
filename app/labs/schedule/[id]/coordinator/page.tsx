@@ -548,11 +548,20 @@ export default function CoordinatorViewPage() {
     setAssigningRetake(retakeKey);
 
     try {
-      // Find a station that has this skill sheet
-      const matchStation = stations.find(station => {
-        // We need to match station to skill sheet - use station skill_name
-        return station.skill_name?.toLowerCase().includes(failedSkill.skill_name.toLowerCase().substring(0, 15));
-      });
+      // Find a station that has this skill sheet.
+      // Match by skill_sheet_id (reliable), NOT by skill_name substring
+      // (broken — E201 and E202 share the prefix "Patient assessment and
+      // management" so substring(0,15) collides and picks the first
+      // station alphabetically, which is Medical). Prefer overflow
+      // (added_during_exam) stations for retakes so the original station's
+      // scenario isn't rotated out from under new first-attempt students.
+      const sameSkillStations = stations.filter(
+        station => station.skillSheetId === failedSkill.skill_sheet_id
+      );
+      const matchStation =
+        sameSkillStations.find(s => s.addedDuringExam) ||
+        sameSkillStations[0] ||
+        null;
 
       if (matchStation) {
         // Open grading view with retake params
