@@ -116,10 +116,19 @@ export async function DELETE(
       .update({ team_evaluation_id: null })
       .eq('team_evaluation_id', evaluationId);
 
-    const { error } = await supabase
-      .from('student_skill_evaluations')
-      .delete()
-      .eq('id', evaluationId);
+    // IMPORTANT: student_skill_evaluations has a prevent_critical_delete
+    // trigger (see migrations/archive/20260315_fk_cascade_audit_and_delete_protection.sql)
+    // that blocks any direct DELETE with P0001 unless the session var
+    // app.allow_critical_delete = 'true'. A plain supabase.delete() does
+    // NOT get past this trigger, even via the service role — it broke
+    // the "retest skill" flow mid-lab on NREMT day (2026-04-15).
+    //
+    // Use the delete_evaluation_admin(uuid) SECURITY DEFINER RPC added in
+    // 20260415_delete_evaluation_admin.sql. It sets the override flag
+    // transaction-locally and performs the delete in a single call.
+    const { error } = await supabase.rpc('delete_evaluation_admin', {
+      p_evaluation_id: evaluationId,
+    });
 
     if (error) throw error;
 
