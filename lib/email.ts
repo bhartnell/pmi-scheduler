@@ -339,13 +339,98 @@ async function logEmailSend(params: {
 }
 
 /**
+ * NREMT-day kill switch.
+ *
+ * Student-facing evaluation result emails (`skill_evaluation` and
+ * `scenario_feedback`) must NEVER be delivered on a day where any lab
+ * day is flagged `is_nremt_testing = true`. This prevents partial /
+ * formative / retake results from leaking to students mid-test while
+ * the instructor is still grading.
+ *
+ * We cache the check for 30s so a batch send doesn't hammer the DB.
+ * The cache is intentionally short — if staff toggles `is_nremt_testing`
+ * off mid-day the queue will catch up within half a minute.
+ *
+ * Routes that bypass the Resend client directly (`resend.emails.send`)
+ * are NOT covered by this guard — they must call `sendEmail` instead,
+ * or we need to add the same check at the call site. Audit with:
+ *   grep -rn "resend\\.emails\\.send" app/
+ */
+const STUDENT_EVAL_TEMPLATES: ReadonlySet<EmailTemplate> = new Set([
+  'skill_evaluation',
+  'scenario_feedback',
+]);
+let nremtLockCache: { value: boolean; fetchedAt: number } | null = null;
+const NREMT_LOCK_TTL_MS = 30_000;
+
+async function isNremtTestingActiveToday(): Promise<boolean> {
+  const now = Date.now();
+  if (nremtLockCache && now - nremtLockCache.fetchedAt < NREMT_LOCK_TTL_MS) {
+    return nremtLockCache.value;
+  }
+  try {
+    const supabase = getSupabaseAdmin();
+    // Arizona (MST, no DST) — PMI is in Tucson. Using AZ-local date so a
+    // send at 23:30 UTC (16:30 MST) still resolves to "today" correctly.
+    const azDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Phoenix',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date()); // YYYY-MM-DD
+    const { data, error } = await supabase
+      .from('lab_days')
+      .select('id')
+      .eq('is_nremt_testing', true)
+      .eq('date', azDate)
+      .limit(1);
+    if (error) {
+      console.error('[email guard] failed to check is_nremt_testing; failing CLOSED:', error);
+      // Fail-closed: if we can't confirm it's safe, block the send.
+      nremtLockCache = { value: true, fetchedAt: now };
+      return true;
+    }
+    const active = !!(data && data.length > 0);
+    nremtLockCache = { value: active, fetchedAt: now };
+    return active;
+  } catch (err) {
+    console.error('[email guard] exception checking is_nremt_testing; failing CLOSED:', err);
+    nremtLockCache = { value: true, fetchedAt: now };
+    return true;
+  }
+}
+
+/**
  * Send an email using the Resend API.
  * Uses the centralized wrapInEmailTemplate for consistent branding.
  * Logs the result to email_log for delivery tracking.
+ *
+ * NREMT-day guard: if any `lab_days` row for today has
+ * `is_nremt_testing = true`, all `skill_evaluation` and
+ * `scenario_feedback` sends are blocked and logged as 'failed'.
+ *
  * @param emailData - Email data including recipient, template, and template data
  * @returns Result object with success status, optional error message, and email ID
  */
 export async function sendEmail(emailData: EmailData): Promise<{ success: boolean; error?: string; id?: string }> {
+  // NREMT-day kill switch — runs BEFORE any Resend call, before client init.
+  // Blocks student-facing evaluation emails whenever NREMT testing is active.
+  if (STUDENT_EVAL_TEMPLATES.has(emailData.template)) {
+    const blocked = await isNremtTestingActiveToday();
+    if (blocked) {
+      const msg = 'Blocked: NREMT testing is active today. Student result emails are disabled.';
+      console.warn(`[email guard] ${msg} template=${emailData.template} to=${emailData.to}`);
+      await logEmailSend({
+        to: emailData.to,
+        subject: `[BLOCKED] ${emailData.template}`,
+        template: emailData.template,
+        status: 'failed',
+        error: msg,
+      });
+      return { success: false, error: msg };
+    }
+  }
+
   const resend = getResend();
 
   if (!resend) {
