@@ -8,38 +8,43 @@ import {
   type EvalDataForPrint,
 } from '@/lib/skillSheetPrintTemplate';
 import JSZip from 'jszip';
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
+
+// Vercel serverless functions have a 60s default timeout.
+// PDF generation for ~16 students takes ~30-45s with headless Chrome.
+// Next.js 16 uses the route segment config for timeout:
+export const maxDuration = 120;
 
 /**
  * GET /api/lab-management/lab-days/[id]/pdf-packet
  *
- * Returns a zip file containing one print-ready HTML document per student
- * who has evaluations on the given lab day. Each HTML file is identical to
- * the output of the single-student /student-pdf endpoint: PMI-branded,
- * white background, cover page with summary, full step-by-step tables,
- * page breaks between skills, and retake labels.
+ * Returns a zip file containing one real PDF per active student who has
+ * evaluations on the given lab day. Each PDF is rendered server-side via
+ * headless Chrome (@sparticuz/chromium on Vercel) from the same print
+ * template used by the single-student /student-pdf endpoint.
  *
- * Files are named per CreAM convention:
- *   NREMT_2026-04-15_LastName_FirstName.html
+ * Files are named LastName_FirstName_NREMT_YYYY-MM-DD.pdf (last name
+ * first for alphabetical sort during CreAM bulk upload).
  *
- * The HTML files are print-ready — open in a browser and File → Print → Save
- * as PDF. Each file triggers window.print() automatically.
+ * Zip file: NREMT_YYYY-MM-DD_CohortN_Results.zip
  *
- * Only includes students with status = 'active' (excludes withdrawn).
+ * Excludes withdrawn students.
  */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  let browser: Awaited<ReturnType<typeof puppeteer.launch>> | null = null;
+
   try {
     const auth = await requireAuth('instructor');
     if (auth instanceof NextResponse) return auth;
 
     const { id: labDayId } = await params;
     const supabase = getSupabaseAdmin();
-
-    // Suppress unused var lint — request is used by Next.js routing
     void request;
 
     // 1. Lab day + cohort info
@@ -58,7 +63,7 @@ export async function GET(
       );
     }
 
-    // 2. All evaluations for this lab day, grouped by student
+    // 2. All evaluations for this lab day
     const { data: evaluations, error: evalsError } = await supabase
       .from('student_skill_evaluations')
       .select(
@@ -89,7 +94,7 @@ export async function GET(
       );
     }
 
-    // 3. Group evaluations by student (exclude withdrawn students)
+    // 3. Group evaluations by student (exclude withdrawn)
     const studentMap = new Map<
       string,
       {
@@ -101,7 +106,6 @@ export async function GET(
     for (const ev of evaluations) {
       const student = ev.student as any;
       if (!student?.id) continue;
-      // Exclude withdrawn students
       if (student.status === 'withdrawn') continue;
 
       if (!studentMap.has(student.id)) {
@@ -117,7 +121,6 @@ export async function GET(
       studentMap.get(student.id)!.evals.push(ev as unknown as EvalDataForPrint);
     }
 
-    // 4. Build HTML for each student (same logic as /student-pdf endpoint)
     const dateForFilename =
       labDay.date || new Date().toISOString().split('T')[0];
     const cohort = labDay.cohort as any;
@@ -130,10 +133,13 @@ export async function GET(
         })
       : 'Unknown Date';
 
-    const zip = new JSZip();
+    // 4. Build HTML documents for each student
+    const studentHtmlDocs: Array<{
+      filename: string;
+      html: string;
+    }> = [];
 
     for (const [, { student, evals }] of studentMap) {
-      // Group by skill
       const skillGroups = new Map<string, EvalDataForPrint[]>();
       for (const ev of evals) {
         const skillName =
@@ -223,7 +229,6 @@ export async function GET(
         </div>
       `;
 
-      // Evaluation sections
       let evalSections = '';
       for (const [, skillEvals] of skillGroups) {
         const hasRetake = skillEvals.some((e) => e.is_retake);
@@ -240,27 +245,48 @@ export async function GET(
         }
       }
 
-      // Print bar + auto-print script
-      const printBar = `
-        <div class="no-print" style="max-width: 820px; margin: 0 auto 16px auto; text-align: right;">
-          <button onclick="window.print()" style="padding: 8px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">
-            Print / Save as PDF
-          </button>
-        </div>`;
-      const autoPrintScript = `<script>window.addEventListener('load', function() { setTimeout(function() { window.print(); }, 400); });</script>`;
-
-      const body = `${printBar}\n${coverSection}\n${evalSections}\n${autoPrintScript}`;
+      // No print bar or auto-print script — server-side rendering
+      const body = `${coverSection}\n${evalSections}`;
       const html = wrapPrintHtml(
         `NREMT Results — ${student.first_name} ${student.last_name}`,
         body
       );
 
-      // Add to zip with CreAM-compatible filename
-      const filename = `NREMT_${dateForFilename}_${student.last_name}_${student.first_name}.html`;
-      zip.file(filename, html);
+      // LastName_FirstName_NREMT_date.pdf — last name first for alpha sort
+      const filename = `${student.last_name}_${student.first_name}_NREMT_${dateForFilename}.pdf`;
+      studentHtmlDocs.push({ filename, html });
     }
 
-    // 5. Generate zip
+    // 5. Launch headless Chrome and render each HTML to PDF
+    console.log(`[pdf-packet] Rendering ${studentHtmlDocs.length} PDFs...`);
+
+    browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: true,
+    });
+
+    const zip = new JSZip();
+
+    for (const { filename, html } of studentHtmlDocs) {
+      const page = await browser.newPage();
+      await page.setContent(html, { waitUntil: 'networkidle0' });
+      const pdfBytes = await page.pdf({
+        format: 'letter',
+        printBackground: true,
+        margin: { top: '0.4in', bottom: '0.4in', left: '0.4in', right: '0.4in' },
+      });
+      await page.close();
+      zip.file(filename, pdfBytes);
+    }
+
+    await browser.close();
+    browser = null;
+
+    console.log(`[pdf-packet] All PDFs rendered, building zip...`);
+
+    // 6. Generate zip
     const cohortLabel = cohort
       ? `Cohort${cohort.cohort_number || ''}`
       : 'Results';
@@ -285,5 +311,14 @@ export async function GET(
       { success: false, error: 'Failed to generate PDF packet' },
       { status: 500 }
     );
+  } finally {
+    // Always close browser on error
+    if (browser) {
+      try {
+        await browser.close();
+      } catch {
+        // Ignore close errors
+      }
+    }
   }
 }
