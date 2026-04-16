@@ -24,6 +24,7 @@ import {
   TrendingDown,
   ChevronDown,
   FileDown,
+  FolderDown,
 } from 'lucide-react';
 import { downloadStudentPDF } from '@/lib/nremtExport';
 
@@ -84,6 +85,7 @@ interface LabDay {
   id: string;
   title: string;
   date: string;
+  is_nremt_testing?: boolean;
 }
 
 interface StudentHistoryEval {
@@ -136,6 +138,7 @@ export default function SkillResultsPage() {
   const [sendingAll, setSendingAll] = useState(false);
   const [sendingStudent, setSendingStudent] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [downloadingPdfs, setDownloadingPdfs] = useState(false);
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
   // Individual student tab state
@@ -166,8 +169,9 @@ export default function SkillResultsPage() {
     try {
       const res = await fetch(`/api/lab-management/lab-days/${labDayId}`);
       const data = await res.json();
-      if (data.id) {
-        setLabDay({ id: data.id, title: data.title, date: data.date });
+      const ld = data.labDay || data;
+      if (ld.id) {
+        setLabDay({ id: ld.id, title: ld.title, date: ld.date, is_nremt_testing: ld.is_nremt_testing });
       }
     } catch {
       // Lab day info is supplementary
@@ -336,6 +340,36 @@ export default function SkillResultsPage() {
     });
   };
 
+  // Download all score sheets as a zip of print-ready HTML files
+  const handleDownloadAllPdfs = async () => {
+    if (downloadingPdfs) return;
+    setDownloadingPdfs(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}/pdf-packet`);
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        setToastMessage(errData?.error || 'Failed to download score sheets');
+        return;
+      }
+      // Trigger browser download
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download =
+        res.headers.get('Content-Disposition')?.match(/filename="(.+)"/)?.[1] ||
+        `NREMT_Results.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setToastMessage('Failed to download score sheets');
+    } finally {
+      setDownloadingPdfs(false);
+    }
+  };
+
   // Toast auto-dismiss
   useEffect(() => {
     if (toastMessage) {
@@ -391,7 +425,7 @@ export default function SkillResultsPage() {
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {queuedCount > 0 && (
+            {queuedCount > 0 && !labDay?.is_nremt_testing && (
               <button
                 onClick={handleSendAllQueued}
                 disabled={sendingAll}
@@ -405,6 +439,18 @@ export default function SkillResultsPage() {
                 Send All Queued ({queuedCount})
               </button>
             )}
+            <button
+              onClick={handleDownloadAllPdfs}
+              disabled={!students.length || downloadingPdfs}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors text-sm font-medium"
+            >
+              {downloadingPdfs ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <FolderDown className="w-4 h-4" />
+              )}
+              {downloadingPdfs ? 'Packaging...' : 'Download All PDFs'}
+            </button>
             <button
               onClick={handleExportCSV}
               disabled={!students.length}
@@ -482,6 +528,7 @@ export default function SkillResultsPage() {
             labDay={labDay}
             sendingStudent={sendingStudent}
             onResendStudent={handleResendStudent}
+            isNremtTesting={labDay?.is_nremt_testing || false}
           />
         )}
 
@@ -499,6 +546,7 @@ export default function SkillResultsPage() {
             loading={loadingHistory}
             labDayId={labDayId}
             onResendDone={fetchResults}
+            isNremtTesting={labDay?.is_nremt_testing || false}
           />
         )}
 
@@ -523,6 +571,7 @@ function CohortOverviewTab({
   labDay,
   sendingStudent,
   onResendStudent,
+  isNremtTesting,
 }: {
   students: StudentResult[];
   skills: SkillInfo[];
@@ -531,6 +580,7 @@ function CohortOverviewTab({
   labDay: LabDay | null;
   sendingStudent: string | null;
   onResendStudent: (id: string) => void;
+  isNremtTesting: boolean;
 }) {
   if (!students.length || !skills.length) {
     return (
@@ -666,7 +716,7 @@ function CohortOverviewTab({
                         <FileDown className="w-3 h-3" />
                         PDF
                       </button>
-                      {hasUnsent && (
+                      {hasUnsent && !isNremtTesting && (
                         <button
                           onClick={() => onResendStudent(student.id)}
                           disabled={sendingStudent === student.id}
@@ -879,6 +929,7 @@ function IndividualStudentTab({
   loading,
   labDayId,
   onResendDone,
+  isNremtTesting,
 }: {
   students: StudentResult[];
   selectedStudentId: string;
@@ -888,6 +939,7 @@ function IndividualStudentTab({
   loading: boolean;
   labDayId: string;
   onResendDone: () => void;
+  isNremtTesting: boolean;
 }) {
   const [resendingId, setResendingId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -1064,7 +1116,7 @@ function IndividualStudentTab({
                         {ev.critical_fail_notes || ev.notes || '--'}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        {canResend && (
+                        {canResend && !isNremtTesting && (
                           <button
                             onClick={() => handleResendEval(ev.id)}
                             disabled={resendingId === ev.id}
