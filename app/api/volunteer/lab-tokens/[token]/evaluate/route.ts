@@ -111,18 +111,37 @@ export async function POST(
       );
     }
 
-    // 4. Determine attempt number
+    // 4. Determine attempt number + auto-detect retake
     let attemptNumber = 1;
+    let isRetake = false;
+    let originalEvalId: string | null = null;
     try {
       const { data: prevEvals } = await supabase
         .from('student_skill_evaluations')
-        .select('attempt_number')
+        .select('id, attempt_number, result')
         .eq('skill_sheet_id', skill_sheet_id)
         .eq('student_id', student_id)
         .order('attempt_number', { ascending: false })
         .limit(1);
       if (prevEvals && prevEvals.length > 0 && prevEvals[0].attempt_number) {
         attemptNumber = prevEvals[0].attempt_number + 1;
+      }
+      // Auto-detect retake: if a prior fail exists on the same lab day
+      if (tokenData.lab_day_id) {
+        const { data: priorFail } = await supabase
+          .from('student_skill_evaluations')
+          .select('id')
+          .eq('skill_sheet_id', skill_sheet_id)
+          .eq('student_id', student_id)
+          .eq('lab_day_id', tokenData.lab_day_id)
+          .eq('status', 'complete')
+          .eq('result', 'fail')
+          .order('created_at', { ascending: true })
+          .limit(1);
+        if (priorFail && priorFail.length > 0) {
+          isRetake = true;
+          originalEvalId = priorFail[0].id;
+        }
       }
     } catch {
       // attempt_number column may not exist
@@ -148,6 +167,8 @@ export async function POST(
         step_marks: step_marks || null,
         step_details: step_details || null,
         attempt_number: attemptNumber,
+        is_retake: isRetake,
+        original_evaluation_id: originalEvalId,
         status: 'complete',
       })
       .select('*')

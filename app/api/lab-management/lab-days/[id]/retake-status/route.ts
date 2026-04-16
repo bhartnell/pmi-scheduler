@@ -75,23 +75,31 @@ export async function GET(
     const allSkillSheetIds = new Set(Object.values(stationSkillSheetMap));
     const totalSkills = allSkillSheetIds.size;
 
-    // Get all evaluations for this lab day
+    // Get all evaluations for this lab day, ordered by creation time so we
+    // can derive first-attempt vs retake from the data itself (earliest
+    // eval per student+skill is the first attempt, any subsequent are retakes).
     const { data: evaluations, error: evalErr } = await supabase
       .from('student_skill_evaluations')
       .select(`
-        id, student_id, skill_sheet_id, result, attempt_number, is_retake, original_evaluation_id, status,
+        id, student_id, skill_sheet_id, result, attempt_number, is_retake, original_evaluation_id, status, created_at,
         student:students!student_skill_evaluations_student_id_fkey(id, first_name, last_name),
         skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name)
       `)
       .eq('lab_day_id', labDayId)
-      .eq('status', 'complete');
+      .eq('status', 'complete')
+      .order('created_at', { ascending: true });
 
     if (evalErr) {
       console.error('[retake-status] Query error:', evalErr);
       return NextResponse.json({ success: false, error: 'Failed to fetch evaluations' }, { status: 500 });
     }
 
-    // Group evaluations by student
+    // Group evaluations by student.
+    // Retake detection is DATA-DERIVED: for each student+skill, the earliest
+    // evaluation (by created_at) is the first attempt; any subsequent evals
+    // for the same skill are retakes — regardless of whether is_retake was
+    // set at submission time. This fixes the gap where "New Attempt" on the
+    // grading view bypassed the coordinator retake pathway.
     const studentEvals = new Map<string, {
       name: string;
       evals: Array<{
@@ -102,6 +110,7 @@ export async function GET(
         attempt_number: number;
         is_retake: boolean;
         original_evaluation_id: string | null;
+        created_at: string;
       }>;
     }>();
 
@@ -125,7 +134,29 @@ export async function GET(
         attempt_number: ev.attempt_number || 1,
         is_retake: ev.is_retake === true,
         original_evaluation_id: ev.original_evaluation_id || null,
+        created_at: ev.created_at,
       });
+    }
+
+    // Derive retake status from data: for each student+skill, the first
+    // eval (by created_at) is the first attempt; subsequent ones are retakes.
+    for (const [, data] of studentEvals) {
+      // Track which skill_sheet_ids we've already seen a first attempt for
+      const seenFirstAttempt = new Map<string, string>(); // skill_sheet_id → first eval id
+      // Evals are already ordered by created_at ascending from the query
+      for (const ev of data.evals) {
+        if (!seenFirstAttempt.has(ev.skill_sheet_id)) {
+          // This is the first attempt for this skill
+          seenFirstAttempt.set(ev.skill_sheet_id, ev.id);
+          ev.is_retake = false;
+        } else {
+          // Subsequent attempt = retake
+          ev.is_retake = true;
+          if (!ev.original_evaluation_id) {
+            ev.original_evaluation_id = seenFirstAttempt.get(ev.skill_sheet_id)!;
+          }
+        }
+      }
     }
 
     // Build retake status per student

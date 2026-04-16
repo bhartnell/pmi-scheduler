@@ -213,10 +213,37 @@ export async function POST(
 
     const resolvedResult = isInProgress ? (result || 'pass') : result;
 
-    // For retakes, force attempt_number to 2 and validate original_evaluation_id
-    const isRetake = is_retake === true;
-    if (isRetake) {
-      attemptNumber = 2;
+    // Auto-detect retake: if client says is_retake OR if a prior completed
+    // fail exists for the same student + skill + lab_day, this is a retake.
+    // This ensures retakes are tagged regardless of whether the submission
+    // came via the coordinator "Assign Retake" pathway or via a direct
+    // "New Attempt" on the grading view.
+    let isRetake = is_retake === true;
+    let resolvedOriginalEvalId: string | null = original_evaluation_id || null;
+
+    if (!isRetake && lab_day_id) {
+      try {
+        const { data: priorFail } = await supabase
+          .from('student_skill_evaluations')
+          .select('id, result')
+          .eq('skill_sheet_id', skillSheetId)
+          .eq('student_id', student_id)
+          .eq('lab_day_id', lab_day_id)
+          .eq('status', 'complete')
+          .eq('result', 'fail')
+          .order('created_at', { ascending: true })
+          .limit(1);
+        if (priorFail && priorFail.length > 0) {
+          isRetake = true;
+          resolvedOriginalEvalId = resolvedOriginalEvalId || priorFail[0].id;
+          console.log(
+            `[evaluate] Auto-detected retake: student ${student_id}, skill ${skillSheetId}, ` +
+            `prior fail ${priorFail[0].id} on lab_day ${lab_day_id}`
+          );
+        }
+      } catch {
+        // Non-critical — proceed with client-provided value
+      }
     }
 
     // Create the evaluation record
@@ -239,7 +266,7 @@ export async function POST(
         critical_fail: critical_fail ?? false,
         critical_fail_notes: critical_fail_notes || null,
         is_retake: isRetake,
-        original_evaluation_id: isRetake && original_evaluation_id ? original_evaluation_id : null,
+        original_evaluation_id: isRetake && resolvedOriginalEvalId ? resolvedOriginalEvalId : null,
       })
       .select('*')
       .single();
