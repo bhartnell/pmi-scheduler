@@ -33,12 +33,14 @@ import {
   FileText,
   Wand2,
   Loader2,
-  Printer
+  Printer,
+  ClipboardCheck
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import FieldTripAttendance from '@/components/FieldTripAttendance';
 import BulkPhotoUpload from '@/components/BulkPhotoUpload';
 import EmptyState from '@/components/EmptyState';
+import SkillCoveragePanel from '@/components/lab-day/SkillCoveragePanel';
 import { useToast } from '@/components/Toast';
 import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
 import type { ExportConfig } from '@/lib/export-utils';
@@ -881,6 +883,23 @@ export default function CohortHubPage() {
               total={stats?.totalStudents || 0}
             />
           </div>
+        </div>
+
+        {/* Lab Planning — skill coverage reference. Not a student tracker
+            (Platinum handles per-student competency); this answers "has
+            this cohort practiced this skill this semester, and how many
+            times?" for lab planning. Collapsed by default to keep the page
+            quick to scan; one click expands the full list. */}
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <ClipboardCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+            Lab Planning
+          </h2>
+          <SkillCoveragePanel
+            cohortId={cohortId}
+            defaultExpanded={false}
+            inline
+          />
         </div>
 
         {/* Cohort Tools Section */}
