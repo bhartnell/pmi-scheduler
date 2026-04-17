@@ -30,7 +30,8 @@ import {
   X,
   Copy,
   Check,
-  Phone
+  Phone,
+  AlertTriangle
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, hasMinRole, type Role } from '@/lib/permissions';
 import { parseDateSafe } from '@/lib/utils';
@@ -264,6 +265,26 @@ export default function InternshipDetailPage() {
       fetchData();
     }
   }, [session, internshipId]);
+
+  // Protect against losing unsaved edits on browser navigation (reload,
+  // close tab, back button, typing a new URL). Fixes the reported bug
+  // where adjustments to clearance / preceptor / shift fields were
+  // silently lost when the user navigated away without hitting Save.
+  // Note: this does NOT protect against in-app <Link> clicks; Next.js
+  // router navigations are separate. For those we rely on the sticky
+  // Save banner being visible whenever hasChanges is true.
+  useEffect(() => {
+    if (!hasChanges) return;
+    const handler = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      // Modern browsers show a generic message; the returnValue assignment
+      // is required to trigger the prompt in some older clients.
+      e.returnValue = '';
+      return '';
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [hasChanges]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -1270,6 +1291,39 @@ export default function InternshipDetailPage() {
                 {/* Shift Duration & Provisional License */}
                 {canEdit && (
                   <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                    {/* Phase and Status — direct edit. Normally these are
+                        driven by workflow actions (extension button,
+                        phase-complete), but admins may need to correct
+                        them manually (e.g. back out a wrong extension). */}
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm text-gray-700 dark:text-gray-300">Current Phase</label>
+                      <select
+                        value={formData.current_phase || 'pre_internship'}
+                        onChange={(e) => handleInputChange('current_phase', e.target.value)}
+                        className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                      >
+                        <option value="pre_internship">Pre-Internship</option>
+                        <option value="phase_1_mentorship">Phase 1 — Mentorship</option>
+                        <option value="phase_2_evaluation">Phase 2 — Evaluation</option>
+                        <option value="extended">Extended</option>
+                        <option value="completed">Completed</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm text-gray-700 dark:text-gray-300">Status</label>
+                      <select
+                        value={formData.status || 'not_started'}
+                        onChange={(e) => handleInputChange('status', e.target.value)}
+                        className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                      >
+                        <option value="not_started">Not Started</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="withdrawn">Withdrawn</option>
+                      </select>
+                    </div>
+
                     <div className="flex items-center justify-between">
                       <label className="text-sm text-gray-700 dark:text-gray-300">Shift Duration</label>
                       <select
@@ -2044,6 +2098,32 @@ export default function InternshipDetailPage() {
           />
         </div>
       </main>
+
+      {/* Floating unsaved-changes banner. The Save button in the header
+          is not sticky, so on long internship records the user loses
+          visibility of unsaved edits as they scroll. This floating bar
+          keeps the Save action accessible and makes unsaved state
+          impossible to miss — complementing the beforeunload guard. */}
+      {canEdit && hasChanges && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-white dark:bg-gray-800 border border-amber-400 dark:border-amber-600 rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
+          <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+          <span className="text-sm text-gray-700 dark:text-gray-200">
+            You have unsaved changes
+          </span>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50 text-sm font-medium"
+          >
+            {saving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            Save Changes
+          </button>
+        </div>
+      )}
 
       {/* Add Preceptor Modal */}
       {showAddPreceptorModal && (

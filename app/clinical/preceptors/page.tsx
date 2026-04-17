@@ -17,7 +17,9 @@ import {
   X,
   Check,
   Copy,
-  Building2
+  Building2,
+  AlertTriangle,
+  AlertCircle
 } from 'lucide-react';
 import { canEditClinical, isSuperadmin, type Role } from '@/lib/permissions';
 import { parseDateSafe } from '@/lib/utils';
@@ -45,7 +47,89 @@ interface Preceptor {
   max_students: number;
   is_active: boolean;
   notes: string | null;
+  credentials: string | null;
   agencies: Agency | null;
+}
+
+type CompletenessLevel = 'complete' | 'partial' | 'low';
+
+interface CompletenessResult {
+  level: CompletenessLevel;
+  score: number;
+  present: number;
+  total: number;
+  missing: string[];
+}
+
+const REQUIRED_FIELD_LABELS: Record<string, string> = {
+  email: 'Email',
+  phone: 'Phone',
+  agency: 'Agency',
+  credentials: 'Credentials',
+};
+
+function getCompleteness(p: Preceptor): CompletenessResult {
+  const isPresent = (v: unknown): boolean =>
+    v !== null && v !== undefined && String(v).trim() !== '';
+
+  const checks: Array<{ key: string; ok: boolean }> = [
+    { key: 'email', ok: isPresent(p.email) },
+    { key: 'phone', ok: isPresent(p.phone) },
+    { key: 'agency', ok: isPresent(p.agency_id) || isPresent(p.agency_name) },
+    { key: 'credentials', ok: isPresent(p.credentials) },
+  ];
+
+  const total = checks.length;
+  const present = checks.filter(c => c.ok).length;
+  const score = present / total;
+  const missing = checks.filter(c => !c.ok).map(c => REQUIRED_FIELD_LABELS[c.key]);
+
+  let level: CompletenessLevel;
+  if (score >= 1) level = 'complete';
+  else if (score >= 0.5) level = 'partial';
+  else level = 'low';
+
+  return { level, score, present, total, missing };
+}
+
+function CompletenessBadge({ completeness }: { completeness: CompletenessResult }) {
+  if (completeness.level === 'complete') {
+    return (
+      <span
+        className="inline-flex items-center text-green-600 dark:text-green-400"
+        aria-label="All required fields complete"
+        title="All required fields complete"
+      >
+        <Check className="w-3.5 h-3.5" />
+      </span>
+    );
+  }
+
+  const missingLabel = `Incomplete. Missing: ${completeness.missing.join(', ')}`;
+
+  if (completeness.level === 'partial') {
+    return (
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+        aria-label={missingLabel}
+        title={missingLabel}
+      >
+        <AlertTriangle className="w-3 h-3" />
+        Incomplete
+      </span>
+    );
+  }
+
+  return (
+    <span
+      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300"
+      aria-label={missingLabel}
+      title={missingLabel}
+    >
+      <AlertCircle className="w-3 h-3" />
+      Incomplete
+    </span>
+  );
 }
 
 export default function PreceptorsPage() {
@@ -61,6 +145,7 @@ export default function PreceptorsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterAgency, setFilterAgency] = useState('');
   const [showInactive, setShowInactive] = useState(false);
+  const [showOnlyIncomplete, setShowOnlyIncomplete] = useState(false);
 
   // Modal state
   const [showModal, setShowModal] = useState(false);
@@ -174,7 +259,9 @@ export default function PreceptorsPage() {
         p.agency_name === filterAgencyObj.abbreviation
       ));
 
-    return matchesSearch && matchesAgency;
+    const matchesCompleteness = !showOnlyIncomplete || getCompleteness(p).level !== 'complete';
+
+    return matchesSearch && matchesAgency && matchesCompleteness;
   });
 
   const openAddModal = () => {
@@ -383,6 +470,17 @@ export default function PreceptorsPage() {
               />
               Show inactive
             </label>
+
+            {/* Show Only Incomplete */}
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+              <input
+                type="checkbox"
+                checked={showOnlyIncomplete}
+                onChange={(e) => setShowOnlyIncomplete(e.target.checked)}
+                className="rounded border-gray-300 dark:border-gray-600"
+              />
+              Show only incomplete records
+            </label>
           </div>
         </div>
 
@@ -449,8 +547,11 @@ export default function PreceptorsPage() {
                       className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 ${!preceptor.is_active ? 'opacity-50' : ''}`}
                     >
                       <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {preceptor.first_name} {preceptor.last_name}
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {preceptor.first_name} {preceptor.last_name}
+                          </span>
+                          <CompletenessBadge completeness={getCompleteness(preceptor)} />
                         </div>
                         {!preceptor.is_active && (
                           <span className="text-xs text-red-500">Inactive</span>
@@ -550,9 +651,25 @@ export default function PreceptorsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-4 border-b dark:border-gray-700 flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {editingPreceptor ? 'Edit Preceptor' : 'Add Preceptor'}
-              </h3>
+              <div className="flex items-center gap-3">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {editingPreceptor
+                    ? `Edit Preceptor${formData.first_name || formData.last_name ? `: ${formData.first_name} ${formData.last_name}`.trim() : ''}`
+                    : 'Add Preceptor'}
+                </h3>
+                {editingPreceptor && (
+                  <CompletenessBadge
+                    completeness={getCompleteness({
+                      ...editingPreceptor,
+                      email: formData.email || null,
+                      phone: formData.phone || null,
+                      agency_id: formData.agency_id || null,
+                      agency_name: editingPreceptor.agency_name,
+                      credentials: editingPreceptor.credentials,
+                    })}
+                  />
+                )}
+              </div>
               <button
                 onClick={() => setShowModal(false)}
                 className="p-1 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
