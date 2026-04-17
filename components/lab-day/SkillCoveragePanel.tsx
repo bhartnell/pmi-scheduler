@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   Loader2,
   Search,
+  ArrowUpDown,
+  Download,
 } from 'lucide-react';
 
 /**
@@ -26,6 +28,8 @@ import {
  */
 
 type CoverageStatus = 'multiple' | 'once' | 'not_yet';
+type SortKey = 'name' | 'count' | 'last_run';
+type SortDir = 'asc' | 'desc';
 
 interface SkillRow {
   skill_id: string;
@@ -107,6 +111,10 @@ export default function SkillCoveragePanel({
   const [expanded, setExpanded] = useState(defaultExpanded);
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
+  // Sort state. Default 'name asc' matches the API's default ordering
+  // (display_order, then name), so the initial render doesn't reshuffle.
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
 
   const fetchCoverage = useCallback(async () => {
     if (!cohortId) {
@@ -143,12 +151,92 @@ export default function SkillCoveragePanel({
   const filteredSkills = useMemo(() => {
     if (!data?.skills) return [];
     const q = search.trim().toLowerCase();
-    return data.skills.filter((s) => {
+    const filtered = data.skills.filter((s) => {
       if (filter !== 'all' && s.status !== filter) return false;
       if (q && !s.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [data, filter, search]);
+    // Sort on a copy — the source array is memoized from the API response.
+    // For name: simple locale compare. For count: numeric. For last_run:
+    // ISO date string compare (safe because YYYY-MM-DD sorts correctly).
+    // Nulls go to the end on asc, start on desc for last_run/count.
+    const sorted = [...filtered].sort((a, b) => {
+      const dir = sortDir === 'asc' ? 1 : -1;
+      if (sortKey === 'name') {
+        return a.name.localeCompare(b.name) * dir;
+      }
+      if (sortKey === 'count') {
+        return (a.lab_day_count - b.lab_day_count) * dir;
+      }
+      // last_run: nulls always at bottom regardless of dir
+      const aNull = !a.last_run_date;
+      const bNull = !b.last_run_date;
+      if (aNull && bNull) return 0;
+      if (aNull) return 1;
+      if (bNull) return -1;
+      return a.last_run_date!.localeCompare(b.last_run_date!) * dir;
+    });
+    return sorted;
+  }, [data, filter, search, sortKey, sortDir]);
+
+  // Export currently-filtered rows (respects search + status filter) as CSV.
+  // Filename includes cohort number + semester so downloaded files are
+  // self-identifying when multiple are saved for comparison.
+  const handleExportCsv = useCallback(() => {
+    if (!data?.skills) return;
+    const cohortLabel = data.cohort?.cohort_number
+      ? `Cohort${String(data.cohort.cohort_number).replace(/\.0$/, '')}`
+      : 'Cohort';
+    const semLabel =
+      data.semester != null ? `Semester${data.semester}` : 'AllSemesters';
+    const today = new Date().toISOString().split('T')[0];
+    const filename = `SkillCoverage_${cohortLabel}_${semLabel}_${today}.csv`;
+
+    const escape = (v: string | number | null | undefined): string => {
+      if (v == null) return '';
+      const s = String(v);
+      // Quote any cell containing a comma, quote, or newline, per RFC 4180.
+      if (/[",\n\r]/.test(s)) return `"${s.replace(/"/g, '""')}"`;
+      return s;
+    };
+    const header = [
+      'Skill',
+      'Category',
+      'Lab Days',
+      'Last Run',
+      'Status',
+      'In Program',
+    ];
+    const statusLabel: Record<CoverageStatus, string> = {
+      multiple: 'Done multiple times',
+      once: 'Done once',
+      not_yet: 'Not yet',
+    };
+    const lines = [header.map(escape).join(',')];
+    for (const s of filteredSkills) {
+      lines.push(
+        [
+          escape(s.name),
+          escape(s.category || ''),
+          escape(s.lab_day_count),
+          escape(s.last_run_date || ''),
+          escape(statusLabel[s.status]),
+          escape(s.in_program ? 'yes' : 'no'),
+        ].join(',')
+      );
+    }
+    const blob = new Blob([lines.join('\n')], {
+      type: 'text/csv;charset=utf-8;',
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }, [data, filteredSkills]);
 
   const counts = useMemo(() => {
     const c = { multiple: 0, once: 0, not_yet: 0, total: 0 };
@@ -275,6 +363,44 @@ export default function SkillCoveragePanel({
                       );
                     }
                   )}
+                </div>
+                {/* Sort + CSV export row. Sort dropdown + direction toggle
+                    is more compact than column headers in this narrow panel. */}
+                <div className="flex items-center gap-2 pt-1">
+                  <ArrowUpDown className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                  <select
+                    value={sortKey}
+                    onChange={(e) => setSortKey(e.target.value as SortKey)}
+                    className="flex-1 min-w-0 px-1.5 py-0.5 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200"
+                    aria-label="Sort by"
+                  >
+                    <option value="name">Name</option>
+                    <option value="last_run">Last practiced</option>
+                    <option value="count">Times practiced</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+                    }
+                    className="px-1.5 py-0.5 text-xs font-medium rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                    aria-label={
+                      sortDir === 'asc' ? 'Ascending' : 'Descending'
+                    }
+                    title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
+                  >
+                    {sortDir === 'asc' ? '↑' : '↓'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleExportCsv}
+                    disabled={!data?.skills?.length}
+                    className="inline-flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Download as CSV"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span className="hidden sm:inline">CSV</span>
+                  </button>
                 </div>
               </div>
 
