@@ -35,7 +35,8 @@ import {
   Loader2,
   Printer,
   ClipboardCheck,
-  BookOpen
+  BookOpen,
+  Target
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import FieldTripAttendance from '@/components/FieldTripAttendance';
@@ -896,13 +897,23 @@ export default function CohortHubPage() {
               <ClipboardCheck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
               Lab Planning
             </h2>
-            <Link
-              href={`/academics/cohorts/${cohortId}/skill-log`}
-              className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <BookOpen className="w-4 h-4" />
-              Full Semester Log
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/academics/cohorts/${cohortId}/smc`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                title="Student Minimum Competency — the required skills for this program + semester"
+              >
+                <Target className="w-4 h-4" />
+                SMC Coverage
+              </Link>
+              <Link
+                href={`/academics/cohorts/${cohortId}/skill-log`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
+              >
+                <BookOpen className="w-4 h-4" />
+                Semester Log
+              </Link>
+            </div>
           </div>
           <SkillCoveragePanel
             cohortId={cohortId}
