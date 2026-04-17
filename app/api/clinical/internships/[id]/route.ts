@@ -139,6 +139,10 @@ export async function PUT(
     if (body.status !== undefined) updateData.status = body.status;
     if (body.notes !== undefined) updateData.notes = body.notes?.trim() || null;
 
+    // Provisional license
+    if (body.provisional_license_obtained !== undefined) updateData.provisional_license_obtained = body.provisional_license_obtained;
+    if (body.provisional_license_date !== undefined) updateData.provisional_license_date = body.provisional_license_date || null;
+
     // Dates
     if (body.placement_date !== undefined) updateData.placement_date = body.placement_date || null;
     if (body.orientation_date !== undefined) updateData.orientation_date = body.orientation_date || null;

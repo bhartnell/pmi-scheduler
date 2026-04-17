@@ -2,12 +2,57 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 
+/**
+ * Field trips API.
+ *
+ * Schema note: the `field_trips` table in production uses different
+ * column names than the client payload. Column mapping:
+ *   client `name`        → db `title`        (NOT NULL)
+ *   client `location`    → db `destination`
+ *   client `description` → db `notes`
+ *   `created_by`         — db uuid (lab_users.id), NOT email
+ *
+ * This route translates in both directions so the client can keep using
+ * friendly names without a schema migration.
+ */
+
+type DbFieldTrip = {
+  id: string;
+  cohort_id: string;
+  title: string;
+  destination: string | null;
+  trip_date: string;
+  departure_time: string | null;
+  return_time: string | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  is_active: boolean | null;
+};
+
+function dbToClient(row: DbFieldTrip) {
+  return {
+    id: row.id,
+    cohort_id: row.cohort_id,
+    name: row.title,
+    trip_date: row.trip_date,
+    location: row.destination,
+    description: row.notes,
+    departure_time: row.departure_time,
+    return_time: row.return_time,
+    created_by: row.created_by,
+    created_at: row.created_at,
+    updated_at: row.updated_at,
+    is_active: row.is_active,
+  };
+}
+
 // GET - List field trips for a cohort
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth('instructor');
     if (auth instanceof NextResponse) return auth;
-    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
 
@@ -18,10 +63,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'cohortId is required' }, { status: 400 });
     }
 
-    let fieldTrips = null;
-    let error = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let fieldTrips: any[] | null = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let error: any = null;
 
-    // Try with is_active filter first
     const result = await supabase
       .from('field_trips')
       .select('*')
@@ -33,7 +79,7 @@ export async function GET(request: NextRequest) {
     error = result.error;
 
     // If is_active column doesn't exist, retry without filter
-    if (error && ((error as Error).message?.includes('is_active') || (error as any).code === '42703')) {
+    if (error && ((error as Error).message?.includes('is_active') || error?.code === '42703')) {
       console.warn('field_trips: is_active column not found, querying without filter');
       const fallback = await supabase
         .from('field_trips')
@@ -46,13 +92,14 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       // Table might not exist yet
-      if ((error as any).code === '42P01') {
+      if (error?.code === '42P01') {
         return NextResponse.json({ success: true, fieldTrips: [] });
       }
       throw error;
     }
 
-    return NextResponse.json({ success: true, fieldTrips: fieldTrips || [] });
+    const mapped = (fieldTrips || []).map((r) => dbToClient(r as DbFieldTrip));
+    return NextResponse.json({ success: true, fieldTrips: mapped });
   } catch (error) {
     console.error('Error fetching field trips:', error);
     return NextResponse.json(
@@ -67,7 +114,7 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await requireAuth('instructor');
     if (auth instanceof NextResponse) return auth;
-    const { user, session } = auth;
+    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
     const body = await request.json();
@@ -80,22 +127,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Translate client payload to DB schema. created_by must be a uuid
+    // (lab_users.id), NOT an email — using session.user.email here was the
+    // original 500 cause on 2026-04-17.
     const { data: fieldTrip, error } = await supabase
       .from('field_trips')
       .insert({
         cohort_id,
-        name,
+        title: name,
         trip_date,
-        location: location || null,
-        description: description || null,
-        created_by: session.user.email,
+        destination: location || null,
+        notes: description || null,
+        created_by: user.id,
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, fieldTrip });
+    return NextResponse.json({
+      success: true,
+      fieldTrip: fieldTrip ? dbToClient(fieldTrip as DbFieldTrip) : null,
+    });
   } catch (error) {
     console.error('Error creating field trip:', error);
     return NextResponse.json(
@@ -110,7 +163,6 @@ export async function DELETE(request: NextRequest) {
   try {
     const auth = await requireAuth('instructor');
     if (auth instanceof NextResponse) return auth;
-    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
 

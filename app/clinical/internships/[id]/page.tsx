@@ -47,6 +47,8 @@ interface Internship {
   agency_id: string | null;
   agency_name: string | null;
   shift_type: string;
+  provisional_license_obtained: boolean;
+  provisional_license_date: string | null;
   placement_date: string | null;
   orientation_date: string | null;
   orientation_completed: boolean;
@@ -299,6 +301,8 @@ export default function InternshipDetailPage() {
           preceptor_id: i.preceptor_id || '',
           agency_id: i.agency_id || '',
           shift_type: i.shift_type || '12_hour',
+          provisional_license_obtained: i.provisional_license_obtained || false,
+          provisional_license_date: i.provisional_license_date || '',
           current_phase: i.current_phase || 'pre_internship',
           status: i.status || 'not_started',
           placement_date: i.placement_date || '',
@@ -408,6 +412,7 @@ export default function InternshipDetailPage() {
     'psychomotor_exam_date', 'course_completion_date',
     'phase_1_meeting_scheduled', 'phase_2_meeting_scheduled', 'final_exam_scheduled',
     'extension_date', 'original_expected_end_date', 'extension_eval_date',
+    'provisional_license_date',
   ];
 
   const handleSave = async () => {
@@ -1261,6 +1266,48 @@ export default function InternshipDetailPage() {
                 {PLACEMENT_ITEMS.map(item => (
                   <ChecklistRow key={item.key} item={item} section="placement" />
                 ))}
+
+                {/* Shift Duration & Provisional License */}
+                {canEdit && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm text-gray-700 dark:text-gray-300">Shift Duration</label>
+                      <select
+                        value={formData.shift_type || '12_hour'}
+                        onChange={(e) => handleInputChange('shift_type', e.target.value)}
+                        className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                      >
+                        <option value="12_hour">12 hour</option>
+                        <option value="14_hour">14 hour</option>
+                        <option value="24_hour">24 hour</option>
+                      </select>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        <input
+                          type="checkbox"
+                          checked={!!formData.provisional_license_obtained}
+                          onChange={(e) => {
+                            handleInputChange('provisional_license_obtained', e.target.checked);
+                            if (!e.target.checked) {
+                              handleInputChange('provisional_license_date', '');
+                            }
+                          }}
+                          className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                        />
+                        Provisional license obtained
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.provisional_license_date || ''}
+                        disabled={!formData.provisional_license_obtained}
+                        onChange={(e) => handleInputChange('provisional_license_date', e.target.value)}
+                        className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
