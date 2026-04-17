@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import AutoSaveIndicator from '@/components/AutoSaveIndicator';
 import HelpTooltip from '@/components/HelpTooltip';
+import SkillCoveragePanel from '@/components/lab-day/SkillCoveragePanel';
 import {
   ChevronRight,
   Plus,
@@ -2589,7 +2590,32 @@ function NewLabDayPageContent() {
             )}
           </button>
         </div>
+
+        {/* Skill Coverage — inline on small/medium screens. Lab-planning
+            reference (skills + scenarios the cohort has practiced this
+            semester). Not a student tracker — replaces the manual Google
+            Doc the user was maintaining. */}
+        <div className="xl:hidden">
+          <SkillCoveragePanel
+            cohortId={selectedCohort || null}
+            semester={semester ? parseInt(semester, 10) : null}
+            defaultExpanded={false}
+            inline
+          />
+        </div>
       </main>
+
+      {/* Skill Coverage — floating right-side reference on xl+ screens. */}
+      <aside
+        className="hidden xl:block fixed right-4 top-24 w-80 z-20"
+        aria-label="Skill coverage reference"
+      >
+        <SkillCoveragePanel
+          cohortId={selectedCohort || null}
+          semester={semester ? parseInt(semester, 10) : null}
+          defaultExpanded={true}
+        />
+      </aside>
 
       {/* Load Template Confirmation Modal */}
       {showLoadConfirm && (

@@ -150,11 +150,20 @@ export async function GET(
     // Skill → most recent lab day date it appeared on
     const skillLastDate = new Map<string, string>();
 
+    // Scenario → Set of lab_day_ids that used it. Keyed by scenario_id
+    // (from the scenarios table) when present. Scenarios were added
+    // 2026-05 after the user requested tracking the scenario library
+    // alongside skills — lab_stations.scenario_id is the canonical link.
+    const scenarioLabDays = new Map<string, Set<string>>();
+    const scenarioLastDate = new Map<string, string>();
+    const scenarioIdsSeen = new Set<string>();
+
     if (labDayIds.length > 0) {
-      // Fetch all lab_stations for these lab_days (limit unlikely but safe)
+      // Fetch lab_stations with scenario_id so we can aggregate scenarios
+      // in the same pass.
       const { data: stations, error: stationsError } = await supabase
         .from('lab_stations')
-        .select('id, lab_day_id')
+        .select('id, lab_day_id, scenario_id')
         .in('lab_day_id', labDayIds);
 
       if (stationsError) {
@@ -163,6 +172,20 @@ export async function GET(
         const stationIdToLabDay = new Map<string, string>();
         for (const st of stations) {
           stationIdToLabDay.set(st.id, st.lab_day_id);
+
+          // Aggregate scenarios directly from lab_stations.scenario_id
+          if (st.scenario_id) {
+            scenarioIdsSeen.add(st.scenario_id);
+            if (!scenarioLabDays.has(st.scenario_id)) {
+              scenarioLabDays.set(st.scenario_id, new Set());
+            }
+            scenarioLabDays.get(st.scenario_id)!.add(st.lab_day_id);
+            const date = labDayDateMap.get(st.lab_day_id);
+            if (date) {
+              const prev = scenarioLastDate.get(st.scenario_id);
+              if (!prev || date > prev) scenarioLastDate.set(st.scenario_id, date);
+            }
+          }
         }
 
         // Get all station_skills entries for these stations
@@ -191,6 +214,19 @@ export async function GET(
       }
     }
 
+    // Load scenario records for any scenario_ids we saw on stations.
+    // Only includes scenarios actually run (no "not yet" scenarios — the
+    // scenarios library is too broad to show every untouched one).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let scenariosRun: any[] = [];
+    if (scenarioIdsSeen.size > 0) {
+      const { data } = await supabase
+        .from('scenarios')
+        .select('id, title, category')
+        .in('id', Array.from(scenarioIdsSeen));
+      scenariosRun = data || [];
+    }
+
     // 4. Assemble the response. Include every relevant skill (even not-yet
     //    ones) so the UI can show "not yet" chips. Also include skills that
     //    were run but aren't in the relevant list (e.g., cross-program),
@@ -217,9 +253,10 @@ export async function GET(
       last_run_date: string | null;
       status: 'multiple' | 'once' | 'not_yet';
       in_program: boolean;
+      kind: 'skill' | 'scenario';
     };
 
-    const buildRow = (skill: any, inProgram: boolean): Row => {
+    const buildSkillRow = (skill: any, inProgram: boolean): Row => {
       const count = skillLabDays.get(skill.id)?.size || 0;
       const status: Row['status'] =
         count >= 2 ? 'multiple' : count === 1 ? 'once' : 'not_yet';
@@ -231,12 +268,30 @@ export async function GET(
         last_run_date: skillLastDate.get(skill.id) || null,
         status,
         in_program: inProgram,
+        kind: 'skill',
+      };
+    };
+
+    const buildScenarioRow = (scenario: any): Row => {
+      const count = scenarioLabDays.get(scenario.id)?.size || 0;
+      const status: Row['status'] =
+        count >= 2 ? 'multiple' : count === 1 ? 'once' : 'not_yet';
+      return {
+        skill_id: scenario.id, // shared field name for frontend convenience
+        name: scenario.title,
+        category: scenario.category,
+        lab_day_count: count,
+        last_run_date: scenarioLastDate.get(scenario.id) || null,
+        status,
+        in_program: true, // scenarios always "in program"
+        kind: 'scenario',
       };
     };
 
     const rows: Row[] = [
-      ...relevantSkills.map((s) => buildRow(s, true)),
-      ...extraSkills.map((s) => buildRow(s, false)),
+      ...relevantSkills.map((s) => buildSkillRow(s, true)),
+      ...extraSkills.map((s) => buildSkillRow(s, false)),
+      ...scenariosRun.map(buildScenarioRow),
     ];
 
     return NextResponse.json({

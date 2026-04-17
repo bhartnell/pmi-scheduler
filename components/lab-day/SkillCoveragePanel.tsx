@@ -39,6 +39,9 @@ interface SkillRow {
   last_run_date: string | null;
   status: CoverageStatus;
   in_program: boolean;
+  /** 'skill' (from skills table) or 'scenario' (from scenarios table).
+      Added 2026-05 so the panel shows both in one unified list. */
+  kind?: 'skill' | 'scenario';
 }
 
 interface CoverageResponse {
@@ -439,7 +442,15 @@ export default function SkillCoveragePanel({
                         <div className="flex-1 min-w-0">
                           <div className="text-sm text-gray-900 dark:text-white truncate">
                             {s.name}
-                            {!s.in_program && (
+                            {s.kind === 'scenario' && (
+                              <span
+                                className="ml-2 text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
+                                title="Scenario (from scenarios library)"
+                              >
+                                scenario
+                              </span>
+                            )}
+                            {!s.in_program && s.kind !== 'scenario' && (
                               <span
                                 className="ml-2 text-[10px] uppercase font-semibold text-gray-500 dark:text-gray-400"
                                 title="Not on the program list — ran anyway"
