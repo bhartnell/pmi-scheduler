@@ -39,7 +39,7 @@ import {
   Target
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
-import FieldTripAttendance from '@/components/FieldTripAttendance';
+import ChecklistAttendance from '@/components/ChecklistAttendance';
 import BulkPhotoUpload from '@/components/BulkPhotoUpload';
 import EmptyState from '@/components/EmptyState';
 import SkillCoveragePanel from '@/components/lab-day/SkillCoveragePanel';
@@ -1033,9 +1033,10 @@ export default function CohortHubPage() {
           </div>
         )}
 
-        {/* Field Trip Attendance */}
+        {/* Checklists — general-purpose cohort checklists (renamed from
+            Field Trips 2026-04-18, see migration/component). */}
         {students.length > 0 && (
-          <FieldTripAttendance cohortId={cohortId} students={students} />
+          <ChecklistAttendance cohortId={cohortId} students={students} />
         )}
 
         {/* Student List */}

@@ -82,7 +82,7 @@ Standalone components used across multiple pages:
 - **EmailSettingsPanel** - Email notification preferences UI
 - **ExportDropdown** - Multi-format export menu (Excel, PDF, Print)
 - **FeedbackButton** - Floating feedback submission button
-- **FieldTripAttendance** - Field trip attendance tracking
+- **ChecklistAttendance** - General-purpose cohort checklist + attendance tracking (renamed from FieldTripAttendance 2026-04-18)
 - **GlobalTimerBanner** - System-wide lab timer banner
 - **LabHeader** - Standard header for lab management pages
 - **LabTimer** - Lab timer control component
