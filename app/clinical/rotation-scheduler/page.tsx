@@ -236,7 +236,8 @@ export default function RotationSchedulerPage() {
       return;
     }
     try {
-      const res = await fetch(`/api/lab-management/students?cohortId=${cohortId}&limit=100`);
+      // status=active excludes withdrawn students (status != 'withdrawn')
+      const res = await fetch(`/api/lab-management/students?cohortId=${cohortId}&status=active&limit=100`);
       const data = await res.json();
       if (data.students) {
         setStudents(data.students);

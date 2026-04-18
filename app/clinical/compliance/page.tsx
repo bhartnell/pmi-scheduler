@@ -115,7 +115,8 @@ export default function ComplianceTrackerPage() {
   const fetchCohortData = async () => {
     try {
       const [studentsRes, docsRes] = await Promise.all([
-        fetch(`/api/lab-management/students?cohortId=${selectedCohort}`),
+        // status=active excludes withdrawn students (status != 'withdrawn')
+        fetch(`/api/lab-management/students?cohortId=${selectedCohort}&status=active`),
         fetch(`/api/clinical/compliance?cohortId=${selectedCohort}`),
       ]);
 

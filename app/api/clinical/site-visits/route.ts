@@ -31,6 +31,10 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '100');
     const offset = parseInt(searchParams.get('offset') || '0');
 
+    // student.status is pulled into the embed so withdrawn students can
+    // be stripped from the returned list (post-fetch because filtering
+    // through a junction-table embed is awkward in PostgREST).
+    // excludes withdrawn students (status != 'withdrawn')
     let query = supabase
       .from('clinical_site_visits')
       .select(`
@@ -40,7 +44,7 @@ export async function GET(request: NextRequest) {
         cohort:cohorts(id, cohort_number, program:programs(id, name, abbreviation)),
         visitor:lab_users(id, name, email),
         students:clinical_visit_students(
-          student:students(id, first_name, last_name)
+          student:students(id, first_name, last_name, status)
         )
       `, { count: 'exact' })
       .order('visit_date', { ascending: false })
@@ -72,9 +76,23 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
+    // Strip withdrawn students from each visit's student list post-fetch.
+    // See comment above — the junction-table embed can't be filtered
+    // server-side via PostgREST without a view.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const visits = (data || []).map((v: any) => ({
+      ...v,
+      students: Array.isArray(v.students)
+        ? v.students.filter(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (s: any) => s?.student?.status !== 'withdrawn'
+          )
+        : v.students,
+    }));
+
     return NextResponse.json({
       success: true,
-      visits: data,
+      visits,
       total: count,
       limit,
       offset

@@ -18,7 +18,10 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');
 
-    // Build base query joining student and site info
+    // Build base query joining student and site info.
+    // !inner + .neq on student.status excludes withdrawn students
+    // (status != 'withdrawn') so off-program students don't appear
+    // on rotation schedules. Same pattern used elsewhere in /api/clinical.
     let query = supabase
       .from('clinical_rotations')
       .select(`
@@ -32,9 +35,10 @@ export async function GET(request: NextRequest) {
         assigned_by,
         created_at,
         updated_at,
-        student:students(id, first_name, last_name, cohort_id),
+        student:students!inner(id, first_name, last_name, cohort_id, status),
         site:clinical_sites(id, name, abbreviation, system, max_students_per_day)
       `)
+      .neq('student.status', 'withdrawn')
       .order('rotation_date', { ascending: true })
       .order('student_id', { ascending: true });
 

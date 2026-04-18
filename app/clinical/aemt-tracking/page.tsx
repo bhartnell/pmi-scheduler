@@ -122,7 +122,8 @@ export default function AEMTTrackingPage() {
   const fetchCohortData = async () => {
     try {
       const [studentsRes, trackingRes] = await Promise.all([
-        fetch(`/api/lab-management/students?cohortId=${selectedCohort}`),
+        // status=active excludes withdrawn students (status != 'withdrawn')
+        fetch(`/api/lab-management/students?cohortId=${selectedCohort}&status=active`),
         fetch(`/api/clinical/aemt-tracking?cohortId=${selectedCohort}`),
       ]);
 

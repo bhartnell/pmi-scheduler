@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
         scores:summative_evaluation_scores(
           id,
           student_id,
-          student:students(id, first_name, last_name),
+          student:students(id, first_name, last_name, status),
           leadership_scene_score,
           patient_assessment_score,
           patient_management_score,
@@ -82,7 +82,21 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, evaluations: data });
+    // Strip withdrawn students from each evaluation's scores list
+    // (status != 'withdrawn'). Post-fetch because PostgREST can't filter
+    // through the scores -> student join cleanly.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const evaluations = (data || []).map((ev: any) => ({
+      ...ev,
+      scores: Array.isArray(ev.scores)
+        ? ev.scores.filter(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (s: any) => s?.student?.status !== 'withdrawn'
+          )
+        : ev.scores,
+    }));
+
+    return NextResponse.json({ success: true, evaluations });
   } catch (error) {
     console.error('Error fetching summative evaluations:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch evaluations' }, { status: 500 });

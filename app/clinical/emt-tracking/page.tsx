@@ -116,7 +116,8 @@ export default function EMTTrackingPage() {
   const fetchCohortData = async () => {
     try {
       const [studentsRes, trackingRes] = await Promise.all([
-        fetch(`/api/lab-management/students?cohortId=${selectedCohort}`),
+        // status=active excludes withdrawn students (status != 'withdrawn')
+        fetch(`/api/lab-management/students?cohortId=${selectedCohort}&status=active`),
         fetch(`/api/clinical/emt-tracking?cohortId=${selectedCohort}`),
       ]);
 

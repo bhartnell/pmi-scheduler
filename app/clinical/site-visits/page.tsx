@@ -278,7 +278,8 @@ export default function SiteVisitsPage() {
   const fetchCohortStudents = async (cohortId: string) => {
     setLoadingStudents(true);
     try {
-      const res = await fetch(`/api/lab-management/students?cohortId=${cohortId}`);
+      // status=active excludes withdrawn students (status != 'withdrawn')
+      const res = await fetch(`/api/lab-management/students?cohortId=${cohortId}&status=active`);
       const data = await res.json();
       if (data.success) {
         setCohortStudents(data.students || []);

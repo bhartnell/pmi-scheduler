@@ -29,11 +29,16 @@ export async function GET(request: NextRequest) {
     const phase = searchParams.get('phase');
     const agencyId = searchParams.get('agencyId');
 
+    // !inner turns the embed into an inner join so .neq on students.status
+    // filters the internships list, not just the embedded student object.
+    // Without !inner the filter silently no-ops and withdrawn students
+    // (Mccracken, Salazar Salgado) leak back onto /clinical/internships.
+    // excludes withdrawn students (status != 'withdrawn')
     let query = supabase
       .from('student_internships')
       .select(`
         *,
-        students (
+        students!inner (
           id,
           first_name,
           last_name,
@@ -64,6 +69,7 @@ export async function GET(request: NextRequest) {
           abbreviation
         )
       `)
+      .neq('students.status', 'withdrawn')
       .order('created_at', { ascending: false });
 
     if (cohortId) {

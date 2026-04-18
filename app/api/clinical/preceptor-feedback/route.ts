@@ -30,16 +30,22 @@ export async function GET(request: NextRequest) {
     const internshipId = searchParams.get('internship_id');
     const flaggedOnly = searchParams.get('flagged') === 'true';
 
+    // excludes withdrawn students (status != 'withdrawn') so feedback
+    // for off-program students doesn't appear on the unfiltered list.
+    // When a specific student_id is passed the filter is redundant but
+    // harmless; it matters for the instructor-facing dashboard view.
     let query = supabase
       .from('preceptor_feedback')
       .select(`
         *,
-        students (
+        students!inner (
           id,
           first_name,
-          last_name
+          last_name,
+          status
         )
       `)
+      .neq('students.status', 'withdrawn')
       .order('shift_date', { ascending: false });
 
     if (studentId) {

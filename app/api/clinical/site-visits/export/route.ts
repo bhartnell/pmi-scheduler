@@ -19,6 +19,8 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
 
+    // excludes withdrawn students (status != 'withdrawn') — same post-fetch
+    // strip as /site-visits route, see comment there.
     let query = supabase
       .from('clinical_site_visits')
       .select(`
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
         cohort:cohorts(id, cohort_number, program:programs(id, name, abbreviation)),
         visitor:lab_users(id, name, email),
         students:clinical_visit_students(
-          student:students(id, first_name, last_name)
+          student:students(id, first_name, last_name, status)
         )
       `)
       .order('visit_date', { ascending: false })
@@ -63,9 +65,17 @@ export async function GET(request: NextRequest) {
     ];
 
     visits?.forEach((visit) => {
+      // Strip withdrawn students from the export list so archived rows
+      // don't accidentally reappear on spreadsheets shared outside.
+      const activeStudents = Array.isArray(visit.students)
+        ? visit.students.filter(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (s: any) => s?.student?.status !== 'withdrawn'
+          )
+        : [];
       const studentNames = visit.entire_class
         ? 'Entire Class'
-        : visit.students?.map((s: any) =>
+        : activeStudents.map((s: any) =>
             `${s.student?.first_name} ${s.student?.last_name}`
           ).join(', ') || '';
 
