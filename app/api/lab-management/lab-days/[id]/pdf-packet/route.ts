@@ -7,6 +7,7 @@ import {
   escapeHtml,
   type EvalDataForPrint,
 } from '@/lib/skillSheetPrintTemplate';
+import { formatCohortNumber } from '@/lib/format-cohort';
 import JSZip from 'jszip';
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
@@ -286,9 +287,12 @@ export async function GET(
 
     console.log(`[pdf-packet] All PDFs rendered, building zip...`);
 
-    // 6. Generate zip
-    const cohortLabel = cohort
-      ? `Cohort${cohort.cohort_number || ''}`
+    // 6. Generate zip. cohort_number is numeric(5,1) in the DB so a plain
+    // value like 14 comes back as "14.0" — strip the trailing .0 via
+    // formatCohortNumber so the zip is "Cohort14_Results.zip", not
+    // "Cohort14.0_Results.zip".
+    const cohortLabel = cohort?.cohort_number
+      ? `Cohort${formatCohortNumber(cohort.cohort_number)}`
       : 'Results';
     const zipFilename = `NREMT_${dateForFilename}_${cohortLabel}_Results.zip`;
 
