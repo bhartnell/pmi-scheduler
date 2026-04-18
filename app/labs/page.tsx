@@ -118,7 +118,9 @@ export default function LabsPage() {
     {
       title: 'Stations',
       description: 'Manage lab stations and equipment',
-      href: '/labs/stations',
+      // /labs/stations has no index page (only /log and /pool subroutes).
+      // Pool is the station management view — matches this card's purpose.
+      href: '/labs/stations/pool',
       icon: Monitor,
       color: 'teal',
       show: canManage,

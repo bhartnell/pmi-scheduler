@@ -30,7 +30,8 @@ export default function OpenLabQRCodePage() {
       return;
     }
     if (status === 'authenticated' && session?.user?.email) {
-      fetch('/api/auth/me')
+      // /api/auth/me does not exist; use the real endpoint.
+      fetch('/api/instructor/me')
         .then((r) => r.json())
         .then((data) => {
           const user = data.user || data;

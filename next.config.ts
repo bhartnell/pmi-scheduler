@@ -194,7 +194,9 @@ const nextConfig: NextConfig = {
       },
       {
         source: '/lab-management/stations',
-        destination: '/labs/stations',
+        // Retarget to /labs/stations/pool since /labs/stations has no
+        // index page — following the same redirect would hit a 404.
+        destination: '/labs/stations/pool',
         permanent: true,
       },
       {

@@ -170,7 +170,10 @@ export default function OpenLabManagementPage() {
       return;
     }
     if (status === 'authenticated' && session?.user?.email) {
-      fetch('/api/auth/me')
+      // /api/auth/me does not exist — that path lives under NextAuth's
+      // [...nextauth] catchall which returns 400 for unknown actions.
+      // The real endpoint is /api/instructor/me.
+      fetch('/api/instructor/me')
         .then((r) => r.json())
         .then((data) => {
           const user = data.user || data;
