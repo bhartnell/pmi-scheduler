@@ -14,7 +14,9 @@ import {
   Circle,
   AlertCircle,
   Star,
+  Settings,
 } from 'lucide-react';
+import { hasMinRole, type Role } from '@/lib/permissions';
 
 /**
  * SMC (Student Minimum Competency) completion view.
@@ -61,6 +63,7 @@ interface SmcResponse {
     id: string;
     cohort_number: number | string | null;
     current_semester: number | null;
+    program_id: string | null;
     program_abbr: string | null;
   };
   semester?: number | null;
@@ -113,9 +116,29 @@ export default function SmcCompletionPage() {
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [semesterOverride, setSemesterOverride] = useState<number | null>(null);
 
+  const [userRole, setUserRole] = useState<Role | null>(null);
+
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') router.push('/auth/signin');
   }, [sessionStatus, router]);
+
+  // Lightweight role fetch so the "Manage SMC" admin button only renders
+  // for lead_instructor+. Non-admins hitting the admin URL still get
+  // bounced by the page's own access gate; this is cosmetic only.
+  useEffect(() => {
+    if (sessionStatus !== 'authenticated') return;
+    fetch('/api/instructor/me')
+      .then((r) => r.json())
+      .then((data) => {
+        const role = (data.user?.role || data.role) as Role | undefined;
+        if (role) setUserRole(role);
+      })
+      .catch(() => {
+        // Non-fatal — button just won't render
+      });
+  }, [sessionStatus]);
+
+  const canManageSmc = userRole ? hasMinRole(userRole, 'lead_instructor') : false;
 
   const fetchData = useCallback(async () => {
     if (!cohortId) return;
@@ -288,6 +311,24 @@ export default function SmcCompletionPage() {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {canManageSmc && (
+                <Link
+                  href={`/academics/admin/smc?${
+                    data?.cohort?.program_id
+                      ? `program_id=${data.cohort.program_id}`
+                      : ''
+                  }${
+                    data?.semester != null
+                      ? `${data?.cohort?.program_id ? '&' : ''}semester=${data.semester}`
+                      : ''
+                  }`}
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
+                  title="Manage SMC requirements (lead instructor+)"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden sm:inline">Manage SMC</span>
+                </Link>
+              )}
               <button
                 onClick={handleExportCsv}
                 disabled={!filteredRows.length}
