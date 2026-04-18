@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentType } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -207,531 +207,296 @@ export default function ClinicalDashboardPage() {
         </div>
         )}
 
-        {/* Sites & Agencies Section — lead_instructor+ only */}
+        {/*
+          Primary workflow cards. The four tools Ryan and Rae reach for
+          most often: Preceptor Directory, Internship Tracker, Clinical
+          Hours, Site Visits. Kept as large visually-prominent cards in
+          a 2x2 grid so they're impossible to miss at page load.
+         */}
         {effectiveRole && canAccessClinical(effectiveRole) && (
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-            Sites &amp; Agencies
-          </h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            {/* Clinical Sites */}
-            <Link
-              href="/clinical/agencies?type=hospital"
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-l-4 border-blue-500"
-            >
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                  <Hospital className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Clinical Sites</h3>
-                    <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-sm font-medium rounded-full">
-                      {stats.totalClinicalSites}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    Hospitals and ERs where students complete clinical rotations
-                  </p>
-                  <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
-                    View clinical sites
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </div>
-                </div>
-              </div>
-            </Link>
-
-            {/* Internship Agencies */}
-            <Link
-              href="/clinical/agencies?type=ems"
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-l-4 border-orange-500"
-            >
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50 transition-colors">
-                  <Ambulance className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between mb-1">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Internship Agencies</h3>
-                    <span className="px-2.5 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 text-sm font-medium rounded-full">
-                      {stats.totalInternshipAgencies}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    Fire departments and ambulance services for field internships
-                  </p>
-                  <div className="flex items-center text-orange-600 dark:text-orange-400 text-sm font-medium">
-                    View field agencies
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </div>
-                </div>
-              </div>
-            </Link>
+          <div className="mb-10">
+            <div className="grid md:grid-cols-2 gap-6">
+              <PrimaryCard
+                href="/clinical/preceptors"
+                icon={Users}
+                title="Preceptor Directory"
+                description="View and manage field training officers"
+                accent="teal"
+                metric={`${stats.activePreceptors} active preceptors`}
+              />
+              <PrimaryCard
+                href="/clinical/internships"
+                icon={ClipboardList}
+                title="Internship Tracker"
+                description="Track student progress through internship phases"
+                accent="purple"
+                metric={`${stats.totalInternships} students tracked`}
+              />
+              <PrimaryCard
+                href="/clinical/hours"
+                icon={Clock}
+                title="Clinical Hours"
+                description="Track shifts and hours by department"
+                accent="blue"
+                metric="View tracker"
+              />
+              <PrimaryCard
+                href="/clinical/site-visits"
+                icon={Building2}
+                title="Site Visits"
+                description="Log and track instructor visits to clinical sites"
+                accent="cyan"
+                metric="Log visit"
+              />
+            </div>
           </div>
-        </div>
         )}
 
-        {/* Navigation Cards */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Overview Dashboard - Primary — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/overview"
-            className="bg-gradient-to-br from-teal-500 to-cyan-600 dark:from-teal-600 dark:to-cyan-700 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group md:col-span-2 lg:col-span-1"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors">
-                <LayoutDashboard className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white mb-1">Overview Dashboard</h3>
-                <p className="text-sm text-teal-100 mb-3">
-                  See all priorities and what needs attention
-                </p>
-                <div className="flex items-center text-white text-sm font-medium">
-                  View Dashboard
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Cohort Manager - Secondary Prominent — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/academics/cohorts"
-            className="bg-gradient-to-br from-purple-500 to-indigo-600 dark:from-purple-600 dark:to-indigo-700 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-white/20 rounded-xl group-hover:bg-white/30 transition-colors">
-                <GraduationCap className="w-6 h-6 text-white" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white mb-1">Cohort Manager</h3>
-                <p className="text-sm text-purple-100 mb-3">
-                  Manage cohorts, semesters, and dates
-                </p>
-                <div className="flex items-center text-white text-sm font-medium">
-                  Manage Cohorts
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Preceptors — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/preceptors"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-teal-100 dark:bg-teal-900/30 rounded-xl group-hover:bg-teal-200 dark:group-hover:bg-teal-900/50 transition-colors">
-                <Users className="w-6 h-6 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Preceptor Directory</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  View and manage field training officers
-                </p>
-                <div className="flex items-center text-teal-600 dark:text-teal-400 text-sm font-medium">
-                  {stats.activePreceptors} active preceptors
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Internship Tracker — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/internships"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
-                <ClipboardList className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Internship Tracker</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Track student progress through internship phases
-                </p>
-                <div className="flex items-center text-purple-600 dark:text-purple-400 text-sm font-medium">
-                  {stats.totalInternships} students tracked
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Compliance Docs Tracker — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/compliance"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
-                <FileCheck className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Compliance Docs</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Track immunizations, clearances, and required documents
-                </p>
-                <div className="flex items-center text-green-600 dark:text-green-400 text-sm font-medium">
-                  View tracker
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Clinical Hours Tracker — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/hours"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                <Clock className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Clinical Hours</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Track shifts and hours by department
-                </p>
-                <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
-                  View tracker
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* EMT Tracking — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/emt-tracking"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                <ClipboardList className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">EMT Tracking</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Track mCE, vax, ride-alongs, and vitals for EMT students
-                </p>
-                <div className="flex items-center text-blue-600 dark:text-blue-400 text-sm font-medium">
-                  View tracker
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* AEMT Tracking — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/aemt-tracking"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
-                <ClipboardList className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">AEMT Tracking</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Track mCE, vax, ride-alongs, clinicals, and vitals for AEMT students
-                </p>
-                <div className="flex items-center text-purple-600 dark:text-purple-400 text-sm font-medium">
-                  View tracker
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Ride-Along Scheduling — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/ride-alongs"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
-                <Ambulance className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Ride-Alongs</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Schedule and manage EMT student ride-along shifts
-                </p>
-                <div className="flex items-center text-purple-600 dark:text-purple-400 text-sm font-medium">
-                  Manage ride-alongs
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Volunteer Recruitment — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/admin/volunteer-events"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-teal-100 dark:bg-teal-900/30 rounded-xl group-hover:bg-teal-200 dark:group-hover:bg-teal-900/50 transition-colors">
-                <Users className="w-6 h-6 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Volunteer Recruitment</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  NREMT testing day & Instructor 1 lab volunteers
-                </p>
-                <div className="flex items-center text-teal-600 dark:text-teal-400 text-sm font-medium">
-                  Manage volunteers
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Summative Evaluations — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/summative-evaluations"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-orange-100 dark:bg-orange-900/30 rounded-xl group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50 transition-colors">
-                <ClipboardList className="w-6 h-6 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Summative Evaluations</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Semester 4 final psychomotor scenarios
-                </p>
-                <div className="flex items-center text-orange-600 dark:text-orange-400 text-sm font-medium">
-                  Manage evaluations
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Site Visits — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/site-visits"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-cyan-100 dark:bg-cyan-900/30 rounded-xl group-hover:bg-cyan-200 dark:group-hover:bg-cyan-900/50 transition-colors">
-                <Building2 className="w-6 h-6 text-cyan-600 dark:text-cyan-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Site Visits</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Log and track instructor visits to clinical sites
-                </p>
-                <div className="flex items-center text-cyan-600 dark:text-cyan-400 text-sm font-medium">
-                  Log visit
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* OSCE Events — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/admin/osce-events"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
-                <ClipboardCheck className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">OSCE Events</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Create and manage OSCE evaluator signup events
-                </p>
-                <div className="flex items-center text-amber-600 dark:text-amber-400 text-sm font-medium">
-                  Manage events
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Planning Calendar — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/planning-calendar"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
-                <CalendarDays className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Planning Calendar</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Track which days PMI has access to sites vs other schools
-                </p>
-                <div className="flex items-center text-indigo-600 dark:text-indigo-400 text-sm font-medium">
-                  View calendar
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Site Capacity — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/capacity"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-teal-100 dark:bg-teal-900/30 rounded-xl group-hover:bg-teal-200 dark:group-hover:bg-teal-900/50 transition-colors">
-                <BarChart3 className="w-6 h-6 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Site Capacity</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Monitor student placement limits and utilization across all sites
-                </p>
-                <div className="flex items-center text-teal-600 dark:text-teal-400 text-sm font-medium">
-                  View capacity
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Compliance Tracker — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/compliance-tracker"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-violet-100 dark:bg-violet-900/30 rounded-xl group-hover:bg-violet-200 dark:group-hover:bg-violet-900/50 transition-colors">
-                <Shield className="w-6 h-6 text-violet-600 dark:text-violet-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Compliance Tracker</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Track student compliance status across all clinical requirements
-                </p>
-                <div className="flex items-center text-violet-600 dark:text-violet-400 text-sm font-medium">
-                  View tracker
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Rotation Scheduler — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/rotation-scheduler"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-teal-100 dark:bg-teal-900/30 rounded-xl group-hover:bg-teal-200 dark:group-hover:bg-teal-900/50 transition-colors">
-                <Shuffle className="w-6 h-6 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Rotation Scheduler</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Visually assign students to clinical site slots with conflict detection
-                </p>
-                <div className="flex items-center text-teal-600 dark:text-teal-400 text-sm font-medium">
-                  Open scheduler
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* MCE Tracker — lead_instructor+ only */}
-          {effectiveRole && canAccessClinical(effectiveRole) && (
-          <Link
-            href="/clinical/mce"
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex items-start gap-4">
-              <div className="p-3 bg-rose-100 dark:bg-rose-900/30 rounded-xl group-hover:bg-rose-200 dark:group-hover:bg-rose-900/50 transition-colors">
-                <BookOpen className="w-6 h-6 text-rose-600 dark:text-rose-400" />
-              </div>
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">MCE Tracker</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                  Track mandatory continuing education hours for students
-                </p>
-                <div className="flex items-center text-rose-600 dark:text-rose-400 text-sm font-medium">
-                  View tracker
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </div>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Affiliation Agreements */}
-          {effectiveRole && canAccessAffiliations(effectiveRole) && (
-            <Link
-              href="/clinical/affiliations"
-              className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-            >
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-xl group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
-                  <ScrollText className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Affiliations</h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                    Track clinical site affiliation agreements and expiration dates
-                  </p>
-                  <div className="flex items-center text-amber-600 dark:text-amber-400 text-sm font-medium">
-                    View agreements
-                    <ChevronRight className="w-4 h-4 ml-1" />
-                  </div>
-                </div>
-              </div>
-            </Link>
-          )}
-
+        {/*
+          Secondary section — everything else, below a visual divider.
+          Uses compact 3/4-column cards with smaller text + subtle styling
+          so the primary workflow above stays visually dominant.
+         */}
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">
+            More clinical tools
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            {effectiveRole && canAccessClinical(effectiveRole) && (
+              <>
+                <SecondaryCard
+                  href="/clinical/overview"
+                  icon={LayoutDashboard}
+                  title="Overview Dashboard"
+                  description="All priorities at a glance"
+                />
+                <SecondaryCard
+                  href="/academics/cohorts"
+                  icon={GraduationCap}
+                  title="Cohort Manager"
+                  description="Cohorts, semesters, dates"
+                />
+                <SecondaryCard
+                  href="/clinical/agencies?type=hospital"
+                  icon={Hospital}
+                  title="Clinical Sites"
+                  description="Hospitals & ERs"
+                  badge={stats.totalClinicalSites}
+                />
+                <SecondaryCard
+                  href="/clinical/agencies?type=ems"
+                  icon={Ambulance}
+                  title="Internship Agencies"
+                  description="Fire & ambulance services"
+                  badge={stats.totalInternshipAgencies}
+                />
+                <SecondaryCard
+                  href="/clinical/compliance"
+                  icon={FileCheck}
+                  title="Compliance Docs"
+                  description="Immunizations, clearances"
+                />
+                <SecondaryCard
+                  href="/clinical/compliance-tracker"
+                  icon={Shield}
+                  title="Compliance Tracker"
+                  description="Per-student status overview"
+                />
+                <SecondaryCard
+                  href="/clinical/emt-tracking"
+                  icon={ClipboardList}
+                  title="EMT Tracking"
+                  description="mCE, vax, ride-alongs"
+                />
+                <SecondaryCard
+                  href="/clinical/aemt-tracking"
+                  icon={ClipboardList}
+                  title="AEMT Tracking"
+                  description="mCE, vax, ride-alongs"
+                />
+                <SecondaryCard
+                  href="/clinical/mce"
+                  icon={BookOpen}
+                  title="MCE Tracker"
+                  description="Continuing ed hours"
+                />
+                <SecondaryCard
+                  href="/clinical/ride-alongs"
+                  icon={Ambulance}
+                  title="Ride-Alongs"
+                  description="EMT ride-along shifts"
+                />
+                <SecondaryCard
+                  href="/clinical/rotation-scheduler"
+                  icon={Shuffle}
+                  title="Rotation Scheduler"
+                  description="Assign students to slots"
+                />
+                <SecondaryCard
+                  href="/clinical/capacity"
+                  icon={BarChart3}
+                  title="Site Capacity"
+                  description="Placement limits"
+                />
+                <SecondaryCard
+                  href="/clinical/planning-calendar"
+                  icon={CalendarDays}
+                  title="Planning Calendar"
+                  description="Site access days"
+                />
+                <SecondaryCard
+                  href="/clinical/summative-evaluations"
+                  icon={ClipboardList}
+                  title="Summative Evaluations"
+                  description="Semester 4 finals"
+                />
+                <SecondaryCard
+                  href="/admin/osce-events"
+                  icon={ClipboardCheck}
+                  title="OSCE Events"
+                  description="Evaluator signups"
+                />
+                <SecondaryCard
+                  href="/admin/volunteer-events"
+                  icon={Users}
+                  title="Volunteer Recruitment"
+                  description="NREMT & lab volunteers"
+                />
+              </>
+            )}
+            {effectiveRole && canAccessAffiliations(effectiveRole) && (
+              <SecondaryCard
+                href="/clinical/affiliations"
+                icon={ScrollText}
+                title="Affiliations"
+                description="Site agreements & expirations"
+              />
+            )}
+          </div>
         </div>
       </main>
     </div>
+  );
+}
+
+/* ──────────────────────────────────────────────────────────────────
+   Card components — kept local so the parent component stays scannable
+   and we avoid coupling to the shared ToolCard abstraction used on the
+   cohort hub (different visual weight requirements).
+   ────────────────────────────────────────────────────────────────── */
+
+type CardIcon = ComponentType<{ className?: string }>;
+
+type Accent = 'teal' | 'purple' | 'blue' | 'cyan';
+
+const ACCENT_CLASSES: Record<
+  Accent,
+  { iconBg: string; iconBgHover: string; iconColor: string; text: string }
+> = {
+  teal: {
+    iconBg: 'bg-teal-100 dark:bg-teal-900/30',
+    iconBgHover: 'group-hover:bg-teal-200 dark:group-hover:bg-teal-900/50',
+    iconColor: 'text-teal-600 dark:text-teal-400',
+    text: 'text-teal-600 dark:text-teal-400',
+  },
+  purple: {
+    iconBg: 'bg-purple-100 dark:bg-purple-900/30',
+    iconBgHover: 'group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50',
+    iconColor: 'text-purple-600 dark:text-purple-400',
+    text: 'text-purple-600 dark:text-purple-400',
+  },
+  blue: {
+    iconBg: 'bg-blue-100 dark:bg-blue-900/30',
+    iconBgHover: 'group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50',
+    iconColor: 'text-blue-600 dark:text-blue-400',
+    text: 'text-blue-600 dark:text-blue-400',
+  },
+  cyan: {
+    iconBg: 'bg-cyan-100 dark:bg-cyan-900/30',
+    iconBgHover: 'group-hover:bg-cyan-200 dark:group-hover:bg-cyan-900/50',
+    iconColor: 'text-cyan-600 dark:text-cyan-400',
+    text: 'text-cyan-600 dark:text-cyan-400',
+  },
+};
+
+function PrimaryCard({
+  href,
+  icon: Icon,
+  title,
+  description,
+  accent,
+  metric,
+}: {
+  href: string;
+  icon: CardIcon;
+  title: string;
+  description: string;
+  accent: Accent;
+  metric: string;
+}) {
+  const a = ACCENT_CLASSES[accent];
+  return (
+    <Link
+      href={href}
+      className="bg-white dark:bg-gray-800 rounded-xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+    >
+      <div className="flex items-start gap-4">
+        <div
+          className={`p-3 rounded-xl transition-colors ${a.iconBg} ${a.iconBgHover}`}
+        >
+          <Icon className={`w-6 h-6 ${a.iconColor}`} />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+            {title}
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+            {description}
+          </p>
+          <div className={`flex items-center text-sm font-medium ${a.text}`}>
+            {metric}
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </div>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function SecondaryCard({
+  href,
+  icon: Icon,
+  title,
+  description,
+  badge,
+}: {
+  href: string;
+  icon: CardIcon;
+  title: string;
+  description: string;
+  badge?: number | null;
+}) {
+  return (
+    <Link
+      href={href}
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-700 transition-all p-3 group flex items-start gap-2.5"
+    >
+      <Icon className="w-4 h-4 text-gray-500 dark:text-gray-400 flex-shrink-0 mt-0.5" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-1.5">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+            {title}
+          </h3>
+          {typeof badge === 'number' && (
+            <span className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-[10px] font-medium rounded tabular-nums">
+              {badge}
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+          {description}
+        </p>
+      </div>
+    </Link>
   );
 }
