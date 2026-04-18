@@ -9,7 +9,9 @@ import { requireAuth } from '@/lib/api-auth';
  * column names than the client payload. Column mapping:
  *   client `name`        → db `title`        (NOT NULL)
  *   client `location`    → db `destination`
- *   client `description` → db `notes`
+ *   client `description` → db `description`  (dedicated column added
+ *                          in migration 20260417, was previously
+ *                          squatting on `notes`)
  *   `created_by`         — db uuid (lab_users.id), NOT email
  *
  * This route translates in both directions so the client can keep using
@@ -24,6 +26,7 @@ type DbFieldTrip = {
   trip_date: string;
   departure_time: string | null;
   return_time: string | null;
+  description: string | null;
   notes: string | null;
   created_by: string | null;
   created_at: string | null;
@@ -38,7 +41,9 @@ function dbToClient(row: DbFieldTrip) {
     name: row.title,
     trip_date: row.trip_date,
     location: row.destination,
-    description: row.notes,
+    // Prefer the new description column; fall back to notes for rows
+    // created before the migration that may still have the blurb there.
+    description: row.description ?? row.notes,
     departure_time: row.departure_time,
     return_time: row.return_time,
     created_by: row.created_by,
@@ -137,7 +142,7 @@ export async function POST(request: NextRequest) {
         title: name,
         trip_date,
         destination: location || null,
-        notes: description || null,
+        description: description || null,
         created_by: user.id,
       })
       .select()
