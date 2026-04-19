@@ -42,6 +42,11 @@ interface SkillRow {
   /** 'skill' (from skills table) or 'scenario' (from scenarios table).
       Added 2026-05 so the panel shows both in one unified list. */
   kind?: 'skill' | 'scenario';
+  /** Required by the cohort's SMC for this semester. Populated by
+      merging in smc-completion data. Phase 4 upgrade 2026-04-18. */
+  smc_required?: boolean;
+  /** Minimum attempts from the SMC row, when smc_required. */
+  smc_min_attempts?: number | null;
 }
 
 interface CoverageResponse {
@@ -58,7 +63,7 @@ interface CoverageResponse {
   error?: string;
 }
 
-type Filter = 'all' | 'not_yet' | 'once' | 'multiple';
+type Filter = 'all' | 'smc_gap' | 'not_yet' | 'once' | 'multiple';
 
 interface Props {
   cohortId: string | null | undefined;
@@ -129,17 +134,76 @@ export default function SkillCoveragePanel({
     try {
       const qs = new URLSearchParams();
       if (semester != null) qs.set('semester', String(semester));
-      const url = `/api/lab-management/cohorts/${cohortId}/skill-coverage${
-        qs.toString() ? `?${qs.toString()}` : ''
-      }`;
-      const res = await fetch(url);
-      const json: CoverageResponse = await res.json();
-      if (!res.ok || !json.success) {
-        setError(json.error || 'Failed to load skill coverage');
+      const tail = qs.toString() ? `?${qs.toString()}` : '';
+
+      // Fetch coverage + SMC in parallel. SMC is optional — if it fails
+      // the panel still renders coverage, just without the gap markers.
+      const [coverageRes, smcRes] = await Promise.all([
+        fetch(`/api/lab-management/cohorts/${cohortId}/skill-coverage${tail}`),
+        fetch(`/api/lab-management/cohorts/${cohortId}/smc-completion${tail}`).catch(
+          () => null
+        ),
+      ]);
+
+      const coverageJson: CoverageResponse = await coverageRes.json();
+      if (!coverageRes.ok || !coverageJson.success) {
+        setError(coverageJson.error || 'Failed to load skill coverage');
         setData(null);
-      } else {
-        setData(json);
+        return;
       }
+
+      // Merge in SMC requirements. For each lab_tracked SMC row:
+      //   - If skill_id already in coverage → annotate with smc_required
+      //   - If skill_id not in coverage → add a synthetic row (not yet
+      //     practiced, but required by SMC) so the gap is visible here.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let smcJson: any = null;
+      if (smcRes && smcRes.ok) {
+        try {
+          smcJson = await smcRes.json();
+        } catch {
+          smcJson = null;
+        }
+      }
+
+      const skills = [...(coverageJson.skills || [])];
+      if (smcJson?.success && Array.isArray(smcJson.results)) {
+        const bySkillId = new Map<string, SkillRow>();
+        for (const row of skills) bySkillId.set(row.skill_id, row);
+
+        for (const smc of smcJson.results) {
+          // Only lab-tracked SMC rows contribute gap markers. Clinical/
+          // field-tracked skills (Platinum) would always be "not yet"
+          // here and would drown out the real lab gaps.
+          if (smc.lab_tracked === false) continue;
+          if (!smc.skill_id) continue; // unlinked SMC rows can't dedup here
+
+          const existing = bySkillId.get(smc.skill_id);
+          if (existing) {
+            existing.smc_required = true;
+            existing.smc_min_attempts = smc.min_attempts ?? null;
+          } else {
+            // SMC requires this skill but no station has tagged it yet.
+            // Inject a synthetic "not yet" row so the gap is visible.
+            const synthetic: SkillRow = {
+              skill_id: smc.skill_id,
+              name: smc.skill_name,
+              category: smc.category,
+              lab_day_count: 0,
+              last_run_date: null,
+              status: 'not_yet',
+              in_program: true,
+              kind: 'skill',
+              smc_required: true,
+              smc_min_attempts: smc.min_attempts ?? null,
+            };
+            skills.push(synthetic);
+            bySkillId.set(smc.skill_id, synthetic);
+          }
+        }
+      }
+
+      setData({ ...coverageJson, skills });
     } catch {
       setError('Failed to load skill coverage');
     } finally {
@@ -155,15 +219,27 @@ export default function SkillCoveragePanel({
     if (!data?.skills) return [];
     const q = search.trim().toLowerCase();
     const filtered = data.skills.filter((s) => {
-      if (filter !== 'all' && s.status !== filter) return false;
+      // 'smc_gap' is not a status value — it's a composite: SMC-required
+      // AND not yet covered. Handled explicitly here.
+      if (filter === 'smc_gap') {
+        if (!s.smc_required || s.lab_day_count > 0) return false;
+      } else if (filter !== 'all' && s.status !== filter) {
+        return false;
+      }
       if (q && !s.name.toLowerCase().includes(q)) return false;
       return true;
     });
     // Sort on a copy — the source array is memoized from the API response.
-    // For name: simple locale compare. For count: numeric. For last_run:
-    // ISO date string compare (safe because YYYY-MM-DD sorts correctly).
-    // Nulls go to the end on asc, start on desc for last_run/count.
+    // Primary sort: SMC gaps first (required + not yet practiced). Secondary:
+    // the user-chosen sortKey. Rationale: this panel is a lab-planning aid,
+    // so the most actionable items (required SMC skills not yet covered)
+    // should land at the top of any view regardless of other sort choice.
+    // User can still reverse the secondary sort with the direction toggle.
     const sorted = [...filtered].sort((a, b) => {
+      const aGap = a.smc_required && a.lab_day_count === 0 ? 0 : 1;
+      const bGap = b.smc_required && b.lab_day_count === 0 ? 0 : 1;
+      if (aGap !== bGap) return aGap - bGap;
+
       const dir = sortDir === 'asc' ? 1 : -1;
       if (sortKey === 'name') {
         return a.name.localeCompare(b.name) * dir;
@@ -242,10 +318,11 @@ export default function SkillCoveragePanel({
   }, [data, filteredSkills]);
 
   const counts = useMemo(() => {
-    const c = { multiple: 0, once: 0, not_yet: 0, total: 0 };
+    const c = { multiple: 0, once: 0, not_yet: 0, total: 0, smc_gap: 0 };
     for (const s of data?.skills || []) {
       c.total++;
       c[s.status]++;
+      if (s.smc_required && s.lab_day_count === 0) c.smc_gap++;
     }
     return c;
   }, [data]);
@@ -339,17 +416,32 @@ export default function SkillCoveragePanel({
                   />
                 </div>
                 <div className="flex flex-wrap gap-1">
-                  {(['all', 'not_yet', 'once', 'multiple'] as Filter[]).map(
-                    (f) => {
+                  {/* Filter order: SMC gaps is the most actionable bucket
+                      (required but not yet covered) so it sits first,
+                      with red styling to draw the eye when the count > 0. */}
+                  {(['smc_gap', 'all', 'not_yet', 'once', 'multiple'] as Filter[])
+                    // Only render the smc_gap chip when there are SMC
+                    // rows merged in (counts.smc_gap > 0 OR any
+                    // smc_required in data) — hide it otherwise to keep
+                    // the chip row small when SMC isn't relevant.
+                    .filter((f) =>
+                      f === 'smc_gap'
+                        ? (data?.skills || []).some((s) => s.smc_required)
+                        : true
+                    )
+                    .map((f) => {
                       const active = filter === f;
                       const label =
                         f === 'all'
                           ? `All (${counts.total})`
-                          : f === 'not_yet'
-                            ? `Not yet (${counts.not_yet})`
-                            : f === 'once'
-                              ? `Once (${counts.once})`
-                              : `Multiple (${counts.multiple})`;
+                          : f === 'smc_gap'
+                            ? `SMC gaps (${counts.smc_gap})`
+                            : f === 'not_yet'
+                              ? `Not yet (${counts.not_yet})`
+                              : f === 'once'
+                                ? `Once (${counts.once})`
+                                : `Multiple (${counts.multiple})`;
+                      const gapStyle = f === 'smc_gap' && counts.smc_gap > 0;
                       return (
                         <button
                           key={f}
@@ -357,15 +449,18 @@ export default function SkillCoveragePanel({
                           onClick={() => setFilter(f)}
                           className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                             active
-                              ? 'bg-blue-600 text-white'
-                              : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                              ? gapStyle
+                                ? 'bg-red-600 text-white'
+                                : 'bg-blue-600 text-white'
+                              : gapStyle
+                                ? 'bg-red-50 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-300 dark:hover:bg-red-900/50'
+                                : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
                           }`}
                         >
                           {label}
                         </button>
                       );
-                    }
-                  )}
+                    })}
                 </div>
                 {/* Sort + CSV export row. Sort dropdown + direction toggle
                     is more compact than column headers in this narrow panel. */}
@@ -442,6 +537,35 @@ export default function SkillCoveragePanel({
                         <div className="flex-1 min-w-0">
                           <div className="text-sm text-gray-900 dark:text-white truncate">
                             {s.name}
+                            {/* SMC-gap badge renders first and loudest — a
+                                required-but-uncovered skill is the single
+                                most actionable thing on this panel. */}
+                            {s.smc_required && s.lab_day_count === 0 && (
+                              <span
+                                className="ml-2 text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                                title={
+                                  s.smc_min_attempts && s.smc_min_attempts > 1
+                                    ? `SMC requires this skill (min ${s.smc_min_attempts} attempts) — not yet covered`
+                                    : 'SMC requires this skill — not yet covered'
+                                }
+                              >
+                                SMC gap
+                              </span>
+                            )}
+                            {/* Covered SMC skills get a subtler green badge so
+                                planners can still see what's in-scope. */}
+                            {s.smc_required && s.lab_day_count > 0 && (
+                              <span
+                                className="ml-2 text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                                title={
+                                  s.smc_min_attempts && s.smc_min_attempts > 1
+                                    ? `SMC requirement (min ${s.smc_min_attempts} attempts)`
+                                    : 'SMC requirement'
+                                }
+                              >
+                                SMC
+                              </span>
+                            )}
                             {s.kind === 'scenario' && (
                               <span
                                 className="ml-2 text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300"
