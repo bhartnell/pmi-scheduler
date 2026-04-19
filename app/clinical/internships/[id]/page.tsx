@@ -153,6 +153,7 @@ interface Preceptor {
   id: string;
   first_name: string;
   last_name: string;
+  agency_id: string | null;
   agency_name: string | null;
   station: string | null;
 }
@@ -250,6 +251,10 @@ export default function InternshipDetailPage() {
   const [addingAssignment, setAddingAssignment] = useState(false);
   const [newAssignRole, setNewAssignRole] = useState('primary');
   const [newAssignPreceptorId, setNewAssignPreceptorId] = useState('');
+  // When true, the preceptor picker shows ALL preceptors. Default false
+  // so the picker auto-filters to the internship's agency FTOs — the
+  // common case. Toggle surfaces when the user needs a cross-agency pick.
+  const [showAllAgencyPreceptors, setShowAllAgencyPreceptors] = useState(false);
 
   // Form state with all fields
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -1219,8 +1224,35 @@ export default function InternshipDetailPage() {
                         )}
                       </div>
 
-                      {/* Add preceptor assignment */}
-                      {canEdit && (
+                      {/* Add preceptor assignment.
+                          Auto-filters to the internship's agency FTOs (by
+                          agency_id, with agency_name as a case-insensitive
+                          fallback for pre-migration rows that only have the
+                          text). A "Show all agencies" checkbox reveals the
+                          full list when the user needs a cross-agency pick. */}
+                      {canEdit && (() => {
+                        const internshipAgencyId = formData.agency_id || internship.agency_id;
+                        const internshipAgencyName = (
+                          internship.agencies?.name ||
+                          formData.agency_name ||
+                          ''
+                        ).toLowerCase().trim();
+                        const filteredPreceptors = showAllAgencyPreceptors
+                          ? preceptors
+                          : preceptors.filter((p) => {
+                              if (internshipAgencyId && p.agency_id) {
+                                return p.agency_id === internshipAgencyId;
+                              }
+                              if (internshipAgencyName && p.agency_name) {
+                                return p.agency_name.toLowerCase().trim() === internshipAgencyName;
+                              }
+                              // No agency set on internship — show all so
+                              // users aren't blocked on a missing field.
+                              return true;
+                            });
+                        const hiddenCount = preceptors.length - filteredPreceptors.length;
+                        return (
+                        <div className="space-y-2">
                         <div className="flex gap-2 items-end">
                           <select
                             value={newAssignPreceptorId}
@@ -1228,7 +1260,7 @@ export default function InternshipDetailPage() {
                             className="flex-1 px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
                           >
                             <option value="">Select Preceptor</option>
-                            {preceptors.map(p => (
+                            {filteredPreceptors.map(p => (
                               <option key={p.id} value={p.id}>{p.first_name} {p.last_name} {p.agency_name ? `(${p.agency_name})` : ''}</option>
                             ))}
                           </select>
@@ -1271,7 +1303,28 @@ export default function InternshipDetailPage() {
                             {addingAssignment ? '...' : 'Add'}
                           </button>
                         </div>
-                      )}
+                        {/* Filter toggle + hidden-count helper. Only shown
+                            when the filter is actually hiding preceptors —
+                            noise-free when there's nothing to reveal. */}
+                        {(hiddenCount > 0 || showAllAgencyPreceptors) && (
+                          <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={showAllAgencyPreceptors}
+                              onChange={(e) => setShowAllAgencyPreceptors(e.target.checked)}
+                              className="w-3.5 h-3.5 rounded border-gray-300"
+                            />
+                            Show all agencies
+                            {!showAllAgencyPreceptors && hiddenCount > 0 && (
+                              <span className="text-gray-500">
+                                ({hiddenCount} hidden)
+                              </span>
+                            )}
+                          </label>
+                        )}
+                        </div>
+                        );
+                      })()}
 
                       <button
                         type="button"

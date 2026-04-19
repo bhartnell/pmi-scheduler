@@ -190,10 +190,24 @@ function getStationDisplayName(station: GridStation): string {
 
 /** Abbreviate a skill name for column headers */
 function abbreviateSkill(name: string): string {
+  // Keyed on EXACT DB skill_sheet / skill names. Prior version used
+  // guessed labels ("Patient Assessment - Medical") that never matched
+  // the actual DB values ("Patient assessment and management — medical"),
+  // which is why Stacie saw both NREMT tracker columns collapse to the
+  // same "Patient Assessment" header on 2026-04-15.
   const abbrevMap: Record<string, string> = {
     'Cardiac Arrest Management / AED': 'Cardiac Arrest',
-    'Patient Assessment - Medical': 'Medical Assess.',
-    'Patient Assessment - Trauma': 'Trauma Assess.',
+    // Both dash variants (em-dash and ASCII hyphen) to survive any
+    // future typo/copy-paste drift:
+    'Patient assessment and management — medical': 'Medical Patient Assessment',
+    'Patient assessment and management -- medical': 'Medical Patient Assessment',
+    'Patient assessment and management - medical': 'Medical Patient Assessment',
+    'Patient assessment and management — trauma': 'Trauma Patient Assessment',
+    'Patient assessment and management -- trauma': 'Trauma Patient Assessment',
+    'Patient assessment and management - trauma': 'Trauma Patient Assessment',
+    // Legacy keys retained for any older station that still uses them:
+    'Patient Assessment - Medical': 'Medical Patient Assessment',
+    'Patient Assessment - Trauma': 'Trauma Patient Assessment',
     'Spinal Immobilization (Supine Patient)': 'Spinal (Supine)',
     'Spinal Immobilization (Seated Patient)': 'Spinal (Seated)',
     'BVM Ventilation of an Apneic Adult Patient': 'BVM',
@@ -202,7 +216,13 @@ function abbreviateSkill(name: string): string {
     'Joint Immobilization': 'Joint Immob.',
     'Long Bone Immobilization': 'Long Bone Immob.',
   };
-  return abbrevMap[name] || name;
+  if (abbrevMap[name]) return abbrevMap[name];
+  // Case-insensitive fallback for any slight whitespace / casing drift.
+  const lowered = name.toLowerCase().trim();
+  for (const [key, value] of Object.entries(abbrevMap)) {
+    if (key.toLowerCase() === lowered) return value;
+  }
+  return name;
 }
 
 /** Abbreviate a list of needed skills for dropdown display */

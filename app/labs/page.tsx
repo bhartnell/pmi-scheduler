@@ -165,14 +165,9 @@ export default function LabsPage() {
       color: 'emerald',
       show: isInstructor,
     },
-    {
-      title: 'Protocol Tracking',
-      description: 'Track protocol completion and compliance',
-      href: '/labs/protocol-tracking',
-      icon: Stethoscope,
-      color: 'sky',
-      show: isInstructor,
-    },
+    // Protocol Tracking removed from /labs 2026-04-18 — protocol tracking
+    // lives in Platinum, not in this section. The route still exists for
+    // any deep links but is not surfaced here.
   ];
 
   const colorMap: Record<string, { bg: string; icon: string; hoverBg: string }> = {

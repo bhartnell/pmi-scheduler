@@ -416,9 +416,46 @@ export default function LabDayPage() {
         <EquipmentSection labDayId={labDayId} stations={labDay.stations} />
         {userRole && hasMinRole(userRole, 'instructor') && <CostsSection labDayId={labDayId} cohortStudents={cohortStudents} />}
         {labDay.cohort?.id && <LabDayCheckInSection labDay={labDay} labDayId={labDayId} onLabDayUpdate={setLabDay} />}
-        {labDay.cohort?.id && labMode !== 'individual_testing' && (<div className="mt-6 print:hidden"><AttendanceSection labDayId={labDayId} cohortId={labDay.cohort.id} /></div>)}
-        {userRole && hasMinRole(userRole, 'instructor') && cohortStudents.length > 0 && <StudentRatingsSection labDayId={labDayId} cohortStudents={cohortStudents} />}
-        {userRole && hasMinRole(userRole, 'instructor') && labDay.cohort?.id && (<div className="mt-6 print:hidden"><LearningStyleDistribution labDayId={labDayId} cohortLinkId={labDay.cohort.id} /></div>)}
+        {/*
+          Student Attendance, Performance, and Learning Style widgets
+          are collapsed by default as of 2026-04-18 per feedback from
+          active lab days — they clutter the working view and are rarely
+          consulted mid-lab. Still one click away via native <details>
+          disclosure (no JS state, keyboard-accessible out of the box).
+        */}
+        {labDay.cohort?.id && labMode !== 'individual_testing' && (
+          <details className="mt-6 print:hidden group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-t-lg flex items-center justify-between">
+              <span>Student Attendance</span>
+              <span className="text-xs font-normal text-gray-400 group-open:hidden">Click to expand</span>
+            </summary>
+            <div className="border-t border-gray-200 dark:border-gray-700">
+              <AttendanceSection labDayId={labDayId} cohortId={labDay.cohort.id} />
+            </div>
+          </details>
+        )}
+        {userRole && hasMinRole(userRole, 'instructor') && cohortStudents.length > 0 && (
+          <details className="mt-6 print:hidden group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-t-lg flex items-center justify-between">
+              <span>Student Performance Ratings</span>
+              <span className="text-xs font-normal text-gray-400 group-open:hidden">Click to expand</span>
+            </summary>
+            <div className="border-t border-gray-200 dark:border-gray-700">
+              <StudentRatingsSection labDayId={labDayId} cohortStudents={cohortStudents} />
+            </div>
+          </details>
+        )}
+        {userRole && hasMinRole(userRole, 'instructor') && labDay.cohort?.id && (
+          <details className="mt-6 print:hidden group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-t-lg flex items-center justify-between">
+              <span>Learning Style Distribution</span>
+              <span className="text-xs font-normal text-gray-400 group-open:hidden">Click to expand</span>
+            </summary>
+            <div className="border-t border-gray-200 dark:border-gray-700">
+              <LearningStyleDistribution labDayId={labDayId} cohortLinkId={labDay.cohort.id} />
+            </div>
+          </details>
+        )}
         <LabDaySkillSignoffs labDayId={labDayId} cohortStudents={cohortStudents} skills={skills} userRole={userRole} />
         {isLabDayPast() && <DebriefSection labDayId={labDayId} />}
         {isLabDayPastOrToday() && <DebriefNotesSection labDayId={labDayId} session={session} userRole={userRole || ''} />}

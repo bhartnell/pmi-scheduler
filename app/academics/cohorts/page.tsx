@@ -21,6 +21,7 @@ import {
   Wand2,
   CheckCircle2,
   Activity,
+  Briefcase,
 } from 'lucide-react';
 import { canManageCohorts, type Role } from '@/lib/permissions';
 
@@ -682,12 +683,38 @@ export default function CohortManagementPage() {
                                   N/A
                                 </span>
                               )}
-                              {cohort.track_clinical_hours && (
-                                <span className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs rounded flex items-center gap-1" title="Clinical hours tracking enabled for this cohort">
-                                  <Activity className="w-3 h-3" />
-                                  Clinical
-                                </span>
-                              )}
+                              {/*
+                                Semester phase badges (PM only).
+                                Prior version showed a green "Clinical" tag
+                                whenever track_clinical_hours was true, which
+                                is enabled for every PM cohort at all times —
+                                so the badge appeared on S1/S2 cohorts that
+                                aren't actually in the clinical phase.
+                                Repurposed now as a proper phase indicator:
+                                  S3 → green "Clinical"  (clinical rotations)
+                                  S4 → blue  "Internship" (field internships)
+                                Other semesters show only the S{n} badge.
+                              */}
+                              {(program.abbreviation === 'PM' || program.abbreviation === 'PMD') &&
+                                cohort.current_semester === 3 && (
+                                  <span
+                                    className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs rounded flex items-center gap-1"
+                                    title="Semester 3 — clinical rotations"
+                                  >
+                                    <Activity className="w-3 h-3" />
+                                    Clinical
+                                  </span>
+                                )}
+                              {(program.abbreviation === 'PM' || program.abbreviation === 'PMD') &&
+                                cohort.current_semester === 4 && (
+                                  <span
+                                    className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs rounded flex items-center gap-1"
+                                    title="Semester 4 — field internship"
+                                  >
+                                    <Briefcase className="w-3 h-3" />
+                                    Internship
+                                  </span>
+                                )}
                               {!cohort.is_active && !cohort.is_archived && (
                                 <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded">
                                   Inactive

@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -166,6 +166,7 @@ const MILESTONE_INDICATORS: Record<MilestoneStatus, { emoji: string; className: 
 export default function InternshipTrackerPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [internships, setInternships] = useState<Internship[]>([]);
   const [cohorts, setCohorts] = useState<CohortOption[]>([]);
@@ -175,8 +176,13 @@ export default function InternshipTrackerPage() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<Role | null>(null);
 
-  // Filters
-  const [selectedCohort, setSelectedCohort] = useState('');
+  // Filters. Cohort selection is persisted in the URL (?cohortId=…) so
+  // browser back/forward preserves the active filter — matches the fix
+  // applied to /academics/students. Without this the user opens a student
+  // file, hits back, and lands on a blank tracker.
+  const [selectedCohort, setSelectedCohort] = useState(
+    () => searchParams?.get('cohortId') || ''
+  );
   const [filterPhase, setFilterPhase] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterAgency, setFilterAgency] = useState('');
@@ -278,6 +284,18 @@ export default function InternshipTrackerPage() {
     }
   }, [selectedCohort, filterPhase, filterStatus, filterAgency, cohorts]);
 
+  // Keep the URL in sync with selectedCohort so browser back/forward and
+  // bookmarks preserve the active filter. Uses router.replace with a
+  // scroll:false option so the page doesn't jump while typing in filters.
+  useEffect(() => {
+    if (!selectedCohort) return;
+    const currentUrlCohort = searchParams?.get('cohortId');
+    if (currentUrlCohort === selectedCohort) return;
+    const qs = new URLSearchParams(searchParams?.toString() || '');
+    qs.set('cohortId', selectedCohort);
+    router.replace(`?${qs.toString()}`, { scroll: false });
+  }, [selectedCohort, router, searchParams]);
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -300,10 +318,19 @@ export default function InternshipTrackerPage() {
       const preceptorsData = await preceptorsRes.json();
 
       if (cohortsData.success) {
-        setCohorts(cohortsData.cohorts || []);
-        // Auto-select first cohort
-        if (cohortsData.cohorts?.length > 0 && !selectedCohort) {
-          setSelectedCohort(cohortsData.cohorts[0].id);
+        const list = cohortsData.cohorts || [];
+        setCohorts(list);
+        // Auto-select first cohort only if no URL preference AND nothing
+        // is currently selected. URL cohortId takes precedence so back
+        // navigation can restore the user's last view.
+        if (list.length > 0 && !selectedCohort) {
+          const urlCohortId = searchParams?.get('cohortId');
+          const hasUrlCohort = urlCohortId && list.some(
+            (c: CohortOption) => c.id === urlCohortId
+          );
+          if (!hasUrlCohort) {
+            setSelectedCohort(list[0].id);
+          }
         }
       }
       if (agenciesData.success) {
