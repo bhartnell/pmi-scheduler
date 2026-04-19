@@ -146,6 +146,10 @@ export async function PATCH(
     if (body.instructions_url !== undefined) updateData.instructions_url = body.instructions_url;
     if (body.station_notes !== undefined) updateData.station_notes = body.station_notes;
     if (body.drill_ids !== undefined) updateData.drill_ids = Array.isArray(body.drill_ids) && body.drill_ids.length > 0 ? body.drill_ids : null;
+    // is_retake_station — coordinator-toggled flag that marks this station
+    // as a retake destination. The retake routing prefers these over
+    // same-skill non-retake stations. Added 2026-04-19.
+    if (body.is_retake_station !== undefined) updateData.is_retake_station = !!body.is_retake_station;
 
     // Coordinator status: merge into metadata (read-modify-write)
     if (body.coordinator_status !== undefined) {

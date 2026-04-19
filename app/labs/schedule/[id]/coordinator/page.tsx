@@ -77,6 +77,9 @@ interface GridStation {
   addedDuringExam?: boolean;
   stationSuffix?: string | null;
   coordinatorStatus?: 'open' | 'closed' | 'break';
+  /** Coordinator-toggled flag. When true, the retake queue routes
+      students to this station first. Added 2026-04-19 migration. */
+  isRetakeStation?: boolean;
 }
 
 interface InstructorOption {
@@ -568,17 +571,24 @@ export default function CoordinatorViewPage() {
     setAssigningRetake(retakeKey);
 
     try {
-      // Find a station that has this skill sheet.
-      // Match by skill_sheet_id (reliable), NOT by skill_name substring
-      // (broken — E201 and E202 share the prefix "Patient assessment and
-      // management" so substring(0,15) collides and picks the first
-      // station alphabetically, which is Medical). Prefer overflow
-      // (added_during_exam) stations for retakes so the original station's
-      // scenario isn't rotated out from under new first-attempt students.
+      // Find a station that has this skill sheet. Match by skill_sheet_id
+      // (reliable), NOT by skill_name substring — E201 and E202 share the
+      // prefix "Patient assessment and management" so substring matching
+      // collides and picks the wrong station.
+      //
+      // Routing preference (strongest first):
+      //   1. isRetakeStation=true — coordinator explicitly designated this
+      //      as a retake destination (flag added 2026-04-19).
+      //   2. addedDuringExam — legacy heuristic: overflow stations opened
+      //      mid-exam doubled as retake stations. Kept so pre-flag lab
+      //      days still route reasonably.
+      //   3. First same-skill station — last resort, routes to the
+      //      original which may cause scenario rotation on that station.
       const sameSkillStations = stations.filter(
         station => station.skillSheetId === failedSkill.skill_sheet_id
       );
       const matchStation =
+        sameSkillStations.find(s => s.isRetakeStation) ||
         sameSkillStations.find(s => s.addedDuringExam) ||
         sameSkillStations[0] ||
         null;
@@ -927,6 +937,46 @@ export default function CoordinatorViewPage() {
       alert('Failed to update station status');
     } finally {
       setStatusSaving(null);
+    }
+  };
+
+  // ─── Retake-station toggle ──────────────────────────────────────────────
+  // Coordinator can mark any station as a retake destination. The retake
+  // routing (handleAssignRetake above) prefers is_retake_station=true
+  // stations over legacy addedDuringExam heuristics. Added 2026-04-19.
+  const handleToggleRetakeStation = async (
+    stationId: string,
+    next: boolean
+  ) => {
+    // Optimistic UI — revert on failure
+    setStations((prev) =>
+      prev.map((s) =>
+        s.id === stationId ? { ...s, isRetakeStation: next } : s
+      )
+    );
+    try {
+      const res = await fetch(`/api/lab-management/stations/${stationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_retake_station: next }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(`Failed to toggle retake flag: ${data.error || 'Unknown error'}`);
+        setStations((prev) =>
+          prev.map((s) =>
+            s.id === stationId ? { ...s, isRetakeStation: !next } : s
+          )
+        );
+        return;
+      }
+    } catch (err) {
+      console.error('Error toggling retake flag:', err);
+      setStations((prev) =>
+        prev.map((s) =>
+          s.id === stationId ? { ...s, isRetakeStation: !next } : s
+        )
+      );
     }
   };
 
@@ -1511,6 +1561,7 @@ export default function CoordinatorViewPage() {
             const displayProctor = getDisplayProctor(station);
             const allStudentsDone = completedCount === totalStudents && totalStudents > 0;
             const isAddedDuringExam = station.addedDuringExam || station.custom_title?.includes('(Added)');
+            const isRetakeStation = !!station.isRetakeStation;
             const enRouteEntry = enRouteStudents[station.id];
             const hasCurrentStudent = !!currentStudent;
             const { eligible } = getEligibleStudentsForStation(station);
@@ -1528,6 +1579,11 @@ export default function CoordinatorViewPage() {
                     ? 'border-gray-400 bg-gray-100 dark:border-gray-600 dark:bg-gray-800/60 opacity-70'
                     : isStationBreak
                     ? 'border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20'
+                    : isRetakeStation
+                    ? // Retake stations get a purple tint + border so the
+                      // coordinator can see at a glance which stations the
+                      // retake queue will route to.
+                      'border-purple-400 bg-purple-50 dark:border-purple-500 dark:bg-purple-900/10'
                     : `${config.border} ${config.bg}`
                 } p-3 sm:p-4 shadow-sm transition-all`}
               >
@@ -1539,6 +1595,14 @@ export default function CoordinatorViewPage() {
                       {isAddedDuringExam && (
                         <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded-full normal-case">
                           Additional Station
+                        </span>
+                      )}
+                      {isRetakeStation && (
+                        <span
+                          className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/40 px-1.5 py-0.5 rounded-full normal-case"
+                          title="Retake queue routes students here first"
+                        >
+                          Retake
                         </span>
                       )}
                       {isStationClosed && (
@@ -1611,6 +1675,26 @@ export default function CoordinatorViewPage() {
                               >
                                 <Clock className="w-4 h-4" />
                                 On Break (5–10 min)
+                              </button>
+                            )}
+                            {/* Retake-station toggle — NREMT-day only,
+                                since that's the only context where the
+                                retake queue does routing. */}
+                            {labDayInfo?.is_nremt_testing && (
+                              <button
+                                onClick={() => {
+                                  setStatusMenuStationId(null);
+                                  handleToggleRetakeStation(
+                                    station.id,
+                                    !isRetakeStation
+                                  );
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700"
+                              >
+                                <RefreshCw className="w-4 h-4" />
+                                {isRetakeStation
+                                  ? 'Unmark as retake station'
+                                  : 'Mark as retake station'}
                               </button>
                             )}
                           </div>

@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     // evaluation back to an existing station column.
     const { data: stations } = await supabase
       .from('lab_stations')
-      .select('id, station_number, station_type, custom_title, skill_name, skill_sheet_id, metadata, scenario:scenarios(id, title)')
+      .select('id, station_number, station_type, custom_title, skill_name, skill_sheet_id, is_retake_station, metadata, scenario:scenarios(id, title)')
       .eq('lab_day_id', labDayId)
       .order('station_number');
 
@@ -583,6 +583,8 @@ export async function GET(request: NextRequest) {
           addedDuringExam: stationAddedDuringExamMap[s.id] || false,
           stationSuffix: stationSuffixMap[s.id] || null,
           coordinatorStatus,
+          // Typed column; defaults false per migration 20260419.
+          isRetakeStation: (s as { is_retake_station?: boolean }).is_retake_station === true,
         };
       }),
       cells,

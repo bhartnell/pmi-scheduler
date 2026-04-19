@@ -201,6 +201,59 @@ export async function POST(request: NextRequest) {
     if (body.duplicate_of_station_id) metadata.duplicate_of_station_id = body.duplicate_of_station_id;
     if (body.station_suffix) metadata.station_suffix = body.station_suffix;
 
+    // 2026-04-15 NREMT fix: when an overflow station is created by
+    // duplicating a source station ("Open Additional Station" modal),
+    // inherit the source's scenario context so retakes on the new
+    // station aren't silently missing a scenario. Station 9 on the
+    // April 15 exam had no selected_scenario_id because the coordinator
+    // frontend doesn't expose station metadata; resolving it server-side
+    // here means every duplicate gets its scenario automatically.
+    //
+    // The explicit body values still win — if a caller passes
+    // scenario_id or selected_scenario_id they take precedence.
+    let inheritedScenarioId: string | null = null;
+    let inheritedSelectedScenarioId: string | null = null;
+    if (body.duplicate_of_station_id) {
+      try {
+        const { data: source } = await supabase
+          .from('lab_stations')
+          .select('scenario_id, skill_sheet_id, metadata')
+          .eq('id', body.duplicate_of_station_id)
+          .single();
+        if (source) {
+          inheritedScenarioId = source.scenario_id || null;
+          const sourceMeta =
+            (source.metadata && typeof source.metadata === 'object'
+              ? (source.metadata as Record<string, unknown>)
+              : null) || null;
+          if (sourceMeta && typeof sourceMeta.selected_scenario_id === 'string') {
+            inheritedSelectedScenarioId = sourceMeta.selected_scenario_id;
+          }
+          // Also inherit skill_sheet_id when caller didn't pass one —
+          // the April 15 "No station found for skill" error happened when
+          // skill_sheet_id got lost on the duplicate.
+          if (!body.skill_sheet_id && source.skill_sheet_id) {
+            body.skill_sheet_id = source.skill_sheet_id;
+            metadata.skill_sheet_id = source.skill_sheet_id;
+          }
+        }
+      } catch (lookupErr) {
+        console.warn(
+          'Failed to inherit scenario from duplicate_of_station_id:',
+          lookupErr
+        );
+      }
+    }
+    // Body values win over inherited values. selected_scenario_id lives
+    // in metadata (not a typed column); scenario_id is the typed one.
+    const resolvedScenarioId =
+      body.scenario_id ?? inheritedScenarioId ?? null;
+    const resolvedSelectedScenarioId =
+      body.selected_scenario_id ?? inheritedSelectedScenarioId ?? null;
+    if (resolvedSelectedScenarioId) {
+      metadata.selected_scenario_id = resolvedSelectedScenarioId;
+    }
+
     // Default station_type: if a skill_sheet_id is provided, this is a skills station.
     // Otherwise fall back to scenario (legacy default).
     const resolvedStationType =
@@ -213,7 +266,7 @@ export async function POST(request: NextRequest) {
         lab_day_id: body.lab_day_id,
         station_number: body.station_number || 1,
         station_type: resolvedStationType,
-        scenario_id: body.scenario_id || null,
+        scenario_id: resolvedScenarioId,
         drill_ids: Array.isArray(body.drill_ids) && body.drill_ids.length > 0 ? body.drill_ids : null,
         custom_title: body.custom_title || null,
         skill_name: body.skill_name || null,
@@ -230,6 +283,7 @@ export async function POST(request: NextRequest) {
         skill_sheet_url: body.skill_sheet_url || null,
         instructions_url: body.instructions_url || null,
         station_notes: body.station_notes || null,
+        is_retake_station: body.is_retake_station === true,
         metadata: Object.keys(metadata).length > 0 ? metadata : null,
       })
       .select('*')
