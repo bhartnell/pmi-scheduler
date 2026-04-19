@@ -423,6 +423,11 @@ export default function CoordinatorViewPage() {
   // Station status menu (close / break / reopen)
   const [statusMenuStationId, setStatusMenuStationId] = useState<string | null>(null);
   const [statusSaving, setStatusSaving] = useState<string | null>(null);
+  // Mid-exam station delete confirmation. Holds the station pending
+  // delete; cleared when the modal is cancelled or the delete completes.
+  const [deleteStationConfirm, setDeleteStationConfirm] =
+    useState<GridStation | null>(null);
+  const [deletingStationId, setDeletingStationId] = useState<string | null>(null);
 
   // Cell popover (for clickable cells in progress table)
   const [popoverCell, setPopoverCell] = useState<string | null>(null);
@@ -977,6 +982,34 @@ export default function CoordinatorViewPage() {
           s.id === stationId ? { ...s, isRetakeStation: !next } : s
         )
       );
+    }
+  };
+
+  // ─── Mid-exam station delete ───────────────────────────────────────────
+  // Deletes an overflow or retake station via the delete_station_admin
+  // RPC. The RPC enforces NREMT-day + overflow/retake-only constraints;
+  // the UI gates the menu item on the same conditions. Evaluations
+  // referencing the station are preserved via their independent
+  // lab_day_id FK.
+  const handleDeleteStation = async (station: GridStation) => {
+    setDeletingStationId(station.id);
+    try {
+      const res = await fetch(`/api/lab-management/stations/${station.id}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) {
+        alert(`Failed to delete station: ${data?.error || 'Unknown error'}`);
+        return;
+      }
+      setDeleteStationConfirm(null);
+      // Refetch grid data to remove the deleted station from local state.
+      await fetchGridData(true);
+    } catch (err) {
+      console.error('Error deleting station:', err);
+      alert('Failed to delete station');
+    } finally {
+      setDeletingStationId(null);
     }
   };
 
@@ -1697,6 +1730,25 @@ export default function CoordinatorViewPage() {
                                   : 'Mark as retake station'}
                               </button>
                             )}
+                            {/* Mid-exam delete — NREMT-day only, and only
+                                for overflow (addedDuringExam) or retake
+                                stations. Original template stations aren't
+                                deletable mid-exam; the RPC would reject
+                                anyway but we hide the option to avoid
+                                dead-end clicks. */}
+                            {labDayInfo?.is_nremt_testing &&
+                              (isAddedDuringExam || isRetakeStation) && (
+                                <button
+                                  onClick={() => {
+                                    setStatusMenuStationId(null);
+                                    setDeleteStationConfirm(station);
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                  Delete station
+                                </button>
+                              )}
                           </div>
                         </>
                       )}
@@ -2137,7 +2189,25 @@ export default function CoordinatorViewPage() {
                           </div>
                         );
                       } else if (r?.status === 'in_progress') {
-                        badge = (
+                        // Retake in progress: purple accent + "R" corner dot
+                        // so it's visually distinct from first-attempt in
+                        // progress (amber). Same cell layout, just recoloured.
+                        badge = r.hasRetake ? (
+                          <div className="relative inline-flex items-center justify-center">
+                            <span
+                              className="inline-flex items-center justify-center w-7 h-7 rounded bg-purple-50 dark:bg-purple-900/50 text-purple-600 dark:text-purple-200 border border-purple-200 dark:border-purple-700"
+                              title="Retake in progress"
+                            >
+                              <Clock className="w-4 h-4 animate-pulse" />
+                            </span>
+                            <span
+                              className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-purple-500 text-white text-[8px] font-bold flex items-center justify-center"
+                              title="Retake attempt — grading in progress"
+                            >
+                              R
+                            </span>
+                          </div>
+                        ) : (
                           <span className="inline-flex items-center justify-center w-7 h-7 rounded bg-amber-50 dark:bg-amber-900/50 text-amber-600 dark:text-amber-200 border border-amber-200 dark:border-amber-700">
                             <Clock className="w-4 h-4 animate-pulse" />
                           </span>
@@ -2223,11 +2293,23 @@ export default function CoordinatorViewPage() {
                                 </div>
                               )}
 
-                              {/* In-progress cell popover */}
+                              {/* In-progress cell popover. Retake-in-progress
+                                  (prior fail exists on this day) renders with
+                                  purple accent instead of amber so coordinators
+                                  can tell apart "first attempt in flight" from
+                                  "retake in flight" at a glance. */}
                               {cell?.status === 'in_progress' && (
                                 <div className="space-y-2">
                                   <div className="pb-2 border-b border-gray-100 dark:border-gray-700">
-                                    <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">In Progress</span>
+                                    {cell.hasRetake ? (
+                                      <span className="text-sm font-semibold text-purple-600 dark:text-purple-400">
+                                        Retake In Progress
+                                      </span>
+                                    ) : (
+                                      <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+                                        In Progress
+                                      </span>
+                                    )}
                                     {cell.evalSummary?.evaluatorName && (
                                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Evaluator: {cell.evalSummary.evaluatorName}</div>
                                     )}
@@ -2774,6 +2856,67 @@ export default function CoordinatorViewPage() {
           senderRole="coordinator"
           bottomOffset={80}
         />
+      )}
+
+      {/* Mid-exam station delete confirmation. Only reachable from the
+          per-station three-dot menu, which is already gated to NREMT days
+          and overflow/retake stations. Evaluations are preserved via
+          their independent lab_day_id FK — explicit in the copy so the
+          coordinator isn't nervous about losing data. */}
+      {deleteStationConfirm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg flex-shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                  Delete station?
+                </h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  <strong className="text-gray-900 dark:text-white">
+                    {deleteStationConfirm.custom_title ||
+                      deleteStationConfirm.skill_name ||
+                      `Station ${deleteStationConfirm.station_number}`}
+                  </strong>
+                </p>
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                  This cannot be undone. Any evaluations recorded at this
+                  station will be preserved.
+                </p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setDeleteStationConfirm(null)}
+                disabled={deletingStationId === deleteStationConfirm.id}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => handleDeleteStation(deleteStationConfirm)}
+                disabled={deletingStationId === deleteStationConfirm.id}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 inline-flex items-center gap-2"
+              >
+                {deletingStationId === deleteStationConfirm.id ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    Delete station
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -101,10 +101,14 @@ export async function GET(request: NextRequest) {
       .select('id, student_id, station_id, status, result, evaluation_id, started_at, completed_at')
       .eq('lab_day_id', labDayId);
 
-    // 6. Get evaluations for this lab day (with step counts + retake info)
+    // 6. Get evaluations for this lab day (with step counts + retake info).
+    // `status` added 2026-04-19: in-progress evals need to surface as
+    // in_progress cells so the coordinator board shows any active
+    // grading session even when it was started directly (without a
+    // coordinator "assign" that would create a queue entry).
     const { data: evaluations } = await supabase
       .from('student_skill_evaluations')
-      .select('id, student_id, skill_sheet_id, result, step_marks, created_at, team_role, is_retake, attempt_number, evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(name)')
+      .select('id, student_id, skill_sheet_id, result, status, step_marks, created_at, team_role, is_retake, attempt_number, evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(name)')
       .eq('lab_day_id', labDayId);
 
     // 7. Build station-to-skill-sheet mapping.
@@ -284,15 +288,65 @@ export async function GET(request: NextRequest) {
     // Track all results per student+station for best-result logic
     const allResults: Record<string, { results: string[]; hasRetake: boolean }> = {};
 
-    // Overlay evaluation results (evaluations take precedence for completed status)
+    // Pre-compute completed fail history keyed on student+skill_sheet —
+    // used to detect retake-in-progress: an in_progress eval preceded by
+    // a completed fail on the same day is a retake attempt whether or not
+    // is_retake was set at submission time.
+    const priorFailByStudentSheet = new Set<string>();
+    for (const e of (evaluations || [])) {
+      if (
+        e.status === 'complete' &&
+        e.result === 'fail' &&
+        e.skill_sheet_id
+      ) {
+        priorFailByStudentSheet.add(`${e.student_id}__${e.skill_sheet_id}`);
+      }
+    }
+
+    // Overlay evaluation cells. Both completed and in_progress evals are
+    // surfaced: completed ones populate final results, in_progress ones
+    // light up the "student is being graded here now" indicator on the
+    // coordinator board — crucial for grading sessions that weren't
+    // initiated via coordinator assign (no queue entry exists).
     for (const evalItem of (evaluations || [])) {
+      const isInProgress = evalItem.status === 'in_progress';
       // Find station for this evaluation's skill_sheet_id
       for (const [stationId, skillSheetId] of Object.entries(stationSkillMap)) {
         if (skillSheetId === evalItem.skill_sheet_id) {
           const key = `${evalItem.student_id}_${stationId}`;
           const existing = cells[key];
 
-          // Track results for best-result logic
+          if (isInProgress) {
+            // Don't pollute best-result history with in-progress evals —
+            // they have no result yet. But do mark hasRetake when the
+            // student has a prior same-day fail on this skill (retake
+            // attempt started, grading in progress).
+            const failKey = `${evalItem.student_id}__${evalItem.skill_sheet_id}`;
+            const isRetakeAttempt =
+              priorFailByStudentSheet.has(failKey) ||
+              !!(evalItem as Record<string, unknown>).is_retake;
+
+            // Don't overwrite a completed cell — the pass/fail wins over
+            // an in_progress started afterward.
+            if (existing?.status === 'completed') continue;
+
+            cells[key] = {
+              queueId: existing?.queueId || null,
+              status: 'in_progress',
+              result: null,
+              evaluationId: evalItem.id,
+              evalSummary: evalSummaryMap[evalItem.id] || null,
+              teamRole:
+                ((evalItem as Record<string, unknown>).team_role as
+                  | string
+                  | null) || null,
+              hasRetake: isRetakeAttempt,
+              bestResult: existing?.bestResult ?? null,
+            };
+            continue;
+          }
+
+          // Track results for best-result logic (completed evals only)
           if (!allResults[key]) {
             allResults[key] = { results: [], hasRetake: false };
           }

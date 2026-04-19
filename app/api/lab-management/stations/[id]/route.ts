@@ -270,13 +270,57 @@ export async function DELETE(
 
   if (auth instanceof NextResponse) return auth;
 
-  const { user } = auth;
+  void auth;
+  void request;
 
   const { id } = await params;
 
   try {
     const supabase = getSupabaseAdmin();
 
+    // Look up the station's lab day to decide which delete path to use.
+    // On NREMT testing days we route through the delete_station_admin
+    // RPC so the critical-delete guardrail is bypassed safely and the
+    // constraints on deletable stations (overflow/retake only) are
+    // enforced inside the function.
+    const { data: station, error: lookupErr } = await supabase
+      .from('lab_stations')
+      .select('id, lab_day_id, is_retake_station, metadata, lab_day:lab_days!lab_stations_lab_day_id_fkey(is_nremt_testing)')
+      .eq('id', id)
+      .single();
+
+    if (lookupErr || !station) {
+      return NextResponse.json(
+        { success: false, error: 'Station not found' },
+        { status: 404 }
+      );
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const labDay = station.lab_day as any;
+    const isNremt = !!labDay?.is_nremt_testing;
+
+    if (isNremt) {
+      // Mid-exam path — go through the RPC which (a) flips the critical-
+      // delete flag inside the transaction and (b) validates this is an
+      // overflow or retake station. Original template stations are
+      // rejected by the RPC with insufficient_privilege.
+      const { error: rpcErr } = await supabase.rpc('delete_station_admin', {
+        p_station_id: id,
+      });
+      if (rpcErr) {
+        console.error('delete_station_admin RPC error:', rpcErr);
+        const msg = rpcErr.message || 'Delete blocked';
+        return NextResponse.json(
+          { success: false, error: msg },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    // Non-NREMT: plain delete (may hit the critical-delete guardrail on
+    // active labs — same behavior as before this endpoint branched).
     const { error } = await supabase
       .from('lab_stations')
       .delete()
