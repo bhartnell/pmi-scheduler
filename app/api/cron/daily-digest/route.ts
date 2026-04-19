@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { wrapInEmailTemplate, EMAIL_COLORS } from '@/lib/email-templates';
 import { NotificationCategory } from '@/lib/notifications';
+import { isNremtTestingActiveToday } from '@/lib/email';
 
 const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
 
@@ -298,6 +299,14 @@ async function processUserDigest(
 
   const preferencesUrl = `${APP_URL}/settings?tab=notifications`;
   const fullHtml = wrapInEmailTemplate(digestContent, preferencesUrl);
+
+  // NREMT kill switch — this route bypasses lib/email.ts. Added 2026-04-19.
+  if (await isNremtTestingActiveToday()) {
+    console.warn(
+      '[nremt-guard] Skipped daily digest send — NREMT testing active'
+    );
+    return 'skipped';
+  }
 
   // Send via Resend directly (bypass the template system since we build HTML ourselves)
   const { Resend } = await import('resend');

@@ -4,6 +4,7 @@ import { hasMinRole } from '@/lib/permissions';
 import { Resend } from 'resend';
 import { requireAuth } from '@/lib/api-auth';
 import { wrapInEmailTemplate } from '@/lib/email-templates';
+import { isNremtTestingActiveToday } from '@/lib/email';
 
 const FROM_EMAIL = process.env.EMAIL_FROM || 'PMI Paramedic Tools <notifications@pmiparamedic.tools>';
 const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
@@ -126,6 +127,25 @@ export async function POST(
         error: 'No students with email addresses found in this cohort',
         skipped: studentsWithoutEmail.length,
       }, { status: 400 });
+    }
+
+    // NREMT kill switch — highest-leak-risk route (instructor-initiated
+    // mass email to students). 2026-04-15 exam had leaks through this
+    // path because it uses its own Resend client and doesn't go through
+    // lib/email.ts's sendEmail() guard.
+    if (await isNremtTestingActiveToday()) {
+      console.warn(
+        '[nremt-guard] Blocked cohort email — NREMT testing is active today'
+      );
+      return NextResponse.json(
+        {
+          success: false,
+          blocked: 'nremt_testing_day',
+          error:
+            'Cohort emails are blocked on NREMT testing days. Try again tomorrow.',
+        },
+        { status: 423 } // Locked
+      );
     }
 
     const resend = getResend();

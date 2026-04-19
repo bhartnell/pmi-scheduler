@@ -363,7 +363,18 @@ const STUDENT_EVAL_TEMPLATES: ReadonlySet<EmailTemplate> = new Set([
 let nremtLockCache: { value: boolean; fetchedAt: number } | null = null;
 const NREMT_LOCK_TTL_MS = 30_000;
 
-async function isNremtTestingActiveToday(): Promise<boolean> {
+/**
+ * Public check for other routes that bypass the central sendEmail()
+ * (i.e. they use their own Resend client for custom templates). These
+ * routes should still respect the NREMT kill switch — call this before
+ * sending and short-circuit when it returns true. Exported 2026-04-19
+ * after auditing 6 bypass routes that were leaking during NREMT exams.
+ */
+export async function isNremtTestingActiveToday(): Promise<boolean> {
+  return _isNremtTestingActiveToday();
+}
+
+async function _isNremtTestingActiveToday(): Promise<boolean> {
   const now = Date.now();
   if (nremtLockCache && now - nremtLockCache.fetchedAt < NREMT_LOCK_TTL_MS) {
     return nremtLockCache.value;

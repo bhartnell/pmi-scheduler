@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { createNotification } from '@/lib/notifications';
 import { wrapInEmailTemplate, EMAIL_COLORS } from '@/lib/email-templates';
+import { isNremtTestingActiveToday } from '@/lib/email';
 
 const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
 const FROM_EMAIL =
@@ -191,6 +192,21 @@ export async function POST(request: NextRequest) {
     const submittedIds = new Set<string>(
       (weekAvailability || []).map((a: { instructor_id: string }) => a.instructor_id)
     );
+
+    // NREMT kill switch — this route bypasses lib/email.ts's sendEmail()
+    // so we re-check the flag here. Availability reminders are non-student
+    // but we still block on NREMT days to keep the "no outbound mail today"
+    // promise simple and verifiable (audit: 2026-04-19).
+    if (await isNremtTestingActiveToday()) {
+      console.warn(
+        '[nremt-guard] Blocked availability-reminder send — NREMT testing active'
+      );
+      return NextResponse.json({
+        success: false,
+        blocked: 'nremt_testing_day',
+        sent: 0,
+      });
+    }
 
     // Initialize Resend
     const { Resend } = await import('resend');

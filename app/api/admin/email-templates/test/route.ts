@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { wrapInEmailTemplate } from '@/lib/email-templates';
 import { Resend } from 'resend';
+import { isNremtTestingActiveToday } from '@/lib/email';
 
 const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
 const FROM_EMAIL =
@@ -88,6 +89,20 @@ export async function POST(request: NextRequest) {
 
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json({ success: true, message: 'Test email simulated (no API key)' });
+    }
+
+    // NREMT kill switch — even admin test sends stop on NREMT days so a
+    // template preview doesn't accidentally leak to a student address.
+    if (await isNremtTestingActiveToday()) {
+      return NextResponse.json(
+        {
+          success: false,
+          blocked: 'nremt_testing_day',
+          error:
+            'Test email blocked — NREMT testing is active today. Try again tomorrow.',
+        },
+        { status: 423 }
+      );
     }
 
     const resend = new Resend(process.env.RESEND_API_KEY);

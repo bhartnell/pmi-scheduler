@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { wrapInEmailTemplate, EMAIL_COLORS } from '@/lib/email-templates';
+import { isNremtTestingActiveToday } from '@/lib/email';
 
 const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
 const FROM_EMAIL =
@@ -387,6 +388,14 @@ async function processExport(
   // Build CSV attachment name
   const csvFilename = `${exportConfig.report_type}_${new Date(generatedAt).toISOString().slice(0, 10)}.csv`;
   const csvBase64 = Buffer.from(reportData.csv, 'utf-8').toString('base64');
+
+  // NREMT kill switch — bypass-path guard added 2026-04-19.
+  if (await isNremtTestingActiveToday()) {
+    console.warn(
+      '[nremt-guard] Skipped scheduled export send — NREMT testing active'
+    );
+    return 'skipped';
+  }
 
   const { Resend } = await import('resend');
   const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;

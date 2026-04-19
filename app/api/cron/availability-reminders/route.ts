@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { createNotification } from '@/lib/notifications';
 import { wrapInEmailTemplate, EMAIL_COLORS } from '@/lib/email-templates';
+import { isNremtTestingActiveToday } from '@/lib/email';
 
 const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
 const FROM_EMAIL =
@@ -174,6 +175,14 @@ async function processInstructorWeek(
     referenceType: 'availability_reminder',
     referenceId: weekStartStr,
   });
+
+  // NREMT kill switch — bypass-path guard added 2026-04-19.
+  if (await isNremtTestingActiveToday()) {
+    console.warn(
+      '[nremt-guard] Skipped availability-reminder cron send — NREMT testing active'
+    );
+    return 'skipped';
+  }
 
   // Send email if Resend is configured
   const { Resend } = await import('resend');
