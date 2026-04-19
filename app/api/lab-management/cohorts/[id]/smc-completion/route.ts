@@ -91,10 +91,13 @@ export async function GET(
     const effectiveSemester =
       semesterFilter !== null ? semesterFilter : cohort.current_semester ?? 1;
 
-    // 2. SMC requirements for this program+semester
+    // 2. SMC requirements for this program+semester.
+    // week_number + sim_permitted added 2026-04-18 for the authoritative
+    // EMT/AEMT seeds — EMT SMC is week-ordered, AEMT lists sim-permitted
+    // CoAEMSP skills. Both are optional/nullable on Paramedic rows.
     const { data: smcRows, error: smcError } = await supabase
       .from('smc_requirements')
-      .select('id, skill_id, skill_name, category, min_attempts, is_platinum, display_order')
+      .select('id, skill_id, skill_name, category, min_attempts, is_platinum, sim_permitted, week_number, display_order')
       .eq('program_id', program?.id)
       .eq('semester', effectiveSemester)
       .eq('is_active', true)
@@ -170,6 +173,8 @@ export async function GET(
       category: string | null;
       min_attempts: number;
       is_platinum: boolean;
+      sim_permitted: boolean;
+      week_number: number | null;
       covered: boolean;
       lab_day_count: number;
       first_covered_date: string | null;
@@ -247,6 +252,8 @@ export async function GET(
         category: smc.category,
         min_attempts: smc.min_attempts,
         is_platinum: smc.is_platinum,
+        sim_permitted: smc.sim_permitted === true,
+        week_number: smc.week_number ?? null,
         covered: matchedDayIds.size > 0,
         lab_day_count: matchedDayIds.size,
         first_covered_date: firstDate,

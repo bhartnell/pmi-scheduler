@@ -36,6 +36,15 @@ export async function PATCH(
     if ('min_attempts' in body)
       patch.min_attempts = parseInt(String(body.min_attempts), 10) || 1;
     if ('is_platinum' in body) patch.is_platinum = !!body.is_platinum;
+    if ('sim_permitted' in body) patch.sim_permitted = !!body.sim_permitted;
+    if ('week_number' in body) {
+      // Accept null/empty to clear, integer otherwise
+      const w = body.week_number;
+      patch.week_number =
+        w === null || w === '' || w === undefined
+          ? null
+          : parseInt(String(w), 10) || null;
+    }
     if ('notes' in body) patch.notes = body.notes || null;
     if ('is_active' in body) patch.is_active = !!body.is_active;
     if ('display_order' in body)

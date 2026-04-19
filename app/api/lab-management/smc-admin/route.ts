@@ -45,11 +45,12 @@ export async function GET(request: NextRequest) {
         .order('name'),
     ]);
 
-    // 2. Load SMC rows
+    // 2. Load SMC rows. week_number and sim_permitted added 2026-04-18
+    // for the authoritative EMT/AEMT seeds.
     let query = supabase
       .from('smc_requirements')
       .select(
-        'id, program_id, semester, skill_id, skill_name, category, min_attempts, is_platinum, notes, display_order, is_active, created_at, updated_at'
+        'id, program_id, semester, skill_id, skill_name, category, min_attempts, is_platinum, sim_permitted, week_number, notes, display_order, is_active, created_at, updated_at'
       )
       .order('program_id')
       .order('semester')
@@ -117,6 +118,8 @@ export async function POST(request: NextRequest) {
       category,
       min_attempts,
       is_platinum,
+      sim_permitted,
+      week_number,
       notes,
     } = body;
 
@@ -137,6 +140,11 @@ export async function POST(request: NextRequest) {
         category: category || null,
         min_attempts: min_attempts ? parseInt(String(min_attempts), 10) : 1,
         is_platinum: !!is_platinum,
+        sim_permitted: !!sim_permitted,
+        week_number:
+          week_number === null || week_number === '' || week_number === undefined
+            ? null
+            : parseInt(String(week_number), 10) || null,
         notes: notes || null,
         is_active: true,
       })

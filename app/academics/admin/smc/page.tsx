@@ -47,6 +47,10 @@ interface SmcRow {
   category: string | null;
   min_attempts: number;
   is_platinum: boolean;
+  /** EMT: week number 1-14 when skill is introduced. Null for AEMT/Paramedic. */
+  week_number: number | null;
+  /** AEMT: CoAEMSP skills marked * allow simulation toward min_attempts. */
+  sim_permitted: boolean;
   notes: string | null;
   display_order: number;
   is_active: boolean;
@@ -636,9 +640,25 @@ function RowCard({
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
+          {typeof row.week_number === 'number' && row.week_number > 0 && (
+            <span
+              className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 tabular-nums"
+              title={`Introduced in week ${row.week_number}`}
+            >
+              Wk {row.week_number}
+            </span>
+          )}
           <span className="text-sm font-medium text-gray-900 dark:text-white">
             {row.skill_name}
           </span>
+          {row.sim_permitted && (
+            <span
+              className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+              title="Simulation permitted toward minimum attempts"
+            >
+              sim ok
+            </span>
+          )}
           {row.is_platinum && (
             <span className="inline-flex items-center gap-0.5 text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
               <Star className="w-2.5 h-2.5 fill-current" />
@@ -712,6 +732,10 @@ function EditRowModal({
   const [category, setCategory] = useState(row.category || '');
   const [minAttempts, setMinAttempts] = useState(row.min_attempts);
   const [isPlatinum, setIsPlatinum] = useState(row.is_platinum);
+  const [simPermitted, setSimPermitted] = useState(row.sim_permitted || false);
+  const [weekNumber, setWeekNumber] = useState<string>(
+    row.week_number != null ? String(row.week_number) : ''
+  );
   const [notes, setNotes] = useState(row.notes || '');
   const [isActive, setIsActive] = useState(row.is_active);
   const [saving, setSaving] = useState(false);
@@ -724,6 +748,8 @@ function EditRowModal({
       category: category || null,
       min_attempts: minAttempts,
       is_platinum: isPlatinum,
+      sim_permitted: simPermitted,
+      week_number: weekNumber ? parseInt(weekNumber, 10) : null,
       notes: notes || null,
       is_active: isActive,
     });
@@ -748,7 +774,7 @@ function EditRowModal({
             onChange={setSkillId}
           />
         </FormField>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <FormField label="Category">
             <input
               type="text"
@@ -768,8 +794,19 @@ function EditRowModal({
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
             />
           </FormField>
+          <FormField label="Week (EMT)">
+            <input
+              type="number"
+              min={1}
+              max={52}
+              value={weekNumber}
+              onChange={(e) => setWeekNumber(e.target.value)}
+              placeholder="—"
+              className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+            />
+          </FormField>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 flex-wrap">
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input
               type="checkbox"
@@ -778,6 +815,18 @@ function EditRowModal({
               className="w-4 h-4 rounded border-gray-300"
             />
             Platinum skill
+          </label>
+          <label
+            className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+            title="AEMT CoAEMSP: simulation counts toward minimum attempts"
+          >
+            <input
+              type="checkbox"
+              checked={simPermitted}
+              onChange={(e) => setSimPermitted(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300"
+            />
+            Sim permitted (AEMT)
           </label>
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input

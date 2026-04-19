@@ -44,6 +44,10 @@ interface SmcRow {
   category: string | null;
   min_attempts: number;
   is_platinum: boolean;
+  /** EMT: week the skill is introduced (1-14). Null for AEMT/Paramedic. */
+  week_number?: number | null;
+  /** AEMT: CoAEMSP skills marked * allow simulation toward min_attempts. */
+  sim_permitted?: boolean;
   covered: boolean;
   lab_day_count: number;
   first_covered_date: string | null;
@@ -243,8 +247,10 @@ export default function SmcCompletionPage() {
     const lines = [
       [
         'Skill',
+        'Week',
         'Category',
         'Platinum',
+        'Sim Permitted',
         'Min Attempts',
         'Covered',
         'Lab Days',
@@ -259,8 +265,10 @@ export default function SmcCompletionPage() {
       lines.push(
         [
           escape(r.skill_name),
+          escape(r.week_number ?? ''),
           escape(r.category),
           escape(r.is_platinum ? 'yes' : 'no'),
+          escape(r.sim_permitted ? 'yes' : 'no'),
           escape(r.min_attempts),
           escape(r.covered ? 'yes' : 'no'),
           escape(r.lab_day_count),
@@ -531,9 +539,25 @@ export default function SmcCompletionPage() {
                     <Icon className={`w-5 h-5 flex-shrink-0 ${iconColor}`} />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
+                        {typeof r.week_number === 'number' && r.week_number > 0 && (
+                          <span
+                            className="text-[10px] font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300 tabular-nums"
+                            title={`Introduced in week ${r.week_number}`}
+                          >
+                            Wk {r.week_number}
+                          </span>
+                        )}
                         <span className="text-sm font-medium text-gray-900 dark:text-white">
                           {r.skill_name}
                         </span>
+                        {r.sim_permitted && (
+                          <span
+                            className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                            title="Simulation permitted toward minimum attempts"
+                          >
+                            sim ok
+                          </span>
+                        )}
                         {r.is_platinum && (
                           <span
                             className="inline-flex items-center gap-0.5 text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
