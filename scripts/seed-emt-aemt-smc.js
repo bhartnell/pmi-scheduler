@@ -102,32 +102,34 @@ const EMT_SMC = [
   [1, 'PPE'],
   [1, 'Physical restraint'],
   // Week 3
-  [3, 'Lifting and moving'],
-  [3, 'Perform report to ALS provider', { platinum_only: true }],
+  // Names aligned to catalog entries (migration 20260418_catalog_emt_foundations)
+  // so the auto-matcher exact-matches instead of falling through to fuzzy.
+  [3, 'Patient lifting and moving techniques'],
+  [3, 'Patient report to ALS provider', { platinum_only: true }],
   [3, 'Team Leader (Lab)', { platinum_only: true }],
-  [3, 'BP auscultation'],
-  [3, 'BP palpation'],
-  [3, 'LOC'],
+  [3, 'Blood pressure by auscultation'],
+  [3, 'Blood pressure by palpation'],
+  [3, 'Level of consciousness (LOC)'],
   [3, 'Patient history'],
-  [3, 'Automated BP'],
+  [3, 'Automated blood pressure'],
   [3, 'Blood glucose'],
-  [3, 'Pulses'],
-  [3, 'Pupils'],
-  [3, 'Skin signs'],
+  [3, 'Pulses assessment'],
+  [3, 'Pupils assessment'],
+  [3, 'Skin signs assessment'],
   // Week 4
   [4, 'NPA insertion'],
   [4, 'CPR — adult/child 1-rescuer'],
   [4, 'CPR — adult/child 2-rescuer'],
-  [4, 'CPR — infant'],
+  [4, 'CPR — infant (one-rescuer)'],
   [4, 'FBAO — conscious adult/child'],
   [4, 'FBAO — conscious infant'],
   [4, 'FBAO — unconscious adult/child'],
   [4, 'FBAO — unconscious infant'],
   // Week 5
-  [5, 'Oxygen tank assembly'],
+  [5, 'Oxygen tank assembly/operation'],
   [5, 'BiPAP/CPAP application'],
   [5, 'BVM ventilation of apneic adult'],
-  [5, 'Humidified oxygen'],
+  [5, 'Humidified oxygen delivery'],
   [5, 'Manual airway maneuvers'],
   [5, 'OPA insertion'],
   [5, 'Oxygen administration by non-rebreather mask'],
@@ -143,12 +145,12 @@ const EMT_SMC = [
   [7, 'MDI administration'],
   [7, 'Nebulized medication administration'],
   [7, '12-lead ECG acquisition'],
-  [7, 'Cardiac Arrest / AED (EMT)'],
+  [7, 'Cardiac Arrest Management / AED (EMT)'],
   // Week 8
   [8, 'Naloxone administration'],
   // Week 9
   [9, 'Patient Assessment — Trauma (EMT)', { platinum_only: true }],
-  [9, 'Bleeding control / shock management (EMT)'],
+  [9, 'Bleeding control and shock management (EMT)'],
   // Week 10
   [10, 'Hemorrhage control — wound packing'],
   // Week 11
@@ -161,7 +163,7 @@ const EMT_SMC = [
   // Week 12
   [12, 'Childbirth — normal delivery'],
   // Week 14
-  [14, 'Report to receiving facility'],
+  [14, 'Patient report to receiving facility'],
 ];
 
 // ── Authoritative AEMT list (13 skills) ──
@@ -179,7 +181,8 @@ const AEMT_SMC = [
   ['Perform PPV with BVM', 10, true],
   ['Perform endotracheal suctioning', 2, true],
   ['Insert supraglottic airway', 10, true],
-  ['Defibrillation — automated and semi-automated', 2, true],
+  // Catalog name: "AED / Defibrillation" (exact match after rename)
+  ['AED / Defibrillation', 2, true],
   ['Perform chest compressions', 2, true],
   ['ETCO2 monitoring and waveform interpretation', 10, true],
 ];
