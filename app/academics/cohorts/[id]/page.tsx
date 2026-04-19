@@ -36,7 +36,8 @@ import {
   Printer,
   ClipboardCheck,
   BookOpen,
-  Target
+  Target,
+  GitCompare
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import ChecklistAttendance from '@/components/ChecklistAttendance';
@@ -905,6 +906,14 @@ export default function CohortHubPage() {
               >
                 <Target className="w-4 h-4" />
                 SMC Coverage
+              </Link>
+              <Link
+                href={`/academics/cohorts/${cohortId}/semester-review`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-600"
+                title="Compare the loaded template plan against what actually ran"
+              >
+                <GitCompare className="w-4 h-4" />
+                Semester Review
               </Link>
               <Link
                 href={`/academics/cohorts/${cohortId}/skill-log`}
