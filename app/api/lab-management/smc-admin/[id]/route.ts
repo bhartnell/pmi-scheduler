@@ -37,6 +37,7 @@ export async function PATCH(
       patch.min_attempts = parseInt(String(body.min_attempts), 10) || 1;
     if ('is_platinum' in body) patch.is_platinum = !!body.is_platinum;
     if ('sim_permitted' in body) patch.sim_permitted = !!body.sim_permitted;
+    if ('lab_tracked' in body) patch.lab_tracked = !!body.lab_tracked;
     if ('week_number' in body) {
       // Accept null/empty to clear, integer otherwise
       const w = body.week_number;

@@ -48,6 +48,9 @@ interface SmcRow {
   week_number?: number | null;
   /** AEMT: CoAEMSP skills marked * allow simulation toward min_attempts. */
   sim_permitted?: boolean;
+  /** False when the skill is tracked elsewhere (Platinum — clinical/field),
+      not via lab stations. Hidden from lab SMC view by default. */
+  lab_tracked?: boolean;
   covered: boolean;
   lab_day_count: number;
   first_covered_date: string | null;
@@ -119,6 +122,10 @@ export default function SmcCompletionPage() {
   const [sortKey, setSortKey] = useState<SortKey>('status');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [semesterOverride, setSemesterOverride] = useState<number | null>(null);
+  // Hide skills flagged lab_tracked=false by default so the lab SMC view
+  // isn't noisy with clinical/field skills that are tracked in Platinum
+  // and will never get "covered" by a lab station. Toggle reveals them.
+  const [showClinicalSkills, setShowClinicalSkills] = useState(false);
 
   const [userRole, setUserRole] = useState<Role | null>(null);
 
@@ -178,6 +185,9 @@ export default function SmcCompletionPage() {
     if (!data?.results) return [];
     const q = search.trim().toLowerCase();
     const filtered = data.results.filter((r) => {
+      // Default: hide clinical/field-only skills (lab_tracked=false).
+      // They're tracked in Platinum and will never show as covered here.
+      if (!showClinicalSkills && r.lab_tracked === false) return false;
       if (q && !r.skill_name.toLowerCase().includes(q)) return false;
       if (statusFilter === 'not_yet' && r.covered) return false;
       if (statusFilter === 'covered' && !r.covered) return false;
@@ -208,11 +218,25 @@ export default function SmcCompletionPage() {
       return a.last_run_date!.localeCompare(b.last_run_date!) * dir;
     });
     return sorted;
-  }, [data, statusFilter, search, sortKey, sortDir]);
+  }, [data, statusFilter, search, sortKey, sortDir, showClinicalSkills]);
 
   const counts = useMemo(() => {
-    const c = { covered: 0, not_yet: 0, weak: 0, platinum_missing: 0, total: 0 };
+    const c = {
+      covered: 0,
+      not_yet: 0,
+      weak: 0,
+      platinum_missing: 0,
+      total: 0,
+      clinical_only: 0,
+    };
     for (const r of data?.results || []) {
+      // Track clinical-only count separately but don't count it in
+      // the main totals unless the user opts to show it. Matches the
+      // filter in filteredRows so the summary cards agree with the list.
+      if (r.lab_tracked === false) {
+        c.clinical_only++;
+        if (!showClinicalSkills) continue;
+      }
       c.total++;
       if (r.covered) {
         c.covered++;
@@ -227,7 +251,7 @@ export default function SmcCompletionPage() {
       }
     }
     return c;
-  }, [data]);
+  }, [data, showClinicalSkills]);
 
   const handleExportCsv = useCallback(() => {
     if (!filteredRows.length) return;
@@ -473,6 +497,24 @@ export default function SmcCompletionPage() {
                 {label}
               </button>
             ))}
+            {/* Clinical-skills toggle. Only rendered when there's something
+                to reveal — silent when the cohort's SMC has zero clinical-
+                only entries (EMT/AEMT have none currently). */}
+            {counts.clinical_only > 0 && (
+              <label
+                className="inline-flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-pointer"
+                title="Also show skills tracked in Platinum (clinical/field) rather than via lab stations"
+              >
+                <input
+                  type="checkbox"
+                  checked={showClinicalSkills}
+                  onChange={(e) => setShowClinicalSkills(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded border-gray-300"
+                />
+                Include clinical/field skills
+                <span className="text-gray-400">({counts.clinical_only})</span>
+              </label>
+            )}
             <div className="ml-auto flex items-center gap-1 text-xs">
               <span className="text-gray-500 dark:text-gray-400">Sort:</span>
               <select

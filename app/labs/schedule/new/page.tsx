@@ -1014,9 +1014,13 @@ function NewLabDayPageContent() {
 
         const stationData = await stationRes.json();
 
-        // If skills station, add the skill links
-        if (station.station_type === 'skills' && stationData.success) {
-          // Add library skills
+        // Attach any selected library skills to this station. 2026-04-18:
+        // gate widened from station_type === 'skills' to any type so
+        // scenario/other stations can tag the skills practiced there.
+        // This closes the data gap that required retroactive SQL fixes
+        // to populate station_skills. Unique (station_id, skill_id)
+        // makes double-inserts a no-op.
+        if (stationData.success) {
           for (const skillId of station.selected_skills) {
             await fetch('/api/lab-management/station-skills', {
               method: 'POST',
@@ -2244,8 +2248,11 @@ function NewLabDayPageContent() {
                       </div>
                     )}
 
-                    {/* Skills Selection (for skills type only) */}
-                    {station.station_type === 'skills' && (
+                    {/* Linked skills — available for every station type as
+                        of 2026-04-18 so scenario / procedural stations
+                        can tag the skills practiced there at creation
+                        time instead of via retroactive SQL. */}
+                    {true && (
                       <div className="space-y-3">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">

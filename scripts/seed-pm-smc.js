@@ -119,11 +119,12 @@ const PM_SMC = [
   [1, 'Endotracheal Suctioning',           2,  true],
   [1, 'FBAO Removal with Magill Forceps',  2,  true],
 
-  // Semester 2 — medication administration emphasis
-  [2, 'IV Bolus Medication',               10, false],
+  // Semester 2 — medication administration emphasis.
+  // Both flagged lab_tracked=false (tracked in Platinum, not lab).
+  [2, 'IV Bolus Medication',               10, false, { lab_tracked: false }],
   // IV Infusion Setup is the closest catalog match for CoAEMSP's
   // "Administer IV infusion medication" — covers the same skill scope.
-  [2, 'IV Infusion Setup',                 2,  true],
+  [2, 'IV Infusion Setup',                 2,  true,  { lab_tracked: false }],
 ];
 
 async function main() {
@@ -159,7 +160,7 @@ async function main() {
 
   const rows = [];
   const unmatched = [];
-  PM_SMC.forEach(([semester, name, minAttempts, simPermitted], idx) => {
+  PM_SMC.forEach(([semester, name, minAttempts, simPermitted, opts = {}], idx) => {
     const match = matchSkill(name, catalog);
     if (!match) unmatched.push(name);
     rows.push({
@@ -171,6 +172,7 @@ async function main() {
       min_attempts: minAttempts,
       is_platinum: false,
       sim_permitted: simPermitted,
+      lab_tracked: opts.lab_tracked !== false, // default true
       week_number: null,
       display_order: idx + 1,
       match_method: match ? match.method : 'none',
@@ -195,15 +197,16 @@ async function main() {
     await client.query(
       `INSERT INTO smc_requirements
         (program_id, semester, skill_id, skill_name, category,
-         min_attempts, is_platinum, sim_permitted, week_number,
-         display_order, is_active)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, true)
+         min_attempts, is_platinum, sim_permitted, lab_tracked,
+         week_number, display_order, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
        ON CONFLICT (program_id, semester, skill_name) DO UPDATE
          SET skill_id = EXCLUDED.skill_id,
              category = EXCLUDED.category,
              min_attempts = EXCLUDED.min_attempts,
              is_platinum = EXCLUDED.is_platinum,
              sim_permitted = EXCLUDED.sim_permitted,
+             lab_tracked = EXCLUDED.lab_tracked,
              week_number = EXCLUDED.week_number,
              display_order = EXCLUDED.display_order,
              is_active = true,
@@ -217,6 +220,7 @@ async function main() {
         r.min_attempts,
         r.is_platinum,
         r.sim_permitted,
+        r.lab_tracked,
         r.week_number,
         r.display_order,
       ]

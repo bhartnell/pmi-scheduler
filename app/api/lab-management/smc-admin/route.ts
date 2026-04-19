@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('smc_requirements')
       .select(
-        'id, program_id, semester, skill_id, skill_name, category, min_attempts, is_platinum, sim_permitted, week_number, notes, display_order, is_active, created_at, updated_at'
+        'id, program_id, semester, skill_id, skill_name, category, min_attempts, is_platinum, sim_permitted, lab_tracked, week_number, notes, display_order, is_active, created_at, updated_at'
       )
       .order('program_id')
       .order('semester')
@@ -119,6 +119,7 @@ export async function POST(request: NextRequest) {
       min_attempts,
       is_platinum,
       sim_permitted,
+      lab_tracked,
       week_number,
       notes,
     } = body;
@@ -141,6 +142,8 @@ export async function POST(request: NextRequest) {
         min_attempts: min_attempts ? parseInt(String(min_attempts), 10) : 1,
         is_platinum: !!is_platinum,
         sim_permitted: !!sim_permitted,
+        // lab_tracked defaults true on create unless explicitly false
+        lab_tracked: lab_tracked === false ? false : true,
         week_number:
           week_number === null || week_number === '' || week_number === undefined
             ? null

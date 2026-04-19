@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
+import Link from 'next/link';
 import { AlertCircle, UserPlus } from 'lucide-react';
 import WidgetCard, { WidgetEmpty } from '../WidgetCard';
 
@@ -128,9 +129,14 @@ export default function OpenStationsWidget() {
                   }`}>
                     {formatDate(station.lab_day.date)}
                   </div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  {/* Link the station title to its lab day so "open lab" is
+                      one click away. Previously unlinked text. */}
+                  <Link
+                    href={`/labs/schedule/${station.lab_day.id}`}
+                    className="text-sm font-medium text-gray-900 dark:text-white truncate hover:underline block"
+                  >
                     {station.custom_title || station.scenario?.title || `Station ${station.station_number}`}
-                  </p>
+                  </Link>
                   <p className="text-xs text-gray-600 dark:text-gray-400">
                     {station.lab_day.cohort.program.abbreviation} Group {station.lab_day.cohort.cohort_number}
                   </p>

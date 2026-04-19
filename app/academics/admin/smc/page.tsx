@@ -51,6 +51,8 @@ interface SmcRow {
   week_number: number | null;
   /** AEMT: CoAEMSP skills marked * allow simulation toward min_attempts. */
   sim_permitted: boolean;
+  /** False for skills tracked in Platinum (clinical/field), not lab. */
+  lab_tracked: boolean;
   notes: string | null;
   display_order: number;
   is_active: boolean;
@@ -659,6 +661,14 @@ function RowCard({
               sim ok
             </span>
           )}
+          {row.lab_tracked === false && (
+            <span
+              className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300"
+              title="Tracked in Platinum (clinical/field), not via lab stations"
+            >
+              clinical
+            </span>
+          )}
           {row.is_platinum && (
             <span className="inline-flex items-center gap-0.5 text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
               <Star className="w-2.5 h-2.5 fill-current" />
@@ -733,6 +743,8 @@ function EditRowModal({
   const [minAttempts, setMinAttempts] = useState(row.min_attempts);
   const [isPlatinum, setIsPlatinum] = useState(row.is_platinum);
   const [simPermitted, setSimPermitted] = useState(row.sim_permitted || false);
+  // lab_tracked defaults true (both for new rows and rows pre-column)
+  const [labTracked, setLabTracked] = useState(row.lab_tracked !== false);
   const [weekNumber, setWeekNumber] = useState<string>(
     row.week_number != null ? String(row.week_number) : ''
   );
@@ -749,6 +761,7 @@ function EditRowModal({
       min_attempts: minAttempts,
       is_platinum: isPlatinum,
       sim_permitted: simPermitted,
+      lab_tracked: labTracked,
       week_number: weekNumber ? parseInt(weekNumber, 10) : null,
       notes: notes || null,
       is_active: isActive,
@@ -827,6 +840,18 @@ function EditRowModal({
               className="w-4 h-4 rounded border-gray-300"
             />
             Sim permitted (AEMT)
+          </label>
+          <label
+            className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300"
+            title="Uncheck for skills tracked in Platinum (clinical/field), not lab. Hides from the lab SMC view by default."
+          >
+            <input
+              type="checkbox"
+              checked={labTracked}
+              onChange={(e) => setLabTracked(e.target.checked)}
+              className="w-4 h-4 rounded border-gray-300"
+            />
+            Lab-tracked
           </label>
           <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
             <input

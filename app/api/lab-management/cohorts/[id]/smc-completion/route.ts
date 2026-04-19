@@ -97,7 +97,7 @@ export async function GET(
     // CoAEMSP skills. Both are optional/nullable on Paramedic rows.
     const { data: smcRows, error: smcError } = await supabase
       .from('smc_requirements')
-      .select('id, skill_id, skill_name, category, min_attempts, is_platinum, sim_permitted, week_number, display_order')
+      .select('id, skill_id, skill_name, category, min_attempts, is_platinum, sim_permitted, lab_tracked, week_number, display_order')
       .eq('program_id', program?.id)
       .eq('semester', effectiveSemester)
       .eq('is_active', true)
@@ -174,6 +174,7 @@ export async function GET(
       min_attempts: number;
       is_platinum: boolean;
       sim_permitted: boolean;
+      lab_tracked: boolean;
       week_number: number | null;
       covered: boolean;
       lab_day_count: number;
@@ -253,6 +254,9 @@ export async function GET(
         min_attempts: smc.min_attempts,
         is_platinum: smc.is_platinum,
         sim_permitted: smc.sim_permitted === true,
+        // Default lab_tracked=true when the column is null/missing
+        // (e.g. fresh rows inserted before the column existed).
+        lab_tracked: smc.lab_tracked !== false,
         week_number: smc.week_number ?? null,
         covered: matchedDayIds.size > 0,
         lab_day_count: matchedDayIds.size,

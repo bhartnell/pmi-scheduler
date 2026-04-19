@@ -86,11 +86,15 @@ export default function EditStationModal({
     // Fetch scenarios and skills
     await fetchScenariosAndSkills();
 
-    // Fetch station skills and custom skills if it's a skills station
+    // Fetch existing station_skills + custom_skills for this station.
+    // 2026-04-18: widened from skills/skill_drill gate to any station
+    // type so the picker can surface linked skills even on scenario /
+    // procedural stations (prevents data loss when editing one of
+    // those stations would have dropped skills silently).
     let stationSkillIds: string[] = [];
     let customSkillsList: string[] = [];
 
-    if (station.station_type === 'skills' || station.station_type === 'skill_drill') {
+    {
       try {
         const res = await fetch(`/api/lab-management/station-skills?stationId=${station.id}`);
         const data = await res.json();
@@ -342,7 +346,11 @@ export default function EditStationModal({
         return;
       }
 
-      if (editForm.station_type === 'skills' || editForm.station_type === 'skill_drill') {
+      // Persist station_skills + custom_skills for every station type
+      // (2026-04-18: gate widened from skills/skill_drill). DELETE + re-POST
+      // ensures removed skills get dropped. Unique (station_id, skill_id)
+      // protects against double-inserts on retry.
+      {
         await fetch(`/api/lab-management/station-skills?stationId=${station.id}`, { method: 'DELETE' });
         for (const skillId of editForm.selectedSkills) {
           await fetch('/api/lab-management/station-skills', {
@@ -762,8 +770,9 @@ export default function EditStationModal({
             <TemplateGuideSection metadata={station.metadata} />
           )}
 
-          {/* Skills Selection */}
-          {(editForm.station_type === 'skills' || editForm.station_type === 'skill_drill') && (
+          {/* Skills Selection — available for every station type so
+              scenario / procedural stations can tag station_skills too. */}
+          {true && (
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Skills from Library</label>
