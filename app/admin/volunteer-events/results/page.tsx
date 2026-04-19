@@ -47,6 +47,8 @@ interface EventWithRegistrations {
   start_time: string | null;
   end_time: string | null;
   location: string | null;
+  description: string | null;
+  max_volunteers: number | null;
   linked_lab_day_id: string | null;
   registrations: Registration[];
   registration_count: number;
@@ -377,11 +379,23 @@ export default function VolunteerResultsPage() {
               >
                 <div className="p-4 border-b border-gray-200 dark:border-gray-700">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {event.name}
-                      </h3>
-                      <div className="text-sm text-gray-500 dark:text-gray-400 flex gap-3">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                          {event.name}
+                        </h3>
+                        {/* Type badge inline with name. Previously the
+                            event_type was only visible in CSV export. */}
+                        <span
+                          className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded ${
+                            TYPE_STYLES[event.event_type] ||
+                            'bg-gray-100 text-gray-700'
+                          }`}
+                        >
+                          {TYPE_LABELS[event.event_type] || event.event_type}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400 flex gap-3 flex-wrap mt-1">
                         <span>
                           {new Date(event.date + 'T00:00:00').toLocaleDateString('en-US', {
                             weekday: 'short',
@@ -390,8 +404,30 @@ export default function VolunteerResultsPage() {
                             year: 'numeric',
                           })}
                         </span>
+                        {(event.start_time || event.end_time) && (
+                          <span>
+                            {event.start_time
+                              ? event.start_time.substring(0, 5)
+                              : '?'}
+                            {event.end_time && (
+                              <> – {event.end_time.substring(0, 5)}</>
+                            )}
+                          </span>
+                        )}
                         {event.location && <span>{event.location}</span>}
+                        {event.max_volunteers && (
+                          <span className="text-gray-400">
+                            cap {event.max_volunteers}
+                          </span>
+                        )}
                       </div>
+                      {/* Inline description — the biggest missing piece
+                          previously, only visible via CSV export. */}
+                      {event.description && (
+                        <p className="mt-2 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">
+                          {event.description}
+                        </p>
+                      )}
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">

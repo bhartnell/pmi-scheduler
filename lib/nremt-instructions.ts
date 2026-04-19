@@ -246,6 +246,24 @@ Various splinting materials should be available. Do not indicate displeasure wit
  * Find the instruction entry for a given station/skill name using fuzzy matching.
  * Handles variations in naming between the database skill_name and the instruction keys.
  */
+// Synonym patterns for station custom_titles that don't exactly match
+// the canonical NREMT skill names. Each pattern resolves to a canonical
+// key in NREMT_CANDIDATE_INSTRUCTIONS. Without this, stations titled
+// "O2 Administration by NRB" (the Schafer 2026-04-15 case) matched
+// nothing and showed no proctor instructions.
+const SKILL_NAME_SYNONYMS: Array<{
+  pattern: RegExp;
+  canonicalKey: string;
+}> = [
+  // Oxygen / Non-Rebreather variants
+  { pattern: /\bnrb\b/i, canonicalKey: 'Oxygen Administration by Non-Rebreather Mask' },
+  { pattern: /\bo2\b/i, canonicalKey: 'Oxygen Administration by Non-Rebreather Mask' },
+  { pattern: /non[-\s]?rebreather/i, canonicalKey: 'Oxygen Administration by Non-Rebreather Mask' },
+  // BVM variants (the canonical already matches 'bvm' directly, kept for clarity)
+  { pattern: /\bbvm\b/i, canonicalKey: 'BVM Ventilation of an Apneic Adult Patient' },
+  { pattern: /bag[-\s]?valve[-\s]?mask/i, canonicalKey: 'BVM Ventilation of an Apneic Adult Patient' },
+];
+
 export function findInstructionEntry(stationName: string): SkillInstructionEntry | null {
   if (!stationName) return null;
   const lower = stationName.toLowerCase();
@@ -265,6 +283,16 @@ export function findInstructionEntry(stationName: string): SkillInstructionEntry
     const keyWords = key.toLowerCase().split(/\s+/).filter(w => w.length > 3);
     const matchCount = keyWords.filter(w => lower.includes(w)).length;
     if (matchCount >= 2) return entry;
+  }
+
+  // Synonym fallback — catches "O2", "NRB", "BVM" etc. that don't share
+  // enough significant words with the canonical key to satisfy the
+  // keyword-overlap heuristic.
+  for (const { pattern, canonicalKey } of SKILL_NAME_SYNONYMS) {
+    if (pattern.test(stationName)) {
+      const entry = NREMT_CANDIDATE_INSTRUCTIONS[canonicalKey];
+      if (entry) return entry;
+    }
   }
 
   return null;

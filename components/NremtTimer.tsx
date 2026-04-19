@@ -15,7 +15,10 @@ const NREMT_TIME_LIMITS: Record<string, number> = {
 };
 const DEFAULT_TIME_LIMIT = 15;
 
-// Dual station phases (seconds)
+// Dual station phases (seconds). Station titled "O2 Administration by NRB"
+// (Schafer 2026-04-15) was falling through to a 15-min single timer
+// because the name didn't literally include 'oxygen' or 'bvm'. The
+// isDualStation matcher below now covers nrb/o2/bag-valve-mask synonyms.
 export const DUAL_PHASES = [
   { name: 'O2 Prep', seconds: 2 * 60 },
   { name: 'O2 Evaluation', seconds: 5 * 60 },
@@ -24,8 +27,16 @@ export const DUAL_PHASES = [
 ];
 
 export function isDualStation(name: string): boolean {
+  if (!name) return false;
   const lower = name.toLowerCase();
-  return lower.includes('bvm') || lower.includes('oxygen');
+  return (
+    lower.includes('bvm') ||
+    lower.includes('oxygen') ||
+    /\bnrb\b/.test(lower) ||
+    /\bo2\b/.test(lower) ||
+    /non[-\s]?rebreather/.test(lower) ||
+    /bag[-\s]?valve[-\s]?mask/.test(lower)
+  );
 }
 
 function getTimeLimit(name: string): number {
