@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
@@ -230,7 +230,12 @@ export default function InternshipDetailPage() {
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const internshipId = params.id as string;
+  const backCohortId = searchParams.get('cohortId');
+  const backHref = backCohortId
+    ? `/clinical/internships/cohort/${backCohortId}`
+    : '/clinical/internships';
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -800,11 +805,13 @@ export default function InternshipDetailPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link
-                href="/clinical/internships"
+                href={backHref}
                 className="flex items-center gap-1 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm text-gray-600 dark:text-gray-400"
               >
                 <ArrowLeft className="w-5 h-5" />
-                <span className="hidden sm:inline">Back to Internships</span>
+                <span className="hidden sm:inline">
+                  {backCohortId ? 'Back to Cohort' : 'Back to Internships'}
+                </span>
               </Link>
 
               <div className="w-14 h-14 bg-teal-100 dark:bg-teal-900/30 rounded-full flex items-center justify-center">

@@ -37,7 +37,8 @@ import {
   ClipboardCheck,
   BookOpen,
   Target,
-  GitCompare
+  GitCompare,
+  Briefcase
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import ChecklistAttendance from '@/components/ChecklistAttendance';
@@ -702,6 +703,16 @@ export default function CohortHubPage() {
             </div>
 
             <div className="flex flex-wrap gap-2">
+              {templateProgram === 'paramedic' && (
+                <Link
+                  href={`/clinical/internships/cohort/${cohortId}`}
+                  className="inline-flex items-center gap-2 px-3 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-sm"
+                  title="Open internship tracker for this cohort"
+                >
+                  <Briefcase className="w-4 h-4" />
+                  Internship Tracker
+                </Link>
+              )}
               {!cohort.is_archived && (
                 <>
                   <Link
