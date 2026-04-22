@@ -3,6 +3,8 @@
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
+import TransferCohortModal from '@/components/students/TransferCohortModal';
+import CohortHistorySection, { type CohortHistoryHandle } from '@/components/students/CohortHistorySection';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -38,7 +40,7 @@ import {
   Phone,
 } from 'lucide-react';
 import Barcode from 'react-barcode';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight } from 'lucide-react';
 import { canManageStudentRoster, hasMinRole, type Role } from '@/lib/permissions';
 import StudentCommunications from '@/components/StudentCommunications';
 import AttendanceAlertBanner from '@/components/AttendanceAlertBanner';
@@ -256,6 +258,8 @@ export default function StudentDetailPage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<Role | null>(null);
+  const [showTransferModal, setShowTransferModal] = useState(false);
+  const cohortHistoryRef = useRef<CohortHistoryHandle>(null);
 
   // Edit form state
   const [editFirstName, setEditFirstName] = useState('');
@@ -1200,6 +1204,16 @@ export default function StudentDetailPage() {
                       <button onClick={() => setEditing(true)} className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                         <Edit2 className="w-5 h-5" />
                       </button>
+                      {userRole && canManageStudentRoster(userRole) && (
+                        <button
+                          onClick={() => setShowTransferModal(true)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg font-medium"
+                          title="Move student to a different cohort"
+                        >
+                          <ArrowRight className="w-4 h-4" />
+                          Transfer
+                        </button>
+                      )}
                       {userRole && canManageStudentRoster(userRole) && (
                         <button onClick={handleDelete} className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg">
                           <Trash2 className="w-5 h-5" />
@@ -2450,7 +2464,25 @@ export default function StudentDetailPage() {
         </div>
         </>}
 
+        {/* Cohort transfer history — only renders when there's history */}
+        <CohortHistorySection ref={cohortHistoryRef} studentId={studentId} />
+
       </main>
+
+      {showTransferModal && student && (
+        <TransferCohortModal
+          studentId={studentId}
+          studentName={`${student.first_name} ${student.last_name}`}
+          currentStatus={student.status}
+          currentCohort={student.cohort}
+          onClose={() => setShowTransferModal(false)}
+          onTransferred={() => {
+            setShowTransferModal(false);
+            fetchStudent();
+            cohortHistoryRef.current?.refresh();
+          }}
+        />
+      )}
     </div>
   );
 }
