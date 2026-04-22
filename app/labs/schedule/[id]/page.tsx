@@ -410,8 +410,14 @@ export default function LabDayPage() {
               stations run the same skill (e.g. Intubation Checkoff). Auto-
               detects from stations; shows an empty state otherwise. */}
           <Link
+            href={`/labs/schedule/${labDayId}/assignments`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800 ml-auto"
+          >
+            <Users className="w-3.5 h-3.5" /> Assign Students
+          </Link>
+          <Link
             href={`/labs/schedule/${labDayId}/checkoff`}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 rounded-lg hover:bg-teal-100 dark:hover:bg-teal-900/50 border border-teal-200 dark:border-teal-800 ml-auto"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 rounded-lg hover:bg-teal-100 dark:hover:bg-teal-900/50 border border-teal-200 dark:border-teal-800"
           >
             <ClipboardCheck className="w-3.5 h-3.5" /> Checkoff View
           </Link>

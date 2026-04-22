@@ -77,6 +77,34 @@ interface Payload {
   progress: { complete: number; total: number };
 }
 
+// Station assignments payload (loaded in parallel; drives the "at Station 2 —
+// Ambulance Org" subtitle under each roster row and the per-station panel
+// in Section A).
+interface AssignmentStation {
+  id: string;
+  station_number: number | null;
+  title: string | null;
+  room: string | null;
+  instructor_name: string | null;
+  is_checkoff: boolean;
+  students: {
+    student_id: string;
+    first_name: string;
+    last_name: string;
+    lab_group: { id: string; name: string } | null;
+  }[];
+}
+interface AssignmentsPayload {
+  success: true;
+  stations: AssignmentStation[];
+  unassigned: {
+    student_id: string;
+    first_name: string;
+    last_name: string;
+    lab_group: { id: string; name: string } | null;
+  }[];
+}
+
 // ─── Lab group colors (A=blue, B=green, C=orange) ──────────────────────────
 const GROUP_COLORS: Record<string, string> = {
   A: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
@@ -99,10 +127,12 @@ export default function CheckoffCoordinatorPage() {
   const labDayId = params?.id as string;
 
   const [data, setData] = useState<Payload | null>(null);
+  const [assignments, setAssignments] = useState<AssignmentsPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null); // student_id being toggled
   const [stationsOpen, setStationsOpen] = useState(false);
+  const [expandedStation, setExpandedStation] = useState<string | null>(null);
   const [lastSync, setLastSync] = useState<Date | null>(null);
 
   // Redirect unauth
@@ -110,19 +140,31 @@ export default function CheckoffCoordinatorPage() {
     if (sessionStatus === 'unauthenticated') router.push('/auth/signin');
   }, [sessionStatus, router]);
 
-  // Fetch
+  // Fetch both the checkoff status and the station assignments in parallel
+  // so the roster subtitle + Section A panel stay in sync.
   const fetchData = useCallback(async () => {
     if (!labDayId) return;
     try {
-      const r = await fetch(
-        `/api/lab-management/lab-days/${labDayId}/checkoff-status`
-      );
-      const json = (await r.json()) as Payload | { success: false; error: string };
+      const [statusRes, assignRes] = await Promise.all([
+        fetch(`/api/lab-management/lab-days/${labDayId}/checkoff-status`),
+        fetch(`/api/lab-management/lab-days/${labDayId}/station-assignments`),
+      ]);
+      const json = (await statusRes.json()) as
+        | Payload
+        | { success: false; error: string };
       if (!('success' in json) || !json.success) {
         setError((json as any).error || 'Failed to load checkoff status');
         return;
       }
       setData(json);
+      try {
+        const aj = (await assignRes.json()) as
+          | AssignmentsPayload
+          | { success: false; error: string };
+        if ('success' in aj && aj.success) setAssignments(aj);
+      } catch {
+        // Assignment fetch is best-effort — roster still works without it.
+      }
       setError(null);
       setLastSync(new Date());
     } catch {
@@ -216,6 +258,52 @@ export default function CheckoffCoordinatorPage() {
   const orgStations = useMemo(
     () => (data?.stations ?? []).filter((s) => !s.is_checkoff),
     [data]
+  );
+
+  // Pre-compute student_id → station label. Powers the subtitle under each
+  // roster row ("Group 2 · Station 2 — Ambulance Org"). Falls back to just
+  // the lab-group chip when a student isn't yet assigned.
+  const stationLabelByStudent = useMemo(() => {
+    const map = new Map<string, { station_number: number | null; title: string | null }>();
+    for (const s of assignments?.stations ?? []) {
+      if (s.is_checkoff) continue;
+      for (const stu of s.students) {
+        map.set(stu.student_id, {
+          station_number: s.station_number,
+          title: s.title,
+        });
+      }
+    }
+    return map;
+  }, [assignments]);
+
+  // Section-A panel source: the assignments payload's non-checkoff stations
+  // (sorted by station_number). If assignments haven't loaded yet we fall
+  // back to the checkoff-status payload so the basic reference list still
+  // renders.
+  const panelStations = useMemo(() => {
+    if (assignments?.stations?.length) {
+      return [...assignments.stations].sort(
+        (a, b) => (a.station_number ?? 999) - (b.station_number ?? 999)
+      );
+    }
+    return (data?.stations ?? []).map((s) => ({
+      id: s.id,
+      station_number: s.station_number,
+      title: s.title,
+      room: s.room,
+      instructor_name: s.instructor_name,
+      is_checkoff: s.is_checkoff,
+      students: [] as AssignmentStation['students'],
+    }));
+  }, [assignments, data]);
+
+  const assignedCount = useMemo(
+    () =>
+      (assignments?.stations ?? [])
+        .filter((s) => !s.is_checkoff)
+        .reduce((acc, s) => acc + s.students.length, 0),
+    [assignments]
   );
 
   if (loading) {
@@ -320,7 +408,7 @@ export default function CheckoffCoordinatorPage() {
           </div>
         )}
 
-        {/* ─── Section A: Station assignments (collapsible) ─────────────── */}
+        {/* ─── Section A: Station assignments (collapsible per station) ─── */}
         <section className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           <button
             type="button"
@@ -331,7 +419,8 @@ export default function CheckoffCoordinatorPage() {
               <MapPin className="w-4 h-4 text-teal-600 dark:text-teal-400" />
               Station assignments
               <span className="text-xs text-gray-500 dark:text-gray-400 font-normal">
-                ({orgStations.length} org + {(data.stations.length - orgStations.length)} checkoff)
+                ({orgStations.length} org + {data.stations.length - orgStations.length} checkoff
+                {assignments ? ` · ${assignedCount} assigned` : ''})
               </span>
             </span>
             {stationsOpen ? (
@@ -342,38 +431,100 @@ export default function CheckoffCoordinatorPage() {
           </button>
           {stationsOpen && (
             <div className="border-t border-gray-100 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700">
-              {data.stations.length === 0 && (
+              {panelStations.length === 0 && (
                 <div className="px-4 py-6 text-sm text-center text-gray-500 dark:text-gray-400">
                   No stations on this lab day.
                 </div>
               )}
-              {data.stations.map((s) => (
-                <div key={s.id} className="px-4 py-3">
-                  <div className="flex items-start gap-2">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-gray-900 dark:text-white text-sm flex items-center gap-2">
-                        {s.station_number != null && (
-                          <span className="inline-flex w-6 h-6 items-center justify-center bg-gray-100 dark:bg-gray-700 text-xs rounded font-semibold">
-                            {s.station_number}
-                          </span>
-                        )}
-                        <span className="truncate">{s.title || 'Station'}</span>
-                        {s.is_checkoff && (
-                          <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300">
-                            Checkoff
-                          </span>
+              {panelStations.map((s) => {
+                const isOpen = expandedStation === s.id;
+                const hasStudents = s.students.length > 0;
+                return (
+                  <div key={s.id}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedStation((cur) => (cur === s.id ? null : s.id))
+                      }
+                      className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-700/30"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                          {s.station_number != null && (
+                            <span className="inline-flex w-6 h-6 items-center justify-center bg-gray-100 dark:bg-gray-700 text-xs rounded font-semibold">
+                              {s.station_number}
+                            </span>
+                          )}
+                          <span className="truncate">{s.title || 'Station'}</span>
+                          {s.is_checkoff && (
+                            <span className="text-[10px] uppercase tracking-wide font-semibold px-1.5 py-0.5 rounded bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300">
+                              Checkoff
+                            </span>
+                          )}
+                          {!s.is_checkoff && hasStudents && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 font-semibold">
+                              {s.students.length}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          {[s.room, s.instructor_name].filter(Boolean).join(' · ') || '—'}
+                        </div>
+                      </div>
+                      {!s.is_checkoff && (
+                        <span className="ml-2 flex-shrink-0 text-gray-400">
+                          {isOpen ? (
+                            <ChevronDown className="w-4 h-4" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4" />
+                          )}
+                        </span>
+                      )}
+                    </button>
+                    {isOpen && !s.is_checkoff && (
+                      <div className="px-4 pb-3 pt-1">
+                        {hasStudents ? (
+                          <ul className="text-sm space-y-1">
+                            {s.students.map((stu) => (
+                              <li
+                                key={stu.student_id}
+                                className="flex items-center gap-2 text-gray-700 dark:text-gray-200"
+                              >
+                                <span className="text-gray-400">•</span>
+                                <span className="flex-1">
+                                  {stu.last_name}, {stu.first_name}
+                                </span>
+                                {stu.lab_group && (
+                                  <span
+                                    className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${groupChipClasses(
+                                      stu.lab_group.name
+                                    )}`}
+                                  >
+                                    {stu.lab_group.name}
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <div className="text-xs italic text-gray-400 dark:text-gray-500">
+                            No students assigned to this station yet.
+                          </div>
                         )}
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                        {[s.room, s.instructor_name].filter(Boolean).join(' · ') || '—'}
-                      </div>
-                    </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
               <div className="px-4 py-3 text-[11px] text-gray-400 dark:text-gray-500 italic">
-                Per-student assignments coming in Part 2 (drag-and-drop). For now,
-                reference the cohort lab-group rotation.
+                Assign students from the{' '}
+                <Link
+                  href={`/labs/schedule/${labDayId}/assignments`}
+                  className="underline hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  setup view
+                </Link>
+                . Checkoff stations (students rotate through) have no pre-assignments.
               </div>
             </div>
           )}
@@ -403,6 +554,7 @@ export default function CheckoffCoordinatorPage() {
                 <StudentRow
                   key={r.student_id}
                   entry={r}
+                  stationLabel={stationLabelByStudent.get(r.student_id) ?? null}
                   pending={pending === r.student_id}
                   disabled={!checkoff}
                   onComplete={() => toggle(r, 'complete')}
@@ -425,6 +577,7 @@ export default function CheckoffCoordinatorPage() {
 // ─── StudentRow ────────────────────────────────────────────────────────────
 function StudentRow({
   entry,
+  stationLabel,
   pending,
   disabled,
   onComplete,
@@ -432,6 +585,7 @@ function StudentRow({
   onReset,
 }: {
   entry: RosterEntry;
+  stationLabel: { station_number: number | null; title: string | null } | null;
   pending: boolean;
   disabled: boolean;
   onComplete: () => void;
@@ -479,7 +633,7 @@ function StudentRow({
           <span className="block font-medium text-gray-900 dark:text-white truncate">
             {entry.last_name}, {entry.first_name}
           </span>
-          <span className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+          <span className="flex items-center gap-2 flex-wrap text-xs text-gray-500 dark:text-gray-400 mt-0.5">
             {entry.lab_group && (
               <span
                 className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${groupChipClasses(
@@ -487,6 +641,19 @@ function StudentRow({
                 )}`}
               >
                 {entry.lab_group.name}
+              </span>
+            )}
+            {stationLabel && (
+              <span className="inline-flex items-center gap-1 text-gray-600 dark:text-gray-300">
+                <MapPin className="w-3 h-3" />
+                {stationLabel.station_number != null && (
+                  <>Station {stationLabel.station_number}</>
+                )}
+                {stationLabel.title && (
+                  <span className="truncate max-w-[14ch] sm:max-w-none">
+                    — {stationLabel.title}
+                  </span>
+                )}
               </span>
             )}
             {status === 'complete' && (
