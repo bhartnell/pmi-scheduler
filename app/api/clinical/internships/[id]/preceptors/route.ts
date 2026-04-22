@@ -136,6 +136,29 @@ export async function POST(
       .single();
 
     if (error) {
+      // 23505 = unique_violation on (internship_id, preceptor_id, role).
+      // Surfacing this as a 409 with a human-readable message lets the UI
+      // tell the user "already assigned" instead of a generic 500.
+      if ((error as { code?: string }).code === '23505') {
+        const { data: existing } = await supabase
+          .from('student_preceptor_assignments')
+          .select('id, is_active')
+          .eq('internship_id', internshipId)
+          .eq('preceptor_id', preceptor_id)
+          .eq('role', role)
+          .maybeSingle();
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'This preceptor is already assigned to this internship in the same role.',
+            code: 'duplicate_assignment',
+            existing_assignment_id: existing?.id ?? null,
+            existing_is_active: existing?.is_active ?? null,
+          },
+          { status: 409 }
+        );
+      }
       console.error('Error creating preceptor assignment:', error);
       throw error;
     }
