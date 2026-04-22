@@ -403,9 +403,18 @@ export default function LabDayPage() {
           {(labDay.is_nremt_testing || labMode === 'individual_testing') && (
             <>
               <Link href={`/labs/schedule/${labDayId}/results`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/30 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800"><ClipboardCheck className="w-3.5 h-3.5" /> Skill Results</Link>
-              <Link href={`/labs/schedule/${labDayId}/coordinator`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800 ml-auto"><Users className="w-3.5 h-3.5" /> Coordinator View</Link>
+              <Link href={`/labs/schedule/${labDayId}/coordinator`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800"><Users className="w-3.5 h-3.5" /> Coordinator View</Link>
             </>
           )}
+          {/* Checkoff view — mobile-first combined tracker for days where two
+              stations run the same skill (e.g. Intubation Checkoff). Auto-
+              detects from stations; shows an empty state otherwise. */}
+          <Link
+            href={`/labs/schedule/${labDayId}/checkoff`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 rounded-lg hover:bg-teal-100 dark:hover:bg-teal-900/50 border border-teal-200 dark:border-teal-800 ml-auto"
+          >
+            <ClipboardCheck className="w-3.5 h-3.5" /> Checkoff View
+          </Link>
         </div>
 
         {labMode === 'individual_testing' && (<div className="mt-6 print:hidden"><IndividualTestingGrid labDayId={labDayId as string} isNremtTesting={!!labDay.is_nremt_testing} /></div>)}
