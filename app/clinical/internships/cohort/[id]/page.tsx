@@ -50,6 +50,7 @@ interface Internship {
   phase_1_start_date: string | null;
   phase_2_start_date: string | null;
   extension_date: string | null;
+  pre_internship_meeting_scheduled: string | null;
   phase_1_meeting_scheduled: string | null;
   phase_2_meeting_scheduled: string | null;
   final_exam_scheduled: string | null;
@@ -241,6 +242,7 @@ export default function PmInternshipCohortHub() {
       return { scheduled, total };
     };
     return {
+      preInternship: count('pre_internship_meeting_scheduled'),
       phase1: count('phase_1_meeting_scheduled'),
       phase2: count('phase_2_meeting_scheduled'),
       final: count('final_exam_scheduled'),
@@ -478,7 +480,13 @@ export default function PmInternshipCohortHub() {
             <Calendar className="w-5 h-5 text-teal-600 dark:text-teal-400" />
             Meeting Status
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <MeetingCard
+              title="Pre-Internship Agency"
+              scheduled={meetingStats.preInternship.scheduled}
+              total={meetingStats.preInternship.total}
+              onShowUnscheduled={() => setSelectedPhase('pre_internship')}
+            />
             <MeetingCard
               title="Phase 1 Evaluation"
               scheduled={meetingStats.phase1.scheduled}
@@ -503,9 +511,7 @@ export default function PmInternshipCohortHub() {
             />
           </div>
           <p className="mt-4 text-xs text-gray-500 dark:text-gray-400">
-            Pre-Internship Agency Meeting tracking + internal meeting maker
-            coming in a follow-up. Click a student above to schedule individual
-            meetings.
+            Click a student above to set individual meeting dates / links.
           </p>
         </section>
 

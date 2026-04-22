@@ -93,13 +93,18 @@ interface Internship {
   psychomotor_exam_passed: boolean;
   // Course completion
   course_completion_date: string | null;
-  // Meeting poll IDs
+  // Meeting poll IDs (legacy Rally) + meeting links (new)
   phase_1_meeting_poll_id: string | null;
   phase_1_meeting_scheduled: string | null;
+  phase_1_meeting_link: string | null;
   phase_2_meeting_poll_id: string | null;
   phase_2_meeting_scheduled: string | null;
+  phase_2_meeting_link: string | null;
   final_exam_poll_id: string | null;
   final_exam_scheduled: string | null;
+  final_exam_meeting_link: string | null;
+  pre_internship_meeting_scheduled: string | null;
+  pre_internship_meeting_link: string | null;
   // Extension tracking
   is_extended: boolean;
   extension_reason: string | null;
@@ -376,13 +381,18 @@ export default function InternshipDetailPage() {
           psychomotor_exam_date: i.psychomotor_exam_date || '',
           psychomotor_exam_passed: i.psychomotor_exam_passed || false,
           course_completion_date: i.course_completion_date || '',
-          // Meeting poll IDs
+          // Meeting poll IDs (legacy) + meeting links (new)
           phase_1_meeting_poll_id: i.phase_1_meeting_poll_id || '',
           phase_1_meeting_scheduled: i.phase_1_meeting_scheduled || '',
+          phase_1_meeting_link: i.phase_1_meeting_link || '',
           phase_2_meeting_poll_id: i.phase_2_meeting_poll_id || '',
           phase_2_meeting_scheduled: i.phase_2_meeting_scheduled || '',
+          phase_2_meeting_link: i.phase_2_meeting_link || '',
           final_exam_poll_id: i.final_exam_poll_id || '',
           final_exam_scheduled: i.final_exam_scheduled || '',
+          final_exam_meeting_link: i.final_exam_meeting_link || '',
+          pre_internship_meeting_scheduled: i.pre_internship_meeting_scheduled || '',
+          pre_internship_meeting_link: i.pre_internship_meeting_link || '',
           notes: i.notes || '',
           // Extension tracking
           is_extended: i.is_extended || false,
@@ -442,6 +452,7 @@ export default function InternshipDetailPage() {
     'nremt_clearance_date', 'ryan_notified_date', 'written_exam_date',
     'psychomotor_exam_date', 'course_completion_date',
     'phase_1_meeting_scheduled', 'phase_2_meeting_scheduled', 'final_exam_scheduled',
+    'pre_internship_meeting_scheduled',
     'extension_date', 'original_expected_end_date', 'extension_eval_date',
     'provisional_license_date',
   ];
@@ -2003,128 +2014,47 @@ export default function InternshipDetailPage() {
               </div>
 
               <div className="p-4 space-y-4">
-                {/* Phase 1 Meeting */}
-                <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-700/30">
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">Phase 1 Evaluation</div>
-                    {formData.phase_1_meeting_scheduled && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        Scheduled: {formatDate(formData.phase_1_meeting_scheduled)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {canEdit && (
-                      <input
-                        type="text"
-                        value={formData.phase_1_meeting_poll_id || ''}
-                        onChange={(e) => handleInputChange('phase_1_meeting_poll_id', e.target.value)}
-                        placeholder="Rallly poll ID"
-                        className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white w-32"
-                      />
-                    )}
-                    {formData.phase_1_meeting_poll_id && (
-                      <a
-                        href={`https://rallly.co/p/${formData.phase_1_meeting_poll_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 rounded"
-                      >
-                        View Poll <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                    {!formData.phase_1_meeting_poll_id && (
-                      <Link
-                        href="/scheduling/polls/create"
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                      >
-                        Create Poll <ExternalLink className="w-3 h-3" />
-                      </Link>
-                    )}
-                  </div>
-                </div>
-
-                {/* Phase 2 Meeting */}
-                <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-700/30">
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">Phase 2 Evaluation</div>
-                    {formData.phase_2_meeting_scheduled && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        Scheduled: {formatDate(formData.phase_2_meeting_scheduled)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {canEdit && (
-                      <input
-                        type="text"
-                        value={formData.phase_2_meeting_poll_id || ''}
-                        onChange={(e) => handleInputChange('phase_2_meeting_poll_id', e.target.value)}
-                        placeholder="Rallly poll ID"
-                        className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white w-32"
-                      />
-                    )}
-                    {formData.phase_2_meeting_poll_id && (
-                      <a
-                        href={`https://rallly.co/p/${formData.phase_2_meeting_poll_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 rounded"
-                      >
-                        View Poll <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                    {!formData.phase_2_meeting_poll_id && (
-                      <Link
-                        href="/scheduling/polls/create"
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                      >
-                        Create Poll <ExternalLink className="w-3 h-3" />
-                      </Link>
-                    )}
-                  </div>
-                </div>
-
-                {/* Final Exam Meeting */}
-                <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-gray-50 dark:bg-gray-700/30">
-                  <div>
-                    <div className="font-medium text-gray-900 dark:text-white">Final Exam</div>
-                    {formData.final_exam_scheduled && (
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        Scheduled: {formatDate(formData.final_exam_scheduled)}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {canEdit && (
-                      <input
-                        type="text"
-                        value={formData.final_exam_poll_id || ''}
-                        onChange={(e) => handleInputChange('final_exam_poll_id', e.target.value)}
-                        placeholder="Rallly poll ID"
-                        className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white w-32"
-                      />
-                    )}
-                    {formData.final_exam_poll_id && (
-                      <a
-                        href={`https://rallly.co/p/${formData.final_exam_poll_id}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 rounded"
-                      >
-                        View Poll <ExternalLink className="w-3 h-3" />
-                      </a>
-                    )}
-                    {!formData.final_exam_poll_id && (
-                      <Link
-                        href="/scheduling/polls/create"
-                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
-                      >
-                        Create Poll <ExternalLink className="w-3 h-3" />
-                      </Link>
-                    )}
-                  </div>
-                </div>
+                <MeetingRow
+                  label="Pre-Internship Agency Meeting"
+                  subLabel="Student + PMI + Agency introduction"
+                  dateField="pre_internship_meeting_scheduled"
+                  linkField="pre_internship_meeting_link"
+                  pollIdField={null}
+                  formData={formData}
+                  canEdit={canEdit}
+                  onChange={handleInputChange}
+                  formatDate={formatDate}
+                />
+                <MeetingRow
+                  label="Phase 1 Evaluation"
+                  dateField="phase_1_meeting_scheduled"
+                  linkField="phase_1_meeting_link"
+                  pollIdField="phase_1_meeting_poll_id"
+                  formData={formData}
+                  canEdit={canEdit}
+                  onChange={handleInputChange}
+                  formatDate={formatDate}
+                />
+                <MeetingRow
+                  label="Phase 2 Evaluation"
+                  dateField="phase_2_meeting_scheduled"
+                  linkField="phase_2_meeting_link"
+                  pollIdField="phase_2_meeting_poll_id"
+                  formData={formData}
+                  canEdit={canEdit}
+                  onChange={handleInputChange}
+                  formatDate={formatDate}
+                />
+                <MeetingRow
+                  label="Final Exam"
+                  dateField="final_exam_scheduled"
+                  linkField="final_exam_meeting_link"
+                  pollIdField="final_exam_poll_id"
+                  formData={formData}
+                  canEdit={canEdit}
+                  onChange={handleInputChange}
+                  formatDate={formatDate}
+                />
               </div>
             </div>
           </div>
@@ -2265,6 +2195,124 @@ export default function InternshipDetailPage() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// MeetingRow — a single row in the Meeting Scheduling section.
+//
+// Replaces the old Rally-poll-ID-only workflow with a "Create meeting /
+// paste link" choice. Users can either open the internal poll creator
+// (/scheduling/polls/create) in a new tab, or paste a meeting URL they
+// already have (Rallly, Calendly, Google Meet, Zoom, etc.).
+//
+// The scheduled-date field below drives the cohort-hub "X/Y scheduled"
+// counts (Section C), so that stays the source of truth for completion.
+// ---------------------------------------------------------------------------
+interface MeetingRowProps {
+  label: string;
+  subLabel?: string;
+  dateField: string;
+  linkField: string;
+  pollIdField: string | null; // legacy Rally ID — null for pre-internship row
+  formData: any;
+  canEdit: boolean;
+  onChange: (field: string, value: any) => void;
+  formatDate: (d: string | null) => string;
+}
+
+function MeetingRow({
+  label,
+  subLabel,
+  dateField,
+  linkField,
+  pollIdField,
+  formData,
+  canEdit,
+  onChange,
+  formatDate,
+}: MeetingRowProps) {
+  const scheduled = formData[dateField] || '';
+  const link = formData[linkField] || '';
+  const legacyPollId = pollIdField ? formData[pollIdField] || '' : '';
+  const resolvedLink = link || (legacyPollId ? `https://rallly.co/p/${legacyPollId}` : '');
+
+  return (
+    <div className="py-3 px-3 rounded-lg bg-gray-50 dark:bg-gray-700/30">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-medium text-gray-900 dark:text-white">{label}</div>
+          {subLabel && (
+            <div className="text-xs text-gray-500 dark:text-gray-400">{subLabel}</div>
+          )}
+          {scheduled && (
+            <div className="text-xs text-teal-700 dark:text-teal-300 mt-1">
+              Scheduled: {formatDate(scheduled)}
+            </div>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">
+          <Link
+            href="/scheduling/polls/create"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded"
+          >
+            <CalendarDays className="w-3.5 h-3.5" />
+            Create Meeting
+          </Link>
+          {resolvedLink && (
+            <a
+              href={resolvedLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm text-cyan-700 dark:text-cyan-300 bg-white dark:bg-gray-800 border border-cyan-200 dark:border-cyan-800 hover:bg-cyan-50 dark:hover:bg-cyan-900/30 rounded"
+            >
+              Open <ExternalLink className="w-3 h-3" />
+            </a>
+          )}
+        </div>
+      </div>
+
+      {canEdit && (
+        <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+          <label className="text-xs text-gray-500 dark:text-gray-400 sm:w-28 flex-shrink-0">
+            Meeting link
+          </label>
+          <input
+            type="url"
+            value={link}
+            onChange={(e) => onChange(linkField, e.target.value)}
+            placeholder="Paste meeting URL (or leave blank)"
+            className="flex-1 px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+          />
+          {link && (
+            <button
+              type="button"
+              onClick={() => onChange(linkField, '')}
+              className="px-2 py-1 text-xs text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400"
+              title="Clear link"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
+      {canEdit && (
+        <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
+          <label className="text-xs text-gray-500 dark:text-gray-400 sm:w-28 flex-shrink-0">
+            Scheduled date
+          </label>
+          <input
+            type="date"
+            value={scheduled}
+            onChange={(e) => onChange(dateField, e.target.value)}
+            className="px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+          />
         </div>
       )}
     </div>

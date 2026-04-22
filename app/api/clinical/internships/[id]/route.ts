@@ -195,13 +195,20 @@ export async function PUT(
     if (body.psychomotor_exam_passed !== undefined) updateData.psychomotor_exam_passed = body.psychomotor_exam_passed;
     if (body.course_completion_date !== undefined) updateData.course_completion_date = body.course_completion_date || null;
 
-    // Meeting poll fields
+    // Meeting poll fields (legacy Rally poll IDs — kept for back-compat)
     if (body.phase_1_meeting_poll_id !== undefined) updateData.phase_1_meeting_poll_id = body.phase_1_meeting_poll_id || null;
     if (body.phase_1_meeting_scheduled !== undefined) updateData.phase_1_meeting_scheduled = body.phase_1_meeting_scheduled || null;
     if (body.phase_2_meeting_poll_id !== undefined) updateData.phase_2_meeting_poll_id = body.phase_2_meeting_poll_id || null;
     if (body.phase_2_meeting_scheduled !== undefined) updateData.phase_2_meeting_scheduled = body.phase_2_meeting_scheduled || null;
     if (body.final_exam_poll_id !== undefined) updateData.final_exam_poll_id = body.final_exam_poll_id || null;
     if (body.final_exam_scheduled !== undefined) updateData.final_exam_scheduled = body.final_exam_scheduled || null;
+
+    // Meeting-link fields (new — replaces the Rally poll ID workflow)
+    if (body.phase_1_meeting_link !== undefined) updateData.phase_1_meeting_link = body.phase_1_meeting_link?.trim() || null;
+    if (body.phase_2_meeting_link !== undefined) updateData.phase_2_meeting_link = body.phase_2_meeting_link?.trim() || null;
+    if (body.final_exam_meeting_link !== undefined) updateData.final_exam_meeting_link = body.final_exam_meeting_link?.trim() || null;
+    if (body.pre_internship_meeting_link !== undefined) updateData.pre_internship_meeting_link = body.pre_internship_meeting_link?.trim() || null;
+    if (body.pre_internship_meeting_scheduled !== undefined) updateData.pre_internship_meeting_scheduled = body.pre_internship_meeting_scheduled || null;
 
     // Extension tracking
     if (body.is_extended !== undefined) updateData.is_extended = body.is_extended;
