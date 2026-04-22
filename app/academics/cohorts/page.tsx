@@ -22,6 +22,7 @@ import {
   CheckCircle2,
   Activity,
   Briefcase,
+  Home,
 } from 'lucide-react';
 import { canManageCohorts, type Role } from '@/lib/permissions';
 
@@ -395,9 +396,12 @@ export default function CohortManagementPage() {
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
-            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
+            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
+              <Home className="w-3 h-3" />
+              Home
+            </Link>
             <ChevronRight className="w-4 h-4" />
-            <Link href="/labs/admin" className="hover:text-blue-600 dark:hover:text-blue-400">Admin</Link>
+            <Link href="/academics" className="hover:text-blue-600 dark:hover:text-blue-400">Academics</Link>
             <ChevronRight className="w-4 h-4" />
             <span className="dark:text-gray-300">Cohorts</span>
           </div>

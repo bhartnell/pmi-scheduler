@@ -72,7 +72,7 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     color: 'bg-indigo-500',
   },
   admin: {
-    href: '/labs/admin',
+    href: '/admin',
     icon: Settings,
     label: 'Admin',
     color: 'bg-gray-500',
