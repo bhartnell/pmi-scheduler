@@ -209,6 +209,7 @@ export async function PUT(
     if (body.final_exam_meeting_link !== undefined) updateData.final_exam_meeting_link = body.final_exam_meeting_link?.trim() || null;
     if (body.pre_internship_meeting_link !== undefined) updateData.pre_internship_meeting_link = body.pre_internship_meeting_link?.trim() || null;
     if (body.pre_internship_meeting_scheduled !== undefined) updateData.pre_internship_meeting_scheduled = body.pre_internship_meeting_scheduled || null;
+    if (body.pre_internship_meeting_completed !== undefined) updateData.pre_internship_meeting_completed = !!body.pre_internship_meeting_completed;
 
     // Extension tracking
     if (body.is_extended !== undefined) updateData.is_extended = body.is_extended;

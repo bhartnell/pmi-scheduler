@@ -50,10 +50,19 @@ interface Internship {
   phase_1_start_date: string | null;
   phase_2_start_date: string | null;
   extension_date: string | null;
+  // Meeting schedule dates (drive "scheduled?" counts + Next Step display)
   pre_internship_meeting_scheduled: string | null;
+  pre_internship_meeting_completed: boolean | null;
   phase_1_meeting_scheduled: string | null;
   phase_2_meeting_scheduled: string | null;
   final_exam_scheduled: string | null;
+  // Canonical eval scheduling + completion (pre-existing columns)
+  phase_1_eval_scheduled: string | null;
+  phase_1_eval_completed: boolean | null;
+  phase_2_eval_scheduled: string | null;
+  phase_2_eval_completed: boolean | null;
+  extension_eval_date: string | null;
+  extension_eval_completed: boolean | null;
   shift_type: string | null;
   preceptor_id: string | null;
   agency_id: string | null;
@@ -136,6 +145,136 @@ function formatDate(iso: string | null): string {
   } catch {
     return iso;
   }
+}
+
+/**
+ * Short date: "May 3" if the year matches today, otherwise "May 3, 2025".
+ */
+function formatShortDate(iso: string | null): string {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso + 'T12:00:00');
+    const thisYear = new Date().getFullYear();
+    if (d.getFullYear() === thisYear) {
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+type NextStepTone = 'blocked' | 'action' | 'pending' | 'ready' | 'done';
+
+interface NextStep {
+  label: string;
+  tone: NextStepTone;
+  /** Where to send the user. If omitted the step renders as informational text. */
+  href?: string;
+}
+
+const NEXT_STEP_CLASSES: Record<NextStepTone, string> = {
+  blocked:
+    'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800',
+  action:
+    'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800',
+  pending:
+    'text-yellow-800 dark:text-yellow-200 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-800',
+  ready:
+    'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800',
+  done:
+    'text-emerald-700 dark:text-emerald-300',
+};
+
+/**
+ * Compute the single "Next Step" for a student, derived from the sequential
+ * gate-by-gate logic described in the product spec. Returning the *first*
+ * unmet gate gives users a direct "what do I do now?" answer in the table.
+ *
+ * For meeting links: there's no internal scheduler route yet beyond
+ * /scheduling/polls/create. We link those action items to the student's
+ * internship file where the MeetingRow UI (added in Part 2.4) provides
+ * the Create Meeting button + paste-link flow.
+ *
+ * TODO: once a dedicated meeting-scheduler page exists, swap href to that.
+ */
+function computeNextStep(i: Internship, cohortId: string): NextStep {
+  const internshipHref = `/clinical/internships/${i.id}?cohortId=${cohortId}`;
+  const phase = (i.current_phase || 'pre_internship') as Phase;
+
+  // COMPLETED: no further action.
+  if (phase === 'completed') {
+    return { label: '', tone: 'done' };
+  }
+
+  // EXTENDED: eval-scheduled → eval-completed → complete internship.
+  if (phase === 'extended') {
+    if (!i.extension_eval_date) {
+      return { label: 'Schedule extension eval', tone: 'action', href: internshipHref };
+    }
+    if (!i.extension_eval_completed) {
+      return {
+        label: `Extension eval — ${formatShortDate(i.extension_eval_date)}`,
+        tone: 'pending',
+        href: internshipHref,
+      };
+    }
+    return { label: 'Complete internship', tone: 'action', href: internshipHref };
+  }
+
+  // PHASE 2: schedule eval → run eval → advance/extend decision → ready.
+  if (phase === 'phase_2_evaluation') {
+    if (!i.phase_2_eval_scheduled) {
+      return { label: 'Schedule Phase 2 eval', tone: 'action', href: internshipHref };
+    }
+    if (!i.phase_2_eval_completed) {
+      return {
+        label: `Phase 2 eval — ${formatShortDate(i.phase_2_eval_scheduled)}`,
+        tone: 'pending',
+        href: internshipHref,
+      };
+    }
+    // Eval done but student hasn't moved to completed/extended yet.
+    return { label: 'Complete or extend?', tone: 'action', href: internshipHref };
+  }
+
+  // PHASE 1: schedule eval → run eval → advance/extend decision → ready.
+  if (phase === 'phase_1_mentorship') {
+    if (!i.phase_1_eval_scheduled) {
+      return { label: 'Schedule Phase 1 eval', tone: 'action', href: internshipHref };
+    }
+    if (!i.phase_1_eval_completed) {
+      return {
+        label: `Phase 1 eval — ${formatShortDate(i.phase_1_eval_scheduled)}`,
+        tone: 'pending',
+        href: internshipHref,
+      };
+    }
+    return { label: 'Advance or extend?', tone: 'action', href: internshipHref };
+  }
+
+  // PRE-INTERNSHIP: license → placement → meeting scheduled → meeting done → ready.
+  if (!i.provisional_license_obtained) {
+    return { label: 'Get provisional license', tone: 'blocked' };
+  }
+  if (!i.agency_id || !i.preceptor_id) {
+    return { label: 'Confirm placement', tone: 'blocked', href: internshipHref };
+  }
+  if (!i.pre_internship_meeting_scheduled) {
+    return { label: 'Schedule pre-internship meeting', tone: 'action', href: internshipHref };
+  }
+  if (!i.pre_internship_meeting_completed) {
+    return {
+      label: `Pre-internship meeting — ${formatShortDate(i.pre_internship_meeting_scheduled)}`,
+      tone: 'pending',
+      href: internshipHref,
+    };
+  }
+  return { label: 'Ready to start Phase 1', tone: 'ready' };
 }
 
 function phaseStartDate(i: Internship): string | null {
@@ -411,14 +550,17 @@ export default function PmInternshipCohortHub() {
                     <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase">
                       Phase
                     </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase">
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase hidden sm:table-cell">
                       Phase started
                     </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase">
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase hidden md:table-cell">
                       FTO
                     </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase">
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase hidden md:table-cell">
                       Agency
+                    </th>
+                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase hidden md:table-cell">
+                      Next step
                     </th>
                   </tr>
                 </thead>
@@ -430,6 +572,12 @@ export default function PmInternshipCohortHub() {
                     const phaseMeta =
                       PHASE_META[i.current_phase as string] ||
                       PHASE_META.pre_internship;
+                    const nextStep = computeNextStep(i, cohortId);
+                    const agencyLabel =
+                      i.agencies?.abbreviation ||
+                      i.agencies?.name ||
+                      i.agency_name ||
+                      null;
                     return (
                       <tr
                         key={i.id}
@@ -438,10 +586,22 @@ export default function PmInternshipCohortHub() {
                         <td className="px-3 py-2">
                           <Link
                             href={`/clinical/internships/${i.id}?cohortId=${cohortId}`}
-                            className="text-teal-700 dark:text-teal-300 hover:underline"
+                            className="text-teal-700 dark:text-teal-300 hover:underline font-medium"
                           >
                             {name}
                           </Link>
+                          {/* Mobile-only subtitle: agency + next step
+                              (these columns are hidden < md). */}
+                          <div className="md:hidden mt-1 flex flex-col gap-1">
+                            {agencyLabel && (
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                {agencyLabel}
+                              </div>
+                            )}
+                            <div>
+                              <NextStepCell step={nextStep} />
+                            </div>
+                          </div>
                         </td>
                         <td className="px-3 py-2">
                           <span
@@ -450,20 +610,19 @@ export default function PmInternshipCohortHub() {
                             {phaseMeta.label}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                        <td className="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap hidden sm:table-cell">
                           {formatDate(phaseStartDate(i))}
                         </td>
-                        <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-300 hidden md:table-cell">
                           {i.field_preceptors
                             ? `${i.field_preceptors.first_name} ${i.field_preceptors.last_name}`
                             : <span className="text-gray-400">—</span>}
                         </td>
-                        <td className="px-3 py-2 text-gray-700 dark:text-gray-300">
-                          {i.agencies?.abbreviation ||
-                            i.agencies?.name ||
-                            i.agency_name || (
-                              <span className="text-gray-400">—</span>
-                            )}
+                        <td className="px-3 py-2 text-gray-700 dark:text-gray-300 hidden md:table-cell">
+                          {agencyLabel || <span className="text-gray-400">—</span>}
+                        </td>
+                        <td className="px-3 py-2 hidden md:table-cell">
+                          <NextStepCell step={nextStep} />
                         </td>
                       </tr>
                     );
@@ -522,6 +681,55 @@ export default function PmInternshipCohortHub() {
         )}
       </main>
     </div>
+  );
+}
+
+// ─── Next-step cell ─────────────────────────────────────────────────────────
+
+function NextStepCell({ step }: { step: NextStep }) {
+  // Completed students: quiet green check, no action.
+  if (step.tone === 'done') {
+    return <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" aria-label="Completed" />;
+  }
+
+  const classes = NEXT_STEP_CLASSES[step.tone];
+
+  // "Ready" rows: informational pill, no arrow, no link.
+  if (step.tone === 'ready') {
+    return (
+      <span
+        className={`inline-flex items-center gap-1 text-xs font-medium rounded-full border px-2 py-0.5 ${classes}`}
+      >
+        <CheckCircle2 className="w-3 h-3" /> {step.label}
+      </span>
+    );
+  }
+
+  const body = (
+    <span className="inline-flex items-center gap-1">
+      {step.label}
+      {step.href && <ExternalLink className="w-3 h-3 opacity-60" />}
+    </span>
+  );
+
+  if (step.href) {
+    return (
+      <Link
+        href={step.href}
+        className={`inline-flex items-center text-xs font-medium rounded border px-2 py-1 hover:opacity-80 underline-offset-2 ${classes}`}
+      >
+        {body}
+      </Link>
+    );
+  }
+
+  // Non-linked action (e.g. "Get provisional license"): read-only badge.
+  return (
+    <span
+      className={`inline-flex items-center text-xs font-medium rounded border px-2 py-1 ${classes}`}
+    >
+      {body}
+    </span>
   );
 }
 
