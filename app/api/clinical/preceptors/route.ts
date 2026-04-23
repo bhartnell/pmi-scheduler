@@ -108,6 +108,10 @@ export async function POST(request: NextRequest) {
         agency_id: body.agency_id || null,
         agency_name: agencyName,
         station: body.station?.trim() || null,
+        // credentials is required for the completeness badge to read
+        // as Complete — accept it on create so new rows aren't
+        // silently flagged Incomplete the moment they're saved.
+        credentials: body.credentials?.trim() || null,
         normal_schedule: body.normal_schedule?.trim() || null,
         snhd_trained_date: body.snhd_trained_date || null,
         snhd_cert_expires: body.snhd_cert_expires || null,

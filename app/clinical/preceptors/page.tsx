@@ -160,6 +160,7 @@ export default function PreceptorsPage() {
     phone: '',
     agency_id: '',
     station: '',
+    credentials: '',
     normal_schedule: '',
     snhd_trained_date: '',
     snhd_cert_expires: '',
@@ -273,6 +274,7 @@ export default function PreceptorsPage() {
       phone: '',
       agency_id: '',
       station: '',
+      credentials: '',
       normal_schedule: '',
       snhd_trained_date: '',
       snhd_cert_expires: '',
@@ -292,6 +294,7 @@ export default function PreceptorsPage() {
       phone: preceptor.phone || '',
       agency_id: preceptor.agency_id || '',
       station: preceptor.station || '',
+      credentials: preceptor.credentials || '',
       normal_schedule: preceptor.normal_schedule || '',
       snhd_trained_date: preceptor.snhd_trained_date || '',
       snhd_cert_expires: preceptor.snhd_cert_expires || '',
@@ -665,7 +668,9 @@ export default function PreceptorsPage() {
                       phone: formData.phone || null,
                       agency_id: formData.agency_id || null,
                       agency_name: editingPreceptor.agency_name,
-                      credentials: editingPreceptor.credentials,
+                      // Reads from the form so the badge updates live as
+                      // the user types, not from the pre-edit snapshot.
+                      credentials: formData.credentials || null,
                     })}
                   />
                 )}
@@ -774,6 +779,22 @@ export default function PreceptorsPage() {
                     placeholder="Station 4, Unit 367, etc."
                   />
                 </div>
+              </div>
+
+              {/* Credentials — required for the completeness badge to
+                  read as Complete. Free-form text so we can store things
+                  like "Paramedic, FTO", "RN BSN", "Critical Care RN". */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Credentials
+                </label>
+                <input
+                  type="text"
+                  value={formData.credentials}
+                  onChange={(e) => setFormData({ ...formData, credentials: e.target.value })}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  placeholder="Paramedic, RN, FTO, etc."
+                />
               </div>
 
               {/* Schedule */}

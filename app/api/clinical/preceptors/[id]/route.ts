@@ -53,6 +53,7 @@ export async function PUT(
     if (body.email !== undefined) updateData.email = body.email?.trim() || null;
     if (body.phone !== undefined) updateData.phone = body.phone?.trim() || null;
     if (body.station !== undefined) updateData.station = body.station?.trim() || null;
+    if (body.credentials !== undefined) updateData.credentials = body.credentials?.trim() || null;
     if (body.normal_schedule !== undefined) updateData.normal_schedule = body.normal_schedule?.trim() || null;
     if (body.snhd_trained_date !== undefined) updateData.snhd_trained_date = body.snhd_trained_date || null;
     if (body.snhd_cert_expires !== undefined) updateData.snhd_cert_expires = body.snhd_cert_expires || null;

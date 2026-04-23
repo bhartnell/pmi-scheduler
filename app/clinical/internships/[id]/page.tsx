@@ -253,7 +253,21 @@ export default function InternshipDetailPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showAddPreceptorModal, setShowAddPreceptorModal] = useState(false);
-  const [newPreceptor, setNewPreceptor] = useState({ first_name: '', last_name: '', email: '', phone: '', agency_name: '' });
+  // Inline preceptor form — matches the full /clinical/preceptors form so
+  // newly created preceptors aren't immediately flagged as Incomplete.
+  // Previously captured only name + free-text agency_name, leaving email,
+  // phone, agency_id, station, credentials, and notes blank → the
+  // completeness badge (f925d99c) showed amber/"Pre-migration" from birth.
+  const [newPreceptor, setNewPreceptor] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    phone: '',
+    agency_id: '',
+    station: '',
+    credentials: '',
+    notes: '',
+  });
   const [addingPreceptor, setAddingPreceptor] = useState(false);
   const [copiedEmail, setCopiedEmail] = useState<string | null>(null);
   // Multi-preceptor assignments
@@ -550,7 +564,10 @@ export default function InternshipDetailPage() {
           last_name: newPreceptor.last_name.trim(),
           email: newPreceptor.email.trim() || null,
           phone: newPreceptor.phone.trim() || null,
-          agency_name: newPreceptor.agency_name.trim() || null,
+          agency_id: newPreceptor.agency_id || null,
+          station: newPreceptor.station.trim() || null,
+          credentials: newPreceptor.credentials.trim() || null,
+          notes: newPreceptor.notes.trim() || null,
           is_active: true,
         }),
       });
@@ -561,7 +578,16 @@ export default function InternshipDetailPage() {
         setPreceptors([...preceptors, data.preceptor]);
         handleInputChange('preceptor_id', data.preceptor.id);
         setShowAddPreceptorModal(false);
-        setNewPreceptor({ first_name: '', last_name: '', email: '', phone: '', agency_name: '' });
+        setNewPreceptor({
+          first_name: '',
+          last_name: '',
+          email: '',
+          phone: '',
+          agency_id: '',
+          station: '',
+          credentials: '',
+          notes: '',
+        });
         showToast('Preceptor added successfully', 'success');
       } else {
         showToast(data.error || 'Failed to add preceptor', 'error');
@@ -2116,13 +2142,28 @@ export default function InternshipDetailPage() {
       )}
 
       {/* Add Preceptor Modal */}
-      {showAddPreceptorModal && (
+      {showAddPreceptorModal && (() => {
+          // Keep the Add-Preceptor form in lockstep with the completeness
+          // badge (email + phone + agency_id + credentials). This preview
+          // tells the user what colour badge the new row will carry the
+          // moment they save, so "Incomplete" is a deliberate choice, not
+          // a surprise.
+          const willBeComplete =
+            !!newPreceptor.email.trim() &&
+            !!newPreceptor.phone.trim() &&
+            !!newPreceptor.agency_id &&
+            !!newPreceptor.credentials.trim();
+          return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[95vh] flex flex-col">
             <div className="p-4 border-b dark:border-gray-700">
               <h3 className="font-semibold text-gray-900 dark:text-white">Add New Preceptor</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Same fields as the full preceptor form (/clinical/preceptors) so new records
+                show a green ✓ badge immediately instead of amber &ldquo;Incomplete&rdquo;.
+              </p>
             </div>
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-3 overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">First Name *</label>
@@ -2145,42 +2186,114 @@ export default function InternshipDetailPage() {
                   />
                 </div>
               </div>
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
-                <input
-                  type="email"
-                  value={newPreceptor.email}
-                  onChange={(e) => setNewPreceptor({ ...newPreceptor, email: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                  placeholder="email@example.com"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Email</label>
+                  <input
+                    type="email"
+                    value={newPreceptor.email}
+                    onChange={(e) => setNewPreceptor({ ...newPreceptor, email: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                    placeholder="email@example.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Phone</label>
+                  <input
+                    type="tel"
+                    value={newPreceptor.phone}
+                    onChange={(e) => setNewPreceptor({ ...newPreceptor, phone: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                    placeholder="(702) 555-1234"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Agency</label>
+                  <select
+                    value={newPreceptor.agency_id}
+                    onChange={(e) => setNewPreceptor({ ...newPreceptor, agency_id: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  >
+                    <option value="">Select agency…</option>
+                    {agencies.map((a) => (
+                      <option key={a.id} value={a.id}>
+                        {a.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Station / Unit</label>
+                  <input
+                    type="text"
+                    value={newPreceptor.station}
+                    onChange={(e) => setNewPreceptor({ ...newPreceptor, station: e.target.value })}
+                    className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                    placeholder="Station 4, Unit 367, etc."
+                  />
+                </div>
               </div>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  value={newPreceptor.phone}
-                  onChange={(e) => setNewPreceptor({ ...newPreceptor, phone: e.target.value })}
-                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                  placeholder="(702) 555-1234"
-                />
-              </div>
-              <div>
-                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Agency Name</label>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Credentials</label>
                 <input
                   type="text"
-                  value={newPreceptor.agency_name}
-                  onChange={(e) => setNewPreceptor({ ...newPreceptor, agency_name: e.target.value })}
+                  value={newPreceptor.credentials}
+                  onChange={(e) => setNewPreceptor({ ...newPreceptor, credentials: e.target.value })}
                   className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
-                  placeholder="Agency name"
+                  placeholder="Paramedic, RN, FTO, etc."
                 />
               </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Notes</label>
+                <textarea
+                  value={newPreceptor.notes}
+                  onChange={(e) => setNewPreceptor({ ...newPreceptor, notes: e.target.value })}
+                  rows={2}
+                  className="w-full px-3 py-2 border rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600"
+                  placeholder="Optional"
+                />
+              </div>
+              {/* Live completeness hint — only shows when the user has
+                  filled in at least a name, so an empty form doesn't
+                  nag them immediately. */}
+              {(newPreceptor.first_name.trim() || newPreceptor.last_name.trim()) && (
+                <div
+                  className={`text-xs rounded-lg px-3 py-2 border ${
+                    willBeComplete
+                      ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200'
+                      : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200'
+                  }`}
+                >
+                  {willBeComplete
+                    ? '✓ Will save as Complete — email, phone, agency, and credentials are all set.'
+                    : 'Missing for Complete: ' +
+                      [
+                        !newPreceptor.email.trim() && 'email',
+                        !newPreceptor.phone.trim() && 'phone',
+                        !newPreceptor.agency_id && 'agency',
+                        !newPreceptor.credentials.trim() && 'credentials',
+                      ]
+                        .filter(Boolean)
+                        .join(', ')}
+                </div>
+              )}
             </div>
             <div className="p-4 border-t dark:border-gray-700 flex justify-end gap-2">
               <button
                 onClick={() => {
                   setShowAddPreceptorModal(false);
-                  setNewPreceptor({ first_name: '', last_name: '', email: '', phone: '', agency_name: '' });
+                  setNewPreceptor({
+                    first_name: '',
+                    last_name: '',
+                    email: '',
+                    phone: '',
+                    agency_id: '',
+                    station: '',
+                    credentials: '',
+                    notes: '',
+                  });
                 }}
                 className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
               >
@@ -2196,7 +2309,8 @@ export default function InternshipDetailPage() {
             </div>
           </div>
         </div>
-      )}
+          );
+        })()}
     </div>
   );
 }
