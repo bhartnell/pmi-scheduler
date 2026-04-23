@@ -16,11 +16,15 @@ import {
   Building2,
   UserCheck,
   Filter,
+  Plus,
+  Target,
+  TrendingUp,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import { PageLoader } from '@/components/ui';
 import { hasMinRole, canAccessScheduling } from '@/lib/permissions';
+import LogHoursModal from '@/components/scheduling/LogHoursModal';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import type { CurrentUser } from '@/types';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -41,11 +45,16 @@ export default function SchedulingPage() {
     name: string;
     email: string;
     role: string;
+    monthlyHoursTarget: number | null;
     availableThisWeek: number;
     availabilityDates: string[];
     confirmedShifts: number;
     pendingShifts: number;
     monthlyHours: number;
+    semesterHours: number;
+    upcomingHours: number;
+    manualMonthlyHours: number;
+    trend: Array<{ month: string; hours: number }>;
     lastShiftDate: string | null;
   }
   interface PartTimerSummary {
@@ -58,6 +67,14 @@ export default function SchedulingPage() {
   const [ptSummary, setPtSummary] = useState<PartTimerSummary | null>(null);
   const [ptLoading, setPtLoading] = useState(false);
   const [ptFilter, setPtFilter] = useState<'all' | 'available'>('all');
+  // State for the Log Hours modal (per-row trigger from the part-timer table).
+  const [logHoursFor, setLogHoursFor] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  // Edit-target state for the inline monthly-hours-target control.
+  const [editingTargetFor, setEditingTargetFor] = useState<string | null>(null);
+  const [targetDraft, setTargetDraft] = useState<string>('');
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -120,27 +137,52 @@ export default function SchedulingPage() {
     setLoading(false);
   };
 
-  // Fetch part-timer status when director/admin and user loaded
+  // Fetch part-timer status when director/admin and user loaded. Also
+  // exposed as a callback so the Log Hours modal + target-edit flow
+  // can refresh the totals after a save without reloading the page.
+  const fetchPartTimerStatus = async () => {
+    setPtLoading(true);
+    try {
+      const res = await fetch('/api/scheduling/part-timer-status');
+      const data = await res.json();
+      if (data.success) {
+        setPartTimers(data.partTimers || []);
+        setPtSummary(data.summary || null);
+      }
+    } catch (err) {
+      console.error('Error fetching part-timer status:', err);
+    }
+    setPtLoading(false);
+  };
+
   useEffect(() => {
     if (!currentUser) return;
     const isAdmin = currentUser.role === 'admin' || currentUser.role === 'superadmin';
     if (!isAdmin && !userIsDirector) return;
-    const fetchPartTimerStatus = async () => {
-      setPtLoading(true);
-      try {
-        const res = await fetch('/api/scheduling/part-timer-status');
-        const data = await res.json();
-        if (data.success) {
-          setPartTimers(data.partTimers || []);
-          setPtSummary(data.summary || null);
-        }
-      } catch (err) {
-        console.error('Error fetching part-timer status:', err);
-      }
-      setPtLoading(false);
-    };
     fetchPartTimerStatus();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser, userIsDirector]);
+
+  // Save a new monthly_hours_target for one user, then refresh the table.
+  const saveTarget = async (userId: string) => {
+    const raw = targetDraft.trim();
+    const target = raw === '' ? null : Math.round(Number(raw));
+    if (target != null && (isNaN(target) || target <= 0 || target > 400)) {
+      return;
+    }
+    try {
+      await fetch('/api/scheduling/hours-target', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, target }),
+      });
+      setEditingTargetFor(null);
+      setTargetDraft('');
+      await fetchPartTimerStatus();
+    } catch (err) {
+      console.error('Error saving target:', err);
+    }
+  };
 
   if (status === 'loading' || loading) {
     return <PageLoader />;
@@ -472,66 +514,219 @@ export default function SchedulingPage() {
                       <thead className="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
                           <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Name</th>
-                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Available This Week</th>
-                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Confirmed</th>
-                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Pending</th>
-                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Monthly Hours</th>
-                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Last Shift</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400 hidden sm:table-cell">Avail. Week</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400 hidden md:table-cell">Confirmed</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400 hidden md:table-cell">Pending</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Month / Target</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400 hidden lg:table-cell">Semester</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400 hidden lg:table-cell">Upcoming</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400 hidden xl:table-cell">3-Mo Trend</th>
+                          <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400 hidden md:table-cell">Last Shift</th>
+                          {isAdmin && (
+                            <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Actions</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                         {partTimers
                           .filter(pt => ptFilter === 'all' || pt.availableThisWeek > 0)
-                          .map(pt => (
-                          <tr key={pt.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
-                            <td className="px-4 py-3">
-                              <div className="font-medium text-gray-900 dark:text-white">{pt.name}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400">{pt.email}</div>
-                            </td>
-                            <td className="text-center px-4 py-3">
-                              {pt.availableThisWeek > 0 ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs font-medium">
-                                  {pt.availableThisWeek} day{pt.availableThisWeek !== 1 ? 's' : ''}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400 dark:text-gray-500">--</span>
-                              )}
-                            </td>
-                            <td className="text-center px-4 py-3">
-                              {pt.confirmedShifts > 0 ? (
-                                <span className="font-medium text-blue-600 dark:text-blue-400">{pt.confirmedShifts}</span>
-                              ) : (
-                                <span className="text-gray-400 dark:text-gray-500">0</span>
-                              )}
-                            </td>
-                            <td className="text-center px-4 py-3">
-                              {pt.pendingShifts > 0 ? (
-                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded text-xs font-medium">
-                                  {pt.pendingShifts}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400 dark:text-gray-500">0</span>
-                              )}
-                            </td>
-                            <td className="text-center px-4 py-3">
-                              <span className={pt.monthlyHours > 0 ? 'font-medium text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}>
-                                {pt.monthlyHours > 0 ? `${pt.monthlyHours}h` : '--'}
-                              </span>
-                            </td>
-                            <td className="text-center px-4 py-3">
-                              {pt.lastShiftDate ? (
-                                <span className="text-xs text-gray-600 dark:text-gray-400">
-                                  {new Date(pt.lastShiftDate + 'T12:00:00').toLocaleDateString('en-US', {
-                                    month: 'short',
-                                    day: 'numeric',
-                                  })}
-                                </span>
-                              ) : (
-                                <span className="text-gray-400 dark:text-gray-500">--</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
+                          .map(pt => {
+                            // Color-band the Month/Target cell. With no target
+                            // we fall back to plain black/gray hours. With a
+                            // target: green <80%, amber 80-100%, red >100%.
+                            const target = pt.monthlyHoursTarget;
+                            let pct = 0;
+                            let targetTone: 'none' | 'under' | 'near' | 'over' = 'none';
+                            if (target && target > 0) {
+                              pct = Math.min(999, Math.round((pt.monthlyHours / target) * 100));
+                              targetTone =
+                                pct < 80 ? 'under' : pct <= 100 ? 'near' : 'over';
+                            }
+                            const monthColor =
+                              targetTone === 'over'
+                                ? 'text-red-600 dark:text-red-400'
+                                : targetTone === 'near'
+                                ? 'text-amber-600 dark:text-amber-400'
+                                : targetTone === 'under'
+                                ? 'text-emerald-600 dark:text-emerald-400'
+                                : pt.monthlyHours > 0
+                                ? 'text-gray-900 dark:text-white'
+                                : 'text-gray-400 dark:text-gray-500';
+                            const barColor =
+                              targetTone === 'over'
+                                ? 'bg-red-500'
+                                : targetTone === 'near'
+                                ? 'bg-amber-500'
+                                : 'bg-emerald-500';
+                            return (
+                              <tr key={pt.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors">
+                                <td className="px-4 py-3">
+                                  <div className="font-medium text-gray-900 dark:text-white">{pt.name}</div>
+                                  <div className="text-xs text-gray-500 dark:text-gray-400">{pt.email}</div>
+                                  {pt.manualMonthlyHours > 0 && (
+                                    <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5">
+                                      incl. {pt.manualMonthlyHours}h manual
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="text-center px-4 py-3 hidden sm:table-cell">
+                                  {pt.availableThisWeek > 0 ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded text-xs font-medium">
+                                      {pt.availableThisWeek} day{pt.availableThisWeek !== 1 ? 's' : ''}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 dark:text-gray-500">--</span>
+                                  )}
+                                </td>
+                                <td className="text-center px-4 py-3 hidden md:table-cell">
+                                  {pt.confirmedShifts > 0 ? (
+                                    <span className="font-medium text-blue-600 dark:text-blue-400">{pt.confirmedShifts}</span>
+                                  ) : (
+                                    <span className="text-gray-400 dark:text-gray-500">0</span>
+                                  )}
+                                </td>
+                                <td className="text-center px-4 py-3 hidden md:table-cell">
+                                  {pt.pendingShifts > 0 ? (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 rounded text-xs font-medium">
+                                      {pt.pendingShifts}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 dark:text-gray-500">0</span>
+                                  )}
+                                </td>
+                                {/* Month / Target — fraction + progress bar when
+                                    a target is set; plain hours otherwise.
+                                    Click the pencil to edit the target inline. */}
+                                <td className="text-center px-4 py-3">
+                                  {editingTargetFor === pt.id ? (
+                                    <div className="flex items-center justify-center gap-1">
+                                      <input
+                                        type="number"
+                                        min={1}
+                                        max={400}
+                                        value={targetDraft}
+                                        onChange={(e) => setTargetDraft(e.target.value)}
+                                        className="w-16 px-1.5 py-0.5 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                                        autoFocus
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => saveTarget(pt.id)}
+                                        className="text-xs px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                                      >
+                                        Save
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingTargetFor(null);
+                                          setTargetDraft('');
+                                        }}
+                                        className="text-xs text-gray-500 hover:text-gray-700"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex flex-col items-center gap-0.5">
+                                      <div className="flex items-baseline justify-center gap-1">
+                                        <span className={`font-medium tabular-nums ${monthColor}`}>
+                                          {pt.monthlyHours}h
+                                        </span>
+                                        {target ? (
+                                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                                            / {target}h
+                                          </span>
+                                        ) : (
+                                          isAdmin && (
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setEditingTargetFor(pt.id);
+                                                setTargetDraft('');
+                                              }}
+                                              className="text-[10px] text-blue-600 hover:underline"
+                                              title="Set monthly hours target"
+                                            >
+                                              <Target className="w-3 h-3 inline" />
+                                            </button>
+                                          )
+                                        )}
+                                      </div>
+                                      {target && (
+                                        <>
+                                          <div className="w-24 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                                            <div
+                                              className={`h-full ${barColor} transition-all`}
+                                              style={{
+                                                width: `${Math.min(100, pct)}%`,
+                                              }}
+                                            />
+                                          </div>
+                                          {isAdmin && (
+                                            <button
+                                              type="button"
+                                              onClick={() => {
+                                                setEditingTargetFor(pt.id);
+                                                setTargetDraft(String(target));
+                                              }}
+                                              className="text-[10px] text-gray-400 hover:text-blue-600 hover:underline"
+                                              title="Edit target"
+                                            >
+                                              edit target
+                                            </button>
+                                          )}
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
+                                </td>
+                                <td className="text-center px-4 py-3 hidden lg:table-cell">
+                                  <span className={pt.semesterHours > 0 ? 'tabular-nums text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}>
+                                    {pt.semesterHours > 0 ? `${pt.semesterHours}h` : '--'}
+                                  </span>
+                                </td>
+                                <td className="text-center px-4 py-3 hidden lg:table-cell">
+                                  <span className={pt.upcomingHours > 0 ? 'tabular-nums text-blue-700 dark:text-blue-300' : 'text-gray-400 dark:text-gray-500'}>
+                                    {pt.upcomingHours > 0 ? `${pt.upcomingHours}h` : '--'}
+                                  </span>
+                                </td>
+                                <td className="text-center px-4 py-3 hidden xl:table-cell">
+                                  {/* Simple 3-number sparkline — small bars
+                                      proportional to max in that trio. Zero
+                                      months render as faint dashes so the
+                                      cell always shows three positions. */}
+                                  <TrendBars trend={pt.trend} />
+                                </td>
+                                <td className="text-center px-4 py-3 hidden md:table-cell">
+                                  {pt.lastShiftDate ? (
+                                    <span className="text-xs text-gray-600 dark:text-gray-400">
+                                      {new Date(pt.lastShiftDate + 'T12:00:00').toLocaleDateString('en-US', {
+                                        month: 'short',
+                                        day: 'numeric',
+                                      })}
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 dark:text-gray-500">--</span>
+                                  )}
+                                </td>
+                                {isAdmin && (
+                                  <td className="text-center px-4 py-3">
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setLogHoursFor({ id: pt.id, name: pt.name })
+                                      }
+                                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800"
+                                      title="Log hours for this user (class, prep, etc.)"
+                                    >
+                                      <Plus className="w-3 h-3" /> Log Hours
+                                    </button>
+                                  </td>
+                                )}
+                              </tr>
+                            );
+                          })}
                       </tbody>
                     </table>
 
@@ -554,6 +749,53 @@ export default function SchedulingPage() {
           </div>
         )}
       </main>
+
+      {logHoursFor && (
+        <LogHoursModal
+          userId={logHoursFor.id}
+          userName={logHoursFor.name}
+          onClose={() => setLogHoursFor(null)}
+          onSaved={() => {
+            setLogHoursFor(null);
+            fetchPartTimerStatus();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Inline 3-bar sparkline for the part-timer trend column. Bars are sized
+ * proportionally to the max hours in the trio; zero months render as faint
+ * dashes so every row shows three positions. Tooltip on hover gives the
+ * raw hours per month.
+ */
+function TrendBars({ trend }: { trend: Array<{ month: string; hours: number }> }) {
+  if (!trend || trend.length === 0) {
+    return <span className="text-gray-400 dark:text-gray-500">--</span>;
+  }
+  const max = Math.max(1, ...trend.map((t) => t.hours));
+  return (
+    <div
+      className="inline-flex items-end gap-0.5 h-6"
+      title={trend.map((t) => `${t.month}: ${t.hours}h`).join('  ·  ')}
+    >
+      {trend.map((t) => {
+        const pct = Math.max(4, (t.hours / max) * 100);
+        return t.hours > 0 ? (
+          <div
+            key={t.month}
+            className="w-2 bg-blue-400 dark:bg-blue-500 rounded-sm"
+            style={{ height: `${pct}%` }}
+          />
+        ) : (
+          <div
+            key={t.month}
+            className="w-2 h-0.5 self-center bg-gray-300 dark:bg-gray-600 rounded-sm"
+          />
+        );
+      })}
     </div>
   );
 }
