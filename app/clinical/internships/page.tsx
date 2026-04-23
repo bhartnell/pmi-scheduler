@@ -225,7 +225,7 @@ export default function InternshipCohortPickerPage() {
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <Link
@@ -257,7 +257,7 @@ export default function InternshipCohortPickerPage() {
         </div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
         {error && (
           <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 text-sm text-red-700 dark:text-red-300">
             {error}
@@ -285,7 +285,7 @@ export default function InternshipCohortPickerPage() {
             <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400 mb-3">
               Active
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {partitioned.active.map((c) => (
                 <CohortCard key={c.id} cohort={c} />
               ))}
@@ -312,7 +312,7 @@ export default function InternshipCohortPickerPage() {
               />
             </button>
             {showRecent && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 opacity-80">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 opacity-80">
                 {partitioned.recent.map((c) => (
                   <CohortCard key={c.id} cohort={c} muted />
                 ))}
