@@ -431,9 +431,26 @@ export default function PmInternshipCohortHub() {
           </div>
         )}
 
+        {/*
+          Layout: on mobile the three sections stack as before
+          (A → B → C). On lg+ Section B (the phase-overview table)
+          takes the left main column, and Sections A + C sit in a
+          ~340px right rail. Explicit grid placement preserves mobile
+          DOM order; space-y-6 collapses into gap-6 when the grid
+          kicks in.
+        */}
+        <div
+          className={
+            `space-y-6 lg:space-y-0 lg:grid lg:gap-6 ` +
+            (showLicenseTracker
+              ? 'lg:grid-cols-[minmax(0,1fr)_340px] lg:grid-rows-[auto_auto]'
+              : 'lg:grid-cols-[minmax(0,1fr)_340px]')
+          }
+        >
+
         {/* ─── Section A: Provisional License Tracker ─────────────────── */}
         {showLicenseTracker && (
-          <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+          <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-5 lg:col-start-2 lg:row-start-1">
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <ClipboardCheck className="w-5 h-5 text-amber-600 dark:text-amber-400" />
@@ -486,7 +503,12 @@ export default function PmInternshipCohortHub() {
         )}
 
         {/* ─── Section B: Phase Overview ──────────────────────────────── */}
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+        <section
+          className={
+            'bg-white dark:bg-gray-800 rounded-lg shadow p-5 lg:col-start-1 ' +
+            (showLicenseTracker ? 'lg:row-start-1 lg:row-span-2' : 'lg:row-start-1')
+          }
+        >
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Users className="w-5 h-5 text-teal-600 dark:text-teal-400" />
             Phase Overview
@@ -634,12 +656,20 @@ export default function PmInternshipCohortHub() {
         </section>
 
         {/* ─── Section C: Meeting Status ──────────────────────────────── */}
-        <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+        <section
+          className={
+            'bg-white dark:bg-gray-800 rounded-lg shadow p-5 lg:col-start-2 ' +
+            (showLicenseTracker ? 'lg:row-start-2' : 'lg:row-start-1')
+          }
+        >
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-teal-600 dark:text-teal-400" />
             Meeting Status
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* In the right sidebar the 4-tile grid becomes a 2×2 on lg
+              (narrow column). Mobile / md keep the existing responsive
+              breakpoints. */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 lg:grid-cols-2">
             <MeetingCard
               title="Pre-Internship Agency"
               scheduled={meetingStats.preInternship.scheduled}
@@ -673,6 +703,9 @@ export default function PmInternshipCohortHub() {
             Click a student above to set individual meeting dates / links.
           </p>
         </section>
+
+        </div>
+        {/* /end sidebar layout wrapper */}
 
         {loading && (
           <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-8">
