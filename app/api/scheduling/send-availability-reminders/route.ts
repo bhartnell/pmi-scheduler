@@ -147,15 +147,20 @@ export async function POST(request: NextRequest) {
       year: 'numeric',
     });
 
-    // Build query for target instructors
+    // Build query for target instructors. Full-time instructors don't submit
+    // weekly availability, so they're excluded regardless of whether this is
+    // a "send to all missing" or "send to specific emails" request — avoids
+    // spamming full-timers like Stacie. Filter added 2026-04-22.
     let instructorQuery = supabase
       .from('lab_users')
       .select('id, name, email, role')
       .in('role', ['instructor', 'lead_instructor', 'volunteer_instructor', 'admin', 'superadmin'])
       .eq('is_active', true)
+      .eq('is_part_time', true)
       .order('name');
 
-    // If specific emails were provided, filter to those
+    // If specific emails were provided, filter to those (still intersected
+    // with is_part_time = true above).
     if (instructor_emails && instructor_emails.length > 0) {
       instructorQuery = instructorQuery.in('email', instructor_emails);
     }

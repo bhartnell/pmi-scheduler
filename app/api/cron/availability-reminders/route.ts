@@ -18,6 +18,7 @@ interface InstructorUser {
   email: string;
   role: string;
   is_active: boolean;
+  is_part_time: boolean;
 }
 
 interface AvailabilityRecord {
@@ -259,12 +260,16 @@ export async function GET(request: NextRequest) {
     },
   ];
 
-  // Fetch all active instructors
+  // Fetch active *part-time* instructors only. Full-time instructors (Stacie
+  // and others) have their schedules set directly and do not submit weekly
+  // availability — sending them reminders is spam. Filter added 2026-04-22
+  // after stpeterson@pmi.edu reported receiving these notifications.
   const { data: instructors, error: instructorError } = await supabase
     .from('lab_users')
-    .select('id, name, email, role, is_active')
+    .select('id, name, email, role, is_active, is_part_time')
     .in('role', ['instructor', 'lead_instructor', 'volunteer_instructor'])
     .eq('is_active', true)
+    .eq('is_part_time', true)
     .order('name');
 
   if (instructorError) {
