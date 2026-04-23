@@ -425,9 +425,79 @@ export default function LabDayPage() {
 
         {labMode === 'individual_testing' && (<div className="mt-6 print:hidden"><IndividualTestingGrid labDayId={labDayId as string} isNremtTesting={!!labDay.is_nremt_testing} /></div>)}
 
-        <StationCards stations={labDay.stations} stationSkillDocs={stationSkillDocs} stationSkillSheetIds={stationSkillSheetIds} stationNremtCodes={stationNremtCodes} stationScenarioTitles={nremtScenarioTitles} canSelectScenario={!!userRole && hasMinRole(userRole, 'lead_instructor')} calendarAvailability={calendarAvailability} labDayId={labDayId as string} getStationTitle={getStationTitle} onEditStation={(station) => setEditingStation(station)} onOpenRoleModal={(station) => setRoleModalStation(station)} onOpenScenarioPicker={(station, code) => setScenarioPickerState({ station, code })} />
+        {/* Station cards + right rail (lab info / quick stats / checklist).
+            Mobile: stacks in DOM order — StationCards → LabInfo → Checklist.
+            lg+: StationCards fills the left main column while the sidebar
+            rail holds the quick-reference lab info card above the checklist. */}
+        <div className="space-y-6 lg:space-y-0 lg:grid lg:gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
+          <div className="lg:col-start-1 lg:row-start-1">
+            <StationCards stations={labDay.stations} stationSkillDocs={stationSkillDocs} stationSkillSheetIds={stationSkillSheetIds} stationNremtCodes={stationNremtCodes} stationScenarioTitles={nremtScenarioTitles} canSelectScenario={!!userRole && hasMinRole(userRole, 'lead_instructor')} calendarAvailability={calendarAvailability} labDayId={labDayId as string} getStationTitle={getStationTitle} onEditStation={(station) => setEditingStation(station)} onOpenRoleModal={(station) => setRoleModalStation(station)} onOpenScenarioPicker={(station, code) => setScenarioPickerState({ station, code })} />
+          </div>
 
-        <ChecklistSection labDayId={labDayId} />
+          <aside className="lg:col-start-2 lg:row-start-1 space-y-4 lg:sticky lg:top-4">
+            {/* Lab Info + Quick Stats — at-a-glance reference card */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 text-sm">
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">
+                Lab Info
+              </h3>
+              <dl className="space-y-1.5">
+                <div className="flex justify-between gap-2">
+                  <dt className="text-gray-500 dark:text-gray-400">Date</dt>
+                  <dd className="text-gray-900 dark:text-white font-medium">{formatDate(labDay.date)}</dd>
+                </div>
+                {(labDay.start_time || labDay.end_time) && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-gray-500 dark:text-gray-400">Time</dt>
+                    <dd className="text-gray-900 dark:text-white font-medium">
+                      {labDay.start_time ? formatTime(labDay.start_time) : '—'}
+                      {labDay.end_time ? ` – ${formatTime(labDay.end_time)}` : ''}
+                    </dd>
+                  </div>
+                )}
+                {labDay.cohort && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-gray-500 dark:text-gray-400">Cohort</dt>
+                    <dd className="text-gray-900 dark:text-white font-medium">
+                      {labDay.cohort.program?.abbreviation || 'Unknown'} {formatCohortNumber(labDay.cohort.cohort_number)}
+                    </dd>
+                  </div>
+                )}
+                {labDayRoles.filter((r) => r.role === 'lab_lead').length > 0 && (
+                  <div className="flex justify-between gap-2">
+                    <dt className="text-gray-500 dark:text-gray-400">Lab Lead</dt>
+                    <dd className="text-gray-900 dark:text-white font-medium text-right">
+                      {labDayRoles
+                        .filter((r) => r.role === 'lab_lead')
+                        .map((r) => r.instructor?.name)
+                        .filter(Boolean)
+                        .join(', ')}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+              <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                <div className="text-center">
+                  <div className="text-xl font-bold text-gray-900 dark:text-white tabular-nums">
+                    {labDay.stations?.length || 0}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">
+                    Stations
+                  </div>
+                </div>
+                <div className="text-center">
+                  <div className="text-xl font-bold text-gray-900 dark:text-white tabular-nums">
+                    {cohortStudents.length}
+                  </div>
+                  <div className="text-[10px] uppercase tracking-wide text-gray-500 dark:text-gray-400 font-semibold">
+                    Students
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <ChecklistSection labDayId={labDayId} />
+          </aside>
+        </div>
         <EquipmentSection labDayId={labDayId} stations={labDay.stations} />
         {userRole && hasMinRole(userRole, 'instructor') && <CostsSection labDayId={labDayId} cohortStudents={cohortStudents} />}
         {labDay.cohort?.id && <LabDayCheckInSection labDay={labDay} labDayId={labDayId} onLabDayUpdate={setLabDay} />}

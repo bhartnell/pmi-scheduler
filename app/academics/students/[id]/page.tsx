@@ -949,6 +949,13 @@ export default function StudentDetailPage() {
           <LearningPlanBanner studentId={studentId} />
         )}
 
+        {/* On lg+ the profile card + stats move to a sticky right rail while
+            the detailed sections (communications, notes, barcode, learning
+            style, skill evaluations…) fill the main column. On mobile
+            everything stacks in DOM order — no regression. */}
+        <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6 lg:space-y-0 space-y-6">
+        <aside className="lg:col-start-2 lg:row-start-1 space-y-6 lg:sticky lg:top-4">
+
         {/* Profile Card */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           <div className="flex flex-col sm:flex-row gap-6">
@@ -1292,6 +1299,10 @@ export default function StudentDetailPage() {
             </div>
           </div>
         </div>
+
+        </aside>
+        {/* Main column — detailed sections (tabs / notes / evaluations / etc.) */}
+        <div className="lg:col-start-1 lg:row-start-1 space-y-6">
 
         {/* Tab Navigation */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
@@ -2463,6 +2474,10 @@ export default function StudentDetailPage() {
           )}
         </div>
         </>}
+
+        </div>
+        </div>
+        {/* /end profile sidebar layout */}
 
         {/* Cohort transfer history — only renders when there's history */}
         <CohortHistorySection ref={cohortHistoryRef} studentId={studentId} />
