@@ -59,6 +59,7 @@ import {
   CertExpiryWidget,
   AtRiskStudentsWidget,
   MyCohortWidget,
+  ProgramSnapshotWidget,
   ROLE_DEFAULTS,
   WIDGET_DEFINITIONS,
   filterWidgetsByRole,
@@ -320,6 +321,9 @@ export default function HomePage() {
         break;
       case 'my_cohort':
         content = <MyCohortWidget />;
+        break;
+      case 'program_snapshot':
+        content = <ProgramSnapshotWidget />;
         break;
       default:
         return null;

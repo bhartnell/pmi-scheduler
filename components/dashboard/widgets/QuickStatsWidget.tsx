@@ -1,14 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Calendar, CheckSquare, TrendingUp, TrendingDown, Minus, Zap } from 'lucide-react';
+import { Users, Calendar, CheckSquare, CalendarDays, TrendingUp, TrendingDown, Minus, Zap } from 'lucide-react';
 import WidgetCard from '../WidgetCard';
 
 interface QuickStats {
   activeStudents: number;
   labsThisMonth: number;
+  labsThisWeek: number;
   openTasks: number;
-  completionRate: number;
 }
 
 interface StatItem {
@@ -25,8 +25,8 @@ export default function QuickStatsWidget() {
   const [stats, setStats] = useState<QuickStats>({
     activeStudents: 0,
     labsThisMonth: 0,
+    labsThisWeek: 0,
     openTasks: 0,
-    completionRate: 0,
   });
   const [loading, setLoading] = useState(true);
 
@@ -77,20 +77,17 @@ export default function QuickStatsWidget() {
       trendLabel: stats.openTasks === 0 ? 'All done' : undefined,
     },
     {
-      label: 'Completion Rate',
-      value: `${stats.completionRate}%`,
-      icon: TrendingUp,
-      color: stats.completionRate >= 80
-        ? 'text-green-600 dark:text-green-400'
-        : stats.completionRate >= 50
-          ? 'text-amber-600 dark:text-amber-400'
-          : 'text-red-600 dark:text-red-400',
-      iconBg: stats.completionRate >= 80
-        ? 'bg-green-100 dark:bg-green-900/30'
-        : stats.completionRate >= 50
-          ? 'bg-amber-100 dark:bg-amber-900/30'
-          : 'bg-red-100 dark:bg-red-900/30',
-      trend: stats.completionRate >= 80 ? 'up' : stats.completionRate < 50 ? 'down' : 'neutral',
+      // Replaces the old Completion Rate tile, which reported nonsense
+      // percentages (tasks completed this month ÷ tasks created this
+      // month ignored anything created last month, so values over 100%
+      // were common). Labs This Week is a plain count with a clear
+      // meaning; the Labs This Month tile still gives the broader view.
+      label: 'Labs This Week',
+      value: stats.labsThisWeek,
+      icon: CalendarDays,
+      color: stats.labsThisWeek > 0 ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-500 dark:text-gray-400',
+      iconBg: stats.labsThisWeek > 0 ? 'bg-indigo-100 dark:bg-indigo-900/30' : 'bg-gray-100 dark:bg-gray-700',
+      trend: stats.labsThisWeek > 0 ? 'up' : 'neutral',
     },
   ];
 

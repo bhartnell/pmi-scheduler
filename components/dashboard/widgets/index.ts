@@ -13,6 +13,7 @@ export { default as MyTasksWidget } from './MyTasksWidget';
 export { default as CertExpiryWidget } from './CertExpiryWidget';
 export { default as AtRiskStudentsWidget } from './AtRiskStudentsWidget';
 export { default as MyCohortWidget } from './MyCohortWidget';
+export { default as ProgramSnapshotWidget } from './ProgramSnapshotWidget';
 
 // Widget configuration for the customize modal
 export const WIDGET_DEFINITIONS = {
@@ -86,7 +87,7 @@ export const WIDGET_DEFINITIONS = {
   quick_stats: {
     id: 'quick_stats',
     name: 'Quick Stats',
-    description: 'Key metrics at a glance: students, labs, tasks, and completion rate',
+    description: 'Key metrics at a glance: students, labs this month, labs this week, and open tasks',
     defaultFor: ['admin', 'superadmin', 'lead_instructor'],
   },
   cert_expiry: {
@@ -107,6 +108,12 @@ export const WIDGET_DEFINITIONS = {
     description: 'Quick access to your primary cohort students',
     defaultFor: ['instructor', 'lead_instructor'],
     conditional: true, // Only shows if user has a primary_cohort_id set
+  },
+  program_snapshot: {
+    id: 'program_snapshot',
+    name: 'Program Snapshot',
+    description: 'Active student counts by program + semester, with PM Sem 4 internship phase breakdown',
+    defaultFor: ['admin', 'superadmin', 'lead_instructor'],
   },
 } as const;
 
@@ -165,15 +172,15 @@ export const QUICK_LINK_WHITELIST: Record<string, string[]> = {
 // Role-based default configurations
 export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: string[] }> = {
   superadmin: {
-    widgets: ['needs_attention', 'at_risk_students', 'overview_stats', 'my_tasks', 'quick_stats', 'my_labs', 'overdue_tasks', 'notifications', 'recent_activity', 'cert_expiry', 'recent_feedback', 'quick_links'],
+    widgets: ['needs_attention', 'at_risk_students', 'overview_stats', 'program_snapshot', 'my_tasks', 'quick_stats', 'my_labs', 'overdue_tasks', 'notifications', 'recent_activity', 'cert_expiry', 'recent_feedback', 'quick_links'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
   },
   admin: {
-    widgets: ['needs_attention', 'at_risk_students', 'overview_stats', 'my_tasks', 'quick_stats', 'my_labs', 'overdue_tasks', 'notifications', 'recent_activity', 'cert_expiry', 'recent_feedback', 'quick_links'],
+    widgets: ['needs_attention', 'at_risk_students', 'overview_stats', 'program_snapshot', 'my_tasks', 'quick_stats', 'my_labs', 'overdue_tasks', 'notifications', 'recent_activity', 'cert_expiry', 'recent_feedback', 'quick_links'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
   },
   lead_instructor: {
-    widgets: ['needs_attention', 'my_tasks', 'my_labs', 'at_risk_students', 'overview_stats', 'quick_stats', 'open_stations', 'overdue_tasks', 'cert_expiry', 'notifications', 'quick_links'],
+    widgets: ['needs_attention', 'my_tasks', 'my_labs', 'at_risk_students', 'overview_stats', 'program_snapshot', 'quick_stats', 'open_stations', 'overdue_tasks', 'cert_expiry', 'notifications', 'quick_links'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical'],
   },
   agency_liaison: {
