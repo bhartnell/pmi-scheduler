@@ -46,6 +46,7 @@ export default function SchedulingPage() {
     email: string;
     role: string;
     monthlyHoursTarget: number | null;
+    unavailableWeekdays: number[];
     availableThisWeek: number;
     availabilityDates: string[];
     confirmedShifts: number;
@@ -71,10 +72,14 @@ export default function SchedulingPage() {
   const [logHoursFor, setLogHoursFor] = useState<{
     id: string;
     name: string;
+    unavailableWeekdays: number[];
   } | null>(null);
   // Edit-target state for the inline monthly-hours-target control.
   const [editingTargetFor, setEditingTargetFor] = useState<string | null>(null);
   const [targetDraft, setTargetDraft] = useState<string>('');
+  // Unavailable-weekdays editor — per-user checkbox popover.
+  const [editingUnavailFor, setEditingUnavailFor] = useState<string | null>(null);
+  const [unavailDraft, setUnavailDraft] = useState<number[]>([]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -183,6 +188,25 @@ export default function SchedulingPage() {
       console.error('Error saving target:', err);
     }
   };
+
+  // Save unavailable_weekdays for one user. Empty array clears the setting
+  // (server stores NULL). Refreshes the table afterward.
+  const saveUnavail = async (userId: string) => {
+    try {
+      await fetch('/api/scheduling/unavailable-days', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, weekdays: unavailDraft }),
+      });
+      setEditingUnavailFor(null);
+      setUnavailDraft([]);
+      await fetchPartTimerStatus();
+    } catch (err) {
+      console.error('Error saving unavailable weekdays:', err);
+    }
+  };
+
+  const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   if (status === 'loading' || loading) {
     return <PageLoader />;
@@ -568,6 +592,96 @@ export default function SchedulingPage() {
                                       incl. {pt.manualMonthlyHours}h manual
                                     </div>
                                   )}
+                                  {/* Unavailable-weekdays badge + inline editor.
+                                      Shown as a subtle amber chip; admins can
+                                      click to edit via a small checkbox
+                                      popover rendered below. */}
+                                  {editingUnavailFor === pt.id ? (
+                                    <div className="mt-1 p-2 rounded border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
+                                      <div className="text-[10px] uppercase tracking-wide font-semibold text-amber-700 dark:text-amber-300 mb-1">
+                                        Unavailable weekdays
+                                      </div>
+                                      <div className="flex flex-wrap gap-1.5 mb-2">
+                                        {WEEKDAY_NAMES.map((name, wd) => {
+                                          const on = unavailDraft.includes(wd);
+                                          return (
+                                            <button
+                                              type="button"
+                                              key={wd}
+                                              onClick={() =>
+                                                setUnavailDraft((prev) =>
+                                                  on
+                                                    ? prev.filter((x) => x !== wd)
+                                                    : [...prev, wd].sort()
+                                                )
+                                              }
+                                              className={`px-1.5 py-0.5 text-[10px] rounded border ${
+                                                on
+                                                  ? 'bg-amber-500 text-white border-amber-500'
+                                                  : 'bg-white dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-gray-300 dark:border-gray-600'
+                                              }`}
+                                            >
+                                              {name}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                      <div className="flex items-center gap-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => saveUnavail(pt.id)}
+                                          className="text-[11px] px-2 py-0.5 rounded bg-blue-600 hover:bg-blue-700 text-white"
+                                        >
+                                          Save
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingUnavailFor(null);
+                                            setUnavailDraft([]);
+                                          }}
+                                          className="text-[11px] text-gray-500 hover:text-gray-700"
+                                        >
+                                          Cancel
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : pt.unavailableWeekdays.length > 0 ? (
+                                    <div className="mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-[10px] text-amber-700 dark:text-amber-300">
+                                      <span>
+                                        Unavail:{' '}
+                                        {pt.unavailableWeekdays
+                                          .map((w) => WEEKDAY_NAMES[w])
+                                          .join(', ')}
+                                      </span>
+                                      {isAdmin && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingUnavailFor(pt.id);
+                                            setUnavailDraft([...pt.unavailableWeekdays]);
+                                          }}
+                                          className="hover:underline"
+                                          title="Edit unavailable weekdays"
+                                        >
+                                          ✎
+                                        </button>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    isAdmin && (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingUnavailFor(pt.id);
+                                          setUnavailDraft([]);
+                                        }}
+                                        className="mt-0.5 text-[10px] text-gray-400 hover:text-blue-600 hover:underline"
+                                      >
+                                        + set unavailable days
+                                      </button>
+                                    )
+                                  )}
                                 </td>
                                 <td className="text-center px-4 py-3 hidden sm:table-cell">
                                   {pt.availableThisWeek > 0 ? (
@@ -715,7 +829,11 @@ export default function SchedulingPage() {
                                     <button
                                       type="button"
                                       onClick={() =>
-                                        setLogHoursFor({ id: pt.id, name: pt.name })
+                                        setLogHoursFor({
+                                          id: pt.id,
+                                          name: pt.name,
+                                          unavailableWeekdays: pt.unavailableWeekdays,
+                                        })
                                       }
                                       className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800"
                                       title="Log hours for this user (class, prep, etc.)"
@@ -754,6 +872,7 @@ export default function SchedulingPage() {
         <LogHoursModal
           userId={logHoursFor.id}
           userName={logHoursFor.name}
+          unavailableWeekdays={logHoursFor.unavailableWeekdays}
           onClose={() => setLogHoursFor(null)}
           onSaved={() => {
             setLogHoursFor(null);

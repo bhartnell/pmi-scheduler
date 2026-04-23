@@ -82,10 +82,10 @@ export async function GET() {
     const upcomingEndStr = upcomingEnd.toISOString().split('T')[0];
 
     // 1. Get all part-time instructors (plus monthly_hours_target for the
-    //    progress-bar column).
+    //    progress-bar column and unavailable_weekdays for the conflict badge).
     const { data: partTimers, error: ptError } = await supabase
       .from('lab_users')
-      .select('id, name, email, role, is_part_time, monthly_hours_target')
+      .select('id, name, email, role, is_part_time, monthly_hours_target, unavailable_weekdays')
       .eq('is_part_time', true)
       .order('name', { ascending: true });
 
@@ -274,6 +274,7 @@ export async function GET() {
         email: pt.email,
         role: pt.role,
         monthlyHoursTarget: pt.monthly_hours_target ?? null,
+        unavailableWeekdays: pt.unavailable_weekdays ?? [],
         availableThisWeek: availability.length,
         availabilityDates: availability.map(a => a.date),
         confirmedShifts: confirmed.length,
