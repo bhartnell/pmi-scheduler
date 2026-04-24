@@ -19,12 +19,15 @@ import {
   Plus,
   Target,
   TrendingUp,
+  AlertOctagon,
+  Check,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import { PageLoader } from '@/components/ui';
 import { hasMinRole, canAccessScheduling } from '@/lib/permissions';
 import LogHoursModal from '@/components/scheduling/LogHoursModal';
+import RequestCoverageModal from '@/components/scheduling/RequestCoverageModal';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import type { CurrentUser } from '@/types';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -80,6 +83,33 @@ export default function SchedulingPage() {
   // Unavailable-weekdays editor — per-user checkbox popover.
   const [editingUnavailFor, setEditingUnavailFor] = useState<string | null>(null);
   const [unavailDraft, setUnavailDraft] = useState<number[]>([]);
+
+  // Coverage request state
+  interface CoverageRequestRow {
+    id: string;
+    requested_by: string;
+    date: string;
+    start_time: string;
+    end_time: string;
+    request_type: string;
+    urgency: 'normal' | 'urgent';
+    status: string;
+    notes: string | null;
+    created_at: string;
+    requester?: { id: string; name: string; email: string } | null;
+    approver?: { id: string; name: string; email: string } | null;
+    lab_day?: {
+      id: string;
+      title: string | null;
+      cohort?: {
+        cohort_number: string | number;
+        program?: { abbreviation: string } | null;
+      } | null;
+    } | null;
+  }
+  const [coverageRequests, setCoverageRequests] = useState<CoverageRequestRow[]>([]);
+  const [showRequestCoverage, setShowRequestCoverage] = useState(false);
+  const [coverageBusy, setCoverageBusy] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -208,6 +238,55 @@ export default function SchedulingPage() {
 
   const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  // Fetch pending + approved coverage requests. Admins see the full
+  // queue; everyone else sees only their own tickets via ?mine=1.
+  const fetchCoverageRequests = async () => {
+    if (!currentUser) return;
+    try {
+      const isAdminRole =
+        currentUser.role === 'admin' || currentUser.role === 'superadmin';
+      const url = isAdminRole
+        ? '/api/scheduling/coverage-requests'
+        : '/api/scheduling/coverage-requests?mine=1';
+      const r = await fetch(url);
+      const j = await r.json();
+      if (j?.success) setCoverageRequests(j.requests || []);
+    } catch (err) {
+      console.error('Error fetching coverage requests:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!currentUser) return;
+    if (!hasMinRole(currentUser.role, 'lead_instructor')) return;
+    fetchCoverageRequests();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
+
+  const handleCoverageAction = async (
+    id: string,
+    action: 'approve' | 'decline' | 'cancel'
+  ) => {
+    setCoverageBusy(id);
+    try {
+      const r = await fetch(`/api/scheduling/coverage-requests/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const j = await r.json();
+      if (!r.ok || !j?.success) {
+        alert(j?.error || `Failed to ${action}`);
+      } else {
+        await fetchCoverageRequests();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCoverageBusy(null);
+    }
+  };
+
   if (status === 'loading' || loading) {
     return <PageLoader />;
   }
@@ -255,6 +334,22 @@ export default function SchedulingPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Request Coverage — primary action at top of the scheduling hub.
+            Visible to lead_instructor+. Opens the modal that posts a
+            coverage_requests row and pings Ryan + Ben. */}
+        {effectiveRole && hasMinRole(effectiveRole, 'lead_instructor') && (
+          <div className="mb-6 flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowRequestCoverage(true)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm"
+            >
+              <AlertOctagon className="w-4 h-4" />
+              Request Coverage
+            </button>
+          </div>
+        )}
+
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* My Availability */}
           <Link
@@ -475,6 +570,142 @@ export default function SchedulingPage() {
             </>
           )}
         </div>
+
+        {/* Coverage Requests — lead_instructor+ see their own; admin
+            sees everyone's plus Approve/Decline controls. Rendered
+            above Part-Timer Status so pending tickets are the first
+            thing a director sees when they open the page. */}
+        {effectiveRole && hasMinRole(effectiveRole, 'lead_instructor') && coverageRequests.length > 0 && (
+          <div className="mt-8">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border-2 border-blue-200 dark:border-blue-800">
+              <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertOctagon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Coverage Requests
+                  </h2>
+                  {coverageRequests.filter((r) => r.status === 'pending').length > 0 && (
+                    <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300">
+                      {coverageRequests.filter((r) => r.status === 'pending').length} pending
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {coverageRequests.map((req) => {
+                  const prettyDate = (() => {
+                    try {
+                      return new Date(req.date + 'T12:00:00').toLocaleDateString('en-US', {
+                        weekday: 'short',
+                        month: 'short',
+                        day: 'numeric',
+                      });
+                    } catch {
+                      return req.date;
+                    }
+                  })();
+                  const timeRange = `${req.start_time.slice(0, 5)}–${req.end_time.slice(0, 5)}`;
+                  const labLabel = req.lab_day
+                    ? req.lab_day.cohort
+                      ? `${req.lab_day.cohort.program?.abbreviation ?? ''} ${req.lab_day.cohort.cohort_number}`.trim()
+                      : req.lab_day.title
+                    : null;
+                  const statusColor =
+                    req.status === 'pending'
+                      ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                      : req.status === 'approved'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+                      : req.status === 'filled'
+                      ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300';
+                  const canActOnThis =
+                    req.status === 'pending' &&
+                    (isAdmin ||
+                      (req.requested_by === currentUser?.id && true));
+                  return (
+                    <div key={req.id} className="p-4 flex flex-wrap items-start gap-3">
+                      <div className="flex-1 min-w-[240px]">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span
+                            className={`px-2 py-0.5 text-[11px] font-semibold rounded uppercase tracking-wide ${statusColor}`}
+                          >
+                            {req.status}
+                          </span>
+                          {req.urgency === 'urgent' && req.status === 'pending' && (
+                            <span className="px-2 py-0.5 text-[11px] font-semibold rounded uppercase tracking-wide bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+                              Urgent
+                            </span>
+                          )}
+                          <span className="text-[11px] uppercase tracking-wide font-semibold text-gray-500 dark:text-gray-400">
+                            {req.request_type}
+                          </span>
+                        </div>
+                        <div className="mt-1 font-medium text-gray-900 dark:text-white text-sm">
+                          {prettyDate} · {timeRange}
+                          {labLabel && (
+                            <span className="text-gray-500 dark:text-gray-400 font-normal">
+                              {' '}
+                              · {labLabel}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Requested by {req.requester?.name ?? '(unknown)'}
+                          {req.approver && req.status !== 'pending' && (
+                            <>
+                              {' '}
+                              · {req.status === 'cancelled' ? 'declined' : 'approved'} by{' '}
+                              {req.approver.name}
+                            </>
+                          )}
+                        </div>
+                        {req.notes && (
+                          <p className="text-xs text-gray-600 dark:text-gray-300 italic mt-1">
+                            &ldquo;{req.notes}&rdquo;
+                          </p>
+                        )}
+                      </div>
+                      {canActOnThis && (
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {isAdmin && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleCoverageAction(req.id, 'approve')}
+                                disabled={coverageBusy === req.id}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded bg-emerald-600 hover:bg-emerald-700 text-white disabled:bg-gray-400"
+                              >
+                                <Check className="w-3.5 h-3.5" /> Approve
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCoverageAction(req.id, 'decline')}
+                                disabled={coverageBusy === req.id}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                              >
+                                Decline
+                              </button>
+                            </>
+                          )}
+                          {!isAdmin && req.requested_by === currentUser?.id && (
+                            <button
+                              type="button"
+                              onClick={() => handleCoverageAction(req.id, 'cancel')}
+                              disabled={coverageBusy === req.id}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                            >
+                              Cancel request
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Part-Timer Status Section — Director/Admin only */}
         {(userIsDirector || isAdmin) && (
@@ -877,6 +1108,16 @@ export default function SchedulingPage() {
           onSaved={() => {
             setLogHoursFor(null);
             fetchPartTimerStatus();
+          }}
+        />
+      )}
+
+      {showRequestCoverage && (
+        <RequestCoverageModal
+          onClose={() => setShowRequestCoverage(false)}
+          onSubmitted={() => {
+            setShowRequestCoverage(false);
+            fetchCoverageRequests();
           }}
         />
       )}

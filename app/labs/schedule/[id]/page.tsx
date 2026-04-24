@@ -10,6 +10,7 @@ import {
   Calendar,
   Plus,
   ClipboardCheck,
+  AlertOctagon,
   Users,
   Check,
   AlertCircle,
@@ -24,6 +25,7 @@ import LearningStyleDistribution from '@/components/LearningStyleDistribution';
 import { useToast } from '@/components/Toast';
 import { hasMinRole, canAccessAdmin } from '@/lib/permissions';
 import TemplateDiffModal from '@/components/TemplateDiffModal';
+import RequestCoverageModal from '@/components/scheduling/RequestCoverageModal';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 
 import type {
@@ -101,6 +103,7 @@ export default function LabDayPage() {
   const [rosterIncludePhotos, setRosterIncludePhotos] = useState(true);
   const [copySuccessToast, setCopySuccessToast] = useState(false);
   const [showDiffModal, setShowDiffModal] = useState(false);
+  const [showRequestCoverage, setShowRequestCoverage] = useState(false);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [showNextWeekConfirm, setShowNextWeekConfirm] = useState(false);
   const [showBulkDuplicateModal, setShowBulkDuplicateModal] = useState(false);
@@ -421,6 +424,18 @@ export default function LabDayPage() {
           >
             <ClipboardCheck className="w-3.5 h-3.5" /> Checkoff View
           </Link>
+          {/* Request Coverage — lead_instructor+. Opens the modal
+              pre-filled with this lab day's date/time so the director
+              (Ryan/Ben) just has to click Approve. */}
+          {userRole && hasMinRole(userRole, 'lead_instructor') && (
+            <button
+              type="button"
+              onClick={() => setShowRequestCoverage(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800"
+            >
+              <AlertOctagon className="w-3.5 h-3.5" /> Request Coverage
+            </button>
+          )}
         </div>
 
         {labMode === 'individual_testing' && (<div className="mt-6 print:hidden"><IndividualTestingGrid labDayId={labDayId as string} isNremtTesting={!!labDay.is_nremt_testing} /></div>)}
@@ -567,6 +582,26 @@ export default function LabDayPage() {
       )}
       <DuplicateModals labDay={labDay} labDayId={labDayId} showDuplicateModal={showDuplicateModal} showNextWeekConfirm={showNextWeekConfirm} showBulkDuplicateModal={showBulkDuplicateModal} onCloseDuplicate={() => setShowDuplicateModal(false)} onCloseNextWeek={() => setShowNextWeekConfirm(false)} onCloseBulkDuplicate={() => setShowBulkDuplicateModal(false)} onDuplicated={(newId) => { setCopySuccessToast(true); setTimeout(() => setCopySuccessToast(false), 3000); router.push(`/labs/schedule/${newId}/edit`); }} formatDate={formatDate} />
       {showDiffModal && labDay.source_template && (<TemplateDiffModal labDayId={labDay.id} templateId={labDay.source_template.id} templateName={labDay.source_template.name} onClose={() => setShowDiffModal(false)} onApplied={() => { setShowDiffModal(false); toast.success('Template updated successfully'); fetchLabDay(); }} />)}
+
+      {showRequestCoverage && (
+        <RequestCoverageModal
+          onClose={() => setShowRequestCoverage(false)}
+          onSubmitted={() => {
+            setShowRequestCoverage(false);
+            toast.success('Coverage request submitted — Ryan + Ben notified.');
+          }}
+          prefilledLabDay={{
+            id: labDayId,
+            date: labDay.date,
+            start_time: labDay.start_time,
+            end_time: labDay.end_time,
+            title: labDay.title,
+            cohortLabel: labDay.cohort
+              ? `${labDay.cohort.program?.abbreviation ?? ''} Cohort ${formatCohortNumber(labDay.cohort.cohort_number)}`.trim()
+              : null,
+          }}
+        />
+      )}
 
       {session?.user && (
         <LabDayChat
