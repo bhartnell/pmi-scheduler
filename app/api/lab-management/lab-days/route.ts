@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
+import { createNotification } from '@/lib/notifications';
 
 export async function GET(request: NextRequest) {
   // Allow volunteer_instructor+ to read lab schedule data (read-only access)
@@ -238,6 +239,69 @@ export async function POST(request: NextRequest) {
           warning: `Lab day created but stations failed: ${stationsError.message}`
         });
       }
+    }
+
+    // Fan-out notification to anyone opted in to "notify me when new
+    // lab days are created" (lab_users.notify_lab_availability = true).
+    // Currently just Gannon; others can be added by admins flipping the
+    // flag on their row. Non-fatal if anything here fails — the lab day
+    // itself was already saved above.
+    try {
+      const { data: optedIn } = await supabase
+        .from('lab_users')
+        .select('email, name')
+        .eq('notify_lab_availability', true)
+        .eq('is_active', true);
+      if (optedIn && optedIn.length > 0) {
+        // Resolve cohort label for a friendlier notification body.
+        let cohortLabel = '';
+        if (labDay.cohort_id) {
+          const { data: c } = await supabase
+            .from('cohorts')
+            .select('cohort_number, program:programs(abbreviation)')
+            .eq('id', labDay.cohort_id)
+            .maybeSingle();
+          const cohort = c as { cohort_number?: string | number; program?: { abbreviation?: string } } | null;
+          if (cohort) {
+            cohortLabel =
+              `${cohort.program?.abbreviation ?? ''} ${cohort.cohort_number ?? ''}`.trim();
+          }
+        }
+        const prettyDate = (() => {
+          try {
+            return new Date(labDay.date + 'T12:00:00').toLocaleDateString('en-US', {
+              weekday: 'short',
+              month: 'short',
+              day: 'numeric',
+            });
+          } catch {
+            return labDay.date;
+          }
+        })();
+        const timeRange =
+          labDay.start_time && labDay.end_time
+            ? ` ${labDay.start_time.slice(0, 5)}–${labDay.end_time.slice(0, 5)}`
+            : '';
+        const body = `${prettyDate}${timeRange}${cohortLabel ? ` · ${cohortLabel}` : ''}${labDay.title ? ` · ${labDay.title}` : ''}`;
+        await Promise.all(
+          optedIn.map((u: { email: string }) =>
+            createNotification({
+              userEmail: u.email,
+              title: 'New lab day posted',
+              message: body,
+              type: 'general',
+              category: 'scheduling',
+              linkUrl: `/labs/schedule/${labDay.id}`,
+              referenceType: 'lab_day',
+              referenceId: labDay.id,
+            }).catch((e) =>
+              console.error('[lab-days POST] notify', u.email, e)
+            )
+          )
+        );
+      }
+    } catch (e) {
+      console.error('[lab-days POST] opt-in notify error', e);
     }
 
     return NextResponse.json({ success: true, labDay });

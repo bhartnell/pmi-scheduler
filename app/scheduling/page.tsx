@@ -50,6 +50,7 @@ export default function SchedulingPage() {
     role: string;
     monthlyHoursTarget: number | null;
     unavailableWeekdays: number[];
+    notifyLabAvailability: boolean;
     availableThisWeek: number;
     availabilityDates: string[];
     confirmedShifts: number;
@@ -262,6 +263,23 @@ export default function SchedulingPage() {
     fetchCoverageRequests();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
+
+  // Toggle lab-availability notification opt-in for one user.
+  const toggleNotifyLabAvailability = async (
+    userId: string,
+    enabled: boolean
+  ) => {
+    try {
+      await fetch('/api/scheduling/notify-lab-availability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, enabled }),
+      });
+      await fetchPartTimerStatus();
+    } catch (err) {
+      console.error('Error toggling lab notification:', err);
+    }
+  };
 
   const handleCoverageAction = async (
     id: string,
@@ -1057,20 +1075,43 @@ export default function SchedulingPage() {
                                 </td>
                                 {isAdmin && (
                                   <td className="text-center px-4 py-3">
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setLogHoursFor({
-                                          id: pt.id,
-                                          name: pt.name,
-                                          unavailableWeekdays: pt.unavailableWeekdays,
-                                        })
-                                      }
-                                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800"
-                                      title="Log hours for this user (class, prep, etc.)"
-                                    >
-                                      <Plus className="w-3 h-3" /> Log Hours
-                                    </button>
+                                    <div className="inline-flex flex-col gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setLogHoursFor({
+                                            id: pt.id,
+                                            name: pt.name,
+                                            unavailableWeekdays: pt.unavailableWeekdays,
+                                          })
+                                        }
+                                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800"
+                                        title="Log hours for this user (class, prep, etc.)"
+                                      >
+                                        <Plus className="w-3 h-3" /> Log Hours
+                                      </button>
+                                      {/* Opt-in toggle for "notify me when a
+                                          new lab day is created". Flipping this
+                                          on adds the user to the fan-out list
+                                          inside POST /lab-days. */}
+                                      <label
+                                        className="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] text-gray-600 dark:text-gray-300 cursor-pointer select-none"
+                                        title="Notify this user in-app whenever a new lab day is created"
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={pt.notifyLabAvailability}
+                                          onChange={(e) =>
+                                            toggleNotifyLabAvailability(
+                                              pt.id,
+                                              e.target.checked
+                                            )
+                                          }
+                                          className="w-3 h-3 rounded border-gray-300 text-blue-600"
+                                        />
+                                        Lab alerts
+                                      </label>
+                                    </div>
                                   </td>
                                 )}
                               </tr>

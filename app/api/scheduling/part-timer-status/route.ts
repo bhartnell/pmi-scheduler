@@ -85,7 +85,7 @@ export async function GET() {
     //    progress-bar column and unavailable_weekdays for the conflict badge).
     const { data: partTimers, error: ptError } = await supabase
       .from('lab_users')
-      .select('id, name, email, role, is_part_time, monthly_hours_target, unavailable_weekdays')
+      .select('id, name, email, role, is_part_time, monthly_hours_target, unavailable_weekdays, notify_lab_availability')
       .eq('is_part_time', true)
       .order('name', { ascending: true });
 
@@ -275,6 +275,7 @@ export async function GET() {
         role: pt.role,
         monthlyHoursTarget: pt.monthly_hours_target ?? null,
         unavailableWeekdays: pt.unavailable_weekdays ?? [],
+        notifyLabAvailability: !!pt.notify_lab_availability,
         availableThisWeek: availability.length,
         availabilityDates: availability.map(a => a.date),
         confirmedShifts: confirmed.length,
