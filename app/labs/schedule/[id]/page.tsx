@@ -104,6 +104,25 @@ export default function LabDayPage() {
   const [copySuccessToast, setCopySuccessToast] = useState(false);
   const [showDiffModal, setShowDiffModal] = useState(false);
   const [showRequestCoverage, setShowRequestCoverage] = useState(false);
+
+  // Checkoff-day auto-detection. Matches the server heuristic: the
+  // skill_sheet_id that shows up on 2+ stations wins. Used for the
+  // banner + to collapse the Individual Testing tracker by default on
+  // these days (the live station grid is the primary UI; the tracker
+  // panel just makes the page longer).
+  const checkoffDetection = (() => {
+    const counts = new Map<string, number>();
+    for (const sid of Object.values(stationSkillSheetIds)) {
+      if (sid) counts.set(sid, (counts.get(sid) ?? 0) + 1);
+    }
+    let best: { id: string; n: number } | null = null;
+    for (const [id, n] of counts) {
+      if (n < 2) continue;
+      if (!best || n > best.n) best = { id, n };
+    }
+    return best;
+  })();
+  const isCheckoffDay = !!checkoffDetection;
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [showNextWeekConfirm, setShowNextWeekConfirm] = useState(false);
   const [showBulkDuplicateModal, setShowBulkDuplicateModal] = useState(false);
@@ -326,6 +345,41 @@ export default function LabDayPage() {
           </div>
         )}
 
+        {/* Checkoff-day banner. Renders when 2+ stations share the same
+            skill_sheet_id (the same heuristic the coordinator API uses).
+            Links straight to the mobile coordinator view so Ryan can tap
+            it from the toolbar without scrolling through every station. */}
+        {checkoffDetection && (() => {
+          const checkoffStations = labDay.stations.filter(
+            (s) => stationSkillSheetIds[s.id] === checkoffDetection.id
+          );
+          const firstSkillName =
+            checkoffStations[0]?.skill_name ||
+            checkoffStations[0]?.custom_title ||
+            'Checkoff skill';
+          return (
+            <Link
+              href={`/labs/schedule/${labDayId}/checkoff`}
+              className="mb-4 flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-teal-50 dark:bg-teal-900/20 border border-teal-200 dark:border-teal-800 hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors"
+            >
+              <div className="flex items-center gap-3">
+                <ClipboardCheck className="w-5 h-5 text-teal-600 dark:text-teal-400 flex-shrink-0" />
+                <div>
+                  <div className="font-semibold text-teal-800 dark:text-teal-200 text-sm">
+                    Checkoff day &mdash; {firstSkillName}
+                  </div>
+                  <div className="text-xs text-teal-700 dark:text-teal-300">
+                    Running across {checkoffDetection.n} stations. Tap to open the coordinator view.
+                  </div>
+                </div>
+              </div>
+              <span className="text-teal-600 dark:text-teal-400 text-xs font-medium">
+                Open &rarr;
+              </span>
+            </Link>
+          );
+        })()}
+
         {/* Cohort selector */}
         {userRole && hasMinRole(userRole, 'instructor') && (
           <div className="flex items-center gap-3 mb-4 print:hidden">
@@ -438,7 +492,24 @@ export default function LabDayPage() {
           )}
         </div>
 
-        {labMode === 'individual_testing' && (<div className="mt-6 print:hidden"><IndividualTestingGrid labDayId={labDayId as string} isNremtTesting={!!labDay.is_nremt_testing} /></div>)}
+        {/* Individual Testing tracker — auto-collapsed on checkoff
+            days (the coordinator uses the dedicated checkoff view as
+            the primary UI; the full tracker is still one click away
+            but doesn't need to push the station cards below the fold). */}
+        {labMode === 'individual_testing' && (
+          <details
+            className="mt-6 print:hidden group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
+            open={!isCheckoffDay}
+          >
+            <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-t-lg flex items-center justify-between">
+              <span>Individual Testing Tracker</span>
+              <span className="text-xs font-normal text-gray-400 group-open:hidden">Click to expand</span>
+            </summary>
+            <div className="border-t border-gray-200 dark:border-gray-700">
+              <IndividualTestingGrid labDayId={labDayId as string} isNremtTesting={!!labDay.is_nremt_testing} />
+            </div>
+          </details>
+        )}
 
         {/* Station cards + right rail (lab info / quick stats / checklist).
             Mobile: stacks in DOM order — StationCards → LabInfo → Checklist.
