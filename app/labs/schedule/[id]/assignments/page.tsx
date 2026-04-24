@@ -28,6 +28,9 @@ import {
   X,
   CheckCircle2,
   AlertTriangle,
+  Printer,
+  Circle,
+  RotateCcw,
 } from 'lucide-react';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
@@ -55,6 +58,36 @@ interface Payload {
   unassigned: StudentEntry[];
 }
 
+// Supplementary payload from /checkoff-status — used for the print
+// header (lab day title/date/cohort) and the printable intubation
+// roster at the bottom. Fetched in parallel; print view degrades
+// gracefully if this call fails.
+type CheckoffStatus = 'not_started' | 'complete' | 'retake_needed';
+interface CheckoffPayload {
+  success: true;
+  lab_day: {
+    id: string;
+    date: string;
+    title: string | null;
+    cohort: {
+      cohort_number: string | number;
+      program: { abbreviation: string } | null;
+    } | null;
+  };
+  checkoff: {
+    skill_sheet_id: string;
+    skill_name: string | null;
+  } | null;
+  roster: Array<{
+    student_id: string;
+    first_name: string;
+    last_name: string;
+    lab_group: { id: string; name: string } | null;
+    status: CheckoffStatus;
+  }>;
+  progress: { complete: number; total: number };
+}
+
 // ─── Lab group colors (A=blue, B=green, C=orange) ──────────────────────────
 const GROUP_COLORS: Record<string, string> = {
   A: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
@@ -76,6 +109,7 @@ export default function StationAssignmentsPage() {
   const labDayId = params?.id as string;
 
   const [data, setData] = useState<Payload | null>(null);
+  const [checkoff, setCheckoff] = useState<CheckoffPayload | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
@@ -88,12 +122,25 @@ export default function StationAssignmentsPage() {
 
   const fetchData = useCallback(async () => {
     try {
-      const r = await fetch(
-        `/api/lab-management/lab-days/${labDayId}/station-assignments`
-      );
+      // Run the assignments + checkoff-status fetches in parallel. The
+      // latter is what powers the print view's header (lab-day title,
+      // date, cohort) and the bottom intubation roster block, so even
+      // though the primary UI only needs the first call, we fire both.
+      // If the checkoff fetch fails the assignment view still works;
+      // print just shows a minimal header.
+      const [r, cr] = await Promise.all([
+        fetch(`/api/lab-management/lab-days/${labDayId}/station-assignments`),
+        fetch(`/api/lab-management/lab-days/${labDayId}/checkoff-status`),
+      ]);
       const j = await r.json();
       if (!j?.success) throw new Error(j?.error || 'Failed to load');
       setData(j);
+      try {
+        const cj = await cr.json();
+        if (cj?.success) setCheckoff(cj as CheckoffPayload);
+      } catch {
+        /* non-fatal; print view will fall back */
+      }
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
@@ -208,9 +255,26 @@ export default function StationAssignmentsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 pb-24">
-      {/* Header */}
-      <div className="bg-white dark:bg-gray-800 shadow">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 pb-24 print:bg-white print:min-h-0 print:pb-0">
+      {/* Print-only CSS — sets paper margins and encourages sensible
+          page breaks between station cards. Scoped here rather than in
+          globals.css because this is the only page with a custom
+          print layout right now. */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @media print {
+              @page { margin: 0.5in; }
+              html, body { background: #fff !important; }
+              /* Avoid mid-card page breaks; already reinforced by
+                 break-inside-avoid utility classes on each card. */
+              .break-inside-avoid { page-break-inside: avoid; }
+            }
+          `,
+        }}
+      />
+      {/* Header — hidden when printing so only the clean station cards go on paper. */}
+      <div className="bg-white dark:bg-gray-800 shadow print:hidden">
         <div className="max-w-5xl mx-auto px-3 py-3 flex items-center gap-2">
           <Link
             href={`/labs/schedule/${labDayId}`}
@@ -229,6 +293,14 @@ export default function StationAssignmentsPage() {
           </div>
           <button
             type="button"
+            onClick={() => window.print()}
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+            title="Print station assignments to post at each station"
+          >
+            <Printer className="w-3.5 h-3.5" /> Print
+          </button>
+          <button
+            type="button"
             onClick={autoAssign}
             disabled={autoBusy}
             className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-300"
@@ -243,7 +315,7 @@ export default function StationAssignmentsPage() {
         </div>
       </div>
 
-      <main className="max-w-5xl mx-auto px-3 py-4 space-y-4">
+      <main className="max-w-5xl mx-auto px-3 py-4 space-y-4 print:hidden">
         {error && (
           <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-700 dark:text-red-300">
             {error}
@@ -360,10 +432,153 @@ export default function StationAssignmentsPage() {
         </p>
       </main>
 
+      {/* Print-only layout — posted at each station on checkoff day. Uses
+          a two-column CSS grid on wide paper, single column on narrow.
+          Large font, generous spacing, minimal chrome. @media print CSS
+          in globals scope collapses colors + page breaks; Tailwind
+          `print:` utilities do the rest. */}
+      <div className="hidden print:block">
+        {/* Print header */}
+        <div className="mb-4">
+          <h1 className="text-2xl font-bold text-black">
+            Station Assignments
+            {checkoff?.lab_day && (
+              <>
+                {' '}
+                &mdash;{' '}
+                {new Date(checkoff.lab_day.date + 'T12:00:00').toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  month: 'long',
+                  day: 'numeric',
+                  year: 'numeric',
+                })}
+              </>
+            )}
+          </h1>
+          <div className="text-sm text-gray-700 mt-1">
+            {checkoff?.lab_day?.title && <span>{checkoff.lab_day.title}</span>}
+            {checkoff?.lab_day?.cohort && (
+              <span>
+                {checkoff.lab_day.title ? ' · ' : ''}
+                {checkoff.lab_day.cohort.program?.abbreviation ?? ''} Cohort{' '}
+                {checkoff.lab_day.cohort.cohort_number}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Station cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {orgStations.map((station) => (
+            <div
+              key={station.id}
+              className="border border-gray-400 rounded-md break-inside-avoid"
+            >
+              <div className="px-3 py-2 border-b border-gray-400 bg-gray-100">
+                <div className="font-bold text-base text-black">
+                  {station.station_number != null && (
+                    <span className="mr-2">Station {station.station_number}</span>
+                  )}
+                  {station.title || 'Station'}
+                </div>
+                <div className="text-xs text-gray-700 mt-0.5">
+                  {[station.room, station.instructor_name]
+                    .filter(Boolean)
+                    .join(' · ') ||
+                    'Instructor: —'}
+                </div>
+              </div>
+              {station.students.length === 0 ? (
+                <div className="px-3 py-3 text-xs italic text-gray-600">
+                  No students assigned.
+                </div>
+              ) : (
+                <ul className="divide-y divide-gray-300">
+                  {station.students.map((s) => (
+                    <li
+                      key={s.student_id}
+                      className="px-3 py-1.5 flex items-center justify-between gap-2 text-sm text-black"
+                    >
+                      <span>
+                        {s.last_name}, {s.first_name}
+                      </span>
+                      {s.lab_group && (
+                        <span className="text-xs font-semibold text-gray-800 border border-gray-400 rounded px-1.5 py-0.5">
+                          {s.lab_group.name}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Intubation roster — only when checkoff data is available. */}
+        {checkoff?.checkoff && checkoff.roster.length > 0 && (
+          <div className="mt-6 border border-gray-400 rounded-md break-inside-avoid">
+            <div className="px-3 py-2 border-b border-gray-400 bg-gray-100">
+              <div className="font-bold text-base text-black">
+                {checkoff.checkoff.skill_name || 'Checkoff'} — Roster
+              </div>
+              <div className="text-xs text-gray-700 mt-0.5">
+                {checkoff.progress.complete}/{checkoff.progress.total} complete at print time
+              </div>
+            </div>
+            <ul className="divide-y divide-gray-300 columns-1 sm:columns-2">
+              {checkoff.roster.map((r) => {
+                const icon =
+                  r.status === 'complete'
+                    ? '✓'
+                    : r.status === 'retake_needed'
+                    ? '↻'
+                    : '○';
+                const iconColor =
+                  r.status === 'complete'
+                    ? 'text-black'
+                    : r.status === 'retake_needed'
+                    ? 'text-black'
+                    : 'text-gray-500';
+                return (
+                  <li
+                    key={r.student_id}
+                    className="px-3 py-1 flex items-center justify-between gap-2 text-sm text-black break-inside-avoid"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span className={`font-bold ${iconColor}`}>{icon}</span>
+                      <span>
+                        {r.last_name}, {r.first_name}
+                      </span>
+                    </span>
+                    {r.lab_group && (
+                      <span className="text-[10px] text-gray-700 border border-gray-400 rounded px-1 py-0.5">
+                        {r.lab_group.name}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        <p className="mt-4 text-[10px] text-gray-500 italic text-right">
+          Printed{' '}
+          {new Date().toLocaleString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+          })}
+        </p>
+      </div>
+
       {/* Station picker sheet */}
       {pickingFor && (
         <div
-          className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center"
+          className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center print:hidden"
           onClick={() => setPickingFor(null)}
         >
           <div
