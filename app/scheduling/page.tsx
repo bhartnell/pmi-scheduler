@@ -28,6 +28,7 @@ import { PageLoader } from '@/components/ui';
 import { hasMinRole, canAccessScheduling } from '@/lib/permissions';
 import LogHoursModal from '@/components/scheduling/LogHoursModal';
 import RequestCoverageModal from '@/components/scheduling/RequestCoverageModal';
+import RecurringAvailabilityModal from '@/components/scheduling/RecurringAvailabilityModal';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import type { CurrentUser } from '@/types';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -111,6 +112,10 @@ export default function SchedulingPage() {
   const [coverageRequests, setCoverageRequests] = useState<CoverageRequestRow[]>([]);
   const [showRequestCoverage, setShowRequestCoverage] = useState(false);
   const [coverageBusy, setCoverageBusy] = useState<string | null>(null);
+  const [recurringAvailFor, setRecurringAvailFor] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -1090,6 +1095,20 @@ export default function SchedulingPage() {
                                       >
                                         <Plus className="w-3 h-3" /> Log Hours
                                       </button>
+                                      {/* Recurring availability template —
+                                          expands weekday pattern to
+                                          instructor_availability rows for
+                                          Trevor-style fixed schedules. */}
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setRecurringAvailFor({ id: pt.id, name: pt.name })
+                                        }
+                                        className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800"
+                                        title="Generate recurring availability from a weekday pattern"
+                                      >
+                                        <Calendar className="w-3 h-3" /> Set Recurring
+                                      </button>
                                       {/* Opt-in toggle for "notify me when a
                                           new lab day is created". Flipping this
                                           on adds the user to the fan-out list
@@ -1159,6 +1178,19 @@ export default function SchedulingPage() {
           onSubmitted={() => {
             setShowRequestCoverage(false);
             fetchCoverageRequests();
+          }}
+        />
+      )}
+
+      {recurringAvailFor && (
+        <RecurringAvailabilityModal
+          userId={recurringAvailFor.id}
+          userName={recurringAvailFor.name}
+          onClose={() => setRecurringAvailFor(null)}
+          onSaved={(inserted) => {
+            setRecurringAvailFor(null);
+            fetchPartTimerStatus();
+            console.log(`Generated ${inserted} availability rows`);
           }}
         />
       )}
