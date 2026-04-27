@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -342,6 +342,17 @@ export default function InternshipDetailPage() {
   // Inline error for the placement-section add flow — same UX as the
   // PreceptorsSection modal: 409 surfaces here instead of as a toast.
   const [assignmentInlineError, setAssignmentInlineError] = useState<string | null>(null);
+  // Save state machine. handleInputChange sets `hasChanges` + adds
+  // the field to dirtyFields; the auto-save useEffect below schedules
+  // a debounced save 1.5s after the last edit; handleSave transitions
+  // through saving → saved or error.
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [dirtyFields, setDirtyFields] = useState<Set<string>>(new Set());
+  // Holds the latest handleSave so the auto-save effect always invokes
+  // a fresh closure (formData has the user's most recent input even
+  // after several intermediate renders).
+  const handleSaveRef = useRef<((opts?: { auto?: boolean }) => Promise<void>) | null>(null);
   // Collapsible-section state for the editable detail cards
   // (Placement, Exams, Closeout). Same pattern as the phase cards:
   // null until internship loads, then a derived default that the user
@@ -560,6 +571,17 @@ export default function InternshipDetailPage() {
       return updated;
     });
     setHasChanges(true);
+    setSaveError(null);
+    setDirtyFields(prev => {
+      if (prev.has(field)) return prev;
+      const next = new Set(prev);
+      next.add(field);
+      return next;
+    });
+    // Auto-save itself runs in a useEffect below that watches
+    // [formData, hasChanges] — the fresh-closure pattern avoids the
+    // stale-closure trap of scheduling timers from inside the change
+    // handler.
   };
 
   // DATE_FIELDS now lives at module scope (top of file) so both
@@ -583,10 +605,12 @@ export default function InternshipDetailPage() {
     setPreceptorRefreshKey(k => k + 1);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (opts: { auto?: boolean } = {}) => {
     if (!userRole || !canEditClinical(userRole)) return;
+    if (saving) return; // already in flight
 
     setSaving(true);
+    setSaveError(null);
     try {
       // Sanitize date fields:
       //   • empty string → null (PostgreSQL DATE columns reject "")
@@ -604,27 +628,74 @@ export default function InternshipDetailPage() {
         }
       }
 
-      const res = await fetch(`/api/clinical/internships/${internshipId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(sanitizedData),
-      });
+      // PUT with one automatic retry on 503 (Supabase pooler timeouts
+      // — Rae's "Service Unavailable" report). Retry waits 1s. Auth /
+      // permission errors don't get retried.
+      const doRequest = () =>
+        fetch(`/api/clinical/internships/${internshipId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(sanitizedData),
+        });
+      let res = await doRequest();
+      if (res.status === 503) {
+        await new Promise(r => setTimeout(r, 1000));
+        res = await doRequest();
+      }
 
-      const data = await res.json();
-      if (data.success) {
+      const data = await res.json().catch(() => ({} as Record<string, unknown>));
+      if (res.ok && (data as { success?: boolean }).success) {
         setHasChanges(false);
-        showToast('Changes saved successfully', 'success');
+        setDirtyFields(new Set());
+        setLastSavedAt(new Date());
+        // Manual saves still surface a confirmation toast; auto-saves
+        // are silent on success — the lastSavedAt timestamp + the
+        // banner state change is enough signal without spamming
+        // toasts on every keystroke pause.
+        if (!opts.auto) showToast('Changes saved successfully', 'success');
         await fetchData();
       } else {
-        console.error('Save failed:', data.error, data.code);
-        showToast(data.error || 'Failed to save changes', 'error');
+        const msg =
+          (data as { error?: string }).error ||
+          (res.status === 503
+            ? 'Service unavailable — retried once and still failed. Try again in a moment.'
+            : `Save failed (${res.status})`);
+        console.error('Save failed:', msg, (data as { code?: string }).code);
+        setSaveError(msg);
+        // Manual saves also get a toast; auto-saves rely on the
+        // banner's red-error state to alert the user.
+        if (!opts.auto) showToast(msg, 'error');
       }
     } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Network error';
       console.error('Error saving:', error);
-      showToast('Network error saving changes', 'error');
+      setSaveError(msg);
+      if (!opts.auto) showToast('Network error saving changes', 'error');
     }
     setSaving(false);
   };
+
+  // Keep the ref pointing at the latest handleSave so the debounce
+  // effect can call into it without holding a stale closure.
+  handleSaveRef.current = handleSave;
+
+  // Auto-save: every formData change re-arms a 1.5s debounce timer.
+  // Cleanup cancels the prior timer if the user keeps editing, so the
+  // save only fires after a quiet period. Skipped when there's nothing
+  // dirty, when the user can't edit, or when a save is already in
+  // flight. canEdit is derived inline because the const declaration
+  // sits below this hook in the component body.
+  const userCanEdit = userRole ? canEditClinical(userRole) : false;
+  useEffect(() => {
+    if (!hasChanges || !userCanEdit || saving) return;
+    const t = setTimeout(() => {
+      handleSaveRef.current?.({ auto: true });
+    }, 1500);
+    return () => clearTimeout(t);
+    // formData is the actual debounce trigger — when it changes, the
+    // timer resets. eslint can't see that handleSaveRef is stable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData, hasChanges, userCanEdit, saving]);
 
   const handleNotifyRyan = async () => {
     if (!canEdit) return;
@@ -1064,7 +1135,7 @@ export default function InternshipDetailPage() {
               </button>
               {canEdit && hasChanges && (
                 <button
-                  onClick={handleSave}
+                  onClick={() => handleSave()}
                   disabled={saving}
                   className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50"
                 >
@@ -2630,24 +2701,72 @@ export default function InternshipDetailPage() {
           visibility of unsaved edits as they scroll. This floating bar
           keeps the Save action accessible and makes unsaved state
           impossible to miss — complementing the beforeunload guard. */}
-      {canEdit && hasChanges && (
-        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-white dark:bg-gray-800 border border-amber-400 dark:border-amber-600 rounded-lg shadow-lg px-4 py-2 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-          <span className="text-sm text-gray-700 dark:text-gray-200">
-            You have unsaved changes
+      {/* Floating save banner — three visual states:
+          • dirty + saving:  blue, "Saving..." spinner
+          • dirty + error:   red, error message + Retry button
+          • dirty + idle:    amber pulse, "N unsaved change(s) — auto-saving in 1.5s" + manual Save button
+          • clean + recent:  green checkmark "Saved [time]" — fades after a bit
+          z-50 puts it above modals so it's never obscured. */}
+      {canEdit && (hasChanges || saving || saveError) && (
+        <div
+          role="status"
+          className={`fixed bottom-4 left-1/2 -translate-x-1/2 z-50 rounded-lg shadow-xl px-4 py-2 flex items-center gap-3 border-2 ${
+            saveError
+              ? 'bg-red-50 dark:bg-red-900/40 border-red-500 text-red-900 dark:text-red-100'
+              : saving
+              ? 'bg-blue-50 dark:bg-blue-900/40 border-blue-500 text-blue-900 dark:text-blue-100'
+              : 'bg-amber-100 dark:bg-amber-900/40 border-amber-500 text-amber-900 dark:text-amber-100 animate-pulse'
+          }`}
+        >
+          {saveError ? (
+            <>
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-300 flex-shrink-0" />
+              <span className="text-sm">{saveError}</span>
+              <button
+                onClick={() => handleSave()}
+                disabled={saving}
+                className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50 text-sm font-medium"
+              >
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                Retry
+              </button>
+            </>
+          ) : saving ? (
+            <>
+              <Loader2 className="w-5 h-5 text-blue-600 dark:text-blue-300 animate-spin flex-shrink-0" />
+              <span className="text-sm font-medium">Saving…</span>
+            </>
+          ) : (
+            <>
+              <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-300 flex-shrink-0" />
+              <span className="text-sm font-medium">
+                {dirtyFields.size > 0
+                  ? `${dirtyFields.size} unsaved change${dirtyFields.size === 1 ? '' : 's'} — auto-saving…`
+                  : 'Unsaved changes — auto-saving…'}
+              </span>
+              <button
+                onClick={() => handleSave()}
+                disabled={saving}
+                className="flex items-center gap-1 px-3 py-1.5 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50 text-sm font-medium"
+              >
+                <Save className="w-4 h-4" />
+                Save now
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* "Saved" confirmation pill — appears briefly after a successful
+          save when the form is otherwise clean. Fades on its own via
+          conditional rendering tied to lastSavedAt freshness (within
+          last 4 seconds + no pending changes). */}
+      {canEdit && !hasChanges && !saving && !saveError && lastSavedAt && Date.now() - lastSavedAt.getTime() < 4000 && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 bg-emerald-50 dark:bg-emerald-900/40 border-2 border-emerald-500 rounded-lg shadow px-3 py-1.5 flex items-center gap-2 text-emerald-900 dark:text-emerald-100">
+          <CheckCircle2 className="w-4 h-4" />
+          <span className="text-sm font-medium">
+            Saved {lastSavedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
           </span>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50 text-sm font-medium"
-          >
-            {saving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
-            )}
-            Save Changes
-          </button>
         </div>
       )}
 
