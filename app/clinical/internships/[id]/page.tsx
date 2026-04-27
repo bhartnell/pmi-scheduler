@@ -35,7 +35,10 @@ import {
 } from 'lucide-react';
 import { canAccessClinical, canEditClinical, hasMinRole, type Role } from '@/lib/permissions';
 import { parseDateSafe } from '@/lib/utils';
-import SummativeEvaluationsSection from '@/components/clinical/SummativeEvaluationsSection';
+// Summative Evaluations section removed 2026-04-24 — program no longer
+// uses the summative-eval workflow. API routes (/api/clinical/internships/
+// [id]/summative-evaluations) stay in place so historical rows remain
+// queryable; only the UI is gone.
 import Breadcrumbs from '@/components/Breadcrumbs';
 import PreceptorsSection from '@/components/clinical/PreceptorsSection';
 import CloseoutSection from '@/components/clinical/CloseoutSection';
@@ -1148,9 +1151,19 @@ export default function InternshipDetailPage() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Left Column */}
-          <div className="space-y-6">
+        {/*
+          Wide-screen sidebar layout.
+          Mobile: stacked vertically (default flow), preserving the
+          existing DOM order so nothing reshuffles unexpectedly.
+          lg+: main column flexes (wide work area), sidebar pinned at
+          340px and sticky-positioned so Preceptors / Contact / Meeting
+          Scheduling stay visible while the main column scrolls.
+          Same pattern proved out on /clinical/internships/cohort/[id]
+          (commit ccd4e2c9).
+        */}
+        <div className="space-y-6 lg:space-y-0 lg:grid lg:gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+          {/* Left main column */}
+          <div className="space-y-6 min-w-0">
             {/* Placement & Pre-Requisites */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">
@@ -1543,8 +1556,14 @@ export default function InternshipDetailPage() {
             </div>
           </div>
 
-          {/* Right Column */}
-          <div className="space-y-6">
+          {/* Right sidebar — sticky on lg+ so the reference-style sections
+              (Preceptors, Contact Info, Meeting Scheduling) stay in view
+              while the user scrolls the longer main column. The
+              max-h + overflow rules prevent the sidebar from growing
+              taller than the viewport when its own content is long
+              (e.g., during an active extension with the Closeout
+              workflow expanded). */}
+          <div className="space-y-6 min-w-0 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
             {/* Preceptors */}
             <PreceptorsSection internshipId={internshipId} canEdit={canEdit} />
 
@@ -1587,15 +1606,6 @@ export default function InternshipDetailPage() {
                 </div>
               </div>
             </div>
-
-            {/* Summative Evaluations */}
-            <SummativeEvaluationsSection
-              internshipId={internshipId}
-              studentId={internship.student_id}
-              studentName={`${student?.first_name} ${student?.last_name}`}
-              cohortId={internship.cohort_id}
-              canEdit={canEdit}
-            />
 
             {/* Extension Tracking */}
             {(formData.is_extended || formData.current_phase === 'extended') && (
