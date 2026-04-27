@@ -333,6 +333,15 @@ export default function InternshipDetailPage() {
   // header chevron, after which we keep their choice.
   const [phase1Open, setPhase1Open] = useState<boolean | null>(null);
   const [phase2Open, setPhase2Open] = useState<boolean | null>(null);
+  // Bumps when the preceptor assignments change in any of the three
+  // surfaces (placement-section picker, summary card, PreceptorsSection
+  // modal). The increment forces PreceptorsSection's effect to refetch,
+  // and we also re-fetch our own preceptorAssignments below so the
+  // summary card + placement list update without a page reload.
+  const [preceptorRefreshKey, setPreceptorRefreshKey] = useState(0);
+  // Inline error for the placement-section add flow — same UX as the
+  // PreceptorsSection modal: 409 surfaces here instead of as a toast.
+  const [assignmentInlineError, setAssignmentInlineError] = useState<string | null>(null);
   // Collapsible-section state for the editable detail cards
   // (Placement, Exams, Closeout). Same pattern as the phase cards:
   // null until internship loads, then a derived default that the user
@@ -555,6 +564,24 @@ export default function InternshipDetailPage() {
 
   // DATE_FIELDS now lives at module scope (top of file) so both
   // formData init and save sanitization can reference the same list.
+
+  // Refetch preceptor assignments + bump refreshKey so PreceptorsSection
+  // also refetches. Single source of truth wins; both surfaces stay
+  // in sync after any add/remove from any of the three places this can
+  // happen (placement-section picker, PreceptorsSection modal, summary
+  // card future Add button).
+  const refreshPreceptorAssignments = async () => {
+    try {
+      const res = await fetch(`/api/clinical/internships/${internshipId}/preceptors`);
+      const data = await res.json();
+      if (data.success) {
+        setPreceptorAssignments(data.assignments || []);
+      }
+    } catch (err) {
+      console.error('Error refreshing preceptor assignments:', err);
+    }
+    setPreceptorRefreshKey(k => k + 1);
+  };
 
   const handleSave = async () => {
     if (!userRole || !canEditClinical(userRole)) return;
@@ -1584,9 +1611,10 @@ export default function InternshipDetailPage() {
                                 type="button"
                                 onClick={async () => {
                                   await fetch(`/api/clinical/internships/${internshipId}/preceptors`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assignmentId: assignment.id, is_active: false, end_date: new Date().toISOString().split('T')[0] }) });
-                                  const res = await fetch(`/api/clinical/internships/${internshipId}/preceptors`);
-                                  const data = await res.json();
-                                  if (data.success) setPreceptorAssignments(data.assignments || []);
+                                  // Cross-surface refresh: bumps refreshKey
+                                  // so PreceptorsSection picks up the change
+                                  // too.
+                                  await refreshPreceptorAssignments();
                                 }}
                                 className="text-gray-400 hover:text-red-500 p-1"
                                 title="Remove assignment"
@@ -1670,8 +1698,9 @@ export default function InternshipDetailPage() {
                             disabled={!newAssignPreceptorId || addingAssignment}
                             onClick={async () => {
                               setAddingAssignment(true);
+                              setAssignmentInlineError(null);
                               try {
-                                await fetch(`/api/clinical/internships/${internshipId}/preceptors`, {
+                                const res = await fetch(`/api/clinical/internships/${internshipId}/preceptors`, {
                                   method: 'POST',
                                   headers: { 'Content-Type': 'application/json' },
                                   body: JSON.stringify({
@@ -1680,13 +1709,24 @@ export default function InternshipDetailPage() {
                                     start_date: new Date().toISOString().split('T')[0],
                                   }),
                                 });
-                                // Refresh assignments
-                                const res = await fetch(`/api/clinical/internships/${internshipId}/preceptors`);
                                 const data = await res.json();
-                                if (data.success) setPreceptorAssignments(data.assignments || []);
-                                setNewAssignPreceptorId('');
+                                if (res.ok && data?.success) {
+                                  // Cross-surface refresh — also bumps
+                                  // refreshKey for PreceptorsSection.
+                                  await refreshPreceptorAssignments();
+                                  setNewAssignPreceptorId('');
+                                } else if (res.status === 409) {
+                                  setAssignmentInlineError(
+                                    data?.error || 'This preceptor is already assigned in that role.'
+                                  );
+                                } else {
+                                  setAssignmentInlineError(
+                                    data?.error || 'Failed to add preceptor assignment'
+                                  );
+                                }
                               } catch (err) {
                                 console.error('Error adding assignment:', err);
+                                setAssignmentInlineError('Network error — please try again');
                               }
                               setAddingAssignment(false);
                             }}
@@ -1713,6 +1753,14 @@ export default function InternshipDetailPage() {
                               </span>
                             )}
                           </label>
+                        )}
+                        {/* Inline error — surfaces 409 "already assigned"
+                            and other add failures without a toast that
+                            dismisses while the user is correcting. */}
+                        {assignmentInlineError && (
+                          <div className="text-xs rounded-lg p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200">
+                            {assignmentInlineError}
+                          </div>
                         )}
                         </div>
                         );
@@ -2031,8 +2079,18 @@ export default function InternshipDetailPage() {
                 the at-a-glance "where are we?" view that the sidebar
                 used to provide. */}
 
-            {/* Preceptors */}
-            <PreceptorsSection internshipId={internshipId} canEdit={canEdit} />
+            {/* Preceptors — wired with the cross-surface sync helpers
+                so adds in PreceptorsSection's modal also refresh the
+                summary card and the placement-section list. agencyId
+                drives the modal's auto-filter to the internship's
+                agency (with "Show all agencies" escape hatch). */}
+            <PreceptorsSection
+              internshipId={internshipId}
+              canEdit={canEdit}
+              agencyId={formData.agency_id || internship.agency_id || null}
+              refreshKey={preceptorRefreshKey}
+              onChange={refreshPreceptorAssignments}
+            />
 
             {/* (Phase 2 standalone block removed 2026-04-24 — moved into
                 the side-by-side card grid above with Phase 1.) */}

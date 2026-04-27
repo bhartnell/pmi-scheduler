@@ -44,6 +44,7 @@ interface AvailablePreceptor {
   id: string;
   first_name: string;
   last_name: string;
+  agency_id: string | null;
   agency_name: string | null;
   station: string | null;
 }
@@ -51,6 +52,27 @@ interface AvailablePreceptor {
 interface PreceptorsSectionProps {
   internshipId: string;
   canEdit: boolean;
+  /**
+   * Optional internship agency to scope the picker. When set, the
+   * Add Preceptor modal auto-filters preceptors to that agency
+   * (with a "Show all agencies (N hidden)" toggle as escape hatch),
+   * matching the placement-section behaviour from fe5de287.
+   */
+  agencyId?: string | null;
+  /**
+   * Bump this number whenever a sibling area (placement-section
+   * preceptor picker, summary card, etc.) modifies the assignments
+   * server-side. The component re-fetches when it changes so both
+   * views stay in sync without a full page reload.
+   */
+  refreshKey?: number;
+  /**
+   * Called after a successful add / remove from inside this
+   * component. Lets the parent re-fetch its own copy of the
+   * assignments so summary cards / placement section update
+   * immediately.
+   */
+  onChange?: () => void;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -83,7 +105,13 @@ function formatDate(dateStr: string | null): string {
   });
 }
 
-export default function PreceptorsSection({ internshipId, canEdit }: PreceptorsSectionProps) {
+export default function PreceptorsSection({
+  internshipId,
+  canEdit,
+  agencyId,
+  refreshKey,
+  onChange,
+}: PreceptorsSectionProps) {
   const [assignments, setAssignments] = useState<PreceptorAssignment[]>([]);
   const [availablePreceptors, setAvailablePreceptors] = useState<AvailablePreceptor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,17 +120,28 @@ export default function PreceptorsSection({ internshipId, canEdit }: PreceptorsS
   const [submitting, setSubmitting] = useState(false);
   const [endingId, setEndingId] = useState<string | null>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  // Inline modal error — used for the 409 "already assigned" case so the
+  // user sees a tight in-modal message instead of a generic toast that
+  // dismisses the modal in the middle of correcting their selection.
+  const [modalError, setModalError] = useState<string | null>(null);
 
   // Add modal form state
   const [modalPreceptorId, setModalPreceptorId] = useState('');
   const [modalRole, setModalRole] = useState<'primary' | 'secondary' | 'tertiary'>('primary');
   const [modalStartDate, setModalStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [modalNotes, setModalNotes] = useState('');
+  // "Show all agencies" toggle — defaults to false so the picker
+  // auto-filters to the internship's agency (matching the placement-
+  // section behaviour). Toggle true to reveal cross-agency preceptors.
+  const [showAllAgencies, setShowAllAgencies] = useState(false);
 
   useEffect(() => {
     fetchAssignments();
     fetchPreceptors();
-  }, [internshipId]);
+    // refreshKey participates in the deps so a sibling area triggering
+    // a sync via the parent → refreshKey bump causes us to re-fetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [internshipId, refreshKey]);
 
   const fetchAssignments = async () => {
     try {
@@ -137,9 +176,10 @@ export default function PreceptorsSection({ internshipId, canEdit }: PreceptorsS
 
   const handleAddAssignment = async () => {
     if (!modalPreceptorId) {
-      showToast('Please select a preceptor', 'error');
+      setModalError('Please select a preceptor');
       return;
     }
+    setModalError(null);
 
     setSubmitting(true);
     try {
@@ -157,12 +197,20 @@ export default function PreceptorsSection({ internshipId, canEdit }: PreceptorsS
       const data = await res.json();
       if (data.success) {
         await fetchAssignments();
+        onChange?.();
         setShowAddModal(false);
         setModalPreceptorId('');
         setModalRole('primary');
         setModalStartDate(new Date().toISOString().split('T')[0]);
         setModalNotes('');
         showToast('Preceptor assigned successfully', 'success');
+      } else if (res.status === 409) {
+        // Duplicate-assignment case — surface inline so the user can
+        // pick a different preceptor or role without a toast killing
+        // the modal in the middle of their correction.
+        setModalError(
+          data.error || 'This preceptor is already assigned in that role.'
+        );
       } else {
         showToast(data.error || 'Failed to add preceptor', 'error');
       }
@@ -185,6 +233,7 @@ export default function PreceptorsSection({ internshipId, canEdit }: PreceptorsS
       const data = await res.json();
       if (data.success) {
         await fetchAssignments();
+        onChange?.();
         showToast('Assignment ended', 'success');
       } else {
         showToast(data.error || 'Failed to end assignment', 'error');
@@ -432,25 +481,57 @@ export default function PreceptorsSection({ internshipId, canEdit }: PreceptorsS
             </div>
 
             <div className="p-5 space-y-4">
-              {/* Preceptor Select */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                  Preceptor <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={modalPreceptorId}
-                  onChange={(e) => setModalPreceptorId(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
-                >
-                  <option value="">Select a preceptor...</option>
-                  {availablePreceptors.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.first_name} {p.last_name}
-                      {p.agency_name ? ` (${p.agency_name})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Preceptor Select.
+                  Auto-filters by the internship's agency when agencyId
+                  is set; the "Show all agencies" toggle below reveals
+                  cross-agency preceptors. Same behaviour as the
+                  placement-section picker (fe5de287). */}
+              {(() => {
+                const filtered =
+                  agencyId && !showAllAgencies
+                    ? availablePreceptors.filter((p) => p.agency_id === agencyId)
+                    : availablePreceptors;
+                const hiddenCount = availablePreceptors.length - filtered.length;
+                return (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      Preceptor <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={modalPreceptorId}
+                      onChange={(e) => setModalPreceptorId(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                    >
+                      <option value="">Select a preceptor...</option>
+                      {filtered.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.first_name} {p.last_name}
+                          {p.agency_name ? ` (${p.agency_name})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                    {/* Filter toggle — only renders when there's actually
+                        something to reveal, so the picker stays clean
+                        when no filter is active. */}
+                    {agencyId && (hiddenCount > 0 || showAllAgencies) && (
+                      <label className="mt-1.5 flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={showAllAgencies}
+                          onChange={(e) => setShowAllAgencies(e.target.checked)}
+                          className="w-3.5 h-3.5 rounded border-gray-300"
+                        />
+                        Show all agencies
+                        {!showAllAgencies && hiddenCount > 0 && (
+                          <span className="text-gray-500">
+                            ({hiddenCount} hidden)
+                          </span>
+                        )}
+                      </label>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* Role Select */}
               <div>
@@ -506,6 +587,14 @@ export default function PreceptorsSection({ internshipId, canEdit }: PreceptorsS
                   className="w-full px-3 py-2 border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 resize-none"
                 />
               </div>
+
+              {/* Inline error — surfaces 409 "already assigned" without
+                  closing the modal so the user can adjust selection. */}
+              {modalError && (
+                <div className="text-sm rounded-lg p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200">
+                  {modalError}
+                </div>
+              )}
             </div>
 
             <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
