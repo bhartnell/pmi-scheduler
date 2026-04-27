@@ -1196,9 +1196,14 @@ export default function InternshipDetailPage() {
               </div>
 
               <div className="p-4 space-y-2">
-                {/* Agency & Preceptor Selects */}
+                {/* Agency & Preceptor Selects.
+                    Agency goes in the left half, preceptor block in the
+                    right half on md+ so the two reference inputs sit
+                    side-by-side instead of stacking the agency over a
+                    much-taller preceptor block. Mobile drops back to a
+                    single column. */}
                 {canEdit && (
-                  <div className="grid grid-cols-2 gap-4 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700 items-start">
                     <div>
                       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agency</label>
                       <select
@@ -1212,7 +1217,7 @@ export default function InternshipDetailPage() {
                         ))}
                       </select>
                     </div>
-                    <div className="col-span-2">
+                    <div>
                       <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Preceptor Assignments</label>
 
                       {/* Current assignments */}
@@ -1407,19 +1412,29 @@ export default function InternshipDetailPage() {
                   </div>
                 )}
 
-                {PLACEMENT_ITEMS.map(item => (
-                  <ChecklistRow key={item.key} item={item} section="placement" />
-                ))}
+                {/* Placement checklist — 2×2 on md+ to use horizontal
+                    space instead of stacking 4 rows vertically. */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {PLACEMENT_ITEMS.map(item => (
+                    <ChecklistRow key={item.key} item={item} section="placement" />
+                  ))}
+                </div>
 
-                {/* Shift Duration & Provisional License */}
+                {/* Shift Duration & Provisional License.
+                    Four control rows arranged in 2×2 on md+: Current
+                    Phase + Status share row 1, Shift Duration +
+                    Provisional License share row 2. Each row keeps the
+                    flex label/select layout internally so labels stay
+                    left-anchored. Mobile (single col) preserves the
+                    original stacked layout via grid-cols-1 base. */}
                 {canEdit && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700 grid grid-cols-1 md:grid-cols-2 gap-3">
                     {/* Phase and Status — direct edit. Normally these are
                         driven by workflow actions (extension button,
                         phase-complete), but admins may need to correct
                         them manually (e.g. back out a wrong extension). */}
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm text-gray-700 dark:text-gray-300">Current Phase</label>
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">Current Phase</label>
                       <select
                         value={formData.current_phase || 'pre_internship'}
                         onChange={(e) => handleInputChange('current_phase', e.target.value)}
@@ -1433,8 +1448,8 @@ export default function InternshipDetailPage() {
                       </select>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm text-gray-700 dark:text-gray-300">Status</label>
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">Status</label>
                       <select
                         value={formData.status || 'not_started'}
                         onChange={(e) => handleInputChange('status', e.target.value)}
@@ -1447,8 +1462,8 @@ export default function InternshipDetailPage() {
                       </select>
                     </div>
 
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm text-gray-700 dark:text-gray-300">Shift Duration</label>
+                    <div className="flex items-center justify-between gap-3">
+                      <label className="text-sm text-gray-700 dark:text-gray-300 whitespace-nowrap">Shift Duration</label>
                       <select
                         value={formData.shift_type || '12_hour'}
                         onChange={(e) => handleInputChange('shift_type', e.target.value)}
@@ -1461,7 +1476,7 @@ export default function InternshipDetailPage() {
                     </div>
 
                     <div className="flex items-center justify-between gap-3">
-                      <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                      <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 min-w-0">
                         <input
                           type="checkbox"
                           checked={!!formData.provisional_license_obtained}
@@ -1471,9 +1486,9 @@ export default function InternshipDetailPage() {
                               handleInputChange('provisional_license_date', '');
                             }
                           }}
-                          className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500"
+                          className="w-4 h-4 text-teal-600 border-gray-300 rounded focus:ring-teal-500 flex-shrink-0"
                         />
-                        Provisional license obtained
+                        <span className="truncate">Provisional license</span>
                       </label>
                       <input
                         type="date"
@@ -1506,14 +1521,16 @@ export default function InternshipDetailPage() {
                 </div>
               </div>
 
-              <div className="p-4 space-y-2">
-                {EXAM_ITEMS.map(item => (
-                  <ChecklistRow key={item.key} item={item} section="exams" />
-                ))}
-                {/* Course Completion Date now lives in EXAM_ITEMS so it
-                    counts toward the section's progress; the standalone
-                    input that used to render below the loop has been
-                    folded into the same ChecklistRow pattern. */}
+              <div className="p-4">
+                {/* Two exam items render side-by-side on md+ (Written
+                    Exam | Course Completion Date). Course Completion
+                    Date now lives in EXAM_ITEMS so it counts toward
+                    the section's progress %. */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {EXAM_ITEMS.map(item => (
+                    <ChecklistRow key={item.key} item={item} section="exams" />
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -1538,7 +1555,16 @@ export default function InternshipDetailPage() {
               </div>
 
               <div className="p-4 space-y-2">
-                {PHASE1_ITEMS.map(item => (
+                {/* Start Date + Eval Scheduled side-by-side, then the
+                    Phase 1 Eval Completed checkbox on its own row so the
+                    "completed" milestone is visually distinct from the
+                    two scheduling dates above it. */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {PHASE1_ITEMS.slice(0, 2).map(item => (
+                    <ChecklistRow key={item.key} item={item} section="phase1" />
+                  ))}
+                </div>
+                {PHASE1_ITEMS.slice(2).map(item => (
                   <ChecklistRow key={item.key} item={item} section="phase1" />
                 ))}
 
@@ -1591,7 +1617,14 @@ export default function InternshipDetailPage() {
               </div>
 
               <div className="p-4 space-y-2">
-                {PHASE2_ITEMS.map(item => (
+                {/* Same pattern as Phase 1: Start + Eval Scheduled
+                    side-by-side, Eval Completed full-width below. */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {PHASE2_ITEMS.slice(0, 2).map(item => (
+                    <ChecklistRow key={item.key} item={item} section="phase2" />
+                  ))}
+                </div>
+                {PHASE2_ITEMS.slice(2).map(item => (
                   <ChecklistRow key={item.key} item={item} section="phase2" />
                 ))}
 
