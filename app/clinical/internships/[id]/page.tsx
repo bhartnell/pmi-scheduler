@@ -836,7 +836,7 @@ export default function InternshipDetailPage() {
 
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="max-w-7xl lg:max-w-[96rem] mx-auto px-4 py-6">
           <Breadcrumbs
             entityTitle={student ? `${student.first_name} ${student.last_name}` : 'Detail'}
             className="mb-2"
@@ -888,7 +888,7 @@ export default function InternshipDetailPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-7xl lg:max-w-[96rem] mx-auto px-4 py-8">
         {/* Quick Contacts */}
         {(() => {
           // Resolve preceptor contact — prefer active assignment, fall back to legacy join
@@ -1156,12 +1156,14 @@ export default function InternshipDetailPage() {
           Mobile: stacked vertically (default flow), preserving the
           existing DOM order so nothing reshuffles unexpectedly.
           lg+: main column flexes (wide work area), sidebar pinned at
-          340px and sticky-positioned so Preceptors / Contact / Meeting
+          300px and sticky-positioned so Preceptors / Contact / Meeting
           Scheduling stay visible while the main column scrolls.
           Same pattern proved out on /clinical/internships/cohort/[id]
-          (commit ccd4e2c9).
+          (commit ccd4e2c9). Sidebar trimmed from 340 → 300 and the
+          outer container widened to 96rem on lg+ so the main work
+          column gets ~1180px on a 1920×1080 monitor instead of 884.
         */}
-        <div className="space-y-6 lg:space-y-0 lg:grid lg:gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+        <div className="space-y-6 lg:space-y-0 lg:grid lg:gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
           {/* Left main column */}
           <div className="space-y-6 min-w-0">
             {/* Placement & Pre-Requisites */}
