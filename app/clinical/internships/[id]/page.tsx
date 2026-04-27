@@ -1160,23 +1160,183 @@ export default function InternshipDetailPage() {
           </div>
         </div>
 
-        {/*
-          Desktop-first sidebar layout. This page is used almost
-          exclusively from desktops; previous mobile-first attempts
-          left the main column too narrow on 1280-1920px monitors.
-          Now the GRID is the default (md+) and we collapse to a
-          single column only on phones.
-
-          - md+ (≥ 768px): grid with a flexing main column +
-            fixed 320px sidebar. With no max-width cap above, the
-            main column simply absorbs whatever horizontal room is
-            available.
-          - max-md (< 768px): single-column stack via grid-cols-1.
-            DOM order is preserved.
+        {/* ─── Section 2: Summary cards row ────────────────────────────────
+            Three at-a-glance cards above the editable detail sections —
+            "where are we?" snapshot. Each card links / scrolls to the
+            full editable section below. Renders from the same formData
+            the detail sections use; no extra fetches.
         */}
-        <div className="grid gap-6 grid-cols-[minmax(0,1fr)_320px] items-start max-md:grid-cols-1 max-md:gap-6">
-          {/* Left main column */}
-          <div className="space-y-6 min-w-0">
+        {(() => {
+          const phaseLabels: Record<string, { label: string; chip: string }> = {
+            pre_internship: { label: 'Pre-Internship', chip: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200' },
+            phase_1_mentorship: { label: 'Phase 1', chip: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200' },
+            phase_2_evaluation: { label: 'Phase 2', chip: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200' },
+            extended: { label: 'Extended', chip: 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200' },
+            completed: { label: 'Completed', chip: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' },
+          };
+          const statusLabels: Record<string, { label: string; chip: string }> = {
+            not_started: { label: 'Not started', chip: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200' },
+            in_progress: { label: 'In progress', chip: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-200' },
+            completed: { label: 'Completed', chip: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200' },
+            withdrawn: { label: 'Withdrawn', chip: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300' },
+          };
+          const phase = phaseLabels[formData.current_phase as string] || phaseLabels.pre_internship;
+          const status = statusLabels[formData.status as string] || statusLabels.not_started;
+          const activeAssignments = preceptorAssignments.filter(a => a.is_active);
+          const meetingRows: Array<{ label: string; date: string | null }> = [
+            { label: 'Pre-Internship Meeting', date: formData.pre_internship_meeting_scheduled || null },
+            { label: 'Phase 1 Eval', date: formData.phase_1_meeting_scheduled || formData.phase_1_eval_scheduled || null },
+            { label: 'Phase 2 Eval', date: formData.phase_2_meeting_scheduled || formData.phase_2_eval_scheduled || null },
+          ];
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              {/* Card A: Placement Summary */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                    <Building2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                    Placement
+                  </h3>
+                </div>
+                <dl className="space-y-2 text-sm">
+                  <div>
+                    <dt className="text-xs text-gray-500 dark:text-gray-400">Agency</dt>
+                    <dd className="text-gray-900 dark:text-white font-medium truncate">
+                      {internship.agencies?.name || formData.agency_name || (
+                        <span className="text-gray-400 italic">Not assigned</span>
+                      )}
+                    </dd>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${phase.chip}`}>{phase.label}</span>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${status.chip}`}>{status.label}</span>
+                  </div>
+                  {formData.placement_date && (
+                    <div>
+                      <dt className="text-xs text-gray-500 dark:text-gray-400">Placement date</dt>
+                      <dd className="text-gray-700 dark:text-gray-300">{formatDate(formData.placement_date)}</dd>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 text-xs">
+                    {formData.provisional_license_obtained ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                        <span className="text-emerald-700 dark:text-emerald-300">
+                          Provisional license{formData.provisional_license_date ? ` · ${formatDate(formData.provisional_license_date)}` : ''}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <Circle className="w-4 h-4 text-gray-400" />
+                        <span className="text-gray-500 dark:text-gray-400">Provisional license pending</span>
+                      </>
+                    )}
+                  </div>
+                </dl>
+              </div>
+
+              {/* Card B: Preceptors compact — full management lives in
+                  the PreceptorsSection further down. */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                    <Users className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                    Preceptors
+                  </h3>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {activeAssignments.length} active
+                  </span>
+                </div>
+                {activeAssignments.length === 0 && !internship.field_preceptors ? (
+                  <p className="text-sm text-gray-400 italic">No preceptors assigned yet</p>
+                ) : (
+                  <ul className="space-y-1.5 text-sm">
+                    {activeAssignments.length === 0 && internship.field_preceptors && (
+                      <li className="flex items-center gap-2">
+                        <span className="px-1 py-0.5 text-[10px] uppercase font-bold rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">1°</span>
+                        <span className="text-gray-900 dark:text-white">
+                          {internship.field_preceptors.first_name} {internship.field_preceptors.last_name}
+                        </span>
+                      </li>
+                    )}
+                    {activeAssignments.map(a => (
+                      <li key={a.id} className="flex items-center gap-2 min-w-0">
+                        <span className={`px-1 py-0.5 text-[10px] uppercase font-bold rounded flex-shrink-0 ${
+                          a.role === 'primary'
+                            ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
+                            : a.role === 'secondary'
+                            ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                            : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
+                        }`}>
+                          {a.role === 'primary' ? '1°' : a.role === 'secondary' ? '2°' : '3°'}
+                        </span>
+                        <span className="text-gray-900 dark:text-white truncate">
+                          {a.preceptor?.first_name} {a.preceptor?.last_name}
+                        </span>
+                        {a.preceptor?.email && (
+                          <a
+                            href={`mailto:${a.preceptor.email}`}
+                            className="text-gray-400 hover:text-teal-600 flex-shrink-0"
+                            title={`Email ${a.preceptor.email}`}
+                          >
+                            <Mail className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              {/* Card C: Meetings — quick statuses; the full Meeting
+                  Scheduling block (with Create Meeting buttons) sits
+                  below in the detail flow. */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
+                    Meetings
+                  </h3>
+                </div>
+                <ul className="space-y-1.5 text-sm">
+                  {meetingRows.map(row => (
+                    <li key={row.label} className="flex items-center justify-between gap-2">
+                      <span className="flex items-center gap-2 min-w-0">
+                        {row.date ? (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        ) : (
+                          <Circle className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                        )}
+                        <span className="text-gray-700 dark:text-gray-300 truncate">{row.label}</span>
+                      </span>
+                      <span className={`text-xs flex-shrink-0 ${row.date ? 'text-gray-600 dark:text-gray-400' : 'text-gray-400 italic'}`}>
+                        {row.date ? formatDate(row.date) : 'not scheduled'}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 text-right">
+                  <a
+                    href="#meeting-scheduling"
+                    className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline"
+                  >
+                    Manage meetings →
+                  </a>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/*
+          Single-column detail flow. The sidebar (Preceptors / Closeout
+          Workflow / Contact Info / Meeting Scheduling) was retired in
+          the 2026-04-24 redesign; its quick-glance content now lives in
+          the 3-card summary row above, while the editable detail
+          sections all stack full-width here. Wide monitors get the
+          breathing room they need without sub-column constraints.
+        */}
+        <div className="space-y-6">
             {/* Placement & Pre-Requisites */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">
@@ -1582,17 +1742,14 @@ export default function InternshipDetailPage() {
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Right sidebar — sticky from md+ so reference sections
-              (Preceptors, Contact Info, Meeting Scheduling) stay in
-              view while the user scrolls the longer main column. The
-              max-h + overflow rules prevent the sidebar from growing
-              taller than the viewport when its own content is long
-              (active extension + expanded Closeout workflow).
-              Sticky disabled on phones via max-md: so it scrolls
-              with the rest of the page. */}
-          <div className="space-y-6 min-w-0 md:sticky md:top-4 md:self-start md:max-h-[calc(100vh-2rem)] md:overflow-y-auto">
+            {/* Sidebar wrapper retired 2026-04-24 — Preceptors, Closeout
+                Workflow, Contact Info, and Meeting Scheduling now flow
+                full-width below the Phase 1 section in the same
+                space-y-6 column. The summary card row at the top covers
+                the at-a-glance "where are we?" view that the sidebar
+                used to provide. */}
+
             {/* Preceptors */}
             <PreceptorsSection internshipId={internshipId} canEdit={canEdit} />
 
@@ -2076,8 +2233,9 @@ export default function InternshipDetailPage() {
               );
             })()}
 
-            {/* Meeting Scheduling */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+            {/* Meeting Scheduling — anchor target for the summary card's
+                "Manage meetings →" link. */}
+            <div id="meeting-scheduling" className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden scroll-mt-4">
               <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-cyan-50 dark:bg-cyan-900/20">
                 <div className="flex items-center gap-2">
                   <CalendarDays className="w-5 h-5 text-cyan-600 dark:text-cyan-400" />
@@ -2129,7 +2287,6 @@ export default function InternshipDetailPage() {
                 />
               </div>
             </div>
-          </div>
         </div>
 
         {/* Closeout Documents & Completion */}
