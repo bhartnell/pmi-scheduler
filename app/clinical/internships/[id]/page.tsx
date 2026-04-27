@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
+  ChevronDown,
   Home,
   Save,
   ArrowLeft,
@@ -288,6 +289,11 @@ export default function InternshipDetailPage() {
   // so the picker auto-filters to the internship's agency FTOs — the
   // common case. Toggle surfaces when the user needs a cross-agency pick.
   const [showAllAgencyPreceptors, setShowAllAgencyPreceptors] = useState(false);
+  // Phase 1 / Phase 2 expand state — set once internship loads so the
+  // current phase auto-expands. User can override by clicking the
+  // header chevron, after which we keep their choice.
+  const [phase1Open, setPhase1Open] = useState<boolean | null>(null);
+  const [phase2Open, setPhase2Open] = useState<boolean | null>(null);
 
   // Form state with all fields
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -323,6 +329,23 @@ export default function InternshipDetailPage() {
     window.addEventListener('beforeunload', handler);
     return () => window.removeEventListener('beforeunload', handler);
   }, [hasChanges]);
+
+  // Auto-expand the phase card matching the student's current phase the
+  // first time the internship loads. The setter form preserves user
+  // overrides — once they manually toggle a card open or closed, the
+  // effect won't clobber that choice on subsequent re-renders.
+  useEffect(() => {
+    if (!internship) return;
+    setPhase1Open(prev =>
+      prev ?? internship.current_phase === 'phase_1_mentorship'
+    );
+    setPhase2Open(prev =>
+      prev ?? (
+        internship.current_phase === 'phase_2_evaluation' ||
+        internship.current_phase === 'extended'
+      )
+    );
+  }, [internship]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -628,6 +651,30 @@ export default function InternshipDetailPage() {
   const examProgress = calculateSectionProgress(EXAM_ITEMS);
   const phase1Progress = calculateSectionProgress(PHASE1_ITEMS);
   const phase2Progress = calculateSectionProgress(PHASE2_ITEMS);
+
+  // Phase card border + accent colors derived from current_phase.
+  // - phase_1_mentorship → Phase 1 active (blue)
+  // - phase_2_evaluation → Phase 2 active (blue), Phase 1 done (green)
+  // - extended           → Phase 2 amber border
+  // - completed          → both green
+  // - pre_internship/anything else → both gray
+  const currentPhase = (formData.current_phase || internship?.current_phase || 'pre_internship') as string;
+  const phase1Border =
+    currentPhase === 'phase_1_mentorship'
+      ? 'border-blue-400 dark:border-blue-600'
+      : currentPhase === 'phase_2_evaluation' || currentPhase === 'extended' || currentPhase === 'completed'
+      ? 'border-emerald-400 dark:border-emerald-600'
+      : 'border-gray-200 dark:border-gray-700';
+  const phase2Border =
+    currentPhase === 'extended'
+      ? 'border-amber-400 dark:border-amber-600'
+      : currentPhase === 'phase_2_evaluation'
+      ? 'border-blue-400 dark:border-blue-600'
+      : currentPhase === 'completed'
+      ? 'border-emerald-400 dark:border-emerald-600'
+      : 'border-gray-200 dark:border-gray-700';
+  const phase1Effective = phase1Open ?? false;
+  const phase2Effective = phase2Open ?? false;
   const closeoutProgress = calculateSectionProgress(CLOSEOUT_ITEMS);
 
   const totalItems = PLACEMENT_ITEMS.length + EXAM_ITEMS.length + PHASE1_ITEMS.length + PHASE2_ITEMS.length + CLOSEOUT_ITEMS.length;
@@ -1694,52 +1741,173 @@ export default function InternshipDetailPage() {
               </div>
             </div>
 
-            {/* Phase 1 */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-indigo-50 dark:bg-indigo-900/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center text-sm font-bold text-indigo-600 dark:text-indigo-400">
+            {/* ─── Phase 1 + Phase 2 side-by-side cards ──────────────────────
+                Each card is collapsible; the card matching internship.current_phase
+                auto-expands on load (see useEffect with [internship] dep).
+                Border color tells the user where they stand at a glance:
+                  blue   = currently in this phase
+                  green  = phase complete
+                  amber  = extended (Phase 2 only)
+                  gray   = not yet started
+            */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Phase 1 card */}
+              <div className={`bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden border-2 ${phase1Border}`}>
+                <button
+                  type="button"
+                  onClick={() => setPhase1Open(o => !(o ?? false))}
+                  className="w-full px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-indigo-50 dark:bg-indigo-900/20 flex items-center justify-between gap-2"
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center text-sm font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0">
                       1
-                    </div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Phase 1 - Mentorship</h3>
-                  </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded ${
-                    phase1Progress === 100
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                  }`}>
-                    {phase1Progress}%
+                    </span>
+                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">Phase 1 — Mentorship</h3>
                   </span>
-                </div>
+                  <span className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`px-2 py-1 text-xs font-medium rounded ${
+                      phase1Progress === 100
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                    }`}>{phase1Progress}%</span>
+                    {phase1Effective ? (
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                    )}
+                  </span>
+                </button>
+
+                {phase1Effective && (
+                  <div className="p-4 space-y-2">
+                    {/* Start Date + Eval Scheduled side-by-side, then the
+                        Phase 1 Eval Completed checkbox on its own row. */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {PHASE1_ITEMS.slice(0, 2).map(item => (
+                        <ChecklistRow key={item.key} item={item} section="phase1" />
+                      ))}
+                    </div>
+                    {PHASE1_ITEMS.slice(2).map(item => (
+                      <ChecklistRow key={item.key} item={item} section="phase1" />
+                    ))}
+
+                    {/* Schedule Phase 1 Eval link → /scheduling/polls/create. */}
+                    {!formData.phase_1_eval_completed && canEdit && (
+                      <a
+                        href="/scheduling/polls/create"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full text-center py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                      >
+                        Schedule Phase 1 Eval
+                      </a>
+                    )}
+
+                    {/* Phase 1 Notes */}
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Phase 1 Notes</label>
+                      <textarea
+                        value={formData.phase_1_eval_notes || ''}
+                        onChange={(e) => handleInputChange('phase_1_eval_notes', e.target.value)}
+                        disabled={!canEdit}
+                        rows={2}
+                        className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50"
+                        placeholder="Add notes..."
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="p-4 space-y-2">
-                {/* Start Date + Eval Scheduled side-by-side, then the
-                    Phase 1 Eval Completed checkbox on its own row so the
-                    "completed" milestone is visually distinct from the
-                    two scheduling dates above it. */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {PHASE1_ITEMS.slice(0, 2).map(item => (
-                    <ChecklistRow key={item.key} item={item} section="phase1" />
-                  ))}
-                </div>
-                {PHASE1_ITEMS.slice(2).map(item => (
-                  <ChecklistRow key={item.key} item={item} section="phase1" />
-                ))}
+              {/* Phase 2 card */}
+              <div className={`bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden border-2 ${phase2Border}`}>
+                <button
+                  type="button"
+                  onClick={() => setPhase2Open(o => !(o ?? false))}
+                  className="w-full px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/20 flex items-center justify-between gap-2"
+                >
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span className="w-6 h-6 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center text-sm font-bold text-purple-600 dark:text-purple-400 flex-shrink-0">
+                      2
+                    </span>
+                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">Phase 2 — Evaluation</h3>
+                    {currentPhase === 'extended' && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 flex-shrink-0">
+                        Extended
+                      </span>
+                    )}
+                  </span>
+                  <span className="flex items-center gap-2 flex-shrink-0">
+                    <span className={`px-2 py-1 text-xs font-medium rounded ${
+                      phase2Progress === 100
+                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                    }`}>{phase2Progress}%</span>
+                    {phase2Effective ? (
+                      <ChevronDown className="w-4 h-4 text-gray-500" />
+                    ) : (
+                      <ChevronRight className="w-4 h-4 text-gray-500" />
+                    )}
+                  </span>
+                </button>
 
-                {/* Phase 1 Notes */}
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Phase 1 Notes</label>
-                  <textarea
-                    value={formData.phase_1_eval_notes || ''}
-                    onChange={(e) => handleInputChange('phase_1_eval_notes', e.target.value)}
-                    disabled={!canEdit}
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50"
-                    placeholder="Add notes..."
-                  />
-                </div>
+                {phase2Effective && (
+                  <div className="p-4 space-y-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {PHASE2_ITEMS.slice(0, 2).map(item => (
+                        <ChecklistRow key={item.key} item={item} section="phase2" />
+                      ))}
+                    </div>
+                    {PHASE2_ITEMS.slice(2).map(item => (
+                      <ChecklistRow key={item.key} item={item} section="phase2" />
+                    ))}
+
+                    {/* Schedule Phase 2 Eval link */}
+                    {!formData.phase_2_eval_completed && canEdit && (
+                      <a
+                        href="/scheduling/polls/create"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block w-full text-center py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
+                      >
+                        Schedule Phase 2 Eval
+                      </a>
+                    )}
+
+                    {/* Mark as Extended — moved here from below the
+                        Extension Tracking block. Only renders when the
+                        student isn't already extended; expands the
+                        Extension Tracking section below on click. */}
+                    {!formData.is_extended && currentPhase !== 'extended' && canEdit && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleInputChange('is_extended', true);
+                          handleInputChange('current_phase', 'extended');
+                          handleInputChange('original_expected_end_date', formData.expected_end_date || '');
+                          handleInputChange('extension_date', new Date().toISOString().split('T')[0]);
+                        }}
+                        className="w-full py-2 text-sm text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-600 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Clock className="w-4 h-4" />
+                        Mark as Extended
+                      </button>
+                    )}
+
+                    {/* Phase 2 Notes */}
+                    <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Phase 2 Notes</label>
+                      <textarea
+                        value={formData.phase_2_eval_notes || ''}
+                        onChange={(e) => handleInputChange('phase_2_eval_notes', e.target.value)}
+                        disabled={!canEdit}
+                        rows={2}
+                        className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50"
+                        placeholder="Add notes..."
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1753,52 +1921,8 @@ export default function InternshipDetailPage() {
             {/* Preceptors */}
             <PreceptorsSection internshipId={internshipId} canEdit={canEdit} />
 
-            {/* Phase 2 */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-purple-50 dark:bg-purple-900/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center text-sm font-bold text-purple-600 dark:text-purple-400">
-                      2
-                    </div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Phase 2 - Evaluation</h3>
-                  </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded ${
-                    phase2Progress === 100
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                  }`}>
-                    {phase2Progress}%
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-4 space-y-2">
-                {/* Same pattern as Phase 1: Start + Eval Scheduled
-                    side-by-side, Eval Completed full-width below. */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {PHASE2_ITEMS.slice(0, 2).map(item => (
-                    <ChecklistRow key={item.key} item={item} section="phase2" />
-                  ))}
-                </div>
-                {PHASE2_ITEMS.slice(2).map(item => (
-                  <ChecklistRow key={item.key} item={item} section="phase2" />
-                ))}
-
-                {/* Phase 2 Notes */}
-                <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Phase 2 Notes</label>
-                  <textarea
-                    value={formData.phase_2_eval_notes || ''}
-                    onChange={(e) => handleInputChange('phase_2_eval_notes', e.target.value)}
-                    disabled={!canEdit}
-                    rows={2}
-                    className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50"
-                    placeholder="Add notes..."
-                  />
-                </div>
-              </div>
-            </div>
+            {/* (Phase 2 standalone block removed 2026-04-24 — moved into
+                the side-by-side card grid above with Phase 1.) */}
 
             {/* Extension Tracking */}
             {(formData.is_extended || formData.current_phase === 'extended') && (
@@ -1879,22 +2003,8 @@ export default function InternshipDetailPage() {
               </div>
             )}
 
-            {/* Mark as Extended button (when not already extended) */}
-            {!formData.is_extended && formData.current_phase !== 'extended' && canEdit && (
-              <button
-                type="button"
-                onClick={() => {
-                  handleInputChange('is_extended', true);
-                  handleInputChange('current_phase', 'extended');
-                  handleInputChange('original_expected_end_date', formData.expected_end_date || '');
-                  handleInputChange('extension_date', new Date().toISOString().split('T')[0]);
-                }}
-                className="w-full py-2 text-sm text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-600 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
-              >
-                <Clock className="w-4 h-4 inline-block mr-1" />
-                Mark as Extended (removes critical alerts)
-              </button>
-            )}
+            {/* Mark as Extended button moved 2026-04-24 — now lives
+                inside the Phase 2 card content above. */}
 
             {/* Closeout Workflow */}
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
