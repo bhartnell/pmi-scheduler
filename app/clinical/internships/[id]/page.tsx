@@ -189,6 +189,44 @@ const PLACEMENT_ITEMS: ChecklistItem[] = [
   { key: 'orientation_completed', label: 'Orientation Completed', dateKey: 'orientation_date', required: true },
 ];
 
+// Date fields. Used in two places:
+//   1. formData initialization — values are normalized via toDateInput()
+//      so ISO timestamp strings from the API ("2026-04-27T00:00:00+00:00")
+//      become "2026-04-27" — the only format <input type="date"> accepts.
+//      Without this, the input renders empty AND saves silently fail
+//      because the browser refuses to bind invalid values.
+//   2. Save sanitization — empty strings become NULL so PostgreSQL DATE
+//      columns don't blow up.
+const DATE_FIELDS = [
+  'placement_date', 'orientation_date', 'internship_start_date', 'expected_end_date',
+  'actual_end_date', 'phase_1_start_date', 'phase_1_end_date', 'phase_1_eval_scheduled',
+  'phase_2_start_date', 'phase_2_end_date', 'phase_2_eval_scheduled',
+  'closeout_meeting_date', 'internship_completion_date', 'snhd_submitted_date',
+  'snhd_field_docs_submitted_at', 'snhd_course_completion_submitted_at',
+  'nremt_clearance_date', 'ryan_notified_date', 'written_exam_date',
+  'psychomotor_exam_date', 'course_completion_date',
+  'phase_1_meeting_scheduled', 'phase_2_meeting_scheduled', 'final_exam_scheduled',
+  'pre_internship_meeting_scheduled',
+  'extension_date', 'original_expected_end_date', 'extension_eval_date',
+  'provisional_license_date',
+];
+
+/**
+ * Normalize an API value into a yyyy-MM-dd string suitable for
+ * <input type="date">. Accepts:
+ *   - "2026-04-27"                   → returned as-is
+ *   - "2026-04-27T00:00:00+00:00"    → stripped to "2026-04-27"
+ *   - "2026-04-27T07:00:00.000Z"     → stripped to "2026-04-27"
+ *   - null / undefined / empty       → ""
+ *
+ * The `T` split is safe because postgres date / timestamptz / timestamp
+ * columns all serialise with a `T` separator when JSON-encoded.
+ */
+function toDateInput(v: unknown): string {
+  if (typeof v !== 'string' || !v) return '';
+  return v.split('T')[0];
+}
+
 // Exam tracking items.
 // 2026-04-24: Psychomotor Exam removed — program no longer uses it.
 // Course Completion Date promoted into the checklist so it actually
@@ -394,7 +432,13 @@ export default function InternshipDetailPage() {
       if (internshipData.success && internshipData.internship) {
         setInternship(internshipData.internship);
         const i = internshipData.internship;
-        setFormData({
+        // Build the form state object first, then run every date field
+        // through toDateInput() so ISO timestamp strings from the API
+        // (timestamptz columns and a few date columns serialised as
+        // "yyyy-MM-ddTHH:mm:ss+00:00") are normalised to "yyyy-MM-dd"
+        // — the only format <input type="date"> will accept. Without
+        // this, the inputs render empty AND saves silently fail.
+        const init: Record<string, any> = {
           preceptor_id: i.preceptor_id || '',
           agency_id: i.agency_id || '',
           shift_type: i.shift_type || '12_hour',
@@ -463,7 +507,13 @@ export default function InternshipDetailPage() {
           extension_eval_completed: i.extension_eval_completed || false,
           extension_eval_date: i.extension_eval_date || '',
           extension_eval_notes: i.extension_eval_notes || '',
-        });
+        };
+        // Strip time components from every date field so the inputs
+        // render correctly and saves don't break.
+        for (const key of DATE_FIELDS) {
+          if (key in init) init[key] = toDateInput(init[key]);
+        }
+        setFormData(init);
       } else {
         console.error('Failed to load internship:', internshipData.error, internshipData.debug);
         const debugInfo = internshipData.debug ? ` (Queried ID: ${internshipData.debug.queriedId})` : '';
@@ -503,32 +553,27 @@ export default function InternshipDetailPage() {
     setHasChanges(true);
   };
 
-  // Date fields that need empty-string-to-null sanitization before save
-  const DATE_FIELDS = [
-    'placement_date', 'orientation_date', 'internship_start_date', 'expected_end_date',
-    'actual_end_date', 'phase_1_start_date', 'phase_1_end_date', 'phase_1_eval_scheduled',
-    'phase_2_start_date', 'phase_2_end_date', 'phase_2_eval_scheduled',
-    'closeout_meeting_date', 'internship_completion_date', 'snhd_submitted_date',
-    'snhd_field_docs_submitted_at', 'snhd_course_completion_submitted_at',
-    'nremt_clearance_date', 'ryan_notified_date', 'written_exam_date',
-    'psychomotor_exam_date', 'course_completion_date',
-    'phase_1_meeting_scheduled', 'phase_2_meeting_scheduled', 'final_exam_scheduled',
-    'pre_internship_meeting_scheduled',
-    'extension_date', 'original_expected_end_date', 'extension_eval_date',
-    'provisional_license_date',
-  ];
+  // DATE_FIELDS now lives at module scope (top of file) so both
+  // formData init and save sanitization can reference the same list.
 
   const handleSave = async () => {
     if (!userRole || !canEditClinical(userRole)) return;
 
     setSaving(true);
     try {
-      // Sanitize date fields: convert empty strings to null to avoid
-      // PostgreSQL errors on DATE columns receiving empty strings
+      // Sanitize date fields:
+      //   • empty string → null (PostgreSQL DATE columns reject "")
+      //   • ISO timestamp → strip time so the API receives plain
+      //     yyyy-MM-dd. Belt-and-suspenders since formData should
+      //     already be normalised at load via toDateInput(), but a
+      //     stale value from a partial save round-trip won't break
+      //     the next save attempt.
       const sanitizedData = { ...formData };
       for (const key of DATE_FIELDS) {
         if (key in sanitizedData) {
-          sanitizedData[key] = sanitizedData[key] || null;
+          const v = sanitizedData[key];
+          sanitizedData[key] =
+            typeof v === 'string' && v ? v.split('T')[0] : null;
         }
       }
 
