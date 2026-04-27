@@ -43,6 +43,7 @@ import { parseDateSafe } from '@/lib/utils';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import PreceptorsSection from '@/components/clinical/PreceptorsSection';
 import CloseoutSection from '@/components/clinical/CloseoutSection';
+import CollapsibleCard from '@/components/clinical/CollapsibleCard';
 
 interface Internship {
   id: string;
@@ -294,6 +295,14 @@ export default function InternshipDetailPage() {
   // header chevron, after which we keep their choice.
   const [phase1Open, setPhase1Open] = useState<boolean | null>(null);
   const [phase2Open, setPhase2Open] = useState<boolean | null>(null);
+  // Collapsible-section state for the editable detail cards
+  // (Placement, Exams, Closeout). Same pattern as the phase cards:
+  // null until internship loads, then a derived default that the user
+  // can override. The Review All toggle drives all four (these three
+  // plus the phase 1+2 pair) to open/closed in one click.
+  const [placementOpen, setPlacementOpen] = useState<boolean | null>(null);
+  const [examsOpen, setExamsOpen] = useState<boolean | null>(null);
+  const [closeoutOpen, setCloseoutOpen] = useState<boolean | null>(null);
 
   // Form state with all fields
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -330,21 +339,27 @@ export default function InternshipDetailPage() {
     return () => window.removeEventListener('beforeunload', handler);
   }, [hasChanges]);
 
-  // Auto-expand the phase card matching the student's current phase the
-  // first time the internship loads. The setter form preserves user
-  // overrides — once they manually toggle a card open or closed, the
-  // effect won't clobber that choice on subsequent re-renders.
+  // Auto-expand the section that matches the student's current phase
+  // the first time the internship loads. The setState functional form
+  // preserves user overrides — once they manually toggle a card open
+  // or closed, the effect won't clobber that choice on subsequent
+  // re-renders. Defaults:
+  //   pre_internship       → Placement expanded
+  //   phase_1_mentorship   → Phase 1 expanded
+  //   phase_2_evaluation   → Phase 2 expanded
+  //   extended             → Phase 2 expanded
+  //   completed            → Closeout expanded
+  // Exams is closed by default everywhere (lower-priority workflow).
   useEffect(() => {
     if (!internship) return;
-    setPhase1Open(prev =>
-      prev ?? internship.current_phase === 'phase_1_mentorship'
-    );
+    const cp = internship.current_phase;
+    setPhase1Open(prev => prev ?? cp === 'phase_1_mentorship');
     setPhase2Open(prev =>
-      prev ?? (
-        internship.current_phase === 'phase_2_evaluation' ||
-        internship.current_phase === 'extended'
-      )
+      prev ?? (cp === 'phase_2_evaluation' || cp === 'extended')
     );
+    setPlacementOpen(prev => prev ?? cp === 'pre_internship');
+    setExamsOpen(prev => prev ?? false);
+    setCloseoutOpen(prev => prev ?? cp === 'completed');
   }, [internship]);
 
   const fetchData = async () => {
@@ -675,6 +690,35 @@ export default function InternshipDetailPage() {
       : 'border-gray-200 dark:border-gray-700';
   const phase1Effective = phase1Open ?? false;
   const phase2Effective = phase2Open ?? false;
+  const placementEffective = placementOpen ?? false;
+  const examsEffective = examsOpen ?? false;
+  const closeoutEffective = closeoutOpen ?? false;
+  // "Review All" / "Collapse All" toggle. allOpen tracks the dominant
+  // state across the five collapsibles; the button label flips based
+  // on it. On expand we smooth-scroll to the phase grid so the user
+  // lands at the top of the now-fully-visible flow.
+  const allOpen =
+    phase1Effective &&
+    phase2Effective &&
+    placementEffective &&
+    examsEffective &&
+    closeoutEffective;
+  const toggleReviewAll = () => {
+    const next = !allOpen;
+    setPhase1Open(next);
+    setPhase2Open(next);
+    setPlacementOpen(next);
+    setExamsOpen(next);
+    setCloseoutOpen(next);
+    if (next && typeof window !== 'undefined') {
+      // Wait one tick so the cards open before we scroll.
+      setTimeout(() => {
+        document
+          .getElementById('phase-grid')
+          ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    }
+  };
   const closeoutProgress = calculateSectionProgress(CLOSEOUT_ITEMS);
 
   const totalItems = PLACEMENT_ITEMS.length + EXAM_ITEMS.length + PHASE1_ITEMS.length + PHASE2_ITEMS.length + CLOSEOUT_ITEMS.length;
@@ -929,6 +973,23 @@ export default function InternshipDetailPage() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Review All / Collapse All — opens or closes every
+                  collapsible (Placement, Exams, Phase 1, Phase 2,
+                  Closeout) in one click. On expand, smooth-scrolls
+                  to the phase grid. */}
+              <button
+                type="button"
+                onClick={toggleReviewAll}
+                className="flex items-center gap-1.5 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                title={allOpen ? 'Collapse all sections' : 'Expand all sections'}
+              >
+                {allOpen ? (
+                  <ChevronRight className="w-4 h-4" />
+                ) : (
+                  <ChevronDown className="w-4 h-4" />
+                )}
+                {allOpen ? 'Collapse All' : 'Review All'}
+              </button>
               {canEdit && hasChanges && (
                 <button
                   onClick={handleSave}
@@ -1384,25 +1445,29 @@ export default function InternshipDetailPage() {
           breathing room they need without sub-column constraints.
         */}
         <div className="space-y-6">
-            {/* Placement & Pre-Requisites */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-blue-50 dark:bg-blue-900/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Placement & Pre-Requisites</h3>
-                  </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded ${
-                    placementProgress === 100
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                  }`}>
-                    {placementProgress}%
-                  </span>
-                </div>
-              </div>
-
-              <div className="p-4 space-y-2">
+            {/* Placement & Pre-Requisites — wrapped in CollapsibleCard
+                so the user can collapse the long form when working
+                primarily on phase content. Auto-expanded for
+                pre_internship students. */}
+            <CollapsibleCard
+              id="placement-detail"
+              title="Placement & Pre-Requisites"
+              icon={Building2}
+              iconClassName="w-5 h-5 text-blue-600 dark:text-blue-400"
+              headerBg="bg-blue-50 dark:bg-blue-900/20"
+              open={placementEffective}
+              onToggle={(next) => setPlacementOpen(next)}
+              accent={
+                <span className={`px-2 py-1 text-xs font-medium rounded ${
+                  placementProgress === 100
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                }`}>
+                  {placementProgress}%
+                </span>
+              }
+            >
+              <div className="space-y-2">
                 {/* Agency & Preceptor Selects.
                     Agency goes in the left half, preceptor block in the
                     right half on md+ so the two reference inputs sit
@@ -1708,38 +1773,39 @@ export default function InternshipDetailPage() {
                   </div>
                 )}
               </div>
-            </div>
+            </CollapsibleCard>
 
-            {/* Exams */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-amber-50 dark:bg-amber-900/20">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Award className="w-5 h-5 text-amber-600 dark:text-amber-400" />
-                    <h3 className="font-semibold text-gray-900 dark:text-white">Exams</h3>
-                  </div>
-                  <span className={`px-2 py-1 text-xs font-medium rounded ${
-                    examProgress === 100
-                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                      : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                  }`}>
-                    {examProgress}%
-                  </span>
-                </div>
+            {/* Exams — also collapsible. Closed by default; opens when
+                the user is actively working through written exam +
+                course completion entry. */}
+            <CollapsibleCard
+              id="exams"
+              title="Exams"
+              icon={Award}
+              iconClassName="w-5 h-5 text-amber-600 dark:text-amber-400"
+              headerBg="bg-amber-50 dark:bg-amber-900/20"
+              open={examsEffective}
+              onToggle={(next) => setExamsOpen(next)}
+              accent={
+                <span className={`px-2 py-1 text-xs font-medium rounded ${
+                  examProgress === 100
+                    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                    : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                }`}>
+                  {examProgress}%
+                </span>
+              }
+            >
+              {/* Two exam items render side-by-side on md+ (Written
+                  Exam | Course Completion Date). Course Completion
+                  Date lives in EXAM_ITEMS so it counts toward the
+                  section's progress %. */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {EXAM_ITEMS.map(item => (
+                  <ChecklistRow key={item.key} item={item} section="exams" />
+                ))}
               </div>
-
-              <div className="p-4">
-                {/* Two exam items render side-by-side on md+ (Written
-                    Exam | Course Completion Date). Course Completion
-                    Date now lives in EXAM_ITEMS so it counts toward
-                    the section's progress %. */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                  {EXAM_ITEMS.map(item => (
-                    <ChecklistRow key={item.key} item={item} section="exams" />
-                  ))}
-                </div>
-              </div>
-            </div>
+            </CollapsibleCard>
 
             {/* ─── Phase 1 + Phase 2 side-by-side cards ──────────────────────
                 Each card is collapsible; the card matching internship.current_phase
@@ -1749,8 +1815,10 @@ export default function InternshipDetailPage() {
                   green  = phase complete
                   amber  = extended (Phase 2 only)
                   gray   = not yet started
+                The id="phase-grid" anchor is the scroll target the
+                "Review All" button jumps to after expanding everything.
             */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div id="phase-grid" className="grid grid-cols-1 md:grid-cols-2 gap-6 scroll-mt-4">
               {/* Phase 1 card */}
               <div className={`bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden border-2 ${phase1Border}`}>
                 <button
@@ -2399,16 +2467,33 @@ export default function InternshipDetailPage() {
             </div>
         </div>
 
-        {/* Closeout Documents & Completion */}
+        {/* Closeout — wrapped in CollapsibleCard so the long checklist
+            stays out of the way until the user is ready to close out
+            the internship. Auto-expanded for completed students. */}
         <div className="mt-6">
-          <CloseoutSection
-            internshipId={internshipId}
-            canEdit={canEdit}
-            isAdmin={isAdmin}
-            studentName={student ? `${student.first_name} ${student.last_name}` : ''}
-            studentEmail={student?.email || ''}
-            program={internship.cohorts?.programs?.name || ''}
-          />
+          <CollapsibleCard
+            id="closeout"
+            title="Closeout"
+            icon={CheckSquare}
+            iconClassName="w-5 h-5 text-emerald-600 dark:text-emerald-400"
+            headerBg="bg-emerald-50 dark:bg-emerald-900/20"
+            open={closeoutEffective}
+            onToggle={(next) => setCloseoutOpen(next)}
+          >
+            {/* CloseoutSection already renders its own internal padding /
+                checklist / buttons so we drop directly into it without
+                an extra wrapper. */}
+            <div className="-m-4">
+              <CloseoutSection
+                internshipId={internshipId}
+                canEdit={canEdit}
+                isAdmin={isAdmin}
+                studentName={student ? `${student.first_name} ${student.last_name}` : ''}
+                studentEmail={student?.email || ''}
+                program={internship.cohorts?.programs?.name || ''}
+              />
+            </div>
+          </CollapsibleCard>
         </div>
 
         {/* Notes Section */}
