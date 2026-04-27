@@ -187,10 +187,16 @@ const PLACEMENT_ITEMS: ChecklistItem[] = [
   { key: 'orientation_completed', label: 'Orientation Completed', dateKey: 'orientation_date', required: true },
 ];
 
-// Exam tracking items
+// Exam tracking items.
+// 2026-04-24: Psychomotor Exam removed — program no longer uses it.
+// Course Completion Date promoted into the checklist so it actually
+// counts toward the section's progress %; previously it was rendered
+// as a standalone input below the loop and never moved the meter.
+// The psychomotor_exam_date / psychomotor_exam_passed columns stay on
+// student_internships for historical rows; only the UI is gone.
 const EXAM_ITEMS: ChecklistItem[] = [
   { key: 'written_exam_passed', label: 'Written Exam', dateKey: 'written_exam_date', required: true },
-  { key: 'psychomotor_exam_passed', label: 'Psychomotor Exam', dateKey: 'psychomotor_exam_date', required: true },
+  { key: 'course_completion_date', label: 'Course Completion Date', dateKey: 'course_completion_date', required: true },
 ];
 
 const PHASE1_ITEMS: ChecklistItem[] = [
@@ -836,7 +842,10 @@ export default function InternshipDetailPage() {
 
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl lg:max-w-[96rem] mx-auto px-4 py-6">
+        {/* No max-width cap — this page is desktop-primary. The header
+            stretches to match the main content area below. Generous
+            horizontal padding instead of mx-auto centering. */}
+        <div className="w-full px-6 py-6">
           <Breadcrumbs
             entityTitle={student ? `${student.first_name} ${student.last_name}` : 'Detail'}
             className="mb-2"
@@ -888,7 +897,7 @@ export default function InternshipDetailPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl lg:max-w-[96rem] mx-auto px-4 py-8">
+      <main className="w-full px-6 py-8">
         {/* Quick Contacts */}
         {(() => {
           // Resolve preceptor contact — prefer active assignment, fall back to legacy join
@@ -1152,18 +1161,20 @@ export default function InternshipDetailPage() {
         </div>
 
         {/*
-          Wide-screen sidebar layout.
-          Mobile: stacked vertically (default flow), preserving the
-          existing DOM order so nothing reshuffles unexpectedly.
-          lg+: main column flexes (wide work area), sidebar pinned at
-          300px and sticky-positioned so Preceptors / Contact / Meeting
-          Scheduling stay visible while the main column scrolls.
-          Same pattern proved out on /clinical/internships/cohort/[id]
-          (commit ccd4e2c9). Sidebar trimmed from 340 → 300 and the
-          outer container widened to 96rem on lg+ so the main work
-          column gets ~1180px on a 1920×1080 monitor instead of 884.
+          Desktop-first sidebar layout. This page is used almost
+          exclusively from desktops; previous mobile-first attempts
+          left the main column too narrow on 1280-1920px monitors.
+          Now the GRID is the default (md+) and we collapse to a
+          single column only on phones.
+
+          - md+ (≥ 768px): grid with a flexing main column +
+            fixed 320px sidebar. With no max-width cap above, the
+            main column simply absorbs whatever horizontal room is
+            available.
+          - max-md (< 768px): single-column stack via grid-cols-1.
+            DOM order is preserved.
         */}
-        <div className="space-y-6 lg:space-y-0 lg:grid lg:gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-start">
+        <div className="grid gap-6 grid-cols-[minmax(0,1fr)_320px] items-start max-md:grid-cols-1 max-md:gap-6">
           {/* Left main column */}
           <div className="space-y-6 min-w-0">
             {/* Placement & Pre-Requisites */}
@@ -1499,21 +1510,10 @@ export default function InternshipDetailPage() {
                 {EXAM_ITEMS.map(item => (
                   <ChecklistRow key={item.key} item={item} section="exams" />
                 ))}
-
-                {/* Course Completion Date */}
-                {canEdit && (
-                  <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm text-gray-700 dark:text-gray-300">Course Completion Date</label>
-                      <input
-                        type="date"
-                        value={formData.course_completion_date || ''}
-                        onChange={(e) => handleInputChange('course_completion_date', e.target.value)}
-                        className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
-                      />
-                    </div>
-                  </div>
-                )}
+                {/* Course Completion Date now lives in EXAM_ITEMS so it
+                    counts toward the section's progress; the standalone
+                    input that used to render below the loop has been
+                    folded into the same ChecklistRow pattern. */}
               </div>
             </div>
 
@@ -1558,14 +1558,15 @@ export default function InternshipDetailPage() {
             </div>
           </div>
 
-          {/* Right sidebar — sticky on lg+ so the reference-style sections
-              (Preceptors, Contact Info, Meeting Scheduling) stay in view
-              while the user scrolls the longer main column. The
+          {/* Right sidebar — sticky from md+ so reference sections
+              (Preceptors, Contact Info, Meeting Scheduling) stay in
+              view while the user scrolls the longer main column. The
               max-h + overflow rules prevent the sidebar from growing
               taller than the viewport when its own content is long
-              (e.g., during an active extension with the Closeout
-              workflow expanded). */}
-          <div className="space-y-6 min-w-0 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+              (active extension + expanded Closeout workflow).
+              Sticky disabled on phones via max-md: so it scrolls
+              with the rest of the page. */}
+          <div className="space-y-6 min-w-0 md:sticky md:top-4 md:self-start md:max-h-[calc(100vh-2rem)] md:overflow-y-auto">
             {/* Preceptors */}
             <PreceptorsSection internshipId={internshipId} canEdit={canEdit} />
 
