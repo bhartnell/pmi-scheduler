@@ -1344,22 +1344,20 @@ export default function CloseoutSection({
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-emerald-50 dark:bg-emerald-900/20">
-          <div className="flex items-center gap-2">
-            <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            <h3 className="font-semibold text-gray-900 dark:text-white">Closeout Documents</h3>
-          </div>
-        </div>
-        <div className="p-8 flex justify-center">
-          <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
-        </div>
+      <div className="p-8 flex justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-600" />
       </div>
     );
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-xl shadow overflow-hidden">
+    // Outer wrapper + section header retired 2026-04-24 — the parent
+    // page wraps this component in <CollapsibleCard> which provides
+    // its own card chrome + emerald header. The Toast still floats
+    // above everything via fixed positioning. The orphaned
+    // EmploymentVerificationModal / PreceptorEvalModal render blocks
+    // are gone too — Phase A removed the buttons that triggered them.
+    <>
       {/* Toast */}
       {toast && (
         <div
@@ -1371,57 +1369,7 @@ export default function CloseoutSection({
         </div>
       )}
 
-
-      {/* Employment Verification Modal */}
-      {showEmploymentModal && (
-        <EmploymentVerificationModal
-          internshipId={internshipId}
-          existingVerification={employmentVerification}
-          prefillData={{
-            studentName,
-            studentEmail,
-            program,
-          }}
-          onClose={() => { setShowEmploymentModal(false); setEmploymentAutoGeneratePdf(false); }}
-          onSaved={handleEmploymentSaved}
-          autoGeneratePdf={employmentAutoGeneratePdf}
-        />
-      )}
-
-      {/* Preceptor Eval Modal */}
-      {showPreceptorEvalModal && (
-        <PreceptorEvalModal
-          internshipId={internshipId}
-          studentName={studentName}
-          onClose={() => setShowPreceptorEvalModal(false)}
-        />
-      )}
-
-      {/* Section Header */}
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-emerald-50 dark:bg-emerald-900/20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CheckSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            <h3 className="font-semibold text-gray-900 dark:text-white">Closeout Documents</h3>
-            {closeoutTotalCount > 0 && (
-              <span className={`ml-1 px-2 py-0.5 text-xs font-medium rounded-full ${
-                closeoutCheckedCount === closeoutTotalCount
-                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                  : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
-              }`}>
-                {closeoutCheckedCount}/{closeoutTotalCount} complete
-              </span>
-            )}
-          </div>
-          {completedAt && (
-            <span className="px-2 py-1 text-xs font-medium rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-              Completed
-            </span>
-          )}
-        </div>
-      </div>
-
-      <div className="p-4 space-y-5">
+      <div className="space-y-5">
         {/* Completed Banner */}
         {completedAt && (
           <div className="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border-2 border-green-400 dark:border-green-600 rounded-lg">
@@ -1436,10 +1384,10 @@ export default function CloseoutSection({
           </div>
         )}
 
-        {/* Checklist */}
+        {/* Checklist — 2-col on md+ to use the wider main column. */}
         <div>
           <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Completion Checklist</h4>
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {checklist.map(item => {
               const isChecked = item.auto_checked || item.manual_override;
               return (
@@ -1668,6 +1616,6 @@ export default function CloseoutSection({
           </div>
         )}
       </div>
-    </div>
+    </>
   );
 }

@@ -2479,6 +2479,15 @@ export default function InternshipDetailPage() {
             headerBg="bg-emerald-50 dark:bg-emerald-900/20"
             open={closeoutEffective}
             onToggle={(next) => setCloseoutOpen(next)}
+            accent={
+              <span className={`px-2 py-1 text-xs font-medium rounded ${
+                closeoutProgress === 100
+                  ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                  : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+              }`}>
+                {closeoutProgress}%
+              </span>
+            }
           >
             {/* CloseoutSection already renders its own internal padding /
                 checklist / buttons so we drop directly into it without
