@@ -178,13 +178,22 @@ export default function TransferCohortModal({
     setSubmitting(true);
     setError(null);
     try {
-      const r = await fetch(`/api/students/${studentId}/transfer`, {
+      // Phase 2 (2026-04-27): 'reenroll' mode dispatches to the new
+      // /re-enroll endpoint (which auto-detects re-enrollment vs
+      // program_upgrade based on the target cohort's program).
+      // 'transfer' and 'upgrade' modes still go through /transfer,
+      // which handles same/cross-program moves for active students.
+      const endpoint =
+        mode === 'reenroll'
+          ? `/api/students/${studentId}/re-enroll`
+          : `/api/students/${studentId}/transfer`;
+      const r = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           target_cohort_id: selected.id,
           new_status: newStatus || undefined,
-          reason: reason.trim() || undefined,
+          notes: reason.trim() || undefined,
         }),
       });
       const j = await r.json();

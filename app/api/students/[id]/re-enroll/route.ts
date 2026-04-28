@@ -5,15 +5,28 @@ import { canManageStudentRoster } from '@/lib/permissions';
 import { logAuditEvent } from '@/lib/audit';
 
 /**
- * /api/students/[id]/transfer
+ * POST /api/students/[id]/re-enroll
  *
- * Cohort transfers with an audit trail.
- * - POST moves the student to a new cohort, optionally updates their status,
- *   and writes a row to student_cohort_history.
- * - GET returns the transfer history for the student.
+ * Returns a non-active student (withdrawn / graduated / on_hold) to
+ * 'active' status by enrolling them in a target cohort. Server-side
+ * decides whether the action is a re-enrollment or a program upgrade
+ * based on whether the target cohort's program matches the student's
+ * current cohort program:
  *
- * Permission: lead_instructor or above (same gate as the rest of roster
- * management via canManageStudentRoster).
+ *   • same program       → event_type = 're-enrollment'
+ *   • different program  → event_type = 'program_upgrade'  (and stamps
+ *                          from_cert_level / to_cert_level on the row)
+ *
+ * Both paths dispatch through promote_student_to_program (Phase 2 RPC)
+ * which handles the four writes — student_program_enrollments insert,
+ * students.status flip, student_cohort_history row — atomically.
+ *
+ * Body:
+ *   { target_cohort_id: string,
+ *     notes?: string,        // free-form audit note
+ *     reason?: string }      // back-compat alias for notes
+ *
+ * Permission: lead_instructor or above. Same gate as /transfer + /graduate.
  */
 
 async function getCallerRole(email: string | null | undefined) {
@@ -27,65 +40,6 @@ async function getCallerRole(email: string | null | undefined) {
   return data?.role ?? null;
 }
 
-// ---------------------------------------------------------------------------
-// GET — history for this student
-// ---------------------------------------------------------------------------
-export async function GET(
-  _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const auth = await requireAuth('instructor');
-    if (auth instanceof NextResponse) return auth;
-
-    const { id: studentId } = await params;
-    const supabase = getSupabaseAdmin();
-
-    const { data, error } = await supabase
-      .from('student_cohort_history')
-      .select(`
-        id, from_cohort_id, to_cohort_id, previous_status, new_status,
-        event_type, from_cert_level, to_cert_level,
-        notes, transferred_by, transferred_at,
-        from_cohort:cohorts!student_cohort_history_from_cohort_id_fkey(
-          id, cohort_number, program:programs(abbreviation)
-        ),
-        to_cohort:cohorts!student_cohort_history_to_cohort_id_fkey(
-          id, cohort_number, program:programs(abbreviation)
-        )
-      `)
-      .eq('student_id', studentId)
-      .order('transferred_at', { ascending: false });
-
-    if (error) {
-      console.error('[transfer GET] error', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true, history: data ?? [] });
-  } catch (e) {
-    return NextResponse.json(
-      { error: e instanceof Error ? e.message : 'Unknown error' },
-      { status: 500 }
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// POST — transfer
-//
-// Body: { target_cohort_id, new_status?, notes? }
-//   `reason` is still accepted as a synonym for `notes` for back-compat
-//   with any callers from before the Phase 2 rename.
-//
-// Phase 2 (2026-04-27): now dispatches through the
-// promote_student_to_program RPC which mutates student_program_enrollments,
-// updates students, and inserts the student_cohort_history row in one
-// transaction. event_type is computed here based on whether the move
-// crosses program boundaries:
-//   • same program → 'transfer'
-//   • different program → 'program_upgrade'
-// ---------------------------------------------------------------------------
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -107,14 +61,8 @@ export async function POST(
     const supabase = getSupabaseAdmin();
 
     const body = await request.json();
-    const {
-      target_cohort_id,
-      new_status,
-      notes,
-      reason, // back-compat alias
-    } = body as {
+    const { target_cohort_id, notes, reason } = body as {
       target_cohort_id: string;
-      new_status?: 'active' | 'withdrawn' | 'on_hold' | 'graduated' | null;
       notes?: string;
       reason?: string;
     };
@@ -126,7 +74,7 @@ export async function POST(
       );
     }
 
-    // Load current student + program (for event_type classification).
+    // Load student + current program (for event_type classification).
     const { data: student, error: studentErr } = await supabase
       .from('students')
       .select(`
@@ -143,14 +91,17 @@ export async function POST(
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
     }
 
-    if (student.cohort_id === target_cohort_id) {
+    if (student.status === 'active') {
       return NextResponse.json(
-        { error: 'Student is already in this cohort' },
+        {
+          error:
+            'Student is already active. Use /transfer to move an active student to a different cohort.',
+        },
         { status: 400 }
       );
     }
 
-    // Validate target cohort + pull its program for event_type decision.
+    // Lookup target cohort + its program.
     const { data: targetCohort, error: cohortErr } = await supabase
       .from('cohorts')
       .select('id, cohort_number, program:programs(abbreviation, name)')
@@ -164,7 +115,7 @@ export async function POST(
       );
     }
 
-    // Same-program vs cross-program decision drives event_type.
+    // Program comparison drives event_type.
     type ProgramHolder = { abbreviation?: string | null } | null | undefined;
     const programOf = (p: ProgramHolder) =>
       (p?.abbreviation === 'PM' || p?.abbreviation === 'PMD')
@@ -176,25 +127,26 @@ export async function POST(
     const toProgram = programOf(
       (targetCohort.program as unknown as ProgramHolder)
     );
-    const event_type = fromProgram === toProgram ? 'transfer' : 'program_upgrade';
+    const event_type =
+      fromProgram && toProgram && fromProgram !== toProgram
+        ? 'program_upgrade'
+        : 're-enrollment';
 
-    // RPC handles the four writes atomically.
+    // Atomic write via the RPC.
     const { error: rpcErr } = await supabase.rpc('promote_student_to_program', {
       p_student_id: studentId,
       p_target_cohort_id: target_cohort_id,
       p_event_type: event_type,
       p_transferred_by: user.email,
       p_notes: (notes ?? reason)?.trim() || null,
-      p_new_status: new_status || 'active',
+      p_new_status: 'active',
     });
 
     if (rpcErr) {
-      console.error('[transfer POST] RPC error', rpcErr);
+      console.error('[re-enroll POST] RPC error', rpcErr);
       return NextResponse.json({ error: rpcErr.message }, { status: 500 });
     }
 
-    // Refetch the updated student row for the client (RPC returns a
-    // jsonb summary, not the full row).
     const { data: updated } = await supabase
       .from('students')
       .select(`
@@ -213,7 +165,7 @@ export async function POST(
         action: 'student_group_changed',
         resourceType: 'student',
         resourceId: studentId,
-        resourceDescription: `${student.first_name} ${student.last_name} cohort ${event_type}`,
+        resourceDescription: `${student.first_name} ${student.last_name} ${event_type}`,
         metadata: {
           event_type,
           from_cohort_id: student.cohort_id,
@@ -221,12 +173,12 @@ export async function POST(
           from_program: fromProgram,
           to_program: toProgram,
           previous_status: student.status,
-          new_status: new_status ?? student.status,
+          new_status: 'active',
           notes: (notes ?? reason) || null,
         },
       });
     } catch {
-      // Audit logging is best-effort; don't fail the transfer on it.
+      /* best-effort */
     }
 
     return NextResponse.json({
@@ -235,7 +187,7 @@ export async function POST(
       event_type,
     });
   } catch (e) {
-    console.error('[transfer POST] error', e);
+    console.error('[re-enroll POST] error', e);
     return NextResponse.json(
       { error: e instanceof Error ? e.message : 'Unknown error' },
       { status: 500 }

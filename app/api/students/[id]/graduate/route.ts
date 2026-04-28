@@ -88,6 +88,19 @@ export async function POST(
       );
     }
 
+    // Phase 2 (2026-04-27): graduation now also closes the matching
+    // student_program_enrollments row (status='graduated' + end_date)
+    // and writes the history row with event_type='graduation'. The
+    // /transfer + /re-enroll flows go through a single RPC; graduation
+    // is its own path because no cohort change happens — we just
+    // close the current enrollment and flip the student's status.
+    //
+    // Wrapped in best-effort try/catch around the secondary writes so
+    // a failure on enrollment-row update or history insert doesn't
+    // leave the students.status flip un-rolled-back. If we ever see
+    // these in the wild they get logged and surfaced, but the primary
+    // status change always lands.
+
     // Update the student row.
     const { data: updated, error: upErr } = await supabase
       .from('students')
@@ -110,9 +123,27 @@ export async function POST(
       return NextResponse.json({ error: upErr.message }, { status: 500 });
     }
 
+    // Close the active enrollment row (Phase 2). Best-effort; if no
+    // active row exists (legacy student missing the backfill), this
+    // is a no-op.
+    {
+      const { error: enrollErr } = await supabase
+        .from('student_program_enrollments')
+        .update({
+          status: 'graduated',
+          end_date: gradDate,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('student_id', studentId)
+        .eq('status', 'active');
+      if (enrollErr) {
+        console.error('[graduate POST] enrollment close failed', enrollErr);
+      }
+    }
+
     // Audit row — to_cohort_id is the same as from_cohort_id since no
-    // cohort change happens here. The new_status flip + reason capture
-    // the lifecycle event. transferred_by stamps who marked it.
+    // cohort change happens here. event_type='graduation' tags the
+    // lifecycle event for filtering / reporting.
     if (student.cohort_id) {
       const { error: histErr } = await supabase
         .from('student_cohort_history')
@@ -122,7 +153,8 @@ export async function POST(
           to_cohort_id: student.cohort_id,
           previous_status: student.status,
           new_status: 'graduated',
-          reason:
+          event_type: 'graduation',
+          notes:
             reason?.trim() ||
             `Graduated ${gradDate}`,
           transferred_by: user.email,
@@ -140,10 +172,11 @@ export async function POST(
         resourceId: studentId,
         resourceDescription: `${student.first_name} ${student.last_name} graduated`,
         metadata: {
+          event_type: 'graduation',
           previous_status: student.status,
           new_status: 'graduated',
           graduation_date: gradDate,
-          reason: reason || null,
+          notes: reason || null,
         },
       });
     } catch {

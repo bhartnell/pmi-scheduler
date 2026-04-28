@@ -19,10 +19,38 @@ interface HistoryEntry {
   } | null;
   previous_status: string | null;
   new_status: string | null;
-  reason: string | null;
+  /** Phase 2 (2026-04-27): renamed from `reason`. */
+  notes: string | null;
+  /** One of: transfer | re-enrollment | program_upgrade | graduation | withdrawal. NULL on rows from before Phase 1 backfilled. */
+  event_type: string | null;
+  from_cert_level: string | null;
+  to_cert_level: string | null;
   transferred_by: string | null;
   transferred_at: string;
 }
+
+const EVENT_TYPE_META: Record<string, { label: string; chip: string }> = {
+  transfer: {
+    label: 'Transfer',
+    chip: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+  },
+  're-enrollment': {
+    label: 'Re-enrollment',
+    chip: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300',
+  },
+  program_upgrade: {
+    label: 'Program upgrade',
+    chip: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300',
+  },
+  graduation: {
+    label: 'Graduation',
+    chip: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300',
+  },
+  withdrawal: {
+    label: 'Withdrawal',
+    chip: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+  },
+};
 
 export interface CohortHistoryHandle {
   refresh: () => void;
@@ -102,6 +130,16 @@ const CohortHistorySection = forwardRef<CohortHistoryHandle, { studentId: string
                 className="text-sm rounded border border-gray-200 dark:border-gray-700 px-3 py-2"
               >
                 <div className="flex flex-wrap items-center gap-2">
+                  {/* Event-type chip — leads each row so the user
+                      can scan the kind of transition first. NULL on
+                      pre-Phase-2 rows; falls back to "—". */}
+                  {e.event_type && EVENT_TYPE_META[e.event_type] && (
+                    <span
+                      className={`text-[11px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded ${EVENT_TYPE_META[e.event_type].chip}`}
+                    >
+                      {EVENT_TYPE_META[e.event_type].label}
+                    </span>
+                  )}
                   <span className="px-2 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-medium">
                     {from}
                   </span>
@@ -115,11 +153,16 @@ const CohortHistorySection = forwardRef<CohortHistoryHandle, { studentId: string
                       status {e.previous_status} → {e.new_status}
                     </span>
                   )}
+                  {e.from_cert_level && e.to_cert_level && (
+                    <span className="text-[11px] text-purple-700 dark:text-purple-300">
+                      {e.from_cert_level} → {e.to_cert_level}
+                    </span>
+                  )}
                 </div>
-                {(e.reason || e.transferred_by) && (
+                {(e.notes || e.transferred_by) && (
                   <div className="mt-1 text-xs text-gray-600 dark:text-gray-400">
-                    {e.reason && <span className="italic">&ldquo;{e.reason}&rdquo;</span>}
-                    {e.reason && e.transferred_by && <span> · </span>}
+                    {e.notes && <span className="italic">&ldquo;{e.notes}&rdquo;</span>}
+                    {e.notes && e.transferred_by && <span> · </span>}
                     {e.transferred_by && <span>{e.transferred_by}</span>}
                   </div>
                 )}
