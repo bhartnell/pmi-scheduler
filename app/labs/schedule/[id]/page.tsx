@@ -154,8 +154,14 @@ export default function LabDayPage() {
   );
 
   // ---- Fetch functions ----
-  const fetchLabDay = async () => {
-    setLoading(true);
+  // `silent: true` skips the loading-spinner flash. Use it for post-
+  // mutation refreshes (cohort change, station add/edit, scenario
+  // picker, template diff) so the page doesn't unmount into a full-
+  // screen spinner that resets scroll position and any open modals.
+  // The initial load (from the bootstrapping useEffect) leaves it off
+  // so the first paint shows the spinner instead of an empty page.
+  const fetchLabDay = async (opts: { silent?: boolean } = {}) => {
+    if (!opts.silent) setLoading(true);
     try {
       const [labDayRes, instructorsRes, locationsRes, rolesRes] = await Promise.all([
         fetch(`/api/lab-management/lab-days/${labDayId}`),
@@ -196,7 +202,7 @@ export default function LabDayPage() {
         if (labDayData.labDay.cohort?.program?.abbreviation) lookupSkillSheets(labDayData.labDay.stations, labDayData.labDay.cohort.program.abbreviation);
       }
     } catch (error) { console.error('Error fetching lab day:', error); }
-    setLoading(false);
+    if (!opts.silent) setLoading(false);
   };
 
   const lookupSkillSheets = async (stations: any[], program: string) => {
@@ -278,7 +284,7 @@ export default function LabDayPage() {
       const data = await res.json();
       if (!data.error) {
         toast?.addToast('success', 'Cohort updated');
-        fetchLabDay();
+        fetchLabDay({ silent: true });
       } else {
         toast?.addToast('error', data.error || 'Failed to update cohort');
       }
@@ -293,7 +299,7 @@ export default function LabDayPage() {
   // ---- Quick add & lab mode ----
   const handleQuickAddStation = async () => {
     if (!quickAddTitle.trim()) return; setQuickAddSaving(true);
-    try { const nextNumber = labDay ? Math.max(...labDay.stations.map((s: Station) => s.station_number), 0) + 1 : 1; const res = await fetch('/api/lab-management/stations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lab_day_id: labDayId, station_number: nextNumber, station_type: quickAddType, custom_title: quickAddTitle.trim() }) }); const data = await res.json(); if (data.success) { toast?.addToast('success', 'Station added'); setShowQuickAddStation(false); setQuickAddTitle(''); setQuickAddType('scenario'); fetchLabDay(); } else toast?.addToast('error', data.error || 'Failed'); }
+    try { const nextNumber = labDay ? Math.max(...labDay.stations.map((s: Station) => s.station_number), 0) + 1 : 1; const res = await fetch('/api/lab-management/stations', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lab_day_id: labDayId, station_number: nextNumber, station_type: quickAddType, custom_title: quickAddTitle.trim() }) }); const data = await res.json(); if (data.success) { toast?.addToast('success', 'Station added'); setShowQuickAddStation(false); setQuickAddTitle(''); setQuickAddType('scenario'); fetchLabDay({ silent: true }); } else toast?.addToast('error', data.error || 'Failed'); }
     catch (error) { console.error('Error:', error); toast?.addToast('error', 'Failed to add station'); }
     setQuickAddSaving(false);
   };
@@ -637,7 +643,7 @@ export default function LabDayPage() {
         </div>
       </main>
 
-      {editingStation && (<EditStationModal station={editingStation} labDay={labDay} instructors={instructors} locations={locations} calendarAvailability={calendarAvailability} session={session} onClose={() => setEditingStation(null)} onSaved={() => { setEditingStation(null); fetchLabDay(); }} />)}
+      {editingStation && (<EditStationModal station={editingStation} labDay={labDay} instructors={instructors} locations={locations} calendarAvailability={calendarAvailability} session={session} onClose={() => setEditingStation(null)} onSaved={() => { setEditingStation(null); fetchLabDay({ silent: true }); }} />)}
       {showTimer && <LabTimer labDayId={labDayId} numRotations={labDay.num_rotations} rotationMinutes={labDay.rotation_duration} onClose={() => setShowTimer(false)} isController={true} />}
       {roleModalStation?.scenario && (<ScenarioRoleModal station={roleModalStation} labDayId={labDayId} labDayDate={labDay.date} cohortStudents={cohortStudents} scenarioParticipation={scenarioParticipation} onClose={() => setRoleModalStation(null)} onSaved={async () => { await fetchScenarioParticipation(); setRoleModalStation(null); }} />)}
       {scenarioPickerState && (
@@ -648,11 +654,11 @@ export default function LabDayPage() {
           allStations={labDay.stations}
           stationNremtCodes={stationNremtCodes}
           onClose={() => setScenarioPickerState(null)}
-          onSaved={async () => { await fetchLabDay(); setScenarioPickerState(null); }}
+          onSaved={async () => { await fetchLabDay({ silent: true }); setScenarioPickerState(null); }}
         />
       )}
       <DuplicateModals labDay={labDay} labDayId={labDayId} showDuplicateModal={showDuplicateModal} showNextWeekConfirm={showNextWeekConfirm} showBulkDuplicateModal={showBulkDuplicateModal} onCloseDuplicate={() => setShowDuplicateModal(false)} onCloseNextWeek={() => setShowNextWeekConfirm(false)} onCloseBulkDuplicate={() => setShowBulkDuplicateModal(false)} onDuplicated={(newId) => { setCopySuccessToast(true); setTimeout(() => setCopySuccessToast(false), 3000); router.push(`/labs/schedule/${newId}/edit`); }} formatDate={formatDate} />
-      {showDiffModal && labDay.source_template && (<TemplateDiffModal labDayId={labDay.id} templateId={labDay.source_template.id} templateName={labDay.source_template.name} onClose={() => setShowDiffModal(false)} onApplied={() => { setShowDiffModal(false); toast.success('Template updated successfully'); fetchLabDay(); }} />)}
+      {showDiffModal && labDay.source_template && (<TemplateDiffModal labDayId={labDay.id} templateId={labDay.source_template.id} templateName={labDay.source_template.name} onClose={() => setShowDiffModal(false)} onApplied={() => { setShowDiffModal(false); toast.success('Template updated successfully'); fetchLabDay({ silent: true }); }} />)}
 
       {showRequestCoverage && (
         <RequestCoverageModal

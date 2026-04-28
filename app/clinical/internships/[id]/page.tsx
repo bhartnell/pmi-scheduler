@@ -653,7 +653,18 @@ export default function InternshipDetailPage() {
         // banner state change is enough signal without spamming
         // toasts on every keystroke pause.
         if (!opts.auto) showToast('Changes saved successfully', 'success');
-        await fetchData();
+        // No refetch on success. fetchData() flips loading=true (which
+        // unmounts the entire form into a full-screen spinner) and
+        // calls setFormData(init), which overwrites every field with
+        // server data — nuking any in-progress edits the user is mid-
+        // typing in another field. Local formData already reflects the
+        // saved values (we just sent them), so the UI is correct.
+        // Refresh the internship object so derived sections (phase
+        // borders, banners) re-evaluate, but only if the API returned
+        // it. Auto-expand effects are guarded with prev??default so
+        // user-toggled card state is preserved across the update.
+        const returned = (data as { internship?: Internship }).internship;
+        if (returned) setInternship(returned);
       } else {
         const msg =
           (data as { error?: string }).error ||
@@ -711,7 +722,19 @@ export default function InternshipDetailPage() {
       const data = await res.json();
       if (data.success) {
         showToast('Ryan has been notified that student is ready for NREMT clearance review.', 'success');
-        await fetchData();
+        // The endpoint flips ryan_notified=true and stamps
+        // ryan_notified_date=today server-side. Mirror that change
+        // locally instead of refetching — keeps card-collapse / scroll
+        // / in-progress edits intact.
+        const today = new Date().toISOString().slice(0, 10);
+        setInternship(prev =>
+          prev ? { ...prev, ryan_notified: true, ryan_notified_date: today } : prev
+        );
+        setFormData(prev => ({
+          ...prev,
+          ryan_notified: true,
+          ryan_notified_date: today,
+        }));
       } else {
         showToast(data.error || 'Failed to notify Ryan', 'error');
       }
