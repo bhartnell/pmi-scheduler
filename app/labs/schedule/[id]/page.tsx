@@ -11,6 +11,7 @@ import {
   Plus,
   ClipboardCheck,
   AlertOctagon,
+  AlertTriangle,
   Users,
   Check,
   AlertCircle,
@@ -18,7 +19,9 @@ import {
   Layers,
   RefreshCw,
   GraduationCap,
+  Flag,
 } from 'lucide-react';
+import { priorityBadgeClasses, type PriorityFlag } from '@/components/lab-day/types';
 import LabTimer from '@/components/LabTimer';
 import AttendanceSection from '@/components/AttendanceSection';
 import LearningStyleDistribution from '@/components/LearningStyleDistribution';
@@ -320,6 +323,47 @@ export default function LabDayPage() {
     } catch (err) { console.error('Error:', err); }
   };
 
+  // Scheduling Overhaul Phase 1.1 — set the lab day's priority flag.
+  // The reason prompt only fires for high/critical; clearing back to
+  // normal wipes the existing reason so it doesn't linger on a now-
+  // unflagged day. Optimistic local update — no full refetch (keeps
+  // station collapse / scroll intact).
+  const [priorityLoading, setPriorityLoading] = useState(false);
+  const handleSetPriority = async (newFlag: PriorityFlag) => {
+    if (!labDay || newFlag === (labDay.priority_flag ?? 'normal')) return;
+    let reason: string | null = labDay.priority_reason ?? null;
+    if (newFlag === 'normal') {
+      reason = null;
+    } else {
+      const promptLabel = newFlag === 'critical'
+        ? 'Reason for CRITICAL priority (e.g. "ACLS recert", "NREMT psychomotor"):'
+        : 'Reason for HIGH priority (e.g. "Guest cardiologist", "Heavy skill day"):';
+      const entered = window.prompt(promptLabel, reason || '');
+      if (entered === null) return; // user cancelled
+      reason = entered.trim() || null;
+    }
+    setPriorityLoading(true);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priority_flag: newFlag, priority_reason: reason }),
+      });
+      const data = await res.json();
+      if (!data.error) {
+        setLabDay({ ...labDay, priority_flag: newFlag, priority_reason: reason });
+        toast?.addToast('success', newFlag === 'normal' ? 'Priority cleared' : `Priority set to ${newFlag}`);
+      } else {
+        toast?.addToast('error', data.error || 'Failed to set priority');
+      }
+    } catch (err) {
+      console.error('Error setting priority:', err);
+      toast?.addToast('error', 'Failed to set priority');
+    } finally {
+      setPriorityLoading(false);
+    }
+  };
+
   // ---- Date helpers ----
   const isLabDayPast = (): boolean => { if (!labDay?.date) return false; const today = new Date(); today.setHours(0, 0, 0, 0); return new Date(labDay.date + 'T00:00:00') < today; };
   const isLabDayPastOrToday = (): boolean => { if (!labDay?.date) return false; const tomorrow = new Date(); tomorrow.setHours(0, 0, 0, 0); tomorrow.setDate(tomorrow.getDate() + 1); return new Date(labDay.date + 'T00:00:00') < tomorrow; };
@@ -348,6 +392,36 @@ export default function LabDayPage() {
         {labDay.is_nremt_testing && (
           <div className="bg-red-600 text-white text-center py-2 font-bold rounded-lg mb-4">
             NREMT Psychomotor Testing Day &mdash; Official Examination
+          </div>
+        )}
+
+        {/* Priority banner (Scheduling Overhaul Phase 1.1) — high/critical
+            days get a prominent strip with the reason text so part-timers
+            and instructors who land here see the context immediately,
+            without scrolling through to find the badge. Critical = red,
+            high = amber. Hidden on print to avoid wasting toner. */}
+        {labDay.priority_flag && labDay.priority_flag !== 'normal' && !labDay.is_nremt_testing && (
+          <div
+            className={`flex items-center gap-2 px-4 py-2 mb-4 rounded-lg font-semibold print:hidden ${
+              labDay.priority_flag === 'critical'
+                ? 'bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 border border-red-300 dark:border-red-800'
+                : 'bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-800'
+            }`}
+          >
+            {labDay.priority_flag === 'critical' ? (
+              <AlertOctagon className="w-5 h-5 flex-shrink-0" />
+            ) : (
+              <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            )}
+            <span className="uppercase tracking-wide text-xs">
+              {labDay.priority_flag === 'critical' ? 'Critical priority' : 'High priority'}
+            </span>
+            {labDay.priority_reason && (
+              <>
+                <span className="text-gray-400 dark:text-gray-600">·</span>
+                <span className="text-sm font-normal">{labDay.priority_reason}</span>
+              </>
+            )}
           </div>
         )}
 
@@ -462,6 +536,42 @@ export default function LabDayPage() {
           <label className="inline-flex items-center gap-1.5 cursor-pointer" title="Enables Final evaluations only, per-station timers, candidate instructions, and coordinator view">
             <input type="checkbox" checked={!!labDay.is_nremt_testing} onChange={handleToggleNremt} className="w-3.5 h-3.5 rounded border-gray-300 text-red-600 focus:ring-red-500" />
             <span className={`text-xs font-medium ${labDay.is_nremt_testing ? 'text-red-600 dark:text-red-400' : 'text-gray-500 dark:text-gray-400'}`}>NREMT Testing Day</span>
+          </label>
+          {/* Priority flag selector (Scheduling Overhaul 1.1). Native
+              <select> keeps the toolbar compact; setter prompts for a
+              reason when promoting to high/critical so the banner has
+              context. Color hints which value is currently active. */}
+          <span className="mx-1 text-gray-300 dark:text-gray-600">|</span>
+          <label
+            className="inline-flex items-center gap-1.5"
+            title="Flag this day so part-timers and instructors see it as a priority on calendars and the open-shift feed."
+          >
+            <Flag
+              className={`w-3.5 h-3.5 ${
+                labDay.priority_flag === 'critical'
+                  ? 'text-red-600 dark:text-red-400'
+                  : labDay.priority_flag === 'high'
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-gray-400 dark:text-gray-500'
+              }`}
+            />
+            <select
+              value={labDay.priority_flag ?? 'normal'}
+              onChange={e => handleSetPriority(e.target.value as PriorityFlag)}
+              disabled={priorityLoading}
+              className={`text-xs font-medium bg-transparent border-0 focus:ring-0 cursor-pointer ${
+                labDay.priority_flag === 'critical'
+                  ? 'text-red-600 dark:text-red-400'
+                  : labDay.priority_flag === 'high'
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-gray-500 dark:text-gray-400'
+              }`}
+            >
+              <option value="normal">Normal priority</option>
+              <option value="high">High priority</option>
+              <option value="critical">Critical priority</option>
+            </select>
+            {priorityLoading && <Loader2 className="w-3 h-3 animate-spin text-gray-400" />}
           </label>
           {(labDay.is_nremt_testing || labMode === 'individual_testing') && (
             <>

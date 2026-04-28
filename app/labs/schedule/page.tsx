@@ -123,6 +123,10 @@ interface LabDay {
   stations: any[];
   roles: LabDayRole[];
   shift_signups?: ShiftSignupInfo;
+  // Scheduling Overhaul Phase 1.1
+  priority_flag?: 'normal' | 'high' | 'critical';
+  priority_reason?: string | null;
+  is_nremt_testing?: boolean;
 }
 
 interface DailyNote {
@@ -1096,8 +1100,23 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                     <div key={labDay.id} className="p-4">
                       <div className="flex items-center justify-between mb-3">
                         <div>
-                          <h4 className="font-semibold text-lg text-gray-900 dark:text-white">
+                          <h4 className="font-semibold text-lg text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
                             {labDay.cohort.program.abbreviation} Group {formatCohortNumber(labDay.cohort.cohort_number)}
+                            {/* Priority badge (Phase 1.1) — suppressed when
+                                is_nremt_testing is set since NREMT days
+                                already get their own red treatment. */}
+                            {labDay.priority_flag && labDay.priority_flag !== 'normal' && !labDay.is_nremt_testing && (
+                              <span
+                                className={`inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide rounded ${
+                                  labDay.priority_flag === 'critical'
+                                    ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                                    : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                                }`}
+                                title={labDay.priority_reason || undefined}
+                              >
+                                {labDay.priority_flag === 'critical' ? 'Critical' : 'High priority'}
+                              </span>
+                            )}
                           </h4>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
                             {labDay.title || (labDay.week_number && labDay.day_number
@@ -1106,6 +1125,9 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                             )}
                             {' • '}
                             {labDay.num_rotations} rotations × {String(labDay.stations[0]?.rotation_minutes || labDay.num_rotations)} min
+                            {labDay.priority_reason && labDay.priority_flag && labDay.priority_flag !== 'normal' && (
+                              <span className="italic"> · {labDay.priority_reason}</span>
+                            )}
                           </p>
                         </div>
                         <Link
@@ -1578,17 +1600,43 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
 
                   {/* Lab day entries */}
                   <div className="space-y-1">
-                    {dayLabDays.slice(0, notesForDate.length > 0 ? Math.max(0, 3 - notesForDate.length) : 3).map(labDay => (
+                    {dayLabDays.slice(0, notesForDate.length > 0 ? Math.max(0, 3 - notesForDate.length) : 3).map(labDay => {
+                      // Priority colors override the default blue cell so
+                      // critical/high days are spottable from a month view
+                      // without zooming. Reason text rolls into the title
+                      // attribute as a hover hint.
+                      const isCritical = labDay.priority_flag === 'critical' && !labDay.is_nremt_testing;
+                      const isHigh = labDay.priority_flag === 'high' && !labDay.is_nremt_testing;
+                      const cellClass = isCritical
+                        ? 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200 hover:bg-red-200 dark:hover:bg-red-900/60'
+                        : isHigh
+                        ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-amber-900/60'
+                        : 'bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70';
+                      const tooltip = [
+                        labDay.title || `${labDay.cohort.program.abbreviation} G${formatCohortNumber(labDay.cohort.cohort_number)}`,
+                        labDay.priority_reason && labDay.priority_flag && labDay.priority_flag !== 'normal'
+                          ? `${labDay.priority_flag.toUpperCase()}: ${labDay.priority_reason}`
+                          : null,
+                      ].filter(Boolean).join(' — ');
+                      const countTone = isCritical
+                        ? 'text-red-700 dark:text-red-300'
+                        : isHigh
+                        ? 'text-amber-700 dark:text-amber-300'
+                        : 'text-blue-600 dark:text-blue-400';
+                      return (
                       <Link
                         key={labDay.id}
                         href={`/labs/schedule/${labDay.id}`}
-                        className="block px-1.5 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/70"
-                        title={labDay.title || `${labDay.cohort.program.abbreviation} G${formatCohortNumber(labDay.cohort.cohort_number)}`}
+                        className={`block px-1.5 py-1 text-xs rounded ${cellClass}`}
+                        title={tooltip}
                       >
                         <div className="font-medium truncate">
+                          {(isCritical || isHigh) && (
+                            <span aria-hidden className="mr-0.5">{isCritical ? '⛔' : '⚠'}</span>
+                          )}
                           {labDay.cohort.program.abbreviation} G{formatCohortNumber(labDay.cohort.cohort_number)}
                           {labDay.stations.length > 0 && (
-                            <span className="text-blue-600 dark:text-blue-400 ml-1">
+                            <span className={`${countTone} ml-1`}>
                               ({labDay.stations.length})
                             </span>
                           )}
@@ -1604,7 +1652,8 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                           </div>
                         )}
                       </Link>
-                    ))}
+                      );
+                    })}
                     {(() => {
                       const maxSlots = notesForDate.length > 0 ? Math.max(0, 3 - notesForDate.length) : 3;
                       return dayLabDays.length > maxSlots ? (

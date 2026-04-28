@@ -197,6 +197,11 @@ export async function PATCH(
     if (body.room !== undefined) allowedFields.room = body.room;
     if (body.lab_mode !== undefined) allowedFields.lab_mode = body.lab_mode;
     if (body.is_nremt_testing !== undefined) allowedFields.is_nremt_testing = body.is_nremt_testing;
+    // Priority flag (Scheduling Overhaul Phase 1.1): normal | high | critical.
+    // The DB CHECK constraint enforces the enum, so a bad value bounces
+    // back as a 400 from Supabase. priority_reason is free-form text.
+    if (body.priority_flag !== undefined) allowedFields.priority_flag = body.priority_flag;
+    if (body.priority_reason !== undefined) allowedFields.priority_reason = body.priority_reason;
 
     if (Object.keys(allowedFields).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

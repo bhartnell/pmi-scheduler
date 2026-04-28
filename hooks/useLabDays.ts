@@ -57,6 +57,12 @@ interface LabDay {
   }>;
   roles: LabDayRole[];
   shift_signups?: ShiftSignupInfo;
+  // Scheduling Overhaul Phase 1.1 — explicit so list/calendar consumers
+  // can read these without falling through the index signature (which
+  // would type them as `unknown`).
+  priority_flag?: 'normal' | 'high' | 'critical';
+  priority_reason?: string | null;
+  is_nremt_testing?: boolean;
   [key: string]: unknown;
 }
 

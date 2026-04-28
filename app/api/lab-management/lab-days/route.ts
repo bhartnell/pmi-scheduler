@@ -30,6 +30,7 @@ export async function GET(request: NextRequest) {
       .from('lab_days')
       .select(`
         id, date, cohort_id, title, start_time, end_time, semester, week_number, day_number, num_rotations, rotation_duration, notes,
+        priority_flag, priority_reason, is_nremt_testing,
         cohort:cohorts(
           id,
           cohort_number,

@@ -22,6 +22,10 @@ export interface LabDay {
     };
   };
   is_nremt_testing?: boolean;
+  /** Scheduling Overhaul Phase 1.1 — drives the priority badge on calendars and the open-shift sort. */
+  priority_flag?: 'normal' | 'high' | 'critical';
+  /** Free-form context shown alongside the priority badge ("ACLS recert", "Guest cardiologist", etc.). */
+  priority_reason?: string | null;
   lab_mode?: 'group_rotations' | 'individual_testing';
   stations: Station[];
   source_template_id?: string | null;
@@ -204,6 +208,32 @@ export const COST_CATEGORY_COLORS: Record<string, string> = {
   External: 'bg-orange-100 text-orange-800 dark:bg-orange-900/40 dark:text-orange-300',
   Other: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
 };
+
+// ---------------------------------------------------------------------------
+// Priority flag — Scheduling Overhaul Phase 1.1
+// ---------------------------------------------------------------------------
+// Single source of truth for badge colors + labels so every calendar surface
+// (list, detail, cohort grid, open-shifts feed) renders the same chip.
+// Returns null for 'normal' so callers can `if (cls) render()`.
+
+export type PriorityFlag = 'normal' | 'high' | 'critical';
+
+export const PRIORITY_FLAG_LABELS: Record<PriorityFlag, string> = {
+  normal: 'Normal',
+  high: 'High priority',
+  critical: 'Critical',
+};
+
+export function priorityBadgeClasses(flag: PriorityFlag | null | undefined): string | null {
+  switch (flag) {
+    case 'critical':
+      return 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300';
+    case 'high':
+      return 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300';
+    default:
+      return null; // 'normal' or unset → no badge
+  }
+}
 
 export const STATION_TYPES = [
   { value: 'scenario', label: 'Scenario', description: 'Rubric-based grading' },
