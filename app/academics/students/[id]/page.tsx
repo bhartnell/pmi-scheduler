@@ -967,7 +967,11 @@ export default function StudentDetailPage() {
 
         {/* Profile Card */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <div className="flex flex-col sm:flex-row gap-6">
+          {/* Layout: photo + info side-by-side on sm/md (single-column page),
+              but stack vertically on lg+ where this card lives in the 340px
+              right rail — otherwise the info column collapses to ~188px and
+              the action buttons get crushed. */}
+          <div className="flex flex-col sm:flex-row lg:flex-col gap-6">
             {/* Photo */}
             <div className="flex flex-col items-center">
               <div
@@ -1175,9 +1179,14 @@ export default function StudentDetailPage() {
                 </div>
               ) : (
                 <>
-                  <div className="flex items-start justify-between mb-4">
+                  {/* Header: name on left / actions on right when card is
+                      full-width (sm-md), but stacks (name above actions) on
+                      lg+ where the card is rail-width. Combined with the
+                      flex-wrap on the actions row below, every button gets
+                      to wrap to a new line gracefully. */}
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between lg:flex-col lg:items-start gap-3 mb-4">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{student.first_name} {student.last_name}</h1>
                         {highestFlagLevel === 'red' && (
                           <span
@@ -1202,7 +1211,7 @@ export default function StudentDetailPage() {
                         <p className="text-gray-600 dark:text-gray-400">{student.cohort.program.abbreviation} Group {student.cohort.cohort_number}</p>
                       )}
                     </div>
-                    <div className="flex gap-2 items-center">
+                    <div className="flex flex-wrap gap-2 items-center">
                       <Link
                         href={`/students/${studentId}/progress`}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg font-medium"
@@ -1338,8 +1347,9 @@ export default function StudentDetailPage() {
           </div>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {/* Stats — 4 cols across when full-width on sm/md, 2x2 inside the
+            lg+ right rail so each cell keeps a comfortable width. */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 mb-1">
               <Star className="w-5 h-5" />
