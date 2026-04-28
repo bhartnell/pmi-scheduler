@@ -3,8 +3,9 @@
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
-import TransferCohortModal from '@/components/students/TransferCohortModal';
+import TransferCohortModal, { type TransferMode } from '@/components/students/TransferCohortModal';
 import CohortHistorySection, { type CohortHistoryHandle } from '@/components/students/CohortHistorySection';
+import GraduationModal from '@/components/students/GraduationModal';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -258,7 +259,15 @@ export default function StudentDetailPage() {
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<Role | null>(null);
-  const [showTransferModal, setShowTransferModal] = useState(false);
+  // showTransferModal carries an embedded mode so one modal serves the
+  // three lifecycle entry points (transfer / re-enroll / advance). null
+  // means closed; an object describes which flow to render.
+  const [showTransferModal, setShowTransferModal] = useState<{
+    mode: TransferMode;
+    programFilter?: string;
+    defaultNewStatus?: 'active' | 'on_hold' | 'withdrawn' | 'graduated' | '';
+  } | null>(null);
+  const [showGraduationModal, setShowGraduationModal] = useState(false);
   const cohortHistoryRef = useRef<CohortHistoryHandle>(null);
 
   // Edit form state
@@ -1211,16 +1220,85 @@ export default function StudentDetailPage() {
                       <button onClick={() => setEditing(true)} className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                         <Edit2 className="w-5 h-5" />
                       </button>
-                      {userRole && canManageStudentRoster(userRole) && (
-                        <button
-                          onClick={() => setShowTransferModal(true)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg font-medium"
-                          title="Move student to a different cohort"
-                        >
-                          <ArrowRight className="w-4 h-4" />
-                          Transfer
-                        </button>
-                      )}
+                      {/* Lifecycle actions — visible to lead_instructor+.
+                          Which buttons render depends on the student's
+                          current status / program:
+                            • Active student  → Transfer, Mark Graduated
+                            • Withdrawn       → Re-enroll
+                            • Graduated       → Advance to <next-program>
+                                                (if not already in PM)
+                          All three flows write to student_cohort_history.
+                      */}
+                      {userRole && canManageStudentRoster(userRole) && (() => {
+                        const programAbbr = student.cohort?.program?.abbreviation?.toUpperCase();
+                        // Map current program → next program in the EMS
+                        // ladder. Paramedic is terminal; null means
+                        // "no further advancement".
+                        const nextProgram =
+                          programAbbr === 'EMT' ? 'AEMT'
+                          : programAbbr === 'AEMT' ? 'PM'
+                          : null;
+                        const isWithdrawn = student.status === 'withdrawn';
+                        const isGraduated = student.status === 'graduated';
+                        const isActive = student.status === 'active';
+                        return (
+                          <>
+                            {/* Re-enroll — withdrawn only */}
+                            {isWithdrawn && (
+                              <button
+                                onClick={() => setShowTransferModal({
+                                  mode: 'reenroll',
+                                  defaultNewStatus: 'active',
+                                })}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg font-medium"
+                                title="Re-enroll this student in a cohort"
+                              >
+                                <ArrowRight className="w-4 h-4" />
+                                Re-enroll
+                              </button>
+                            )}
+
+                            {/* Advance to next program — only meaningful
+                                for graduated EMT/AEMT students. */}
+                            {isGraduated && nextProgram && (
+                              <button
+                                onClick={() => setShowTransferModal({
+                                  mode: 'upgrade',
+                                  programFilter: nextProgram,
+                                  defaultNewStatus: 'active',
+                                })}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg font-medium"
+                                title={`Advance to the ${nextProgram} program`}
+                              >
+                                <ArrowRight className="w-4 h-4" />
+                                Advance to {nextProgram}
+                              </button>
+                            )}
+
+                            {/* Transfer — always available */}
+                            <button
+                              onClick={() => setShowTransferModal({ mode: 'transfer' })}
+                              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg font-medium"
+                              title="Move student to a different cohort"
+                            >
+                              <ArrowRight className="w-4 h-4" />
+                              Transfer
+                            </button>
+
+                            {/* Mark as Graduated — active students only */}
+                            {isActive && (
+                              <button
+                                onClick={() => setShowGraduationModal(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg font-medium"
+                                title="Mark this student as having graduated their program"
+                              >
+                                <FileCheck className="w-4 h-4" />
+                                Mark Graduated
+                              </button>
+                            )}
+                          </>
+                        );
+                      })()}
                       {userRole && canManageStudentRoster(userRole) && (
                         <button onClick={handleDelete} className="p-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg">
                           <Trash2 className="w-5 h-5" />
@@ -2490,9 +2568,30 @@ export default function StudentDetailPage() {
           studentName={`${student.first_name} ${student.last_name}`}
           currentStatus={student.status}
           currentCohort={student.cohort}
-          onClose={() => setShowTransferModal(false)}
+          mode={showTransferModal.mode}
+          programFilter={showTransferModal.programFilter}
+          defaultNewStatus={showTransferModal.defaultNewStatus}
+          onClose={() => setShowTransferModal(null)}
           onTransferred={() => {
-            setShowTransferModal(false);
+            setShowTransferModal(null);
+            fetchStudent();
+            cohortHistoryRef.current?.refresh();
+          }}
+        />
+      )}
+
+      {showGraduationModal && student && (
+        <GraduationModal
+          studentId={studentId}
+          studentName={`${student.first_name} ${student.last_name}`}
+          cohortLabel={
+            student.cohort
+              ? `${student.cohort.program?.abbreviation ?? ''} Group ${student.cohort.cohort_number}`.trim()
+              : undefined
+          }
+          onClose={() => setShowGraduationModal(false)}
+          onGraduated={() => {
+            setShowGraduationModal(false);
             fetchStudent();
             cohortHistoryRef.current?.refresh();
           }}

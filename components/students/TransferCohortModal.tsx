@@ -10,6 +10,16 @@ import { ArrowRight, Loader2, Search, X, AlertTriangle } from 'lucide-react';
  * different cohort. Writes a row to student_cohort_history via the
  * /api/students/[id]/transfer endpoint; the student's downstream records
  * (evaluations, clinical hours, internships) stay linked by student_id.
+ *
+ * `mode` switches the title, copy, and presets without changing the
+ * underlying flow:
+ *   - 'transfer'  (default) → "Transfer to another cohort"
+ *   - 'reenroll'             → "Re-enroll", default new_status='active'
+ *   - 'upgrade'              → "Advance to <program>", filters cohorts
+ *                              by programFilter, default new_status='active'
+ *
+ * `programFilter` (e.g. 'AEMT', 'PM') restricts the cohort picker to a
+ * specific program — used by the program-upgrade flow.
  */
 
 interface CohortOption {
@@ -28,6 +38,8 @@ interface CurrentCohort {
   program: { abbreviation: string; name: string } | null;
 }
 
+export type TransferMode = 'transfer' | 'reenroll' | 'upgrade';
+
 export interface TransferCohortModalProps {
   studentId: string;
   studentName: string;
@@ -35,6 +47,12 @@ export interface TransferCohortModalProps {
   currentCohort: CurrentCohort | undefined | null;
   onClose: () => void;
   onTransferred: () => void;
+  /** Switches title / copy / status defaults. Default 'transfer'. */
+  mode?: TransferMode;
+  /** Restricts cohort picker to a specific program abbreviation. */
+  programFilter?: string;
+  /** Pre-selects this status in the dropdown when the modal opens. */
+  defaultNewStatus?: '' | 'active' | 'on_hold' | 'withdrawn' | 'graduated';
 }
 
 const STATUS_OPTIONS: Array<{
@@ -55,16 +73,51 @@ export default function TransferCohortModal({
   currentCohort,
   onClose,
   onTransferred,
+  mode = 'transfer',
+  programFilter,
+  defaultNewStatus = '',
 }: TransferCohortModalProps) {
   const [cohorts, setCohorts] = useState<CohortOption[]>([]);
   const [loadingCohorts, setLoadingCohorts] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [newStatus, setNewStatus] = useState<'' | 'active' | 'on_hold' | 'withdrawn' | 'graduated'>('');
+  const [newStatus, setNewStatus] = useState<'' | 'active' | 'on_hold' | 'withdrawn' | 'graduated'>(defaultNewStatus);
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
+
+  // Mode-driven copy. Concentrated here so the JSX below stays clean.
+  const modeMeta = useMemo(() => {
+    if (mode === 'reenroll') {
+      return {
+        title: `Re-enroll ${studentName}`,
+        cta: 'Review re-enrollment',
+        confirmCta: 'Re-enroll student',
+        successHeading: 'Confirm re-enrollment',
+        actionVerb: 'Re-enroll',
+        reasonPlaceholder: 'e.g., Returning after withdrawal, restarting program…',
+      };
+    }
+    if (mode === 'upgrade') {
+      return {
+        title: `Advance ${studentName}${programFilter ? ` to ${programFilter}` : ''}`,
+        cta: 'Review program advance',
+        confirmCta: 'Advance student',
+        successHeading: 'Confirm program advance',
+        actionVerb: 'Advance',
+        reasonPlaceholder: 'e.g., Completed EMT, advancing to AEMT…',
+      };
+    }
+    return {
+      title: `Transfer ${studentName} to another cohort`,
+      cta: 'Review transfer',
+      confirmCta: 'Transfer student',
+      successHeading: 'Confirm transfer',
+      actionVerb: 'Move',
+      reasonPlaceholder: 'e.g., Delayed re-entry, failed and restarting, transferred from another program…',
+    };
+  }, [mode, programFilter, studentName]);
 
   // Fetch cohorts on mount
   useEffect(() => {
@@ -90,12 +143,21 @@ export default function TransferCohortModal({
 
   const visibleCohorts = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const filtered = q
-      ? cohorts.filter((c) => {
-          const label = `${c.program?.abbreviation ?? ''} ${c.cohort_number}`.toLowerCase();
-          return label.includes(q) || `${c.cohort_number}`.toLowerCase().includes(q);
-        })
-      : cohorts;
+    let filtered = cohorts;
+    // Hard filter by program (program-upgrade flow). Done before
+    // search so the search box only narrows within the target program.
+    if (programFilter) {
+      const wanted = programFilter.toUpperCase();
+      filtered = filtered.filter(
+        (c) => (c.program?.abbreviation ?? '').toUpperCase() === wanted
+      );
+    }
+    if (q) {
+      filtered = filtered.filter((c) => {
+        const label = `${c.program?.abbreviation ?? ''} ${c.cohort_number}`.toLowerCase();
+        return label.includes(q) || `${c.cohort_number}`.toLowerCase().includes(q);
+      });
+    }
     // Active non-archived first, then everything else; within each group sort
     // by program abbreviation then cohort number desc.
     return [...filtered].sort((a, b) => {
@@ -107,7 +169,7 @@ export default function TransferCohortModal({
       if (ap !== bp) return ap.localeCompare(bp);
       return Number(b.cohort_number) - Number(a.cohort_number);
     });
-  }, [cohorts, search]);
+  }, [cohorts, search, programFilter]);
 
   const selected = cohorts.find((c) => c.id === selectedId) ?? null;
 
@@ -151,7 +213,7 @@ export default function TransferCohortModal({
         {/* Header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-            Transfer {studentName} to another cohort
+            {modeMeta.title}
           </h2>
           <button
             type="button"
@@ -271,7 +333,7 @@ export default function TransferCohortModal({
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="e.g. Delayed re-entry, failed and restarting, transferred from another program…"
+                placeholder={modeMeta.reasonPlaceholder}
                 rows={2}
                 className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
               />
@@ -299,7 +361,7 @@ export default function TransferCohortModal({
                 disabled={!selected}
                 className="px-3 py-2 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white disabled:bg-gray-300 dark:disabled:bg-gray-600 disabled:cursor-not-allowed inline-flex items-center gap-1"
               >
-                Review transfer <ArrowRight className="w-4 h-4" />
+                {modeMeta.cta} <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
@@ -307,9 +369,9 @@ export default function TransferCohortModal({
           /* ─── Confirm step ───────────────────────────────────────────── */
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-4 text-sm text-amber-900 dark:text-amber-100">
-              <div className="font-semibold">Confirm transfer</div>
+              <div className="font-semibold">{modeMeta.successHeading}</div>
               <div className="mt-2">
-                Move <strong>{studentName}</strong> from <strong>{currentLabel}</strong> to{' '}
+                {modeMeta.actionVerb} <strong>{studentName}</strong> from <strong>{currentLabel}</strong> to{' '}
                 <strong>{targetLabel}</strong>?
               </div>
               <ul className="mt-3 list-disc list-inside text-xs space-y-0.5">
@@ -348,10 +410,10 @@ export default function TransferCohortModal({
               >
                 {submitting ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Transferring…
+                    <Loader2 className="w-4 h-4 animate-spin" /> Saving…
                   </>
                 ) : (
-                  <>Transfer student</>
+                  <>{modeMeta.confirmCta}</>
                 )}
               </button>
             </div>
