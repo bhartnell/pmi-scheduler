@@ -576,7 +576,7 @@ export default function RotationSchedulerPage() {
 
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
-        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1 flex-wrap">
@@ -671,7 +671,7 @@ export default function RotationSchedulerPage() {
         </div>
       )}
 
-      <main className="max-w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
         {/* Controls bar */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 mb-5 print:hidden">

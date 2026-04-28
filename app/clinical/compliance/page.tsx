@@ -223,7 +223,7 @@ export default function ComplianceTrackerPage() {
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-full mx-auto px-4 py-6">
+        <div className="max-w-7xl mx-auto px-6 py-6">
           <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -243,7 +243,7 @@ export default function ComplianceTrackerPage() {
         </div>
       </div>
 
-      <main className="max-w-full mx-auto px-4 py-6 space-y-4">
+      <main className="max-w-7xl mx-auto px-6 py-6 space-y-4">
         {/* Filters */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <div className="flex flex-wrap gap-4 items-center">

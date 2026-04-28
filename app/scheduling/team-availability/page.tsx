@@ -368,7 +368,7 @@ export default function TeamAvailabilityPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 
           {/* ── Left Panel: Instructor Selector + Date Range ── */}
           <div className="lg:col-span-1 space-y-4">
