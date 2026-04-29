@@ -89,6 +89,8 @@ export async function POST(request: NextRequest) {
       block_type, title, course_name, content_notes, color,
       is_recurring, specific_date, sort_order, date, week_number, recurring_group_id,
       instructor_ids,
+      // Direct-FK columns (Scheduling Overhaul follow-up).
+      instructor_id, additional_instructor_id,
     } = body;
 
     if (!semester_id || !start_time || !end_time) {
@@ -125,6 +127,8 @@ export async function POST(request: NextRequest) {
         week_number: week_number ?? null,
         recurring_group_id: recurring_group_id || null,
         sort_order: sort_order ?? 0,
+        instructor_id: instructor_id || null,
+        additional_instructor_id: additional_instructor_id || null,
       })
       .select(BLOCK_SELECT)
       .single();

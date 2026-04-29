@@ -64,6 +64,15 @@ export async function PUT(
     if (body.week_number !== undefined) updates.week_number = body.week_number;
     if (body.sort_order !== undefined) updates.sort_order = body.sort_order;
     if (body.linked_lab_day_id !== undefined) updates.linked_lab_day_id = body.linked_lab_day_id || null;
+    // Direct-FK instructor columns (Scheduling Overhaul follow-up).
+    // Distinct from the legacy pmi_block_instructors many-to-many —
+    // these mirror the lab_stations.instructor_id pattern and feed
+    // the coordinator-calendar 5th data source. Empty string + null
+    // both clear the slot so the picker can deassign.
+    if (body.instructor_id !== undefined) updates.instructor_id = body.instructor_id || null;
+    if (body.additional_instructor_id !== undefined) {
+      updates.additional_instructor_id = body.additional_instructor_id || null;
+    }
 
     // Extract instructor_ids from body (handled separately from block field updates)
     const instructorIds: string[] | undefined = Array.isArray(body.instructor_ids) ? body.instructor_ids : undefined;

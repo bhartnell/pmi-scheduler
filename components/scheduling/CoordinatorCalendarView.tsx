@@ -20,7 +20,7 @@ type Block = {
   date: string;
   person_id: string;
   person_name: string;
-  type: 'lab_assignment' | 'shift' | 'manual_hours' | 'availability' | 'recurring';
+  type: 'lab_assignment' | 'shift' | 'manual_hours' | 'availability' | 'recurring' | 'class_teaching';
   start_time: string | null;
   end_time: string | null;
   hours: number | null;
@@ -66,6 +66,7 @@ const TYPE_LABELS: Record<Block['type'], string> = {
   manual_hours: 'Logged hours',
   availability: 'Available',
   recurring: 'Recurring',
+  class_teaching: 'Class',
 };
 
 // Compute the Sunday-anchored start of the week containing `d`.
@@ -198,10 +199,11 @@ export default function CoordinatorCalendarView() {
     const map = new Map<string, Block[]>();
     const typeOrder: Record<Block['type'], number> = {
       lab_assignment: 0,
-      shift: 1,
-      manual_hours: 2,
-      availability: 3,
-      recurring: 4,
+      class_teaching: 1,
+      shift: 2,
+      manual_hours: 3,
+      availability: 4,
+      recurring: 5,
     };
     for (const b of filteredBlocks) {
       const arr = map.get(b.date) ?? [];
@@ -439,8 +441,11 @@ export default function CoordinatorCalendarView() {
                     {dayBlocks.map(b => {
                       const c = colorMap.get(b.person_id);
                       if (!c) return null;
+                      // class_teaching uses the solid block style too
+                      // — it's confirmed work, same render weight as a
+                      // lab assignment or shift.
                       const style =
-                        b.type === 'lab_assignment' || b.type === 'shift' ? c.block
+                        b.type === 'lab_assignment' || b.type === 'shift' || b.type === 'class_teaching' ? c.block
                         : b.type === 'manual_hours' ? c.stripe
                         : c.outline;
                       const tooltipParts = [

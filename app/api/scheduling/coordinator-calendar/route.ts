@@ -46,8 +46,8 @@ type Block = {
   date: string;
   person_id: string;
   person_name: string;
-  /** lab_assignment | shift | manual_hours | availability | recurring */
-  type: 'lab_assignment' | 'shift' | 'manual_hours' | 'availability' | 'recurring';
+  /** lab_assignment | shift | manual_hours | availability | recurring | class_teaching */
+  type: 'lab_assignment' | 'shift' | 'manual_hours' | 'availability' | 'recurring' | 'class_teaching';
   start_time: string | null;
   end_time: string | null;
   hours: number | null;
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
     // requested window so the payload stays bounded by date range
     // rather than total roster size.
     // ---------------------------------------------------------------
-    const [labDaysRes, rolesRes, shiftsRes, availabilityRes, hoursRes] =
+    const [labDaysRes, rolesRes, shiftsRes, availabilityRes, hoursRes, blocksRes] =
       await Promise.all([
         supabase
           .from('lab_days')
@@ -177,6 +177,32 @@ export async function GET(request: NextRequest) {
           .gte('date', startDate)
           .lte('date', endDate)
           .order('date'),
+
+        // pmi_schedule_blocks — class-teaching hours (lecture, lab,
+        // exam blocks from the planner). Only blocks with at least
+        // one instructor assigned + status != 'cancelled' contribute
+        // to the coordinator view. Without this query, a class like
+        // Gannon's EMS 121 that's assigned in the planner doesn't
+        // show as "Gannon teaching" on the coordinator calendar.
+        supabase
+          .from('pmi_schedule_blocks')
+          .select(`
+            id, date, start_time, end_time, block_type, title, course_name, status,
+            instructor_id, additional_instructor_id,
+            instructor:instructor_id(id, name, email),
+            additional_instructor:additional_instructor_id(id, name, email),
+            program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
+              cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
+                cohort_number,
+                program:programs(abbreviation)
+              )
+            )
+          `)
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .neq('status', 'cancelled')
+          .or('instructor_id.not.is.null,additional_instructor_id.not.is.null')
+          .order('date'),
       ]);
 
     if (labDaysRes.error) throw labDaysRes.error;
@@ -184,6 +210,7 @@ export async function GET(request: NextRequest) {
     if (shiftsRes.error) throw shiftsRes.error;
     if (availabilityRes.error) throw availabilityRes.error;
     if (hoursRes.error) throw hoursRes.error;
+    if (blocksRes.error) throw blocksRes.error;
 
     // Station-level instructor pull. Three sources contribute to a
     // single station: lab_stations.instructor_id (primary),
@@ -538,6 +565,49 @@ export async function GET(request: NextRequest) {
         notes: (h as any).notes,
         label: (h as any).entry_type || null,
       });
+    }
+
+    // 5. pmi_schedule_blocks with instructor_id / additional_instructor_id.
+    //    Class-teaching, lab, and exam blocks from the planner that
+    //    have at least one instructor assigned. Distinguishes itself
+    //    from `lab_assignment` (lab_day_roles + lab_stations) so the
+    //    UI / future hours-sidebar can split classroom hours from
+    //    lab hours if useful. Hours = block duration. Cancelled
+    //    blocks are pre-filtered server-side (.neq('status','cancelled')).
+    //
+    //    Label format: prefer the block.title, fall back to course_name
+    //    (e.g. "EMS 121 Pharmacology"). Cohort context is appended so
+    //    the chip says "EMS 121 — PM G14" when there's room.
+    for (const b of blocksRes.data ?? []) {
+      const block = b as any;
+      const ps = Array.isArray(block.program_schedule) ? block.program_schedule[0] : block.program_schedule;
+      const cohort = ps?.cohort && (Array.isArray(ps.cohort) ? ps.cohort[0] : ps.cohort);
+      const cohortLabel = cohort
+        ? `${cohort.program?.abbreviation ?? ''} G${cohort.cohort_number ?? '?'}`.trim()
+        : null;
+      const baseLabel = block.title || block.course_name || 'Class block';
+      const fullLabel = cohortLabel ? `${baseLabel} — ${cohortLabel}` : baseLabel;
+
+      // Iterate the two FK slots. Both can resolve via the embed; no
+      // email-fallback is needed here since the picker writes the FK
+      // directly (unlike lab_stations.instructor_email legacy paths).
+      for (const slot of [block.instructor, block.additional_instructor]) {
+        const inst = Array.isArray(slot) ? slot[0] : slot;
+        if (!inst?.id) continue;
+        remember(inst);
+        blocks.push({
+          id: `psb-${block.id}-${inst.id}`,
+          date: block.date,
+          person_id: inst.id,
+          person_name: inst.name || inst.email,
+          type: 'class_teaching',
+          start_time: block.start_time,
+          end_time: block.end_time,
+          hours: durationHours(block.start_time, block.end_time),
+          role: block.block_type || 'class',
+          label: fullLabel,
+        });
+      }
     }
 
     // ---------------------------------------------------------------
