@@ -269,6 +269,11 @@ export default function CohortHubPage() {
       titles_updated: number;
       stations_added: number;
     };
+    resolved?: {
+      program: string;
+      semester: number;
+      templates_available: number;
+    };
     error?: string;
     applied?: boolean;
   } | null>(null);
@@ -645,7 +650,7 @@ export default function CohortHubPage() {
         setUpdPreview({ error: data.error || 'Failed to run' });
         toast.error(data.error || 'Failed to update from template');
       } else {
-        setUpdPreview({ summary: data.summary, applied: !dryRun });
+        setUpdPreview({ summary: data.summary, resolved: data.resolved, applied: !dryRun });
         if (!dryRun) {
           toast.success(
             `Updated ${data.summary.titles_updated} title(s) and added ${data.summary.stations_added} station(s)`
@@ -1689,6 +1694,13 @@ export default function CohortHubPage() {
                   <div className="font-semibold text-blue-900 dark:text-blue-200 mb-1">
                     {updPreview.applied ? 'Applied' : 'Preview'}
                   </div>
+                  {updPreview.resolved && (
+                    <div className="text-[11px] text-blue-700 dark:text-blue-400 mb-1.5 italic">
+                      Pulling from <span className="font-semibold">{updPreview.resolved.program}</span> Semester{' '}
+                      <span className="font-semibold">{updPreview.resolved.semester}</span> templates
+                      {' '}({updPreview.resolved.templates_available} available)
+                    </div>
+                  )}
                   <div className="text-blue-800 dark:text-blue-300 space-y-0.5">
                     <div>{updPreview.summary.lab_days_examined} lab day(s) examined</div>
                     <div>{updPreview.summary.lab_days_with_template_match} matched a template</div>

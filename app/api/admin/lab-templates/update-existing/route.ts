@@ -95,11 +95,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cohort not found' }, { status: 404 });
     }
     const programRel = Array.isArray(cohort.program) ? cohort.program[0] : cohort.program;
-    const program = (body.program ?? programRel?.abbreviation ?? '').toLowerCase();
+    // Map cohort program abbreviation → template program key. The
+    // lab_day_templates table uses 'paramedic' / 'emt' / 'aemt'
+    // (lowercase) but cohorts store 'PM' / 'PMD' / 'EMT' / 'AEMT'
+    // — without this mapping the WHERE program=... clause resolves
+    // to 'pm' and matches zero templates. Same mapping the cohort-
+    // hub UI does for /apply via getTemplateProgram(), now done
+    // server-side so callers can pass cohort_id alone.
+    const mapAbbrToTemplateKey = (abbr: string | null | undefined): string => {
+      const u = (abbr ?? '').toUpperCase();
+      if (u === 'PM' || u === 'PMD') return 'paramedic';
+      if (u === 'EMT') return 'emt';
+      if (u === 'AEMT') return 'aemt';
+      return (abbr ?? '').toLowerCase();
+    };
+    const program = body.program
+      ? body.program.trim().toLowerCase()
+      : mapAbbrToTemplateKey(programRel?.abbreviation);
+    // Semester resolution: caller override → cohort.current_semester
+    // → legacy cohort.semester. PM G15 / PM G14 both have
+    // current_semester=1; cohort.semester is null on those rows.
     const semester = body.semester ?? (cohort as any).current_semester ?? cohort.semester;
     if (!program || !semester) {
       return NextResponse.json(
-        { error: 'Could not resolve program + semester for cohort. Pass them explicitly.' },
+        {
+          error: 'Could not resolve program + semester for cohort. Pass them explicitly.',
+          resolved_program: program || null,
+          resolved_semester: semester ?? null,
+        },
         { status: 400 }
       );
     }
@@ -291,6 +314,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       dry_run: dryRun,
+      // Echo what the resolver actually used so the UI can render
+      // "Pulling from paramedic Semester 1 templates (14 available)"
+      // before the user clicks Apply — catches mismatches up-front
+      // (e.g. cohort.current_semester out of date).
+      resolved: {
+        program,
+        semester,
+        templates_available: (templates ?? []).length,
+      },
       summary: {
         lab_days_examined: labDays.length,
         lab_days_with_template_match: labDaysWithMatch,
