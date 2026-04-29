@@ -24,29 +24,42 @@ interface UnifiedEvent {
   metadata?: Record<string, unknown>;
 }
 
-// Default times applied when a block doesn't carry start/end values.
-// Picks a reasonable mid-morning window so missing-time events still
-// land somewhere on the recipient's calendar instead of being dropped
-// or stamped with random hours. Matches the fallback the UI uses for
-// the same data.
-const DEFAULT_START = '08:00:00';
-const DEFAULT_END = '09:00:00';
-
-// ICS date format: YYYYMMDDTHHMMSS. Both inputs guarded against
-// nulls — the export bug ("Cannot read properties of null reading
-// 'split'") originated here. Returns an empty string when dateStr
-// itself is missing; callers (buildVEVENT) check for that before
-// pushing the DTSTART/DTEND lines.
+// ICS date format: YYYYMMDDTHHMMSS for timed events. Both inputs
+// guarded against nulls. Returns empty string when dateStr is
+// missing; caller (buildVEVENT) treats that as a skip.
+//
+// Per the calendar architecture fix: NEVER silently substitute a
+// default time. When time is null/missing, callers route to the
+// all-day formatter (toICSAllDayDate) instead. Putting a wrong
+// 8am clock-time on someone's calendar caused real "instructor
+// showed up at the wrong time" incidents.
 function toICSDate(dateStr: string | null | undefined, time: string | null | undefined): string {
-  if (!dateStr) return '';
-  const safeTime = time && typeof time === 'string' ? time : DEFAULT_START;
+  if (!dateStr || !time || typeof time !== 'string') return '';
   const dateParts = dateStr.split('-');
   if (dateParts.length !== 3) return '';
   const [year, month, day] = dateParts;
-  const timeParts = safeTime.split(':');
+  const timeParts = time.split(':');
   const h = timeParts[0] || '00';
   const m = timeParts[1] || '00';
   return `${year}${month}${day}T${h}${m}00`;
+}
+
+// All-day VEVENT date format: YYYYMMDD only (no time). Used for
+// blocks that have no start_time / end_time on the source — better
+// to render an all-day chip than fabricate a wrong clock-time.
+function toICSAllDayDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return '';
+  const dateParts = dateStr.split('-');
+  if (dateParts.length !== 3) return '';
+  return dateParts.join('');
+}
+
+// All-day events use exclusive end-date semantics in iCalendar:
+// DTEND is the day AFTER the event. Add one calendar day.
+function nextDayYmd(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
 }
 
 // Defensive against null/undefined input. RFC 5545 requires escaping
@@ -69,23 +82,46 @@ function generateUID(eventId: string): string {
 
 // Returns the VEVENT block, or null when the event is missing the
 // minimum data required for an ICS entry (a date). Dateless events
-// can't be rendered on a calendar, so we skip them rather than emit
-// invalid ICS. Times default to 08:00–09:00 per the bug-fix spec so
-// blocks created without explicit times still surface as a 1-hour
-// placeholder in the user's calendar.
+// can't be rendered on a calendar so they're skipped. Events
+// without start_time/end_time render as ALL-DAY (DTSTART;VALUE=DATE)
+// rather than getting a fabricated 8am-9am window — putting a
+// wrong clock-time on a calendar invite caused real-world "showed
+// up at the wrong time" incidents, so the export now refuses to
+// guess and emits an all-day chip instead.
 function buildVEVENT(event: UnifiedEvent): string[] | null {
   if (!event.date) return null;
 
-  const startTime = event.start_time ?? DEFAULT_START;
-  const endTime = event.end_time ?? DEFAULT_END;
   const title = event.title ?? 'PMI Event';
+  const hasStart = !!event.start_time;
+  const hasEnd = !!event.end_time;
+  const allDay = !hasStart && !hasEnd;
 
   const lines: string[] = [];
   lines.push('BEGIN:VEVENT');
   lines.push(`UID:${generateUID(event.id)}`);
   lines.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
-  lines.push(`DTSTART;TZID=America/Phoenix:${toICSDate(event.date, startTime)}`);
-  lines.push(`DTEND;TZID=America/Phoenix:${toICSDate(event.date, endTime)}`);
+
+  if (allDay) {
+    // All-day event: DTSTART/DTEND are dates (no time), DTEND
+    // exclusive (day after).
+    const startYmd = toICSAllDayDate(event.date);
+    const endYmd = toICSAllDayDate(nextDayYmd(event.date));
+    lines.push(`DTSTART;VALUE=DATE:${startYmd}`);
+    lines.push(`DTEND;VALUE=DATE:${endYmd}`);
+  } else {
+    // Timed event. If only one of start/end is missing, mirror the
+    // other so the event has a defined slot rather than spilling
+    // into the rest of the day. The mirror still respects the
+    // source — never invents a fresh time. End === start = a
+    // zero-duration "instant" which most calendar clients render
+    // as a single point in the day; that's the correct signal that
+    // the data was incomplete.
+    const start = event.start_time ?? event.end_time ?? '00:00:00';
+    const end = event.end_time ?? event.start_time ?? '00:00:00';
+    lines.push(`DTSTART;TZID=America/Phoenix:${toICSDate(event.date, start)}`);
+    lines.push(`DTEND;TZID=America/Phoenix:${toICSDate(event.date, end)}`);
+  }
+
   lines.push(`SUMMARY:${escapeICS(title)}`);
 
   if (event.room) {
