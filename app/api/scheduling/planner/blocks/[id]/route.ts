@@ -6,6 +6,7 @@ import {
   assignSemesterId,
   cohortIdForProgramSchedule,
 } from '@/lib/planner-semester';
+import { applyInstructorDiff, type InstructorDiff } from '@/lib/calendar-auto-sync';
 
 const BLOCK_SELECT = `
   *,
@@ -25,6 +26,61 @@ const BLOCK_SELECT = `
     id, title, date
   )
 `;
+
+/**
+ * Fire-and-forget calendar diff after a planner block update.
+ * Resolves OLD vs NEW instructor emails from the lab_users.id values
+ * we have, then hands the diff to applyInstructorDiff() which calls
+ * removeSeriesForUser / syncSeriesForUser per affected user.
+ *
+ * Wrapped in try/catch and never throws — calendar sync is
+ * best-effort. Logs outcomes for debugging.
+ */
+async function fireInstructorAutoSync(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  pre: { recurring_group_id: string | null; instructor_id: string | null; additional_instructor_id: string | null },
+  post: { id: string; recurring_group_id: string | null; instructor_id: string | null; additional_instructor_id: string | null }
+): Promise<void> {
+  try {
+    const oldIds = [pre.instructor_id, pre.additional_instructor_id].filter(Boolean) as string[];
+    const newIds = [post.instructor_id, post.additional_instructor_id].filter(Boolean) as string[];
+    const allIds = Array.from(new Set([...oldIds, ...newIds]));
+    if (allIds.length === 0) return;
+
+    // Resolve email map for the union of old/new IDs in one round-trip.
+    const { data: users } = await supabase
+      .from('lab_users')
+      .select('id, email')
+      .in('id', allIds);
+    const idToEmail = new Map<string, string>();
+    for (const u of users ?? []) idToEmail.set(u.id, (u.email as string).toLowerCase());
+
+    const oldEmails = new Set(oldIds.map(i => idToEmail.get(i)).filter(Boolean) as string[]);
+    const newEmails = new Set(newIds.map(i => idToEmail.get(i)).filter(Boolean) as string[]);
+
+    const diff: InstructorDiff = {
+      // Use the recurring group from EITHER pre- or post-state (they
+      // shouldn't differ — the planner UI doesn't allow moving a
+      // block between groups). post wins when set.
+      recurringGroupId: post.recurring_group_id ?? pre.recurring_group_id ?? null,
+      blockIdForOneOff:
+        post.recurring_group_id || pre.recurring_group_id ? null : post.id,
+      oldEmails,
+      newEmails,
+    };
+
+    const results = await applyInstructorDiff(diff);
+    for (const r of results) {
+      if (r.result.status === 'failed') {
+        console.warn(`[planner-block PUT] auto-sync ${r.action} failed for ${r.email}:`, 'error' in r.result ? r.result.error : '');
+      } else {
+        console.log(`[planner-block PUT] auto-sync ${r.action} ${r.result.status} for ${r.email}`);
+      }
+    }
+  } catch (err) {
+    console.error('[planner-block PUT] fireInstructorAutoSync error:', err);
+  }
+}
 
 export async function PUT(
   request: NextRequest,
@@ -82,6 +138,28 @@ export async function PUT(
     const instructorIds: string[] | undefined = Array.isArray(body.instructor_ids) ? body.instructor_ids : undefined;
 
     const supabase = getSupabaseAdmin();
+
+    // Calendar auto-sync prep: pre-capture the OLD instructor IDs and
+    // recurring_group_id BEFORE we run the UPDATE, so the post-update
+    // diff knows who used to be assigned. Only relevant when the
+    // request actually touches an instructor slot — skip the round-
+    // trip otherwise.
+    const instructorTouched =
+      body.instructor_id !== undefined ||
+      body.additional_instructor_id !== undefined;
+    let preInstructorState: {
+      recurring_group_id: string | null;
+      instructor_id: string | null;
+      additional_instructor_id: string | null;
+    } | null = null;
+    if (instructorTouched) {
+      const { data: pre } = await supabase
+        .from('pmi_schedule_blocks')
+        .select('recurring_group_id, instructor_id, additional_instructor_id')
+        .eq('id', id)
+        .single();
+      preInstructorState = pre ?? null;
+    }
 
     // Year-anchor: re-derive semester_id whenever date or
     // program_schedule_id changes (or when the caller explicitly
@@ -218,6 +296,14 @@ export async function PUT(
 
         if (refetchError) throw refetchError;
 
+        // Calendar auto-sync for the recurring-group change. The
+        // diff applies once at the SERIES level (not per-block) —
+        // recurring_group_id is shared across the batch, so a
+        // single push/remove is the right thing to do.
+        if (instructorTouched && preInstructorState) {
+          void fireInstructorAutoSync(supabase, preInstructorState, updatedBlock);
+        }
+
         return NextResponse.json({ block: updatedBlock, batch_updated: true, updated_count: updatedCount });
       }
     }
@@ -243,7 +329,19 @@ export async function PUT(
         .eq('id', id)
         .single();
 
+      // Calendar auto-sync (instructor change diff). See helper
+      // below — kicked off as fire-and-forget so the PUT response
+      // returns immediately; Google API failures are logged but
+      // never block the planner write.
+      if (instructorTouched && preInstructorState) {
+        void fireInstructorAutoSync(supabase, preInstructorState, refreshed || data);
+      }
+
       return NextResponse.json({ block: refreshed || data });
+    }
+
+    if (instructorTouched && preInstructorState) {
+      void fireInstructorAutoSync(supabase, preInstructorState, data);
     }
 
     return NextResponse.json({ block: data });
