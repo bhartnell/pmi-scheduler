@@ -202,16 +202,95 @@ export async function GET(request: NextRequest) {
           .from('lab_stations')
           .select(`
             id, lab_day_id, station_number, custom_title, skill_name, station_type,
+            instructor_id, additional_instructor_id, instructor_email, instructor_name,
             instructor:instructor_id(id, name, email),
             additional_instructor:additional_instructor_id(id, name, email),
             station_instructors(
-              id, user_id, is_primary,
+              id, user_id, user_email, user_name, is_primary,
               user:user_id(id, name, email)
             )
           `)
           .in('lab_day_id', labDayIdsForStations)
       : { data: [], error: null };
     if (stationsRes.error) throw stationsRes.error;
+
+    // Email-fallback lookup. Production data has the FK columns mostly
+    // empty — stations + station_instructors store an `instructor_email`
+    // (or `user_email`) without setting the corresponding *_id FK.
+    // Without this fallback the Schafer-on-NREMT-day case never
+    // surfaces because the FK joins above all return null. Walk the
+    // station rows once to collect the orphan emails, then batch-look
+    // them up by lower(email) so we have a single round-trip's worth
+    // of overhead regardless of station count.
+    const orphanEmails = new Set<string>();
+    for (const st of stationsRes.data ?? []) {
+      const s = st as any;
+      if (!s.instructor_id && s.instructor_email) {
+        orphanEmails.add(String(s.instructor_email).toLowerCase());
+      }
+      // Note: lab_stations has no `additional_instructor_email` column
+      // in the schema — that slot is FK-only, so no fallback is needed.
+      for (const si of (s.station_instructors ?? []) as any[]) {
+        if (!si.user_id && si.user_email) {
+          orphanEmails.add(String(si.user_email).toLowerCase());
+        }
+      }
+    }
+    type ResolvedPerson = { id: string; name: string; email: string };
+    const emailToUser = new Map<string, ResolvedPerson>();
+    if (orphanEmails.size > 0) {
+      // Email casing is mixed across the codebase (some lowercase, some
+      // mixed-case). The .in() filter is case-sensitive, so we look up
+      // ilike-eq for each unique lowercase email by hitting the
+      // `email.ilike.<email>` filter via or() — but PostgREST's `in()`
+      // wins on round-trips. lab_users emails are stored lowercase per
+      // current import scripts, so .in() with the lowercased orphan list
+      // is the right tradeoff. Anything that misses falls through to a
+      // synthetic person below so volunteers without a lab_users row
+      // still appear in 'All instructors' scope.
+      const list = Array.from(orphanEmails);
+      const { data: matched } = await supabase
+        .from('lab_users')
+        .select('id, name, email')
+        .in('email', list);
+      for (const m of matched ?? []) {
+        emailToUser.set(String(m.email).toLowerCase(), {
+          id: m.id,
+          name: m.name || m.email,
+          email: m.email,
+        });
+      }
+    }
+    // Resolve a station's slot to a ResolvedPerson, preferring the FK
+    // embed but falling back to email lookup, then to a synthetic
+    // record (id = `email:${e}`, is_part_time defaults to false so the
+    // person only shows in 'All instructors' scope) so we never silently
+    // drop a station assignment.
+    const resolveSlot = (
+      embed: any,
+      fallbackEmail: string | null | undefined,
+      fallbackName: string | null | undefined
+    ): ResolvedPerson | null => {
+      const direct = Array.isArray(embed) ? embed[0] : embed;
+      if (direct?.id) {
+        return {
+          id: direct.id,
+          name: direct.name || direct.email,
+          email: direct.email,
+        };
+      }
+      if (!fallbackEmail) return null;
+      const key = String(fallbackEmail).toLowerCase();
+      const matched = emailToUser.get(key);
+      if (matched) return matched;
+      // Synthetic person — id is the email itself prefixed so the
+      // legend / chip helpers don't collide with real lab_users UUIDs.
+      return {
+        id: `email:${key}`,
+        name: fallbackName || fallbackEmail,
+        email: fallbackEmail,
+      };
+    };
 
     // ---------------------------------------------------------------
     // Build the unified `blocks` array. Each source maps to a Block
@@ -328,25 +407,34 @@ export async function GET(request: NextRequest) {
       if (!labDayId || !labDayIdsInRange.has(labDayId)) continue;
       const stationTitle =
         (st as any).custom_title || (st as any).skill_name || null;
+      const s = st as any;
 
-      // Primary instructor slot.
-      const primary = Array.isArray((st as any).instructor) ? (st as any).instructor[0] : (st as any).instructor;
+      // Primary instructor slot — FK first, then instructor_email
+      // fallback. The fallback is the common case for NREMT-day
+      // station rosters (Schafer / Trevor / volunteer examiners).
+      const primary = resolveSlot(
+        s.instructor,
+        s.instructor_email,
+        s.instructor_name
+      );
       collectStationPerson(primary, labDayId, stationTitle);
 
-      // Secondary "additional_instructor" slot.
-      const secondary = Array.isArray((st as any).additional_instructor)
-        ? (st as any).additional_instructor[0]
-        : (st as any).additional_instructor;
+      // Secondary "additional_instructor" slot — FK only; the schema
+      // has no `additional_instructor_email` column, so resolution is
+      // direct.
+      const secondary = resolveSlot(s.additional_instructor, null, null);
       collectStationPerson(secondary, labDayId, stationTitle);
 
-      // station_instructors many-to-many — covers volunteers added via
-      // the modal that supports multiple examiners per station.
-      const sInstructors = Array.isArray((st as any).station_instructors)
-        ? (st as any).station_instructors
+      // station_instructors many-to-many — covers volunteers added
+      // via the modal. The FK column user_id is frequently null in
+      // production; user_email is the populated path. resolveSlot
+      // covers both.
+      const sInstructors = Array.isArray(s.station_instructors)
+        ? s.station_instructors
         : [];
       for (const si of sInstructors) {
-        const u = Array.isArray(si.user) ? si.user[0] : si.user;
-        collectStationPerson(u, labDayId, stationTitle);
+        const person = resolveSlot(si.user, si.user_email, si.user_name);
+        collectStationPerson(person, labDayId, stationTitle);
       }
     }
 
@@ -455,14 +543,29 @@ export async function GET(request: NextRequest) {
     // ---------------------------------------------------------------
     // Backfill role + part-time on people we've seen (single roundtrip
     // — peopleMap is bounded by who actually has activity in window).
+    //
+    // Two id flavours can appear in peopleMap:
+    //   • UUID — real lab_users row, queryable via .in('id', ...)
+    //   • "email:foo@bar"  — synthetic, created when a station's
+    //     email-only assignment didn't match any lab_users row. These
+    //     are passed through with is_part_time=false so they only
+    //     surface in 'All instructors' scope.
+    // We split the keyspace before the .in() call because lab_users.id
+    // is a uuid column — passing a synthetic 'email:...' string blows
+    // up the query with a parse error.
     // ---------------------------------------------------------------
-    const peopleIds = Array.from(peopleMap.keys());
+    const allPeopleIds = Array.from(peopleMap.keys());
+    const uuidLike = (s: string) =>
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s);
+    const realIds = allPeopleIds.filter(uuidLike);
+    const syntheticIds = allPeopleIds.filter(id => !uuidLike(id));
+
     let people: Array<Person & { role?: string; is_part_time?: boolean }> = [];
-    if (peopleIds.length > 0) {
+    if (realIds.length > 0) {
       const { data: peopleRows } = await supabase
         .from('lab_users')
         .select('id, name, email, role, is_part_time')
-        .in('id', peopleIds);
+        .in('id', realIds);
       people = (peopleRows ?? []).map(p => ({
         id: p.id,
         name: p.name || p.email,
@@ -470,6 +573,20 @@ export async function GET(request: NextRequest) {
         role: p.role,
         is_part_time: p.is_part_time ?? false,
       }));
+    }
+    // Synthetic people round-trip from peopleMap directly; they don't
+    // have a role and default is_part_time=false so the legend / scope
+    // toggle treat them as full-time / unknown.
+    for (const sid of syntheticIds) {
+      const p = peopleMap.get(sid);
+      if (!p) continue;
+      people.push({
+        id: p.id,
+        name: p.name,
+        email: p.email,
+        role: undefined,
+        is_part_time: false,
+      });
     }
 
     // Lab days for the badge layer — return regardless of staffing.
