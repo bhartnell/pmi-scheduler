@@ -90,11 +90,12 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     const { data: callerRow } = await supabase
       .from('lab_users')
-      .select('id, role')
+      .select('id, role, lvfr_platoon')
       .ilike('email', session.user.email || '')
       .single();
     const callerRole = callerRow?.role ?? null;
     const callerUserId = callerRow?.id ?? null;
+    const callerLvfrPlatoon = (callerRow as { lvfr_platoon?: string } | null)?.lvfr_platoon ?? null;
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('start_date');
@@ -230,6 +231,26 @@ export async function GET(request: NextRequest) {
     if (availabilityRes.error) throw availabilityRes.error;
     if (hoursRes.error) throw hoursRes.error;
     if (blocksRes.error) throw blocksRes.error;
+
+    // LVFR platoon schedule for the requested date range. One row
+    // per date with the resolved platoon (A/B/C/off). Drives:
+    //   - Personal-mode overlays (Jimi sees gray "on duty @ LVFR"
+    //     on dates matching his lvfr_platoon)
+    //   - Coordinator A/B/C badges per day
+    // Best-effort — failure here doesn't break the calendar grid.
+    const lvfrRes = await supabase
+      .from('lvfr_platoon_schedule')
+      .select('date, platoon, is_bid_day, notes')
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date');
+    const lvfr_platoons: Array<{ date: string; platoon: string; is_bid_day?: boolean; notes?: string | null }> =
+      (lvfrRes.data ?? []).map((r: any) => ({
+        date: r.date,
+        platoon: r.platoon,
+        is_bid_day: !!r.is_bid_day,
+        notes: r.notes ?? null,
+      }));
 
     // Station-level instructor pull. Three sources contribute to a
     // single station: lab_stations.instructor_id (primary),
@@ -710,10 +731,16 @@ export async function GET(request: NextRequest) {
       people: personalPeople,
       lab_days,
       blocks: personalBlocks,
+      lvfr_platoons,
       mode: personal ? 'personal' : 'coordinator',
       // user echoed back is handy for the client if it ever wants to
       // call out "your assignments" within the coordinator view.
-      caller: { email: user.email, role: callerRole, id: callerUserId },
+      caller: {
+        email: user.email,
+        role: callerRole,
+        id: callerUserId,
+        lvfr_platoon: callerLvfrPlatoon,
+      },
     });
   } catch (e) {
     console.error('[coordinator-calendar GET] error', e);

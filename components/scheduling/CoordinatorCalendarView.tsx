@@ -51,6 +51,13 @@ type Person = {
   is_part_time?: boolean;
 };
 
+type LvfrPlatoonRow = {
+  date: string;
+  platoon: 'A' | 'B' | 'C' | 'off';
+  is_bid_day?: boolean;
+  notes?: string | null;
+};
+
 type ApiResponse = {
   success: true;
   start_date: string;
@@ -58,6 +65,8 @@ type ApiResponse = {
   people: Person[];
   lab_days: LabDayLite[];
   blocks: Block[];
+  lvfr_platoons?: LvfrPlatoonRow[];
+  caller?: { id?: string; lvfr_platoon?: 'A' | 'B' | 'C' | null };
 };
 
 const TYPE_LABELS: Record<Block['type'], string> = {
@@ -357,6 +366,20 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
     return map;
   }, [data?.lab_days]);
 
+  // LVFR platoon lookup. Coordinator view renders an A/B/C badge on
+  // every day; personal view also tints the day cell when the
+  // platoon matches the caller's affiliation (Jimi=A → his A-shift
+  // days get a "On duty @ LVFR" gray overlay so PMI shifts show
+  // alongside fire commitments at a glance).
+  const lvfrByDate = useMemo(() => {
+    const map = new Map<string, LvfrPlatoonRow>();
+    for (const row of data?.lvfr_platoons ?? []) {
+      map.set(row.date, row);
+    }
+    return map;
+  }, [data?.lvfr_platoons]);
+  const callerPlatoon = data?.caller?.lvfr_platoon ?? null;
+
   const todayIso = ymd(new Date());
 
   const weekLabel = `${days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
@@ -646,19 +669,57 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                     {/* Priority badge — uses lab_day priority_flag,
                         not person color. Critical wins over high if
                         there are multiple labs on the day. */}
-                    {topPriority !== 'normal' && (
-                      <div className={`mt-1 inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded ${
-                        topPriority === 'critical'
-                          ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                      }`}>
-                        {topPriority === 'critical' ? <AlertOctagon className="w-2.5 h-2.5" /> : <AlertTriangle className="w-2.5 h-2.5" />}
-                        {topPriority}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1 mt-1 flex-wrap">
+                      {topPriority !== 'normal' && (
+                        <div className={`inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide rounded ${
+                          topPriority === 'critical'
+                            ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                        }`}>
+                          {topPriority === 'critical' ? <AlertOctagon className="w-2.5 h-2.5" /> : <AlertTriangle className="w-2.5 h-2.5" />}
+                          {topPriority}
+                        </div>
+                      )}
+                      {(() => {
+                        // LVFR platoon badge — small A/B/C chip showing
+                        // which platoon is on duty that day. Visible in
+                        // both coordinator and personal modes; matches
+                        // the shift colors so a quick glance shows
+                        // which platoons cover what days of the week.
+                        const lvfr = lvfrByDate.get(iso);
+                        if (!lvfr || lvfr.platoon === 'off') return null;
+                        const tone =
+                          lvfr.platoon === 'A' ? 'bg-slate-700 text-white dark:bg-slate-600'
+                          : lvfr.platoon === 'B' ? 'bg-rose-600 text-white'
+                          : 'bg-emerald-600 text-white';
+                        return (
+                          <span
+                            className={`inline-flex items-center px-1 py-0.5 text-[10px] font-bold rounded ${tone}`}
+                            title={`LVFR ${lvfr.platoon}-shift on duty${lvfr.is_bid_day ? ' · BID day' : ''}${lvfr.notes ? ` · ${lvfr.notes}` : ''}`}
+                          >
+                            {lvfr.platoon}
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
 
                   <div className="p-1.5 space-y-1 min-h-[140px]">
+                    {/* Personal-mode LVFR overlay — gray "on duty"
+                        block on dates matching the caller's platoon
+                        affiliation. Informational only — does NOT
+                        mark the user unavailable for PMI; coordinator
+                        and Jimi himself still see PMI shifts on the
+                        same day for cross-checking. */}
+                    {personal && callerPlatoon && lvfrByDate.get(iso)?.platoon === callerPlatoon && (
+                      <div
+                        className="px-1.5 py-1 text-[11px] rounded bg-gray-300 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-medium border border-gray-400 dark:border-gray-600"
+                        title={`On duty @ LVFR (${callerPlatoon}-shift)`}
+                      >
+                        On duty @ LVFR
+                      </div>
+                    )}
+
                     {/* Lab day chip(s) — show even when no instructor
                         assigned so coordinator can spot uncovered labs. */}
                     {dayLabs.map(ld => (
@@ -783,11 +844,15 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
               const dotPeople = personOrder.slice(0, 3);
               const moreCount = Math.max(0, personOrder.length - 3);
 
+              const lvfr = lvfrByDate.get(iso);
+              const onLvfrDuty = personal && callerPlatoon && lvfr?.platoon === callerPlatoon;
               const cellAccent =
                 topPriority === 'critical'
                   ? 'bg-red-50 dark:bg-red-900/20'
                   : topPriority === 'high'
                   ? 'bg-amber-50 dark:bg-amber-900/20'
+                  : onLvfrDuty
+                  ? 'bg-gray-100 dark:bg-gray-800/60'
                   : isToday
                   ? 'bg-blue-50 dark:bg-blue-900/20'
                   : '';
@@ -800,8 +865,9 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                   className={`min-h-[80px] px-1.5 py-1 border-b border-r last:border-r-0 border-gray-200 dark:border-gray-700 text-left flex flex-col gap-1 hover:bg-gray-50 dark:hover:bg-gray-800/60 transition-colors ${cellAccent} ${
                     expandedDay === iso ? 'ring-2 ring-blue-500 ring-inset' : ''
                   } ${(idx + 1) % 7 === 0 ? 'border-r-0' : ''}`}
+                  title={onLvfrDuty ? `On duty @ LVFR (${callerPlatoon}-shift)` : undefined}
                 >
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-1">
                     <span
                       className={`text-xs font-semibold ${
                         !inMonth
@@ -813,18 +879,32 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                     >
                       {d.getDate()}
                     </span>
-                    {topPriority !== 'normal' && (
-                      <span
-                        className={`inline-flex items-center text-[9px] uppercase tracking-wide font-bold rounded px-1 ${
-                          topPriority === 'critical'
-                            ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
-                            : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                        }`}
-                        title={dayLabs.find(l => l.priority_flag === topPriority)?.priority_reason ?? topPriority}
-                      >
-                        {topPriority === 'critical' ? <AlertOctagon className="w-2.5 h-2.5" /> : <AlertTriangle className="w-2.5 h-2.5" />}
-                      </span>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {lvfr && lvfr.platoon !== 'off' && (
+                        <span
+                          className={`inline-flex items-center text-[9px] font-bold rounded px-1 ${
+                            lvfr.platoon === 'A' ? 'bg-slate-700 text-white dark:bg-slate-600'
+                            : lvfr.platoon === 'B' ? 'bg-rose-600 text-white'
+                            : 'bg-emerald-600 text-white'
+                          }`}
+                          title={`LVFR ${lvfr.platoon}-shift on duty${lvfr.is_bid_day ? ' · BID' : ''}${lvfr.notes ? ` · ${lvfr.notes}` : ''}`}
+                        >
+                          {lvfr.platoon}
+                        </span>
+                      )}
+                      {topPriority !== 'normal' && (
+                        <span
+                          className={`inline-flex items-center text-[9px] uppercase tracking-wide font-bold rounded px-1 ${
+                            topPriority === 'critical'
+                              ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                              : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                          }`}
+                          title={dayLabs.find(l => l.priority_flag === topPriority)?.priority_reason ?? topPriority}
+                        >
+                          {topPriority === 'critical' ? <AlertOctagon className="w-2.5 h-2.5" /> : <AlertTriangle className="w-2.5 h-2.5" />}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-0.5 mt-auto">
                     {dotPeople.map(pid => {
