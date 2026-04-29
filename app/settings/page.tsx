@@ -1427,6 +1427,10 @@ function GoogleCalendarPanel() {
   const [calendarList, setCalendarList] = useState<any[]>([]);
   const [selectedCalendarIds, setSelectedCalendarIds] = useState<string[]>([]);
   const [loadingCalendars, setLoadingCalendars] = useState(false);
+  // Per-instructor block sync — counts and last-synced timestamp
+  // sourced from /api/calendar/sync-my-blocks (GET = stats).
+  const [syncStats, setSyncStats] = useState<{ count: number; last_synced_at: string | null } | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     fetchCalendarStatus();
@@ -1441,8 +1445,48 @@ function GoogleCalendarPanel() {
   useEffect(() => {
     if (connected && !needsReauth) {
       fetchCalendars();
+      fetchSyncStats();
     }
   }, [connected, needsReauth]);
+
+  const fetchSyncStats = async () => {
+    try {
+      const res = await fetch('/api/calendar/sync-my-blocks');
+      if (res.ok) {
+        const data = await res.json();
+        setSyncStats({ count: data.count ?? 0, last_synced_at: data.last_synced_at ?? null });
+      }
+    } catch {
+      /* best-effort */
+    }
+  };
+
+  const handleSyncNow = async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch('/api/calendar/sync-my-blocks', { method: 'POST' });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || 'Sync failed');
+        return;
+      }
+      const { created = 0, updated = 0, failed = 0 } = data;
+      const parts = [];
+      if (created > 0) parts.push(`${created} created`);
+      if (updated > 0) parts.push(`${updated} updated`);
+      if (failed > 0) parts.push(`${failed} failed`);
+      toast.success(
+        parts.length > 0
+          ? `Synced ${parts.join(', ')}`
+          : 'Nothing to sync — no published assignments yet'
+      );
+      await fetchSyncStats();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Sync failed');
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const fetchCalendarStatus = async () => {
     try {
@@ -1606,6 +1650,48 @@ function GoogleCalendarPanel() {
             <Calendar className="w-3.5 h-3.5" />
             Reconnect Calendar
           </a>
+        </div>
+      )}
+
+      {/* Class schedule sync — pushes published pmi_schedule_blocks
+          where the caller is assigned (instructor or additional)
+          to their Google Calendar as ONE recurring series per
+          recurring_group_id. Stats come from /api/calendar/sync-my-
+          blocks (GET); the button POSTs to the same path. */}
+      {connected && !needsReauth && (
+        <div className="ml-13 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">
+                Class schedule sync
+              </p>
+              <p className="text-xs text-blue-800 dark:text-blue-300 mt-0.5">
+                Pushes your assigned classes to Google Calendar as recurring series.
+                One event for each course (e.g. EMS 121 every Thursday for 15 weeks)
+                instead of 15 individual events.
+              </p>
+              <p className="text-[11px] text-blue-700 dark:text-blue-400 mt-1.5">
+                {syncStats === null
+                  ? 'Loading…'
+                  : syncStats.count === 0
+                  ? 'No series synced yet — click "Sync Now" to push your published assignments.'
+                  : `${syncStats.count} series on Google Calendar${
+                      syncStats.last_synced_at
+                        ? ` · last synced ${new Date(syncStats.last_synced_at).toLocaleString()}`
+                        : ''
+                    }`}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleSyncNow}
+              disabled={syncing}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-md transition-colors flex-shrink-0"
+            >
+              {syncing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Calendar className="w-3.5 h-3.5" />}
+              {syncing ? 'Syncing…' : 'Sync Now'}
+            </button>
+          </div>
         </div>
       )}
 
