@@ -275,7 +275,7 @@ export default function StationAssignmentsPage() {
       />
       {/* Header — hidden when printing so only the clean station cards go on paper. */}
       <div className="bg-white dark:bg-gray-800 shadow print:hidden">
-        <div className="max-w-5xl mx-auto px-3 py-3 flex items-center gap-2">
+        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center gap-2">
           <Link
             href={`/labs/schedule/${labDayId}`}
             className="p-2 -ml-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
@@ -315,7 +315,7 @@ export default function StationAssignmentsPage() {
         </div>
       </div>
 
-      <main className="max-w-5xl mx-auto px-3 py-4 space-y-4 print:hidden">
+      <main className="max-w-7xl mx-auto px-6 py-4 space-y-4 print:hidden">
         {error && (
           <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-3 text-sm text-red-700 dark:text-red-300">
             {error}
