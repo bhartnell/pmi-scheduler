@@ -34,9 +34,26 @@ export async function GET(request: NextRequest) {
     const programScheduleId = searchParams.get('program_schedule_id');
     const dateFrom = searchParams.get('date_from');  // YYYY-MM-DD
     const dateTo = searchParams.get('date_to');      // YYYY-MM-DD
+    // count_only=true returns just { count } for the whole semester —
+    // used by the planner toolbar to show a draft-count badge on the
+    // "Publish drafts" button without paying for the full row payload.
+    const countOnly = searchParams.get('count_only') === 'true';
+    const status = searchParams.get('status'); // optional 'draft'|'published'|'cancelled'
 
     if (!semesterId) {
       return NextResponse.json({ error: 'semester_id is required' }, { status: 400 });
+    }
+
+    if (countOnly) {
+      let countQ = supabase
+        .from('pmi_schedule_blocks')
+        .select('id', { count: 'exact', head: true })
+        .eq('semester_id', semesterId);
+      if (status) countQ = countQ.eq('status', status);
+      if (programScheduleId) countQ = countQ.eq('program_schedule_id', programScheduleId);
+      const { count, error: countErr } = await countQ;
+      if (countErr) throw countErr;
+      return NextResponse.json({ count: count ?? 0 });
     }
 
     let query = supabase
@@ -45,6 +62,10 @@ export async function GET(request: NextRequest) {
       .eq('semester_id', semesterId)
       .order('date', { ascending: true, nullsFirst: false })
       .order('start_time');
+
+    if (status) {
+      query = query.eq('status', status);
+    }
 
     if (roomId) {
       query = query.eq('room_id', roomId);

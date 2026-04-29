@@ -2347,6 +2347,10 @@ function SemesterPlannerPage() {
   const [editingBlock, setEditingBlock] = useState<(Partial<PmiScheduleBlock> & { day_of_week: number }) | null>(null);
   const [showWizard, setShowWizard] = useState(false);
   const [showAddSemester, setShowAddSemester] = useState(false);
+  // Whole-semester draft count for the Publish-drafts button badge.
+  // Mirrors the field in /academics/planner/page.tsx — kept in sync
+  // by the matching loadSemesterData fetch below.
+  const [semesterDraftCount, setSemesterDraftCount] = useState<number>(0);
   const [newSemester, setNewSemester] = useState({ name: '', start_date: '', end_date: '' });
   const [addSemesterError, setAddSemesterError] = useState<string | null>(null);
   const searchParams = useSearchParams();
@@ -2511,22 +2515,25 @@ function SemesterPlannerPage() {
         dateTo = formatDateStr(addDays(lastOfMonth, 7));
       }
 
-      const [progRes, blockRes, conflictRes, labDayRes] = await Promise.all([
+      const [progRes, blockRes, conflictRes, labDayRes, draftCountRes] = await Promise.all([
         fetch(`/api/academics/planner/programs?semester_id=${selectedSemesterId}`),
         fetch(`/api/academics/planner/blocks?semester_id=${selectedSemesterId}&date_from=${dateFrom}&date_to=${dateTo}`),
         fetch(`/api/academics/planner/conflicts?semester_id=${selectedSemesterId}`),
         fetch(`/api/lab-management/lab-days?startDate=${dateFrom}&endDate=${dateTo}&limit=100`),
+        fetch(`/api/academics/planner/blocks?semester_id=${selectedSemesterId}&status=draft&count_only=true`),
       ]);
 
       const progData = await progRes.json();
       const blockData = await blockRes.json();
       const conflictData = await conflictRes.json();
       const labDayData = await labDayRes.json();
+      const draftCountData = await draftCountRes.json().catch(() => ({ count: 0 }));
 
       setPrograms(safeArray(progData.programs));
       setBlocks(safeArray(blockData.blocks));
       setConflicts(safeArray(conflictData.conflicts));
       setLabDaysOverlay(safeArray(labDayData.labDays));
+      setSemesterDraftCount(typeof draftCountData?.count === 'number' ? draftCountData.count : 0);
       hasLoadedSemesterData.current = true;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load semester data');
@@ -2911,11 +2918,19 @@ function SemesterPlannerPage() {
               <Wand2 className="w-4 h-4 text-purple-500" /> Templates
             </a>
 
-            {/* Publish All */}
+            {/* Publish drafts — see /academics/planner/page.tsx for the
+                long-form rationale. Same UX kept in sync here. */}
             <button
+              type="button"
+              disabled={!selectedSemesterId || semesterDraftCount === 0}
               onClick={async () => {
                 if (!selectedSemesterId) return;
-                if (!confirm('Publish all draft blocks for this semester? This will set all draft blocks to Published.')) return;
+                const semName = safeArray(semesters).find(s => s.id === selectedSemesterId)?.name || 'this semester';
+                const ok = confirm(
+                  `Publish ${semesterDraftCount} draft block(s) for ${semName}?\n\n` +
+                  `These will appear on the Master Calendar without needing the "Drafts" filter toggled on.`
+                );
+                if (!ok) return;
                 try {
                   const res = await fetch('/api/academics/planner/blocks/publish-all', {
                     method: 'POST',
@@ -2927,15 +2942,30 @@ function SemesterPlannerPage() {
                     alert(result.error || 'Failed to publish blocks');
                     return;
                   }
-                  alert(`Published ${result.count || 0} block(s)`);
+                  alert(`Published ${result.count || 0} block(s) — they're now live on the Master Calendar.`);
                   await loadSemesterData();
                 } catch (err) {
                   alert(err instanceof Error ? err.message : 'Publish failed');
                 }
               }}
-              className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-lg flex items-center gap-1.5"
+              className={`px-3 py-1.5 text-sm font-medium text-white rounded-lg flex items-center gap-1.5 ${
+                semesterDraftCount === 0
+                  ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed'
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
+              title={
+                semesterDraftCount === 0
+                  ? 'No draft blocks to publish in this semester'
+                  : `Publish all ${semesterDraftCount} draft block(s) so they show on the Master Calendar`
+              }
             >
-              <Eye className="w-4 h-4" /> Publish All
+              <Eye className="w-4 h-4" />
+              Publish drafts
+              {semesterDraftCount > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-white/30">
+                  {semesterDraftCount}
+                </span>
+              )}
             </button>
 
             {/* Generate */}
