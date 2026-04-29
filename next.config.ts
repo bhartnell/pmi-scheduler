@@ -63,6 +63,17 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       // --- Existing redirects (updated destinations) ---
+      // Cohort hub consolidation: /lab-management/cohorts duplicated
+      // /academics/cohorts and split user mental model. Academics is
+      // the canonical hub (where "Update from Template", student
+      // tools, semester review, etc. all live). The :path* matcher
+      // catches the cohort hub itself plus /calendar /completion
+      // /groups /smc /skill-log /semester-review subpages.
+      {
+        source: '/lab-management/cohorts/:path*',
+        destination: '/academics/cohorts/:path*',
+        permanent: true,
+      },
       {
         source: '/lab-management/admin/users',
         destination: '/admin/users',

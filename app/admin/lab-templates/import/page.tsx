@@ -58,7 +58,29 @@ interface ImportPayload {
   program: string;
   semester: number;
   templates: TemplateDef[];
+  // Synthetic UI tag — parser sets this so the preview panel can
+  // render shape-specific summaries. Stripped before send.
+  _shape?: 'lab' | 'course';
 }
+
+interface CourseDef {
+  course_code: string;
+  course_name?: string;
+  day_index: number;
+  start_time: string;
+  end_time: string;
+  block_type?: string;
+  is_online?: boolean;
+}
+
+interface CoursePayload {
+  program_type: string;
+  semester_number?: number;
+  courses: CourseDef[];
+  _shape?: 'lab' | 'course';
+}
+
+type AnyPayload = ImportPayload | CoursePayload;
 
 interface ImportResult {
   success: boolean;
@@ -103,7 +125,7 @@ export default function LabTemplateImportPage() {
 
   const [mode, setMode] = useState<'upload' | 'paste'>('upload');
   const [jsonText, setJsonText] = useState('');
-  const [parsed, setParsed] = useState<ImportPayload | null>(null);
+  const [parsed, setParsed] = useState<AnyPayload | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -111,7 +133,12 @@ export default function LabTemplateImportPage() {
   const [seedResult, setSeedResult] = useState<ImportResult | null>(null);
   const [expandedWeeks, setExpandedWeeks] = useState<Set<string>>(new Set());
 
-  // Parse JSON input
+  // Parse JSON input. Accepts BOTH shapes the import endpoint
+  // routes — lab templates and course templates. Detection happens
+  // here client-side too so we can label which type the user
+  // uploaded before they hit Import (catches the "wrong file
+  // uploaded" class of mistake up-front instead of after the
+  // API call).
   const parseJson = useCallback((text: string) => {
     setJsonText(text);
     setParseError(null);
@@ -123,12 +150,33 @@ export default function LabTemplateImportPage() {
     try {
       const data = JSON.parse(text);
 
-      // Validate structure
-      if (!data.program || data.semester === undefined || !Array.isArray(data.templates)) {
-        setParseError('JSON must have { program, semester, templates[] } structure');
+      // Lab template shape: { program, semester, templates: [{ stations }] }
+      const isLab =
+        data &&
+        typeof data.program === 'string' &&
+        data.semester !== undefined &&
+        Array.isArray(data.templates);
+
+      // Course template shape: { program_type, courses: [...] }
+      const isCourse =
+        data &&
+        typeof data.program_type === 'string' &&
+        Array.isArray(data.courses);
+
+      if (!isLab && !isCourse) {
+        setParseError(
+          'Unrecognised shape. Expected either ' +
+            '{program, semester, templates[]} (lab templates) or ' +
+            '{program_type, semester_number, courses[]} (course templates).'
+        );
         return;
       }
 
+      // Tag the parsed object with a synthetic _shape so the
+      // confirmation panel can show "Course template — 24 courses"
+      // vs "Lab template — 15 weeks". Server still gets the raw
+      // payload (the tag is stripped before send).
+      data._shape = isLab ? 'lab' : 'course';
       setParsed(data);
     } catch (e) {
       setParseError(`Invalid JSON: ${e instanceof Error ? e.message : 'Parse error'}`);
@@ -155,10 +203,15 @@ export default function LabTemplateImportPage() {
     setResult(null);
 
     try {
+      // Strip the synthetic _shape tag before sending — the server
+      // detects the shape from the actual fields, the tag is for
+      // UI labelling only.
+      const payload: Record<string, unknown> = { ...(parsed as unknown as Record<string, unknown>) };
+      delete payload._shape;
       const res = await fetch('/api/admin/lab-templates/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parsed),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -390,13 +443,38 @@ export default function LabTemplateImportPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
           <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Preview: {parsed.program} — Semester {parsed.semester}
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {parsed.templates.length} templates,{' '}
-                {parsed.templates.reduce((s, t) => s + (t.stations?.length || 0), 0)} stations
-              </p>
+              {/* Shape-aware header. Course shape uses program_type +
+                  semester_number; lab shape uses program + semester.
+                  The bold "Detected as: …" label catches "wrong file
+                  uploaded" up-front before Import is clicked. */}
+              {parsed._shape === 'course' ? (
+                <>
+                  <div className="text-[11px] uppercase tracking-wide font-bold text-purple-700 dark:text-purple-300 mb-0.5">
+                    Detected: Course / Class Schedule template
+                  </div>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Preview: {(parsed as CoursePayload).program_type}
+                    {(parsed as CoursePayload).semester_number !== undefined &&
+                      ` — Semester ${(parsed as CoursePayload).semester_number}`}
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {(parsed as CoursePayload).courses.length} courses → pmi_course_templates
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="text-[11px] uppercase tracking-wide font-bold text-blue-700 dark:text-blue-300 mb-0.5">
+                    Detected: Lab template
+                  </div>
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                    Preview: {(parsed as ImportPayload).program} — Semester {(parsed as ImportPayload).semester}
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    {(parsed as ImportPayload).templates.length} templates,{' '}
+                    {(parsed as ImportPayload).templates.reduce((s, t) => s + (t.stations?.length || 0), 0)} stations → lab_day_templates
+                  </p>
+                </>
+              )}
             </div>
             <button
               onClick={handleImport}
@@ -412,9 +490,41 @@ export default function LabTemplateImportPage() {
             </button>
           </div>
 
-          {/* Template list */}
+          {/* Course-shape preview: simple table of courses. Lab-shape
+              preview falls through to the existing template/station
+              renderer below. */}
+          {parsed._shape === 'course' && (
+            <div className="p-4">
+              <table className="w-full text-sm">
+                <thead className="text-xs text-gray-500 dark:text-gray-400 uppercase">
+                  <tr>
+                    <th className="text-left py-1">Course</th>
+                    <th className="text-left py-1">Day</th>
+                    <th className="text-left py-1">Time</th>
+                    <th className="text-left py-1">Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(parsed as CoursePayload).courses.map((c, i) => (
+                    <tr key={i} className="border-t border-gray-100 dark:border-gray-700">
+                      <td className="py-1.5">
+                        <span className="font-medium text-gray-900 dark:text-white">{c.course_code}</span>
+                        <span className="ml-2 text-gray-500 dark:text-gray-400">{c.course_name}</span>
+                      </td>
+                      <td>{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][c.day_index] ?? `Day ${c.day_index}`}</td>
+                      <td>{c.start_time}–{c.end_time}</td>
+                      <td>{c.block_type || 'lecture'}{c.is_online ? ' · online' : ''}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Template list (lab shape only) */}
+          {parsed._shape !== 'course' && (
           <div className="divide-y divide-gray-100 dark:divide-gray-700">
-            {parsed.templates.map((tmpl, idx) => {
+            {(parsed as ImportPayload).templates.map((tmpl, idx) => {
               const key = `${tmpl.week_number}-${tmpl.day_number}`;
               const isExpanded = expandedWeeks.has(key);
 
@@ -548,6 +658,7 @@ export default function LabTemplateImportPage() {
               );
             })}
           </div>
+          )}
         </div>
       )}
 
