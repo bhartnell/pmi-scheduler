@@ -554,6 +554,14 @@ function CalendarContent() {
   // Export panel
   const [exportPanelOpen, setExportPanelOpen] = useState(false);
 
+  // LVFR platoon overlay — populated when the LVFR program filter is
+  // active. Map of YYYY-MM-DD → { platoon, is_bid_day, notes } so
+  // each view can read its day's platoon without scanning the array.
+  // The overlay rides the same on/off state as the existing LVFR
+  // event filter so a single toggle controls "show LVFR clinical
+  // events" + "tint each day with the on-duty platoon".
+  const [lvfrByDate, setLvfrByDate] = useState<Map<string, { platoon: 'A' | 'B' | 'C' | 'off'; is_bid_day?: boolean; notes?: string | null }>>(new Map());
+
   // Initialize from URL params
   useEffect(() => {
     const view = searchParams.get('view') as ViewMode | null;
@@ -667,6 +675,43 @@ function CalendarContent() {
       fetchEvents();
     }
   }, [fetchEvents, status]);
+
+  // LVFR platoon overlay fetch — runs in parallel with the events
+  // fetch when the LVFR program filter is active. Skipped (and the
+  // map cleared) when LVFR is off, so toggling the filter
+  // visibly removes the day-cell tints. Best-effort: a failure
+  // silently leaves the map empty without breaking the calendar.
+  // Derived boolean keeps the dep array stable when other program
+  // toggles change (otherwise we'd refetch on every chip click).
+  const lvfrActive = activePrograms.has('lvfr');
+  useEffect(() => {
+    if (status !== 'authenticated' || !lvfrActive) {
+      setLvfrByDate(new Map());
+      return;
+    }
+    let cancelled = false;
+    fetch(`/api/scheduling/lvfr-platoons?start_date=${dateRange.start}&end_date=${dateRange.end}`)
+      .then(r => r.json())
+      .then((j: { platoons?: Array<{ date: string; platoon: 'A' | 'B' | 'C' | 'off'; is_bid_day?: boolean; notes?: string | null }> }) => {
+        if (cancelled) return;
+        const map = new Map<string, { platoon: 'A' | 'B' | 'C' | 'off'; is_bid_day?: boolean; notes?: string | null }>();
+        for (const row of j.platoons ?? []) {
+          map.set(row.date, {
+            platoon: row.platoon,
+            is_bid_day: !!row.is_bid_day,
+            notes: row.notes ?? null,
+          });
+        }
+        setLvfrByDate(map);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setLvfrByDate(new Map());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [status, lvfrActive, dateRange.start, dateRange.end]);
 
   // Fetch instructor list
   useEffect(() => {
@@ -1172,6 +1217,7 @@ function CalendarContent() {
             setViewMode('week');
           }}
           conflictEventIds={conflictEventIds}
+          lvfrByDate={lvfrByDate}
         />
       ) : viewMode === 'month' ? (
         <MonthView
@@ -1182,12 +1228,14 @@ function CalendarContent() {
             setViewMode('week');
           }}
           onEventClick={handleEventClick}
+          lvfrByDate={lvfrByDate}
         />
       ) : (
         <ListView
           eventsByDate={eventsByDate}
           onEventClick={handleEventClick}
           presetView={presetView}
+          lvfrByDate={lvfrByDate}
         />
       )}
 
@@ -1227,17 +1275,36 @@ function CalendarContent() {
 
 // ── Week View ────────────────────────────────────────────────────────
 
+type LvfrByDate = Map<string, { platoon: 'A' | 'B' | 'C' | 'off'; is_bid_day?: boolean; notes?: string | null }>;
+
+// Color tints per platoon — light enough that event chips on top
+// stay readable. A=blue, B=red, C=green per the spec.
+function lvfrTintFor(p: 'A' | 'B' | 'C' | 'off'): string {
+  if (p === 'A') return 'bg-blue-50/70 dark:bg-blue-900/15';
+  if (p === 'B') return 'bg-rose-50/70 dark:bg-rose-900/15';
+  if (p === 'C') return 'bg-emerald-50/70 dark:bg-emerald-900/15';
+  return '';
+}
+function lvfrBadgeFor(p: 'A' | 'B' | 'C' | 'off'): string {
+  if (p === 'A') return 'bg-blue-600 text-white';
+  if (p === 'B') return 'bg-rose-600 text-white';
+  if (p === 'C') return 'bg-emerald-600 text-white';
+  return 'bg-gray-300 text-gray-700';
+}
+
 function WeekView({
   days,
   events,
   onEventClick,
   conflictEventIds,
+  lvfrByDate,
 }: {
   days: Date[];
   events: CalendarEvent[];
   onEventClick: (e: CalendarEvent) => void;
   onDayClick: (date: Date) => void;
   conflictEventIds?: Set<string>;
+  lvfrByDate?: LvfrByDate;
 }) {
   const HOUR_START = 6;
   const HOUR_END = 21;
@@ -1273,6 +1340,7 @@ function WeekView({
         {days.map(d => {
           const dateStr = toDateStr(d);
           const isToday = dateStr === today;
+          const lvfr = lvfrByDate?.get(dateStr);
           return (
             <div
               key={dateStr}
@@ -1288,6 +1356,27 @@ function WeekView({
               }`}>
                 {d.getDate()}
               </div>
+              {/* LVFR platoon badge — small A/B/C chip + $ for BID
+                  days. Renders only when the LVFR program filter is
+                  active so non-LVFR-relevant views stay clean. */}
+              {lvfr && lvfr.platoon !== 'off' && (
+                <div className="flex items-center justify-center gap-1 mt-0.5">
+                  <span
+                    className={`inline-flex items-center px-1 py-0.5 text-[10px] font-bold rounded ${lvfrBadgeFor(lvfr.platoon)}`}
+                    title={`LVFR ${lvfr.platoon}-shift on duty${lvfr.notes ? ` · ${lvfr.notes}` : ''}`}
+                  >
+                    {lvfr.platoon}
+                  </span>
+                  {lvfr.is_bid_day && (
+                    <span
+                      className="inline-flex items-center px-1 text-[10px] font-bold rounded bg-amber-200 dark:bg-amber-700 text-amber-900 dark:text-amber-100"
+                      title="BID day"
+                    >
+                      $
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
@@ -1313,13 +1402,20 @@ function WeekView({
           const dateStr = toDateStr(d);
           const dayEvents = layoutByDay.get(dateStr) || [];
           const isToday = dateStr === today;
+          const lvfr = lvfrByDate?.get(dateStr);
+          // Today's blue tint wins over LVFR platoon tint so "today"
+          // remains the dominant visual cue. Otherwise the LVFR tint
+          // (when active) marks the on-duty platoon for that column.
+          const columnTint = isToday
+            ? 'bg-blue-50/50 dark:bg-blue-900/10'
+            : lvfr && lvfr.platoon !== 'off'
+              ? lvfrTintFor(lvfr.platoon)
+              : '';
 
           return (
             <div
               key={dateStr}
-              className={`relative border-r last:border-r-0 border-gray-200 dark:border-gray-700 ${
-                isToday ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''
-              }`}
+              className={`relative border-r last:border-r-0 border-gray-200 dark:border-gray-700 ${columnTint}`}
             >
               {/* Hour lines */}
               {hours.map(h => (
@@ -1453,11 +1549,13 @@ function MonthView({
   events,
   onDayClick,
   onEventClick,
+  lvfrByDate,
 }: {
   currentDate: Date;
   events: CalendarEvent[];
   onDayClick: (date: Date) => void;
   onEventClick: (e: CalendarEvent) => void;
+  lvfrByDate?: LvfrByDate;
 }) {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -1494,20 +1592,49 @@ function MonthView({
           const isCurrentMonth = d.getMonth() === month;
           const isToday = dateStr === today;
           const dayEvents = eventsByDate.get(dateStr) || [];
+          const lvfr = lvfrByDate?.get(dateStr);
+          // LVFR tint applies to in-month days only so the
+          // off-month "spillover" cells stay neutral. Today's blue
+          // tint still wins.
+          const cellTint = isToday
+            ? 'bg-blue-50 dark:bg-blue-900/20'
+            : !isCurrentMonth
+              ? 'bg-gray-50 dark:bg-gray-900/50'
+              : lvfr && lvfr.platoon !== 'off'
+                ? lvfrTintFor(lvfr.platoon)
+                : '';
 
           return (
             <button
               key={i}
               onClick={() => onDayClick(d)}
-              className={`min-h-[80px] md:min-h-[100px] p-1 border-b border-r border-gray-200 dark:border-gray-700 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 ${
-                !isCurrentMonth ? 'bg-gray-50 dark:bg-gray-900/50' : ''
-              } ${isToday ? 'bg-blue-50 dark:bg-blue-900/20' : ''}`}
+              className={`min-h-[80px] md:min-h-[100px] p-1 border-b border-r border-gray-200 dark:border-gray-700 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 ${cellTint}`}
             >
-              <div className={`text-xs font-medium mb-0.5 ${
-                isToday ? 'text-blue-600 dark:text-blue-400 font-bold' :
-                isCurrentMonth ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'
-              }`}>
-                {d.getDate()}
+              <div className="flex items-center justify-between gap-1 mb-0.5">
+                <div className={`text-xs font-medium ${
+                  isToday ? 'text-blue-600 dark:text-blue-400 font-bold' :
+                  isCurrentMonth ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-600'
+                }`}>
+                  {d.getDate()}
+                </div>
+                {lvfr && lvfr.platoon !== 'off' && (
+                  <div className="flex items-center gap-0.5">
+                    <span
+                      className={`inline-flex items-center px-1 text-[9px] font-bold rounded ${lvfrBadgeFor(lvfr.platoon)}`}
+                      title={`LVFR ${lvfr.platoon}-shift on duty${lvfr.notes ? ` · ${lvfr.notes}` : ''}`}
+                    >
+                      {lvfr.platoon}
+                    </span>
+                    {lvfr.is_bid_day && (
+                      <span
+                        className="inline-flex items-center px-0.5 text-[9px] font-bold rounded bg-amber-200 dark:bg-amber-700 text-amber-900 dark:text-amber-100"
+                        title="BID day"
+                      >
+                        $
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               {/* Event dots / chips */}
               <div className="space-y-0.5">
@@ -1553,10 +1680,12 @@ function ListView({
   eventsByDate,
   onEventClick,
   presetView,
+  lvfrByDate,
 }: {
   eventsByDate: Map<string, CalendarEvent[]>;
   onEventClick: (e: CalendarEvent) => void;
   presetView: PresetView;
+  lvfrByDate?: LvfrByDate;
 }) {
   const sortedDates = Array.from(eventsByDate.keys()).sort();
   const today = toDateStr(new Date());
@@ -1567,16 +1696,35 @@ function ListView({
         const dayEvents = eventsByDate.get(dateStr) || [];
         if (dayEvents.length === 0) return null;
         const isToday = dateStr === today;
+        const lvfr = lvfrByDate?.get(dateStr);
 
         return (
           <div key={dateStr}>
-            <div className={`sticky top-0 z-10 px-3 py-1.5 text-sm font-semibold rounded-md mb-2 ${
+            <div className={`sticky top-0 z-10 px-3 py-1.5 text-sm font-semibold rounded-md mb-2 flex items-center gap-2 ${
               isToday
                 ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200'
                 : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
             }`}>
-              {formatDate(dateStr)}
-              {isToday && <span className="ml-2 text-xs font-normal">(Today)</span>}
+              <span>{formatDate(dateStr)}</span>
+              {isToday && <span className="text-xs font-normal">(Today)</span>}
+              {lvfr && lvfr.platoon !== 'off' && (
+                <>
+                  <span
+                    className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold rounded ${lvfrBadgeFor(lvfr.platoon)}`}
+                    title={`LVFR ${lvfr.platoon}-shift on duty${lvfr.notes ? ` · ${lvfr.notes}` : ''}`}
+                  >
+                    LVFR {lvfr.platoon}
+                  </span>
+                  {lvfr.is_bid_day && (
+                    <span
+                      className="inline-flex items-center px-1 text-[10px] font-bold rounded bg-amber-200 dark:bg-amber-700 text-amber-900 dark:text-amber-100"
+                      title="BID day"
+                    >
+                      $ BID
+                    </span>
+                  )}
+                </>
+              )}
             </div>
 
             <div className="space-y-1.5">

@@ -686,6 +686,8 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                         // both coordinator and personal modes; matches
                         // the shift colors so a quick glance shows
                         // which platoons cover what days of the week.
+                        // BID days get a "$" sibling so the financial
+                        // significance is visible without hover.
                         const lvfr = lvfrByDate.get(iso);
                         if (!lvfr || lvfr.platoon === 'off') return null;
                         const tone =
@@ -693,12 +695,22 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                           : lvfr.platoon === 'B' ? 'bg-rose-600 text-white'
                           : 'bg-emerald-600 text-white';
                         return (
-                          <span
-                            className={`inline-flex items-center px-1 py-0.5 text-[10px] font-bold rounded ${tone}`}
-                            title={`LVFR ${lvfr.platoon}-shift on duty${lvfr.is_bid_day ? ' · BID day' : ''}${lvfr.notes ? ` · ${lvfr.notes}` : ''}`}
-                          >
-                            {lvfr.platoon}
-                          </span>
+                          <>
+                            <span
+                              className={`inline-flex items-center px-1 py-0.5 text-[10px] font-bold rounded ${tone}`}
+                              title={`LVFR ${lvfr.platoon}-shift on duty${lvfr.is_bid_day ? ' · BID day' : ''}${lvfr.notes ? ` · ${lvfr.notes}` : ''}`}
+                            >
+                              {lvfr.platoon}
+                            </span>
+                            {lvfr.is_bid_day && (
+                              <span
+                                className="inline-flex items-center px-1 text-[10px] font-bold rounded bg-amber-200 dark:bg-amber-700 text-amber-900 dark:text-amber-100"
+                                title="BID day"
+                              >
+                                $
+                              </span>
+                            )}
+                          </>
                         );
                       })()}
                     </div>
@@ -881,16 +893,26 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                     </span>
                     <div className="flex items-center gap-1">
                       {lvfr && lvfr.platoon !== 'off' && (
-                        <span
-                          className={`inline-flex items-center text-[9px] font-bold rounded px-1 ${
-                            lvfr.platoon === 'A' ? 'bg-slate-700 text-white dark:bg-slate-600'
-                            : lvfr.platoon === 'B' ? 'bg-rose-600 text-white'
-                            : 'bg-emerald-600 text-white'
-                          }`}
-                          title={`LVFR ${lvfr.platoon}-shift on duty${lvfr.is_bid_day ? ' · BID' : ''}${lvfr.notes ? ` · ${lvfr.notes}` : ''}`}
-                        >
-                          {lvfr.platoon}
-                        </span>
+                        <>
+                          <span
+                            className={`inline-flex items-center text-[9px] font-bold rounded px-1 ${
+                              lvfr.platoon === 'A' ? 'bg-slate-700 text-white dark:bg-slate-600'
+                              : lvfr.platoon === 'B' ? 'bg-rose-600 text-white'
+                              : 'bg-emerald-600 text-white'
+                            }`}
+                            title={`LVFR ${lvfr.platoon}-shift on duty${lvfr.is_bid_day ? ' · BID' : ''}${lvfr.notes ? ` · ${lvfr.notes}` : ''}`}
+                          >
+                            {lvfr.platoon}
+                          </span>
+                          {lvfr.is_bid_day && (
+                            <span
+                              className="inline-flex items-center text-[9px] font-bold rounded px-0.5 bg-amber-200 dark:bg-amber-700 text-amber-900 dark:text-amber-100"
+                              title="BID day"
+                            >
+                              $
+                            </span>
+                          )}
+                        </>
                       )}
                       {topPriority !== 'normal' && (
                         <span
