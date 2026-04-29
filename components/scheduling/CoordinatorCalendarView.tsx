@@ -102,6 +102,12 @@ export default function CoordinatorCalendarView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [personFilter, setPersonFilter] = useState<string>('all');
+  // Scope toggle: default to part-timers since that's the primary
+  // coordinator workflow (who needs hours / who's available). Switch
+  // to 'all' for the full workload picture including Schafer / Young
+  // and other full-time instructors. Only affects which people the
+  // dropdown + grid list — not which raw rows the API returns.
+  const [scope, setScope] = useState<'part_time' | 'all'>('part_time');
 
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(anchor, i)),
@@ -137,21 +143,53 @@ export default function CoordinatorCalendarView() {
     };
   }, [startDate, endDate]);
 
-  // Color map is stable for the lifetime of the response — recompute
-  // only when people change so chip and block colors stay consistent
-  // across re-renders within the same week.
-  const colorMap = useMemo(
-    () => buildColorMap(data?.people ?? []),
-    [data?.people]
+  // People in the active scope. Part-time is the default coordinator
+  // workflow; 'all' folds in full-time instructors (Schafer, Young,
+  // etc.) for the complete workload picture.
+  const peopleInScope = useMemo(() => {
+    if (!data) return [] as Person[];
+    return scope === 'part_time'
+      ? data.people.filter(p => p.is_part_time)
+      : data.people;
+  }, [data, scope]);
+
+  const peopleInScopeIds = useMemo(
+    () => new Set(peopleInScope.map(p => p.id)),
+    [peopleInScope]
   );
 
-  // Filter blocks by selected person. The lab_days array is unaffected
-  // because the priority badge belongs to the day, not a person.
+  // Color map is stable for the lifetime of the response — recompute
+  // only when the in-scope people change so chip and block colors stay
+  // consistent across re-renders within the same week. We build off
+  // peopleInScope (not data.people) so toggling scope re-pools color
+  // assignments and the legend doesn't show ghost full-timers when
+  // we're filtered to part-timers only.
+  const colorMap = useMemo(
+    () => buildColorMap(peopleInScope),
+    [peopleInScope]
+  );
+
+  // Reset the per-person filter if the previously-selected person
+  // falls outside the new scope (e.g. you had Schafer selected, then
+  // toggled to part-time only). Avoids a stale empty grid.
+  useEffect(() => {
+    if (personFilter !== 'all' && !peopleInScopeIds.has(personFilter)) {
+      setPersonFilter('all');
+    }
+  }, [personFilter, peopleInScopeIds]);
+
+  // Filter blocks by scope first (drops full-time activity when scope
+  // is 'part_time'), then by selected person. The lab_days array is
+  // unaffected because the priority badge belongs to the day, not a
+  // person.
   const filteredBlocks = useMemo(() => {
     if (!data) return [];
-    if (personFilter === 'all') return data.blocks;
-    return data.blocks.filter(b => b.person_id === personFilter);
-  }, [data, personFilter]);
+    let blocks = data.blocks.filter(b => peopleInScopeIds.has(b.person_id));
+    if (personFilter !== 'all') {
+      blocks = blocks.filter(b => b.person_id === personFilter);
+    }
+    return blocks;
+  }, [data, peopleInScopeIds, personFilter]);
 
   // Index blocks by date for fast per-column lookup. Sorted so each
   // day's blocks render in a consistent order: lab/shift first, then
@@ -235,9 +273,40 @@ export default function CoordinatorCalendarView() {
           </span>
         </div>
 
-        {/* Person filter — when only one person is in scope (e.g. a
-            new academic week with sparse activity) the dropdown still
-            renders so users can confirm whose data is missing. */}
+        {/* Scope toggle — Part-timers (default) or All instructors.
+            Per the data-completeness clarification: full-time
+            instructors (Schafer, Young, etc.) need to be queryable
+            for full workload pictures, but the default workflow
+            stays focused on part-timers. */}
+        <div className="inline-flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setScope('part_time')}
+            className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+              scope === 'part_time'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+            }`}
+            title="Show only part-time instructors"
+          >
+            Part-timers
+          </button>
+          <button
+            type="button"
+            onClick={() => setScope('all')}
+            className={`px-2.5 py-1 text-xs font-medium transition-colors border-l border-gray-300 dark:border-gray-600 ${
+              scope === 'all'
+                ? 'bg-blue-600 text-white'
+                : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+            }`}
+            title="Show all instructors including full-time staff"
+          >
+            All instructors
+          </button>
+        </div>
+
+        {/* Person filter — uses peopleInScope so toggling between
+            part-timers and all instructors resizes the dropdown. */}
         <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
           <Filter className="w-3.5 h-3.5" />
           <span className="font-medium">Person:</span>
@@ -246,8 +315,8 @@ export default function CoordinatorCalendarView() {
             onChange={e => setPersonFilter(e.target.value)}
             className="text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-gray-100"
           >
-            <option value="all">All ({data?.people.length ?? 0})</option>
-            {(data?.people ?? []).map(p => (
+            <option value="all">All ({peopleInScope.length})</option>
+            {peopleInScope.map(p => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
           </select>
@@ -255,11 +324,12 @@ export default function CoordinatorCalendarView() {
       </div>
 
       {/* Legend: who's who. Skipped when filtered to one person since
-          the chip is redundant in that case. */}
-      {data && data.people.length > 0 && personFilter === 'all' && (
+          the chip is redundant in that case. Uses peopleInScope so
+          full-timers don't appear in the legend when scope='part_time'. */}
+      {peopleInScope.length > 0 && personFilter === 'all' && (
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-6 py-2 text-xs text-gray-600 dark:text-gray-300 border-b border-gray-100 dark:border-gray-700">
           <span className="font-medium">Legend:</span>
-          {data.people.map(p => {
+          {peopleInScope.map(p => {
             const c = colorMap.get(p.id);
             if (!c) return null;
             return (
@@ -269,6 +339,11 @@ export default function CoordinatorCalendarView() {
               </span>
             );
           })}
+          {scope === 'part_time' && data && data.people.length > peopleInScope.length && (
+            <span className="text-gray-400 dark:text-gray-500 italic">
+              ({data.people.length - peopleInScope.length} full-time hidden — toggle &ldquo;All instructors&rdquo;)
+            </span>
+          )}
         </div>
       )}
 

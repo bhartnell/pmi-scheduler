@@ -68,6 +68,19 @@ function durationHours(start: string | null, end: string | null): number | null 
   return Math.round((minutes / 60) * 100) / 100;
 }
 
+/**
+ * Lab-day duration with the spec's fallback rule. lab_days has no
+ * `duration_hours` column — we derive from start_time/end_time, but
+ * many older rows were created before the start/end fields became
+ * required. Per the data-completeness clarification, missing times
+ * count as a 4-hour day so those rows still pull weight in heat-map
+ * and workload calculations rather than vanishing as zero.
+ */
+const LAB_DEFAULT_HOURS = 4;
+function labDayHours(start: string | null, end: string | null): number {
+  return durationHours(start, end) ?? LAB_DEFAULT_HOURS;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const auth = await requireAuth('instructor');
@@ -191,6 +204,13 @@ export async function GET(request: NextRequest) {
     // 1. Lab assignments — only include rows whose lab_day falls in
     //    the requested window. Roles GET doesn't accept a date filter
     //    so we filter in JS against the embedded lab_day.date.
+    //
+    //    NOTE on cross-program coverage: neither the lab_days query
+    //    above nor this lab_day_roles query filters by cohort_id or
+    //    program_id, so LVFR AEMT (and any future ACLS / PALS / etc.
+    //    program tracks) flow through the same payload as standard
+    //    PMI cohorts. Jimi's LVFR AEMT shifts starting July 6 will
+    //    appear alongside his PMI labs without further work.
     const labDayIdsInRange = new Set((labDaysRes.data ?? []).map((d: any) => d.id));
     for (const r of rolesRes.data ?? []) {
       const ld = Array.isArray((r as any).lab_day) ? (r as any).lab_day[0] : (r as any).lab_day;
@@ -206,7 +226,10 @@ export async function GET(request: NextRequest) {
         type: 'lab_assignment',
         start_time: ld.start_time,
         end_time: ld.end_time,
-        hours: durationHours(ld.start_time, ld.end_time),
+        // 4h fallback when times are missing (older rows pre-date the
+        // required start/end times) so legacy lab assignments still
+        // count toward the future heat-map / hours-sidebar totals.
+        hours: labDayHours(ld.start_time, ld.end_time),
         lab_day_id: (r as any).lab_day_id,
         role: (r as any).role,
         notes: (r as any).notes,
@@ -239,6 +262,14 @@ export async function GET(request: NextRequest) {
     // 3. Availability + recurring (recurring templates materialise
     //    rows in instructor_availability with source_template_id set,
     //    so we tag the block type by the presence of that column).
+    //
+    //    Per the hour-sources clarification: availability + recurring
+    //    are PROJECTED, not worked hours. They render as outlined
+    //    blocks for context ("Jimi's free Wednesday afternoon") but
+    //    must NOT count toward heat-map / sidebar totals — so we set
+    //    `hours: null` here. Downstream sum logic does `b.hours ?? 0`
+    //    and naturally excludes them. Block duration for the tooltip
+    //    can be re-derived from start_time/end_time on the client.
     for (const a of availabilityRes.data ?? []) {
       const inst = Array.isArray((a as any).instructor) ? (a as any).instructor[0] : (a as any).instructor;
       if (!inst) continue;
@@ -254,7 +285,7 @@ export async function GET(request: NextRequest) {
         type: isRecurring ? 'recurring' : 'availability',
         start_time: start,
         end_time: end,
-        hours: (a as any).is_all_day ? null : durationHours(start, end),
+        hours: null,
       });
     }
 
