@@ -988,6 +988,11 @@ export default function LabTemplatesPage() {
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
   const [templates, setTemplates] = useState<LabTemplate[]>([]);
   const [fetchingTemplates, setFetchingTemplates] = useState(false);
+  // Programs list — drives the filter dropdown (replaced the
+  // free-text input that was a typo magnet). Fetched once on
+  // mount from /api/lab-management/programs which has a
+  // stale-while-revalidate cache header so this is cheap.
+  const [programs, setPrograms] = useState<Array<{ id: string; name: string; abbreviation: string }>>([]);
 
   // Filters
   const [filterProgram, setFilterProgram] = useState('');
@@ -1022,7 +1027,7 @@ export default function LabTemplatesPage() {
           return;
         }
         setCurrentUser(data.user);
-        await Promise.all([fetchScenarios(), fetchCohorts()]);
+        await Promise.all([fetchScenarios(), fetchCohorts(), fetchPrograms()]);
       }
     } catch (err) {
       console.error('Error initializing page:', err);
@@ -1047,6 +1052,16 @@ export default function LabTemplatesPage() {
       if (data.success) setCohorts(data.cohorts || []);
     } catch (err) {
       console.error('Error fetching cohorts:', err);
+    }
+  };
+
+  const fetchPrograms = async () => {
+    try {
+      const res = await fetch('/api/lab-management/programs');
+      const data = await res.json();
+      if (data.success) setPrograms(data.programs || []);
+    } catch (err) {
+      console.error('Error fetching programs:', err);
     }
   };
 
@@ -1175,13 +1190,24 @@ export default function LabTemplatesPage() {
           <div className="flex flex-wrap items-center gap-4">
             <div className="flex items-center gap-2">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Program:</label>
-              <input
-                type="text"
+              {/* Was a free-text input — typo magnet that hid templates
+                  whenever the user typed "PM" expecting "paramedic" or
+                  vice versa. Dropdown sources from the programs table
+                  so the values match what's actually stored. Value
+                  uses the abbreviation (lowercase) since that's what
+                  the API filter compares against. */}
+              <select
                 value={filterProgram}
                 onChange={(e) => setFilterProgram(e.target.value)}
-                placeholder="Filter by program"
-                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 dark:placeholder-gray-500"
-              />
+                className="border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All Programs</option>
+                {programs.map(p => (
+                  <option key={p.id} value={(p.abbreviation || '').toLowerCase()}>
+                    {p.name}{p.abbreviation ? ` (${p.abbreviation})` : ''}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="flex items-center gap-2">

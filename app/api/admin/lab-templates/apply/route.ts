@@ -41,6 +41,12 @@ export async function POST(request: NextRequest) {
       skip_existing?: boolean;
       force?: boolean;
       break_weeks?: number[];
+      // Calendar architecture P4: when set, the apply pass refuses
+      // to generate any lab_day with a date past this end. Falls
+      // back to start_date + 15 weeks (the standard semester
+      // length) when not provided so callers without the explicit
+      // end still get a sane cutoff. Format: YYYY-MM-DD.
+      semester_end_date?: string;
     };
 
     // Accept both `program` and legacy `program_id` from callers
@@ -52,6 +58,21 @@ export async function POST(request: NextRequest) {
     const skipExisting = body.skip_existing !== false; // default true
     const force = body.force === true;
     const breakWeeks = new Set(body.break_weeks ?? []);
+
+    // Compute the hard end-of-semester cutoff. Anything generated
+    // past this is silently skipped + counted in the response so
+    // callers can see "X templates skipped because outside
+    // semester window". Default of start + 15 weeks matches the
+    // year-anchor spec; override via semester_end_date.
+    const [yyy, mmm, ddd] = start_date.split('-').map(Number);
+    const startBaseUtc = Date.UTC(yyy, mmm - 1, ddd);
+    let semesterEndUtc: number;
+    if (body.semester_end_date) {
+      const [ey, em, ed] = body.semester_end_date.split('-').map(Number);
+      semesterEndUtc = Date.UTC(ey, em - 1, ed);
+    } else {
+      semesterEndUtc = startBaseUtc + 15 * 7 * 86400000;
+    }
 
     if (!cohort_id || !program || !semester || !start_date) {
       return NextResponse.json(
@@ -153,6 +174,7 @@ export async function POST(request: NextRequest) {
 
     const createdLabDays: Array<{ id: string; date: string; title: string; week_number: number; day_number: number }> = [];
     let skippedCount = 0;
+    let outOfRangeCount = 0;
     const errors: string[] = [];
 
     for (const template of sorted) {
@@ -176,6 +198,16 @@ export async function POST(request: NextRequest) {
       const labDate = new Date(baseDate);
       labDate.setUTCDate(baseDate.getUTCDate() + weekOffset + dayOffset);
       const labDateStr = labDate.toISOString().split('T')[0];
+
+      // Calendar architecture P4: hard cutoff at semester end.
+      // Skip any template week whose computed date is past the
+      // selected semester window. Without this, a 20-week template
+      // applied to a 15-week semester would spill 5 weeks of
+      // lab_days into the next semester's calendar.
+      if (labDate.getTime() > semesterEndUtc) {
+        outOfRangeCount++;
+        continue;
+      }
 
       const displayTitle = template.name || `Week ${weekNum} Day ${dayNum}`;
 
@@ -298,6 +330,8 @@ export async function POST(request: NextRequest) {
       success: true,
       created_count: createdLabDays.length,
       skipped_count: skippedCount,
+      out_of_range_count: outOfRangeCount,
+      semester_end_date: new Date(semesterEndUtc).toISOString().slice(0, 10),
       total_templates: sorted.length,
       break_weeks_applied: breakWeeks.size,
       lab_days: createdLabDays,

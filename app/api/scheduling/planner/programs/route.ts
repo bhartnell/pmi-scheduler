@@ -16,21 +16,60 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'semester_id is required' }, { status: 400 });
     }
 
-    const { data, error } = await supabase
-      .from('pmi_program_schedules')
-      .select(`
-        *,
-        cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
-          id, cohort_number, start_date, expected_end_date, is_active, semester,
-          program:programs(id, name, abbreviation)
-        )
-      `)
-      .eq('semester_id', semesterId)
-      .order('created_at');
+    // Two-source query so the sidebar shows programs that have
+    // EITHER a pmi_program_schedules row for this semester OR a
+    // pmi_schedule_blocks row referencing a program_schedule (the
+    // sidebar was previously empty for semesters where blocks
+    // existed but program_schedules wasn't created — common after
+    // bulk imports of legacy data). Merge-deduped on program_schedule.id.
+    const [withSchedule, fromBlocks] = await Promise.all([
+      supabase
+        .from('pmi_program_schedules')
+        .select(`
+          *,
+          cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
+            id, cohort_number, start_date, expected_end_date, is_active, semester,
+            program:programs(id, name, abbreviation)
+          )
+        `)
+        .eq('semester_id', semesterId)
+        .order('created_at'),
+      supabase
+        .from('pmi_schedule_blocks')
+        .select('program_schedule_id')
+        .eq('semester_id', semesterId)
+        .not('program_schedule_id', 'is', null),
+    ]);
 
-    if (error) throw error;
+    if (withSchedule.error) throw withSchedule.error;
+    if (fromBlocks.error) throw fromBlocks.error;
 
-    return NextResponse.json({ programs: data || [] });
+    const knownIds = new Set((withSchedule.data ?? []).map(p => p.id));
+    const blockReferenced = new Set(
+      ((fromBlocks.data ?? []) as Array<{ program_schedule_id: string | null }>)
+        .map(b => b.program_schedule_id)
+        .filter((id): id is string => !!id && !knownIds.has(id))
+    );
+
+    type ProgramScheduleRow = NonNullable<typeof withSchedule.data>[number];
+    let extra: ProgramScheduleRow[] = [];
+    if (blockReferenced.size > 0) {
+      const { data: extraRows, error: extraErr } = await supabase
+        .from('pmi_program_schedules')
+        .select(`
+          *,
+          cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
+            id, cohort_number, start_date, expected_end_date, is_active, semester,
+            program:programs(id, name, abbreviation)
+          )
+        `)
+        .in('id', Array.from(blockReferenced));
+      if (extraErr) throw extraErr;
+      extra = (extraRows ?? []) as ProgramScheduleRow[];
+    }
+
+    const merged = [...(withSchedule.data ?? []), ...extra];
+    return NextResponse.json({ programs: merged });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('List program schedules error:', err);
