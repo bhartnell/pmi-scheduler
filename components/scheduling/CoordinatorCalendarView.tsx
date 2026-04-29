@@ -125,7 +125,20 @@ function shortName(name: string): string {
 
 type Semester = { id: string; name: string; start_date: string; end_date: string | null };
 
-export default function CoordinatorCalendarView() {
+interface CoordinatorCalendarViewProps {
+  /**
+   * Personal mode: API returns only the caller's own assignments.
+   * Used by the My Calendar tab so a non-admin part-timer can plan
+   * around their own commitments without seeing other people's
+   * shifts / availability. Hides the scope toggle (no point — only
+   * one person is in scope) and the legend (also redundant). Lab
+   * days still appear regardless of staffing so NREMT / ACLS
+   * priority badges are visible to everyone.
+   */
+  personal?: boolean;
+}
+
+export default function CoordinatorCalendarView({ personal = false }: CoordinatorCalendarViewProps = {}) {
   // Anchor is the focal date; meaning depends on viewMode.
   // - week: Sunday of the visible week
   // - month: any date inside the visible month (we recompute the
@@ -172,7 +185,8 @@ export default function CoordinatorCalendarView() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetch(`/api/scheduling/coordinator-calendar?start_date=${startDate}&end_date=${endDate}`)
+    const personalQ = personal ? '&personal=true' : '';
+    fetch(`/api/scheduling/coordinator-calendar?start_date=${startDate}&end_date=${endDate}${personalQ}`)
       .then(r => r.json())
       .then((j: ApiResponse | { error: string }) => {
         if (cancelled) return;
@@ -193,7 +207,7 @@ export default function CoordinatorCalendarView() {
     return () => {
       cancelled = true;
     };
-  }, [startDate, endDate]);
+  }, [startDate, endDate, personal]);
 
   // ── Semester heat-map state ────────────────────────────────────────
   // Heat map is 15 weeks of the current semester regardless of which
@@ -242,7 +256,8 @@ export default function CoordinatorCalendarView() {
     const start = semester.start_date;
     const startDt = new Date(start + 'T00:00:00');
     const end = ymd(addDays(startDt, 15 * 7 - 1));
-    fetch(`/api/scheduling/coordinator-calendar?start_date=${start}&end_date=${end}`)
+    const personalQ = personal ? '&personal=true' : '';
+    fetch(`/api/scheduling/coordinator-calendar?start_date=${start}&end_date=${end}${personalQ}`)
       .then(r => r.json())
       .then((j: ApiResponse | { error: string }) => {
         if (cancelled) return;
@@ -254,7 +269,7 @@ export default function CoordinatorCalendarView() {
     return () => {
       cancelled = true;
     };
-  }, [semester]);
+  }, [semester, personal]);
 
   // People in the active scope. Part-time is the default coordinator
   // workflow; 'all' folds in full-time instructors (Schafer, Young,
@@ -408,7 +423,7 @@ export default function CoordinatorCalendarView() {
         <div className="flex items-center gap-2">
           <CalendarIcon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            Coordinator Calendar
+            {personal ? 'My Calendar' : 'Coordinator Calendar'}
           </h2>
         </div>
 
@@ -497,54 +512,53 @@ export default function CoordinatorCalendarView() {
           </span>
         </div>
 
-        {/* Scope toggle — Part-timers (default) or All instructors.
-            Per the data-completeness clarification: full-time
-            instructors (Schafer, Young, etc.) need to be queryable
-            for full workload pictures, but the default workflow
-            stays focused on part-timers. */}
-        <div className="inline-flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
-          <button
-            type="button"
-            onClick={() => setScope('part_time')}
-            className={`px-2.5 py-1 text-xs font-medium transition-colors ${
-              scope === 'part_time'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-            }`}
-            title="Show only part-time instructors"
-          >
-            Part-timers
-          </button>
-          <button
-            type="button"
-            onClick={() => setScope('all')}
-            className={`px-2.5 py-1 text-xs font-medium transition-colors border-l border-gray-300 dark:border-gray-600 ${
-              scope === 'all'
-                ? 'bg-blue-600 text-white'
-                : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-            }`}
-            title="Show all instructors including full-time staff"
-          >
-            All instructors
-          </button>
-        </div>
+        {/* Scope + person filters are coordinator-only; in personal
+            mode the API has already filtered down to the caller. */}
+        {!personal && (
+          <>
+            <div className="inline-flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setScope('part_time')}
+                className={`px-2.5 py-1 text-xs font-medium transition-colors ${
+                  scope === 'part_time'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
+                title="Show only part-time instructors"
+              >
+                Part-timers
+              </button>
+              <button
+                type="button"
+                onClick={() => setScope('all')}
+                className={`px-2.5 py-1 text-xs font-medium transition-colors border-l border-gray-300 dark:border-gray-600 ${
+                  scope === 'all'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
+                }`}
+                title="Show all instructors including full-time staff"
+              >
+                All instructors
+              </button>
+            </div>
 
-        {/* Person filter — uses peopleInScope so toggling between
-            part-timers and all instructors resizes the dropdown. */}
-        <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
-          <Filter className="w-3.5 h-3.5" />
-          <span className="font-medium">Person:</span>
-          <select
-            value={personFilter}
-            onChange={e => setPersonFilter(e.target.value)}
-            className="text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-gray-100"
-          >
-            <option value="all">All ({peopleInScope.length})</option>
-            {peopleInScope.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
-        </label>
+            <label className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <Filter className="w-3.5 h-3.5" />
+              <span className="font-medium">Person:</span>
+              <select
+                value={personFilter}
+                onChange={e => setPersonFilter(e.target.value)}
+                className="text-sm bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded px-2 py-1 text-gray-900 dark:text-gray-100"
+              >
+                <option value="all">All ({peopleInScope.length})</option>
+                {peopleInScope.map(p => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
       </div>
 
       {/* Legend: who's who. Skipped when filtered to one person since

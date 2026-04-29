@@ -78,7 +78,7 @@ export default function SchedulingPage() {
   // (action cards / coverage requests / part-timer status table).
   // 'calendar' is the new coordinator week view; lead_instructor+ only.
   // The tab is gated below so only users with access see the toggle.
-  const [activeTab, setActiveTab] = useState<'overview' | 'calendar'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'calendar' | 'my_calendar'>('overview');
   // State for the Log Hours modal (per-row trigger from the part-timer table).
   const [logHoursFor, setLogHoursFor] = useState<{
     id: string;
@@ -363,11 +363,17 @@ export default function SchedulingPage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Tab nav — Overview = the long-standing scheduling hub;
-            Calendar = the coordinator week view (Scheduling Overhaul #2).
-            Calendar tab is gated to lead_instructor+; below that role
-            we don't render the toggle and the page stays single-section. */}
-        {effectiveRole && hasMinRole(effectiveRole, 'lead_instructor') && (
+        {/* Tab nav — three tabs total. Overview is the long-standing
+            scheduling hub. Coordinator Calendar is the multi-person
+            week/month grid for leads+ (Scheduling Overhaul #2).
+            My Calendar is the personal-mode equivalent for any
+            instructor — Jimi-style use case where a part-timer wants
+            to see their own commitments + the priority badge layer
+            without admin access.
+            We always render the tab strip when there are 2+ visible
+            tabs; for the rare case where someone has only Overview
+            (no instructor row in lab_users) it stays single-section. */}
+        {effectiveRole && (
           <div className="mb-6 flex border-b border-gray-200 dark:border-gray-700">
             <button
               type="button"
@@ -382,17 +388,35 @@ export default function SchedulingPage() {
             </button>
             <button
               type="button"
-              onClick={() => setActiveTab('calendar')}
+              onClick={() => setActiveTab('my_calendar')}
               className={`px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
-                activeTab === 'calendar'
+                activeTab === 'my_calendar'
                   ? 'border-blue-600 text-blue-700 dark:text-blue-300 dark:border-blue-400'
                   : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               }`}
             >
               <Calendar className="w-3.5 h-3.5" />
-              Calendar
+              My Calendar
             </button>
+            {hasMinRole(effectiveRole, 'lead_instructor') && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('calendar')}
+                className={`px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                  activeTab === 'calendar'
+                    ? 'border-blue-600 text-blue-700 dark:text-blue-300 dark:border-blue-400'
+                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Coordinator
+              </button>
+            )}
           </div>
+        )}
+
+        {activeTab === 'my_calendar' && (
+          <CoordinatorCalendarView personal />
         )}
 
         {activeTab === 'calendar' && effectiveRole && hasMinRole(effectiveRole, 'lead_instructor') && (

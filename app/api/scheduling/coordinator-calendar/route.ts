@@ -87,24 +87,43 @@ export async function GET(request: NextRequest) {
     if (auth instanceof NextResponse) return auth;
     const { user, session } = auth;
 
-    // Role gate — coordinator view is lead_instructor+ per spec.
     const supabase = getSupabaseAdmin();
     const { data: callerRow } = await supabase
       .from('lab_users')
-      .select('role')
+      .select('id, role')
       .ilike('email', session.user.email || '')
       .single();
     const callerRole = callerRow?.role ?? null;
-    if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
-      return NextResponse.json(
-        { error: 'Forbidden — lead instructor or above required' },
-        { status: 403 }
-      );
-    }
+    const callerUserId = callerRow?.id ?? null;
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get('start_date');
     const endDate = searchParams.get('end_date');
+    // Personal mode: instructor sees only their own assignments + the
+    // priority badge layer (lab_days are public — every instructor
+    // benefits from knowing which days are NREMT / ACLS even if
+    // they're not assigned). Drops the lead_instructor gate so a
+    // part-timer can plan around their own commitments without admin
+    // access. The coordinator (full) mode stays gated to leads+.
+    const personal = searchParams.get('personal') === 'true';
+
+    if (!personal) {
+      if (!callerRole || !hasMinRole(callerRole, 'lead_instructor')) {
+        return NextResponse.json(
+          { error: 'Forbidden — lead instructor or above required' },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Personal mode requires a resolvable lab_users row to scope by.
+      if (!callerUserId) {
+        return NextResponse.json(
+          { error: 'No lab_users row found for caller' },
+          { status: 403 }
+        );
+      }
+    }
+
     if (!startDate || !endDate) {
       return NextResponse.json(
         { error: 'start_date and end_date required (YYYY-MM-DD)' },
@@ -672,16 +691,29 @@ export async function GET(request: NextRequest) {
       cohort: Array.isArray(d.cohort) ? d.cohort[0] : d.cohort,
     }));
 
+    // Personal-mode scoping. Filter blocks + people down to the
+    // caller's own user_id so a regular instructor can't see other
+    // people's confirmed shifts / availability windows. lab_days are
+    // public (everyone benefits from seeing NREMT / ACLS day flags
+    // even when not assigned) so they pass through unchanged.
+    const personalBlocks = personal
+      ? blocks.filter(b => b.person_id === callerUserId)
+      : blocks;
+    const personalPeople = personal
+      ? people.filter(p => p.id === callerUserId)
+      : people;
+
     return NextResponse.json({
       success: true,
       start_date: startDate,
       end_date: endDate,
-      people,
+      people: personalPeople,
       lab_days,
-      blocks,
+      blocks: personalBlocks,
+      mode: personal ? 'personal' : 'coordinator',
       // user echoed back is handy for the client if it ever wants to
       // call out "your assignments" within the coordinator view.
-      caller: { email: user.email, role: callerRole },
+      caller: { email: user.email, role: callerRole, id: callerUserId },
     });
   } catch (e) {
     console.error('[coordinator-calendar GET] error', e);
