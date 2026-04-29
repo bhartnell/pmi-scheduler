@@ -74,11 +74,18 @@ export default function SchedulingPage() {
   const [ptSummary, setPtSummary] = useState<PartTimerSummary | null>(null);
   const [ptLoading, setPtLoading] = useState(false);
   const [ptFilter, setPtFilter] = useState<'all' | 'available'>('all');
-  // Tab state — 'overview' renders the long-standing scheduling hub
-  // (action cards / coverage requests / part-timer status table).
-  // 'calendar' is the new coordinator week view; lead_instructor+ only.
-  // The tab is gated below so only users with access see the toggle.
-  const [activeTab, setActiveTab] = useState<'overview' | 'calendar' | 'my_calendar'>('overview');
+  // Tab state — null until the role-based default resolves below.
+  //   • lead_instructor+ → 'calendar' (coordinator workflow lands
+  //     directly on the calendar with the part-timer table + coverage
+  //     requests stacked underneath)
+  //   • everyone else    → 'my_calendar' (personal calendar with
+  //     LVFR overlay, semester heat map, etc.)
+  //   • Overview is supplementary — quick-action navigation cards and
+  //     the Request Coverage button only.
+  // Once the user manually clicks a tab the role-based default no
+  // longer applies; the effect below short-circuits when activeTab
+  // is non-null.
+  const [activeTab, setActiveTab] = useState<'overview' | 'calendar' | 'my_calendar' | null>(null);
   // State for the Log Hours modal (per-row trigger from the part-timer table).
   const [logHoursFor, setLogHoursFor] = useState<{
     id: string;
@@ -135,6 +142,17 @@ export default function SchedulingPage() {
       router.push('/');
     }
   }, [effectiveRole, router]);
+
+  // Role-based default tab. Runs once when the role first resolves
+  // (and only when no tab has been chosen yet). The condition
+  // `activeTab !== null` short-circuits if the user clicked a tab
+  // before the role finished loading — avoids a jarring "selected
+  // tab snaps back" jump.
+  useEffect(() => {
+    if (activeTab !== null) return;
+    if (!effectiveRole) return;
+    setActiveTab(hasMinRole(effectiveRole, 'lead_instructor') ? 'calendar' : 'my_calendar');
+  }, [effectiveRole, activeTab]);
 
   useEffect(() => {
     if (session?.user?.email) {
@@ -328,7 +346,7 @@ export default function SchedulingPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2 text-blue-900 dark:text-blue-400 hover:text-blue-700">
@@ -362,56 +380,53 @@ export default function SchedulingPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Tab nav — three tabs total. Overview is the long-standing
-            scheduling hub. Coordinator Calendar is the multi-person
-            week/month grid for leads+ (Scheduling Overhaul #2).
-            My Calendar is the personal-mode equivalent for any
-            instructor — Jimi-style use case where a part-timer wants
-            to see their own commitments + the priority badge layer
-            without admin access.
-            We always render the tab strip when there are 2+ visible
-            tabs; for the rare case where someone has only Overview
-            (no instructor row in lab_users) it stays single-section. */}
+      <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Tab nav — primary navigation, prominent buttons rather
+            than tiny underline links. Order: My Calendar, Coordinator
+            (leads+), Overview. The leftmost two are the primary
+            workspaces; Overview is supplementary nav cards.
+            Active tab gets a solid filled button + colored ring;
+            inactive tabs are subdued so the active one is unmissable. */}
         {effectiveRole && (
-          <div className="mb-6 flex border-b border-gray-200 dark:border-gray-700">
-            <button
-              type="button"
-              onClick={() => setActiveTab('overview')}
-              className={`px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'overview'
-                  ? 'border-blue-600 text-blue-700 dark:text-blue-300 dark:border-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-              }`}
-            >
-              Overview
-            </button>
+          <div className="mb-6 inline-flex flex-wrap items-center gap-1 p-1 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={() => setActiveTab('my_calendar')}
-              className={`px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeTab === 'my_calendar'
-                  ? 'border-blue-600 text-blue-700 dark:text-blue-300 dark:border-blue-400'
-                  : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
               }`}
             >
-              <Calendar className="w-3.5 h-3.5" />
+              <Calendar className="w-4 h-4" />
               My Calendar
             </button>
             {hasMinRole(effectiveRole, 'lead_instructor') && (
               <button
                 type="button"
                 onClick={() => setActiveTab('calendar')}
-                className={`px-4 py-2 -mb-px text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                   activeTab === 'calendar'
-                    ? 'border-blue-600 text-blue-700 dark:text-blue-300 dark:border-blue-400'
-                    : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                    ? 'bg-blue-600 text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
               >
-                <Calendar className="w-3.5 h-3.5" />
+                <UserCheck className="w-4 h-4" />
                 Coordinator
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setActiveTab('overview')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                activeTab === 'overview'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+              }`}
+            >
+              <Home className="w-4 h-4" />
+              Overview
+            </button>
           </div>
         )}
 
@@ -661,12 +676,22 @@ export default function SchedulingPage() {
             </>
           )}
         </div>
+        </>
+        )}
 
-        {/* Coverage Requests — lead_instructor+ see their own; admin
-            sees everyone's plus Approve/Decline controls. Rendered
-            above Part-Timer Status so pending tickets are the first
-            thing a director sees when they open the page. */}
-        {effectiveRole && hasMinRole(effectiveRole, 'lead_instructor') && coverageRequests.length > 0 && (
+        {/* ── Coordinator-tab extras: Coverage Requests + Part-Timer
+            Status table. Moved here from the Overview tab per the
+            UI restructure spec — these belong with the coordinator
+            tools, not the general overview. They render below the
+            CoordinatorCalendarView (which is rendered earlier in
+            the JSX, at the top of the calendar tab).
+            Order: Coverage Requests first since pending tickets are
+            actionable (need approve/decline) and belong above the
+            passive Part-Timer Status table — director sees what
+            needs doing immediately on tab open. ── */}
+        {activeTab === 'calendar' && effectiveRole && hasMinRole(effectiveRole, 'lead_instructor') && (
+        <>
+        {coverageRequests.length > 0 && (
           <div className="mt-8">
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border-2 border-blue-200 dark:border-blue-800">
               <div className="px-6 py-4 border-b dark:border-gray-700 flex items-center justify-between">
