@@ -185,6 +185,34 @@ export async function GET(request: NextRequest) {
     if (availabilityRes.error) throw availabilityRes.error;
     if (hoursRes.error) throw hoursRes.error;
 
+    // Station-level instructor pull. Three sources contribute to a
+    // single station: lab_stations.instructor_id (primary),
+    // lab_stations.additional_instructor_id (secondary), and the
+    // station_instructors many-to-many (volunteer examiners — Aly
+    // Kent, Brittany Corn, etc.). We collapse all three downstream
+    // into one block per (person, lab_day) so Schafer assigned to
+    // BVM + NRB on an NREMT day shows as a single "Stations: BVM, NRB"
+    // block rather than two separate chips. Runs as a second phase
+    // (not in the parallel batch above) because we need the lab_day
+    // IDs from the date-windowed lab_days query — lab_stations has
+    // no date column of its own.
+    const labDayIdsForStations = (labDaysRes.data ?? []).map((d: any) => d.id);
+    const stationsRes = labDayIdsForStations.length
+      ? await supabase
+          .from('lab_stations')
+          .select(`
+            id, lab_day_id, station_number, custom_title, skill_name, station_type,
+            instructor:instructor_id(id, name, email),
+            additional_instructor:additional_instructor_id(id, name, email),
+            station_instructors(
+              id, user_id, is_primary,
+              user:user_id(id, name, email)
+            )
+          `)
+          .in('lab_day_id', labDayIdsForStations)
+      : { data: [], error: null };
+    if (stationsRes.error) throw stationsRes.error;
+
     // ---------------------------------------------------------------
     // Build the unified `blocks` array. Each source maps to a Block
     // with a discriminator on `type` — the client then groups
@@ -212,12 +240,25 @@ export async function GET(request: NextRequest) {
     //    PMI cohorts. Jimi's LVFR AEMT shifts starting July 6 will
     //    appear alongside his PMI labs without further work.
     const labDayIdsInRange = new Set((labDaysRes.data ?? []).map((d: any) => d.id));
+    // Build a quick lookup for lab_day metadata (date, times, title)
+    // so the station loop below doesn't have to re-walk labDaysRes.
+    const labDayById = new Map<string, any>();
+    for (const d of labDaysRes.data ?? []) labDayById.set(d.id, d);
+
+    // Dedupe key per (person, lab_day). lab_day_roles wins — when
+    // someone is BOTH a lab_lead AND a station examiner on the same
+    // day, we keep the role-level block (it has the better label) and
+    // skip the station-level entry instead of stacking two chips.
+    const labAssignmentSeen = new Set<string>();
+    const seenKey = (personId: string, labDayId: string) => `${personId}|${labDayId}`;
+
     for (const r of rolesRes.data ?? []) {
       const ld = Array.isArray((r as any).lab_day) ? (r as any).lab_day[0] : (r as any).lab_day;
       const inst = Array.isArray((r as any).instructor) ? (r as any).instructor[0] : (r as any).instructor;
       if (!ld || !inst) continue;
       if (!labDayIdsInRange.has((r as any).lab_day_id)) continue;
       remember(inst);
+      labAssignmentSeen.add(seenKey(inst.id, (r as any).lab_day_id));
       blocks.push({
         id: `role-${(r as any).id}`,
         date: ld.date,
@@ -234,6 +275,108 @@ export async function GET(request: NextRequest) {
         role: (r as any).role,
         notes: (r as any).notes,
         label: ld.title || null,
+      });
+    }
+
+    // 1b. Station-level instructor assignments. Surfaces three cases
+    //     the lab_day_roles table misses:
+    //       • Schafer / Young assigned to specific NREMT skill
+    //         stations (BVM, NRB, Suction) without a top-level
+    //         lab-day role
+    //       • Volunteer examiners (is_part_time may or may not be set)
+    //         brought in for a single station via station_instructors
+    //       • The .additional_instructor_id slot when a station has
+    //         a co-instructor distinct from the primary
+    //
+    //     We collapse multiple stations on the same day into one
+    //     block per (person, lab_day) so a person running 3 stations
+    //     shows once with a "Stations: BVM, NRB, Suction" label
+    //     rather than three stacked chips. The dedupe also covers the
+    //     case where the primary AND additional slot reference the
+    //     same person, AND the case where lab_day_roles already
+    //     captured them (set above).
+    type StationAggKey = string; // `${personId}|${labDayId}`
+    const stationAgg = new Map<
+      StationAggKey,
+      { person: { id: string; name: string; email: string }; labDayId: string; titles: Set<string> }
+    >();
+    const collectStationPerson = (
+      person: { id: string; name?: string | null; email?: string | null } | null | undefined,
+      labDayId: string,
+      stationTitle: string | null
+    ) => {
+      if (!person?.id || !labDayId) return;
+      // Skip if lab_day_roles already wrote a block for this pair.
+      if (labAssignmentSeen.has(seenKey(person.id, labDayId))) return;
+      const key: StationAggKey = seenKey(person.id, labDayId);
+      const existing = stationAgg.get(key);
+      const titles = existing?.titles ?? new Set<string>();
+      if (stationTitle) titles.add(stationTitle);
+      stationAgg.set(key, {
+        person: {
+          id: person.id,
+          name: person.name || person.email || 'Unknown',
+          email: person.email || '',
+        },
+        labDayId,
+        titles,
+      });
+    };
+
+    for (const st of stationsRes.data ?? []) {
+      const labDayId = (st as any).lab_day_id as string | null;
+      if (!labDayId || !labDayIdsInRange.has(labDayId)) continue;
+      const stationTitle =
+        (st as any).custom_title || (st as any).skill_name || null;
+
+      // Primary instructor slot.
+      const primary = Array.isArray((st as any).instructor) ? (st as any).instructor[0] : (st as any).instructor;
+      collectStationPerson(primary, labDayId, stationTitle);
+
+      // Secondary "additional_instructor" slot.
+      const secondary = Array.isArray((st as any).additional_instructor)
+        ? (st as any).additional_instructor[0]
+        : (st as any).additional_instructor;
+      collectStationPerson(secondary, labDayId, stationTitle);
+
+      // station_instructors many-to-many — covers volunteers added via
+      // the modal that supports multiple examiners per station.
+      const sInstructors = Array.isArray((st as any).station_instructors)
+        ? (st as any).station_instructors
+        : [];
+      for (const si of sInstructors) {
+        const u = Array.isArray(si.user) ? si.user[0] : si.user;
+        collectStationPerson(u, labDayId, stationTitle);
+      }
+    }
+
+    // Materialise the aggregated station assignments into blocks.
+    for (const [, agg] of stationAgg) {
+      const ld = labDayById.get(agg.labDayId);
+      if (!ld) continue;
+      remember(agg.person);
+      // Title format: "Stations: BVM, NRB" (capped at first 3 names so
+      // tiny day cells stay readable). Single-station shows just the
+      // skill name without the "Stations:" prefix.
+      const titleArr = Array.from(agg.titles);
+      const label =
+        titleArr.length === 0
+          ? ld.title || 'Station examiner'
+          : titleArr.length === 1
+          ? titleArr[0]
+          : `Stations: ${titleArr.slice(0, 3).join(', ')}${titleArr.length > 3 ? '…' : ''}`;
+      blocks.push({
+        id: `station-${agg.person.id}-${agg.labDayId}`,
+        date: ld.date,
+        person_id: agg.person.id,
+        person_name: agg.person.name,
+        type: 'lab_assignment',
+        start_time: ld.start_time,
+        end_time: ld.end_time,
+        hours: labDayHours(ld.start_time, ld.end_time),
+        lab_day_id: agg.labDayId,
+        role: 'station_examiner',
+        label,
       });
     }
 
