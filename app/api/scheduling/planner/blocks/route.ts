@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import {
+  assignSemesterId,
+  cohortIdForProgramSchedule,
+} from '@/lib/planner-semester';
 
 const BLOCK_SELECT = `
   *,
@@ -112,6 +116,9 @@ export async function POST(request: NextRequest) {
       instructor_ids,
       // Direct-FK columns (Scheduling Overhaul follow-up).
       instructor_id, additional_instructor_id,
+      // Year-anchor escape hatch — caller can pin a specific
+      // semester even when the block date falls in a different one.
+      force_semester_override,
     } = body;
 
     if (!semester_id || !start_time || !end_time) {
@@ -128,11 +135,28 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
+    // Year-anchor: the block's semester_id is now derived from its
+    // date by default (with a cohort-override tier and an explicit
+    // force_semester_override escape hatch). Without this, a block
+    // dated May 15 created from a planner view loaded against
+    // Spring 2026 would silently land in Spring 2026 even though
+    // its date belongs to Summer 2026 — the original 285-block bug.
+    const cohortIdForResolve = await cohortIdForProgramSchedule(
+      supabase,
+      program_schedule_id
+    );
+    const resolvedSemesterId = await assignSemesterId(supabase, {
+      date,
+      clientSemesterId: semester_id,
+      cohortId: cohortIdForResolve,
+      forceOverride: !!force_semester_override,
+    });
+
     const { data, error } = await supabase
       .from('pmi_schedule_blocks')
       .insert({
         program_schedule_id: program_schedule_id || null,
-        semester_id,
+        semester_id: resolvedSemesterId,
         room_id: room_id || null,
         day_of_week: dayNum ?? null,
         start_time,

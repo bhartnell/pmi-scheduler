@@ -3,6 +3,10 @@ import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { randomUUID } from 'crypto';
+import {
+  resolveSemesterIdForDate,
+  cohortIdForProgramSchedule,
+} from '@/lib/planner-semester';
 
 /**
  * POST /api/scheduling/planner/blocks/recurring
@@ -85,6 +89,13 @@ export async function POST(request: NextRequest) {
       // Fallback start/end time if day_times not provided
       start_time: defaultStartTime,
       end_time: defaultEndTime,
+      // Year-anchor escape hatch — when true, every generated block
+      // pins to the supplied semester_id even if individual dates
+      // straddle a semester boundary. Default false: each block's
+      // semester_id is derived from its own date so a Thu/Fri series
+      // running May-Aug naturally splits across Spring → Summer
+      // (or Summer → Fall) without manual cleanup.
+      force_semester_override,
     } = body;
 
     if (!semester_id || !start_date || !repeat_days || repeat_days.length === 0) {
@@ -121,6 +132,19 @@ export async function POST(request: NextRequest) {
       ? new Date(semester_start_date + 'T00:00:00')
       : semStart;
 
+    // Year-anchor: resolve the cohort from the program_schedule once
+    // (every block in this recurrence shares it) so per-block semester
+    // resolution can hit the cohort_semester_overrides tier without
+    // N round-trips. Per-date semester_id resolution then runs once
+    // per unique date below — cached so a Thu/Fri loop spanning 15
+    // weeks costs at most 30 lookups, not 30 * blocks.
+    const supabase = getSupabaseAdmin();
+    const cohortIdForResolve = await cohortIdForProgramSchedule(
+      supabase,
+      program_schedule_id ?? null
+    );
+    const semesterIdByDate = new Map<string, string | null>();
+
     for (const dayOfWeek of parsedDays) {
       // Get per-day times or fall back to defaults
       const dayKey = String(dayOfWeek);
@@ -139,13 +163,30 @@ export async function POST(request: NextRequest) {
       let currentDate = firstDate;
       while (currentDate <= endDate) {
         const weekNum = getWeekNumber(currentDate, semesterStartForWeekCalc);
+        const dateStr = formatDate(currentDate);
+
+        // Resolve semester per-date (cached). When the override flag
+        // is set, every block keeps the client-supplied semester_id
+        // — useful when a coordinator deliberately wants a series
+        // pinned to a single semester even though dates straddle
+        // a boundary.
+        let perBlockSemesterId: string | null = semester_id;
+        if (!force_semester_override) {
+          if (!semesterIdByDate.has(dateStr)) {
+            semesterIdByDate.set(
+              dateStr,
+              await resolveSemesterIdForDate(supabase, dateStr, cohortIdForResolve)
+            );
+          }
+          perBlockSemesterId = semesterIdByDate.get(dateStr) ?? semester_id;
+        }
 
         blocksToInsert.push({
-          semester_id,
+          semester_id: perBlockSemesterId,
           program_schedule_id: program_schedule_id || null,
           room_id: room_id || null,
           day_of_week: dayOfWeek,
-          date: formatDate(currentDate),
+          date: dateStr,
           week_number: weekNum > 0 ? weekNum : null,
           recurring_group_id: recurringGroupId,
           start_time: startTime,
@@ -168,8 +209,6 @@ export async function POST(request: NextRequest) {
         error: 'No blocks to create — check repeat_days and date range'
       }, { status: 400 });
     }
-
-    const supabase = getSupabaseAdmin();
 
     // Insert in batches of 100
     const allCreated: Record<string, unknown>[] = [];

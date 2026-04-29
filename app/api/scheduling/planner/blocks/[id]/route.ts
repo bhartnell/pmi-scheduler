@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import {
+  assignSemesterId,
+  cohortIdForProgramSchedule,
+} from '@/lib/planner-semester';
 
 const BLOCK_SELECT = `
   *,
@@ -78,6 +82,52 @@ export async function PUT(
     const instructorIds: string[] | undefined = Array.isArray(body.instructor_ids) ? body.instructor_ids : undefined;
 
     const supabase = getSupabaseAdmin();
+
+    // Year-anchor: re-derive semester_id whenever date or
+    // program_schedule_id changes (or when the caller explicitly
+    // passes semester_id / force_semester_override). Fetches the
+    // current row when needed so we use the EFFECTIVE date / cohort
+    // — i.e. body.date if supplied else the row's existing date —
+    // rather than only what's in the partial update.
+    const semesterTouched =
+      body.date !== undefined ||
+      body.program_schedule_id !== undefined ||
+      body.semester_id !== undefined ||
+      body.force_semester_override !== undefined;
+    if (semesterTouched) {
+      let effectiveDate: string | null = body.date ?? null;
+      let effectiveProgramScheduleId: string | null = body.program_schedule_id ?? null;
+      // Pull the current row only when we don't already have all the
+      // inputs we need from the body. Avoids an extra round-trip on
+      // a "user changed only the date AND program_schedule" edit.
+      if (body.date === undefined || body.program_schedule_id === undefined) {
+        const { data: existing } = await supabase
+          .from('pmi_schedule_blocks')
+          .select('date, program_schedule_id')
+          .eq('id', id)
+          .single();
+        if (body.date === undefined) effectiveDate = existing?.date ?? null;
+        if (body.program_schedule_id === undefined) {
+          effectiveProgramScheduleId = existing?.program_schedule_id ?? null;
+        }
+      }
+      const cohortIdForResolve = await cohortIdForProgramSchedule(
+        supabase,
+        effectiveProgramScheduleId
+      );
+      const resolvedSemesterId = await assignSemesterId(supabase, {
+        date: effectiveDate,
+        clientSemesterId: body.semester_id ?? null,
+        cohortId: cohortIdForResolve,
+        forceOverride: !!body.force_semester_override,
+      });
+      // Only stamp semester_id when the resolver actually picked
+      // something — avoids null-stamping a row that already had a
+      // valid semester_id assigned by a prior write.
+      if (resolvedSemesterId) {
+        updates.semester_id = resolvedSemesterId;
+      }
+    }
 
     // Helper: replace all instructor assignments for a set of block IDs
     async function syncInstructorsForBlocks(blockIds: string[], newInstructorIds: string[]) {
