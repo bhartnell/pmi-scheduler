@@ -97,6 +97,32 @@ function fmtTime(t: string | null): string {
   return `${h12}:${m}${ampm}`;
 }
 
+/**
+ * Pick the display token for a person on a tiny day-cell chip. Last
+ * name reads better than first ("Gannon" vs "Michael") since most
+ * coordinator conversations key on surnames. Falls back to whatever
+ * the source has — synthetic email-only people don't have spaces, so
+ * we hand back the email handle instead.
+ *
+ *   "Michael Gannon"           → "Gannon"
+ *   "Trevor Paul"              → "Paul"
+ *   "Aly Kent Jr."             → "Kent" (drops the suffix)
+ *   "Brittany"                 → "Brittany"
+ *   "brittanycorn01@gmail.com" → "brittanycorn01"
+ */
+function shortName(name: string): string {
+  if (!name) return '?';
+  // Email handle if no space (common for synthetic people).
+  if (!/\s/.test(name)) return name.split('@')[0];
+  const parts = name.trim().split(/\s+/);
+  // Drop common suffixes that would otherwise become the display token.
+  const suffixes = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv']);
+  while (parts.length > 1 && suffixes.has(parts[parts.length - 1].toLowerCase())) {
+    parts.pop();
+  }
+  return parts[parts.length - 1];
+}
+
 export default function CoordinatorCalendarView() {
   const [anchor, setAnchor] = useState<Date>(() => weekStart(new Date()));
   const [data, setData] = useState<ApiResponse | null>(null);
@@ -466,7 +492,7 @@ export default function CoordinatorCalendarView() {
                         <>
                           <div className="flex items-center justify-between gap-1">
                             <span className="font-medium truncate">
-                              {b.person_name.split(' ')[0]}
+                              {shortName(b.person_name)}
                             </span>
                             {b.start_time && (
                               <span className="text-[10px] opacity-80 flex-shrink-0">
