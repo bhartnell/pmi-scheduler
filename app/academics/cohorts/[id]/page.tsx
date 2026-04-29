@@ -258,6 +258,30 @@ export default function CohortHubPage() {
     error?: string;
   } | null>(null);
 
+  // Update-from-Template state — mirrors the lab-management cohort
+  // hub. Two cohort hubs exist (academics + lab-management); both
+  // need the same controls so users find the action wherever they
+  // land.
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updWeekFilter, setUpdWeekFilter] = useState<'all' | 'future'>('all');
+  const [updRunning, setUpdRunning] = useState(false);
+  const [updPreview, setUpdPreview] = useState<{
+    summary?: {
+      lab_days_examined: number;
+      lab_days_with_template_match: number;
+      lab_days_no_template_match: number;
+      titles_updated: number;
+      stations_added: number;
+    };
+    resolved?: {
+      program: string;
+      semester: number;
+      templates_available: number;
+    };
+    error?: string;
+    applied?: boolean;
+  } | null>(null);
+
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/auth/signin');
@@ -606,6 +630,42 @@ export default function CohortHubPage() {
       toast.error('An error occurred while generating lab days');
     }
     setGenerating(false);
+  };
+
+  // Update-from-Template — two-step (preview → apply). See the
+  // lab-management cohort hub for the long-form rationale.
+  const runUpdateFromTemplate = async (dryRun: boolean) => {
+    if (!cohort) return;
+    setUpdRunning(true);
+    if (dryRun) setUpdPreview(null);
+    try {
+      const res = await fetch('/api/admin/lab-templates/update-existing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cohort_id: cohortId,
+          week_filter: updWeekFilter,
+          dry_run: dryRun,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setUpdPreview({ error: data.error || 'Failed to run' });
+        toast.error(data.error || 'Failed to update from template');
+      } else {
+        setUpdPreview({ summary: data.summary, resolved: data.resolved, applied: !dryRun });
+        if (!dryRun) {
+          toast.success(
+            `Updated ${data.summary.titles_updated} title(s) and added ${data.summary.stations_added} station(s)`
+          );
+          fetchData();
+        }
+      }
+    } catch (err) {
+      setUpdPreview({ error: err instanceof Error ? err.message : 'Failed to run' });
+      toast.error('Update failed');
+    }
+    setUpdRunning(false);
   };
 
   // Map program abbreviation to template program key
@@ -990,6 +1050,19 @@ export default function CohortHubPage() {
                   setGenForce(false);
                   setGenStartDate(cohort?.start_date || '');
                   setShowGenerateModal(true);
+                }}
+              />
+            )}
+            {hasTemplates && !cohort?.is_archived && (
+              <ToolCard
+                icon={Wand2}
+                title="Update from Template"
+                status="Fill in stations / titles for existing labs"
+                actionLabel="Update"
+                onClick={() => {
+                  setUpdPreview(null);
+                  setUpdWeekFilter('all');
+                  setShowUpdateModal(true);
                 }}
               />
             )}
@@ -1622,6 +1695,103 @@ export default function CohortHubPage() {
                   </>
                 )}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update-from-Template Modal — two-step (preview then apply). */}
+      {showUpdateModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-lg w-full">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
+                <Wand2 className="w-5 h-5 text-purple-600" />
+                Update from Template
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Fills in stations and titles on this cohort&apos;s existing lab
+                days using the matching templates. Won&apos;t create new lab days
+                or remove anything you&apos;ve customised — only adds missing
+                stations and updates blank/&ldquo;Content Pending&rdquo; titles.
+              </p>
+
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Scope
+              </label>
+              <select
+                value={updWeekFilter}
+                onChange={e => setUpdWeekFilter(e.target.value as 'all' | 'future')}
+                className="w-full px-3 py-2 mb-4 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                disabled={updRunning}
+              >
+                <option value="all">All weeks (any date)</option>
+                <option value="future">Future weeks only (date ≥ today)</option>
+              </select>
+
+              {updPreview?.summary && (
+                <div className="p-3 mb-4 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm">
+                  <div className="font-semibold text-blue-900 dark:text-blue-200 mb-1">
+                    {updPreview.applied ? 'Applied' : 'Preview'}
+                  </div>
+                  {updPreview.resolved && (
+                    <div className="text-[11px] text-blue-700 dark:text-blue-400 mb-1.5 italic">
+                      Pulling from <span className="font-semibold">{updPreview.resolved.program}</span> Semester{' '}
+                      <span className="font-semibold">{updPreview.resolved.semester}</span> templates
+                      {' '}({updPreview.resolved.templates_available} available)
+                    </div>
+                  )}
+                  <div className="text-blue-800 dark:text-blue-300 space-y-0.5">
+                    <div>{updPreview.summary.lab_days_examined} lab day(s) examined</div>
+                    <div>{updPreview.summary.lab_days_with_template_match} matched a template</div>
+                    {updPreview.summary.lab_days_no_template_match > 0 && (
+                      <div>{updPreview.summary.lab_days_no_template_match} had no matching template (skipped)</div>
+                    )}
+                    <div className="font-semibold mt-1">
+                      {updPreview.summary.titles_updated} title(s) {updPreview.applied ? 'updated' : 'will update'}
+                    </div>
+                    <div className="font-semibold">
+                      {updPreview.summary.stations_added} station(s) {updPreview.applied ? 'added' : 'will be added'}
+                    </div>
+                  </div>
+                </div>
+              )}
+              {updPreview?.error && (
+                <div className="p-3 mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-800 dark:text-red-200">
+                  {updPreview.error}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowUpdateModal(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
+                  disabled={updRunning}
+                >
+                  Close
+                </button>
+                {!updPreview?.applied && (
+                  <button
+                    type="button"
+                    onClick={() => runUpdateFromTemplate(true)}
+                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg"
+                    disabled={updRunning}
+                  >
+                    {updRunning ? 'Running…' : 'Preview'}
+                  </button>
+                )}
+                {updPreview?.summary && !updPreview.applied && (
+                  <button
+                    type="button"
+                    onClick={() => runUpdateFromTemplate(false)}
+                    className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-lg"
+                    disabled={updRunning || (updPreview.summary.titles_updated === 0 && updPreview.summary.stations_added === 0)}
+                  >
+                    {updRunning ? 'Applying…' : 'Apply'}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

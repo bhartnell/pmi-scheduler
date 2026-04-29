@@ -77,15 +77,19 @@ export async function GET(
       throw chartsError;
     }
 
-    // Fetch upcoming lab days for cohort
+    // Fetch upcoming lab days for cohort. Was previously capped at
+    // .limit(5) — that produced "5 upcoming" everywhere even when
+    // a cohort had a full 14-week schedule. Cohorts run a bounded
+    // number of weeks (typically <30) so returning the full set is
+    // cheap, and the badge "${upcomingLabs.length} upcoming" now
+    // shows the real count.
     const today = new Date().toISOString().split('T')[0];
     const { data: labDays, error: labsError } = await supabase
       .from('lab_days')
       .select('id, date, title')
       .eq('cohort_id', cohortId)
       .gte('date', today)
-      .order('date')
-      .limit(5);
+      .order('date');
 
     if (labsError) {
       console.error('Error fetching lab days:', labsError.code, labsError.message);
