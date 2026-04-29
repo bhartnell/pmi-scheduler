@@ -4,32 +4,56 @@ import { requireAuth } from '@/lib/api-auth';
 interface UnifiedEvent {
   id: string;
   source: string;
-  title: string;
-  date: string;
-  start_time: string;
-  end_time: string;
+  // Title / times can be null on rows from older imports — the
+  // unified calendar API leaves them as-is for the calendar UI to
+  // render gracefully. The export pipeline used to crash on .split()
+  // when any of these came through null; the helpers below are now
+  // defensive and the buildVEVENT fallbacks documented inline.
+  title: string | null;
+  date: string | null;
+  start_time: string | null;
+  end_time: string | null;
   program?: string;
   color: string;
   cohort_number?: number;
   instructor_names?: string[];
-  room?: string;
+  room?: string | null;
   event_type: string;
   status?: string;
-  content_notes?: string;
+  content_notes?: string | null;
   metadata?: Record<string, unknown>;
 }
 
-// ICS date format: YYYYMMDDTHHMMSS
-function toICSDate(dateStr: string, time: string): string {
-  const [year, month, day] = dateStr.split('-');
-  const timeParts = time.split(':');
+// Default times applied when a block doesn't carry start/end values.
+// Picks a reasonable mid-morning window so missing-time events still
+// land somewhere on the recipient's calendar instead of being dropped
+// or stamped with random hours. Matches the fallback the UI uses for
+// the same data.
+const DEFAULT_START = '08:00:00';
+const DEFAULT_END = '09:00:00';
+
+// ICS date format: YYYYMMDDTHHMMSS. Both inputs guarded against
+// nulls — the export bug ("Cannot read properties of null reading
+// 'split'") originated here. Returns an empty string when dateStr
+// itself is missing; callers (buildVEVENT) check for that before
+// pushing the DTSTART/DTEND lines.
+function toICSDate(dateStr: string | null | undefined, time: string | null | undefined): string {
+  if (!dateStr) return '';
+  const safeTime = time && typeof time === 'string' ? time : DEFAULT_START;
+  const dateParts = dateStr.split('-');
+  if (dateParts.length !== 3) return '';
+  const [year, month, day] = dateParts;
+  const timeParts = safeTime.split(':');
   const h = timeParts[0] || '00';
   const m = timeParts[1] || '00';
   return `${year}${month}${day}T${h}${m}00`;
 }
 
-function escapeICS(text: string): string {
-  let result = text;
+// Defensive against null/undefined input. RFC 5545 requires escaping
+// these literals; passing null would have crashed on .split().
+function escapeICS(text: string | null | undefined): string {
+  if (text == null) return '';
+  let result = String(text);
   result = result.split('\\').join('\\\\');
   result = result.split(';').join('\\;');
   result = result.split(',').join('\\,');
@@ -43,14 +67,26 @@ function generateUID(eventId: string): string {
   return `${eventId}@pmi-scheduler`;
 }
 
-function buildVEVENT(event: UnifiedEvent): string[] {
+// Returns the VEVENT block, or null when the event is missing the
+// minimum data required for an ICS entry (a date). Dateless events
+// can't be rendered on a calendar, so we skip them rather than emit
+// invalid ICS. Times default to 08:00–09:00 per the bug-fix spec so
+// blocks created without explicit times still surface as a 1-hour
+// placeholder in the user's calendar.
+function buildVEVENT(event: UnifiedEvent): string[] | null {
+  if (!event.date) return null;
+
+  const startTime = event.start_time ?? DEFAULT_START;
+  const endTime = event.end_time ?? DEFAULT_END;
+  const title = event.title ?? 'PMI Event';
+
   const lines: string[] = [];
   lines.push('BEGIN:VEVENT');
   lines.push(`UID:${generateUID(event.id)}`);
   lines.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
-  lines.push(`DTSTART;TZID=America/Phoenix:${toICSDate(event.date, event.start_time)}`);
-  lines.push(`DTEND;TZID=America/Phoenix:${toICSDate(event.date, event.end_time)}`);
-  lines.push(`SUMMARY:${escapeICS(event.title)}`);
+  lines.push(`DTSTART;TZID=America/Phoenix:${toICSDate(event.date, startTime)}`);
+  lines.push(`DTEND;TZID=America/Phoenix:${toICSDate(event.date, endTime)}`);
+  lines.push(`SUMMARY:${escapeICS(title)}`);
 
   if (event.room) {
     lines.push(`LOCATION:${escapeICS(event.room)}`);
@@ -175,8 +211,21 @@ export async function GET(request: NextRequest) {
       'END:VTIMEZONE',
     ];
 
+    let skippedCount = 0;
     for (const event of events) {
-      icsLines.push(...buildVEVENT(event));
+      const vevent = buildVEVENT(event);
+      if (vevent === null) {
+        // Event lacks the date column we need for DTSTART. Counted
+        // and logged so a coordinator can spot data-quality issues
+        // upstream; the export itself proceeds with the events that
+        // CAN be rendered.
+        skippedCount += 1;
+        continue;
+      }
+      icsLines.push(...vevent);
+    }
+    if (skippedCount > 0) {
+      console.warn(`[ICS export] Skipped ${skippedCount} event(s) with no date`);
     }
 
     icsLines.push('END:VCALENDAR');
