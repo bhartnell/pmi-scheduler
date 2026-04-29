@@ -392,10 +392,13 @@ export default function EventDetailPanel({ event, open, onClose }: EventDetailPa
             </Link>
           )}
 
-          {/* Edit in Planner */}
+          {/* Edit in Planner — pass the event's date so the planner
+              lands on the right week instead of falling back to its
+              auto-picked semester (which can be wildly off when
+              multiple is_active semesters exist). */}
           {event.source === 'planner' && (
             <Link
-              href="/academics/planner"
+              href={`/academics/planner?date=${encodeURIComponent(event.date)}`}
               className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
             >
               <ExternalLink className="h-4 w-4" />

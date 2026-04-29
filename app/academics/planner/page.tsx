@@ -2325,31 +2325,53 @@ function SemesterPlannerPage() {
         setRooms(safeArray(roomData.rooms));
         setInstructors(safeArray(instData.instructors));
 
-        // Pick the best semester (semList is sorted by start_date DESC from the API):
-        // 1. Latest active semester (most relevant for planning)
-        // 2. Semester whose date range includes today
-        // 3. Next upcoming semester
-        // 4. First in list
+        // ── Semester auto-pick ──────────────────────────────────────
+        // Priority order (corrected from the previous "latestActive
+        // first" version, which would jump to a future planning
+        // semester whenever multiple rows had is_active=true — the
+        // production data has ALL six 2026/2027 semesters flagged
+        // active, so the original logic landed on Fall 2027 every
+        // time):
+        //   1. URL ?date=YYYY-MM-DD  → semester containing that date
+        //      (set by /calendar's "Edit in Planner" link so we land
+        //      on the user's intended week, not the auto-pick)
+        //   2. Semester whose window includes today (most relevant
+        //      for planning the current rolling schedule)
+        //   3. Closest upcoming active semester (next term to plan)
+        //   4. Latest active semester regardless of date
+        //   5. First in list
+        // semList is sorted DESC by start_date from the API.
         const today = new Date();
         const todayStr = today.toISOString().slice(0, 10);
+        const dateParam = searchParams.get('date');
 
-        const latestActive = semList.find(s => s.is_active);
+        const containingDate = (target: string) =>
+          semList.find(s => {
+            if (!s.start_date) return false;
+            return s.start_date <= target && (!s.end_date || s.end_date >= target);
+          });
 
-        const current = semList.find(s => {
-          if (!s.start_date) return false;
-          return s.start_date <= todayStr && (!s.end_date || s.end_date >= todayStr);
-        });
-
+        const fromUrl = dateParam ? containingDate(dateParam) : null;
+        const current = containingDate(todayStr);
         const upcoming = semList
-          .filter(s => s.start_date && s.start_date > todayStr)
+          .filter(s => s.is_active && s.start_date && s.start_date > todayStr)
           .sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''))
           [0];
+        const latestActive = semList.find(s => s.is_active);
 
-        const best = latestActive || current || upcoming || semList[0];
+        const best = fromUrl || current || upcoming || latestActive || semList[0];
 
         if (best) {
           setSelectedSemesterId(best.id);
-          if (best.start_date) {
+          // Anchor the visible week. When the URL specified a date,
+          // that wins — even if the date isn't inside any semester
+          // window we still respect the user's request and fall
+          // through to that exact Monday. Otherwise mirror the
+          // semester selection: today if in window, else semester
+          // start.
+          if (dateParam) {
+            setCurrentWeekStart(getMonday(new Date(dateParam + 'T00:00:00')));
+          } else if (best.start_date) {
             const semStart = new Date(best.start_date + 'T00:00:00');
             const semEnd = best.end_date ? new Date(best.end_date + 'T00:00:00') : null;
             if (today >= semStart && (!semEnd || today <= semEnd)) {
