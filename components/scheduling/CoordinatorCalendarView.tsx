@@ -230,7 +230,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
 
   useEffect(() => {
     let cancelled = false;
-    fetch('/api/academics/planner/semesters?active_only=true')
+    fetch('/api/scheduling/planner/semesters?active_only=true')
       .then(r => r.json())
       .then((j: { semesters?: Semester[] }) => {
         if (cancelled) return;

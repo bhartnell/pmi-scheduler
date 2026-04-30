@@ -120,7 +120,7 @@ export default function AdminInstructorWorkloadPage() {
     try {
       setLoading(true);
       setError(null);
-      const semRes = await fetch('/api/academics/planner/semesters');
+      const semRes = await fetch('/api/scheduling/planner/semesters');
       if (!semRes.ok) throw new Error('Failed to load semesters');
       const semData = await semRes.json();
       const sems: PmiSemester[] = semData.semesters || [];
@@ -134,7 +134,7 @@ export default function AdminInstructorWorkloadPage() {
         const upcoming = sems.filter(s => s.start_date && s.start_date > todayStr).sort((a, b) => (a.start_date || '').localeCompare(b.start_date || ''))[0];
         const activeSem = latestActive || current || upcoming || sems[0];
         setSelectedSemesterId(activeSem.id);
-        const wRes = await fetch(`/api/academics/planner/workload?semester_id=${activeSem.id}`);
+        const wRes = await fetch(`/api/scheduling/planner/workload?semester_id=${activeSem.id}`);
         if (wRes.ok) {
           const wData = await wRes.json();
           setWorkload(wData.workload || []);
@@ -152,7 +152,7 @@ export default function AdminInstructorWorkloadPage() {
   const switchSemester = useCallback(async (semId: string) => {
     setSelectedSemesterId(semId);
     try {
-      const res = await fetch(`/api/academics/planner/workload?semester_id=${semId}`);
+      const res = await fetch(`/api/scheduling/planner/workload?semester_id=${semId}`);
       if (res.ok) {
         const data = await res.json();
         setWorkload(data.workload || []);

@@ -1405,14 +1405,14 @@ function GenerateWizard({
     setLoadingTemplates(true);
     setError(null);
     try {
-      let url = `/api/academics/planner/templates?program_type=${progType}`;
+      let url = `/api/scheduling/planner/templates?program_type=${progType}`;
       if (semNum !== null) url += `&semester_number=${semNum}`;
 
       // Load course templates, lab templates, and cohorts in parallel
-      let labUrl = `/api/academics/planner/lab-templates?program=${progType}`;
+      let labUrl = `/api/scheduling/planner/lab-templates?program=${progType}`;
       if (semNum !== null) labUrl += `&semester=${semNum}`;
 
-      const cohortUrl = `/api/academics/planner/cohorts?program_type=${progType}&semester_id=${semesterId}`;
+      const cohortUrl = `/api/scheduling/planner/cohorts?program_type=${progType}&semester_id=${semesterId}`;
 
       const [res, labRes, cohortRes] = await Promise.all([
         fetch(url),
@@ -1458,7 +1458,7 @@ function GenerateWizard({
     } else if (wizard.step === 3) {
       // Check for existing blocks before proceeding to review
       try {
-        let checkUrl = `/api/academics/planner/blocks/check-existing?semester_id=${semesterId}`;
+        let checkUrl = `/api/scheduling/planner/blocks/check-existing?semester_id=${semesterId}`;
         if (wizard.programScheduleId) {
           checkUrl += `&program_schedule_id=${wizard.programScheduleId}`;
         }
@@ -1510,7 +1510,7 @@ function GenerateWizard({
       // If a cohort is selected but has no program_schedule yet, auto-create one
       if (wizard.cohortId && !programScheduleId) {
         const classDays = Object.values(wizard.dayMapping);
-        const createRes = await fetch('/api/academics/planner/programs', {
+        const createRes = await fetch('/api/scheduling/planner/programs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -1527,7 +1527,7 @@ function GenerateWizard({
         // Non-fatal if this fails — generation can proceed without a program_schedule link
       }
 
-      const res = await fetch('/api/academics/planner/generate', {
+      const res = await fetch('/api/scheduling/planner/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2392,9 +2392,9 @@ function SemesterPlannerPage() {
       try {
         setLoading(true);
         const [semRes, roomRes, instRes] = await Promise.all([
-          fetch('/api/academics/planner/semesters?active_only=false'),
-          fetch('/api/academics/planner/rooms'),
-          fetch('/api/academics/planner/instructors'),
+          fetch('/api/scheduling/planner/semesters?active_only=false'),
+          fetch('/api/scheduling/planner/rooms'),
+          fetch('/api/scheduling/planner/instructors'),
         ]);
 
         const semData = await semRes.json();
@@ -2466,7 +2466,7 @@ function SemesterPlannerPage() {
     }
     try {
       setAddSemesterError(null);
-      const res = await fetch('/api/academics/planner/semesters', {
+      const res = await fetch('/api/scheduling/planner/semesters', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newSemester),
@@ -2477,7 +2477,7 @@ function SemesterPlannerPage() {
         return;
       }
       // Refresh semesters list and select the new one
-      const semRes = await fetch('/api/academics/planner/semesters?active_only=false');
+      const semRes = await fetch('/api/scheduling/planner/semesters?active_only=false');
       const semData = await semRes.json();
       const semList = safeArray<PmiSemester>(semData.semesters);
       setSemesters(semList);
@@ -2516,11 +2516,11 @@ function SemesterPlannerPage() {
       }
 
       const [progRes, blockRes, conflictRes, labDayRes, draftCountRes] = await Promise.all([
-        fetch(`/api/academics/planner/programs?semester_id=${selectedSemesterId}`),
-        fetch(`/api/academics/planner/blocks?semester_id=${selectedSemesterId}&date_from=${dateFrom}&date_to=${dateTo}`),
-        fetch(`/api/academics/planner/conflicts?semester_id=${selectedSemesterId}`),
+        fetch(`/api/scheduling/planner/programs?semester_id=${selectedSemesterId}`),
+        fetch(`/api/scheduling/planner/blocks?semester_id=${selectedSemesterId}&date_from=${dateFrom}&date_to=${dateTo}`),
+        fetch(`/api/scheduling/planner/conflicts?semester_id=${selectedSemesterId}`),
         fetch(`/api/lab-management/lab-days?startDate=${dateFrom}&endDate=${dateTo}&limit=100`),
-        fetch(`/api/academics/planner/blocks?semester_id=${selectedSemesterId}&status=draft&count_only=true`),
+        fetch(`/api/scheduling/planner/blocks?semester_id=${selectedSemesterId}&status=draft&count_only=true`),
       ]);
 
       const progData = await progRes.json();
@@ -2602,8 +2602,8 @@ function SemesterPlannerPage() {
     try {
       const isNew = !editingBlock?.id;
       const url = isNew
-        ? '/api/academics/planner/blocks'
-        : `/api/academics/planner/blocks/${editingBlock!.id}`;
+        ? '/api/scheduling/planner/blocks'
+        : `/api/scheduling/planner/blocks/${editingBlock!.id}`;
       const method = isNew ? 'POST' : 'PUT';
 
       const payload = { ...formData };
@@ -2641,7 +2641,7 @@ function SemesterPlannerPage() {
   const handleSaveRecurring = useCallback(async (data: Record<string, unknown>) => {
     setSaving(true);
     try {
-      const res = await fetch('/api/academics/planner/blocks/recurring', {
+      const res = await fetch('/api/scheduling/planner/blocks/recurring', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
@@ -2666,7 +2666,7 @@ function SemesterPlannerPage() {
 
     try {
       const modeParam = mode ? `?mode=${mode}` : '';
-      const res = await fetch(`/api/academics/planner/blocks/${editingBlock.id}${modeParam}`, {
+      const res = await fetch(`/api/scheduling/planner/blocks/${editingBlock.id}${modeParam}`, {
         method: 'DELETE',
       });
       if (!res.ok) {
@@ -2754,7 +2754,7 @@ function SemesterPlannerPage() {
       if (updateMode) {
         payload.update_mode = updateMode;
       }
-      const res = await fetch(`/api/academics/planner/blocks/${blockId}`, {
+      const res = await fetch(`/api/scheduling/planner/blocks/${blockId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
@@ -2932,7 +2932,7 @@ function SemesterPlannerPage() {
                 );
                 if (!ok) return;
                 try {
-                  const res = await fetch('/api/academics/planner/blocks/publish-all', {
+                  const res = await fetch('/api/scheduling/planner/blocks/publish-all', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ semester_id: selectedSemesterId }),
@@ -2996,7 +2996,7 @@ function SemesterPlannerPage() {
             {/* ICS Export */}
             {selectedSemesterId && (
               <a
-                href={`/api/academics/planner/ical/${selectedSemesterId}`}
+                href={`/api/scheduling/planner/ical/${selectedSemesterId}`}
                 className="px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg flex items-center gap-1.5"
               >
                 <Download className="w-4 h-4" /> ICS

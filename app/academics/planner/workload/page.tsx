@@ -149,7 +149,7 @@ function WeekDetailPanel({
       try {
         setLoading(true);
         const res = await fetch(
-          `/api/academics/planner/workload?semester_id=${semesterId}&instructor_id=${instructorId}&week_number=${weekNumber}`
+          `/api/scheduling/planner/workload?semester_id=${semesterId}&instructor_id=${instructorId}&week_number=${weekNumber}`
         );
         if (!res.ok) throw new Error('Failed to load detail');
         const data = await res.json();
@@ -775,7 +775,7 @@ export default function WorkloadTrackerPage() {
   // ── Data fetching ──
   const fetchWorkload = useCallback(async (semesterId: string) => {
     try {
-      const res = await fetch(`/api/academics/planner/workload?semester_id=${semesterId}`);
+      const res = await fetch(`/api/scheduling/planner/workload?semester_id=${semesterId}`);
       if (!res.ok) throw new Error('Failed to load workload data');
       const data = await res.json();
       setWorkload(data.workload || []);
@@ -790,7 +790,7 @@ export default function WorkloadTrackerPage() {
       setLoading(true);
       setError(null);
 
-      const semRes = await fetch('/api/academics/planner/semesters');
+      const semRes = await fetch('/api/scheduling/planner/semesters');
       if (!semRes.ok) throw new Error('Failed to load semesters');
       const semData = await semRes.json();
       const sems: PmiSemester[] = semData.semesters || [];
@@ -831,7 +831,7 @@ export default function WorkloadTrackerPage() {
     try {
       setRecalculating(true);
       setSelectedCell(null);
-      const res = await fetch('/api/academics/planner/workload', {
+      const res = await fetch('/api/scheduling/planner/workload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ semester_id: selectedSemesterId }),
