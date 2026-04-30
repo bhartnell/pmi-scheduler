@@ -96,6 +96,32 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
+    // ── Find-or-create: idempotent against repeat wizard runs.
+    //    The Generate Semester Schedule wizard auto-calls this
+    //    endpoint every time the user clicks Generate. Without this
+    //    short-circuit, a duplicate run would 23505 on the
+    //    (semester_id, cohort_id) UNIQUE constraint and the wizard
+    //    would silently fall through to "no program_schedule_id" —
+    //    producing orphan blocks. Returning the existing row instead
+    //    lets repeated runs re-use the same program_schedule.
+    //    Filtering by is_active=true matches the user spec.
+    const { data: existing } = await supabase
+      .from('pmi_program_schedules')
+      .select(`
+        *,
+        cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
+          id, cohort_number, start_date, expected_end_date, is_active, semester,
+          program:programs(id, name, abbreviation)
+        )
+      `)
+      .eq('semester_id', semester_id)
+      .eq('cohort_id', cohort_id)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (existing) {
+      return NextResponse.json({ program: existing, reused: true });
+    }
+
     // If no explicit color provided, look up the cohort's program to assign the right default
     let resolvedColor = color;
     if (!resolvedColor) {
@@ -134,7 +160,24 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
+      // Race-condition fallback — if a concurrent request created
+      // the row between our SELECT and INSERT, fetch + return it.
       if (error.code === '23505') {
+        const { data: raceWinner } = await supabase
+          .from('pmi_program_schedules')
+          .select(`
+            *,
+            cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
+              id, cohort_number, start_date, expected_end_date, is_active, semester,
+              program:programs(id, name, abbreviation)
+            )
+          `)
+          .eq('semester_id', semester_id)
+          .eq('cohort_id', cohort_id)
+          .maybeSingle();
+        if (raceWinner) {
+          return NextResponse.json({ program: raceWinner, reused: true });
+        }
         return NextResponse.json({ error: 'This cohort is already scheduled in this semester' }, { status: 409 });
       }
       throw error;

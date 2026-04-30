@@ -5,7 +5,7 @@
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
-  ChevronLeft, Plus, X, Calendar, Download, AlertTriangle,
+  ChevronLeft, Plus, X, Calendar, Download, AlertTriangle, Check,
   Loader2, Clock, MapPin, Users, Filter, Eye, EyeOff, Trash2,
   Link, Unlink, Wand2, ChevronRight, Monitor, Repeat, BarChart3,
 } from 'lucide-react';
@@ -1332,6 +1332,50 @@ function GenerateWizard({
     available_semesters: Array<{ id: string; name: string; start_date: string; end_date: string | null; is_active: boolean }>;
   } | null>(null);
   const [unmappedFallbackId, setUnmappedFallbackId] = useState<string>('');
+
+  // ── Available semesters for the target-semester preview shown in
+  //    Step 3 (under the Start Date input). Lets the user verify
+  //    "Blocks will be assigned to: Summer 2026 (May–Aug)" before
+  //    clicking Generate. Server-side `assignSemesterId()` does the
+  //    real per-block resolution; this is a friendly preview based
+  //    on the start_date alone.
+  interface AvailableSemester {
+    id: string;
+    name: string;
+    start_date: string;
+    end_date: string | null;
+    is_active: boolean;
+  }
+  const [availableSemesters, setAvailableSemesters] = useState<AvailableSemester[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/scheduling/planner/semesters?active_only=false')
+      .then(r => r.json())
+      .then(d => {
+        if (cancelled) return;
+        setAvailableSemesters(safeArray<AvailableSemester>(d.semesters));
+      })
+      .catch(() => {
+        // Non-critical — preview just won't render
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Derive the semester whose date window contains wizard.startDate.
+  // Returns null when start_date is empty or falls outside every
+  // window — caller renders the "outside any defined semester" hint.
+  const previewSemester: AvailableSemester | null = (() => {
+    if (!wizard.startDate) return null;
+    const d = wizard.startDate; // YYYY-MM-DD
+    for (const s of availableSemesters) {
+      const start = s.start_date;
+      const end = s.end_date ?? '9999-12-31';
+      if (d >= start && d <= end) return s;
+    }
+    return null;
+  })();
   const [labTemplateInfo, setLabTemplateInfo] = useState<LabTemplateInfo | null>(null);
 
   // Existing blocks check for duplicate prevention
@@ -1413,13 +1457,24 @@ function GenerateWizard({
       loadTemplates(wizard.programType, wizard.semesterNumber);
       setWizard(prev => ({ ...prev, step: 3 }));
     } else if (wizard.step === 3) {
-      // Check for existing blocks before proceeding to review
+      // Check for existing blocks before proceeding to review.
+      // Filter priority: program_schedule_id (most specific) →
+      // cohort_id (covers cross-semester duplicates for the same
+      // cohort) → semester_id (back-compat fallback). The cohort
+      // path is the primary fix for the "Generate creates duplicate
+      // schedules" bug — even without a programScheduleId pinned in
+      // the wizard state, we now warn when a cohort already has
+      // blocks anywhere.
       try {
-        let checkUrl = `/api/scheduling/planner/blocks/check-existing?semester_id=${semesterId}`;
+        const params = new URLSearchParams();
         if (wizard.programScheduleId) {
-          checkUrl += `&program_schedule_id=${wizard.programScheduleId}`;
+          params.set('program_schedule_id', wizard.programScheduleId);
+        } else if (wizard.cohortId) {
+          params.set('cohort_id', wizard.cohortId);
+        } else if (semesterId) {
+          params.set('semester_id', semesterId);
         }
-        const checkRes = await fetch(checkUrl);
+        const checkRes = await fetch(`/api/scheduling/planner/blocks/check-existing?${params.toString()}`);
         const checkData = await checkRes.json();
         if (checkRes.ok && checkData.has_existing) {
           setExistingBlocks(checkData as ExistingBlocksInfo);
@@ -1464,7 +1519,14 @@ function GenerateWizard({
     try {
       let programScheduleId = wizard.programScheduleId;
 
-      // If a cohort is selected but has no program_schedule yet, auto-create one
+      // If a cohort is selected but no programScheduleId is pinned in
+      // the wizard state, find-or-create one. The endpoint is now
+      // idempotent on (semester_id, cohort_id) — a repeat run returns
+      // the existing program_schedule with `reused: true` instead of
+      // 23505'ing. This kills the previous bug where re-running the
+      // wizard multiple times could either spawn duplicate
+      // program_schedules (older deployments without the unique key)
+      // or silently strand blocks with a null program_schedule_id.
       if (wizard.cohortId && !programScheduleId) {
         const classDays = Object.values(wizard.dayMapping);
         const createRes = await fetch('/api/scheduling/planner/programs', {
@@ -1480,6 +1542,12 @@ function GenerateWizard({
         const createData = await createRes.json();
         if (createRes.ok && createData.program) {
           programScheduleId = createData.program.id;
+          if (createData.reused) {
+            console.info(
+              '[planner.generate] Re-using existing program_schedule for this cohort + semester (id=' +
+                programScheduleId + ')'
+            );
+          }
         }
         // Non-fatal if this fails — generation can proceed without a program_schedule link
       }
@@ -1713,6 +1781,33 @@ function GenerateWizard({
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
                     />
                     <p className="text-xs text-gray-400 mt-1">15 weeks of dated blocks will be generated from this date</p>
+                    {/* Target-semester preview — auto-detected from
+                        start_date against pmi_semesters windows. The
+                        server's per-block resolver still runs a more
+                        thorough check at Generate time, but showing
+                        the preview up front catches user mistakes
+                        ("oh, that date is in Spring not Summer")
+                        BEFORE any blocks get created. */}
+                    {wizard.startDate && (
+                      previewSemester ? (
+                        <div className="mt-2 px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 text-xs text-emerald-800 dark:text-emerald-200 flex items-center gap-2">
+                          <Check className="w-3.5 h-3.5 flex-shrink-0" />
+                          <span>
+                            Blocks will be assigned to <strong>{previewSemester.name}</strong>
+                            {previewSemester.start_date && previewSemester.end_date && (
+                              <> ({previewSemester.start_date} – {previewSemester.end_date})</>
+                            )}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="mt-2 px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                          <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                          <span>
+                            This start date falls outside any defined semester. You&apos;ll be prompted to pick a fallback semester before blocks are written.
+                          </span>
+                        </div>
+                      )
+                    )}
                   </div>
 
                   {/* Cohort link */}
@@ -2080,7 +2175,11 @@ function GenerateWizard({
               Existing blocks found
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-              This semester already has <strong>{existingBlocks.total_count} blocks</strong>:
+              {wizard.cohortId ? (
+                <>This cohort already has <strong>{existingBlocks.total_count} schedule blocks</strong>. Generate will add to existing blocks unless you clear them first.</>
+              ) : (
+                <>This semester already has <strong>{existingBlocks.total_count} blocks</strong>:</>
+              )}
             </p>
             <div className="max-h-[200px] overflow-y-auto mb-4 space-y-1">
               {existingBlocks.courses.map((c, i) => (
