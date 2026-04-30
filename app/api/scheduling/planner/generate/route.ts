@@ -3,6 +3,10 @@ import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { randomUUID } from 'crypto';
+import {
+  assignSemesterId,
+  cohortIdForProgramSchedule,
+} from '@/lib/planner-semester';
 
 // Helper: add days to a date
 function addDays(date: Date, days: number): Date {
@@ -46,6 +50,17 @@ export async function POST(request: NextRequest) {
       lab_template_id,   // specific lab template to use (optional — uses most recent if not provided)
       cohort_id,         // needed for lab template application
       lab_day_index,     // which day_number(s) get lab days: 'day1', 'day2', 'both', 'none' (default: 'day2')
+      // Two-step generation flow per the auto-detect-semester spec:
+      //   dry_run: true  → resolve semesters per block + return
+      //                    breakdown WITHOUT writing. UI uses this
+      //                    to confirm the mapping before commit.
+      //   dry_run: false → actual write. When set with
+      //                    unmapped_fallback_semester_id, blocks
+      //                    whose dates fall outside any semester
+      //                    window pin to that fallback (the
+      //                    dropdown the user picks in the prompt).
+      dry_run,
+      unmapped_fallback_semester_id,
     } = body;
 
     // Normalize instructor IDs: support both legacy single and new multi-instructor
@@ -173,12 +188,14 @@ export async function POST(request: NextRequest) {
         title += ` (Wks ${startWeek}-15)`;
       }
 
-      // Generate one block per week
+      // Generate one block per week. semester_id resolution happens
+      // in a second pass below so we only do the lookup once per
+      // unique date (not once per week × course).
       for (let week = startWeek; week <= endWeek; week++) {
         const blockDate = addDays(firstDate, (week - 1) * 7);
 
         blocksToInsert.push({
-          semester_id,
+          semester_id, // placeholder — overwritten by per-date resolver below
           program_schedule_id: program_schedule_id || null,
           day_of_week: weekday,
           date: formatDate(blockDate),
@@ -197,10 +214,109 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // ── Auto-detect semester per block via the date → pmi_semesters
+    //    lookup. Same path the recurring-block POST and the planner
+    //    block PUT use (lib/planner-semester.ts). Cohort override
+    //    tier resolved once from the program_schedule so a single
+    //    cohort-wide override (Group 12 Dec start, LVFR AEMT July
+    //    start, etc.) applies cleanly to every block.
+    //
+    //    When a block's date falls outside ANY known semester
+    //    window, we record it as "unmapped" and either:
+    //      • use unmapped_fallback_semester_id when the caller
+    //        passed one (the user picked it from the prompt)
+    //      • use the body's semester_id as final fallback
+    //        (back-compat with the pre-auto-detect behaviour)
+    //
+    //    The dry_run mode short-circuits before insert and returns
+    //    the resolved breakdown so the wizard can show a confirm
+    //    panel + the "which semester?" dropdown when needed.
+    const cohortIdForResolve = await cohortIdForProgramSchedule(
+      supabase,
+      program_schedule_id ?? null
+    );
+    const dateCache = new Map<string, string | null>();
+    const semesterCounts = new Map<string, number>();
+    const unmappedDates = new Set<string>();
+    for (const block of blocksToInsert) {
+      const dateStr = block.date as string;
+      let resolved = dateCache.get(dateStr);
+      if (resolved === undefined) {
+        resolved = await assignSemesterId(supabase, {
+          date: dateStr,
+          clientSemesterId: null, // skip body's semester_id at this step
+          cohortId: cohortIdForResolve,
+          forceOverride: false,
+        });
+        dateCache.set(dateStr, resolved);
+      }
+      if (resolved) {
+        block.semester_id = resolved;
+        semesterCounts.set(resolved, (semesterCounts.get(resolved) ?? 0) + 1);
+      } else {
+        // No semester contains this date. Pick the user's picked
+        // fallback (from the prompt) if provided; otherwise the
+        // body's semester_id; otherwise leave null.
+        const fallback = unmapped_fallback_semester_id || semester_id || null;
+        block.semester_id = fallback;
+        unmappedDates.add(dateStr);
+        if (fallback) {
+          semesterCounts.set(fallback, (semesterCounts.get(fallback) ?? 0) + 1);
+        }
+      }
+    }
+
     if (blocksToInsert.length === 0) {
       return NextResponse.json({
         error: 'No blocks to generate — check day_mapping matches template day_index values'
       }, { status: 400 });
+    }
+
+    // Build the breakdown payload the wizard renders in the confirm
+    // panel. Includes per-semester counts (resolved + name) and the
+    // sorted list of unmapped dates so the prompt can show "These
+    // 6 dates fall outside any defined semester: …".
+    const semesterIdsInUse = Array.from(semesterCounts.keys());
+    const { data: semesterNamesRows } =
+      semesterIdsInUse.length > 0
+        ? await supabase
+            .from('pmi_semesters')
+            .select('id, name, start_date, end_date')
+            .in('id', semesterIdsInUse)
+        : { data: [] as Array<{ id: string; name: string; start_date: string; end_date: string }> };
+    const semesterById = new Map(
+      (semesterNamesRows ?? []).map(s => [s.id, s])
+    );
+    const breakdown = Array.from(semesterCounts.entries()).map(([id, count]) => ({
+      semester_id: id,
+      semester_name: semesterById.get(id)?.name ?? '(unnamed semester)',
+      block_count: count,
+    }));
+    const unmappedDateList = Array.from(unmappedDates).sort();
+
+    // Dry run short-circuit — wizard calls this first to render the
+    // confirm panel. If unmapped_count > 0 AND no fallback was
+    // provided, the UI surfaces the "which semester?" dropdown.
+    if (dry_run) {
+      // Need a list of available semesters for the dropdown.
+      const { data: allSemesters } = await supabase
+        .from('pmi_semesters')
+        .select('id, name, start_date, end_date, is_active')
+        .order('start_date', { ascending: false });
+      return NextResponse.json({
+        success: true,
+        dry_run: true,
+        block_count: blocksToInsert.length,
+        breakdown,
+        unmapped_count: unmappedDates.size,
+        unmapped_dates: unmappedDateList,
+        available_semesters: allSemesters ?? [],
+        // Echo back what the user passed so the UI confirm panel
+        // can show "Cohort program type: paramedic, semester: 1".
+        program_type,
+        semester_number: semester_number ?? null,
+        cohort_id: cohort_id ?? null,
+      });
     }
 
     // Insert in batches of 100 to avoid payload limits
@@ -435,6 +551,12 @@ export async function POST(request: NextRequest) {
       generated_count: allCreated.length,
       online_count: onlineTemplates.length,
       lab_template: labResult,
+      // Auto-detect summary — same shape as dry_run so the wizard
+      // can show a confirmation toast like "Generated 75 blocks
+      // (50 in Spring 2026, 25 in Summer 2026)".
+      breakdown,
+      unmapped_count: unmappedDates.size,
+      unmapped_dates: unmappedDateList,
     });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';

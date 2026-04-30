@@ -1318,6 +1318,20 @@ function GenerateWizard({
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Two-step generation flow: first call hits dry_run=true and
+  // returns { breakdown, unmapped_count, unmapped_dates,
+  // available_semesters }. The wizard renders that breakdown so
+  // the user can confirm the semester mapping (and pick a fallback
+  // when some dates land outside any defined window) before the
+  // actual write.
+  const [genPreview, setGenPreview] = useState<{
+    block_count: number;
+    breakdown: Array<{ semester_id: string; semester_name: string; block_count: number }>;
+    unmapped_count: number;
+    unmapped_dates: string[];
+    available_semesters: Array<{ id: string; name: string; start_date: string; end_date: string | null; is_active: boolean }>;
+  } | null>(null);
+  const [unmappedFallbackId, setUnmappedFallbackId] = useState<string>('');
   const [labTemplateInfo, setLabTemplateInfo] = useState<LabTemplateInfo | null>(null);
 
   // Existing blocks check for duplicate prevention
@@ -1470,7 +1484,11 @@ function GenerateWizard({
         // Non-fatal if this fails — generation can proceed without a program_schedule link
       }
 
-      const res = await fetch('/api/scheduling/planner/generate', {
+      // Two-step: first dry_run fetches the per-semester breakdown
+      // so the wizard can show "75 blocks → Spring (50) + Summer
+      // (25)" with a "which semester?" dropdown for any unmapped
+      // dates. confirmGenerate() does the real write afterwards.
+      const dryRes = await fetch('/api/scheduling/planner/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1485,10 +1503,67 @@ function GenerateWizard({
           load_lab_template: wizard.loadLabTemplate,
           lab_template_id: wizard.labTemplateId || null,
           cohort_id: wizard.cohortId || null,
+          dry_run: true,
+        }),
+      });
+      const dryData = await dryRes.json();
+      if (!dryRes.ok) throw new Error(dryData.error || 'Generation failed');
+      setGenPreview({
+        block_count: dryData.block_count,
+        breakdown: dryData.breakdown,
+        unmapped_count: dryData.unmapped_count,
+        unmapped_dates: dryData.unmapped_dates,
+        available_semesters: dryData.available_semesters,
+      });
+      // Default the fallback dropdown to the wizard's selected
+      // semester — usually the right answer when only a few edge
+      // dates miss a window.
+      setUnmappedFallbackId(semesterId || '');
+      // Stash the request body so confirmGenerate doesn't recompute
+      // programScheduleId etc.
+      pendingGenerateBody.current = {
+        program_type: wizard.programType,
+        semester_number: wizard.semesterNumber,
+        semester_id: semesterId,
+        program_schedule_id: programScheduleId || null,
+        day_mapping: wizard.dayMapping,
+        instructor_ids: wizard.instructorIds.length > 0 ? wizard.instructorIds : null,
+        clear_existing: wizard.clearExisting,
+        start_date: wizard.startDate,
+        load_lab_template: wizard.loadLabTemplate,
+        lab_template_id: wizard.labTemplateId || null,
+        cohort_id: wizard.cohortId || null,
+      };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Generation failed');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Real-write step. Called when the user clicks "Confirm" on the
+  // semester-breakdown panel. Sends unmapped_fallback_semester_id
+  // when set so blocks outside any defined window pin to the
+  // dropdown choice.
+  const pendingGenerateBody = useRef<Record<string, unknown> | null>(null);
+  const confirmGenerate = async () => {
+    if (!pendingGenerateBody.current) return;
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await fetch('/api/scheduling/planner/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...pendingGenerateBody.current,
+          dry_run: false,
+          unmapped_fallback_semester_id: unmappedFallbackId || null,
         }),
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || 'Generation failed');
+      setGenPreview(null);
+      pendingGenerateBody.current = null;
       onGenerate(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Generation failed');
@@ -1909,6 +1984,92 @@ function GenerateWizard({
           </div>
         </div>
       </div>
+
+      {/* Semester auto-detect confirmation panel — shown after the
+          dry_run dump comes back with the per-semester breakdown.
+          When some block dates land outside any defined semester
+          (unmapped_count > 0) we show the dropdown so the user can
+          pick which semester those blocks should land in. */}
+      {genPreview && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-lg mx-4 p-5">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2 flex items-center gap-2">
+              <Wand2 className="w-5 h-5 text-purple-500" />
+              Confirm semester assignment
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+              {genPreview.block_count} block(s) will be created. Each block&apos;s
+              semester is auto-assigned by date. Review the breakdown
+              below before committing.
+            </p>
+
+            {/* Per-semester counts */}
+            <div className="space-y-1.5 mb-4">
+              {genPreview.breakdown.map(b => (
+                <div key={b.semester_id} className="flex items-center justify-between p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm">
+                  <span className="font-medium text-blue-900 dark:text-blue-200">{b.semester_name}</span>
+                  <span className="text-blue-700 dark:text-blue-300">{b.block_count} block(s)</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Unmapped-dates prompt — only when at least one date
+                fell outside every known semester window */}
+            {genPreview.unmapped_count > 0 && (
+              <div className="p-3 mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm">
+                <div className="flex items-start gap-2 mb-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-amber-900 dark:text-amber-200">
+                      {genPreview.unmapped_count} date(s) fall outside any defined semester
+                    </p>
+                    <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                      {genPreview.unmapped_dates.slice(0, 5).join(', ')}
+                      {genPreview.unmapped_dates.length > 5 && ` +${genPreview.unmapped_dates.length - 5} more`}
+                    </p>
+                  </div>
+                </div>
+                <label className="block text-xs font-medium text-amber-900 dark:text-amber-200 mb-1">
+                  Which semester should these blocks be assigned to?
+                </label>
+                <select
+                  value={unmappedFallbackId}
+                  onChange={e => setUnmappedFallbackId(e.target.value)}
+                  className="w-full text-sm px-2 py-1.5 border border-amber-300 dark:border-amber-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                >
+                  <option value="">— select a semester —</option>
+                  {genPreview.available_semesters.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {s.name} ({s.start_date}{s.end_date ? ` → ${s.end_date}` : ''})
+                      {s.is_active ? '' : ' (inactive)'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => { setGenPreview(null); pendingGenerateBody.current = null; }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg"
+                disabled={generating}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmGenerate}
+                disabled={generating || (genPreview.unmapped_count > 0 && !unmappedFallbackId)}
+                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 disabled:opacity-50 rounded-lg flex items-center gap-1.5"
+              >
+                {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                Confirm + Generate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Duplicate blocks dialog */}
       {showDuplicateDialog && existingBlocks && (
