@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { mapProgramKey } from '@/lib/program-key';
 
 /**
  * POST /api/admin/lab-templates/update-existing
@@ -95,23 +96,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Cohort not found' }, { status: 404 });
     }
     const programRel = Array.isArray(cohort.program) ? cohort.program[0] : cohort.program;
-    // Map cohort program abbreviation → template program key. The
-    // lab_day_templates table uses 'paramedic' / 'emt' / 'aemt'
-    // (lowercase) but cohorts store 'PM' / 'PMD' / 'EMT' / 'AEMT'
-    // — without this mapping the WHERE program=... clause resolves
-    // to 'pm' and matches zero templates. Same mapping the cohort-
-    // hub UI does for /apply via getTemplateProgram(), now done
-    // server-side so callers can pass cohort_id alone.
-    const mapAbbrToTemplateKey = (abbr: string | null | undefined): string => {
-      const u = (abbr ?? '').toUpperCase();
-      if (u === 'PM' || u === 'PMD') return 'paramedic';
-      if (u === 'EMT') return 'emt';
-      if (u === 'AEMT') return 'aemt';
-      return (abbr ?? '').toLowerCase();
-    };
+    // Use the shared mapProgramKey() helper (lib/program-key.ts) so
+    // every callsite that bridges cohort.abbreviation →
+    // lab_day_templates.program goes through one piece of code. The
+    // inline mapping that used to live here was extracted in the
+    // commit that fixed the same bug in the planner-wizard
+    // /lab-templates endpoint.
     const program = body.program
-      ? body.program.trim().toLowerCase()
-      : mapAbbrToTemplateKey(programRel?.abbreviation);
+      ? mapProgramKey(body.program)
+      : mapProgramKey(programRel?.abbreviation);
     // Semester resolution: caller override → cohort.current_semester
     // → legacy cohort.semester. PM G15 / PM G14 both have
     // current_semester=1; cohort.semester is null on those rows.

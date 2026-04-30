@@ -48,6 +48,7 @@ import SkillCoveragePanel from '@/components/lab-day/SkillCoveragePanel';
 import { useToast } from '@/components/Toast';
 import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
 import type { ExportConfig } from '@/lib/export-utils';
+import { mapProgramKey } from '@/lib/program-key';
 
 interface ArchiveSummary {
   cohort_name: string;
@@ -1072,7 +1073,7 @@ export default function CohortHubPage() {
                 title="Generate Class Schedule"
                 status="Open planner wizard"
                 actionLabel="Generate"
-                href={`/academics/planner?generate=true&cohortId=${cohortId}&program=${encodeURIComponent(cohort?.program?.abbreviation?.toLowerCase() || '')}`}
+                href={`/academics/planner?generate=true&cohortId=${cohortId}&program=${encodeURIComponent(mapProgramKey(cohort?.program?.abbreviation))}`}
               />
             )}
           </div>

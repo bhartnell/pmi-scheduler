@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { mapProgramKey } from '@/lib/program-key';
 
 // GET /api/scheduling/planner/lab-templates?program=paramedic&semester=1
 // Returns available lab templates for the given program/semester
@@ -20,10 +21,17 @@ export async function GET(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
+    // Map cohort abbreviation (PM/PMD/EMT/AEMT) to the template
+    // table key ('paramedic'/'emt'/'aemt'). Without this the wizard
+    // launched from /academics/cohorts/[id] (which forwards
+    // ?program=pm in the URL) hits the DB with WHERE program='pm'
+    // and returns nothing — the bug surfaced as "No lab template
+    // found for pm S1" in the wizard's lab-template step.
+    const programKey = mapProgramKey(program);
     let query = supabase
       .from('lab_day_templates')
       .select('id, name, updated_at, week_number, day_number, category')
-      .eq('program', program.toLowerCase());
+      .eq('program', programKey);
 
     if (semester) {
       query = query.eq('semester', parseInt(semester));

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { mapProgramKey } from '@/lib/program-key';
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +22,10 @@ export async function GET(request: NextRequest) {
       .order('course_code');
 
     if (programType) {
-      query = query.eq('program_type', programType);
+      // Same shared mapping as lab-templates so the wizard works
+      // when the cohort hub forwards ?program=pm. pmi_course_templates
+      // stores 'paramedic' / 'emt' / 'aemt' (full lowercase names).
+      query = query.eq('program_type', mapProgramKey(programType));
     }
     if (semesterNumber) {
       query = query.eq('semester_number', parseInt(semesterNumber));
