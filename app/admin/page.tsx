@@ -372,13 +372,9 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'Recruit volunteers for NREMT testing and lab days, manage invite campaigns',
           color: 'bg-teal-500',
         },
-        {
-          href: '/admin/alumni',
-          icon: GraduationCap,
-          title: 'Alumni Tracking',
-          description: 'Track graduates: employment status, contact info, and continuing education',
-          color: 'bg-blue-700',
-        },
+        // Alumni Tracking hidden per codebase-streamline spec —
+        // archived to speculative-features branch. /admin/alumni
+        // route + API + DB intact for re-activation later.
         {
           href: '/admin/qa-checklist',
           icon: ClipboardCheck,
@@ -845,7 +841,8 @@ export default function AdminPage() {
                   { label: 'Medications Resource', href: '/resources/medications' },
                   { label: 'Incident Reports', href: '/admin/incidents' },
                   { label: 'Scenario Usage Overview', href: '/reports/scenario-usage-overview' },
-                  { label: 'Cases Leaderboard', href: '/cases/leaderboard' },
+                  // Cases Leaderboard hidden — gamification archived
+                  // to speculative-features branch.
                 ].map((item) => (
                   <Link
                     key={item.href}

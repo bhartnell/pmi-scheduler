@@ -23,7 +23,6 @@ import {
   Shield,
   BookOpen,
   Shuffle,
-  ScrollText,
   ClipboardCheck,
 } from 'lucide-react';
 import { canAccessClinical, canAccessAffiliations, type Role } from '@/lib/permissions';
@@ -364,14 +363,10 @@ export default function ClinicalDashboardPage() {
                 />
               </>
             )}
-            {effectiveRole && canAccessAffiliations(effectiveRole) && (
-              <SecondaryCard
-                href="/clinical/affiliations"
-                icon={ScrollText}
-                title="Affiliations"
-                description="Site agreements & expirations"
-              />
-            )}
+            {/* Affiliation Tracker hidden per codebase-streamline
+                spec. /clinical/affiliations page + API + DB intact —
+                only the entry card is removed. Direct URL still
+                works if anyone has a bookmark. */}
           </div>
         </div>
       </main>
