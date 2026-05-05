@@ -4,7 +4,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Users, CheckCircle, Send, ExternalLink, Copy, Eye, X, Sparkles,
   ChevronLeft, ChevronRight, CalendarPlus, Loader2, MapPin, Mail,
+  AlertTriangle, Calendar as CalendarIcon,
 } from 'lucide-react';
+import Link from 'next/link';
 import {
   generateTimeSlots, generateDates, respondentRoles, requiredRoles,
   getCellColor, getRoleConfig, getAvailability,
@@ -39,6 +41,16 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
   });
   const [creatingMeeting, setCreatingMeeting] = useState(false);
   const [meetingResult, setMeetingResult] = useState<MeetingResult | null>(null);
+
+  // Google Calendar connection status — pre-checked when the
+  // meeting modal opens so we can swap the form for a "Connect"
+  // CTA when the user isn't connected yet. Without this, clicking
+  // "Create Meeting" would 412 silently.
+  const [calendarStatus, setCalendarStatus] = useState<{
+    connected: boolean;
+    needs_reauth: boolean;
+  } | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
   // Send Email modal state
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -158,6 +170,20 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
     });
     setMeetingResult(null);
     setShowMeetingModal(true);
+    // Kick off the connection check in the background so the modal
+    // opens instantly. The form section is gated behind
+    // calendarStatus.connected once the result lands.
+    setCheckingStatus(true);
+    fetch('/api/calendar/status')
+      .then(r => r.json())
+      .then(d =>
+        setCalendarStatus({
+          connected: !!d.connected,
+          needs_reauth: !!d.needs_reauth,
+        })
+      )
+      .catch(() => setCalendarStatus({ connected: false, needs_reauth: false }))
+      .finally(() => setCheckingStatus(false));
   };
 
   // Create Google Calendar meeting
@@ -217,8 +243,17 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
       if (result.success) {
         setMeetingResult({
           success: true,
-          message: `Meeting created! Invites sent to ${attendees.length} attendee(s).`,
+          message: `Meeting created! Invites sent to ${result.invited_count ?? attendees.length} attendee(s).`,
           link: result.event?.htmlLink,
+        });
+      } else if (response.status === 412 && result.needs_connect) {
+        // Endpoint says "you need to connect first." Mirror that
+        // into UI state so the modal renders the CTA panel instead
+        // of a generic error.
+        setCalendarStatus({ connected: false, needs_reauth: false });
+        setMeetingResult({
+          success: false,
+          message: 'Connect your Google Calendar to schedule meetings.',
         });
       } else {
         setMeetingResult({
@@ -302,8 +337,56 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
     setSendingEmail(false);
   };
 
+  // Format the scheduled timestamp for the "Scheduled: <date/time>"
+  // banner. Returns "Aug 14, 2026, 1:00 PM" style. Hidden entirely
+  // when no scheduled_at exists on the poll.
+  const scheduledLabel = pollData?.scheduled_at
+    ? new Date(pollData.scheduled_at).toLocaleString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: 'numeric',
+      })
+    : null;
+
   return (
     <div className="max-w-7xl mx-auto px-4">
+      {/* Scheduled banner — visible once an organiser has used the
+          Create Meeting flow. Pulls poll.scheduled_at +
+          poll.google_event_link directly. */}
+      {scheduledLabel && (
+        <div className="mb-4 md:mb-6 rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 p-4 flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-emerald-900 dark:text-emerald-100">
+              Scheduled
+            </p>
+            <p className="text-xs text-emerald-800 dark:text-emerald-200">
+              {scheduledLabel}
+              {pollData.scheduled_end_at
+                ? ` – ${new Date(pollData.scheduled_end_at).toLocaleTimeString(undefined, {
+                    hour: 'numeric',
+                    minute: 'numeric',
+                  })}`
+                : ''}
+            </p>
+          </div>
+          {pollData.google_event_link && (
+            <a
+              href={pollData.google_event_link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-medium"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              View on Google Calendar
+            </a>
+          )}
+        </div>
+      )}
+
       {/* Header with links */}
       <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-4 md:mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-4">{pollData?.title}</h1>
@@ -747,6 +830,44 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
                 </div>
               </div>
 
+              {/* Connection-required CTA — fires when /api/calendar/status
+                  returned connected=false (or the create endpoint 412'd
+                  for the same reason). Hides the form fields entirely
+                  so the user can't waste time filling them out. */}
+              {calendarStatus && !calendarStatus.connected && !meetingResult?.success && (
+                <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-4">
+                  <div className="flex items-start gap-2.5">
+                    <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                        Connect Google Calendar to schedule
+                      </p>
+                      <p className="text-xs text-amber-800 dark:text-amber-200 mt-0.5">
+                        We&apos;ll create the event on your primary calendar and email invites to attendees automatically. Two-step setup, takes &lt; 1 minute.
+                      </p>
+                      <Link
+                        href="/settings/calendar-setup"
+                        className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold"
+                      >
+                        <CalendarIcon className="w-3.5 h-3.5" />
+                        Connect Google Calendar
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {calendarStatus?.connected && calendarStatus.needs_reauth && (
+                <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3">
+                  <p className="text-xs text-amber-900 dark:text-amber-100">
+                    Your Calendar connection uses an older permission level.{' '}
+                    <Link href="/settings/calendar-setup" className="underline font-semibold">
+                      Reconnect
+                    </Link>{' '}
+                    to enable event creation.
+                  </p>
+                </div>
+              )}
+
               {/* Meeting Title */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -871,13 +992,30 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
               {!meetingResult?.success && (
                 <button
                   onClick={handleCreateMeeting}
-                  disabled={creatingMeeting || !meetingForm.title || activeRespondents.length === 0}
+                  disabled={
+                    creatingMeeting ||
+                    !meetingForm.title ||
+                    activeRespondents.length === 0 ||
+                    checkingStatus ||
+                    calendarStatus?.connected === false ||
+                    calendarStatus?.needs_reauth === true
+                  }
+                  title={
+                    calendarStatus?.connected === false
+                      ? 'Connect Google Calendar first'
+                      : undefined
+                  }
                   className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   {creatingMeeting ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
                       Creating...
+                    </>
+                  ) : checkingStatus ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Checking…
                     </>
                   ) : (
                     <>
