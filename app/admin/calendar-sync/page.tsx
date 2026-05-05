@@ -210,7 +210,31 @@ export default function CalendarSyncPage() {
       const res = await fetch('/api/admin/calendar-sync', { method: 'POST' });
       const data = await res.json();
       if (data.success) {
-        toast.success('Sync completed successfully');
+        // Mirror the personal Sync Now feedback pattern: show what
+        // actually happened, not just a generic "completed". The
+        // endpoint returns synced/failed/skipped + (when we extended
+        // it) per-user series counts.
+        const synced = data.synced ?? 0;
+        const failed = data.failed ?? 0;
+        const skipped = data.skipped ?? 0;
+        const seriesSynced = data.series_synced ?? 0;
+        const usersTouched = data.users_touched ?? 0;
+        const parts: string[] = [];
+        if (synced > 0) parts.push(`${synced} event${synced === 1 ? '' : 's'} created`);
+        if (seriesSynced > 0) {
+          parts.push(
+            `${seriesSynced} class series synced` +
+            (usersTouched > 0 ? ` across ${usersTouched} instructor${usersTouched === 1 ? '' : 's'}` : '')
+          );
+        }
+        if (failed > 0) parts.push(`${failed} failed`);
+        if (skipped > 0) parts.push(`${skipped} skipped`);
+        const msg = parts.length > 0 ? parts.join(' · ') : 'Sync complete (nothing new to push)';
+        if (failed > 0 && synced === 0 && seriesSynced === 0) {
+          toast.error(msg);
+        } else {
+          toast.success(msg);
+        }
         fetchData();
       } else {
         toast.error(data.error || 'Sync failed');
@@ -279,7 +303,26 @@ export default function CalendarSyncPage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Re-synced ${email}`);
+        const synced = data.synced ?? 0;
+        const failed = data.failed ?? 0;
+        const seriesSynced = data.series_synced ?? 0;
+        const seriesUpdated = data.series_updated ?? 0;
+        const totalNew = synced + seriesSynced + seriesUpdated;
+        const parts: string[] = [];
+        if (synced > 0) parts.push(`${synced} event${synced === 1 ? '' : 's'}`);
+        if (seriesSynced > 0) parts.push(`${seriesSynced} new series`);
+        if (seriesUpdated > 0) parts.push(`${seriesUpdated} series updated`);
+        if (failed > 0) parts.push(`${failed} failed`);
+        const msg = totalNew > 0
+          ? `Synced ${parts.join(', ')} for ${email}`
+          : failed > 0
+            ? `${failed} failed for ${email}`
+            : `Nothing new to sync for ${email}`;
+        if (failed > 0 && totalNew === 0) {
+          toast.error(msg);
+        } else {
+          toast.success(msg);
+        }
         fetchData();
       } else {
         toast.error(data.error || `Failed to sync ${email}`);

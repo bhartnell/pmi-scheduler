@@ -236,12 +236,112 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 4. Sync recurring class series (pmi_schedule_blocks) per user.
+    //    The original three sources above only cover lab stations,
+    //    lab day roles, and shift signups — they ignore the
+    //    instructor's full class schedule. Without this loop the
+    //    "Sync All" button left every instructor's calendar
+    //    showing first-occurrence-only events for the schedule
+    //    blocks they teach. Calls into the same syncSeriesForUser
+    //    helper that the per-user /api/calendar/sync-my-blocks
+    //    endpoint and the auto-sync hook use, so the recurrence /
+    //    ownership-guard / PATCH-with-RRULE behaviour is shared.
+    let seriesSynced = 0;
+    let seriesUpdated = 0;
+    let seriesFailed = 0;
+    const usersTouched = new Set<string>();
+    try {
+      const { syncSeriesForUser } = await import('@/lib/calendar-auto-sync');
+      // Find every distinct recurring_group_id the connected users
+      // are assigned to. One round-trip rather than N+1.
+      const connectedEmailList = Array.from(connectedEmails);
+      if (connectedEmailList.length > 0) {
+        // Resolve emails → user_ids in one query.
+        const { data: userIdRows } = await supabase
+          .from('lab_users')
+          .select('id, email')
+          .in('email', Array.from(new Set(connectedUsers.map(u => u.email))));
+        const idToEmail = new Map<string, string>();
+        for (const r of userIdRows ?? []) idToEmail.set(r.id, r.email);
+        const userIds = Array.from(idToEmail.keys());
+
+        if (userIds.length > 0) {
+          // pmi_block_instructors → schedule_block_ids assigned to them
+          const { data: bi } = await supabase
+            .from('pmi_block_instructors')
+            .select('instructor_id, schedule_block_id')
+            .in('instructor_id', userIds);
+          // schedule_block_ids → recurring_group_ids
+          const blockIds = Array.from(
+            new Set((bi ?? []).map(r => r.schedule_block_id).filter(Boolean))
+          );
+          if (blockIds.length > 0) {
+            const { data: blocks } = await supabase
+              .from('pmi_schedule_blocks')
+              .select('id, recurring_group_id, status')
+              .in('id', blockIds)
+              .eq('status', 'published');
+            const blockToGroup = new Map<string, string | null>();
+            for (const b of blocks ?? []) {
+              blockToGroup.set(b.id, b.recurring_group_id);
+            }
+            // Build (instructor_id, group_or_block) pairs to sync.
+            const pairs = new Set<string>();
+            for (const r of bi ?? []) {
+              const gid = blockToGroup.get(r.schedule_block_id);
+              if (!blockToGroup.has(r.schedule_block_id)) continue; // dropped above
+              const key = gid
+                ? `${r.instructor_id}:group:${gid}`
+                : `${r.instructor_id}:block:${r.schedule_block_id}`;
+              pairs.add(key);
+            }
+            for (const key of pairs) {
+              const [uid, kind, id] = key.split(':');
+              const email = idToEmail.get(uid);
+              if (!email) continue;
+              if (targetEmail && email.toLowerCase() !== targetEmail.toLowerCase()) {
+                continue;
+              }
+              try {
+                const result = await syncSeriesForUser({
+                  userEmail: email,
+                  recurringGroupId: kind === 'group' ? id : null,
+                  blockIdForOneOff: kind === 'block' ? id : null,
+                });
+                if (result.status === 'synced') {
+                  if (result.created) seriesSynced++;
+                  else seriesUpdated++;
+                  usersTouched.add(email.toLowerCase());
+                } else if (result.status === 'failed') {
+                  seriesFailed++;
+                }
+              } catch (err) {
+                console.error('series sync error', err);
+                seriesFailed++;
+              }
+              // Pace per-user calls — Google quotas are per-user.
+              await new Promise(r => setTimeout(r, 200));
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Series sync block failed:', err);
+    }
+
     return NextResponse.json({
       success: true,
       synced,
       failed,
       skipped,
-      message: `Bulk sync complete: ${synced} created, ${failed} failed, ${skipped} skipped`,
+      series_synced: seriesSynced,
+      series_updated: seriesUpdated,
+      series_failed: seriesFailed,
+      users_touched: usersTouched.size,
+      message:
+        `Bulk sync complete: ${synced} events created, ${seriesSynced} class series ` +
+        `created, ${seriesUpdated} series updated, ${failed + seriesFailed} failed, ` +
+        `${skipped} skipped`,
     });
   } catch (error) {
     console.error('Error in bulk calendar sync:', error);

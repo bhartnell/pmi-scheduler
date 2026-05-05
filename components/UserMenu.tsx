@@ -103,6 +103,20 @@ export default function UserMenu() {
     };
   }, [status]);
 
+  // Diagnostic mount log — leaves a single line in the console with
+  // session status + timestamp so we can verify the component is
+  // actually rendering on each page (vs the bundle being stale or
+  // the SessionProvider failing to resolve).
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      console.info(
+        `[UserMenu] mounted · status=${status} · ` +
+        `email=${session?.user?.email ?? '(none)'} · ` +
+        `path=${window.location.pathname}`
+      );
+    }
+  }, [status, session?.user?.email]);
+
   if (status !== 'authenticated' || !session?.user) return null;
 
   const initials = getInitials(session.user.name, session.user.email);
@@ -112,12 +126,14 @@ export default function UserMenu() {
   return (
     <div
       ref={containerRef}
-      // z-[55] sits above per-page <header> stacking contexts (which
-      // are auto / default) and the global QuickActionsMenu (z-50)
-      // but below modals (z-[60]+) and GlobalTimerBanner (z-[100]).
+      // z-[60] keeps the avatar above per-page header stacking
+      // contexts (auto / default) and the global QuickActionsMenu
+      // (z-50). Slightly more aggressive than the previous z-[55]
+      // because at least one report came in that the menu was
+      // hidden by a route-level header — this defensively wins.
       // top-2 right-2 keeps the avatar pinned in the corner without
       // colliding with most existing per-page header content.
-      className="fixed top-2 right-2 z-[55] print:hidden"
+      className="fixed top-2 right-2 z-[60] print:hidden"
       data-testid="user-menu"
     >
       <button
