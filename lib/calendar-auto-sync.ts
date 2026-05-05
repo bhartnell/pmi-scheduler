@@ -23,6 +23,7 @@ import {
   patchSharedCalendarEvent,
   deleteSharedCalendarEvent,
 } from '@/lib/google-shared-calendar';
+import { findBlocksForInstructor, assertOwnsGoogleEvent } from '@/lib/instructor-blocks';
 
 export type SyncSeriesResult =
   | { status: 'synced'; eventId: string; created: boolean }
@@ -80,36 +81,24 @@ export async function syncSeriesForUser(opts: SeriesKey): Promise<SyncSeriesResu
   if (!userRow?.id) return { status: 'failed', error: 'user not found' };
   const userId = userRow.id as string;
 
-  // Pull every published block in this group where the user is on
-  // either instructor slot, with the cohort + room embed needed for
-  // the summary string.
-  let q = supabase
-    .from('pmi_schedule_blocks')
-    .select(`
-      id, recurring_group_id, semester_id, program_schedule_id,
-      date, start_time, end_time, title, course_name, status,
-      block_type, content_notes, instructor_id, additional_instructor_id,
-      room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(name),
-      program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
-        cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
-          cohort_number,
-          program:programs(abbreviation)
-        )
-      )
-    `)
-    .eq('status', 'published')
-    .or(`instructor_id.eq.${userId},additional_instructor_id.eq.${userId}`)
-    .order('date');
-  if (opts.recurringGroupId) {
-    q = q.eq('recurring_group_id', opts.recurringGroupId);
-  } else {
-    q = q.eq('id', opts.blockIdForOneOff!);
-  }
-  const { data: blocks, error: blocksErr } = await q;
-  if (blocksErr) return { status: 'failed', error: blocksErr.message };
+  // Pull every published block in this group where the user is
+  // assigned (via pmi_block_instructors join OR legacy direct
+  // columns — the helper handles both). Previously this used only
+  // the direct columns and silently returned 0 blocks for everyone
+  // assigned via the join table.
+  const { blocks, error: blocksErr } = await findBlocksForInstructor(
+    supabase,
+    userId,
+    {
+      recurringGroupId: opts.recurringGroupId ?? undefined,
+      blockId: opts.blockIdForOneOff ?? undefined,
+    }
+  );
+  if (blocksErr) return { status: 'failed', error: blocksErr };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const filtered = (blocks ?? []).filter(
-    b => b.date && b.start_time && b.end_time
+    (b: any) => b.date && b.start_time && b.end_time
   );
   if (filtered.length === 0) return { status: 'no-blocks' };
 
@@ -148,6 +137,31 @@ export async function syncSeriesForUser(opts: SeriesKey): Promise<SyncSeriesResu
     .maybeSingle();
 
   if (existing?.google_event_id) {
+    // Hard ownership guard before any modification. The mapping
+    // exists (we just looked it up) so this should always succeed,
+    // but the explicit check logs context if drift ever happens.
+    const owns = await assertOwnsGoogleEvent(
+      supabase,
+      opts.userEmail,
+      existing.google_event_id,
+      `auto-sync PATCH source_id=${sourceId}`
+    );
+    if (!owns) {
+      return { status: 'failed', error: 'Refused to modify unmapped Google event' };
+    }
+
+    // PATCH includes recurrence + start/end so a previously-stamped
+    // single event upgrades to a proper recurring series (this is
+    // what the user-reported "first occurrence only" bug was about).
+    const patchRecurrence: string[] = [];
+    if (rrule) patchRecurrence.push(rrule);
+    if (rdates && rdates.length > 0) {
+      const compactTime = (first.start_time as string).replace(/:/g, '').slice(0, 6);
+      const datePart = rdates
+        .map((d: string) => `${d.replace(/-/g, '')}T${compactTime}`)
+        .join(',');
+      patchRecurrence.push(`RDATE;TZID=America/Phoenix:${datePart}`);
+    }
     const ok = await patchSharedCalendarEvent({
       calendarId: 'primary',
       accessToken,
@@ -156,6 +170,15 @@ export async function syncSeriesForUser(opts: SeriesKey): Promise<SyncSeriesResu
         summary,
         description,
         location: room?.name ?? undefined,
+        start: {
+          dateTime: `${first.date}T${first.start_time}`,
+          timeZone: 'America/Phoenix',
+        },
+        end: {
+          dateTime: `${first.date}T${first.end_time}`,
+          timeZone: 'America/Phoenix',
+        },
+        recurrence: patchRecurrence,
       },
     });
     if (!ok) return { status: 'failed', error: 'Google PATCH failed' };
@@ -217,6 +240,19 @@ export async function removeSeriesForUser(opts: SeriesKey): Promise<RemoveSeries
     return { status: 'no-token' };
   }
 
+  // Hard ownership guard before DELETE. mapping was just looked up
+  // from google_calendar_events so this should always pass, but the
+  // explicit check defends against future code paths that might
+  // accept a google_event_id from another source.
+  const owns = await assertOwnsGoogleEvent(
+    supabase,
+    opts.userEmail,
+    mapping.google_event_id,
+    `auto-sync DELETE source_id=${sourceId}`
+  );
+  if (!owns) {
+    return { status: 'failed', error: 'Refused to delete unmapped Google event' };
+  }
   const ok = await deleteSharedCalendarEvent({
     calendarId: 'primary',
     accessToken,

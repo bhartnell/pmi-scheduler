@@ -7,6 +7,7 @@ import {
   createSharedCalendarEvent,
   patchSharedCalendarEvent,
 } from '@/lib/google-shared-calendar';
+import { findBlocksForInstructor, assertOwnsGoogleEvent } from '@/lib/instructor-blocks';
 
 /**
  * POST /api/calendar/sync-my-blocks
@@ -72,37 +73,26 @@ export async function POST(request: NextRequest) {
     /* no body, sync everything assigned */
   }
 
-  // Pull all PUBLISHED blocks where the caller is on either
-  // instructor slot. The .or() syntax sticks to a single round-trip.
-  let q = supabase
-    .from('pmi_schedule_blocks')
-    .select(`
-      id, recurring_group_id, semester_id, program_schedule_id,
-      date, start_time, end_time, title, course_name, status,
-      block_type, content_notes, instructor_id, additional_instructor_id,
-      room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(name),
-      program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
-        cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
-          cohort_number,
-          program:programs(abbreviation)
-        )
-      )
-    `)
-    .eq('status', 'published')
-    .or(`instructor_id.eq.${callerId},additional_instructor_id.eq.${callerId}`)
-    .order('date');
-
-  if (body.semester_id) {
-    q = q.eq('semester_id', body.semester_id);
-  }
-
-  const { data: blocks, error: blocksErr } = await q;
+  // Pull all PUBLISHED blocks where the caller is assigned. The
+  // findBlocksForInstructor helper checks BOTH the canonical
+  // pmi_block_instructors join table (where every current
+  // assignment lives) AND the legacy direct columns. Previously
+  // this endpoint only looked at the direct columns and silently
+  // returned 0 blocks for everyone — which is what produced the
+  // "first occurrence only" bug: any one-off instructor_id write
+  // sneaked through, but the bulk semester data never got synced.
+  const { blocks, error: blocksErr } = await findBlocksForInstructor(
+    supabase,
+    callerId,
+    { semesterId: body.semester_id }
+  );
   if (blocksErr) {
-    return NextResponse.json({ error: blocksErr.message }, { status: 500 });
+    return NextResponse.json({ error: blocksErr }, { status: 500 });
   }
 
   // Drop blocks missing date/time — they can't ICS without those.
-  type BlockRow = NonNullable<typeof blocks>[number];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  type BlockRow = any;
   const filtered = (blocks ?? []).filter(
     (b: BlockRow) => b.date && b.start_time && b.end_time
   );
@@ -179,15 +169,67 @@ export async function POST(request: NextRequest) {
 
     const existing = existingByKey.get(key);
     if (existing) {
+      // Hard ownership guard: never PATCH a Google event we didn't
+      // create. existingByKey was already built from
+      // google_calendar_events so this re-check is belt-and-suspenders,
+      // but the explicit assertion logs context if anything ever
+      // sneaks through.
+      const owns = await assertOwnsGoogleEvent(
+        supabase,
+        user.email,
+        existing.google_event_id,
+        `sync-my-blocks PATCH key=${key}`
+      );
+      if (!owns) {
+        failed++;
+        outcomes.push({
+          key,
+          label: summary,
+          status: 'failed',
+          error: 'Refused to modify unmapped Google event (safety guard)',
+        });
+        continue;
+      }
+
+      // Build the recurrence payload AGAIN inside the PATCH body so
+      // the path can UPGRADE a single-event mapping (the original
+      // bug stamped these on first sync) into a proper recurring
+      // series. start/end also patched in case time or first-date
+      // shifted since creation.
+      const patchRecurrence: string[] = [];
+      if (rrule) patchRecurrence.push(rrule);
+      if (rdates && rdates.length > 0) {
+        const compactTime = (first.start_time as string).replace(/:/g, '').slice(0, 6);
+        const datePart = rdates
+          .map(d => `${d.replace(/-/g, '')}T${compactTime}`)
+          .join(',');
+        patchRecurrence.push(`RDATE;TZID=America/Phoenix:${datePart}`);
+      }
+      const patchBody: Record<string, unknown> = {
+        summary,
+        description,
+        location: room?.name ?? undefined,
+        start: {
+          dateTime: `${first.date}T${first.start_time}`,
+          timeZone: 'America/Phoenix',
+        },
+        end: {
+          dateTime: `${first.date}T${first.end_time}`,
+          timeZone: 'America/Phoenix',
+        },
+        // Empty recurrence array (no rrule and no rdates) means
+        // "this is a single event" — explicitly send so Google
+        // converts a previously-recurring event into single if the
+        // group shrunk to one block. Otherwise send the full
+        // recurrence list.
+        recurrence: patchRecurrence,
+      };
+
       const ok = await patchSharedCalendarEvent({
         calendarId: 'primary',
         accessToken,
         eventId: existing.google_event_id,
-        patch: {
-          summary,
-          description,
-          location: room?.name ?? undefined,
-        },
+        patch: patchBody,
       });
       if (ok) {
         updated++;
