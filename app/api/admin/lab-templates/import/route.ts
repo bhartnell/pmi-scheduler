@@ -77,6 +77,40 @@ function resolveName(t: TemplateDef): string {
   return t.title || t.name || 'Content Pending';
 }
 
+// Convert any thrown error into a readable string. Supabase's
+// PostgrestError is a plain object with { message, details, hint,
+// code } — calling String() on it produced "[object Object]" and
+// hid the real DB error (e.g. "violates check constraint
+// lab_day_templates_category_check"). This helper returns the
+// richest available text instead.
+function describeError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  if (err && typeof err === 'object') {
+    const e = err as Record<string, unknown>;
+    const parts: string[] = [];
+    if (typeof e.message === 'string') parts.push(e.message);
+    if (typeof e.details === 'string' && e.details) parts.push(`details=${e.details}`);
+    if (typeof e.hint === 'string' && e.hint) parts.push(`hint=${e.hint}`);
+    if (typeof e.code === 'string' && e.code) parts.push(`code=${e.code}`);
+    if (parts.length > 0) return parts.join(' | ');
+    try {
+      return JSON.stringify(err);
+    } catch {
+      return '[unserializable error]';
+    }
+  }
+  return String(err);
+}
+
+// Allowed station_type values are NOT enforced by a DB CHECK; the
+// import accepts whatever the upstream JSON ships and stores it
+// verbatim. Known-good values (used by the planner UI) include:
+//   scenario, skills, skill_drill, briefing, debrief, break, warmup,
+//   flex, osce, special_event, extended_block,
+//   field_experience  ← e.g. paramedic S2 Week 12 Day 2
+// Treat unknown station_type strings as opaque labels rather than
+// rejecting them — the operator decides what's meaningful per cohort.
+
 interface ImportPayload {
   program: string;
   semester: number;
@@ -262,8 +296,9 @@ export async function POST(request: NextRequest) {
           stationsCreated += stationRows.length;
         }
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : String(err);
-        errors.push(`Week ${tmpl.week_number} Day ${tmpl.day_number}: ${msg}`);
+        errors.push(
+          `Week ${tmpl.week_number} Day ${tmpl.day_number}: ${describeError(err)}`
+        );
       }
     }
 
@@ -372,7 +407,7 @@ async function importCourses(body: CourseImportPayload): Promise<NextResponse> {
       }
     } catch (err) {
       errors.push(
-        `${c.course_code} day=${c.day_index} start=${c.start_time}: ${err instanceof Error ? err.message : String(err)}`
+        `${c.course_code} day=${c.day_index} start=${c.start_time}: ${describeError(err)}`
       );
     }
   }
