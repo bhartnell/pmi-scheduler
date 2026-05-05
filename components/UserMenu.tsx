@@ -112,7 +112,12 @@ export default function UserMenu() {
   return (
     <div
       ref={containerRef}
-      className="fixed top-3 right-3 z-40 print:hidden"
+      // z-[55] sits above per-page <header> stacking contexts (which
+      // are auto / default) and the global QuickActionsMenu (z-50)
+      // but below modals (z-[60]+) and GlobalTimerBanner (z-[100]).
+      // top-2 right-2 keeps the avatar pinned in the corner without
+      // colliding with most existing per-page header content.
+      className="fixed top-2 right-2 z-[55] print:hidden"
       data-testid="user-menu"
     >
       <button

@@ -47,6 +47,7 @@ import {
   RefreshCw,
   Archive,
   HeartHandshake,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -255,6 +256,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           title: 'Calendar Sync',
           description: 'Monitor Google Calendar connections and sync status for instructors',
           color: 'bg-teal-600',
+        },
+        {
+          href: '/admin/semesters',
+          icon: CalendarIcon,
+          title: 'Semester Management',
+          description: 'Set the S1 start date once per year — system auto-derives S1–S4 with break weeks. Per-cohort overrides for off-calendar groups.',
+          color: 'bg-indigo-600',
         },
         {
           href: '/skill-sheets',
