@@ -66,6 +66,7 @@ import {
   QUICK_LINK_WHITELIST,
 } from '@/components/dashboard/widgets';
 import AnnouncementBanner from '@/components/dashboard/AnnouncementBanner';
+import CalendarConnectBanner from '@/components/dashboard/CalendarConnectBanner';
 import ResizableWidget, { useWidgetSizes } from '@/components/dashboard/ResizableWidget';
 import { useToast } from '@/components/Toast';
 import HelpTooltip from '@/components/HelpTooltip';
@@ -547,6 +548,12 @@ export default function HomePage() {
         {/* System Announcements */}
         <ErrorBoundary>
           <AnnouncementBanner />
+        </ErrorBoundary>
+
+        {/* Connect Google Calendar prompt — instructors+ only,
+            self-hides on connect or after dismissal. */}
+        <ErrorBoundary>
+          <CalendarConnectBanner />
         </ErrorBoundary>
 
         {/* Customizable Dashboard Widgets - First thing instructors see */}

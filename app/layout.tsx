@@ -12,6 +12,7 @@ import { OfflineProvider } from '@/components/OfflineProvider';
 import WhatsNewWrapper from '@/components/WhatsNewWrapper';
 import RolePreviewBanner from '@/components/RolePreviewBanner';
 import RolePreviewSelector from '@/components/RolePreviewSelector';
+import UserMenu from '@/components/UserMenu';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -44,6 +45,7 @@ export default function RootLayout({
             <WhatsNewWrapper />
             <FeedbackButton />
             <QuickActionsMenu />
+            <UserMenu />
             <RolePreviewSelector />
             <CommandPalette />
           </OfflineProvider>

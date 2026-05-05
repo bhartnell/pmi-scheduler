@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     // Fetch user preferences
     const { data: preferences, error } = await supabase
       .from('user_preferences')
-      .select('user_email, dashboard_widgets, quick_links, notification_settings, updated_at')
+      .select('user_email, dashboard_widgets, quick_links, notification_settings, dismissed_calendar_banner, updated_at')
       .eq('user_email', session.user.email)
       .single();
 
@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
         dashboard_widgets: preferences.dashboard_widgets || [],
         quick_links: preferences.quick_links || [],
         notification_settings: preferences.notification_settings || {},
+        dismissed_calendar_banner: preferences.dismissed_calendar_banner ?? false,
       },
       isDefault: false,
     });
@@ -121,6 +122,13 @@ export async function PUT(request: NextRequest) {
 
     if (body.notification_settings !== undefined) {
       updateData.notification_settings = body.notification_settings;
+    }
+
+    if (body.dismissed_calendar_banner !== undefined) {
+      // Persists when the user X's the home-page "Connect your
+      // Google Calendar" prompt. Stays true even after disconnect —
+      // admins can reset via SQL when re-prompting is desired.
+      updateData.dismissed_calendar_banner = !!body.dismissed_calendar_banner;
     }
 
     // Upsert preferences

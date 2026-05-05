@@ -139,6 +139,9 @@ export default function CalendarSyncPage() {
   const [syncingAll, setSyncingAll] = useState(false);
   const [reminding, setReminding] = useState(false);
   const [syncingUser, setSyncingUser] = useState<string | null>(null);
+  // Per-row reminder state — keyed by email so we can show a spinner
+  // on just the target row while a single-user remind is in flight.
+  const [remindingUser, setRemindingUser] = useState<string | null>(null);
 
   // ── Auth guard ──────────────────────────────────────────────────────────
 
@@ -236,6 +239,33 @@ export default function CalendarSyncPage() {
       toast.error('Reminder request failed');
     } finally {
       setReminding(false);
+    }
+  };
+
+  // Per-user reminder — sends an in-app notification deep-linking
+  // to the calendar-setup wizard. Available on every disconnected /
+  // needs-reauth row.
+  const handleRemindUser = async (email: string) => {
+    setRemindingUser(email);
+    try {
+      const res = await fetch('/api/admin/calendar-sync/remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
+      if (data.success && data.sent > 0) {
+        toast.success(`Reminder sent to ${email}`);
+      } else if (data.success && data.sent === 0) {
+        toast.info(data.message || 'User is already connected');
+      } else {
+        toast.error(data.error || 'Failed to send reminder');
+      }
+    } catch (err) {
+      console.error('Per-user remind error:', err);
+      toast.error('Reminder request failed');
+    } finally {
+      setRemindingUser(null);
     }
   };
 
@@ -518,19 +548,42 @@ export default function CalendarSyncPage() {
                               {inst.eventsSynced.toLocaleString()}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                              <button
-                                onClick={() => handleSyncUser(inst.email)}
-                                disabled={syncingUser === inst.email || !inst.connected}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                                title={!inst.connected ? 'User must be connected to re-sync' : 'Re-sync this user'}
-                              >
-                                <RefreshCw
-                                  className={`w-3.5 h-3.5 ${
-                                    syncingUser === inst.email ? 'animate-spin' : ''
-                                  }`}
-                                />
-                                {syncingUser === inst.email ? 'Syncing...' : 'Re-sync'}
-                              </button>
+                              <div className="flex items-center gap-2">
+                                {/* Connected users get Re-sync.
+                                    Disconnected / needs-reauth users
+                                    get Send reminder — sends an in-app
+                                    notification with a link to the
+                                    /settings/calendar-setup wizard. */}
+                                {inst.connected && !inst.needsReauth ? (
+                                  <button
+                                    onClick={() => handleSyncUser(inst.email)}
+                                    disabled={syncingUser === inst.email}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Re-sync this user"
+                                  >
+                                    <RefreshCw
+                                      className={`w-3.5 h-3.5 ${
+                                        syncingUser === inst.email ? 'animate-spin' : ''
+                                      }`}
+                                    />
+                                    {syncingUser === inst.email ? 'Syncing...' : 'Re-sync'}
+                                  </button>
+                                ) : (
+                                  <button
+                                    onClick={() => handleRemindUser(inst.email)}
+                                    disabled={remindingUser === inst.email}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-amber-300 dark:border-amber-700 text-amber-700 dark:text-amber-300 rounded-lg hover:bg-amber-50 dark:hover:bg-amber-900/20 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                    title="Send an in-app reminder linking to the calendar setup wizard"
+                                  >
+                                    <Bell
+                                      className={`w-3.5 h-3.5 ${
+                                        remindingUser === inst.email ? 'animate-pulse' : ''
+                                      }`}
+                                    />
+                                    {remindingUser === inst.email ? 'Sending…' : 'Send reminder'}
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         );
