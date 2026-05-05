@@ -54,7 +54,13 @@ interface StationDef {
 interface TemplateDef {
   week_number: number;
   day_number: number;
-  title: string;
+  // Some upstream JSON files use `title`, others use `name`.
+  // Both are accepted; the import resolves them via resolveName()
+  // below so a missing field doesn't write NULL into
+  // lab_day_templates.name (which the schema permits but the UI
+  // renders as a blank label).
+  title?: string;
+  name?: string;
   category: string;
   instructor_count: number;
   is_anchor: boolean;
@@ -62,6 +68,13 @@ interface TemplateDef {
   requires_review: boolean;
   review_notes: string | null;
   stations: StationDef[];
+}
+
+// Field-name fallback for the lab_day_templates.name column.
+// Order: explicit `title` → explicit `name` → sentinel placeholder
+// "Content Pending" so the row always lands with a non-empty label.
+function resolveName(t: TemplateDef): string {
+  return t.title || t.name || 'Content Pending';
 }
 
 interface ImportPayload {
@@ -177,7 +190,7 @@ export async function POST(request: NextRequest) {
           const { error: updateError } = await supabase
             .from('lab_day_templates')
             .update({
-              name: tmpl.title,
+              name: resolveName(tmpl),
               category: tmpl.category,
               day_number: tmpl.day_number,
               instructor_count: tmpl.instructor_count,
@@ -204,7 +217,7 @@ export async function POST(request: NextRequest) {
           const { data: newTemplate, error: insertError } = await supabase
             .from('lab_day_templates')
             .insert({
-              name: tmpl.title,
+              name: resolveName(tmpl),
               program,
               semester,
               week_number: tmpl.week_number,
