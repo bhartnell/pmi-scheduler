@@ -13,6 +13,7 @@ import {
   Wand2,
   Upload,
   ArrowLeft,
+  Sparkles,
 } from 'lucide-react';
 import { canAccessAdmin } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -83,6 +84,14 @@ export default function ScenariosHubPage() {
       title: 'Bulk Import Tool',
       description: 'Import multiple BLS scenarios from a JSON or CSV file. Preview and validate all scenarios before committing. Supports full phase-based format with vitals and SAMPLE history.',
       color: 'bg-emerald-600',
+      badge: null,
+    },
+    {
+      href: '/admin/scenarios/cleanup',
+      icon: Sparkles,
+      title: 'Demographic Cleanup',
+      description: 'Bulk-extract chief_complaint, patient_age, patient_name, sex, history, medications, and allergies from prose patient_presentation blocks using Claude. Idempotent — only fills empty fields. Dry-run preview before confirming.',
+      color: 'bg-fuchsia-600',
       badge: null,
     },
   ];

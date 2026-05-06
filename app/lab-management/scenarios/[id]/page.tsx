@@ -112,6 +112,24 @@ interface EvaluationCriteria {
   description: string;
 }
 
+// Allowed values for scenarios.preferred_manikin (CHECK constraint
+// in migration 20260506_scenarios_preferred_manikin.sql).
+type PreferredManikin =
+  | 'simmom'
+  | 'simnewb'
+  | 'standard_manikin'
+  | 'task_trainer'
+  | 'none_specified'
+  | null;
+
+const PREFERRED_MANIKIN_LABELS: Record<NonNullable<PreferredManikin>, string> = {
+  simmom: 'SimMom — OB / birth scenarios',
+  simnewb: 'SimNewB — neonatal / infant',
+  standard_manikin: 'Standard Manikin — general use',
+  task_trainer: 'Task Trainer — skills only',
+  none_specified: 'No preference',
+};
+
 interface Scenario {
   id?: string;
   title: string;
@@ -120,6 +138,7 @@ interface Scenario {
   subcategory: string;
   difficulty: string;
   estimated_duration: number | null;
+  preferred_manikin?: PreferredManikin;
 
   // Quick Reference
   instructor_summary: string;
@@ -769,6 +788,7 @@ export default function ScenarioEditorPage() {
     subcategory: '',
     difficulty: 'Intermediate',
     estimated_duration: 20,
+    preferred_manikin: null,
     instructor_summary: '',
     key_decision_points: [],
     dispatch_time: '',
@@ -859,6 +879,7 @@ export default function ScenarioEditorPage() {
           subcategory: s.subcategory || '',
           difficulty: s.difficulty || 'Intermediate',
           estimated_duration: s.estimated_duration || 20,
+          preferred_manikin: (s.preferred_manikin as PreferredManikin) ?? null,
           instructor_summary: s.instructor_notes || '',
           key_decision_points: toArray(s.learning_objectives),
           dispatch_time: s.dispatch_time || '',
@@ -1213,6 +1234,7 @@ export default function ScenarioEditorPage() {
         subcategory: scenario.subcategory,
         difficulty: scenario.difficulty,
         estimated_duration: scenario.estimated_duration,
+        preferred_manikin: scenario.preferred_manikin ?? null,
         instructor_notes: scenario.instructor_summary,
         learning_objectives: scenario.key_decision_points,
         dispatch_time: scenario.dispatch_time,
@@ -2302,6 +2324,38 @@ export default function ScenarioEditorPage() {
                   className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                 />
               </div>
+            </div>
+
+            {/* Preferred Manikin — optional hint to lab coordinators
+                about which simulator the scenario was designed for.
+                CHECK constraint allows the four named values plus
+                'none_specified'; we render the empty-string option
+                as null so most scenarios can leave it blank. */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                Preferred Manikin <span className="text-xs text-gray-400 font-normal">(optional)</span>
+              </label>
+              <select
+                value={scenario.preferred_manikin ?? ''}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setScenario({
+                    ...scenario,
+                    preferred_manikin: v === '' ? null : (v as PreferredManikin),
+                  });
+                }}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              >
+                <option value="">— Not specified —</option>
+                <option value="simmom">SimMom — OB / birth scenarios</option>
+                <option value="simnewb">SimNewB — neonatal / infant</option>
+                <option value="standard_manikin">Standard Manikin — general use</option>
+                <option value="task_trainer">Task Trainer — skills only</option>
+                <option value="none_specified">No preference (explicit)</option>
+              </select>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Helps lab coordinators set up the right simulator. Most scenarios can leave this blank.
+              </p>
             </div>
 
             <div>
