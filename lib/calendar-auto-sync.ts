@@ -200,14 +200,30 @@ export async function syncSeriesForUser(opts: SeriesKey): Promise<SyncSeriesResu
   });
   if ('error' in result) return { status: 'failed', error: result.error };
 
-  await supabase.from('google_calendar_events').insert({
-    user_email: opts.userEmail,
-    google_event_id: result.id,
-    source_type: sourceType,
-    source_id: sourceId,
-    lab_day_id: null,
-    event_summary: summary,
-  });
+  // UPSERT on the unique (user_email, source_type, source_id)
+  // index — race-safe and surfaces errors instead of swallowing
+  // them. The silent-failure mode here caused the 2026-05-06
+  // duplicate-events incident.
+  const { error: mapErr } = await supabase
+    .from('google_calendar_events')
+    .upsert(
+      {
+        user_email: opts.userEmail,
+        google_event_id: result.id,
+        source_type: sourceType,
+        source_id: sourceId,
+        lab_day_id: null,
+        event_summary: summary,
+      },
+      { onConflict: 'user_email,source_type,source_id' }
+    );
+  if (mapErr) {
+    console.error(
+      `[calendar-auto-sync] CRITICAL: mapping insert failed for ` +
+      `user=${opts.userEmail} source=${sourceType}:${sourceId} ` +
+      `event=${result.id} — ${mapErr.message}. Next sync will duplicate.`
+    );
+  }
   return { status: 'synced', eventId: result.id, created: true };
 }
 

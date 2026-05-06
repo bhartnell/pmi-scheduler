@@ -262,16 +262,37 @@ export async function POST(request: NextRequest) {
     created++;
     outcomes.push({ key, label: summary, status: 'created', google_event_id: result.id });
 
-    // Persist mapping so the next sync run patches instead of duplicating.
+    // Persist mapping so the next sync run patches instead of
+    // duplicating. CRITICAL: surface insert errors via console.error
+    // — the silent-failure mode here was the 2026-05-06 duplicate
+    // incident's root cause. Use UPSERT on the unique key so a
+    // race with another concurrent sync still settles correctly
+    // instead of throwing.
     const isOneOff = key.startsWith('block:');
-    await supabase.from('google_calendar_events').insert({
-      user_email: user.email,
-      google_event_id: result.id,
-      source_type: isOneOff ? 'schedule_block' : 'schedule_block_series',
-      source_id: isOneOff ? first.id : first.recurring_group_id,
-      lab_day_id: null,
-      event_summary: summary,
-    });
+    const sourceType = isOneOff ? 'schedule_block' : 'schedule_block_series';
+    const sourceId = isOneOff ? first.id : first.recurring_group_id;
+    const { error: mapErr } = await supabase
+      .from('google_calendar_events')
+      .upsert(
+        {
+          user_email: user.email,
+          google_event_id: result.id,
+          source_type: sourceType,
+          source_id: sourceId as string,
+          lab_day_id: null,
+          event_summary: summary,
+        },
+        { onConflict: 'user_email,source_type,source_id' }
+      );
+    if (mapErr) {
+      console.error(
+        `[sync-my-blocks] CRITICAL: failed to persist mapping for ` +
+        `user=${user.email} source=${sourceType}:${sourceId} ` +
+        `event=${result.id} — ${mapErr.message}. The Google event was ` +
+        `created but the mapping is absent; next sync run will create ` +
+        `another duplicate. Investigate immediately.`
+      );
+    }
   }
 
   return NextResponse.json({

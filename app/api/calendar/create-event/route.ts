@@ -167,17 +167,25 @@ export async function POST(request: NextRequest) {
   // we're just bookkeeping.
   const supabase = getSupabaseAdmin();
   if (body.pollId) {
-    try {
-      await supabase.from('google_calendar_events').insert({
-        user_email: user.email,
-        google_event_id: event.id,
-        source_type: 'poll_meeting',
-        source_id: body.pollId,
-        lab_day_id: null,
-        event_summary: body.title,
-      });
-    } catch (err) {
-      console.warn('[create-event] failed to log google_calendar_events', err);
+    // UPSERT — race-safe, and surfaces failures instead of swallowing.
+    const { error: mapErr } = await supabase
+      .from('google_calendar_events')
+      .upsert(
+        {
+          user_email: user.email,
+          google_event_id: event.id,
+          source_type: 'poll_meeting',
+          source_id: body.pollId,
+          lab_day_id: null,
+          event_summary: body.title,
+        },
+        { onConflict: 'user_email,source_type,source_id' }
+      );
+    if (mapErr) {
+      console.error(
+        `[create-event] mapping upsert failed for user=${user.email} ` +
+        `poll=${body.pollId} event=${event.id} — ${mapErr.message}`
+      );
     }
     try {
       await supabase
