@@ -87,13 +87,18 @@ export async function POST(request: NextRequest) {
     /* caller lookup is best-effort */
   }
 
-  // Pull every full-time, active instructor.
+  // Pull every full-time, active instructor. Role filter widened
+  // per spec to include superadmin + admin so program leadership
+  // (Ben, Josh, Ryan Y., Robert N.) gets seeded too. Also excludes
+  // gmail.com addresses so test/guest accounts (e.g. the
+  // benjamin.hartnell@gmail.com guest tier) don't pollute the seed.
   const { data: instructors, error: iErr } = await supabase
     .from('lab_users')
     .select('id, name, email')
-    .in('role', ['instructor', 'lead_instructor'])
+    .in('role', ['superadmin', 'admin', 'lead_instructor', 'instructor'])
     .eq('is_active', true)
     .or('is_part_time.is.null,is_part_time.eq.false')
+    .not('email', 'ilike', '%gmail.com%')
     .order('name');
   if (iErr) {
     return NextResponse.json({ success: false, error: iErr.message }, { status: 500 });
