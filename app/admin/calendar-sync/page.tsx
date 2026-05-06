@@ -17,6 +17,9 @@ import {
   Clock,
   ArrowLeft,
   Activity,
+  Trash2,
+  Loader2,
+  X as XIcon,
 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { canAccessAdmin } from '@/lib/permissions';
@@ -143,6 +146,32 @@ export default function CalendarSyncPage() {
   // on just the target row while a single-user remind is in flight.
   const [remindingUser, setRemindingUser] = useState<string | null>(null);
 
+  // Duplicate-cleanup flow state. Two-step UI: dry run → modal
+  // preview → confirm to actually delete.
+  interface CleanupPerUser {
+    user_email: string;
+    events_listed: number;
+    events_matched: number;
+    events_deleted: number;
+    errors: string[];
+  }
+  interface CleanupResult {
+    success: boolean;
+    dry_run: boolean;
+    totals?: {
+      users_processed: number;
+      events_listed: number;
+      events_matched: number;
+      events_deleted: number;
+      errors: number;
+    };
+    per_user?: CleanupPerUser[];
+    error?: string;
+  }
+  const [cleaningUp, setCleaningUp] = useState(false);
+  const [cleanupPreview, setCleanupPreview] = useState<CleanupResult | null>(null);
+  const [confirmingCleanup, setConfirmingCleanup] = useState(false);
+
   // ── Auth guard ──────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -263,6 +292,57 @@ export default function CalendarSyncPage() {
       toast.error('Reminder request failed');
     } finally {
       setReminding(false);
+    }
+  };
+
+  // ── Duplicate cleanup ────────────────────────────────────────
+  // Two-step: dry run first, surface counts in a modal, operator
+  // hits Confirm to actually delete from Google Calendar.
+  const handleCleanupPreview = async () => {
+    setCleaningUp(true);
+    setCleanupPreview(null);
+    try {
+      const res = await fetch('/api/admin/calendar-sync/cleanup-duplicates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dry_run: true }),
+      });
+      const data = (await res.json()) as CleanupResult;
+      setCleanupPreview(data);
+      if (!data.success) {
+        toast.error(data.error || 'Preview failed');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Preview request failed');
+    } finally {
+      setCleaningUp(false);
+    }
+  };
+
+  const handleCleanupConfirm = async () => {
+    setConfirmingCleanup(true);
+    try {
+      const res = await fetch('/api/admin/calendar-sync/cleanup-duplicates', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dry_run: false }),
+      });
+      const data = (await res.json()) as CleanupResult;
+      if (data.success && data.totals) {
+        toast.success(
+          `Deleted ${data.totals.events_deleted} events across ${data.totals.users_processed} user${
+            data.totals.users_processed === 1 ? '' : 's'
+          }`
+        );
+        setCleanupPreview(null);
+        fetchData();
+      } else {
+        toast.error(data.error || 'Cleanup failed');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Cleanup request failed');
+    } finally {
+      setConfirmingCleanup(false);
     }
   };
 
@@ -499,6 +579,22 @@ export default function CalendarSyncPage() {
               >
                 <Bell className={`w-4 h-4 ${reminding ? 'animate-pulse' : ''}`} />
                 {reminding ? 'Sending...' : 'Remind Unconnected'}
+              </button>
+              {/* Duplicate cleanup — opens a modal with the dry-run
+                  preview, then a Confirm button to actually delete.
+                  Red border to signal this is a destructive op. */}
+              <button
+                onClick={handleCleanupPreview}
+                disabled={cleaningUp}
+                title="Find and delete PMI-created duplicate events on connected users' Google Calendars"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {cleaningUp ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                {cleaningUp ? 'Scanning…' : 'Clean up duplicates'}
               </button>
             </div>
 
@@ -737,6 +833,138 @@ export default function CalendarSyncPage() {
           </>
         )}
       </main>
+
+      {/* ── Cleanup-duplicates confirmation modal ───────────────────
+          Surfaces the dry-run preview so the operator can read
+          "X events will be deleted across Y users" + a per-user
+          breakdown before clicking Confirm. The actual delete
+          posts dry_run=false through the same endpoint. */}
+      {cleanupPreview && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+        >
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+              <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Trash2 className="w-5 h-5 text-red-600" />
+                Clean up duplicate Google Calendar events
+              </h3>
+              <button
+                onClick={() => setCleanupPreview(null)}
+                className="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                aria-label="Close"
+              >
+                <XIcon className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 max-h-[70vh] overflow-y-auto">
+              <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 mb-4 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-900 dark:text-amber-100">
+                  Scans every connected user&apos;s primary Google Calendar and deletes ONLY events whose description contains the &quot;Synced from PMI Scheduler&quot; marker.
+                  Personal events, internal meetings, and external coordination are untouched.
+                  After cleanup, hit <strong>Sync All</strong> to recreate one canonical event per assignment.
+                </p>
+              </div>
+
+              {cleanupPreview.totals && (
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-900/40 p-3 text-center">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Users scanned</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{cleanupPreview.totals.users_processed}</p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-900/40 p-3 text-center">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Events listed</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{cleanupPreview.totals.events_listed}</p>
+                  </div>
+                  <div className="rounded-lg bg-red-50 dark:bg-red-900/20 p-3 text-center">
+                    <p className="text-xs text-red-700 dark:text-red-300">Will delete</p>
+                    <p className="text-xl font-bold text-red-700 dark:text-red-300">{cleanupPreview.totals.events_matched}</p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-900/40 p-3 text-center">
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Errors</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100">{cleanupPreview.totals.errors}</p>
+                  </div>
+                </div>
+              )}
+
+              <h4 className="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-2">
+                Per user
+              </h4>
+              <div className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 max-h-72 overflow-y-auto">
+                {(cleanupPreview.per_user ?? []).length === 0 ? (
+                  <p className="p-4 text-sm text-gray-500 dark:text-gray-400 text-center">
+                    No connected users matched the filter.
+                  </p>
+                ) : (
+                  (cleanupPreview.per_user ?? []).map(u => (
+                    <div
+                      key={u.user_email}
+                      className="px-3 py-2 flex items-center justify-between text-sm"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                          {u.user_email}
+                        </p>
+                        {u.errors.length > 0 && (
+                          <p className="text-xs text-red-600 dark:text-red-400 truncate" title={u.errors.join(' · ')}>
+                            {u.errors.length} error{u.errors.length === 1 ? '' : 's'}
+                          </p>
+                        )}
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {u.events_listed} listed
+                        </p>
+                        <p
+                          className={`text-sm font-semibold ${
+                            u.events_matched > 0
+                              ? 'text-red-700 dark:text-red-400'
+                              : 'text-gray-500 dark:text-gray-400'
+                          }`}
+                        >
+                          {u.events_matched} to delete
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
+              <button
+                onClick={() => setCleanupPreview(null)}
+                disabled={confirmingCleanup}
+                className="px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCleanupConfirm}
+                disabled={
+                  confirmingCleanup ||
+                  !cleanupPreview.totals ||
+                  cleanupPreview.totals.events_matched === 0
+                }
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm font-semibold disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {confirmingCleanup ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4" />
+                )}
+                {confirmingCleanup
+                  ? 'Deleting…'
+                  : `Confirm — delete ${cleanupPreview.totals?.events_matched ?? 0} events`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
