@@ -104,6 +104,43 @@ After:  cohort:cohorts!students_cohort_id_fkey(id, cohort_number)
 - Audit: log sensitive operations via lib/audit.ts
 - Supabase embeds: Use explicit FK hints (`!fk_name`) when tables have multiple FK paths (see PostgREST FK Ambiguity Check above)
 
+## Navigation Entry-Point Rule (HARD REQUIREMENT)
+
+**Every new page (`app/**/page.tsx`) MUST have at least one
+navigation entry point or the task is INCOMPLETE.**
+
+Acceptable entry points (any one of these is enough):
+
+1. **Card on a hub page** — add a `<Link href="..." />` card on
+   the relevant parent hub:
+   - `/admin/page.tsx` for admin tools
+   - `/admin/scenarios/page.tsx` for scenario tools
+   - `/scheduling/page.tsx` for scheduling tools
+   - `/lab-management/page.tsx` for lab tools
+   - the home `/page.tsx` for user-facing tools
+
+2. **UserMenu dropdown link** — for personal/settings pages,
+   add to `components/UserMenu.tsx`.
+
+3. **Sidebar/header nav link** — when the page slots into an
+   existing module's nav.
+
+4. **Breadcrumb back to a discoverable parent** — sufficient for
+   detail pages whose parent (a list view) is itself linked.
+
+Pure URL-only access (where the operator must type the path) is
+NEVER acceptable as the only entry point. Telling the user
+"navigate to /admin/foo" without also wiring a link is a regression.
+
+**When you ship a new page, the same commit MUST include the link.**
+If you defer the link, mention it explicitly in the response and
+flag the deferral as a follow-up task — do not silently ship a
+disconnected page.
+
+When auditing whether existing pages have entry points, search for
+`href="<path>"` across `app/`, `components/`, and `lib/nav*` —
+the link must exist somewhere a user can click.
+
 ## Agent Workflow (Supervisor Pattern)
 
 This project uses a supervisor pattern with two specialized sub-agents:
