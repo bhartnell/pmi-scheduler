@@ -89,9 +89,21 @@ export async function POST(request: NextRequest) {
 
   // Pull every full-time, active instructor. Role filter widened
   // per spec to include superadmin + admin so program leadership
-  // (Ben, Josh, Ryan Y., Robert N.) gets seeded too. Also excludes
+  // (Ben, Josh, Ryan Y., Rae N.) gets seeded too. Also excludes
   // gmail.com addresses so test/guest accounts (e.g. the
   // benjamin.hartnell@gmail.com guest tier) don't pollute the seed.
+  //
+  // Hard-coded email exclusions for the small set of @pmi.edu
+  // accounts that pass the role / is_part_time filter but
+  // shouldn't actually have availability seeded:
+  //   - kfivelstad@pmi.edu — medical director, 4-5 visits per year
+  //   - lvems@pmi.edu      — display-login service account
+  // These are kept here (rather than fixing is_part_time on the
+  // lab_users rows) to avoid quietly mutating production user
+  // records — operator can flip the flag manually if they want
+  // them to be filtered everywhere consistently.
+  const EMAIL_EXCLUSIONS = ['kfivelstad@pmi.edu', 'lvems@pmi.edu'];
+
   const { data: instructors, error: iErr } = await supabase
     .from('lab_users')
     .select('id, name, email')
@@ -99,6 +111,7 @@ export async function POST(request: NextRequest) {
     .eq('is_active', true)
     .or('is_part_time.is.null,is_part_time.eq.false')
     .not('email', 'ilike', '%gmail.com%')
+    .not('email', 'in', `(${EMAIL_EXCLUSIONS.map(e => `"${e}"`).join(',')})`)
     .order('name');
   if (iErr) {
     return NextResponse.json({ success: false, error: iErr.message }, { status: 500 });
