@@ -19,6 +19,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  // ── KILL SWITCH ──────────────────────────────────────────────
+  // Calendar sync produced duplicates on 2026-05-06; the cron is
+  // disabled until the duplicate-cleanup + idempotency-check fix
+  // ships. To re-enable, set CALENDAR_SYNC_CRON_ENABLED=true in
+  // Vercel env (or remove this block once the fix is deployed and
+  // verified). A no-op return keeps the schedule entry tidy in
+  // Vercel's UI and logs the disable so we know it ran.
+  if (process.env.CALENDAR_SYNC_CRON_ENABLED !== 'true') {
+    console.warn(
+      '[cron/calendar-sync] DISABLED via kill switch ' +
+      '(set CALENDAR_SYNC_CRON_ENABLED=true to re-enable). ' +
+      'See git log for the duplicate-event incident on 2026-05-06.'
+    );
+    return NextResponse.json({
+      success: true,
+      disabled: true,
+      message:
+        'Calendar sync cron is currently DISABLED. Set CALENDAR_SYNC_CRON_ENABLED=true to re-enable.',
+    });
+  }
+
   const supabase = getSupabaseAdmin();
 
   let usersProcessed = 0;
