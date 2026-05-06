@@ -228,18 +228,41 @@ export default function NewStationPage() {
     return availabilityMap.get(instructor.id) || availabilityMap.get(instructor.email?.toLowerCase());
   }
 
-  // Sort instructors by availability: available first, then same-day, then unavailable
+  // Sort instructors by availability group (Available → Volunteer
+  // → Conflict → No Availability) per the spec. Falls back to
+  // alphabetical when availability hasn't loaded yet so the
+  // dropdown still renders something useful immediately.
   const sortedInstructors = useMemo(() => {
     if (instructorAvailability.length === 0) return instructors;
+    const order: Record<string, number> = {
+      available: 0,
+      volunteer: 1,
+      conflict: 2,
+      no_availability: 3,
+    };
     return [...instructors].sort((a, b) => {
-      const availA = getAvailInfo(a);
-      const availB = getAvailInfo(b);
-      const scoreA = !availA ? 1 : !availA.available ? 2 : availA.same_day_stations?.length > 0 ? 1 : 0;
-      const scoreB = !availB ? 1 : !availB.available ? 2 : availB.same_day_stations?.length > 0 ? 1 : 0;
-      if (scoreA !== scoreB) return scoreA - scoreB;
+      const ga = order[getAvailInfo(a)?.group ?? 'no_availability'] ?? 3;
+      const gb = order[getAvailInfo(b)?.group ?? 'no_availability'] ?? 3;
+      if (ga !== gb) return ga - gb;
       return a.name.localeCompare(b.name);
     });
   }, [instructors, instructorAvailability]);
+
+  // Group instructors so the dropdown can render section headers
+  // (Available / Volunteers / Has Conflict / No Availability).
+  const instructorGroups = useMemo(() => {
+    const groups: Record<'available' | 'volunteer' | 'conflict' | 'no_availability', Instructor[]> = {
+      available: [],
+      volunteer: [],
+      conflict: [],
+      no_availability: [],
+    };
+    for (const inst of sortedInstructors) {
+      const g = (getAvailInfo(inst)?.group ?? 'no_availability') as keyof typeof groups;
+      groups[g].push(inst);
+    }
+    return groups;
+  }, [sortedInstructors, availabilityMap]);
 
   const fetchData = async () => {
     try {
@@ -1136,47 +1159,90 @@ export default function NewStationPage() {
                       <div className="px-3 py-1 text-xs text-gray-400 italic">Loading availability...</div>
                     )}
 
-                    {sortedInstructors.map((instructor) => {
-                      const avail = getAvailInfo(instructor);
-                      const isUnavailable = avail && !avail.available;
-                      const isSameDay = avail && avail.available && avail.same_day_stations?.length > 0;
-                      const isAvailable = avail && avail.available && (!avail.same_day_stations || avail.same_day_stations.length === 0);
-
+                    {/* Render the 4 groups in spec order with section
+                        headers. Each renderInstructorRow() picks the
+                        right dot colour + tooltip from the group. */}
+                    {(['available', 'volunteer', 'conflict', 'no_availability'] as const).map(group => {
+                      const list = instructorGroups[group];
+                      if (list.length === 0) return null;
+                      const headerLabel = {
+                        available: `Available (${list.length})`,
+                        volunteer: `Volunteers (${list.length})`,
+                        conflict: `Has Conflict (${list.length})`,
+                        no_availability: `No Availability Submitted (${list.length})`,
+                      }[group];
+                      const headerColor = {
+                        available: 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20',
+                        volunteer: 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/20',
+                        conflict: 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20',
+                        no_availability: 'text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/20',
+                      }[group];
                       return (
-                        <button
-                          key={instructor.id}
-                          type="button"
-                          onClick={() => {
-                            handleInstructorChange(`${instructor.name}|${instructor.email}`);
-                            setInstructorDropdownOpen(false);
-                          }}
-                          className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between gap-2 ${
-                            isUnavailable ? 'opacity-50' : ''
-                          }`}
-                        >
-                          <span className={`flex items-center gap-2 ${isUnavailable ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>
-                            {isUnavailable && <span className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />}
-                            {isSameDay && <span className="w-2 h-2 rounded-full bg-yellow-500 flex-shrink-0" />}
-                            {isAvailable && <span className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />}
-                            {!avail && <span className="w-2 h-2 rounded-full bg-gray-300 flex-shrink-0" />}
-                            {instructor.name}
-                          </span>
-                          <span className="flex-shrink-0">
-                            {isUnavailable && (
-                              <span className="text-xs text-red-500">
-                                {avail.conflicts?.[0]?.title || 'Unavailable'}
-                              </span>
-                            )}
-                            {isSameDay && (
-                              <span className="text-xs text-yellow-600 dark:text-yellow-400">
-                                {avail.same_day_hours || avail.same_day_stations.length}h today
-                              </span>
-                            )}
-                            {isAvailable && (
-                              <span className="text-xs text-green-600 dark:text-green-400">Available</span>
-                            )}
-                          </span>
-                        </button>
+                        <div key={group}>
+                          <div className={`px-3 py-1 text-[10px] uppercase tracking-wider font-semibold ${headerColor}`}>
+                            {headerLabel}
+                          </div>
+                          {list.map(instructor => {
+                            const avail = getAvailInfo(instructor);
+                            const sameDayBadge = avail && avail.same_day_stations?.length > 0;
+                            const dotClass = {
+                              available: 'bg-emerald-500',
+                              volunteer: 'bg-blue-500',
+                              conflict: 'bg-amber-500',
+                              no_availability: 'bg-gray-300',
+                            }[group];
+                            const conflictTitle = avail?.conflicts?.[0]?.title;
+                            // Build tooltip: spec asks for "Conflict:
+                            // Teaching EMS 172 (8:30-10:00 AM)" style
+                            const tooltip = conflictTitle
+                              ? `Conflict: ${conflictTitle}` +
+                                (avail.conflicts[0].start_time && avail.conflicts[0].end_time
+                                  ? ` (${avail.conflicts[0].start_time}–${avail.conflicts[0].end_time})`
+                                  : '')
+                              : group === 'available'
+                                ? 'Available — has explicit availability covering this slot'
+                                : group === 'volunteer'
+                                  ? 'Volunteer for this lab day'
+                                  : 'No availability record submitted';
+                            return (
+                              <button
+                                key={instructor.id}
+                                type="button"
+                                title={tooltip}
+                                onClick={() => {
+                                  handleInstructorChange(`${instructor.name}|${instructor.email}`);
+                                  setInstructorDropdownOpen(false);
+                                }}
+                                className={`w-full px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center justify-between gap-2 ${
+                                  group === 'no_availability' ? 'opacity-70' : ''
+                                }`}
+                              >
+                                <span className="flex items-center gap-2 text-gray-900 dark:text-white">
+                                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${dotClass}`} />
+                                  {instructor.name}
+                                </span>
+                                <span className="flex-shrink-0 text-xs">
+                                  {group === 'conflict' && (
+                                    <span className="text-amber-600 dark:text-amber-400 truncate max-w-[200px] inline-block">
+                                      {conflictTitle || 'Conflict'}
+                                    </span>
+                                  )}
+                                  {group === 'volunteer' && (
+                                    <span className="text-blue-600 dark:text-blue-400">Volunteer</span>
+                                  )}
+                                  {group === 'available' && sameDayBadge && (
+                                    <span className="text-amber-600 dark:text-amber-400">
+                                      {avail.same_day_hours || avail.same_day_stations.length}h today
+                                    </span>
+                                  )}
+                                  {group === 'available' && !sameDayBadge && (
+                                    <span className="text-emerald-600 dark:text-emerald-400">Available</span>
+                                  )}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       );
                     })}
 

@@ -265,6 +265,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-indigo-600',
         },
         {
+          href: '/admin/seed-availability',
+          icon: CalendarIcon,
+          title: 'Seed Full-Time Availability',
+          description: 'Bulk-create Mon-Fri default availability for full-time instructors across a date window. Idempotent — re-runs skip rows already present.',
+          color: 'bg-emerald-600',
+        },
+        {
           href: '/skill-sheets',
           icon: ClipboardList,
           title: 'Skill Sheets',
