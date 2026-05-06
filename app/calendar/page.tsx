@@ -713,38 +713,53 @@ function CalendarContent() {
     };
   }, [status, lvfrActive, dateRange.start, dateRange.end]);
 
-  // Fetch instructor list
+  // Fetch instructor list for the "By Instructor" filter dropdown.
+  // Uses the dedicated /api/calendar/instructor-filter-options
+  // endpoint which UNIONs assignments from pmi_block_instructors,
+  // lab_day_roles, and station_instructors so users like
+  // role='lead_instructor' or role='admin' who teach a class still
+  // appear (the previous /api/admin/users?role=instructor exact-
+  // match query missed them entirely).
   useEffect(() => {
-    if (status === 'authenticated') {
-      fetch('/api/instructor/me')
-        .then(r => r.json())
-        .catch(() => null);
-
-      fetch('/api/admin/users?role=instructor&limit=200')
-        .then(r => r.json())
-        .then(data => {
-          if (data.users) {
-            setInstructorList(data.users.map((u: { id: string; name: string }) => ({
+    if (status !== 'authenticated') return;
+    let cancelled = false;
+    fetch('/api/calendar/instructor-filter-options')
+      .then(r => r.json())
+      .then(data => {
+        if (cancelled) return;
+        if (data.success && Array.isArray(data.instructors)) {
+          setInstructorList(
+            data.instructors.map((u: { id: string; name: string }) => ({
               id: u.id,
               name: u.name,
-            })));
-          }
-        })
-        .catch(() => {
-          // Fallback - try different endpoint
-          fetch('/api/lab-management/instructors')
-            .then(r => r.json())
-            .then(data => {
-              if (data.instructors) {
-                setInstructorList(data.instructors.map((u: { id: string; name: string }) => ({
+            }))
+          );
+        }
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Defensive fallback — the lab-management endpoint covers
+        // instructor / lead_instructor / admin / superadmin /
+        // volunteer_instructor roles, which is broader than the
+        // old admin/users query and rarely empty.
+        fetch('/api/lab-management/instructors')
+          .then(r => r.json())
+          .then(data => {
+            if (cancelled) return;
+            if (data.instructors) {
+              setInstructorList(
+                data.instructors.map((u: { id: string; name: string }) => ({
                   id: u.id,
                   name: u.name,
-                })));
-              }
-            })
-            .catch(() => { /* instructor list unavailable */ });
-        });
-    }
+                }))
+              );
+            }
+          })
+          .catch(() => { /* instructor list unavailable */ });
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [status]);
 
   // Update URL params
