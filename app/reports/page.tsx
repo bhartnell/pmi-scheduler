@@ -18,6 +18,11 @@ import {
   Calendar,
   Target,
   Briefcase,
+  Clock,
+  DollarSign,
+  Wrench,
+  ListChecks,
+  ClipboardSignature,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
@@ -127,6 +132,55 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
         icon: FileBarChart,
         color: 'text-pink-600 dark:text-pink-400',
         bgColor: 'bg-pink-100 dark:bg-pink-900/30',
+      },
+    ],
+  },
+  // Operational reports — added during the 2026-05-06 navigation
+  // audit. Each was an orphan page reachable only by typing the
+  // URL directly. Keep new operational/utility reports in this
+  // section so the cognitive grouping stays clean.
+  {
+    heading: 'Operational',
+    reports: [
+      {
+        title: 'Instructor Availability Patterns',
+        description: 'Heat-map of which days/times instructors typically have availability across a semester. Useful for spotting recurring gaps.',
+        href: '/reports/availability-patterns',
+        icon: Clock,
+        color: 'text-sky-600 dark:text-sky-400',
+        bgColor: 'bg-sky-100 dark:bg-sky-900/30',
+      },
+      {
+        title: 'Lab Cost Report',
+        description: 'Per-lab-day instructor hours × hourly rate, equipment usage, and cohort cost breakdown.',
+        href: '/reports/lab-costs',
+        icon: DollarSign,
+        color: 'text-lime-600 dark:text-lime-400',
+        bgColor: 'bg-lime-100 dark:bg-lime-900/30',
+      },
+      {
+        title: 'Scenario Usage',
+        description: 'How often each scenario is run across labs, with most-used and never-used identifiers.',
+        href: '/reports/scenario-usage',
+        icon: ListChecks,
+        color: 'text-orange-600 dark:text-orange-400',
+        bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+      },
+      {
+        title: 'Closeout Survey Results',
+        description: 'Aggregated student exit-survey responses per cohort with sentiment trends.',
+        href: '/reports/closeout-surveys',
+        icon: ClipboardSignature,
+        color: 'text-rose-600 dark:text-rose-400',
+        bgColor: 'bg-rose-100 dark:bg-rose-900/30',
+      },
+      {
+        title: 'Custom Report Builder',
+        description: 'Build ad-hoc tabular reports against any data source — pick columns, filters, and grouping.',
+        href: '/reports/builder',
+        icon: Wrench,
+        color: 'text-fuchsia-600 dark:text-fuchsia-400',
+        bgColor: 'bg-fuchsia-100 dark:bg-fuchsia-900/30',
       },
     ],
   },
