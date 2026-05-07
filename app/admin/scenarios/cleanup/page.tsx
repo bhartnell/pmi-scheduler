@@ -53,11 +53,14 @@ interface ExtractResult {
   success: boolean;
   dry_run: boolean;
   total_checked?: number;
+  total_eligible?: number;
+  remaining_count?: number;
   total_with_changes?: number;
   total_applied?: number;
   total_errors?: number;
   changelog?: ChangelogEntry[];
   error?: string;
+  fix?: string;
 }
 
 export default function ScenariosCleanupPage() {
@@ -141,22 +144,42 @@ export default function ScenariosCleanupPage() {
 
   const handleExtractConfirm = async () => {
     setExtractConfirming(true);
+    // The endpoint processes up to ~15 scenarios per call to stay
+    // under Vercel's 60s function timeout. Loop here until
+    // remaining_count is 0 so the operator sees one combined
+    // result toast instead of having to click multiple times.
+    let totalApplied = 0;
+    let totalErrors = 0;
+    let totalChanged = 0;
+    let lastError: string | null = null;
+    let safetyBatchCap = 10; // never more than 10 batches in one click
     try {
-      const res = await fetch('/api/admin/scenarios/extract-demographics', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dry_run: false }),
-      });
-      const data = (await res.json()) as ExtractResult;
-      if (data.success) {
-        toast.success(
-          `Updated ${data.total_applied ?? 0} scenarios · ${data.total_errors ?? 0} errors`
-        );
-        setExtractPreview(null);
-        loadAudit();
-      } else {
-        toast.error(data.error || 'Extraction failed');
+      while (safetyBatchCap-- > 0) {
+        const res = await fetch('/api/admin/scenarios/extract-demographics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dry_run: false }),
+        });
+        const data = (await res.json()) as ExtractResult;
+        if (!data.success) {
+          lastError = data.error || 'Extraction failed';
+          if (data.fix) lastError += ` — ${data.fix}`;
+          break;
+        }
+        totalApplied += data.total_applied ?? 0;
+        totalErrors += data.total_errors ?? 0;
+        totalChanged += data.total_with_changes ?? 0;
+        if ((data.remaining_count ?? 0) === 0) break;
       }
+      if (lastError) {
+        toast.error(lastError);
+      } else {
+        toast.success(
+          `Updated ${totalApplied} scenarios (${totalChanged} with changes, ${totalErrors} errors)`
+        );
+      }
+      setExtractPreview(null);
+      loadAudit();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Extraction request failed');
     } finally {

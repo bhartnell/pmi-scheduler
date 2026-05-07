@@ -42,7 +42,15 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const MODEL = 'claude-sonnet-4-20250514';
 const MAX_TOKENS = 1024;
-const PACING_MS = 600;
+const PACING_MS = 200;
+const DEFAULT_LIMIT = 15;     // safe under 60s maxDuration
+const HARD_LIMIT = 50;        // cap caller-supplied limit defensively
+
+// Vercel function timeout — Anthropic responses average 2-3s
+// each; with PACING_MS=200 we can process ~15-20 scenarios per
+// run before risking a function timeout. Caller invokes the
+// endpoint repeatedly in chunks via the limit body param.
+export const maxDuration = 60;
 
 // Trim helper for nullable strings.
 function nullEmpty(s: unknown): string | null {
@@ -106,45 +114,64 @@ Strict rules:
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth('admin');
-  if (auth instanceof NextResponse) return auth;
-
-  if (!process.env.ANTHROPIC_API_KEY) {
-    return NextResponse.json(
-      { success: false, error: 'ANTHROPIC_API_KEY not configured' },
-      { status: 500 }
-    );
-  }
-
-  let body: { scenario_ids?: string[]; dry_run?: boolean } = {};
+  // Top-level try/catch — without this, ANY unexpected throw
+  // (supabase error, JSON parse, network blip) returns a blank
+  // 500 with no body. Operator gets nothing actionable.
   try {
-    body = await request.json();
-  } catch {
-    /* empty body OK */
-  }
-  const dryRun = body.dry_run !== false; // DEFAULT TRUE
+    const auth = await requireAuth('admin');
+    if (auth instanceof NextResponse) return auth;
 
-  const supabase = getSupabaseAdmin();
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'ANTHROPIC_API_KEY is not configured in Vercel environment variables',
+          fix: 'Add ANTHROPIC_API_KEY to Vercel project settings → Environment Variables, then redeploy.',
+        },
+        { status: 500 }
+      );
+    }
 
-  // Fetch target rows. Either the explicit list or every scenario
-  // missing chief_complaint AND with patient_presentation prose.
-  let q = supabase
-    .from('scenarios')
-    .select(
-      'id, title, patient_presentation, chief_complaint, patient_name, patient_age, patient_sex, patient_weight, medical_history, medications, allergies'
-    )
-    .eq('is_active', true)
-    .not('patient_presentation', 'is', null);
-  if (body.scenario_ids && body.scenario_ids.length > 0) {
-    q = q.in('id', body.scenario_ids);
-  } else {
-    q = q.is('chief_complaint', null);
-  }
+    let body: { scenario_ids?: string[]; dry_run?: boolean; limit?: number } = {};
+    try {
+      body = await request.json();
+    } catch {
+      /* empty body OK */
+    }
+    const dryRun = body.dry_run !== false; // DEFAULT TRUE
+    const limit = Math.min(
+      Math.max(1, typeof body.limit === 'number' ? body.limit : DEFAULT_LIMIT),
+      HARD_LIMIT
+    );
 
-  const { data: scenarios, error: sErr } = await q;
-  if (sErr) {
-    return NextResponse.json({ success: false, error: sErr.message }, { status: 500 });
-  }
+    const supabase = getSupabaseAdmin();
+
+    // Fetch target rows. Either the explicit list or every scenario
+    // missing chief_complaint AND with patient_presentation prose.
+    // Order by id for stable pagination across batches.
+    let q = supabase
+      .from('scenarios')
+      .select(
+        'id, title, patient_presentation, chief_complaint, patient_name, patient_age, patient_sex, patient_weight, medical_history, medications, allergies'
+      )
+      .eq('is_active', true)
+      .not('patient_presentation', 'is', null)
+      .order('id', { ascending: true });
+    if (body.scenario_ids && body.scenario_ids.length > 0) {
+      q = q.in('id', body.scenario_ids);
+    } else {
+      q = q.is('chief_complaint', null);
+    }
+
+    const { data: allEligible, error: sErr } = await q;
+    if (sErr) {
+      return NextResponse.json({ success: false, error: sErr.message }, { status: 500 });
+    }
+    const totalEligible = (allEligible ?? []).length;
+    // Process at most `limit` scenarios per call. Caller invokes
+    // again to chase the remaining ones — keeps each request well
+    // under Vercel's 60s function timeout.
+    const scenarios = (allEligible ?? []).slice(0, limit);
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -292,16 +319,34 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    await new Promise(r => setTimeout(r, PACING_MS));
-  }
+      await new Promise(r => setTimeout(r, PACING_MS));
+    }
 
-  return NextResponse.json({
-    success: true,
-    dry_run: dryRun,
-    total_checked: (scenarios ?? []).length,
-    total_with_changes: totalWithChanges,
-    total_applied: totalApplied,
-    total_errors: totalErrors,
-    changelog,
-  });
+    return NextResponse.json({
+      success: true,
+      dry_run: dryRun,
+      total_checked: scenarios.length,
+      total_eligible: totalEligible,
+      remaining_count: Math.max(0, totalEligible - scenarios.length),
+      total_with_changes: totalWithChanges,
+      total_applied: totalApplied,
+      total_errors: totalErrors,
+      changelog,
+    });
+  } catch (err) {
+    // Top-level catch — surfaces actionable error info to the
+    // operator instead of a blank 500. Logs full stack to Vercel
+    // function logs for post-mortem.
+    console.error('[extract-demographics] unhandled error:', err);
+    const msg = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack?.split('\n').slice(0, 5).join('\n') : undefined;
+    return NextResponse.json(
+      {
+        success: false,
+        error: `Extraction failed: ${msg}`,
+        stack: process.env.NODE_ENV !== 'production' ? stack : undefined,
+      },
+      { status: 500 }
+    );
+  }
 }
