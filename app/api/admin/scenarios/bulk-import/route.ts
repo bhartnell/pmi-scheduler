@@ -387,7 +387,22 @@ export async function POST(request: NextRequest) {
       } else {
         try {
           const parsed = JSON.parse(text);
-          scenarios = Array.isArray(parsed) ? parsed : [parsed];
+          // Unwrap the three accepted JSON shapes:
+          //   1. { "scenarios": [...] }   ← canonical wrapper used
+          //                                  by the scenario-converter
+          //                                  chat output
+          //   2. [ {...}, {...} ]         ← bare array
+          //   3. { ...single scenario }   ← single scenario object
+          // Without the wrapper-unwrap, shape #1 was treated as a
+          // single scenario and validation reported "Title is
+          // required" because the wrapper has no title field.
+          if (parsed && typeof parsed === 'object' && Array.isArray((parsed as { scenarios?: unknown }).scenarios)) {
+            scenarios = (parsed as { scenarios: ImportedScenario[] }).scenarios;
+          } else if (Array.isArray(parsed)) {
+            scenarios = parsed;
+          } else {
+            scenarios = [parsed];
+          }
         } catch {
           return NextResponse.json({ error: 'Invalid JSON file' }, { status: 400 });
         }

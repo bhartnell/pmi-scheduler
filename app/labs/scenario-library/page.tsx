@@ -736,11 +736,15 @@ export default function ScenarioLibraryPage() {
   // Modals
   const [cloneTarget, setCloneTarget] = useState<LibraryScenario | null>(null);
   const [rateTarget, setRateTarget] = useState<LibraryScenario | null>(null);
+  // Banner text shown after successful clone/import action. Kept
+  // for the clone path; the import path now navigates away to
+  // /admin/scenarios/bulk-import.
   const [importSuccess, setImportSuccess] = useState('');
   const [cloneSuccess, setCloneSuccess] = useState('');
 
-  // Import ref
-  const importInputRef = useRef<HTMLInputElement>(null);
+  // (Import ref removed — import button now links to
+  // /admin/scenarios/bulk-import instead of triggering an
+  // in-page file picker.)
 
   // Auth guard
   useEffect(() => {
@@ -874,30 +878,11 @@ export default function ScenarioLibraryPage() {
     }
   }, []);
 
-  // Import scenario(s) from JSON file
-  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
-      const res = await fetch('/api/lab-management/scenarios/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(parsed),
-      });
-      const data = await res.json();
-      if (data.success || data.imported?.length > 0) {
-        setImportSuccess(`Imported ${data.imported?.length || 0} scenario(s)`);
-        setTimeout(() => setImportSuccess(''), 4000);
-        fetchScenarios();
-      }
-    } catch {
-      // silent - could add error toast
-    }
-    // Reset input so same file can be re-imported
-    if (importInputRef.current) importInputRef.current.value = '';
-  };
+  // Import scenario(s) — was a silent-fail JSON-only handler;
+  // replaced with a link to /admin/scenarios/bulk-import which has
+  // preview + validation. Handler removed to keep the lint clean.
+  // setImportSuccess is still consumed by the success-banner UI
+  // for other code paths (e.g. clone success), so it stays.
 
   const clearFilters = () => {
     setCategoryFilter('');
@@ -944,21 +929,21 @@ export default function ScenarioLibraryPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              {/* Import */}
-              <label
+              {/* Import — was a silent-fail file handler that
+                  POSTed to /api/lab-management/scenarios/import
+                  with no preview and an empty catch block.
+                  Consolidated to the canonical bulk-import flow
+                  at /admin/scenarios/bulk-import which provides
+                  preview + per-scenario validation before commit.
+                  Single working import path now. */}
+              <Link
+                href="/admin/scenarios/bulk-import"
                 className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer text-sm font-medium"
-                title="Import scenario from JSON"
+                title="Open the bulk-import tool with preview"
               >
                 <Upload className="w-4 h-4" />
                 Import
-                <input
-                  ref={importInputRef}
-                  type="file"
-                  accept=".json"
-                  className="hidden"
-                  onChange={handleImportFile}
-                />
-              </label>
+              </Link>
 
               {/* New scenario */}
               <Link

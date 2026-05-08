@@ -19,7 +19,8 @@ import {
   Thermometer,
   X,
   Star,
-  Keyboard
+  Keyboard,
+  Upload,
 } from 'lucide-react';
 import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
@@ -316,6 +317,19 @@ export default function ScenariosPage() {
             >
               <Keyboard className="w-4 h-4" />
             </button>
+            {/* Import — links to the canonical bulk-import flow
+                with preview + validation. Was previously only
+                accessible via the admin panel; surfaced here so
+                instructors building scenarios don't have to
+                navigate through admin to upload a JSON. */}
+            <Link
+              href="/admin/scenarios/bulk-import"
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
+              title="Open the bulk-import tool with preview"
+            >
+              <Upload className="w-5 h-5" />
+              Import
+            </Link>
             <Link
               href="/labs/scenarios/new"
               className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 font-medium"
