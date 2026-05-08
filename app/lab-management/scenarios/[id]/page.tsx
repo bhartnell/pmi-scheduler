@@ -30,9 +30,11 @@ import {
   ArrowLeft,
   Users,
   Copy,
-  Wand2
+  Wand2,
+  Eye,
 } from 'lucide-react';
 import { SKIN_OPTIONS } from '@/lib/constants';
+import ScenarioFullDisplay from '@/components/scenario/ScenarioFullDisplay';
 import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
@@ -779,6 +781,9 @@ export default function ScenarioEditorPage() {
   const [instructorPrintMode, setInstructorPrintMode] = useState(false);
   // Version history — bump this key to force the panel to reload after a save/restore
   const [versionHistoryKey, setVersionHistoryKey] = useState(0);
+  // Toggle for the rich scenario preview panel (uses the same
+  // ScenarioFullDisplay component the summative grading page uses).
+  const [showPreview, setShowPreview] = useState(false);
   // Optional change summary the user can enter when saving
   const [changeSummary, setChangeSummary] = useState('');
   const [scenario, setScenario] = useState<Scenario>({
@@ -2251,7 +2256,35 @@ export default function ScenarioEditorPage() {
         </div>
       )}
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-4 print:hidden">
+      <main className="max-w-7xl mx-auto px-6 py-6 space-y-4 print:hidden">
+        {/* Rich scenario preview — same layout as the summative
+            grading reference panel (components/scenario/ScenarioFullDisplay).
+            Toggle gives instructors a one-click way to see the
+            scenario as it'll appear at scoring time without leaving
+            the edit page. */}
+        {isEditing && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+            <button
+              type="button"
+              onClick={() => setShowPreview(v => !v)}
+              className="w-full px-4 py-3 flex items-center justify-between bg-purple-50 dark:bg-purple-900/20 hover:bg-purple-100 dark:hover:bg-purple-900/30 rounded-t-lg border-b border-purple-200 dark:border-purple-800"
+            >
+              <span className="font-semibold text-purple-900 dark:text-purple-100 flex items-center gap-2">
+                <Eye className="w-4 h-4" />
+                Scenario Preview {showPreview ? '— click to hide' : '— click to expand'}
+              </span>
+              <span className="text-xs text-purple-700 dark:text-purple-300">
+                Same layout as the summative-evaluation grading view
+              </span>
+            </button>
+            {showPreview && (
+              <div className="p-6">
+                <ScenarioFullDisplay scenario={scenario} />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Auto-save indicator and restore prompt */}
         <AutoSaveIndicator
           saveStatus={autoSave.saveStatus}
