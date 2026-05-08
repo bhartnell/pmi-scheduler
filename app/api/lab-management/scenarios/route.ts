@@ -16,7 +16,13 @@ export async function GET(request: NextRequest) {
   const program = searchParams.get('program');
   const search = searchParams.get('search');
   const activeOnly = searchParams.get('activeOnly') !== 'false';
-  const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100);
+  // Bumped 50→500 default + 100→1000 hard cap so the station-edit
+  // scenario picker (which calls this without ?limit) can see every
+  // active scenario. Previously the picker silently dropped any
+  // scenario beyond the alphabetical 50, which the operator could
+  // still find on /labs/scenario-library (no cap there). Aligning
+  // the defaults makes both surfaces show the same universe.
+  const limit = Math.min(parseInt(searchParams.get('limit') || '500'), 1000);
   const offset = parseInt(searchParams.get('offset') || '0');
 
   try {

@@ -483,8 +483,10 @@ function NewLabDayPageContent() {
         setCohorts(cohortsData.cohorts || []);
       }
 
-      // Fetch scenarios
-      const scenariosRes = await fetch('/api/lab-management/scenarios');
+      // Fetch scenarios — limit=1000 explicit so the picker
+      // matches /labs/scenario-library coverage. See the
+      // schedule/[id]/stations/new sibling for context.
+      const scenariosRes = await fetch('/api/lab-management/scenarios?limit=1000&activeOnly=true');
       const scenariosData = await scenariosRes.json();
       if (scenariosData.success) {
         setScenarios(scenariosData.scenarios || []);

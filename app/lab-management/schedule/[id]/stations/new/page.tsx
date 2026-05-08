@@ -281,7 +281,11 @@ export default function NewStationPage() {
       }
 
       // Fetch scenarios
-      const scenariosRes = await fetch('/api/lab-management/scenarios');
+      // limit=1000 explicit so the picker matches the library
+      // even if /api/lab-management/scenarios's default ever shrinks
+      // again. activeOnly=true is the endpoint default but spelled
+      // out for clarity.
+      const scenariosRes = await fetch('/api/lab-management/scenarios?limit=1000&activeOnly=true');
       const scenariosData = await scenariosRes.json();
       if (scenariosData.success) {
         setScenarios(scenariosData.scenarios || []);
