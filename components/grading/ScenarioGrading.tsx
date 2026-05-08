@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { Station, ScenarioPhase } from './types';
 import { toArray } from './types';
+import ScenarioFullDisplay from '@/components/scenario/ScenarioFullDisplay';
 
 interface ScenarioGradingProps {
   station: Station;
@@ -586,104 +587,15 @@ export default function ScenarioGrading({
             )}
           </div>
 
-          {/* === EXPANDABLE: Detailed Scenario Info === */}
+          {/* === EXPANDABLE: Detailed Scenario Info ===
+              Replaced ~100 lines of inline JSX with the shared
+              ScenarioFullDisplay component (used here AND on the
+              summative grading page AND on the lab-management
+              scenario detail page). Header strip and proctor
+              notes textarea below are unchanged. */}
           {showScenarioDetails && (
-            <div className="px-4 py-4 space-y-4">
-              {/* Instructor Notes (READ FIRST!) */}
-              {scenario.instructor_notes && (
-                <div className="p-3 bg-yellow-100 dark:bg-yellow-900/40 rounded-lg border-2 border-yellow-400 dark:border-yellow-600">
-                  <h3 className="text-sm font-bold text-yellow-900 dark:text-yellow-200 mb-1">INSTRUCTOR NOTES (READ FIRST)</h3>
-                  <p className="text-sm text-yellow-800 dark:text-yellow-300 whitespace-pre-wrap">{scenario.instructor_notes}</p>
-                </div>
-              )}
-
-              {/* === PHASES: Visual Progression === */}
-              {scenario.phases && scenario.phases.length > 0 && (
-                <div className="space-y-3">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                    <Stethoscope className="w-4 h-4" />
-                    Scenario Phases
-                    <span className="text-xs text-gray-400 dark:text-gray-500 font-normal">({scenario.phases.length} phases)</span>
-                  </h3>
-                  <div className="space-y-3 pl-1">
-                    {scenario.phases.map((phase, index) => (
-                      <CollapsiblePhase
-                        key={index}
-                        phase={phase}
-                        index={index}
-                        scenario={scenario}
-                        defaultExpanded={index === 0}
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Fallback: Assessment structure when no phases */}
-              {(!scenario.phases || scenario.phases.length === 0) && (
-                <FallbackAssessmentStructure scenario={scenario} />
-              )}
-
-              {/* Secondary Survey */}
-              {scenario.secondary_survey && Object.values(scenario.secondary_survey).some(Boolean) && (
-                <div className="p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg border border-gray-200 dark:border-gray-600">
-                  <h3 className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">Secondary Survey</h3>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    {Object.entries(scenario.secondary_survey).map(([region, finding]) => {
-                      if (!finding) return null;
-                      return (
-                        <div key={region} className="flex gap-2">
-                          <span className="font-medium text-gray-500 dark:text-gray-400 capitalize">{region}:</span>
-                          <span className="text-gray-900 dark:text-white">{finding}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* EKG Findings */}
-              {scenario.ekg_findings && Object.values(scenario.ekg_findings).some(Boolean) && (
-                <div className="p-3 bg-rose-50 dark:bg-rose-900/20 rounded-lg border border-rose-200 dark:border-rose-800">
-                  <h3 className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider mb-2">EKG / Cardiac Findings</h3>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    {scenario.ekg_findings.rhythm && <div><span className="text-gray-500 dark:text-gray-400">Rhythm:</span> <span className="font-medium text-gray-900 dark:text-white">{scenario.ekg_findings.rhythm}</span></div>}
-                    {scenario.ekg_findings.rate && <div><span className="text-gray-500 dark:text-gray-400">Rate:</span> <span className="font-medium text-gray-900 dark:text-white">{scenario.ekg_findings.rate}</span></div>}
-                    {scenario.ekg_findings.interpretation && <div className="col-span-2"><span className="text-gray-500 dark:text-gray-400">Interpretation:</span> <span className="font-medium text-gray-900 dark:text-white">{scenario.ekg_findings.interpretation}</span></div>}
-                    {scenario.ekg_findings.twelve_lead && <div className="col-span-2"><span className="text-gray-500 dark:text-gray-400">12-Lead:</span> <span className="font-medium text-gray-900 dark:text-white">{scenario.ekg_findings.twelve_lead}</span></div>}
-                  </div>
-                </div>
-              )}
-
-              {/* Learning Objectives */}
-              {scenario.learning_objectives && toArray(scenario.learning_objectives).length > 0 && (
-                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg border border-indigo-200 dark:border-indigo-800">
-                  <h3 className="text-sm font-medium text-indigo-800 dark:text-indigo-300 mb-2">Learning Objectives</h3>
-                  <ul className="text-sm text-indigo-700 dark:text-indigo-400 space-y-1">
-                    {toArray(scenario.learning_objectives).map((obj, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span className="text-indigo-400 dark:text-indigo-500">•</span>
-                        {obj}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {/* Debrief Points */}
-              {scenario.debrief_points && toArray(scenario.debrief_points).length > 0 && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-                  <h3 className="text-sm font-medium text-amber-800 dark:text-amber-300 mb-2">Debrief Discussion Points</h3>
-                  <ul className="text-sm text-amber-700 dark:text-amber-400 space-y-1">
-                    {toArray(scenario.debrief_points).map((point, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <span className="text-amber-400 dark:text-amber-500">•</span>
-                        {point}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+            <div className="px-4 py-4">
+              <ScenarioFullDisplay scenario={scenario} />
             </div>
           )}
 

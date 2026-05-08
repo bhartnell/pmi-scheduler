@@ -783,7 +783,10 @@ export default function ScenarioEditorPage() {
   const [versionHistoryKey, setVersionHistoryKey] = useState(0);
   // Toggle for the rich scenario preview panel (uses the same
   // ScenarioFullDisplay component the summative grading page uses).
-  const [showPreview, setShowPreview] = useState(false);
+  // Defaults to OPEN per spec — the primary purpose of visiting a
+  // scenario detail page is to view the scenario; editing is a
+  // secondary action behind the form below.
+  const [showPreview, setShowPreview] = useState(true);
   // Optional change summary the user can enter when saving
   const [changeSummary, setChangeSummary] = useState('');
   const [scenario, setScenario] = useState<Scenario>({
