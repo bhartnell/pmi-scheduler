@@ -893,7 +893,29 @@ export default function ScenarioEditorPage() {
             time_onset: ''
           },
           phases: s.phases?.length > 0 ? s.phases : [createEmptyPhase(0)],
-          critical_actions: s.critical_actions?.map((a: string, i: number) => ({ id: `ca-${i}`, description: a })) || [],
+          // Defensive unwrap — see lab-management sibling for the
+          // full story; in short, the OLD transform path could
+          // store JSON-stringified objects in the text[] column,
+          // so we unwrap repeatedly until we have a plain string.
+          critical_actions: s.critical_actions?.map((a: string, i: number) => {
+            let desc = a;
+            for (let safety = 0; safety < 10; safety++) {
+              if (typeof desc !== 'string') break;
+              const trimmed = desc.trim();
+              if (!trimmed.startsWith('{') || !trimmed.includes('"description"')) break;
+              try {
+                const inner = JSON.parse(trimmed);
+                if (inner && typeof inner === 'object' && typeof inner.description === 'string') {
+                  desc = inner.description;
+                  continue;
+                }
+              } catch {
+                /* not parseable — leave as-is */
+              }
+              break;
+            }
+            return { id: `ca-${i}`, description: desc };
+          }) || [],
           evaluation_criteria: DEFAULT_EVALUATION_CRITERIA,
           debrief_points: toArray(s.debrief_points)
         });

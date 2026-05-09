@@ -922,7 +922,34 @@ export default function ScenarioEditorPage() {
             time_onset: ''
           },
           phases: s.phases?.length > 0 ? s.phases : [createEmptyPhase(0)],
-          critical_actions: s.critical_actions?.map((a: string, i: number) => ({ id: `ca-${i}`, description: a })) || [],
+          // Defensive unwrap — when the OLD broken transform path
+          // ran on this row, strings ended up JSON-stringified
+          // objects like '{"id":"...","description":"text"}' (or
+          // worse: nested multiple times). Strip any wrap layers
+          // so the editor renders the actual description, not
+          // raw JSON. Saving re-extracts .description so the
+          // round-trip lands clean strings.
+          critical_actions: s.critical_actions?.map((a: string, i: number) => {
+            let desc = a;
+            // Repeatedly unwrap until we get a plain string or
+            // hit a non-wrapped object.
+            for (let safety = 0; safety < 10; safety++) {
+              if (typeof desc !== 'string') break;
+              const trimmed = desc.trim();
+              if (!trimmed.startsWith('{') || !trimmed.includes('"description"')) break;
+              try {
+                const inner = JSON.parse(trimmed);
+                if (inner && typeof inner === 'object' && typeof inner.description === 'string') {
+                  desc = inner.description;
+                  continue;
+                }
+              } catch {
+                /* not parseable — leave as-is */
+              }
+              break;
+            }
+            return { id: `ca-${i}`, description: desc };
+          }) || [],
           evaluation_criteria: DEFAULT_EVALUATION_CRITERIA,
           debrief_points: toArray(s.debrief_points)
         });

@@ -331,15 +331,23 @@ function transformScenario(
     }
   }
 
-  // --- Fix critical_actions format ---
-  const criticalActions = scenario.critical_actions;
-  if (Array.isArray(criticalActions) && criticalActions.length > 0 && typeof criticalActions[0] === 'string') {
-    newCriticalActions = (criticalActions as string[]).map((desc, i) => ({
-      id: `critical-${now}-${i}`,
-      description: typeof desc === 'string' ? desc : String(desc),
-    }));
-    changes.push(`Converted ${newCriticalActions.length} critical_action(s) from strings to objects`);
-  }
+  // --- critical_actions format (NO transform performed) ---
+  // Canonical storage is `text[]` of plain strings. The editor
+  // wraps each string into { id, description } in memory for
+  // React-key purposes only, then maps back to a string array on
+  // save (`.map(a => a.description)`).
+  //
+  // The previous "Convert strings → {id, description} objects"
+  // step here caused the 2026-05-08 critical_actions corruption:
+  // because the column is text[] (not jsonb[]), Supabase JS
+  // serialised each new object to a JSON STRING on save. The next
+  // time transform ran, it saw `typeof === 'string'` again and
+  // re-wrapped, producing nested JSON like:
+  //   '{"id":"...","description":"{\\\"id\\\":\\\"...\\\",...}"}'
+  //
+  // Leave critical_actions alone in the transform pipeline. If
+  // the field needs cleanup the dedicated unwrap script in
+  // /scripts handles it without re-wrapping.
 
   return { newPhases, newInitialVitals, newCriticalActions, legacyData, changes };
 }
