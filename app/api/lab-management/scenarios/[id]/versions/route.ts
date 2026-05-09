@@ -71,10 +71,20 @@ export async function POST(
     }
 
     const body = await request.json();
-    const { data: versionData, change_summary } = body;
+    // Accept BOTH `data` and `content` as the snapshot field name.
+    // Both scenario-edit pages POST `{ content: <scenario>, ... }`
+    // but the original server contract expected `data`. Field-name
+    // mismatch produced a 400 every time anyone saved a scenario,
+    // including the auto-snapshot run during normal save. Honouring
+    // either name is the smallest fix and keeps both clients happy.
+    const versionData = body.content ?? body.data;
+    const { change_summary } = body;
 
     if (!versionData || typeof versionData !== 'object') {
-      return NextResponse.json({ error: 'data (JSONB snapshot) is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'content (JSONB snapshot) is required' },
+        { status: 400 }
+      );
     }
 
     const supabase = getSupabaseAdmin();

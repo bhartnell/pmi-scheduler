@@ -220,8 +220,15 @@ export default function StationCards({
               );
             })()}
 
-            {/* Actions */}
-            <div className="flex gap-2 pt-3 border-t dark:border-gray-700 print:hidden">
+            {/* Actions — flex-wrap added so the 4-button row on
+                scenario stations (Edit / Scenario / Log Roles /
+                Grade) reflows to a second line on narrow card
+                widths instead of overflowing past the card edge.
+                The overflow caused two visible bugs: cards
+                appeared to overlap each other (buttons spilled
+                into the next column) AND the Grade button looked
+                "missing" when it was actually clipped off-screen. */}
+            <div className="flex flex-wrap gap-2 pt-3 border-t dark:border-gray-700 print:hidden">
               <button
                 onClick={() => onEditStation(station)}
                 className="inline-flex items-center justify-center gap-1 px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
@@ -249,7 +256,7 @@ export default function StationCards({
               )}
               <Link
                 href={`/labs/grade/station/${station.id}`}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="flex-1 min-w-[100px] inline-flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <ClipboardCheck className="w-4 h-4" />
                 Grade
