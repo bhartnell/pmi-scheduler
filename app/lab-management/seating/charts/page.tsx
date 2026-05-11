@@ -41,6 +41,13 @@ interface Cohort {
   program: { name: string; abbreviation: string };
 }
 
+interface ClassroomPreset {
+  id: string;
+  name: string;
+  description: string | null;
+  layout_config: { preset?: string } | null;
+}
+
 function SeatingChartsContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -49,6 +56,8 @@ function SeatingChartsContent() {
 
   const [charts, setCharts] = useState<Chart[]>([]);
   const [cohorts, setCohorts] = useState<Cohort[]>([]);
+  const [classrooms, setClassrooms] = useState<ClassroomPreset[]>([]);
+  const [selectedClassroom, setSelectedClassroom] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [selectedCohort, setSelectedCohort] = useState<string>(initialCohortId || '');
   const [creating, setCreating] = useState(false);
@@ -64,8 +73,33 @@ function SeatingChartsContent() {
     if (session) {
       fetchCohorts();
       fetchCurrentUser();
+      fetchClassrooms();
     }
   }, [session]);
+
+  // Pull the available room presets (Main Classroom, Suite 1, ...).
+  // Default the picker to whatever classroom is alphabetically first
+  // so "New Chart" never sends a null classroom_id; the API would
+  // pick a default anyway but explicit selection makes the chip on
+  // the list more accurate.
+  const fetchClassrooms = async () => {
+    try {
+      const res = await fetch('/api/seating/classrooms');
+      const data = await res.json();
+      if (data.success) {
+        const list: ClassroomPreset[] = data.classrooms || [];
+        setClassrooms(list);
+        if (!selectedClassroom && list.length > 0) {
+          // Prefer "Main Classroom" if present (legacy default) so
+          // existing instructors don't notice a behavior change.
+          const def = list.find(c => c.name === 'Main Classroom') ?? list[0];
+          setSelectedClassroom(def.id);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching classrooms:', error);
+    }
+  };
 
   const fetchCurrentUser = async () => {
     try {
@@ -123,12 +157,16 @@ function SeatingChartsContent() {
     setCreating(true);
     try {
       const cohort = cohorts.find(c => c.id === selectedCohort);
+      const classroom = classrooms.find(c => c.id === selectedClassroom);
       const res = await fetch('/api/seating/charts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cohort_id: selectedCohort,
-          name: `${cohort?.program.abbreviation} ${cohort?.cohort_number} Seating`,
+          classroom_id: selectedClassroom || undefined,
+          // Include the room name in the chart title so operators can
+          // tell at a glance which room a chart is for ("EMT G5 — Suite 1").
+          name: `${cohort?.program.abbreviation} ${cohort?.cohort_number} Seating${classroom ? ` — ${classroom.name}` : ''}`,
         }),
       });
 
@@ -244,6 +282,21 @@ function SeatingChartsContent() {
                 <option key={c.id} value={c.id}>
                   {c.program.abbreviation} Group {c.cohort_number}
                 </option>
+              ))}
+            </select>
+          </div>
+          {/* Room preset picker — drives which layout the builder
+              renders. Default = legacy 4×2 table layout; Suite 1 =
+              30-seat split layout per the LVFR/EMT seating spec. */}
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600 dark:text-gray-400">Room:</label>
+            <select
+              value={selectedClassroom}
+              onChange={(e) => setSelectedClassroom(e.target.value)}
+              className="px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-700 min-w-[180px]"
+            >
+              {classrooms.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
               ))}
             </select>
           </div>

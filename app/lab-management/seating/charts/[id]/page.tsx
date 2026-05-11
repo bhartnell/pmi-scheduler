@@ -21,6 +21,7 @@ import {
   FlipVertical,
   Shuffle
 } from 'lucide-react';
+import Suite1Layout, { type SuiteRowConfig } from '@/components/seating/Suite1Layout';
 
 interface Student {
   id: string;
@@ -438,7 +439,19 @@ export default function SeatingChartBuilderPage() {
     );
   }
 
-  // Build table layout: 4 rows, 2 tables per row
+  // Detect which room preset the chart was created against. The
+  // classroom's layout_config.preset key drives which renderer branch
+  // we use:
+  //   "default"  → legacy 4-row × 2-table grid (Main Classroom)
+  //   "suite_1"  → 30-seat left/right split with variable rows (Suite 1)
+  // Falls back to "default" for charts created before this field
+  // existed.
+  const presetName: string = (chart.classroom.layout_config?.preset as string | undefined) ?? 'default';
+  const isSuite1 = presetName === 'suite_1';
+  const suite1Rows: SuiteRowConfig[] =
+    (chart.classroom.layout_config?.rows as SuiteRowConfig[] | undefined) ?? [];
+
+  // Build table layout: 4 rows, 2 tables per row (default preset only)
   const baseRows = [
     { row: 1, tables: [1, 2], zone: 'Front (Audio)' },
     { row: 2, tables: [3, 4], zone: 'Middle (Visual)' },
@@ -665,7 +678,7 @@ export default function SeatingChartBuilderPage() {
             )}
 
             {/* Overflow Seats - at back of room (top when flipped, bottom when not flipped) */}
-            {isFlipped && (
+            {!isSuite1 && isFlipped && (
               <div className="mb-6">
                 <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                   Overflow Seating (Back Wall)
@@ -733,7 +746,22 @@ export default function SeatingChartBuilderPage() {
               </div>
             )}
 
-            {/* Tables Grid */}
+            {/* Tables Grid — default preset only. Suite 1 has its own
+                left/right split layout below. */}
+            {isSuite1 ? (
+              <Suite1Layout
+                rows={suite1Rows}
+                isFlipped={isFlipped}
+                styleBadges={STYLE_BADGES}
+                getStudentAtSeat={getStudentAtSeat}
+                getLearningStyle={getLearningStyle}
+                getConflicts={getConflicts}
+                onDragOver={handleDragOver}
+                onDrop={(t, s, r) => handleDrop(t, s, r)}
+                onDragStart={handleDragStart}
+                onContextMenu={handleContextMenu}
+              />
+            ) : (
             <div className="space-y-4">
               {rows.map(({ row, tables, zone }) => (
                 <div key={row}>
@@ -817,9 +845,10 @@ export default function SeatingChartBuilderPage() {
                 </div>
               ))}
             </div>
+            )}
 
             {/* Overflow Seats - at back of room (bottom when not flipped) */}
-            {!isFlipped && (
+            {!isSuite1 && !isFlipped && (
               <div className="mt-6">
                 <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
                   Overflow Seating (Back Wall)
