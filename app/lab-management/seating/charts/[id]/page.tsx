@@ -543,6 +543,40 @@ export default function SeatingChartBuilderPage() {
         </div>
       </div>
 
+      {/* Print stylesheet — fit a 23-25 student class onto ONE
+          landscape 8.5x11 page. Targets the Tailwind utility
+          classes already on the seat cards rather than adding
+          print: variants everywhere, so the markup stays clean.
+          Adjust sizes here when seat-card layout changes. */}
+      <style>{`
+        @media print {
+          @page { size: landscape; margin: 0.4in; }
+          html, body { background: white !important; }
+          /* Tighten seat cards from 96x144 → ~72x auto */
+          #seating-chart-printable .w-24 { width: 70px !important; }
+          #seating-chart-printable .h-36 { height: auto !important; min-height: 0 !important; }
+          /* Photo circle from 80x80 → 32x32 */
+          #seating-chart-printable .w-20 { width: 32px !important; }
+          #seating-chart-printable .h-20 { height: 32px !important; }
+          /* Padding + gaps */
+          #seating-chart-printable .p-3 { padding: 4px !important; }
+          #seating-chart-printable .p-1 { padding: 2px !important; }
+          #seating-chart-printable .gap-2 { gap: 3px !important; }
+          #seating-chart-printable .gap-3 { gap: 4px !important; }
+          #seating-chart-printable .gap-6 { gap: 8px !important; }
+          /* Margins between rows */
+          #seating-chart-printable .mb-2 { margin-bottom: 2px !important; }
+          #seating-chart-printable .mb-4 { margin-bottom: 4px !important; }
+          #seating-chart-printable .mb-6 { margin-bottom: 6px !important; }
+          #seating-chart-printable .py-2 { padding-top: 3px !important; padding-bottom: 3px !important; }
+          #seating-chart-printable .py-6 { padding-top: 0 !important; padding-bottom: 0 !important; }
+          /* Type tighter so names still readable at smaller cards */
+          #seating-chart-printable .text-xs { font-size: 9px !important; line-height: 1.05 !important; }
+          #seating-chart-printable .text-sm { font-size: 10px !important; line-height: 1.1 !important; }
+          /* Avoid splitting the chart across pages */
+          #seating-chart-printable { page-break-inside: avoid; }
+        }
+      `}</style>
       <main id="seating-chart-printable" className="max-w-7xl mx-auto px-4 py-6 print:p-0 print:max-w-none">
         {/* Print Header - Only visible when printing */}
         <div className="hidden print:block mb-6">
