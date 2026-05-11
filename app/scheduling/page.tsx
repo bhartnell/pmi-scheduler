@@ -21,12 +21,14 @@ import {
   TrendingUp,
   AlertOctagon,
   Check,
+  CalendarDays,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import { PageLoader } from '@/components/ui';
 import { hasMinRole, canAccessScheduling } from '@/lib/permissions';
 import LogHoursModal from '@/components/scheduling/LogHoursModal';
+import LogMyShiftModal from '@/components/scheduling/LogMyShiftModal';
 import RequestCoverageModal from '@/components/scheduling/RequestCoverageModal';
 import RecurringAvailabilityModal from '@/components/scheduling/RecurringAvailabilityModal';
 import CoordinatorCalendarView from '@/components/scheduling/CoordinatorCalendarView';
@@ -124,6 +126,10 @@ export default function SchedulingPage() {
   }
   const [coverageRequests, setCoverageRequests] = useState<CoverageRequestRow[]>([]);
   const [showRequestCoverage, setShowRequestCoverage] = useState(false);
+  // Self-service shift logging modal (any instructor). Posts to
+  // /api/scheduling/log-shift which creates the manual_hour_log
+  // row and notifies coordinators.
+  const [showLogMyShift, setShowLogMyShift] = useState(false);
   const [coverageBusy, setCoverageBusy] = useState<string | null>(null);
   const [recurringAvailFor, setRecurringAvailFor] = useState<{
     id: string;
@@ -440,11 +446,24 @@ export default function SchedulingPage() {
 
         {activeTab === 'overview' && (
         <>
-        {/* Request Coverage — primary action at top of the scheduling hub.
-            Visible to lead_instructor+. Opens the modal that posts a
-            coverage_requests row and pings Ryan + Ben. */}
-        {effectiveRole && hasMinRole(effectiveRole, 'lead_instructor') && (
-          <div className="mb-6 flex justify-end">
+        {/* Top action row — Log a Shift (self-service for ANY
+            instructor) plus Request Coverage (leads+). Log a Shift
+            closes the loop where informal class coverage / pickups
+            (e.g. Jimi takes Stacie's EMT class) never made it into
+            the hour-tracking system. The shift posts a manual_hour_log
+            row keyed to the caller and fires an in-app notification
+            to admin/superadmin so the coordinator sees it without
+            polling. No approval needed. */}
+        <div className="mb-6 flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => setShowLogMyShift(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg text-sm font-medium"
+          >
+            <CalendarDays className="w-4 h-4" />
+            Log a Shift
+          </button>
+          {effectiveRole && hasMinRole(effectiveRole, 'lead_instructor') && (
             <button
               type="button"
               onClick={() => setShowRequestCoverage(true)}
@@ -453,8 +472,8 @@ export default function SchedulingPage() {
               <AlertOctagon className="w-4 h-4" />
               Request Coverage
             </button>
-          </div>
-        )}
+          )}
+        </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* My Availability */}
@@ -1262,6 +1281,19 @@ export default function SchedulingPage() {
           onClose={() => setLogHoursFor(null)}
           onSaved={() => {
             setLogHoursFor(null);
+            fetchPartTimerStatus();
+          }}
+        />
+      )}
+
+      {showLogMyShift && (
+        <LogMyShiftModal
+          onClose={() => setShowLogMyShift(false)}
+          onSaved={() => {
+            // Refresh part-timer totals (no-op for full-time
+            // coordinators since the table isn't visible, but
+            // cheap to call). The modal self-closes shortly
+            // after success.
             fetchPartTimerStatus();
           }}
         />
