@@ -57,6 +57,13 @@ type Block = {
   notes?: string | null;
   /** Free-form label the client can use as a tooltip ("EMS 111", "Phase 1 lab", etc.). */
   label?: string | null;
+  /**
+   * Optional client-side navigation target. When set, the calendar
+   * wraps the block in a <Link href={...}>. Used today for LVFR
+   * collapsed session blocks → /lvfr-aemt/day/[date], future use for
+   * shift detail pages once those exist.
+   */
+  link?: string | null;
 };
 
 function durationHours(start: string | null, end: string | null): number | null {
@@ -618,15 +625,37 @@ export async function GET(request: NextRequest) {
     //    Label format: prefer the block.title, fall back to course_name
     //    (e.g. "EMS 121 Pharmacology"). Cohort context is appended so
     //    the chip says "EMS 121 — PM G14" when there's room.
+    //
+    //    LVFR special-case: per the LVFR AEMT revamp spec, the
+    //    coordinator calendar shows ONE block per session per
+    //    instructor (e.g. "Jimi — LVFR Morning") instead of N
+    //    individual chapter / quiz / skill blocks. We divert LVFR
+    //    blocks into a side bucket here and collapse them after the
+    //    loop, so a 4-hour morning session of three pmi_schedule_blocks
+    //    rows ends up as one chip linking to /lvfr-aemt/day/[date].
+    type LvfrBucket = {
+      date: string;
+      person_id: string;
+      person_name: string;
+      session: 'morning' | 'afternoon';
+      starts: string[];
+      ends: string[];
+      hours: number;
+      source_block_ids: string[];
+    };
+    const lvfrBuckets = new Map<string, LvfrBucket>();
+
     for (const b of blocksRes.data ?? []) {
       const block = b as any;
       const ps = Array.isArray(block.program_schedule) ? block.program_schedule[0] : block.program_schedule;
       const cohort = ps?.cohort && (Array.isArray(ps.cohort) ? ps.cohort[0] : ps.cohort);
+      const abbr = cohort?.program?.abbreviation as string | undefined;
       const cohortLabel = cohort
-        ? `${cohort.program?.abbreviation ?? ''} G${cohort.cohort_number ?? '?'}`.trim()
+        ? `${abbr ?? ''} G${cohort.cohort_number ?? '?'}`.trim()
         : null;
       const baseLabel = block.title || block.course_name || 'Class block';
       const fullLabel = cohortLabel ? `${baseLabel} — ${cohortLabel}` : baseLabel;
+      const isLvfr = abbr === 'LVFR';
 
       // Iterate the two FK slots. Both can resolve via the embed; no
       // email-fallback is needed here since the picker writes the FK
@@ -635,6 +664,36 @@ export async function GET(request: NextRequest) {
         const inst = Array.isArray(slot) ? slot[0] : slot;
         if (!inst?.id) continue;
         remember(inst);
+
+        if (isLvfr) {
+          // Bucket key: date + person + AM/PM. start_time '08:30:00'
+          // → 8 (hours), < 12 means morning. Defensively default to
+          // morning if start_time is null so the row still appears.
+          const hour = parseInt((block.start_time ?? '0').split(':')[0], 10) || 0;
+          const session: 'morning' | 'afternoon' = hour < 12 ? 'morning' : 'afternoon';
+          const key = `${block.date}|${inst.id}|${session}`;
+          const existing = lvfrBuckets.get(key);
+          const hrs = durationHours(block.start_time, block.end_time) ?? 0;
+          if (existing) {
+            existing.starts.push(block.start_time);
+            existing.ends.push(block.end_time);
+            existing.hours += hrs;
+            existing.source_block_ids.push(block.id);
+          } else {
+            lvfrBuckets.set(key, {
+              date: block.date,
+              person_id: inst.id,
+              person_name: inst.name || inst.email,
+              session,
+              starts: [block.start_time],
+              ends: [block.end_time],
+              hours: hrs,
+              source_block_ids: [block.id],
+            });
+          }
+          continue;
+        }
+
         blocks.push({
           id: `psb-${block.id}-${inst.id}`,
           date: block.date,
@@ -648,6 +707,29 @@ export async function GET(request: NextRequest) {
           label: fullLabel,
         });
       }
+    }
+
+    // Emit one collapsed chip per (date, person, session) for LVFR.
+    // Times shown are the spec's canonical session windows, not the
+    // min/max of contributing blocks — keeps the calendar uniform
+    // even if one instructor's individual blocks ran short of the
+    // spec window. Underlying hours-summing reflects what was on the
+    // master schedule, though.
+    for (const bucket of lvfrBuckets.values()) {
+      const isMorning = bucket.session === 'morning';
+      blocks.push({
+        id: `lvfr-${bucket.date}-${bucket.person_id}-${bucket.session}`,
+        date: bucket.date,
+        person_id: bucket.person_id,
+        person_name: bucket.person_name,
+        type: 'class_teaching',
+        start_time: isMorning ? '07:30:00' : '12:30:00',
+        end_time: isMorning ? '11:30:00' : '15:30:00',
+        hours: Math.round(bucket.hours * 100) / 100,
+        role: 'class',
+        label: `LVFR ${isMorning ? 'Morning' : 'Afternoon'}`,
+        link: `/lvfr-aemt/day/${bucket.date}`,
+      });
     }
 
     // ---------------------------------------------------------------

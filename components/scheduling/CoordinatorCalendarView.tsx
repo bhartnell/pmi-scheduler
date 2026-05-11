@@ -29,6 +29,8 @@ type Block = {
   role?: string | null;
   notes?: string | null;
   label?: string | null;
+  /** Optional click target — when set, the block renders as a <Link>. */
+  link?: string | null;
 };
 
 type LabDayLite = {
@@ -796,6 +798,15 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                           </Link>
                         );
                       }
+                      // Server-supplied click target (LVFR collapsed
+                      // session blocks → /lvfr-aemt/day/[date]).
+                      if (b.link) {
+                        return (
+                          <Link key={b.id} href={b.link} className={cls} title={tooltip}>
+                            {inner}
+                          </Link>
+                        );
+                      }
                       return (
                         <div key={b.id} className={cls} title={tooltip}>
                           {inner}
@@ -1027,6 +1038,13 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                     if (b.type === 'lab_assignment' && b.lab_day_id) {
                       return (
                         <Link key={`exp-${b.id}`} href={`/labs/schedule/${b.lab_day_id}`} className={cls} title={tooltipParts}>
+                          {inner}
+                        </Link>
+                      );
+                    }
+                    if (b.link) {
+                      return (
+                        <Link key={`exp-${b.id}`} href={b.link} className={cls} title={tooltipParts}>
                           {inner}
                         </Link>
                       );
