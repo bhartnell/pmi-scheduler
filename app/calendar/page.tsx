@@ -551,6 +551,15 @@ function CalendarContent() {
   const [showDrafts, setShowDrafts] = useState(true);
   const [showCancelled, setShowCancelled] = useState(false);
 
+  // LVFR "Compact" toggle. Per the LVFR AEMT revamp spec, LVFR days
+  // collapse to two blocks max — Morning (7:30-11:30) + Afternoon
+  // (12:30-15:30) — so the master calendar shows the day at a glance
+  // instead of N individual chapter/quiz/skill rows. Default is on;
+  // toggle off to see the underlying blocks (helpful when verifying
+  // the schedule). Only meaningful when the LVFR program filter is
+  // active; the pill only renders in that case.
+  const [compactLvfr, setCompactLvfr] = useState<boolean>(true);
+
   // Export panel
   const [exportPanelOpen, setExportPanelOpen] = useState(false);
 
@@ -832,9 +841,80 @@ function CalendarContent() {
     setConflictEventIds(ids);
   }, [events]);
 
+  // LVFR collapse pass — runs BEFORE event-type filtering so the
+  // synthetic "Morning Session" / "Afternoon Session" events flow
+  // through the rest of the pipeline (event-type filter, list view,
+  // detail panel) as normal class events.
+  //
+  // Per the LVFR AEMT revamp spec:
+  //   - When the LVFR program filter is on AND `compactLvfr` is true,
+  //     replace all LVFR-tagged events on each date with up to two
+  //     synthetic rows: Morning (07:30-11:30) and Afternoon
+  //     (12:30-15:30). The session each block belongs to is decided
+  //     by its start hour: <12 → morning, ≥12 → afternoon.
+  //   - Each synthetic event links to /lvfr-aemt/day/[date] via
+  //     `linked_url` so the detail panel's "Open" button takes the
+  //     operator into the day's runsheet.
+  //
+  // Non-LVFR events pass through untouched. When LVFR is off or
+  // compactLvfr is false this memo is a near-no-op.
+  const lvfrCompactActive = activePrograms.has('lvfr') && compactLvfr;
+  const collapsedEvents = useMemo<CalendarEvent[]>(() => {
+    if (!lvfrCompactActive) return events;
+
+    type Bucket = {
+      date: string;
+      session: 'morning' | 'afternoon';
+      sourceIds: string[];
+    };
+    const buckets = new Map<string, Bucket>();
+    const passthrough: CalendarEvent[] = [];
+
+    for (const e of events) {
+      if (e.program !== 'lvfr') {
+        passthrough.push(e);
+        continue;
+      }
+      // Decide AM/PM from start_time. Defensive default → morning.
+      const startHour = parseInt((e.start_time || '0').split(':')[0], 10) || 0;
+      const session: 'morning' | 'afternoon' = startHour < 12 ? 'morning' : 'afternoon';
+      const key = `${e.date}|${session}`;
+      const b = buckets.get(key);
+      if (b) {
+        b.sourceIds.push(e.id);
+      } else {
+        buckets.set(key, { date: e.date, session, sourceIds: [e.id] });
+      }
+    }
+
+    const synthetic: CalendarEvent[] = [];
+    for (const b of buckets.values()) {
+      const isMorning = b.session === 'morning';
+      synthetic.push({
+        id: `lvfr-compact-${b.date}-${b.session}`,
+        source: 'lvfr',
+        title: `LVFR AEMT — ${isMorning ? 'Morning' : 'Afternoon'} Session`,
+        date: b.date,
+        start_time: isMorning ? '07:30' : '12:30',
+        end_time: isMorning ? '11:30' : '15:30',
+        program: 'lvfr',
+        color: PROGRAM_COLORS.lvfr,
+        event_type: 'class',
+        linked_url: `/lvfr-aemt/day/${b.date}`,
+        metadata: {
+          lvfr_compact: true,
+          session: b.session,
+          source_event_count: b.sourceIds.length,
+        },
+      });
+    }
+
+    return [...passthrough, ...synthetic];
+  }, [events, lvfrCompactActive]);
+
   // Filter events client-side for event type and status filtering
   const filteredEvents = useMemo(() => {
-    return events.filter(e => {
+    return collapsedEvents.filter(e => {
       if (!activeEventTypes.has(e.event_type)) return false;
       // Status filtering (only applies to planner events that have status)
       if (e.status) {
@@ -844,7 +924,7 @@ function CalendarContent() {
       }
       return true;
     });
-  }, [events, activeEventTypes, showPublished, showDrafts, showCancelled]);
+  }, [collapsedEvents, activeEventTypes, showPublished, showDrafts, showCancelled]);
 
   // Group events by date for list view
   const eventsByDate = useMemo(() => {
@@ -904,8 +984,15 @@ function CalendarContent() {
   // Print
   const handlePrint = () => window.print();
 
-  // Click event handler — open detail panel instead of navigating
+  // Click event handler — open detail panel instead of navigating.
+  // Exception: a compact LVFR session block bypasses the panel and
+  // jumps straight into the day runsheet. The panel would just say
+  // "this is a Morning session, click to open" anyway, so we skip it.
   const handleEventClick = (event: CalendarEvent) => {
+    if (event.metadata?.lvfr_compact && event.linked_url) {
+      router.push(event.linked_url);
+      return;
+    }
     setSelectedEvent(event);
     setDetailPanelOpen(true);
   };
@@ -1089,20 +1176,43 @@ function CalendarContent() {
           All PMI
         </button>
 
-        {/* Program chips */}
+        {/* Program chips. LVFR gets a sibling "Compact" toggle when
+            active — collapses LVFR clutter into 2 session blocks per
+            day (Morning / Afternoon) so the rest of the master
+            calendar stays scannable. */}
         {PROGRAMS.map(prog => (
-          <button
-            key={prog}
-            onClick={() => toggleProgram(prog)}
-            className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
-              activePrograms.has(prog)
-                ? 'text-white border-transparent'
-                : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-gray-400'
-            }`}
-            style={activePrograms.has(prog) ? { backgroundColor: PROGRAM_COLORS[prog] } : undefined}
-          >
-            {PROGRAM_LABELS[prog]}
-          </button>
+          <span key={prog} className="inline-flex items-center gap-1">
+            <button
+              onClick={() => toggleProgram(prog)}
+              className={`px-2.5 py-1 text-xs font-medium rounded-full border transition-colors ${
+                activePrograms.has(prog)
+                  ? 'text-white border-transparent'
+                  : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-gray-400'
+              }`}
+              style={activePrograms.has(prog) ? { backgroundColor: PROGRAM_COLORS[prog] } : undefined}
+            >
+              {PROGRAM_LABELS[prog]}
+            </button>
+            {prog === 'lvfr' && activePrograms.has('lvfr') && (
+              <button
+                type="button"
+                onClick={() => setCompactLvfr(v => !v)}
+                aria-pressed={compactLvfr}
+                title={
+                  compactLvfr
+                    ? 'Compact view: LVFR collapses to morning + afternoon blocks. Click for full detail.'
+                    : 'Expanded view: showing every LVFR block. Click to collapse back to 2 per day.'
+                }
+                className={`px-2 py-1 text-[10px] font-semibold rounded-full border transition-colors ${
+                  compactLvfr
+                    ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-700'
+                    : 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600 hover:border-gray-400'
+                }`}
+              >
+                {compactLvfr ? '✓ Compact' : 'Expand'}
+              </button>
+            )}
+          </span>
         ))}
 
         <span className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1" />
