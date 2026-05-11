@@ -106,6 +106,12 @@ export async function PATCH(
     if (body.status !== undefined) allowedFields.status = body.status;
     if (body.notes !== undefined) allowedFields.notes = body.notes;
     if (body.photo_url !== undefined) allowedFields.photo_url = body.photo_url;
+    // Day-1 intake fields — coordinator captures these at first
+    // introduction. Stored on the canonical student row so they
+    // persist through cohort moves and graduation. See
+    // /academics/cohorts/[id]/intake for the entry surface.
+    if (body.prior_cert_level !== undefined) allowedFields.prior_cert_level = body.prior_cert_level;
+    if (body.agency !== undefined) allowedFields.agency = body.agency;
     if (body.removed_from_cohort !== undefined) allowedFields.removed_from_cohort = body.removed_from_cohort;
     if (body.removed_at !== undefined) allowedFields.removed_at = body.removed_at;
     if (body.removed_reason !== undefined) allowedFields.removed_reason = body.removed_reason;

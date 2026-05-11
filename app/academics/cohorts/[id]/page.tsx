@@ -1040,6 +1040,13 @@ export default function CohortHubPage() {
               actionLabel="View Report"
               href={`/academics/cohorts/${cohortId}/completion`}
             />
+            <ToolCard
+              icon={Users}
+              title="Day 1 Intake"
+              status="EMS level, agency, intro notes"
+              actionLabel="Open Intake"
+              href={`/academics/cohorts/${cohortId}/intake`}
+            />
             {hasTemplates && !cohort?.is_archived && (
               <ToolCard
                 icon={Wand2}
