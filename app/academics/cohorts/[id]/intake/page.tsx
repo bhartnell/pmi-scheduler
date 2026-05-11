@@ -23,7 +23,7 @@
  * file's allowedFields whitelist).
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -48,17 +48,27 @@ interface Student {
   notes: string | null;
 }
 
-interface Agency {
-  id: string;
-  name: string;
-}
-
 const EMS_LEVELS = [
   '',
   'EMT-Basic',
   'AEMT',
   'Paramedic',
   'None / Student only',
+];
+
+// Hardcoded EMS-employer list for the Day 1 intake. Plain
+// <select> (not <datalist>) per spec — cleaner mobile picker
+// experience with these fixed options. The leading empty
+// string renders as "— Not set —" and stores null.
+// Add new EMS employers here as needed.
+const EMS_EMPLOYERS = [
+  '',
+  'AMR',
+  'MWA',
+  'Community',
+  'LVFR',
+  'Other',
+  'None',
 ];
 
 const AUTOSAVE_DEBOUNCE_MS = 600;
@@ -72,7 +82,6 @@ export default function Day1IntakePage() {
   const cohortId = params.id as string;
 
   const [students, setStudents] = useState<Student[]>([]);
-  const [agencies, setAgencies] = useState<Agency[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [cohortLabel, setCohortLabel] = useState('');
@@ -91,13 +100,15 @@ export default function Day1IntakePage() {
     let cancelled = false;
     (async () => {
       try {
-        const [sRes, aRes, cRes] = await Promise.all([
+        // Agency dropdown is hardcoded (EMS_EMPLOYERS) — the
+        // full agencies table includes clinical sites that
+        // aren't relevant during intro. Just need students +
+        // cohort label here.
+        const [sRes, cRes] = await Promise.all([
           fetch(`/api/lab-management/students?cohortId=${cohortId}&status=active`),
-          fetch('/api/clinical/agencies?activeOnly=true'),
           fetch(`/api/lab-management/cohorts/${cohortId}`),
         ]);
         const sData = await sRes.json();
-        const aData = await aRes.json();
         const cData = cRes.ok ? await cRes.json() : null;
 
         if (cancelled) return;
@@ -122,7 +133,6 @@ export default function Day1IntakePage() {
         } else {
           setError(sData.error || 'Failed to load students');
         }
-        if (aData.success) setAgencies(aData.agencies ?? []);
         if (cData?.cohort) {
           const c = cData.cohort;
           const abbr = c.program?.abbreviation || c.program?.name || '';
@@ -183,14 +193,11 @@ export default function Day1IntakePage() {
     saveField(studentId, field, value as string | null);
   };
 
-  const agencyOptions = useMemo(
-    () =>
-      agencies
-        .map(a => a.name)
-        .filter((n): n is string => !!n)
-        .sort((a, b) => a.localeCompare(b)),
-    [agencies]
-  );
+  // (EMS_EMPLOYERS is the single source of truth for the
+  // agency <select> below. Legacy free-text values appearing on
+  // an existing student row are kept selectable via an inline
+  // fallback <option> in the JSX so the operator never sees
+  // their selection silently change.)
 
   if (status === 'loading') return <PageLoader />;
   if (!session) return null;
@@ -300,23 +307,31 @@ export default function Day1IntakePage() {
                       </select>
                     </div>
 
-                    {/* Agency */}
+                    {/* Agency — hardcoded <select> for clean mobile
+                        picker. Empty option ("— Not set —") stores
+                        null. Existing values that aren't on the
+                        list (legacy free-text agencies on already-
+                        edited rows) are preserved by injecting them
+                        as an extra option so the operator can see
+                        them and pick a replacement. */}
                     <div className="sm:col-span-3">
                       <label className="sm:hidden block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agency</label>
-                      <input
-                        list={`agencies-${s.id}`}
+                      <select
                         value={s.agency ?? ''}
                         onChange={e =>
                           updateField(s.id, 'agency', e.target.value === '' ? null : e.target.value)
                         }
-                        placeholder="Type or pick…"
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
-                      />
-                      <datalist id={`agencies-${s.id}`}>
-                        {agencyOptions.map(name => (
-                          <option key={name} value={name} />
+                      >
+                        {EMS_EMPLOYERS.map(name => (
+                          <option key={name || '__not_set__'} value={name}>
+                            {name === '' ? '— Not set —' : name}
+                          </option>
                         ))}
-                      </datalist>
+                        {s.agency && !EMS_EMPLOYERS.includes(s.agency) && (
+                          <option value={s.agency}>{s.agency} (legacy)</option>
+                        )}
+                      </select>
                     </div>
 
                     {/* Notes */}
