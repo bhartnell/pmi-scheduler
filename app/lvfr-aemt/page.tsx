@@ -10,7 +10,15 @@ import {
   Calendar, Users, BarChart3, Award, BookOpen,
   AlertTriangle, CheckCircle2, TrendingUp,
   ChevronRight, Shield, ClipboardCheck, FolderOpen, LayoutGrid,
+  ListChecks,
 } from 'lucide-react';
+
+// Today as YYYY-MM-DD — built at render time so the "Today's Runsheet"
+// nav card always points to the current date even if the dashboard
+// has been open across midnight.
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 interface DashboardData {
   courseProgress: {
@@ -89,6 +97,7 @@ export default function LVFRDashboardPage() {
   const isStudent = effectiveRole === 'student';
 
   // Nav links based on role
+  const today = todayIso();
   const navLinks = isStudent
     ? [
         { href: '/lvfr-aemt/calendar', icon: Calendar, label: 'Calendar', description: 'Course schedule and upcoming classes', color: 'bg-blue-600' },
@@ -98,6 +107,7 @@ export default function LVFRDashboardPage() {
         { href: '/lvfr-aemt/pharm', icon: Award, label: 'Pharm Checkpoints', description: 'Medication card practice and testing', color: 'bg-red-600' },
       ]
     : [
+        { href: `/lvfr-aemt/day/${today}`, icon: ListChecks, label: "Today's Runsheet", description: 'Day checklist — morning + afternoon sessions, live checkoff', color: 'bg-rose-600' },
         { href: '/lvfr-aemt/calendar', icon: Calendar, label: 'Course Calendar', description: 'View and manage the 30-day course schedule', color: 'bg-blue-600' },
         ...(isInstructor ? [
           { href: '/lvfr-aemt/scheduling', icon: Users, label: 'Coverage Grid', description: 'Instructor scheduling and coverage analysis', color: 'bg-amber-600' },

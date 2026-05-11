@@ -80,6 +80,7 @@ const ROUTE_LABELS: Record<string, string> = {
   'admin/ferpa-compliance': 'FERPA Compliance',
   'admin/compliance': 'Compliance',
   'lvfr-aemt': 'LVFR AEMT',
+  'lvfr-aemt/day': 'Day Runsheet',
   'lvfr-aemt/calendar': 'Course Calendar',
   'lvfr-aemt/scheduling': 'Coverage Grid',
   'lvfr-aemt/pharm': 'Pharmacology',
