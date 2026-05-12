@@ -2,6 +2,36 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 
+/**
+ * POST /api/seating/charts/[id]/generate
+ *
+ * Auto-generates seating assignments for a chart. The placement
+ * algorithm is shared between the default (Main Classroom) layout
+ * and the Suite 1 preset — we enumerate the room's seats from the
+ * chart's classroom layout_config, tag each seat with semantic
+ * properties (rowZone, columnZone, isCorner), then place students
+ * by learning style into seats that best match.
+ *
+ * Algorithm (per the LVFR seating spec):
+ *   STEP 1  Auditory                  → Row 1 center columns
+ *   STEP 2  Kinesthetic                → Back row outside corners
+ *           Kinesthetic + Social       → back center
+ *           Kinesthetic + Independent  → back corner
+ *   STEP 3  Visual + Independent       → far left/right cols, rows 1-3
+ *   STEP 4  Visual + Social            → center cols, rows 1-4
+ *   Audio   + Independent              → middle row, outskirt col
+ *   Audio   + Social                   → middle row, center col
+ *   Unassessed / fallback              → any remaining seat
+ *
+ * Constraints preserved across both layouts:
+ *   - Same-agency students aren't placed at the same "table"
+ *     (synthetic tables for Suite 1: row*10 + side, so this still
+ *     means "students sharing a left-or-right row section").
+ *   - Avoidance preferences ("prefer_near"/"avoid" pairs).
+ *   - Overflow seats only exist for layouts that declare them
+ *     (default: 3, Suite 1: 0).
+ */
+
 interface Student {
   id: string;
   first_name: string;
@@ -29,341 +59,353 @@ interface Assignment {
   is_overflow: boolean;
 }
 
-// Classroom layout configuration
-// Row 1 (Front - Audio): Tables 1 (left), 2 (right)
-// Row 2 (Middle - Visual): Tables 3 (left), 4 (right)
-// Row 3 (Middle - Visual): Tables 5 (left), 6 (right)
-// Row 4 (Back - Kinesthetic): Tables 7 (left), 8 (right)
-// Overflow: 3 seats at back wall
+// ── Seat enumeration ─────────────────────────────────────────────
+// Each physical seat carries the metadata the placement algorithm
+// uses to score it for a given student. `table_number` /
+// `seat_position` / `row_number` round-trip into the seat_assignments
+// schema unchanged.
 
-const LAYOUT = {
-  rows: [
-    { row: 1, tables: [1, 2], style: 'audio' },
-    { row: 2, tables: [3, 4], style: 'visual' },
-    { row: 3, tables: [5, 6], style: 'visual' },
-    { row: 4, tables: [7, 8], style: 'kinesthetic' },
-  ],
-  seatsPerTable: 3,
-  overflowSeats: 3,
-  leftTables: [1, 3, 5, 7],  // Independent learners prefer left
-  rightTables: [2, 4, 6, 8], // Social learners prefer right
-};
+interface SeatSpec {
+  row: number;
+  table_number: number;
+  seat_position: number;
+  side: 'left' | 'right';
+  rowZone: 'front' | 'middle' | 'back';
+  columnZone: 'center' | 'outskirt';
+  isCorner: boolean;
+}
+
+interface LayoutSpec {
+  preset: 'default' | 'suite_1';
+  seats: SeatSpec[];
+  overflowSeats: number; // # of overflow chairs at the back wall
+}
+
+/** Build the seat list for the default 4-row × 2-table × 3-seat layout. */
+function defaultLayout(): LayoutSpec {
+  const seats: SeatSpec[] = [];
+  const layoutRows: Array<{ row: number; tables: [number, number]; rowZone: 'front' | 'middle' | 'back' }> = [
+    { row: 1, tables: [1, 2], rowZone: 'front' },
+    { row: 2, tables: [3, 4], rowZone: 'middle' },
+    { row: 3, tables: [5, 6], rowZone: 'middle' },
+    { row: 4, tables: [7, 8], rowZone: 'back' },
+  ];
+  for (const r of layoutRows) {
+    const [leftTable, rightTable] = r.tables;
+    for (let s = 1; s <= 3; s++) {
+      // 3-seat tables: seat 1 is the aisle-side seat on the left
+      // table (outskirt = window/wall side, seat 1 on left, seat 3
+      // on right table). Inside this 3-seat unit, seat 2 is always
+      // the center seat.
+      seats.push({
+        row: r.row,
+        table_number: leftTable,
+        seat_position: s,
+        side: 'left',
+        rowZone: r.rowZone,
+        columnZone: s === 1 ? 'outskirt' : 'center',
+        isCorner: r.rowZone === 'back' && s === 1,
+      });
+      seats.push({
+        row: r.row,
+        table_number: rightTable,
+        seat_position: s,
+        side: 'right',
+        rowZone: r.rowZone,
+        columnZone: s === 3 ? 'outskirt' : 'center',
+        isCorner: r.rowZone === 'back' && s === 3,
+      });
+    }
+  }
+  return { preset: 'default', seats, overflowSeats: 3 };
+}
+
+/** Build the seat list for the Suite 1 preset from layout_config.rows. */
+function suite1Layout(rows: Array<{ row: number; left: number; right: number; zone?: string }>): LayoutSpec {
+  const seats: SeatSpec[] = [];
+  const maxRow = Math.max(...rows.map(r => r.row));
+  for (const r of rows) {
+    const rowZone: 'front' | 'middle' | 'back' =
+      r.row === 1 ? 'front' : r.row === maxRow ? 'back' : 'middle';
+
+    // Left section: seat 1 is the leftmost (window side) → outskirt.
+    for (let i = 1; i <= r.left; i++) {
+      seats.push({
+        row: r.row,
+        table_number: r.row * 10 + 1,
+        seat_position: i,
+        side: 'left',
+        rowZone,
+        columnZone: i === 1 ? 'outskirt' : 'center',
+        isCorner: rowZone === 'back' && i === 1,
+      });
+    }
+    // Right section: highest-numbered seat is the rightmost (wall
+    // side) → outskirt.
+    for (let i = 1; i <= r.right; i++) {
+      seats.push({
+        row: r.row,
+        table_number: r.row * 10 + 2,
+        seat_position: i,
+        side: 'right',
+        rowZone,
+        columnZone: i === r.right ? 'outskirt' : 'center',
+        isCorner: rowZone === 'back' && i === r.right,
+      });
+    }
+  }
+  return { preset: 'suite_1', seats, overflowSeats: 0 };
+}
+
+function buildLayout(layoutConfig: unknown): LayoutSpec {
+  const cfg = (layoutConfig ?? {}) as { preset?: string; rows?: unknown };
+  if (cfg.preset === 'suite_1' && Array.isArray(cfg.rows)) {
+    return suite1Layout(cfg.rows as Array<{ row: number; left: number; right: number; zone?: string }>);
+  }
+  return defaultLayout();
+}
+
+// ── Placement algorithm ──────────────────────────────────────────
 
 function generateSeating(
   students: Student[],
   learningStyles: LearningStyle[],
-  preferences: Preference[]
-): { assignments: Assignment[]; warnings: string[]; stats: any } {
+  preferences: Preference[],
+  layout: LayoutSpec,
+): { assignments: Assignment[]; warnings: string[]; stats: Record<string, unknown> } {
   const warnings: string[] = [];
   const assignments: Assignment[] = [];
 
-  // Create lookup maps
   const styleMap = new Map<string, LearningStyle>();
-  learningStyles.forEach(ls => styleMap.set(ls.student_id, ls));
+  for (const ls of learningStyles) styleMap.set(ls.student_id, ls);
 
-  // Group students by learning style and agency
-  const audioStudents: Student[] = [];
-  const visualStudents: Student[] = [];
-  const kinestheticStudents: Student[] = [];
-  const unassessedStudents: Student[] = [];
-
-  students.forEach(student => {
-    const ls = styleMap.get(student.id);
-    if (!ls?.primary_style) {
-      unassessedStudents.push(student);
-    } else if (ls.primary_style === 'audio') {
-      audioStudents.push(student);
-    } else if (ls.primary_style === 'visual') {
-      visualStudents.push(student);
-    } else if (ls.primary_style === 'kinesthetic') {
-      kinestheticStudents.push(student);
-    }
-  });
-
-  // Track which seats are filled
-  const seatMap = new Map<string, string>(); // "table-seat" -> studentId
-  const studentPlaced = new Set<string>();
-
-  // Track agencies per table to avoid same agency at same table
+  // Same-agency-at-same-table check operates on table_number. For
+  // Suite 1 a "table" is a row+side (synthetic table_number), which
+  // is still semantically "students seated together within arm's
+  // reach" — exactly the rule the agency separation tries to enforce.
   const agencyPerTable = new Map<number, Set<string>>();
-  for (let t = 1; t <= 8; t++) {
-    agencyPerTable.set(t, new Set());
+  for (const seat of layout.seats) {
+    if (!agencyPerTable.has(seat.table_number)) {
+      agencyPerTable.set(seat.table_number, new Set());
+    }
   }
 
-  // Build conflict map
+  // Build avoid map (bidirectional).
   const avoidMap = new Map<string, Set<string>>();
-  preferences.filter(p => p.preference_type === 'avoid').forEach(p => {
+  for (const p of preferences) {
+    if (p.preference_type !== 'avoid') continue;
     if (!avoidMap.has(p.student_id)) avoidMap.set(p.student_id, new Set());
     if (!avoidMap.has(p.other_student_id)) avoidMap.set(p.other_student_id, new Set());
     avoidMap.get(p.student_id)!.add(p.other_student_id);
     avoidMap.get(p.other_student_id)!.add(p.student_id);
-  });
+  }
 
-  // Helper to check if placing student at table creates agency conflict
-  const hasAgencyConflict = (student: Student, tableNum: number): boolean => {
-    if (!student.agency) return false;
-    return agencyPerTable.get(tableNum)?.has(student.agency) || false;
-  };
+  const seatKey = (s: SeatSpec) => `${s.table_number}-${s.seat_position}`;
+  const takenSeats = new Set<string>();
+  const studentPlaced = new Set<string>();
+  const studentToSeat = new Map<string, SeatSpec>();
 
-  // Helper to check if placing student at table creates avoidance conflict
-  const hasAvoidanceConflict = (studentId: string, tableNum: number): boolean => {
-    const avoidSet = avoidMap.get(studentId);
-    if (!avoidSet) return false;
+  const hasAgencyConflict = (student: Student, seat: SeatSpec) =>
+    !!student.agency && (agencyPerTable.get(seat.table_number)?.has(student.agency) ?? false);
 
-    // Check if any student at this table should be avoided
-    for (let seat = 1; seat <= 3; seat++) {
-      const key = `${tableNum}-${seat}`;
-      const existingStudentId = seatMap.get(key);
-      if (existingStudentId && avoidSet.has(existingStudentId)) {
-        return true;
-      }
+  const hasAvoidanceConflict = (studentId: string, seat: SeatSpec) => {
+    const avoids = avoidMap.get(studentId);
+    if (!avoids) return false;
+    // Check every taken seat in the same table for a student we
+    // should avoid. Cheaper than rebuilding by-table lists.
+    for (const [otherSid, otherSeat] of studentToSeat) {
+      if (otherSeat.table_number === seat.table_number && avoids.has(otherSid)) return true;
     }
     return false;
   };
 
-  // Helper to get available seats at a table
-  const getAvailableSeats = (tableNum: number): number[] => {
-    const available: number[] = [];
-    for (let seat = 1; seat <= 3; seat++) {
-      if (!seatMap.has(`${tableNum}-${seat}`)) {
-        available.push(seat);
-      }
-    }
-    return available;
-  };
-
-  // Helper to place student at table
-  const placeStudent = (student: Student, tableNum: number, seatNum: number, rowNum: number) => {
-    const key = `${tableNum}-${seatNum}`;
-    seatMap.set(key, student.id);
+  const placeAt = (student: Student, seat: SeatSpec) => {
+    takenSeats.add(seatKey(seat));
     studentPlaced.add(student.id);
-
-    if (student.agency) {
-      agencyPerTable.get(tableNum)!.add(student.agency);
-    }
-
+    studentToSeat.set(student.id, seat);
+    if (student.agency) agencyPerTable.get(seat.table_number)!.add(student.agency);
     assignments.push({
       student_id: student.id,
-      table_number: tableNum,
-      seat_position: seatNum,
-      row_number: rowNum,
+      table_number: seat.table_number,
+      seat_position: seat.seat_position,
+      row_number: seat.row,
       is_overflow: false,
     });
   };
 
-  // Priority-based seating interface and functions
-  interface PrioritizedStudent {
-    tier: number;
-    student: Student;
-    preferredSide: 'left' | 'right' | 'any';
-    primary: string | null;
-    social: string | null;
+  /**
+   * Try to seat `student` in the first available seat from `seatsPriority`.
+   * Two passes: first respecting agency conflicts, then ignoring them
+   * if no seat is free (so a student never ends up in overflow purely
+   * because of an agency overlap).
+   */
+  const trySeat = (student: Student, seatsPriority: SeatSpec[]): boolean => {
+    for (const seat of seatsPriority) {
+      if (takenSeats.has(seatKey(seat))) continue;
+      if (hasAgencyConflict(student, seat)) continue;
+      if (hasAvoidanceConflict(student.id, seat)) continue;
+      placeAt(student, seat);
+      return true;
+    }
+    // Fallback: relax agency constraint.
+    for (const seat of seatsPriority) {
+      if (takenSeats.has(seatKey(seat))) continue;
+      if (hasAvoidanceConflict(student.id, seat)) continue;
+      placeAt(student, seat);
+      return true;
+    }
+    return false;
+  };
+
+  // ── Bucket students by (primary, social) combination ────────────
+  const audio: Student[] = [];
+  const audioIndependent: Student[] = [];
+  const audioSocial: Student[] = [];
+  const visualIndependent: Student[] = [];
+  const visualSocial: Student[] = [];
+  const kinestheticCorner: Student[] = []; // independent variant
+  const kinestheticCenter: Student[] = []; // social or unspecified
+  const unassessed: Student[] = [];
+
+  for (const s of students) {
+    const ls = styleMap.get(s.id);
+    const p = ls?.primary_style ?? null;
+    const soc = ls?.social_style ?? null;
+    if (p === 'audio') {
+      // First 1-2 auditory go to front center; remainder split by
+      // social style per the spec's tie-breaker rules.
+      if (soc === 'independent') audioIndependent.push(s);
+      else if (soc === 'social') audioSocial.push(s);
+      else audio.push(s);
+    } else if (p === 'kinesthetic') {
+      if (soc === 'independent') kinestheticCorner.push(s);
+      else kinestheticCenter.push(s);
+    } else if (p === 'visual') {
+      if (soc === 'independent') visualIndependent.push(s);
+      else visualSocial.push(s);
+    } else {
+      unassessed.push(s);
+    }
   }
 
-  // Prioritize students by learning style tiers
-  const prioritizeStudents = (
-    studentList: Student[],
-    styleMap: Map<string, LearningStyle>
-  ): PrioritizedStudent[] => {
-    const prioritized: PrioritizedStudent[] = [];
+  // ── Build named seat lists used by the placement steps ──────────
+  const all = layout.seats;
+  const byRow = (...zones: SeatSpec['rowZone'][]) => all.filter(s => zones.includes(s.rowZone));
+  const front = byRow('front');
+  const middle = byRow('middle');
+  const back = byRow('back');
 
-    for (const student of studentList) {
-      const ls = styleMap.get(student.id);
-      const primary = ls?.primary_style || null;
-      const social = ls?.social_style || null;
+  const center = (xs: SeatSpec[]) => xs.filter(s => s.columnZone === 'center');
+  const outskirt = (xs: SeatSpec[]) => xs.filter(s => s.columnZone === 'outskirt');
 
-      let tier = 7; // Default for unassessed
-      let preferredSide: 'left' | 'right' | 'any' = 'any';
+  const frontCenter = center(front);
+  const middleOutskirt = outskirt(middle);
+  const middleCenter = center(middle);
+  const backCenter = center(back);
+  const backCorners = back.filter(s => s.isCorner);
+  // Independent visual: rows 1-3 outermost columns ("far left and
+  // far right"). For default this is rows 1-3 (back is row 4). For
+  // Suite 1 this is rows 1-3 (middle = 3-4, back = 5).
+  const independentVisualTarget = all.filter(s => s.row <= 3 && s.columnZone === 'outskirt');
+  // Social visual: center seats in non-back rows.
+  const socialVisualTarget = all.filter(s => s.rowZone !== 'back' && s.columnZone === 'center');
 
-      // Determine preferred side based on social style
-      if (social === 'independent') {
-        preferredSide = 'left';
-      } else if (social === 'social') {
-        preferredSide = 'right';
-      }
+  // ── STEP 1 — Auditory students (place first) ────────────────────
+  // Front-row center seats first; overflow into middle center if the
+  // front row fills up (e.g. >2 auditory students).
+  for (const s of audio) trySeat(s, [...frontCenter, ...middleCenter]);
 
-      // Determine tier based on primary + social learning styles
-      // Tier 1: Audio + Independent (highest priority for front/sides)
-      // Tier 2: Audio + Social (front center)
-      // Tier 3: Visual + Independent (front overflow, then middle sides)
-      // Tier 4: Visual + Social (middle center)
-      // Tier 5: Kinesthetic + Independent (side seats)
-      // Tier 6: Kinesthetic + Social (back center)
-      // Tier 7: Unassessed (any remaining)
-      if (primary === 'audio' && social === 'independent') {
-        tier = 1;
-      } else if (primary === 'audio') {
-        tier = 2;
-      } else if (primary === 'visual' && social === 'independent') {
-        tier = 3;
-      } else if (primary === 'visual') {
-        tier = 4;
-      } else if (primary === 'kinesthetic' && social === 'independent') {
-        tier = 5;
-      } else if (primary === 'kinesthetic') {
-        tier = 6;
-      }
+  // ── STEP 2 — Kinesthetic students ────────────────────────────────
+  // Back row first; within the back row, independent variant
+  // prefers corners while social variant prefers center.
+  for (const s of kinestheticCorner) trySeat(s, [...backCorners, ...back, ...middle]);
+  for (const s of kinestheticCenter) trySeat(s, [...backCenter, ...back, ...middle]);
 
-      prioritized.push({ tier, student, preferredSide, primary, social });
-    }
+  // ── STEP 3 — Visual + Independent ────────────────────────────────
+  for (const s of visualIndependent) {
+    trySeat(s, [...independentVisualTarget, ...middleOutskirt, ...outskirt(all)]);
+  }
 
-    // Sort by tier (ascending) - lower tier = higher priority
-    prioritized.sort((a, b) => a.tier - b.tier);
+  // ── Auditory hybrids (middle row variants) ──────────────────────
+  // Per the tie-breaker rules — these fall into the middle row
+  // (between front and back) before Step 4 fills the remaining
+  // central seats.
+  for (const s of audioIndependent) trySeat(s, [...middleOutskirt, ...outskirt(all), ...frontCenter]);
+  for (const s of audioSocial) trySeat(s, [...middleCenter, ...frontCenter]);
 
-    return prioritized;
-  };
+  // ── STEP 4 — Visual + Social (fill remaining center seats) ─────
+  for (const s of visualSocial) trySeat(s, [...socialVisualTarget, ...center(all), ...all]);
 
-  // Helper to count students at a table
-  const getTableOccupancy = (tableNum: number): number => {
-    return 3 - getAvailableSeats(tableNum).length;
-  };
+  // ── Unassessed students: any remaining seat ─────────────────────
+  for (const s of unassessed) trySeat(s, all);
 
-  // Place students by priority, spreading across tables to avoid clustering
-  const placeByPriority = (prioritizedList: PrioritizedStudent[]) => {
-    for (const ps of prioritizedList) {
-      if (studentPlaced.has(ps.student.id)) continue;
-
-      // Determine base table order based on preferred side
-      let baseTableOrder: number[];
-      if (ps.preferredSide === 'left') {
-        // Independent learners: start left, alternate right
-        baseTableOrder = [1, 2, 3, 4, 5, 6, 7, 8];
-      } else if (ps.preferredSide === 'right') {
-        // Social learners: start right, alternate left
-        baseTableOrder = [2, 1, 4, 3, 6, 5, 8, 7];
-      } else {
-        // No preference: fill front to back
-        baseTableOrder = [1, 2, 3, 4, 5, 6, 7, 8];
-      }
-
-      // Sort tables by occupancy (prefer tables with fewer students to spread out)
-      // This prevents clustering of same-type students
-      const tableOrder = [...baseTableOrder].sort((a, b) => {
-        const occA = getTableOccupancy(a);
-        const occB = getTableOccupancy(b);
-        // If occupancy is same, maintain base order
-        if (occA === occB) {
-          return baseTableOrder.indexOf(a) - baseTableOrder.indexOf(b);
-        }
-        // Otherwise, prefer less occupied tables
-        return occA - occB;
-      });
-
-      let placed = false;
-
-      // Try to place without agency conflicts
-      for (const tableNum of tableOrder) {
-        if (placed) break;
-
-        const availableSeats = getAvailableSeats(tableNum);
-        if (availableSeats.length === 0) continue;
-
-        if (!hasAgencyConflict(ps.student, tableNum) && !hasAvoidanceConflict(ps.student.id, tableNum)) {
-          const rowNum = tableNum <= 2 ? 1 : tableNum <= 4 ? 2 : tableNum <= 6 ? 3 : 4;
-          placeStudent(ps.student, tableNum, availableSeats[0], rowNum);
-          placed = true;
-        }
-      }
-
-      // If not placed, try again allowing agency conflicts
-      if (!placed) {
-        for (const tableNum of tableOrder) {
-          if (placed) break;
-
-          const availableSeats = getAvailableSeats(tableNum);
-          if (availableSeats.length === 0) continue;
-
-          if (!hasAvoidanceConflict(ps.student.id, tableNum)) {
-            const rowNum = tableNum <= 2 ? 1 : tableNum <= 4 ? 2 : tableNum <= 6 ? 3 : 4;
-            placeStudent(ps.student, tableNum, availableSeats[0], rowNum);
-            placed = true;
-            // Warning for agency conflict will be generated later
-          }
-        }
-      }
-    }
-  };
-
-  // Phase 1: Prioritize all students and place front-to-back
-  // Using priority tiers based on learning style combinations:
-  // Tier 1: Audio + Independent (front/sides priority)
-  // Tier 2: Audio + Social (front center)
-  // Tier 3: Visual + Independent (front overflow, then middle sides)
-  // Tier 4: Visual + Social (middle center)
-  // Tier 5: Kinesthetic + Independent (side seats)
-  // Tier 6: Kinesthetic + Social (back center)
-  // Tier 7: Unassessed (any remaining)
-  const prioritizedStudents = prioritizeStudents(students, styleMap);
-  placeByPriority(prioritizedStudents);
-
-  // Phase 2: Place remaining students in overflow seats
-  const stillUnplaced = students.filter(s => !studentPlaced.has(s.id));
-
-  for (let i = 0; i < stillUnplaced.length && i < 3; i++) {
-    const student = stillUnplaced[i];
+  // ── Final pass: any still-unplaced students go to overflow ─────
+  // Overflow only exists in layouts that declare it (default = 3,
+  // Suite 1 = 0). Beyond that capacity → warning, not silently lost.
+  const stillUnplaced = students.filter(st => !studentPlaced.has(st.id));
+  let overflowUsed = 0;
+  for (const s of stillUnplaced) {
+    if (overflowUsed >= layout.overflowSeats) break;
     assignments.push({
-      student_id: student.id,
+      student_id: s.id,
       table_number: 0,
-      seat_position: i + 1,
-      row_number: 5,
+      seat_position: overflowUsed + 1,
+      row_number: layout.preset === 'suite_1' ? 6 : 5, // distinct from real rows
       is_overflow: true,
     });
-    studentPlaced.add(student.id);
+    studentPlaced.add(s.id);
+    overflowUsed++;
   }
 
-  // Any students still unplaced get added to warnings
   const finalUnplaced = students.filter(s => !studentPlaced.has(s.id));
   if (finalUnplaced.length > 0) {
-    warnings.push(`${finalUnplaced.length} student(s) could not be placed (max capacity exceeded)`);
+    warnings.push(
+      `${finalUnplaced.length} student(s) could not be placed — room capacity is ${layout.seats.length + layout.overflowSeats} seats.`,
+    );
   }
 
-  // Check for avoidance conflicts in final assignments
-  for (const assignment of assignments) {
-    if (assignment.is_overflow) continue;
+  // ── Post-hoc warnings: agency + avoidance ──────────────────────
+  for (const a of assignments) {
+    if (a.is_overflow) continue;
+    const student = students.find(s => s.id === a.student_id);
+    if (!student) continue;
 
-    const studentAvoids = avoidMap.get(assignment.student_id);
-    if (!studentAvoids) continue;
-
-    // Find other students at same table
-    const tablemates = assignments.filter(
-      a => a.table_number === assignment.table_number &&
-           a.student_id !== assignment.student_id &&
-           !a.is_overflow
-    );
-
-    for (const tablemate of tablemates) {
-      if (studentAvoids.has(tablemate.student_id)) {
-        const student = students.find(s => s.id === assignment.student_id);
-        const other = students.find(s => s.id === tablemate.student_id);
-        warnings.push(`Conflict: ${student?.first_name} should avoid ${other?.first_name} but seated at same table`);
+    // Avoidance check
+    const avoids = avoidMap.get(student.id);
+    if (avoids) {
+      const tablemates = assignments.filter(
+        x => !x.is_overflow && x.table_number === a.table_number && x.student_id !== student.id,
+      );
+      for (const tm of tablemates) {
+        if (avoids.has(tm.student_id)) {
+          const other = students.find(s => s.id === tm.student_id);
+          warnings.push(`Conflict: ${student.first_name} should avoid ${other?.first_name} but seated at same table`);
+        }
       }
     }
   }
 
-  // Check for agency conflicts in final assignments
-  for (const assignment of assignments) {
-    if (assignment.is_overflow) continue;
-
-    const student = students.find(s => s.id === assignment.student_id);
+  // Agency conflict check (one warning per student per table).
+  const flaggedAgency = new Set<string>();
+  for (const a of assignments) {
+    if (a.is_overflow) continue;
+    const student = students.find(s => s.id === a.student_id);
     if (!student?.agency) continue;
-
-    // Find other students at same table with same agency
+    const tag = `${student.id}:${a.table_number}`;
+    if (flaggedAgency.has(tag)) continue;
     const tablemates = assignments.filter(
-      a => a.table_number === assignment.table_number &&
-           a.student_id !== assignment.student_id &&
-           !a.is_overflow
+      x => !x.is_overflow && x.table_number === a.table_number && x.student_id !== student.id,
     );
-
-    for (const tablemate of tablemates) {
-      const other = students.find(s => s.id === tablemate.student_id);
+    for (const tm of tablemates) {
+      const other = students.find(s => s.id === tm.student_id);
       if (other?.agency === student.agency) {
         warnings.push(`${student.first_name} ${student.last_name} placed at table with same agency (${student.agency})`);
-        break; // Only warn once per student
+        flaggedAgency.add(tag);
+        break;
       }
     }
   }
 
-  // Build stats
   const stats = {
     totalStudents: students.length,
     placed: studentPlaced.size,
@@ -371,11 +413,13 @@ function generateSeating(
     inOverflow: assignments.filter(a => a.is_overflow).length,
     agencyConflicts: warnings.filter(w => w.includes('same agency')).length,
     avoidanceConflicts: warnings.filter(w => w.includes('should avoid')).length,
+    layoutPreset: layout.preset,
+    roomCapacity: layout.seats.length + layout.overflowSeats,
     byLearningStyle: {
-      audio: audioStudents.length,
-      visual: visualStudents.length,
-      kinesthetic: kinestheticStudents.length,
-      unassessed: unassessedStudents.length,
+      audio: audio.length + audioIndependent.length + audioSocial.length,
+      visual: visualIndependent.length + visualSocial.length,
+      kinesthetic: kinestheticCorner.length + kinestheticCenter.length,
+      unassessed: unassessed.length,
     },
   };
 
@@ -383,7 +427,7 @@ function generateSeating(
 }
 
 export async function POST(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: chartId } = await params;
@@ -393,14 +437,14 @@ export async function POST(
 
     const auth = await requireAuth('instructor');
     if (auth instanceof NextResponse) return auth;
-    const { user } = auth;
 
-    // Get chart details with cohort
+    // Pull the chart + its classroom so we can branch on layout_config.
     const { data: chart, error: chartError } = await supabase
       .from('seating_charts')
       .select(`
         *,
-        cohort:cohorts(id)
+        cohort:cohorts(id),
+        classroom:classrooms(id, name, layout_config)
       `)
       .eq('id', chartId)
       .single();
@@ -410,6 +454,7 @@ export async function POST(
     }
 
     const cohortId = chart.cohort.id;
+    const layout = buildLayout(chart.classroom?.layout_config);
 
     // Get all active students in cohort
     const { data: students, error: studentsError } = await supabase
@@ -420,7 +465,6 @@ export async function POST(
 
     if (studentsError) throw studentsError;
 
-    // Get learning styles for cohort students
     const studentIds = students?.map(s => s.id) || [];
     const { data: learningStyles, error: lsError } = await supabase
       .from('student_learning_styles')
@@ -429,17 +473,16 @@ export async function POST(
 
     if (lsError) throw lsError;
 
-    // Get seating preferences
-    const { data: preferences, error: prefError } = await supabase
+    const { data: preferences } = await supabase
       .from('seating_preferences')
       .select('student_id, other_student_id, preference_type')
       .or(`student_id.in.(${studentIds.join(',')}),other_student_id.in.(${studentIds.join(',')})`);
 
-    // Generate seating
     const result = generateSeating(
       students || [],
       learningStyles || [],
-      preferences || []
+      preferences || [],
+      layout,
     );
 
     return NextResponse.json({

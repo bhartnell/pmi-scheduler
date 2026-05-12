@@ -655,15 +655,20 @@ export default function SeatingChartBuilderPage() {
         <div className="flex gap-6 print:block">
           {/* Classroom Layout */}
           <div className="flex-1">
-            {/* Front of Room Label - at top when not flipped */}
-            {!isFlipped && (
+            {/* Suite 1 renders the back of the room at the top of the
+                chart (row 5 first, row 1 last), so the FRONT/BACK
+                page labels are inverted relative to the default
+                layout. The boolean blends isFlipped with isSuite1 so
+                the toggle still works as expected for both layouts. */}
+            {/* Front of Room Label - at top when (un-flipped & default) OR (flipped & Suite 1) */}
+            {((!isFlipped && !isSuite1) || (isFlipped && isSuite1)) && (
               <div className="text-center mb-4 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg font-medium print:bg-gray-200 print:text-gray-800">
                 FRONT OF ROOM (Instructor)
               </div>
             )}
 
-            {/* Back of Room Label - at top when flipped */}
-            {isFlipped && (
+            {/* Back of Room Label - at top when (flipped & default) OR (un-flipped & Suite 1) */}
+            {((isFlipped && !isSuite1) || (!isFlipped && isSuite1)) && (
               <div className="text-center mb-4 py-2 bg-gray-500 dark:bg-gray-600 text-white rounded-lg font-medium print:bg-gray-100 print:text-gray-800">
                 BACK OF ROOM
               </div>
@@ -908,15 +913,15 @@ export default function SeatingChartBuilderPage() {
               </div>
             )}
 
-            {/* Front of Room Label - at bottom when flipped (student view) */}
-            {isFlipped && (
+            {/* Front of Room Label - at bottom when (flipped & default) OR (un-flipped & Suite 1) */}
+            {((isFlipped && !isSuite1) || (!isFlipped && isSuite1)) && (
               <div className="text-center mt-6 py-2 bg-gray-800 dark:bg-gray-700 text-white rounded-lg font-medium print:bg-gray-200 print:text-gray-800">
                 FRONT OF ROOM (Instructor)
               </div>
             )}
 
-            {/* Back of Room Label - at bottom when not flipped */}
-            {!isFlipped && (
+            {/* Back of Room Label - at bottom when (un-flipped & default) OR (flipped & Suite 1) */}
+            {((!isFlipped && !isSuite1) || (isFlipped && isSuite1)) && (
               <div className="text-center mt-6 py-2 bg-gray-500 dark:bg-gray-600 text-white rounded-lg font-medium print:bg-gray-100 print:text-gray-800">
                 BACK OF ROOM
               </div>
