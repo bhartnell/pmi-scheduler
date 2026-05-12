@@ -728,6 +728,33 @@ export default function InternshipDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formData, hasChanges, userCanEdit, saving]);
 
+  // Flush pending save on unmount. Without this, clicking a Next.js
+  // <Link> within 1.5s of toggling a checkbox (e.g. "mark cleared")
+  // unmounts the page before the debounce fires — the change is lost.
+  // The unmount-time save is fire-and-forget because there's no UI
+  // left to surface a toast; the next page load will see the saved
+  // value. Only fires when the component is actually going away
+  // (route navigation), not on field-level re-renders.
+  useEffect(() => {
+    return () => {
+      // Avoid stale closure on handleSaveRef — the ref always points
+      // at the latest handleSave by the time this cleanup runs.
+      if (hasChangesRef.current) {
+        void handleSaveRef.current?.({ auto: true });
+      }
+    };
+    // Intentionally empty dep array — we want this cleanup only on
+    // unmount, not on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Mirror of hasChanges into a ref so the unmount cleanup can read
+  // the latest value without retriggering the effect.
+  const hasChangesRef = useRef(false);
+  useEffect(() => {
+    hasChangesRef.current = hasChanges;
+  }, [hasChanges]);
+
   const handleNotifyRyan = async () => {
     if (!canEdit) return;
 

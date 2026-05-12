@@ -87,10 +87,16 @@ export async function GET(request: NextRequest) {
   // clinical hours. This ensures EMT/PM S1-S2 cohorts are excluded.
   // ---------------------------------------------------------------------------
 
+  // Internship milestone alerts only matter once a cohort has reached the
+  // clinical phase (S3+). S1/S2 students aren't yet doing internships, so
+  // milestone alerts at that stage are noise. The current_semester >= 3
+  // gate prevents alerts from firing even on cohorts that have been
+  // pre-flagged with track_clinical_hours.
   const { data: trackedCohorts } = await supabase
     .from('cohorts')
     .select('id')
-    .eq('track_clinical_hours', true);
+    .eq('track_clinical_hours', true)
+    .gte('current_semester', 3);
 
   const trackedCohortIds = (trackedCohorts || []).map((c: { id: string }) => c.id);
 

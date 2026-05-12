@@ -19,6 +19,7 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import { formatCohortNumber } from '@/lib/format-cohort';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 /**
  * PM Internship Cohort Hub.
@@ -258,6 +259,23 @@ function computeNextStep(i: Internship, cohortId: string): NextStep {
   }
 
   // PRE-INTERNSHIP: license → placement → meeting scheduled → meeting done → ready.
+  // Two defensive gates here on top of the phase switch above:
+  //   1. Only the explicit 'pre_internship' phase value reaches the
+  //      pre-internship steps. If current_phase is null, blank, or
+  //      anything unexpected we treat it as 'unknown' rather than
+  //      defaulting back to pre-internship workflow — that mismatch
+  //      was the user-reported bug where a student physically past
+  //      Phase 1 was still being told to "schedule pre-internship
+  //      meeting" because their current_phase column was unset.
+  //   2. If phase_1_start_date is populated, the student has
+  //      operationally started even if current_phase wasn't bumped
+  //      yet, so we skip pre-internship steps regardless.
+  if (phase !== 'pre_internship') {
+    return { label: '', tone: 'done' };
+  }
+  if (i.phase_1_start_date) {
+    return { label: 'Update phase to Phase 1', tone: 'action', href: internshipHref };
+  }
   if (!i.provisional_license_obtained) {
     return { label: 'Get provisional license', tone: 'blocked' };
   }
@@ -307,6 +325,11 @@ export default function PmInternshipCohortHub() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPhase, setSelectedPhase] = useState<Phase | 'all'>('all');
+  // Show / hide withdrawn students. The list API filters them out by
+  // default; flipping this true asks the API to include them so the
+  // user can still see (and click into) a withdrawn student's
+  // internship record when they need to.
+  const [showWithdrawn, setShowWithdrawn] = useState(false);
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') router.push('/auth/signin');
@@ -317,9 +340,11 @@ export default function PmInternshipCohortHub() {
     setLoading(true);
     setError(null);
     try {
+      const intUrl = `/api/clinical/internships?cohortId=${cohortId}` +
+        (showWithdrawn ? '&includeWithdrawn=true' : '');
       const [cohortRes, internshipsRes] = await Promise.all([
         fetch(`/api/lab-management/cohorts/${cohortId}`),
-        fetch(`/api/clinical/internships?cohortId=${cohortId}`),
+        fetch(intUrl),
       ]);
       const cohortJson = await cohortRes.json();
       const intJson = await internshipsRes.json();
@@ -336,7 +361,7 @@ export default function PmInternshipCohortHub() {
     } finally {
       setLoading(false);
     }
-  }, [cohortId]);
+  }, [cohortId, showWithdrawn]);
 
   useEffect(() => {
     fetchAll();
@@ -399,6 +424,7 @@ export default function PmInternshipCohortHub() {
       {/* ─── Header ─────────────────────────────────────────────────────── */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
+          <Breadcrumbs entityTitle={cohortLabel} className="mb-2" />
           <div className="flex items-center gap-3">
             <Link
               href="/clinical/internships"
@@ -509,10 +535,27 @@ export default function PmInternshipCohortHub() {
             (showLicenseTracker ? 'lg:row-start-1 lg:row-span-2' : 'lg:row-start-1')
           }
         >
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Users className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-            Phase Overview
-          </h2>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+              <Users className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+              Phase Overview
+            </h2>
+            {/* Withdrawn-student visibility toggle. Default off — the
+                API filters them out by default. Flip on to surface
+                students whose status changed to "withdrawn" after they
+                already had an internship record (so the operator can
+                close out / annotate that record without going through
+                the All-Internships power-user table). */}
+            <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showWithdrawn}
+                onChange={(e) => setShowWithdrawn(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-gray-300"
+              />
+              Show withdrawn students
+            </label>
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-5">
             <button
               type="button"

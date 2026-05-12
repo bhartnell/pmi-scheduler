@@ -1023,7 +1023,7 @@ export default function InternshipTrackerPage() {
                               </div>
                             </div>
                             <Link
-                              href={`/clinical/internships/${internship.id}`}
+                              href={`/clinical/internships/${internship.id}${selectedCohort ? `?cohortId=${selectedCohort}` : ""}`}
                               className="text-sm text-red-600 dark:text-red-400 hover:underline font-medium"
                             >
                               View →
@@ -1054,7 +1054,7 @@ export default function InternshipTrackerPage() {
                               </div>
                             </div>
                             <Link
-                              href={`/clinical/internships/${internship.id}`}
+                              href={`/clinical/internships/${internship.id}${selectedCohort ? `?cohortId=${selectedCohort}` : ""}`}
                               className="text-sm text-orange-600 dark:text-orange-400 hover:underline font-medium"
                             >
                               View →
@@ -1085,7 +1085,7 @@ export default function InternshipTrackerPage() {
                               </div>
                             </div>
                             <Link
-                              href={`/clinical/internships/${internship.id}`}
+                              href={`/clinical/internships/${internship.id}${selectedCohort ? `?cohortId=${selectedCohort}` : ""}`}
                               className="text-sm text-blue-600 dark:text-blue-400 hover:underline font-medium"
                             >
                               View →
@@ -1342,7 +1342,7 @@ export default function InternshipTrackerPage() {
                                 )}
                                 {hasRecord && internship && (
                                   <Link
-                                    href={`/clinical/internships/${internship.id}`}
+                                    href={`/clinical/internships/${internship.id}${selectedCohort ? `?cohortId=${selectedCohort}` : ""}`}
                                     className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-teal-600 dark:text-teal-400 hover:bg-teal-50 dark:hover:bg-teal-900/30 rounded"
                                   >
                                     <Eye className="w-4 h-4" />
@@ -1659,7 +1659,7 @@ export default function InternshipTrackerPage() {
               {editingInternship && (
                 <div className="pt-2 border-t dark:border-gray-700">
                   <Link
-                    href={`/clinical/internships/${editingInternship.id}`}
+                    href={`/clinical/internships/${editingInternship.id}${selectedCohort ? `?cohortId=${selectedCohort}` : ""}`}
                     className="text-sm text-teal-600 dark:text-teal-400 hover:underline"
                   >
                     View full timeline & history →

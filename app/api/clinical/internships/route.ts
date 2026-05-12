@@ -28,12 +28,17 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status');
     const phase = searchParams.get('phase');
     const agencyId = searchParams.get('agencyId');
+    // includeWithdrawn=true asks the API to return internships whose
+    // student status is 'withdrawn'. Default behaviour stays
+    // "exclude withdrawn" so the cohort tracker never accidentally
+    // shows them; the cohort page's "Show withdrawn" toggle is the
+    // only known caller that flips this on.
+    const includeWithdrawn = searchParams.get('includeWithdrawn') === 'true';
 
     // !inner turns the embed into an inner join so .neq on students.status
     // filters the internships list, not just the embedded student object.
     // Without !inner the filter silently no-ops and withdrawn students
     // (Mccracken, Salazar Salgado) leak back onto /clinical/internships.
-    // excludes withdrawn students (status != 'withdrawn')
     let query = supabase
       .from('student_internships')
       .select(`
@@ -69,8 +74,11 @@ export async function GET(request: NextRequest) {
           abbreviation
         )
       `)
-      .neq('students.status', 'withdrawn')
       .order('created_at', { ascending: false });
+
+    if (!includeWithdrawn) {
+      query = query.neq('students.status', 'withdrawn');
+    }
 
     if (cohortId) {
       query = query.eq('cohort_id', cohortId);

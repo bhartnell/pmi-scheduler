@@ -43,6 +43,8 @@ const ROUTE_LABELS: Record<string, string> = {
   'academics/skill-sheets': 'Skill Sheets',
   'clinical': 'Clinical',
   'clinical/internships': 'Internships',
+  'clinical/internships/all': 'All Internships',
+  'clinical/internships/cohort': 'Cohort',
   'clinical/hours': 'Clinical Hours',
   'clinical/preceptors': 'Preceptors',
   'clinical/compliance': 'Compliance',

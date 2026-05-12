@@ -92,13 +92,19 @@ export async function GET(request: NextRequest) {
   const requiredHours: number = reqRow?.required_value ?? REQUIRED_HOURS_DEFAULT;
 
   // Fetch active, non-archived cohorts that have started AND are configured
-  // to track clinical hours. Only PM S3+, AEMT, etc. should have this flag.
+  // to track clinical hours. Clinical alerts only apply once a cohort is in
+  // semester 3 or later — even if track_clinical_hours has been pre-flagged,
+  // S1/S2 students were getting "behind on clinicals" alerts before they
+  // were eligible to be doing clinicals at all. The current_semester >= 3
+  // gate catches that case without requiring every cohort to be manually
+  // re-flagged at the S3 boundary.
   const { data: cohorts, error: cohortsError } = await supabase
     .from('cohorts')
-    .select('id, cohort_number, start_date, end_date, program:programs(name, abbreviation)')
+    .select('id, cohort_number, current_semester, start_date, end_date, program:programs(name, abbreviation)')
     .eq('is_active', true)
     .eq('is_archived', false)
     .eq('track_clinical_hours', true)
+    .gte('current_semester', 3)
     .not('start_date', 'is', null)
     .lte('start_date', todayStr);
 
