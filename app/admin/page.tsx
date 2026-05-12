@@ -850,7 +850,9 @@ export default function AdminPage() {
                   { label: 'Peer Evaluations', href: '/labs/peer-evals' },
                   { label: 'Mentorship', href: '/labs/mentorship' },
                   { label: 'Equipment Maintenance', href: '/admin/equipment/maintenance' },
-                  { label: 'Protocol Tracking', href: '/labs/protocol-tracking' },
+                  // Protocol Tracking link removed 2026-05-12 — protocol
+                  // tracking lives in Platinum, not in the labs section.
+                  // Route still exists for deep links but isn't surfaced.
                   { label: 'Deep Links', href: '/admin/deep-links' },
                   { label: 'Resource Bookings', href: '/scheduling/resource-bookings' },
                   { label: 'Medications Resource', href: '/resources/medications' },

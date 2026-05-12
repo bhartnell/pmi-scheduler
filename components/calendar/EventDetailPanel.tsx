@@ -381,16 +381,35 @@ export default function EventDetailPanel({ event, open, onClose }: EventDetailPa
 
         {/* Action buttons */}
         <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-3 space-y-2">
-          {/* Open Lab Day */}
-          {(event.source === 'lab_day' || event.linked_lab_day_id || labDayDetail) && (
-            <Link
-              href={labDayDetail ? `/labs/schedule/${labDayDetail.id}` : (event.linked_url || '#')}
-              className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
-            >
-              <ExternalLink className="h-4 w-4" />
-              Open Lab Day
-            </Link>
-          )}
+          {/* Open Lab Day.
+              The link target order of preference:
+                1. labDayDetail.id — the resolved lab_day row (most reliable)
+                2. event.linked_lab_day_id — the FK on the event itself
+                3. (no link)
+              We deliberately don't fall through to event.linked_url
+              anymore — that field can carry stale URLs from older
+              calendar event rows (deleted lab days, renamed routes)
+              that 404'd silently when users clicked them. If we don't
+              have a concrete lab_day id, we hide the button rather
+              than send the user into a dead-end. */}
+          {(() => {
+            const labDayHref =
+              labDayDetail?.id
+                ? `/labs/schedule/${labDayDetail.id}`
+                : event.linked_lab_day_id
+                  ? `/labs/schedule/${event.linked_lab_day_id}`
+                  : null;
+            if (!labDayHref) return null;
+            return (
+              <Link
+                href={labDayHref}
+                className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-900/20 rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+              >
+                <ExternalLink className="h-4 w-4" />
+                Open Lab Day
+              </Link>
+            );
+          })()}
 
           {/* Edit in Planner — pass the event's date so the planner
               lands on the right week instead of falling back to its

@@ -77,7 +77,11 @@ export default function AttendanceSection({ labDayId, cohortId }: AttendanceSect
   const [summary, setSummary] = useState<AttendanceSummary>({ total: 0, present: 0, absent: 0, excused: 0, late: 0, unmarked: 0 });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null); // student_id being saved
-  const [expanded, setExpanded] = useState(true);
+  // Collapsed by default — the lab-day pages render this section under
+  // an outer <details> wrapper that's also collapsed, but if the
+  // component is ever consumed standalone (e.g. an admin tool) the
+  // user-facing default should still be "compact, click to expand".
+  const [expanded, setExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [confirmMarkAbsent, setConfirmMarkAbsent] = useState(false);
   const [markingAll, setMarkingAll] = useState(false);

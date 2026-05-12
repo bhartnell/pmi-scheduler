@@ -225,6 +225,17 @@ function abbreviateSkill(name: string): string {
   for (const [key, value] of Object.entries(abbrevMap)) {
     if (key.toLowerCase() === lowered) return value;
   }
+  // Defensive substring matcher for "patient assessment" variants —
+  // Stacie reported the columns collapsing again on 2026-05-12 because
+  // the underlying skill name had drifted to yet another wording the
+  // exact-match map didn't catch. Any name that contains the
+  // "patient assessment" phrase and a medical/trauma qualifier gets
+  // routed to the correct header regardless of punctuation, casing,
+  // or word order.
+  if (lowered.includes('patient assessment') || lowered.includes('assessment and management')) {
+    if (lowered.includes('medical')) return 'Medical Patient Assessment';
+    if (lowered.includes('trauma')) return 'Trauma Patient Assessment';
+  }
   return name;
 }
 

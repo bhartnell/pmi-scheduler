@@ -2454,7 +2454,14 @@ export default function SkillSheetPanel({
           </div>
         )}
 
-        {/* Mode Toggle */}
+        {/* Mode Toggle.
+            On NREMT testing days, only the Final tab is offered — the
+            Teaching and Formative tabs are filtered out so a stray
+            click can't drop the panel into the practice checklist.
+            Mirrors the same filter on the embedded variant above
+            (see line ~1860). Bug reported 2026-05-12: retake attempts
+            were reverting to formative when this toggle was the only
+            mode picker on screen. */}
         {sheet && (
           <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 flex-shrink-0">
             <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
@@ -2462,7 +2469,7 @@ export default function SkillSheetPanel({
                 { key: 'teaching' as const, label: 'Teaching', icon: FileText },
                 { key: 'formative' as const, label: 'Formative', icon: ClipboardCheck },
                 { key: 'final' as const, label: 'Final', icon: Shield },
-              ]).map(({ key, label, icon: Icon }) => (
+              ]).filter(({ key }) => !nremtMode || key === 'final').map(({ key, label, icon: Icon }) => (
                 <button
                   key={key}
                   onClick={() => setMode(key)}
