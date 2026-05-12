@@ -592,12 +592,32 @@ export default function InternshipDetailPage() {
   // in sync after any add/remove from any of the three places this can
   // happen (placement-section picker, PreceptorsSection modal, summary
   // card future Add button).
+  //
+  // Critically also re-syncs the legacy `preceptor_id` field on
+  // formData + internship state from the active primary assignment.
+  // Without this, the "Preceptor Assigned" checklist row stays
+  // unchecked (and the Next Step column derived from preceptor_id
+  // keeps showing "Assign Preceptor") even after the user just
+  // assigned one — the API updates student_internships.preceptor_id
+  // on the server but the page's local copy went stale.
   const refreshPreceptorAssignments = async () => {
     try {
       const res = await fetch(`/api/clinical/internships/${internshipId}/preceptors`);
       const data = await res.json();
       if (data.success) {
-        setPreceptorAssignments(data.assignments || []);
+        const assignments = data.assignments || [];
+        setPreceptorAssignments(assignments);
+
+        // Find the active primary preceptor and sync into formData /
+        // internship state so downstream checklist + progress
+        // calculations pick up the change without a full refetch.
+        const activePrimary = assignments.find(
+          (a: { is_active?: boolean; role?: string; preceptor_id?: string }) =>
+            a.is_active && a.role === 'primary',
+        );
+        const nextPreceptorId = activePrimary?.preceptor_id ?? null;
+        setFormData(prev => ({ ...prev, preceptor_id: nextPreceptorId || '' }));
+        setInternship(prev => (prev ? { ...prev, preceptor_id: nextPreceptorId } : prev));
       }
     } catch (err) {
       console.error('Error refreshing preceptor assignments:', err);
@@ -1634,242 +1654,37 @@ export default function InternshipDetailPage() {
               }
             >
               <div className="space-y-2">
-                {/* Agency & Preceptor Selects.
-                    Agency goes in the left half, preceptor block in the
-                    right half on md+ so the two reference inputs sit
-                    side-by-side instead of stacking the agency over a
-                    much-taller preceptor block. Mobile drops back to a
-                    single column. */}
+                {/* Agency picker only. Preceptor management was
+                    consolidated into the standalone PreceptorsSection
+                    further down (2026-05-11) — the old inline picker
+                    duplicated that section's UI, surfaced a confusing
+                    "Pre-migration" tag, and ran a separate stale-data
+                    filter that masked preceptors users expected to see. */}
                 {canEdit && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4 pb-4 border-b border-gray-200 dark:border-gray-700 items-start">
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agency</label>
-                      <select
-                        value={formData.agency_id || ''}
-                        onChange={(e) => handleInputChange('agency_id', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
-                      >
-                        <option value="">Select Agency</option>
-                        {agencies.map(a => (
-                          <option key={a.id} value={a.id}>{a.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Preceptor Assignments</label>
-
-                      {/* Current assignments */}
-                      <div className="space-y-2 mb-3">
-                        {/* Legacy preceptor (if no assignments but internship has preceptor_id) */}
-                        {preceptorAssignments.filter(a => a.is_active).length === 0 && internship.field_preceptors && formData.preceptor_id && (
-                          <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700">
-                            <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                              1° Legacy
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                {internship.field_preceptors.first_name} {internship.field_preceptors.last_name}
-                              </div>
-                              {internship.field_preceptors.agency_name && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{internship.field_preceptors.agency_name}</div>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-gray-400">Pre-migration</span>
-                          </div>
-                        )}
-                        {preceptorAssignments.filter(a => a.is_active).length === 0 && !internship.field_preceptors && (
-                          <p className="text-xs text-gray-400 dark:text-gray-500 italic">No preceptors assigned</p>
-                        )}
-                        {preceptorAssignments.filter(a => a.is_active).map(assignment => (
-                          <div key={assignment.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 dark:bg-gray-700/50">
-                            <span className={`px-1.5 py-0.5 text-[10px] font-bold uppercase rounded ${
-                              assignment.role === 'primary'
-                                ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
-                                : assignment.role === 'secondary'
-                                ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                                : 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400'
-                            }`}>
-                              {assignment.role === 'primary' ? '1°' : assignment.role === 'secondary' ? '2°' : '3°'}
-                            </span>
-                            <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                                {assignment.preceptor?.first_name} {assignment.preceptor?.last_name}
-                              </div>
-                              {assignment.preceptor?.agency_name && (
-                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{assignment.preceptor.agency_name}</div>
-                              )}
-                            </div>
-                            <span className="text-[10px] text-gray-400">{assignment.start_date}</span>
-                            {canEdit && (
-                              <button
-                                type="button"
-                                onClick={async () => {
-                                  await fetch(`/api/clinical/internships/${internshipId}/preceptors`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ assignmentId: assignment.id, is_active: false, end_date: new Date().toISOString().split('T')[0] }) });
-                                  // Cross-surface refresh: bumps refreshKey
-                                  // so PreceptorsSection picks up the change
-                                  // too.
-                                  await refreshPreceptorAssignments();
-                                }}
-                                className="text-gray-400 hover:text-red-500 p-1"
-                                title="Remove assignment"
-                              >
-                                <X className="w-3 h-3" />
-                              </button>
-                            )}
-                          </div>
-                        ))}
-
-                        {/* Inactive/historical assignments */}
-                        {preceptorAssignments.filter(a => !a.is_active).length > 0 && (
-                          <details className="text-xs">
-                            <summary className="text-gray-400 cursor-pointer hover:text-gray-600">
-                              {preceptorAssignments.filter(a => !a.is_active).length} previous assignment(s)
-                            </summary>
-                            <div className="mt-1 space-y-1 pl-2 border-l-2 border-gray-200 dark:border-gray-600">
-                              {preceptorAssignments.filter(a => !a.is_active).map(assignment => (
-                                <div key={assignment.id} className="flex items-center gap-2 text-gray-400 dark:text-gray-500">
-                                  <span className="font-medium">{assignment.preceptor?.first_name} {assignment.preceptor?.last_name}</span>
-                                  <span>({assignment.role})</span>
-                                  <span>{assignment.start_date} → {assignment.end_date || '?'}</span>
-                                </div>
-                              ))}
-                            </div>
-                          </details>
-                        )}
-                      </div>
-
-                      {/* Add preceptor assignment.
-                          Auto-filters to the internship's agency FTOs (by
-                          agency_id, with agency_name as a case-insensitive
-                          fallback for pre-migration rows that only have the
-                          text). A "Show all agencies" checkbox reveals the
-                          full list when the user needs a cross-agency pick. */}
-                      {canEdit && (() => {
-                        const internshipAgencyId = formData.agency_id || internship.agency_id;
-                        const internshipAgencyName = (
-                          internship.agencies?.name ||
-                          formData.agency_name ||
-                          ''
-                        ).toLowerCase().trim();
-                        const filteredPreceptors = showAllAgencyPreceptors
-                          ? preceptors
-                          : preceptors.filter((p) => {
-                              if (internshipAgencyId && p.agency_id) {
-                                return p.agency_id === internshipAgencyId;
-                              }
-                              if (internshipAgencyName && p.agency_name) {
-                                return p.agency_name.toLowerCase().trim() === internshipAgencyName;
-                              }
-                              // No agency set on internship — show all so
-                              // users aren't blocked on a missing field.
-                              return true;
-                            });
-                        const hiddenCount = preceptors.length - filteredPreceptors.length;
-                        return (
-                        <div className="space-y-2">
-                        <div className="flex gap-2 items-end">
-                          <select
-                            value={newAssignPreceptorId}
-                            onChange={(e) => setNewAssignPreceptorId(e.target.value)}
-                            className="flex-1 px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
-                          >
-                            <option value="">Select Preceptor</option>
-                            {filteredPreceptors.map(p => (
-                              <option key={p.id} value={p.id}>{p.first_name} {p.last_name} {p.agency_name ? `(${p.agency_name})` : ''}</option>
-                            ))}
-                          </select>
-                          <select
-                            value={newAssignRole}
-                            onChange={(e) => setNewAssignRole(e.target.value)}
-                            className="px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
-                          >
-                            <option value="primary">Primary</option>
-                            <option value="secondary">Secondary</option>
-                            <option value="tertiary">Tertiary</option>
-                          </select>
-                          <button
-                            type="button"
-                            disabled={!newAssignPreceptorId || addingAssignment}
-                            onClick={async () => {
-                              setAddingAssignment(true);
-                              setAssignmentInlineError(null);
-                              try {
-                                const res = await fetch(`/api/clinical/internships/${internshipId}/preceptors`, {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    preceptor_id: newAssignPreceptorId,
-                                    role: newAssignRole,
-                                    start_date: new Date().toISOString().split('T')[0],
-                                  }),
-                                });
-                                const data = await res.json();
-                                if (res.ok && data?.success) {
-                                  // Cross-surface refresh — also bumps
-                                  // refreshKey for PreceptorsSection.
-                                  await refreshPreceptorAssignments();
-                                  setNewAssignPreceptorId('');
-                                } else if (res.status === 409) {
-                                  setAssignmentInlineError(
-                                    data?.error || 'This preceptor is already assigned in that role.'
-                                  );
-                                } else {
-                                  setAssignmentInlineError(
-                                    data?.error || 'Failed to add preceptor assignment'
-                                  );
-                                }
-                              } catch (err) {
-                                console.error('Error adding assignment:', err);
-                                setAssignmentInlineError('Network error — please try again');
-                              }
-                              setAddingAssignment(false);
-                            }}
-                            className="px-3 py-1.5 text-sm bg-teal-600 text-white rounded hover:bg-teal-700 disabled:opacity-50"
-                          >
-                            {addingAssignment ? '...' : 'Add'}
-                          </button>
-                        </div>
-                        {/* Filter toggle + hidden-count helper. Only shown
-                            when the filter is actually hiding preceptors —
-                            noise-free when there's nothing to reveal. */}
-                        {(hiddenCount > 0 || showAllAgencyPreceptors) && (
-                          <label className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={showAllAgencyPreceptors}
-                              onChange={(e) => setShowAllAgencyPreceptors(e.target.checked)}
-                              className="w-3.5 h-3.5 rounded border-gray-300"
-                            />
-                            Show all agencies
-                            {!showAllAgencyPreceptors && hiddenCount > 0 && (
-                              <span className="text-gray-500">
-                                ({hiddenCount} hidden)
-                              </span>
-                            )}
-                          </label>
-                        )}
-                        {/* Inline error — surfaces 409 "already assigned"
-                            and other add failures without a toast that
-                            dismisses while the user is correcting. */}
-                        {assignmentInlineError && (
-                          <div className="text-xs rounded-lg p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200">
-                            {assignmentInlineError}
-                          </div>
-                        )}
-                        </div>
-                        );
-                      })()}
-
-                      <button
-                        type="button"
-                        onClick={() => setShowAddPreceptorModal(true)}
-                        className="mt-2 text-xs text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300"
-                      >
-                        + Create New Preceptor
-                      </button>
-                    </div>
+                  <div className="mb-4 pb-4 border-b border-gray-200 dark:border-gray-700">
+                    <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Agency</label>
+                    <select
+                      value={formData.agency_id || ''}
+                      onChange={(e) => handleInputChange('agency_id', e.target.value)}
+                      className="w-full px-2 py-1.5 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
+                    >
+                      <option value="">Select Agency</option>
+                      {agencies.map(a => (
+                        <option key={a.id} value={a.id}>{a.name}</option>
+                      ))}
+                    </select>
                   </div>
                 )}
+                {/* Deprecated preceptor management block removed
+                    2026-05-11. Preceptor add/end now happens
+                    exclusively in the PreceptorsSection further down
+                    in this file. The old block was a duplicate of
+                    that section: it surfaced a confusing
+                    "Pre-migration" tag, ran a parallel agency-scoped
+                    filter that hid preceptors users wanted to assign,
+                    and rendered "1° Legacy" cards that the migration
+                    long ago made obsolete. The Create-New-Preceptor
+                    button moved next to PreceptorsSection. */}
 
                 {/* Placement checklist — 2×2 on md+ to use horizontal
                     space instead of stacking 4 rows vertically. */}
@@ -2185,6 +2000,23 @@ export default function InternshipDetailPage() {
               refreshKey={preceptorRefreshKey}
               onChange={refreshPreceptorAssignments}
             />
+
+            {/* Create a brand new preceptor record (and assign to this
+                internship). Distinct from PreceptorsSection's "Add
+                Preceptor" modal which only assigns from the existing
+                preceptors table. Inline link so the affordance is
+                clearly secondary to the primary assign-existing flow. */}
+            {canEdit && (
+              <div className="-mt-3 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowAddPreceptorModal(true)}
+                  className="text-xs text-teal-600 dark:text-teal-400 hover:text-teal-800 dark:hover:text-teal-300"
+                >
+                  + Create new preceptor record
+                </button>
+              </div>
+            )}
 
             {/* (Phase 2 standalone block removed 2026-04-24 — moved into
                 the side-by-side card grid above with Phase 1.) */}

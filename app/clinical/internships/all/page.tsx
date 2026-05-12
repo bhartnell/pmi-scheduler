@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { canEditClinical, type Role } from '@/lib/permissions';
 import { parseDateSafe } from '@/lib/utils';
+import { toDateInput } from '@/lib/date-input';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Student {
@@ -404,43 +405,48 @@ export default function InternshipTrackerPage() {
     setEditingInternship(internship);
 
     if (internship) {
-      // Editing existing internship — populate ALL fields
+      // Editing existing internship — populate ALL fields.
+      // Every date / timestamp field flows through toDateInput() so the
+      // <input type="date"> bindings get plain `yyyy-MM-dd` strings;
+      // raw `2026-04-27T00:00:00+00:00` values from timestamptz columns
+      // would otherwise trip the browser's date-format warning AND
+      // silently fail to save the next change.
       setFormData({
         student_id: student.id,
         cohort_id: selectedCohort,
         agency_id: internship.agency_id || '',
         preceptor_id: internship.preceptor_id || '',
         shift_type: internship.shift_type || '12_hour',
-        placement_date: internship.placement_date || '',
-        internship_start_date: internship.internship_start_date || '',
+        placement_date: toDateInput(internship.placement_date),
+        internship_start_date: toDateInput(internship.internship_start_date),
         status: internship.status || 'not_started',
         current_phase: internship.current_phase || 'pre_internship',
         notes: (internship as any).notes || '',
         // Phase tracking
-        orientation_date: internship.orientation_date || '',
+        orientation_date: toDateInput(internship.orientation_date),
         orientation_completed: internship.orientation_completed || false,
-        phase_1_start_date: internship.phase_1_start_date || '',
-        phase_1_eval_scheduled: internship.phase_1_eval_scheduled || '',
+        phase_1_start_date: toDateInput(internship.phase_1_start_date),
+        phase_1_eval_scheduled: toDateInput(internship.phase_1_eval_scheduled),
         phase_1_eval_completed: internship.phase_1_eval_completed || false,
         phase_1_eval_notes: (internship as any).phase_1_eval_notes || '',
-        phase_2_start_date: internship.phase_2_start_date || '',
-        phase_2_eval_scheduled: internship.phase_2_eval_scheduled || '',
+        phase_2_start_date: toDateInput(internship.phase_2_start_date),
+        phase_2_eval_scheduled: toDateInput(internship.phase_2_eval_scheduled),
         phase_2_eval_completed: internship.phase_2_eval_completed || false,
         phase_2_eval_notes: (internship as any).phase_2_eval_notes || '',
-        expected_end_date: internship.expected_end_date || '',
+        expected_end_date: toDateInput(internship.expected_end_date),
         // Clearance & Closeout
-        closeout_meeting_date: internship.closeout_meeting_date || '',
+        closeout_meeting_date: toDateInput(internship.closeout_meeting_date),
         closeout_completed: internship.closeout_completed || false,
-        internship_completion_date: (internship as any).internship_completion_date || '',
+        internship_completion_date: toDateInput((internship as any).internship_completion_date),
         snhd_submitted: (internship as any).snhd_submitted || false,
-        snhd_submitted_date: (internship as any).snhd_submitted_date || '',
+        snhd_submitted_date: toDateInput((internship as any).snhd_submitted_date),
         cleared_for_nremt: internship.cleared_for_nremt || false,
-        nremt_clearance_date: (internship as any).nremt_clearance_date || '',
+        nremt_clearance_date: toDateInput((internship as any).nremt_clearance_date),
         ryan_notified: (internship as any).ryan_notified || false,
-        ryan_notified_date: (internship as any).ryan_notified_date || '',
+        ryan_notified_date: toDateInput((internship as any).ryan_notified_date),
         // Extension
         phase_1_extended: internship.phase_1_extended || false,
-        phase_1_extended_until: internship.phase_1_extended_until || '',
+        phase_1_extended_until: toDateInput(internship.phase_1_extended_until),
         phase_1_extension_reason: internship.phase_1_extension_reason || '',
       });
       // Expand basic section, collapse others

@@ -130,10 +130,13 @@ export default function PreceptorsSection({
   const [modalRole, setModalRole] = useState<'primary' | 'secondary' | 'tertiary'>('primary');
   const [modalStartDate, setModalStartDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [modalNotes, setModalNotes] = useState('');
-  // "Show all agencies" toggle — defaults to false so the picker
-  // auto-filters to the internship's agency (matching the placement-
-  // section behaviour). Toggle true to reveal cross-agency preceptors.
-  const [showAllAgencies, setShowAllAgencies] = useState(false);
+  // "Show all agencies" toggle — defaults to TRUE so the picker shows
+  // every preceptor on first open. The auto-filter to the internship's
+  // agency was hiding preceptors users actively wanted to assign
+  // (especially common when the internship's agency_id was unset or
+  // mis-matched against the preceptor's agency_id). Toggle off to
+  // narrow the list back to the internship's agency.
+  const [showAllAgencies, setShowAllAgencies] = useState(true);
 
   useEffect(() => {
     fetchAssignments();
