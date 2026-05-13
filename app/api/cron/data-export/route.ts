@@ -60,11 +60,14 @@ function buildTableExports(supabase: ReturnType<typeof getSupabaseAdmin>): Table
           .select('*, program:programs(name, abbreviation)'),
     },
     {
-      name: 'student_groups',
+      // Canonical lab_groups + members (lab_group_members). Replaced
+      // the legacy student_groups + student_group_assignments dump,
+      // which has been stale since the lab-groups rewrite.
+      name: 'lab_groups',
       query: () =>
         supabase
-          .from('student_groups')
-          .select('*, student_group_assignments(*)'),
+          .from('lab_groups')
+          .select('*, members:lab_group_members(*)'),
     },
     {
       name: 'station_completions',

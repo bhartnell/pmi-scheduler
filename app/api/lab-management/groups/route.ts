@@ -42,14 +42,21 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    // Optionally include members for all groups in a single bulk query
+    // Optionally include members for all groups in a single bulk query.
+    //
+    // CRITICAL: this read MUST use lab_group_members (lab_group_id),
+    // not the legacy student_group_assignments (group_id). The PUT
+    // endpoint writes to lab_group_members; if the read side hits
+    // the wrong table, saves silently appear to succeed but the
+    // group hub renders empty. That mismatch was the user-reported
+    // "Groups saved!" + "no groups assigned" bug.
     let groupsResult = data || [];
     if (includeMembers && groupsResult.length > 0) {
       const groupIds = groupsResult.map((g) => g.id);
       const { data: allAssignments, error: membersError } = await supabase
-        .from('student_group_assignments')
+        .from('lab_group_members')
         .select(`
-          group_id,
+          lab_group_id,
           student:students(
             id,
             first_name,
@@ -58,14 +65,14 @@ export async function GET(request: NextRequest) {
             photo_url
           )
         `)
-        .in('group_id', groupIds);
+        .in('lab_group_id', groupIds);
 
       if (membersError) throw membersError;
 
-      // Build a map of group_id -> members
+      // Build a map of lab_group_id -> members
       const membersByGroup = new Map<string, any[]>();
       for (const assignment of (allAssignments || [])) {
-        const gid = assignment.group_id;
+        const gid = assignment.lab_group_id;
         if (!membersByGroup.has(gid)) {
           membersByGroup.set(gid, []);
         }

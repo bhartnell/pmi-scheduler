@@ -129,8 +129,12 @@ export async function POST(request: NextRequest) {
         if (body.cohort_id) q = q.eq('id', body.cohort_id);
         return q;
       }},
-      { name: 'student_groups', query: () => {
-        let q = supabase.from('student_groups').select('*');
+      // Lab groups + their member assignments. lab_groups + lab_group_members
+      // are the canonical tables since the lab-groups rewrite; the legacy
+      // student_groups / student_group_assignments tables are no longer
+      // fed by the UI and would export empty/stale rows.
+      { name: 'lab_groups', query: () => {
+        let q = supabase.from('lab_groups').select('*, members:lab_group_members(*)');
         if (body.cohort_id) q = q.eq('cohort_id', body.cohort_id);
         return q;
       }},

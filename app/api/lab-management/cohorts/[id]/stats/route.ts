@@ -53,12 +53,21 @@ export async function GET(
       }
     }
 
-    // Fetch student groups in cohort
-    const { data: groups, error: groupsError } = await supabase
-      .from('student_groups')
-      .select('id, name, group_number')
+    // Fetch lab groups in cohort. lab_groups is the canonical table
+    // since the lab-groups rewrite; student_groups is legacy and no
+    // longer fed by the UI. The schema doesn't carry a group_number
+    // column on lab_groups — display_order is the equivalent — so we
+    // alias it to keep the response shape stable for the consumer.
+    const { data: groupRows, error: groupsError } = await supabase
+      .from('lab_groups')
+      .select('id, name, display_order')
       .eq('cohort_id', cohortId)
       .eq('is_active', true);
+    const groups = (groupRows || []).map(g => ({
+      id: g.id,
+      name: g.name,
+      group_number: g.display_order,
+    }));
 
     if (groupsError) {
       console.error('Error fetching groups:', groupsError.code, groupsError.message);
