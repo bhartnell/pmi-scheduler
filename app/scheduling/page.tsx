@@ -22,6 +22,7 @@ import {
   AlertOctagon,
   Check,
   CalendarDays,
+  Sparkles,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
@@ -30,6 +31,7 @@ import { hasMinRole, canAccessScheduling } from '@/lib/permissions';
 import LogHoursModal from '@/components/scheduling/LogHoursModal';
 import LogMyShiftModal from '@/components/scheduling/LogMyShiftModal';
 import RequestCoverageModal from '@/components/scheduling/RequestCoverageModal';
+import GenerateLabShiftsModal from '@/components/scheduling/GenerateLabShiftsModal';
 import RecurringAvailabilityModal from '@/components/scheduling/RecurringAvailabilityModal';
 import CoordinatorCalendarView from '@/components/scheduling/CoordinatorCalendarView';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
@@ -130,6 +132,11 @@ export default function SchedulingPage() {
   // /api/scheduling/log-shift which creates the manual_hour_log
   // row and notifies coordinators.
   const [showLogMyShift, setShowLogMyShift] = useState(false);
+  // Coordinator-only bulk-generator that fans open_shifts rows out
+  // across a date range of lab_days. Surfaces in the same overview
+  // action row as Request Coverage so it sits where coordinators
+  // already look for "do something across the schedule" actions.
+  const [showGenerateLabShifts, setShowGenerateLabShifts] = useState(false);
   const [coverageBusy, setCoverageBusy] = useState<string | null>(null);
   const [recurringAvailFor, setRecurringAvailFor] = useState<{
     id: string;
@@ -464,14 +471,25 @@ export default function SchedulingPage() {
             Log a Shift
           </button>
           {effectiveRole && hasMinRole(effectiveRole, 'lead_instructor') && (
-            <button
-              type="button"
-              onClick={() => setShowRequestCoverage(true)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm"
-            >
-              <AlertOctagon className="w-4 h-4" />
-              Request Coverage
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowGenerateLabShifts(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 border border-purple-300 dark:border-purple-700 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-lg text-sm font-medium"
+                title="Bulk-create open shifts for upcoming lab days so part-timers can sign up"
+              >
+                <Sparkles className="w-4 h-4" />
+                Generate Lab Shifts
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRequestCoverage(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium shadow-sm"
+              >
+                <AlertOctagon className="w-4 h-4" />
+                Request Coverage
+              </button>
+            </>
           )}
         </div>
 
@@ -1306,6 +1324,12 @@ export default function SchedulingPage() {
             setShowRequestCoverage(false);
             fetchCoverageRequests();
           }}
+        />
+      )}
+
+      {showGenerateLabShifts && (
+        <GenerateLabShiftsModal
+          onClose={() => setShowGenerateLabShifts(false)}
         />
       )}
 

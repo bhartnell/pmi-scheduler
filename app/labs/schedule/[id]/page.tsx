@@ -12,6 +12,7 @@ import {
   ClipboardCheck,
   AlertOctagon,
   AlertTriangle,
+  Sparkles,
   Users,
   Check,
   AlertCircle,
@@ -29,6 +30,7 @@ import { useToast } from '@/components/Toast';
 import { hasMinRole, canAccessAdmin } from '@/lib/permissions';
 import TemplateDiffModal from '@/components/TemplateDiffModal';
 import RequestCoverageModal from '@/components/scheduling/RequestCoverageModal';
+import GenerateLabShiftsModal from '@/components/scheduling/GenerateLabShiftsModal';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 
 import type {
@@ -107,6 +109,10 @@ export default function LabDayPage() {
   const [copySuccessToast, setCopySuccessToast] = useState(false);
   const [showDiffModal, setShowDiffModal] = useState(false);
   const [showRequestCoverage, setShowRequestCoverage] = useState(false);
+  // Shortcut: bulk-shift generator scoped to this single lab day's
+  // date + cohort. Same modal as /scheduling but pre-locked so the
+  // coordinator can't accidentally fan it across other cohorts.
+  const [showGenerateLabShifts, setShowGenerateLabShifts] = useState(false);
 
   // Checkoff-day auto-detection. Matches the server heuristic: the
   // skill_sheet_id that shows up on 2+ stations wins. Used for the
@@ -598,13 +604,23 @@ export default function LabDayPage() {
               pre-filled with this lab day's date/time so the director
               (Ryan/Ben) just has to click Approve. */}
           {userRole && hasMinRole(userRole, 'lead_instructor') && (
-            <button
-              type="button"
-              onClick={() => setShowRequestCoverage(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800"
-            >
-              <AlertOctagon className="w-3.5 h-3.5" /> Request Coverage
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowGenerateLabShifts(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/50 border border-blue-200 dark:border-blue-800"
+                title="Create open shifts for this lab day so part-timers can sign up"
+              >
+                <Sparkles className="w-3.5 h-3.5" /> Create shifts
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowRequestCoverage(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/30 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-900/50 border border-purple-200 dark:border-purple-800"
+              >
+                <AlertOctagon className="w-3.5 h-3.5" /> Request Coverage
+              </button>
+            </>
           )}
         </div>
 
@@ -787,6 +803,22 @@ export default function LabDayPage() {
               ? `${labDay.cohort.program?.abbreviation ?? ''} Cohort ${formatCohortNumber(labDay.cohort.cohort_number)}`.trim()
               : null,
           }}
+        />
+      )}
+
+      {showGenerateLabShifts && (
+        <GenerateLabShiftsModal
+          onClose={() => setShowGenerateLabShifts(false)}
+          onCreated={(count) => {
+            if (count > 0) {
+              toast.success(`Created ${count} shift${count === 1 ? '' : 's'} — part-timers can sign up now.`);
+            }
+          }}
+          // Lock to this lab day's cohort + date so a single-lab
+          // shortcut can't accidentally fan across the whole semester.
+          lockCohortId={labDay.cohort?.id ?? undefined}
+          defaultStartDate={labDay.date}
+          defaultEndDate={labDay.date}
         />
       )}
 
