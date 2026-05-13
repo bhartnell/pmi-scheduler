@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 
+// Force dynamic + no-store so a stale cached "groupsCount: 0" can
+// never explain a "Not created" badge on the cohort hub after a save.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+const NO_CACHE_HEADERS = { 'Cache-Control': 'no-store, max-age=0' };
+
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -163,7 +169,7 @@ export async function GET(
         upcomingLabs: labDays || [],
         nextLab: labDays?.[0] || null,
       },
-    });
+    }, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('Error fetching cohort stats:', error);
     const message = error instanceof Error ? error.message : 'Failed to fetch cohort stats';

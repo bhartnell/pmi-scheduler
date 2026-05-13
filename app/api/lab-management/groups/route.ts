@@ -3,6 +3,17 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
 
+// Belt-and-suspenders against the App Router edge / route cache. The
+// route is implicitly dynamic (reads searchParams), but after the
+// six-round groups-display bug we make it explicit so a stale cached
+// response can never explain "groups saved but display is empty".
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+// Shared Cache-Control header — prevents any intermediate CDN or
+// browser cache from holding onto a pre-fix response.
+const NO_CACHE_HEADERS = { 'Cache-Control': 'no-store, max-age=0' };
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const cohortId = searchParams.get('cohortId');
@@ -107,7 +118,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, groups: groupsResult, history });
+    return NextResponse.json(
+      { success: true, groups: groupsResult, history },
+      { headers: NO_CACHE_HEADERS },
+    );
   } catch (error) {
     console.error('Error fetching groups:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch groups' }, { status: 500 });

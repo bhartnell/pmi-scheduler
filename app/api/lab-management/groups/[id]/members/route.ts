@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 
+// Force dynamic + no-store. Saves go through here and the response
+// returns the resolved roster; if anything cached the response, a
+// re-fetch right after a save could return the pre-save members.
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+const NO_CACHE_HEADERS = { 'Cache-Control': 'no-store, max-age=0' };
+
 /**
  * /api/lab-management/groups/[id]/members
  *
@@ -50,7 +57,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       members: data?.map(a => a.student) || [],
-    });
+    }, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('Error fetching members:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch members' }, { status: 500 });
@@ -198,7 +205,7 @@ export async function PUT(
     return NextResponse.json({
       success: true,
       members: data?.map(a => a.student) || [],
-    });
+    }, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('Error updating members:', error);
     return NextResponse.json({ success: false, error: 'Failed to update members' }, { status: 500 });
