@@ -106,32 +106,30 @@ export async function PUT(
       );
     }
 
-    // Replace-strategy with TWO deletes to honor the globally-unique
-    // student_id constraint on lab_group_members.
+    // UPSERT-then-clean strategy.
     //
-    //   Schema: lab_group_members_student_id_key is UNIQUE on
-    //   (student_id) — a student can be in at most one group across
-    //   the whole cohort. When the UI's handleSaveAll fires a PUT per
-    //   group in parallel and a student moves Group A → Group B, the
-    //   naive "delete WHERE lab_group_id = MY_GROUP then INSERT"
-    //   approach blows up on the (student, Group A) row that another
-    //   request hasn't deleted yet → 23505 → 500.
+    // Schema: lab_group_members_student_id_key is UNIQUE on
+    // (student_id) — a student can be in at most one group across
+    // the whole cohort. A naive "delete WHERE lab_group_id = MY,
+    // then INSERT" is racey under the UI's parallel handleSaveAll
+    // PUTs — two requests can see overlapping empty slots and
+    // both INSERT, or one's INSERT can land before the other's
+    // DELETE → 23505 → 409. The previous global delete-by-student
+    // attempt left the same window between DELETE and INSERT.
     //
-    //   Fix: delete every incoming student_id from ANY group first,
-    //   then delete anyone else still tagged to this group, then
-    //   insert. The end state is the same; only the order makes the
-    //   unique index happy under concurrent PUTs.
-    if ((studentIds as string[]).length > 0) {
-      await supabase
-        .from('lab_group_members')
-        .delete()
-        .in('student_id', studentIds as string[]);
-    }
-    await supabase
-      .from('lab_group_members')
-      .delete()
-      .eq('lab_group_id', groupId);
+    // The upsert keyed on student_id resolves the move case
+    // atomically: if a student already has a row anywhere, UPDATE
+    // its lab_group_id to MY_GROUP; otherwise INSERT new. ON
+    // CONFLICT DO UPDATE — no delete-then-insert window for the
+    // unique index to fire on.
+    //
+    // After the upsert lands the new roster, a second pass deletes
+    // any leftover rows in MY_GROUP whose student_id isn't in the
+    // new roster (= students removed from this group). Doing
+    // delete-after-upsert means we never widen the window where
+    // MY_GROUP is empty.
 
+    // Step 1: upsert the incoming roster.
     if ((studentIds as string[]).length > 0) {
       const assignments = (studentIds as string[]).map((studentId) => ({
         lab_group_id: groupId,
@@ -139,12 +137,12 @@ export async function PUT(
         assigned_by: userEmail,
       }));
 
-      const { error: insertError } = await supabase
+      const { error: upsertError } = await supabase
         .from('lab_group_members')
-        .insert(assignments);
+        .upsert(assignments, { onConflict: 'student_id' });
 
-      if (insertError) {
-        const code = (insertError as { code?: string }).code;
+      if (upsertError) {
+        const code = (upsertError as { code?: string }).code;
         if (code === '23503') {
           return NextResponse.json(
             {
@@ -155,20 +153,28 @@ export async function PUT(
             { status: 404 },
           );
         }
-        if (code === '23505') {
-          // Lost the race against another concurrent PUT. The other
-          // PUT has the student now; tell the caller to refresh.
-          return NextResponse.json(
-            {
-              success: false,
-              error: 'A student in this group was just assigned elsewhere — please refresh and try again.',
-              code: 'duplicate_assignment',
-            },
-            { status: 409 },
-          );
-        }
-        throw insertError;
+        throw upsertError;
       }
+    }
+
+    // Step 2: clean up students who were in MY_GROUP but aren't in
+    // the new roster. supabase-js's .not('col', 'in', list) accepts
+    // a Postgres array literal — UUIDs are hex-safe so no escaping
+    // needed beyond the validation we already did on Array.isArray.
+    {
+      let cleanup = supabase
+        .from('lab_group_members')
+        .delete()
+        .eq('lab_group_id', groupId);
+      if ((studentIds as string[]).length > 0) {
+        cleanup = cleanup.not(
+          'student_id',
+          'in',
+          `(${(studentIds as string[]).join(',')})`,
+        );
+      }
+      const { error: cleanupErr } = await cleanup;
+      if (cleanupErr) throw cleanupErr;
     }
 
     // Return the resolved roster so the UI doesn't need a follow-up
