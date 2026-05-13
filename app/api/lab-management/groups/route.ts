@@ -13,6 +13,13 @@ export async function GET(request: NextRequest) {
     const auth = await requireAuthOrVolunteerToken(request, 'instructor');
     if (auth instanceof NextResponse) return auth;
     const supabase = getSupabaseAdmin();
+    // Sort by name, not display_order. display_order on lab_groups has
+    // historically drifted (PM G15 had two groups sharing order=2),
+    // and the UI ends up rendering Group 1, Group 4, Group 2, Group 3
+    // — the user-reported sort bug. Names are "Group N" so a text
+    // sort gives the intuitive 1, 2, 3, 4 order for ≤9 groups (the
+    // realistic ceiling); display_order is kept as the secondary key
+    // for stability when two rows do share a name.
     let query = supabase
       .from('lab_groups')
       .select(`
@@ -24,7 +31,8 @@ export async function GET(request: NextRequest) {
         )
       `)
       .eq('is_active', true)
-      .order('display_order');
+      .order('name', { ascending: true })
+      .order('display_order', { ascending: true });
 
     if (cohortId) {
       query = query.eq('cohort_id', cohortId);

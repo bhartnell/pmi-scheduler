@@ -106,15 +106,33 @@ export async function PUT(
       );
     }
 
-    // Replace-strategy: nuke existing assignments for this group,
-    // then insert the new full set. Matches the previous behaviour
-    // the UI's "Save" button relied on.
+    // Replace-strategy with TWO deletes to honor the globally-unique
+    // student_id constraint on lab_group_members.
+    //
+    //   Schema: lab_group_members_student_id_key is UNIQUE on
+    //   (student_id) — a student can be in at most one group across
+    //   the whole cohort. When the UI's handleSaveAll fires a PUT per
+    //   group in parallel and a student moves Group A → Group B, the
+    //   naive "delete WHERE lab_group_id = MY_GROUP then INSERT"
+    //   approach blows up on the (student, Group A) row that another
+    //   request hasn't deleted yet → 23505 → 500.
+    //
+    //   Fix: delete every incoming student_id from ANY group first,
+    //   then delete anyone else still tagged to this group, then
+    //   insert. The end state is the same; only the order makes the
+    //   unique index happy under concurrent PUTs.
+    if ((studentIds as string[]).length > 0) {
+      await supabase
+        .from('lab_group_members')
+        .delete()
+        .in('student_id', studentIds as string[]);
+    }
     await supabase
       .from('lab_group_members')
       .delete()
       .eq('lab_group_id', groupId);
 
-    if (studentIds.length > 0) {
+    if ((studentIds as string[]).length > 0) {
       const assignments = (studentIds as string[]).map((studentId) => ({
         lab_group_id: groupId,
         student_id: studentId,
@@ -126,7 +144,8 @@ export async function PUT(
         .insert(assignments);
 
       if (insertError) {
-        if ((insertError as { code?: string }).code === '23503') {
+        const code = (insertError as { code?: string }).code;
+        if (code === '23503') {
           return NextResponse.json(
             {
               success: false,
@@ -134,6 +153,18 @@ export async function PUT(
               code: 'fk_violation',
             },
             { status: 404 },
+          );
+        }
+        if (code === '23505') {
+          // Lost the race against another concurrent PUT. The other
+          // PUT has the student now; tell the caller to refresh.
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'A student in this group was just assigned elsewhere — please refresh and try again.',
+              code: 'duplicate_assignment',
+            },
+            { status: 409 },
           );
         }
         throw insertError;
