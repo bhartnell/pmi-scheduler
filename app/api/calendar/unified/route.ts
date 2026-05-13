@@ -72,8 +72,20 @@ export async function GET(request: NextRequest) {
 
     const events: CalendarEvent[] = [];
 
-    // Track linked lab day IDs from schedule blocks to avoid duplicate events
+    // Track linked lab day IDs from schedule blocks to avoid duplicate events.
+    // Two dedup signals:
+    //   1. Explicit FK: pmi_schedule_blocks.linked_lab_day_id
+    //   2. Fallback (date, cohort_id) when a lab-typed schedule block
+    //      exists for the same date + cohort but isn't FK-linked. This
+    //      catches the user-reported "two blue blocks per lab day"
+    //      issue where the planner created a 'lab' block without
+    //      stamping the FK back onto the lab_day. The schedule block
+    //      already carries the visible title ("Day 1 S2 Lab") so the
+    //      lab_day event would just be a redundant tile.
     const linkedLabDayIds = new Set<string>();
+    const labBlockDateCohortKeys = new Set<string>();
+    const dateCohortKey = (date: string, cohortId: string | null | undefined) =>
+      `${date}|${cohortId ?? ''}`;
 
     // 1. Schedule blocks (classes/exams) from pmi_schedule_blocks
     if (include.has('classes')) {
@@ -145,6 +157,17 @@ export async function GET(request: NextRequest) {
             if (block.linked_lab_day_id) {
               linkedLabDayIds.add(block.linked_lab_day_id as string);
             }
+            // Fallback dedup: any 'lab' block (or block with "lab" in
+            // its title) on a given date+cohort suppresses the matching
+            // lab_day event. Catches lab schedule blocks that weren't
+            // explicitly FK-linked.
+            const titleLower = (block.title || '').toLowerCase();
+            if (
+              blockType === 'lab' ||
+              titleLower.includes('lab')
+            ) {
+              labBlockDateCohortKeys.add(dateCohortKey(block.date, cohort?.id));
+            }
 
             events.push({
               id: `planner-${block.id}`,
@@ -203,8 +226,14 @@ export async function GET(request: NextRequest) {
           for (const ld of labDays) {
             if (!ld.date) continue;
 
-            // Skip lab days that are already linked to a schedule block
+            // Skip lab days already represented on the calendar by a
+            // matching schedule block (either FK-linked or covered by
+            // the fallback date+cohort match built during the planner
+            // pass above).
             if (linkedLabDayIds.has(ld.id)) continue;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const ldCohortId = (ld.cohort as any)?.id;
+            if (labBlockDateCohortKeys.has(dateCohortKey(ld.date, ldCohortId))) continue;
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cohort = ld.cohort as any;
@@ -368,14 +397,23 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 5. Open shifts
+    // 5. Open shifts.
+    //
+    // Lab-coverage shifts (open_shifts.lab_day_id IS NOT NULL) are
+    // intentionally EXCLUDED from the master calendar. They exist for
+    // the part-timer signup flow at /scheduling; surfacing them on the
+    // master calendar produced a confusing third tile per lab day on
+    // top of the existing schedule block + lab_day event. The master
+    // calendar is "what's happening" (classes, labs); the shift signup
+    // surface is "open staffing slots" — different audiences, different
+    // pages. Part-timers continue to see these via /scheduling/shifts.
     if (include.has('shifts')) {
       try {
         const query = supabase
           .from('open_shifts')
           .select(`
             id, title, date, start_time, end_time, location, department,
-            is_filled, is_cancelled,
+            is_filled, is_cancelled, lab_day_id,
             signups:shift_signups(
               instructor:instructor_id(id, name),
               status
@@ -384,6 +422,7 @@ export async function GET(request: NextRequest) {
           .gte('date', startDate)
           .lte('date', endDate)
           .eq('is_cancelled', false)
+          .is('lab_day_id', null)
           .order('date')
           .order('start_time');
 
