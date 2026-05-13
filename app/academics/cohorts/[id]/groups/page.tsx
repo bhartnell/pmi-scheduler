@@ -301,21 +301,36 @@ export default function LabGroupsPage() {
   const handleSaveAll = async () => {
     setSaving(true);
     try {
-      // Update all group memberships
-      await Promise.all(
+      // Update all group memberships, but inspect each response so a
+      // stale group_id (deleted-and-recreated) surfaces as a refresh
+      // prompt instead of an invisible FK violation on the server.
+      const results = await Promise.all(
         groups.map(async (group) => {
-          await fetch(`/api/lab-management/groups/${group.id}/members`, {
+          const res = await fetch(`/api/lab-management/groups/${group.id}/members`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               studentIds: group.members.map(m => m.id),
             }),
           });
-        })
+          const json = await res.json().catch(() => ({}));
+          return { status: res.status, json };
+        }),
       );
 
-      setHasChanges(false);
-      alert('Groups saved!');
+      const stale = results.filter(r => r.status === 404);
+      const failed = results.filter(r => !r.json?.success && r.status !== 404);
+
+      if (stale.length > 0) {
+        alert('Some groups were deleted in another tab — refreshing now.');
+        setHasChanges(false);
+        await fetchData();
+      } else if (failed.length > 0) {
+        alert(failed[0].json?.error || 'Failed to save some groups');
+      } else {
+        setHasChanges(false);
+        alert('Groups saved!');
+      }
     } catch (error) {
       console.error('Error saving:', error);
       alert('Failed to save');

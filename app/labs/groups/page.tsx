@@ -715,21 +715,45 @@ function GroupManagementPageInner() {
   };
 
   // ---- Save All (batch PUT for members) ----
+  //
+  // Previously fire-and-forget — any 500/404 was silently swallowed,
+  // which let stale group_ids (deleted-and-recreated groups) report
+  // as "saved" while the FK violation logged on the server. Now each
+  // response is inspected:
+  //   - 404 (group_not_found / fk_violation) → trigger a refetch +
+  //     surface a clear "refresh required" toast
+  //   - other non-OK → bubble up the server error message
+  //   - all OK → original success toast
 
   const handleSaveAll = async () => {
     setSaving(true);
     try {
-      await Promise.all(
-        groups.map(group =>
-          fetch(`/api/lab-management/groups/${group.id}/members`, {
+      const results = await Promise.all(
+        groups.map(async (group) => {
+          const res = await fetch(`/api/lab-management/groups/${group.id}/members`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ studentIds: group.members.map(m => m.id) }),
-          })
-        )
+          });
+          const json = await res.json().catch(() => ({}));
+          return { group, status: res.status, json };
+        }),
       );
-      setHasChanges(false);
-      toast.success('Groups saved');
+
+      const stale = results.filter(r => r.status === 404);
+      const failed = results.filter(r => !r.json?.success && r.status !== 404);
+
+      if (stale.length > 0) {
+        toast.error('Some groups were deleted in another tab — refreshing now.');
+        setHasChanges(false);
+        await fetchGroups(selectedCohortId);
+      } else if (failed.length > 0) {
+        const first = failed[0];
+        toast.error(first.json?.error || 'Failed to save some groups');
+      } else {
+        setHasChanges(false);
+        toast.success('Groups saved');
+      }
     } catch {
       toast.error('Failed to save groups');
     }

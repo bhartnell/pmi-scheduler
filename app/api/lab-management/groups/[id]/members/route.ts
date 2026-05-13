@@ -49,7 +49,6 @@ export async function PUT(
   try {
     const auth = await requireAuth('instructor');
     if (auth instanceof NextResponse) return auth;
-    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
     const body = await request.json();
@@ -57,6 +56,30 @@ export async function PUT(
 
     if (!Array.isArray(studentIds)) {
       return NextResponse.json({ success: false, error: 'studentIds must be an array' }, { status: 400 });
+    }
+
+    // Pre-flight: confirm the group actually exists. The UI was
+    // hitting 500s because deleted-and-recreated groups left the
+    // client holding stale UUIDs; the INSERT below would then fail
+    // with a 23503 FK violation. Returning a 404 with a clear "stale
+    // group, please refresh" message gives the client something
+    // actionable instead of an opaque server error.
+    const { data: groupExists, error: groupCheckErr } = await supabase
+      .from('student_groups')
+      .select('id')
+      .eq('id', groupId)
+      .maybeSingle();
+    if (groupCheckErr) throw groupCheckErr;
+    if (!groupExists) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Group not found — please refresh and try again.',
+          code: 'group_not_found',
+          group_id: groupId,
+        },
+        { status: 404 },
+      );
     }
 
     // Delete all existing assignments for this group
@@ -77,7 +100,22 @@ export async function PUT(
         .from('student_group_assignments')
         .insert(assignments);
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        // Safety net: if a concurrent delete races the pre-flight
+        // check, the FK violation still bubbles up here. Translate
+        // it to the same 404 so the client gets a consistent signal.
+        if ((insertError as { code?: string }).code === '23503') {
+          return NextResponse.json(
+            {
+              success: false,
+              error: 'Group or student no longer exists — please refresh and try again.',
+              code: 'fk_violation',
+            },
+            { status: 404 },
+          );
+        }
+        throw insertError;
+      }
     }
 
     // Fetch updated members
@@ -157,7 +195,21 @@ export async function POST(
       `)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      // FK violation = stale group_id / student_id. See the matching
+      // 404 path on PUT above for context.
+      if ((error as { code?: string }).code === '23503') {
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Group or student no longer exists — please refresh and try again.',
+            code: 'fk_violation',
+          },
+          { status: 404 },
+        );
+      }
+      throw error;
+    }
 
     return NextResponse.json({ success: true, assignment: data });
   } catch (error) {
