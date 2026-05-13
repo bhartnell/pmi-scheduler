@@ -2,8 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 
+/**
+ * /api/lab-management/groups/[id]/members
+ *
+ * Member assignment CRUD for lab groups. The previous implementation
+ * of this route was hitting `student_groups` + `student_group_assignments`
+ * (legacy tables that pre-date the lab-groups rewrite), while every
+ * other surface — the GET /groups list, POST /groups create, the
+ * /groups PUT action='move_student' branch, the bulk auto-balance
+ * action — uses `lab_groups` + `lab_group_members`. The mismatch
+ * meant every group_id returned by POST /groups was unknown to this
+ * route, so its pre-flight check returned 404 and its INSERTs would
+ * have FK-violated against `student_groups` even if they reached the
+ * insert step. Confirmed against prod: 4-of-4 reported "missing"
+ * group_ids exist in `lab_groups`. Now everything goes through the
+ * canonical lab_* tables, matching the rest of the system.
+ */
+
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: groupId } = await params;
@@ -15,7 +32,7 @@ export async function GET(
     const supabase = getSupabaseAdmin();
 
     const { data, error } = await supabase
-      .from('student_group_assignments')
+      .from('lab_group_members')
       .select(`
         *,
         student:students(
@@ -26,7 +43,7 @@ export async function GET(
           photo_url
         )
       `)
-      .eq('group_id', groupId);
+      .eq('lab_group_id', groupId);
 
     if (error) throw error;
 
@@ -49,23 +66,30 @@ export async function PUT(
   try {
     const auth = await requireAuth('instructor');
     if (auth instanceof NextResponse) return auth;
+    const { session } = auth;
+    const userEmail = session.user.email;
 
     const supabase = getSupabaseAdmin();
     const body = await request.json();
-    const { studentIds } = body;
+    // Accept both the camelCase form the existing UI ships
+    // (studentIds) and the snake_case form a future caller might
+    // send (student_ids), so neither convention silently no-ops.
+    const studentIds: unknown =
+      (body.studentIds !== undefined ? body.studentIds : body.student_ids);
 
     if (!Array.isArray(studentIds)) {
-      return NextResponse.json({ success: false, error: 'studentIds must be an array' }, { status: 400 });
+      return NextResponse.json(
+        { success: false, error: 'studentIds (or student_ids) must be an array' },
+        { status: 400 },
+      );
     }
 
-    // Pre-flight: confirm the group actually exists. The UI was
-    // hitting 500s because deleted-and-recreated groups left the
-    // client holding stale UUIDs; the INSERT below would then fail
-    // with a 23503 FK violation. Returning a 404 with a clear "stale
-    // group, please refresh" message gives the client something
-    // actionable instead of an opaque server error.
+    // Pre-flight: confirm the lab_group actually exists. If a stale
+    // client cache holds a deleted-and-recreated group's old uuid,
+    // we surface a clear "please refresh" 404 instead of letting
+    // the assignments INSERT fail with an opaque FK violation.
     const { data: groupExists, error: groupCheckErr } = await supabase
-      .from('student_groups')
+      .from('lab_groups')
       .select('id')
       .eq('id', groupId)
       .maybeSingle();
@@ -82,28 +106,26 @@ export async function PUT(
       );
     }
 
-    // Delete all existing assignments for this group
+    // Replace-strategy: nuke existing assignments for this group,
+    // then insert the new full set. Matches the previous behaviour
+    // the UI's "Save" button relied on.
     await supabase
-      .from('student_group_assignments')
+      .from('lab_group_members')
       .delete()
-      .eq('group_id', groupId);
+      .eq('lab_group_id', groupId);
 
-    // Insert new assignments
     if (studentIds.length > 0) {
-      const assignments = studentIds.map((studentId: string) => ({
-        group_id: groupId,
+      const assignments = (studentIds as string[]).map((studentId) => ({
+        lab_group_id: groupId,
         student_id: studentId,
-        role: 'member',
+        assigned_by: userEmail,
       }));
 
       const { error: insertError } = await supabase
-        .from('student_group_assignments')
+        .from('lab_group_members')
         .insert(assignments);
 
       if (insertError) {
-        // Safety net: if a concurrent delete races the pre-flight
-        // check, the FK violation still bubbles up here. Translate
-        // it to the same 404 so the client gets a consistent signal.
         if ((insertError as { code?: string }).code === '23503') {
           return NextResponse.json(
             {
@@ -118,9 +140,10 @@ export async function PUT(
       }
     }
 
-    // Fetch updated members
+    // Return the resolved roster so the UI doesn't need a follow-up
+    // GET to reconcile the displayed members.
     const { data, error } = await supabase
-      .from('student_group_assignments')
+      .from('lab_group_members')
       .select(`
         *,
         student:students(
@@ -131,7 +154,7 @@ export async function PUT(
           photo_url
         )
       `)
-      .eq('group_id', groupId);
+      .eq('lab_group_id', groupId);
 
     if (error) throw error;
 
@@ -154,7 +177,8 @@ export async function POST(
   try {
     const auth = await requireAuth('instructor');
     if (auth instanceof NextResponse) return auth;
-    const { user } = auth;
+    const { session } = auth;
+    const userEmail = session.user.email;
 
     const supabase = getSupabaseAdmin();
     const body = await request.json();
@@ -164,24 +188,20 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'student_id is required' }, { status: 400 });
     }
 
-    // Check if already assigned
-    const { data: existing } = await supabase
-      .from('student_group_assignments')
-      .select('id')
-      .eq('group_id', groupId)
-      .eq('student_id', student_id)
-      .single();
-
-    if (existing) {
-      return NextResponse.json({ success: false, error: 'Student already in group' }, { status: 400 });
-    }
+    // Same single-group-per-student invariant the /groups PUT
+    // action='move_student' branch enforces — remove any prior
+    // assignment before inserting the new one.
+    await supabase
+      .from('lab_group_members')
+      .delete()
+      .eq('student_id', student_id);
 
     const { data, error } = await supabase
-      .from('student_group_assignments')
+      .from('lab_group_members')
       .insert({
-        group_id: groupId,
-        student_id: student_id,
-        role: 'member',
+        lab_group_id: groupId,
+        student_id,
+        assigned_by: userEmail,
       })
       .select(`
         *,
@@ -196,8 +216,6 @@ export async function POST(
       .single();
 
     if (error) {
-      // FK violation = stale group_id / student_id. See the matching
-      // 404 path on PUT above for context.
       if ((error as { code?: string }).code === '23503') {
         return NextResponse.json(
           {
@@ -227,7 +245,6 @@ export async function DELETE(
   try {
     const auth = await requireAuth('instructor');
     if (auth instanceof NextResponse) return auth;
-    const { user } = auth;
 
     const supabase = getSupabaseAdmin();
     const searchParams = request.nextUrl.searchParams;
@@ -238,9 +255,9 @@ export async function DELETE(
     }
 
     const { error } = await supabase
-      .from('student_group_assignments')
+      .from('lab_group_members')
       .delete()
-      .eq('group_id', groupId)
+      .eq('lab_group_id', groupId)
       .eq('student_id', studentId);
 
     if (error) throw error;
