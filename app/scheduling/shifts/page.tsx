@@ -844,22 +844,53 @@ function ShiftsPageContent() {
 
                   const dayShifts = shiftsByDate[dateStr] || [];
                   const totalShifts = dayShifts.length;
-                  const filledShifts = dayShifts.filter(s => {
-                    const confirmed = s.confirmed_count || 0;
-                    return s.max_instructors ? confirmed >= s.max_instructors : false;
-                  }).length;
-                  const openShifts = totalShifts - filledShifts;
 
-                  // Color coding: green=all filled, yellow=partial, red=all unfilled
-                  let statusColor = '';
-                  if (totalShifts > 0) {
-                    if (filledShifts === totalShifts) {
-                      statusColor = 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700';
-                    } else if (filledShifts > 0) {
-                      statusColor = 'bg-yellow-100 dark:bg-yellow-900/30 border-yellow-300 dark:border-yellow-700';
+                  // Slot-level math instead of shift-level. The
+                  // previous "X open" counter was ambiguous — "1 open"
+                  // could mean "1 shift exists" or "1 empty seat". We
+                  // sum slots across the day's shifts and label by
+                  // urgency:
+                  //   needed   = sum of unmet min_instructors gaps
+                  //   extra    = sum of unfilled seats above min, up to max
+                  //   unlimited = any shift with no max_instructors cap
+                  // The label tier ranks needed > available > filled
+                  // so the most urgent state always wins the tile.
+                  let needed = 0;
+                  let extra = 0;
+                  let anyUnlimited = false;
+                  for (const s of dayShifts) {
+                    const min = s.min_instructors ?? 1;
+                    const max = s.max_instructors ?? null;
+                    const confirmed = s.confirmed_count ?? 0;
+                    needed += Math.max(0, min - confirmed);
+                    if (max == null) {
+                      anyUnlimited = true;
                     } else {
-                      statusColor = 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700';
+                      extra += Math.max(0, max - Math.max(confirmed, min));
                     }
+                  }
+
+                  type TileStatus = 'need' | 'available' | 'filled' | 'none';
+                  const tileStatus: TileStatus =
+                    totalShifts === 0
+                      ? 'none'
+                      : needed > 0
+                        ? 'need'
+                        : extra > 0 || anyUnlimited
+                          ? 'available'
+                          : 'filled';
+
+                  // Color coding by tier: red=below min, amber=room
+                  // above min, green=filled. Mirrors the label so the
+                  // tile communicates urgency at a glance even without
+                  // reading the text.
+                  let statusColor = '';
+                  if (tileStatus === 'need') {
+                    statusColor = 'bg-red-100 dark:bg-red-900/30 border-red-300 dark:border-red-700';
+                  } else if (tileStatus === 'available') {
+                    statusColor = 'bg-amber-100 dark:bg-amber-900/30 border-amber-300 dark:border-amber-700';
+                  } else if (tileStatus === 'filled') {
+                    statusColor = 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700';
                   }
 
                   const isToday = dateStr === todayStr;
@@ -894,19 +925,33 @@ function ShiftsPageContent() {
 
                       {totalShifts > 0 && (
                         <div className="mt-1 text-center">
+                          {/* Primary label tier — communicates urgency
+                              by which side of the min/max boundary
+                              we're on. Need = below min (red),
+                              available = above min but room to grow
+                              (amber), filled = at max (green). */}
                           <span className={`text-[10px] leading-none font-medium ${
                             isSelected
                               ? 'text-white/90'
-                              : openShifts > 0
+                              : tileStatus === 'need'
                                 ? 'text-red-600 dark:text-red-400'
-                                : 'text-green-600 dark:text-green-400'
+                                : tileStatus === 'available'
+                                  ? 'text-amber-700 dark:text-amber-400'
+                                  : 'text-green-600 dark:text-green-400'
                           }`}>
-                            {openShifts > 0 ? `${openShifts} open` : 'filled'}
+                            {tileStatus === 'need'
+                              ? `Need ${needed}`
+                              : tileStatus === 'available'
+                                ? `${anyUnlimited ? '∞' : extra} available`
+                                : 'Filled'}
                           </span>
+                          {/* Secondary line: total shifts on this day.
+                              Was "filled/total" — kept as a context
+                              count, just clearer about what it is. */}
                           <span className={`block text-[9px] leading-none mt-0.5 ${
                             isSelected ? 'text-white/70' : 'text-gray-400 dark:text-gray-500'
                           }`}>
-                            {filledShifts}/{totalShifts}
+                            {totalShifts} shift{totalShifts === 1 ? '' : 's'}
                           </span>
                         </div>
                       )}
