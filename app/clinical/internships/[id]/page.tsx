@@ -88,6 +88,8 @@ interface Internship {
   snhd_field_docs_submitted_at: string | null;
   snhd_course_completion_submitted_at: string | null;
   cleared_for_nremt: boolean;
+  nremt_passed: boolean;
+  nremt_passed_date: string | null;
   nremt_clearance_date: string | null;
   ryan_notified: boolean;
   ryan_notified_date: string | null;
@@ -203,7 +205,7 @@ const DATE_FIELDS = [
   'phase_2_start_date', 'phase_2_end_date', 'phase_2_eval_scheduled',
   'closeout_meeting_date', 'internship_completion_date', 'snhd_submitted_date',
   'snhd_field_docs_submitted_at', 'snhd_course_completion_submitted_at',
-  'nremt_clearance_date', 'ryan_notified_date', 'written_exam_date',
+  'nremt_clearance_date', 'nremt_passed_date', 'ryan_notified_date', 'written_exam_date',
   'psychomotor_exam_date', 'course_completion_date',
   'phase_1_meeting_scheduled', 'phase_2_meeting_scheduled', 'final_exam_scheduled',
   'pre_internship_meeting_scheduled',
@@ -258,6 +260,10 @@ const CLOSEOUT_ITEMS: ChecklistItem[] = [
   { key: 'snhd_course_completion_submitted_at', label: 'SNHD Course Completion Record Submitted', dateKey: 'snhd_course_completion_submitted_at', required: true },
   { key: 'cleared_for_nremt', label: 'NREMT Clearance', dateKey: 'nremt_clearance_date', required: true },
   { key: 'closeout_completed', label: 'Closeout Meeting Completed', dateKey: 'closeout_meeting_date', required: true },
+  // Final milestone — student passed NREMT and we have the cert.
+  // Distinct from cleared_for_nremt (eligible to test). Required so
+  // it counts toward the closeout progress %.
+  { key: 'nremt_passed', label: 'NREMT Passed & Certificate Received', dateKey: 'nremt_passed_date', required: true },
 ];
 
 // Known agency clinical representatives
@@ -498,6 +504,8 @@ export default function InternshipDetailPage() {
           snhd_course_completion_submitted_at: i.snhd_course_completion_submitted_at || '',
           cleared_for_nremt: i.cleared_for_nremt || false,
           nremt_clearance_date: i.nremt_clearance_date || '',
+          nremt_passed: i.nremt_passed || false,
+          nremt_passed_date: i.nremt_passed_date || '',
           ryan_notified: i.ryan_notified || false,
           ryan_notified_date: i.ryan_notified_date || '',
           // Exam fields
@@ -2417,6 +2425,36 @@ export default function InternshipDetailPage() {
                   }}
                   canEdit={canEdit}
                   buttonLabel="Complete"
+                />
+
+                {/* Step 5: NREMT Passed & Certificate Received — final
+                    milestone. Distinct from cleared_for_nremt (step 3,
+                    which means we approved them to test); this means
+                    they passed and we have the cert on file. Simple
+                    boolean + auto-stamped date per the spec — no
+                    scheduling, no result detail. */}
+                <CloseoutStep
+                  step={5}
+                  label="NREMT Passed & Certificate Received"
+                  description="Student passed NREMT and certificate is on file"
+                  dateKey="nremt_passed_date"
+                  dateValue={formData.nremt_passed_date}
+                  isComplete={formData.nremt_passed}
+                  onMarkComplete={() => {
+                    const today = new Date().toISOString().split('T')[0];
+                    handleInputChange('nremt_passed', true);
+                    handleInputChange('nremt_passed_date', today);
+                  }}
+                  onDateChange={(date) => {
+                    handleInputChange('nremt_passed_date', date);
+                    if (date) handleInputChange('nremt_passed', true);
+                  }}
+                  onClear={() => {
+                    handleInputChange('nremt_passed', false);
+                    handleInputChange('nremt_passed_date', '');
+                  }}
+                  canEdit={canEdit}
+                  buttonLabel="Mark Passed"
                 />
               </div>
             </div>

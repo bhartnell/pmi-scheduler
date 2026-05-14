@@ -68,6 +68,11 @@ interface Internship {
   preceptor_id: string | null;
   agency_id: string | null;
   agency_name: string | null;
+  // Final-step flag: student passed NREMT and we have the cert.
+  // Shown as a single ✅ in the cohort tracker so the coordinator
+  // can see at a glance who's fully done.
+  nremt_passed: boolean | null;
+  nremt_passed_date: string | null;
   students: {
     id: string;
     first_name: string;
@@ -627,6 +632,15 @@ export default function PmInternshipCohortHub() {
                     <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase hidden md:table-cell">
                       Next step
                     </th>
+                    {/* NREMT-passed indicator. Stays a single emoji
+                        column — no count, no date — per the spec's
+                        "simple records confirmation" requirement. */}
+                    <th
+                      className="px-3 py-2 text-center font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase hidden sm:table-cell"
+                      title="Student passed NREMT and certificate is on file"
+                    >
+                      NREMT
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
@@ -688,6 +702,20 @@ export default function PmInternshipCohortHub() {
                         </td>
                         <td className="px-3 py-2 hidden md:table-cell">
                           <NextStepCell step={nextStep} />
+                        </td>
+                        <td
+                          className="px-3 py-2 text-center hidden sm:table-cell"
+                          title={
+                            i.nremt_passed
+                              ? `Passed NREMT${i.nremt_passed_date ? ` on ${i.nremt_passed_date}` : ''}`
+                              : 'Not yet passed / certificate not on file'
+                          }
+                        >
+                          {i.nremt_passed ? (
+                            <span className="text-emerald-600 dark:text-emerald-400 text-base leading-none" aria-label="NREMT passed">✅</span>
+                          ) : (
+                            <span className="text-gray-300 dark:text-gray-600" aria-label="NREMT not passed">—</span>
+                          )}
                         </td>
                       </tr>
                     );

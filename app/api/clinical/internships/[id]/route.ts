@@ -185,6 +185,8 @@ export async function PUT(
     if (body.immunizations_verified !== undefined) updateData.immunizations_verified = body.immunizations_verified;
     if (body.cpr_card_verified !== undefined) updateData.cpr_card_verified = body.cpr_card_verified;
     if (body.cleared_for_nremt !== undefined) updateData.cleared_for_nremt = body.cleared_for_nremt;
+    if (body.nremt_passed !== undefined) updateData.nremt_passed = body.nremt_passed;
+    if (body.nremt_passed_date !== undefined) updateData.nremt_passed_date = body.nremt_passed_date || null;
     if (body.ryan_notified !== undefined) updateData.ryan_notified = body.ryan_notified;
     if (body.ryan_notified_date !== undefined) updateData.ryan_notified_date = body.ryan_notified_date || null;
 
