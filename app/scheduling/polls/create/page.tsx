@@ -41,8 +41,18 @@ export default function CreatePoll() {
 
     const result = await response.json();
 
+    if (result.success && result.poll?.id) {
+      // Land on the new poll's detail page — that's where the
+      // shareable link lives, which is what the creator needs next.
+      // Previously this dumped the user back on the home dashboard.
+      router.push(`/poll/${result.poll.id}`);
+      return; // keep the spinner up through the redirect
+    }
     if (result.success) {
-      router.push('/');
+      // Defensive fallback: poll created but no id came back —
+      // send to the poll list rather than home.
+      router.push('/scheduling/polls');
+      return;
     }
 
     setCreating(false);

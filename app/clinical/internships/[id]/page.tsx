@@ -2516,47 +2516,70 @@ export default function InternshipDetailPage() {
               </div>
 
               <div className="p-4 space-y-4">
-                <MeetingRow
-                  label="Pre-Internship Agency Meeting"
-                  subLabel="Student + PMI + Agency introduction"
-                  dateField="pre_internship_meeting_scheduled"
-                  linkField="pre_internship_meeting_link"
-                  pollIdField={null}
-                  formData={formData}
-                  canEdit={canEdit}
-                  onChange={handleInputChange}
-                  formatDate={formatDate}
-                />
-                <MeetingRow
-                  label="Phase 1 Evaluation"
-                  dateField="phase_1_meeting_scheduled"
-                  linkField="phase_1_meeting_link"
-                  pollIdField="phase_1_meeting_poll_id"
-                  formData={formData}
-                  canEdit={canEdit}
-                  onChange={handleInputChange}
-                  formatDate={formatDate}
-                />
-                <MeetingRow
-                  label="Phase 2 Evaluation"
-                  dateField="phase_2_meeting_scheduled"
-                  linkField="phase_2_meeting_link"
-                  pollIdField="phase_2_meeting_poll_id"
-                  formData={formData}
-                  canEdit={canEdit}
-                  onChange={handleInputChange}
-                  formatDate={formatDate}
-                />
-                <MeetingRow
-                  label="Final Exam"
-                  dateField="final_exam_scheduled"
-                  linkField="final_exam_meeting_link"
-                  pollIdField="final_exam_poll_id"
-                  formData={formData}
-                  canEdit={canEdit}
-                  onChange={handleInputChange}
-                  formatDate={formatDate}
-                />
+                {(() => {
+                  // Student name for poll-title pre-fill, resolved
+                  // once for all four rows.
+                  const meetingStudentName = student
+                    ? `${student.first_name} ${student.last_name}`.trim()
+                    : 'Student';
+                  return (
+                    <>
+                      <MeetingRow
+                        label="Pre-Internship Agency Meeting"
+                        subLabel="Student + PMI + Agency introduction"
+                        dateField="pre_internship_meeting_scheduled"
+                        linkField="pre_internship_meeting_link"
+                        pollIdField={null}
+                        formData={formData}
+                        canEdit={canEdit}
+                        onChange={handleInputChange}
+                        formatDate={formatDate}
+                        internshipId={internshipId}
+                        studentName={meetingStudentName}
+                        pollPurpose="pre_internship_meeting"
+                      />
+                      <MeetingRow
+                        label="Phase 1 Evaluation"
+                        dateField="phase_1_meeting_scheduled"
+                        linkField="phase_1_meeting_link"
+                        pollIdField="phase_1_meeting_poll_id"
+                        formData={formData}
+                        canEdit={canEdit}
+                        onChange={handleInputChange}
+                        formatDate={formatDate}
+                        internshipId={internshipId}
+                        studentName={meetingStudentName}
+                        pollPurpose="phase1_eval"
+                      />
+                      <MeetingRow
+                        label="Phase 2 Evaluation"
+                        dateField="phase_2_meeting_scheduled"
+                        linkField="phase_2_meeting_link"
+                        pollIdField="phase_2_meeting_poll_id"
+                        formData={formData}
+                        canEdit={canEdit}
+                        onChange={handleInputChange}
+                        formatDate={formatDate}
+                        internshipId={internshipId}
+                        studentName={meetingStudentName}
+                        pollPurpose="phase2_eval"
+                      />
+                      <MeetingRow
+                        label="Final Exam"
+                        dateField="final_exam_scheduled"
+                        linkField="final_exam_meeting_link"
+                        pollIdField="final_exam_poll_id"
+                        formData={formData}
+                        canEdit={canEdit}
+                        onChange={handleInputChange}
+                        formatDate={formatDate}
+                        internshipId={internshipId}
+                        studentName={meetingStudentName}
+                        pollPurpose="final_exam"
+                      />
+                    </>
+                  );
+                })()}
               </div>
             </div>
         </div>
@@ -2885,6 +2908,11 @@ interface MeetingRowProps {
   canEdit: boolean;
   onChange: (field: string, value: any) => void;
   formatDate: (d: string | null) => string;
+  // Internship context threaded into the poll builder so the poll
+  // title pre-fills with the student + this meeting's purpose.
+  internshipId: string;
+  studentName: string;
+  pollPurpose: string;
 }
 
 function MeetingRow({
@@ -2897,11 +2925,25 @@ function MeetingRow({
   canEdit,
   onChange,
   formatDate,
+  internshipId,
+  studentName,
+  pollPurpose,
 }: MeetingRowProps) {
   const scheduled = formData[dateField] || '';
   const link = formData[linkField] || '';
   const legacyPollId = pollIdField ? formData[pollIdField] || '' : '';
   const resolvedLink = link || (legacyPollId ? `https://rallly.co/p/${legacyPollId}` : '');
+
+  // Full poll builder (/poll/create) — handles real time-slot
+  // selection, unlike the simplified date-range form at
+  // /scheduling/polls/create. Context params pre-fill the title and
+  // give /poll/create a "Back to Internship" target. Same-tab nav so
+  // the post-create redirect lands the coordinator on the new poll's
+  // detail page (where the shareable link is).
+  const createPollHref =
+    `/poll/create?internship_id=${encodeURIComponent(internshipId)}` +
+    `&student_name=${encodeURIComponent(studentName)}` +
+    `&purpose=${encodeURIComponent(pollPurpose)}`;
 
   return (
     <div className="py-3 px-3 rounded-lg bg-gray-50 dark:bg-gray-700/30">
@@ -2919,13 +2961,11 @@ function MeetingRow({
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:flex-shrink-0">
           <Link
-            href="/scheduling/polls/create"
-            target="_blank"
-            rel="noopener noreferrer"
+            href={createPollHref}
             className="flex items-center gap-1 px-3 py-1.5 text-sm bg-cyan-600 hover:bg-cyan-700 text-white rounded"
           >
             <CalendarDays className="w-3.5 h-3.5" />
-            Create Meeting
+            Create Scheduling Poll
           </Link>
           {resolvedLink && (
             <a
