@@ -119,7 +119,8 @@ export async function POST(
           ? new Date(labDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
           : new Date(evaluation.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-        // Send email
+        // Send email. Scope NREMT guard to this lab day specifically
+        // — see /api/skill-sheets/evaluations/send-email for context.
         const emailResult = await sendSkillEvaluationEmail(student.email, {
           evaluationId: evaluation.id,
           studentFirstName: student.first_name,
@@ -133,6 +134,7 @@ export async function POST(
           notes: evaluation.notes || undefined,
           evaluatorName: evaluator?.name ? formatInstructorName(evaluator.name) : 'Instructor',
           date: evalDate,
+          labDayId,
         });
 
         if (emailResult.success) {

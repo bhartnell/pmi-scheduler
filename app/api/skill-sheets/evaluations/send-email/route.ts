@@ -127,7 +127,10 @@ export async function POST(request: NextRequest) {
       ? new Date(labDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
       : new Date(evaluation.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-    // Send email
+    // Send email. labDayId scopes the NREMT kill-switch to this
+    // specific lab day rather than "any NREMT lab today" — the
+    // earlier broad-date guard was suppressing result emails for
+    // non-NREMT labs that shared a calendar date with NREMT testing.
     const emailResult = await sendSkillEvaluationEmail(student.email, {
       evaluationId: evaluation.id,
       studentFirstName: student.first_name,
@@ -141,6 +144,7 @@ export async function POST(request: NextRequest) {
       notes: evaluation.notes || undefined,
       evaluatorName: evaluator?.name ? formatInstructorName(evaluator.name) : 'Instructor',
       date: evalDate,
+      labDayId: labDay?.id,
     });
 
     if (!emailResult.success) {

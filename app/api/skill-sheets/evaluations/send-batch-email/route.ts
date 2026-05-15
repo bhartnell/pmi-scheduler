@@ -151,6 +151,9 @@ export async function POST(request: NextRequest) {
             notes: evaluation.notes || undefined,
             evaluatorName: evaluator?.name ? formatInstructorName(evaluator.name) : 'Instructor',
             date: evalDate,
+            // Per-eval NREMT scoping — see /api/skill-sheets/
+            // evaluations/send-email for the rationale.
+            labDayId: labDay?.id,
           });
 
           if (emailResult.success) {

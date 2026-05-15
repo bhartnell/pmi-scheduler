@@ -135,7 +135,10 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Send to each recipient
+      // Send to each recipient. labDayId scopes the NREMT kill-switch
+      // to this specific lab day — non-NREMT labs sharing a calendar
+      // date with NREMT testing still send normally. See
+      // /api/skill-sheets/evaluations/send-email for the rationale.
       for (const recipient of recipients) {
         try {
           const result = await sendScenarioFeedbackEmail(recipient.email, {
@@ -152,6 +155,7 @@ export async function POST(request: NextRequest) {
             comments: assessment.overall_comments || undefined,
             evaluatorName: evaluator?.name ? formatInstructorName(evaluator.name) : 'Instructor',
             date: evalDate,
+            labDayId: labDay?.id,
           });
           if (result.success) sent++;
           else errors++;

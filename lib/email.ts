@@ -43,6 +43,16 @@ interface EmailData {
   subject: string;
   template: EmailTemplate;
   data: Record<string, string | number | boolean | undefined>;
+  /**
+   * Optional context: the lab_day this email pertains to. When set,
+   * the NREMT kill-switch checks ONLY that lab day rather than the
+   * "any NREMT lab today" fallback. This lets us keep blocking
+   * result emails for NREMT lab days while continuing to deliver
+   * result emails for non-NREMT labs that happen to share the
+   * calendar date. Optional so older callers keep their existing
+   * (broader, fail-safe) behavior.
+   */
+  labDayId?: string;
 }
 
 /**
@@ -374,6 +384,35 @@ export async function isNremtTestingActiveToday(): Promise<boolean> {
   return _isNremtTestingActiveToday();
 }
 
+/**
+ * Precise check: is the SPECIFIC lab_day flagged is_nremt_testing?
+ * Used when the caller knows which lab the email pertains to —
+ * preferred over the date-based fallback because it doesn't kill
+ * result emails for other (non-NREMT) labs running the same day.
+ *
+ * Fails closed on lookup error so a transient DB problem doesn't
+ * leak NREMT-day results.
+ */
+export async function isNremtLabDay(labDayId: string): Promise<boolean> {
+  if (!labDayId) return false;
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from('lab_days')
+      .select('is_nremt_testing')
+      .eq('id', labDayId)
+      .maybeSingle();
+    if (error) {
+      console.error('[email guard] failed to check lab_day NREMT flag; failing CLOSED:', error);
+      return true;
+    }
+    return !!data?.is_nremt_testing;
+  } catch (err) {
+    console.error('[email guard] exception checking lab_day NREMT flag; failing CLOSED:', err);
+    return true;
+  }
+}
+
 async function _isNremtTestingActiveToday(): Promise<boolean> {
   const now = Date.now();
   if (nremtLockCache && now - nremtLockCache.fetchedAt < NREMT_LOCK_TTL_MS) {
@@ -425,12 +464,27 @@ async function _isNremtTestingActiveToday(): Promise<boolean> {
  */
 export async function sendEmail(emailData: EmailData): Promise<{ success: boolean; error?: string; id?: string }> {
   // NREMT-day kill switch — runs BEFORE any Resend call, before client init.
-  // Blocks student-facing evaluation emails whenever NREMT testing is active.
+  // Two precision tiers:
+  //   1. If the caller passed labDayId, check ONLY that lab day's
+  //      is_nremt_testing flag. Lab days flagged for NREMT testing
+  //      still block their own result emails (per spec); other labs
+  //      running the same calendar date send normally.
+  //   2. If no labDayId, fall back to the broader "any NREMT lab
+  //      today" guard — safe default for callers that don't know
+  //      their lab context.
+  // Previous behavior was tier 2 only, which silently killed result
+  // emails for non-NREMT labs on any day with concurrent NREMT
+  // testing — the reported bug. The cohort schedule has overlapping
+  // labs often enough that this was the dominant case.
   if (STUDENT_EVAL_TEMPLATES.has(emailData.template)) {
-    const blocked = await isNremtTestingActiveToday();
+    const blocked = emailData.labDayId
+      ? await isNremtLabDay(emailData.labDayId)
+      : await isNremtTestingActiveToday();
     if (blocked) {
-      const msg = 'Blocked: NREMT testing is active today. Student result emails are disabled.';
-      console.warn(`[email guard] ${msg} template=${emailData.template} to=${emailData.to}`);
+      const msg = emailData.labDayId
+        ? 'Blocked: this lab day is flagged for NREMT testing. Student result emails are disabled.'
+        : 'Blocked: NREMT testing is active today. Student result emails are disabled.';
+      console.warn(`[email guard] ${msg} template=${emailData.template} to=${emailData.to} labDayId=${emailData.labDayId ?? '(none)'}`);
       await logEmailSend({
         to: emailData.to,
         subject: `[BLOCKED] ${emailData.template}`,
@@ -618,13 +672,21 @@ export async function sendSkillEvaluationEmail(
     evaluatorName: string;
     date?: string;
     scoreSheetHtml?: string;
+    // Optional lab_day context — when present, the NREMT kill-switch
+    // checks only this lab day instead of "any NREMT lab today."
+    // Callers that have it should pass it; callers without lab day
+    // context (e.g. the queued-email retry) can omit and get the
+    // safer broader check.
+    labDayId?: string;
   }
 ) {
+  const { labDayId, ...templateData } = data;
   return sendEmail({
     to: toEmail,
     subject: `[PMI] Skill Evaluation — ${data.skillName}${data.date ? ` (${data.date})` : ''}`,
     template: 'skill_evaluation',
-    data
+    data: templateData,
+    labDayId,
   });
 }
 
@@ -647,12 +709,16 @@ export async function sendScenarioFeedbackEmail(
     comments?: string;
     evaluatorName: string;
     date?: string;
+    // Optional lab_day context for the precise NREMT guard.
+    labDayId?: string;
   }
 ) {
+  const { labDayId, ...templateData } = data;
   return sendEmail({
     to: toEmail,
     subject: `[PMI] Scenario Feedback — ${data.scenarioTitle}${data.date ? ` (${data.date})` : ''}`,
     template: 'scenario_feedback',
-    data
+    data: templateData,
+    labDayId,
   });
 }

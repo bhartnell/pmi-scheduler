@@ -154,7 +154,10 @@ export async function POST(request: NextRequest) {
           ? new Date(labDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
           : new Date(evaluation.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-        // Send email with rate limiting
+        // Send email with rate limiting. labDayId scopes the NREMT
+        // kill-switch to this evaluation's lab day rather than the
+        // broader "any NREMT lab today" check that was silently
+        // blocking non-NREMT result emails on overlapping dates.
         const emailResult = await sendSkillEvaluationEmail(studentEmail, {
           evaluationId: evaluation.id,
           studentFirstName: student.first_name,
@@ -168,6 +171,7 @@ export async function POST(request: NextRequest) {
           notes: evaluation.notes || undefined,
           evaluatorName: evaluator?.name ? formatInstructorName(evaluator.name) : 'Instructor',
           date: evalDate,
+          labDayId: labDay?.id,
         });
 
         if (emailResult.success) {
