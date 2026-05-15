@@ -51,24 +51,24 @@ export default function SchedulerCalendar({
       {isMobile ? (
         <div>
           {/* Day navigation */}
-          <div className="flex items-center justify-between mb-4 bg-gray-50 rounded-lg p-2">
+          <div className="flex items-center justify-between mb-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg p-2">
             <button
               onClick={goToPreviousDay}
               disabled={currentDayIndex === 0}
-              className="p-2 rounded-lg bg-white shadow disabled:opacity-50 disabled:shadow-none"
+              className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow disabled:opacity-50 disabled:shadow-none"
             >
-              <ChevronLeft className="w-5 h-5 text-gray-700" />
+              <ChevronLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </button>
             <div className="text-center">
-              <div className="font-semibold text-gray-900">{dates[currentDayIndex]?.dayName}</div>
-              <div className="text-sm text-gray-600">{dates[currentDayIndex]?.fullDate}</div>
+              <div className="font-semibold text-gray-900 dark:text-white">{dates[currentDayIndex]?.dayName}</div>
+              <div className="text-sm text-gray-600 dark:text-gray-400">{dates[currentDayIndex]?.fullDate}</div>
             </div>
             <button
               onClick={goToNextDay}
               disabled={currentDayIndex === dates.length - 1}
-              className="p-2 rounded-lg bg-white shadow disabled:opacity-50 disabled:shadow-none"
+              className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow disabled:opacity-50 disabled:shadow-none"
             >
-              <ChevronRight className="w-5 h-5 text-gray-700" />
+              <ChevronRight className="w-5 h-5 text-gray-700 dark:text-gray-300" />
             </button>
           </div>
 
@@ -80,7 +80,7 @@ export default function SchedulerCalendar({
                   <button
                     onClick={() => onDayChange(i)}
                     className={`w-2.5 h-2.5 rounded-full transition-all ${
-                      i === currentDayIndex ? 'bg-blue-600 scale-125' : 'bg-gray-300'
+                      i === currentDayIndex ? 'bg-blue-600 scale-125' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   />
                 )}
@@ -114,18 +114,18 @@ export default function SchedulerCalendar({
                 gridTemplateColumns: `${effectiveLabelWidth} repeat(${dates.length}, ${effectiveColumnWidth})`,
               }}
             >
-              <div className="p-2 bg-gray-50 border-b-2"></div>
+              <div className="p-2 bg-gray-50 dark:bg-gray-700/50 border-b-2 border-gray-200 dark:border-gray-700"></div>
               {dates.map((d, i) => (
                 <div
                   key={i}
-                  className="p-2 text-center text-xs md:text-sm bg-gray-50 border-b-2 font-medium text-gray-900"
+                  className="p-2 text-center text-xs md:text-sm bg-gray-50 dark:bg-gray-700/50 border-b-2 border-gray-200 dark:border-gray-700 font-medium text-gray-900 dark:text-white"
                 >
                   {isMobile ? d.shortDisplay : d.display}
                 </div>
               ))}
               {timeSlots.map((t, ti) => (
                 <React.Fragment key={ti}>
-                  <div className="p-2 text-xs md:text-sm font-medium bg-gray-50 border-r border-b text-gray-900">
+                  <div className="p-2 text-xs md:text-sm font-medium bg-gray-50 dark:bg-gray-700/50 border-r border-b border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
                     {t}
                   </div>
                   {dates.map((_, di) => {

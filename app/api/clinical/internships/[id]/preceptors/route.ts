@@ -18,6 +18,17 @@ export async function GET(
 
     const { id: internshipId } = await params;
 
+    // Reject non-UUID ids before they reach the query (see the
+    // matching guard in ../route.ts). A literal like "cohort" would
+    // otherwise blow up the uuid filter with a 500.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!internshipId || !UUID_RE.test(internshipId)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid internship id: "${internshipId}"` },
+        { status: 400 },
+      );
+    }
+
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('student_preceptor_assignments')

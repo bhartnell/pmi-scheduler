@@ -15,13 +15,30 @@ export default function PollPage() {
   useEffect(() => {
     const fetchPoll = async () => {
       const pollId = params.id as string;
+      if (!pollId) {
+        setLoading(false);
+        return;
+      }
 
-      // Try to find poll by the ID in the URL
-      const { data, error } = await supabase
-        .from('polls')
-        .select('*')
-        .like('participant_link', `%${pollId}%`)
-        .single();
+      // The URL segment can be one of two things:
+      //   1. The nanoid embedded in participant_link
+      //      ("…/poll/AbC123XyZ0") — the normal share-link case.
+      //   2. The poll row's uuid primary key — e.g. a redirect
+      //      straight after creation that used poll.id.
+      // Resolve both. A uuid has the canonical 8-4-4-4-12 hex shape;
+      // anything else is treated as a participant-link token.
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(pollId);
+
+      // maybeSingle() instead of single() — single() raises a 406
+      // (PGRST116) whenever the row count isn't exactly 1, which
+      // turned a simple "not found" into a console error. maybeSingle
+      // returns null cleanly.
+      let query = supabase.from('polls').select('*');
+      query = isUuid
+        ? query.eq('id', pollId)
+        : query.like('participant_link', `%${pollId}%`);
+
+      const { data } = await query.maybeSingle();
 
       if (data) {
         setPoll(data);

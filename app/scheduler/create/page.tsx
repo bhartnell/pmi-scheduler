@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { pollLinkPath } from '@/lib/poll-link';
 
 export default function CreatePoll() {
   const { data: session } = useSession();
@@ -41,14 +42,10 @@ export default function CreatePoll() {
 
     const result = await response.json();
 
-    if (result.success && result.poll?.id) {
-      // Redirect to the new poll's detail page (shareable link)
-      // rather than the home dashboard.
-      router.push(`/poll/${result.poll.id}`);
-      return;
-    }
-    if (result.success) {
-      router.push('/scheduling/polls');
+    if (result.success && result.poll) {
+      // Redirect to the new poll's participant-link page (the
+      // shareable URL) rather than the home dashboard.
+      router.push(pollLinkPath(result.poll));
       return;
     }
 

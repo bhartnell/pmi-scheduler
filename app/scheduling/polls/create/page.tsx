@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
+import { pollLinkPath } from '@/lib/poll-link';
 
 export default function CreatePoll() {
   const { data: session } = useSession();
@@ -41,18 +42,14 @@ export default function CreatePoll() {
 
     const result = await response.json();
 
-    if (result.success && result.poll?.id) {
-      // Land on the new poll's detail page — that's where the
-      // shareable link lives, which is what the creator needs next.
+    if (result.success && result.poll) {
+      // Land on the new poll's participant-link page — that's the
+      // shareable URL, which is what the creator needs next.
+      // pollLinkPath resolves the nanoid path from participant_link
+      // (the /poll/[id] page is keyed on the nanoid, not the uuid).
       // Previously this dumped the user back on the home dashboard.
-      router.push(`/poll/${result.poll.id}`);
+      router.push(pollLinkPath(result.poll));
       return; // keep the spinner up through the redirect
-    }
-    if (result.success) {
-      // Defensive fallback: poll created but no id came back —
-      // send to the poll list rather than home.
-      router.push('/scheduling/polls');
-      return;
     }
 
     setCreating(false);

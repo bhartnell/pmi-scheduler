@@ -31,6 +31,21 @@ export async function GET(
 
     const { id } = await params;
 
+    // Guard against non-UUID ids reaching the query. The dynamic
+    // [id] segment will match literals like "cohort" or "undefined"
+    // when a client builds a bad URL (e.g. /api/clinical/internships/
+    // cohort from a fetch with an undefined variable). Postgres then
+    // throws "invalid input syntax for type uuid" → an opaque 500.
+    // A 400 with a clear message is the honest response and keeps
+    // the error log clean.
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!id || !UUID_RE.test(id)) {
+      return NextResponse.json(
+        { success: false, error: `Invalid internship id: "${id}"` },
+        { status: 400 },
+      );
+    }
+
     const { data, error } = await supabase
       .from('student_internships')
       .select(`

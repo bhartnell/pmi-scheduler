@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState, Suspense } from 'react';
 import Link from 'next/link';
 import Scheduler from '@/components/scheduler';
+import { pollLinkPath } from '@/lib/poll-link';
 import { Home, ChevronRight, ArrowLeft, Calendar } from 'lucide-react';
 
 // Human-readable label per internship meeting purpose. The internship
@@ -77,13 +78,14 @@ function CreatePollInner() {
       const result = await response.json();
 
       if (result.success && result.poll) {
-        // Redirect straight to the new poll's detail page. That's
-        // where the shareable link lives — exactly what the
-        // coordinator needs next (send to student / preceptor /
-        // agency rep). Previously this dumped the user on
-        // /scheduling/polls, where they'd have to hunt for the poll
-        // they just made.
-        router.push(`/poll/${result.poll.id}`);
+        // Redirect to the new poll's PARTICIPANT link path — that's
+        // the shareable URL the coordinator sends out, and it's what
+        // the /poll/[id] page is keyed on (participant_link contains
+        // a nanoid, NOT the row's uuid). Redirecting with poll.id
+        // produced a /poll/<uuid> URL the detail page couldn't
+        // resolve → "Poll not found". pollLinkPath() extracts just
+        // the path so router.push stays internal.
+        router.push(pollLinkPath(result.poll));
       } else {
         alert('Failed to create poll: ' + (result.error || 'Unknown error'));
         setCreating(false);
