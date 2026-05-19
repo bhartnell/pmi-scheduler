@@ -225,7 +225,39 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 24 * 60 * 60, // 24 hours (default for all roles; agency 4hr timeout is client-side)
+    // 30 days. Was 24h, which forced a Google re-login for anyone
+    // away longer than a day. The agency 4h inactivity timeout is
+    // still enforced client-side (SessionTimeoutWatcher) and is
+    // unaffected by this — it's an inactivity cap, not a session
+    // lifetime.
+    maxAge: 30 * 24 * 60 * 60, // 30 days = 2592000s
+  },
+  jwt: {
+    // Keep the JWT lifetime in lockstep with the session. When this
+    // is unset NextAuth defaults it to session.maxAge anyway, but
+    // setting it explicitly prevents the two drifting apart if
+    // someone edits one and forgets the other.
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+  },
+  cookies: {
+    // Pin the session-token cookie to a 30-day maxAge so browsers
+    // persist it across restarts rather than treating it as a
+    // session-only cookie. name + secure are environment-aware:
+    // production uses the __Secure- prefix over HTTPS, local dev
+    // drops it (the prefix + secure flag would block the cookie
+    // over http://localhost).
+    sessionToken: {
+      name: process.env.NODE_ENV === 'production'
+        ? '__Secure-next-auth.session-token'
+        : 'next-auth.session-token',
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+      },
+    },
   },
   pages: {
     signIn: '/auth/signin',
