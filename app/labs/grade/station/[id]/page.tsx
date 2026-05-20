@@ -18,6 +18,7 @@ import NremtTimer, { isDualStation } from '@/components/NremtTimer';
 import type { NremtTimerHandle } from '@/components/NremtTimer';
 import NremtStickyNotesPanel from '@/components/NremtStickyNotesPanel';
 import LabDayChat from '@/components/lab-day/LabDayChat';
+import { useToast } from '@/components/Toast';
 
 // Sub-components
 import GradingHeader from '@/components/grading/GradingHeader';
@@ -58,6 +59,7 @@ export default function GradeStationPage() {
   const retakeSkillSheetId = searchParams?.get('skill_sheet_id') || null;
   const retakeOriginalEvalId = searchParams?.get('original_evaluation_id') || null;
 
+  const toast = useToast();
   const [station, setStation] = useState<Station | null>(null);
   const [labGroups, setLabGroups] = useState<LabGroup[]>([]);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
@@ -770,21 +772,73 @@ export default function GradeStationPage() {
         setHasUnsavedChanges(false);
 
         // If Send Now, fire scenario email immediately
+        let emailSent = false;
         if (!isInProgress && emailPref === 'sent' && data.assessment?.id) {
           try {
-            await fetch('/api/lab-management/assessments/scenario/send-email', {
+            const emailRes = await fetch('/api/lab-management/assessments/scenario/send-email', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ assessment_id: data.assessment.id }),
             });
+            // Best-effort flag for the toast — the email path is
+            // non-critical so a failure here doesn't block the save
+            // confirmation; the user still sees a grade-submitted
+            // toast even if Resend hiccupped.
+            emailSent = emailRes.ok;
           } catch { /* non-critical */ }
         }
 
         if (isInProgress) {
-          alert('Progress saved — you can continue later');
+          toast.info('Progress saved — you can continue later');
         } else {
-          alert('Assessment saved successfully!');
-          router.push(`/labs/schedule/${station?.lab_day?.id}`);
+          // Stay on the grading page and ready up for the next
+          // student. Previously this alerted + router.pushed back
+          // to the lab day, forcing the coordinator to re-enter the
+          // grading page once per student — that adds ~6 clicks
+          // per grade across a typical NREMT day. The toast carries
+          // the recipient name so the action is still traceable.
+          // Group members carry a nested `student` payload; skills
+          // stations grade an individual from allStudents directly.
+          // Resolve the recipient name across both shapes so the
+          // toast names whoever just got the grade.
+          const tlMember = labGroups
+            .find(g => g.id === selectedGroupId)?.members
+            .find(m => m.id === teamLeaderId);
+          const skillStudent = allStudents.find(s => s.id === selectedStudentId);
+          const recipient = tlMember?.student ?? skillStudent;
+          const recipientName = recipient
+            ? `${recipient.first_name} ${recipient.last_name}`
+            : 'student';
+          toast.success(
+            emailSent
+              ? `Grade submitted and email sent to ${recipientName}`
+              : emailPref === 'sent'
+                ? `Grade submitted; email queued for ${recipientName}`
+                : `Grade saved for ${recipientName}`,
+          );
+
+          // Reset form for the next student. Keep selectedGroupId
+          // (same group typically rotates team leaders) and
+          // rotationNumber (still in the same rotation slot).
+          setTeamLeaderId('');
+          setSelectedStudentId('');
+          setCriticalActions({});
+          setCriteriaRatings([]);
+          setOverallComments('');
+          setScenarioNotes('');
+          setExaminerNotes('');
+          setIssueLevel('none');
+          setFlagCategories([]);
+          setSaveStatus('idle');
+          setHasUnsavedChanges(false);
+
+          // Scroll back to the top so the next student selection is
+          // the first thing the coordinator sees — without this the
+          // page stays at the bottom of the grade form, which feels
+          // like nothing happened.
+          if (typeof window !== 'undefined') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
         }
       } else {
         alert('Failed to save: ' + (data.error || 'Unknown error'));

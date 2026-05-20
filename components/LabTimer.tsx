@@ -432,15 +432,18 @@ export default function LabTimer({
   // Poll for updates with visibility awareness - ready statuses
   useVisibilityPolling(fetchReadyStatuses, getReadyPollInterval(), { immediate: false });
 
-  // Sync timer duration when lab day settings change
-  useEffect(() => {
-    if (!timerState || !isController) return;
-
-    // Only sync if the duration has changed and timer is stopped
-    if (timerState.duration_seconds !== totalSeconds && timerState.status === 'stopped') {
-      sendAction('update', { duration_seconds: totalSeconds });
-    }
-  }, [timerState, totalSeconds, isController, sendAction]);
+  // Removed 2026-05-20: a previous "sync local prop → server" effect
+  // here pushed `totalSeconds` (derived from the lab_day.rotation_minutes
+  // prop) back to the server every time the polled timer state diverged.
+  // With two devices controlling the same lab, Device A would change
+  // rotation length to 20 min via the explicit Set Duration UI (which
+  // hits /api/lab-management/timer/adjust and persists), then Device B
+  // would poll, see duration 1200 ≠ its stale totalSeconds 1800, and
+  // overwrite the change back to 30 min. The set-duration UI is the
+  // ONLY supported path for changing duration mid-lab; lab_day.rotation_
+  // minutes seeds the initial timer in initializeTimer() and is not
+  // expected to be reconciled afterwards. Timer.duration_seconds is the
+  // authoritative source of truth from then on.
 
   // Calculate display time from timer state
   useEffect(() => {
@@ -638,6 +641,16 @@ export default function LabTimer({
       sendAction('next');
     }
   }, [timerState, numRotations, sendAction]);
+
+  // Cleanup is the "we're past the last rotation, end the lab" action.
+  // handleNextRotation refuses to advance once rotation_number reaches
+  // numRotations (correct for a "next rotation" button), but the
+  // Cleanup button — rendered ONLY at that endpoint — needs to fire
+  // regardless. Without this dedicated handler, clicking Cleanup was
+  // silently no-op'ing because the same guard blocked the send.
+  const handleCleanup = useCallback(() => {
+    sendAction('next');
+  }, [sendAction]);
 
   const handlePrevRotation = useCallback(() => {
     if (timerState && timerState.rotation_number > 1) {
@@ -1385,7 +1398,7 @@ export default function LabTimer({
             </button>
           ) : (
             <button
-              onClick={handleNextRotation}
+              onClick={handleCleanup}
               className="flex items-center gap-2 px-4 py-3 rounded-full transition-colors bg-purple-500 hover:bg-purple-400"
               title="Begin Cleanup"
             >
