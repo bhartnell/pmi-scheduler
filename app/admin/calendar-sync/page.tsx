@@ -142,6 +142,10 @@ export default function CalendarSyncPage() {
   const [syncingAll, setSyncingAll] = useState(false);
   const [reminding, setReminding] = useState(false);
   const [syncingUser, setSyncingUser] = useState<string | null>(null);
+  // Force-resync is the destructive variant: delete the user's Google
+  // events + mapping rows, then recreate from scratch. Tracked
+  // separately so the regular Re-sync spinner doesn't fight with it.
+  const [forceResyncingUser, setForceResyncingUser] = useState<string | null>(null);
   // Per-row reminder state — keyed by email so we can show a spinner
   // on just the target row while a single-user remind is in flight.
   const [remindingUser, setRemindingUser] = useState<string | null>(null);
@@ -412,6 +416,59 @@ export default function CalendarSyncPage() {
       toast.error(`Sync request failed for ${email}`);
     } finally {
       setSyncingUser(null);
+    }
+  };
+
+  // Nuclear option: DELETE the user's Google events + mapping rows
+  // and recreate from scratch. Use when the regular Re-sync's PATCH
+  // path leaves stale events in place (e.g. events created before the
+  // RRULE fix that PATCH can't upgrade for whatever reason). The user
+  // will briefly see their PMI events disappear and reappear on
+  // Google's side, so we gate it behind a confirm.
+  const handleForceResyncUser = async (email: string) => {
+    const ok = window.confirm(
+      `Force re-sync ${email}?\n\n` +
+        `This will DELETE all of their existing PMI events from Google ` +
+        `Calendar and recreate them from scratch. The events will briefly ` +
+        `disappear and reappear in their calendar.\n\n` +
+        `Use this only when the normal "Re-sync" hasn't fixed the issue.`,
+    );
+    if (!ok) return;
+
+    setForceResyncingUser(email);
+    try {
+      const res = await fetch('/api/admin/calendar-sync/force-resync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userEmail: email }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const cleared = data.cleared ?? {};
+        const recreated = data.recreated ?? {};
+        const msg =
+          `Force re-sync done for ${email}: ` +
+          `deleted ${cleared.google_events_deleted ?? 0} Google events, ` +
+          `cleared ${cleared.mapping_rows_deleted ?? 0} rows, ` +
+          `recreated ${recreated.series_created ?? 0} series` +
+          (recreated.series_failed > 0
+            ? ` (${recreated.series_failed} failed)`
+            : '');
+        if (recreated.series_failed > 0) {
+          toast.error(msg);
+          console.error('[force-resync] errors:', recreated.errors);
+        } else {
+          toast.success(msg);
+        }
+        fetchData();
+      } else {
+        toast.error(data.error || `Force re-sync failed for ${email}`);
+      }
+    } catch (err) {
+      console.error('Force re-sync error:', err);
+      toast.error(`Force re-sync request failed for ${email}`);
+    } finally {
+      setForceResyncingUser(null);
     }
   };
 
@@ -694,19 +751,40 @@ export default function CalendarSyncPage() {
                                     notification with a link to the
                                     /settings/calendar-setup wizard. */}
                                 {inst.connected && !inst.needsReauth ? (
-                                  <button
-                                    onClick={() => handleSyncUser(inst.email)}
-                                    disabled={syncingUser === inst.email}
-                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                                    title="Re-sync this user"
-                                  >
-                                    <RefreshCw
-                                      className={`w-3.5 h-3.5 ${
-                                        syncingUser === inst.email ? 'animate-spin' : ''
-                                      }`}
-                                    />
-                                    {syncingUser === inst.email ? 'Syncing...' : 'Re-sync'}
-                                  </button>
+                                  <>
+                                    <button
+                                      onClick={() => handleSyncUser(inst.email)}
+                                      disabled={
+                                        syncingUser === inst.email ||
+                                        forceResyncingUser === inst.email
+                                      }
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title="Re-sync this user (PATCH-based, non-destructive)"
+                                    >
+                                      <RefreshCw
+                                        className={`w-3.5 h-3.5 ${
+                                          syncingUser === inst.email ? 'animate-spin' : ''
+                                        }`}
+                                      />
+                                      {syncingUser === inst.email ? 'Syncing...' : 'Re-sync'}
+                                    </button>
+                                    <button
+                                      onClick={() => handleForceResyncUser(inst.email)}
+                                      disabled={
+                                        syncingUser === inst.email ||
+                                        forceResyncingUser === inst.email
+                                      }
+                                      className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title="Force re-sync — DELETES this user's Google events and recreates them. Use when normal Re-sync hasn't fixed stale events."
+                                    >
+                                      <AlertTriangle
+                                        className={`w-3.5 h-3.5 ${
+                                          forceResyncingUser === inst.email ? 'animate-pulse' : ''
+                                        }`}
+                                      />
+                                      {forceResyncingUser === inst.email ? 'Rebuilding…' : 'Force re-sync'}
+                                    </button>
+                                  </>
                                 ) : (
                                   <button
                                     onClick={() => handleRemindUser(inst.email)}
