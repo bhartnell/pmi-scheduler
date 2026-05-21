@@ -201,6 +201,7 @@ export async function POST(
     // Update template fields from snapshot
     const templateUpdates: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
+      updated_by: `version-restore:${user.email ?? 'unknown'}`,
     };
     if (snapshot.name !== undefined) templateUpdates.name = snapshot.name;
     if (snapshot.description !== undefined) templateUpdates.description = snapshot.description;

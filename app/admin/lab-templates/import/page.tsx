@@ -82,9 +82,24 @@ interface CoursePayload {
 
 type AnyPayload = ImportPayload | CoursePayload;
 
+interface PlaceholderEntry {
+  week_number: number;
+  day_number: number;
+  title: string | null;
+  reasons: string[];
+  file?: string; // seed-route includes this; client preview omits it
+}
+
 interface ImportResult {
   success: boolean;
-  summary: {
+  // 400 responses come back with error_code + placeholders. Surface
+  // those at the top level too so the UI can render the gate message
+  // distinctly from successful imports.
+  error?: string;
+  error_code?: string;
+  placeholder_count?: number;
+  placeholders?: PlaceholderEntry[];
+  summary?: {
     program?: string;
     semester?: number;
     templates_created?: number;
@@ -92,14 +107,50 @@ interface ImportResult {
     stations_created?: number;
     total_templates?: number;
     total_stations?: number;
+    placeholders_skipped?: number;
+    placeholders?: PlaceholderEntry[];
+    total_placeholders_skipped?: number;
     errors?: string[];
     files?: Array<{
       file: string;
       templates: number;
       stations: number;
+      placeholders_skipped?: number;
+      placeholders?: PlaceholderEntry[];
       errors: string[];
     }>;
   };
+}
+
+// Client-side mirror of the server's placeholder detector. Used to
+// warn the operator BEFORE they hit Import — same rule as the route:
+// title contains "Content Pending" OR stations array is empty/missing.
+function detectClientPlaceholders(
+  payload: AnyPayload,
+): PlaceholderEntry[] {
+  if (!payload || payload._shape !== 'lab') return [];
+  const lab = payload as ImportPayload;
+  if (!Array.isArray(lab.templates)) return [];
+  const out: PlaceholderEntry[] = [];
+  for (const t of lab.templates) {
+    const title = (t.title ?? '') || null;
+    const reasons: string[] = [];
+    if ((title ?? '').toLowerCase().includes('content pending')) {
+      reasons.push('title contains "Content Pending"');
+    }
+    if (!Array.isArray(t.stations) || t.stations.length === 0) {
+      reasons.push('stations array is empty or missing');
+    }
+    if (reasons.length > 0) {
+      out.push({
+        week_number: t.week_number,
+        day_number: t.day_number,
+        title,
+        reasons,
+      });
+    }
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -196,18 +247,48 @@ export default function LabTemplateImportPage() {
     reader.readAsText(file);
   };
 
-  // Import parsed data
+  // Import parsed data. Two-step flow when placeholders are present:
+  //   1. First click of Import (with placeholders) → confirm dialog
+  //      describing what will be skipped.
+  //   2. On confirm → POST with confirm_placeholders=true so the
+  //      route applies the non-placeholder templates and skips the
+  //      flagged ones. Without the flag the route refuses outright.
   const handleImport = async () => {
     if (!parsed) return;
+
+    const clientPlaceholders = detectClientPlaceholders(parsed);
+    if (clientPlaceholders.length > 0) {
+      const list = clientPlaceholders
+        .slice(0, 10)
+        .map(p => `  • Wk${p.week_number} D${p.day_number}: ${p.reasons.join('; ')}`)
+        .join('\n');
+      const more =
+        clientPlaceholders.length > 10
+          ? `\n  …and ${clientPlaceholders.length - 10} more`
+          : '';
+      const proceed = window.confirm(
+        `This file contains ${clientPlaceholders.length} placeholder template(s) ` +
+          `(Content Pending titles or empty stations):\n\n${list}${more}\n\n` +
+          `These will be SKIPPED — they will not overwrite existing content. ` +
+          `Non-placeholder templates will still apply.\n\n` +
+          `Proceed?`,
+      );
+      if (!proceed) return;
+    }
+
     setImporting(true);
     setResult(null);
 
     try {
-      // Strip the synthetic _shape tag before sending — the server
-      // detects the shape from the actual fields, the tag is for
-      // UI labelling only.
       const payload: Record<string, unknown> = { ...(parsed as unknown as Record<string, unknown>) };
       delete payload._shape;
+      // Always pass confirm_placeholders when placeholders are
+      // detected client-side. If somehow the server detects more
+      // (e.g. case-sensitivity differences), it'll still refuse and
+      // we'll show the gate response.
+      if (clientPlaceholders.length > 0) {
+        payload.confirm_placeholders = true;
+      }
       const res = await fetch('/api/admin/lab-templates/import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -226,17 +307,63 @@ export default function LabTemplateImportPage() {
     }
   };
 
-  // Seed from embedded files
+  // Seed from embedded files. Two-step flow when the embedded files
+  // contain placeholder templates: first call returns 400 with the
+  // offending entries listed; UI confirms with the operator, then
+  // re-POSTs with confirm_placeholders=true to skip those rows.
+  //
+  // This is intentionally separate from the import flow because
+  // there's no preview step here — the operator hasn't seen the
+  // embedded data files, so we surface the placeholders only after
+  // the server tells us about them.
   const handleSeed = async () => {
     setSeeding(true);
     setSeedResult(null);
 
     try {
-      const res = await fetch('/api/admin/lab-templates/seed', {
+      const firstRes = await fetch('/api/admin/lab-templates/seed', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
       });
+      let data: ImportResult = await firstRes.json();
 
-      const data = await res.json();
+      if (
+        !firstRes.ok &&
+        data.error_code === 'placeholders_blocked' &&
+        Array.isArray(data.placeholders)
+      ) {
+        const list = data.placeholders
+          .slice(0, 10)
+          .map(p =>
+            `  • ${p.file ?? '?'} Wk${p.week_number} D${p.day_number}: ${p.reasons.join('; ')}`,
+          )
+          .join('\n');
+        const more =
+          data.placeholders.length > 10
+            ? `\n  …and ${data.placeholders.length - 10} more`
+            : '';
+        const proceed = window.confirm(
+          `The embedded data files contain ${data.placeholder_count} placeholder template(s):\n\n` +
+            `${list}${more}\n\n` +
+            `These will be SKIPPED — they will not overwrite existing content. ` +
+            `The non-placeholder templates will still be seeded.\n\n` +
+            `Proceed? (Fix the JSON files in data/ to silence this warning permanently.)`,
+        );
+        if (!proceed) {
+          setSeedResult({
+            success: false,
+            summary: { errors: ['Seed cancelled — placeholders not confirmed.'] },
+          });
+          return;
+        }
+        const retryRes = await fetch('/api/admin/lab-templates/seed', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirm_placeholders: true }),
+        });
+        data = await retryRes.json();
+      }
       setSeedResult(data);
     } catch (err) {
       setSeedResult({
@@ -326,7 +453,7 @@ export default function LabTemplateImportPage() {
                   )}
                   <span>
                     {seedResult.success
-                      ? `${seedResult.summary.total_templates} templates, ${seedResult.summary.total_stations} stations`
+                      ? `${seedResult.summary?.total_templates ?? 0} templates, ${seedResult.summary?.total_stations ?? 0} stations`
                       : 'Seed failed'}
                   </span>
                 </div>
@@ -489,6 +616,52 @@ export default function LabTemplateImportPage() {
               {importing ? 'Importing...' : 'Import All'}
             </button>
           </div>
+
+          {/* Placeholder warning banner — appears for lab-shape
+              uploads whose preview contains any "Content Pending"
+              titles or empty stations arrays. Surfaces the exact
+              rows so the operator knows what will be SKIPPED if
+              they proceed. Importantly the server REFUSES placeholder
+              rows: they will never overwrite real content. This
+              banner just gives the operator a heads-up before they
+              click. Mirrors the bug fixed 2026-05-21 where a stale
+              embedded file kept reverting paramedic S2. */}
+          {parsed._shape === 'lab' && (() => {
+            const placeholders = detectClientPlaceholders(parsed);
+            if (placeholders.length === 0) return null;
+            return (
+              <div className="px-4 pt-4">
+                <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 text-sm">
+                      <div className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                        {placeholders.length} placeholder template{placeholders.length === 1 ? '' : 's'} will be skipped
+                      </div>
+                      <p className="text-amber-800 dark:text-amber-200 mb-2">
+                        These rows have <code>Content Pending</code> titles or empty <code>stations</code> arrays.
+                        They will <strong>not</strong> overwrite existing content. The other{' '}
+                        {(parsed as ImportPayload).templates.length - placeholders.length} template
+                        {(parsed as ImportPayload).templates.length - placeholders.length === 1 ? '' : 's'} will apply.
+                      </p>
+                      <ul className="space-y-0.5 text-amber-800 dark:text-amber-200 text-xs">
+                        {placeholders.slice(0, 8).map((p) => (
+                          <li key={`${p.week_number}-${p.day_number}`}>
+                            <span className="font-mono">Wk{p.week_number} D{p.day_number}</span>
+                            {p.title ? ` — "${p.title}"` : ''}
+                            <span className="text-amber-700 dark:text-amber-300"> ({p.reasons.join('; ')})</span>
+                          </li>
+                        ))}
+                        {placeholders.length > 8 && (
+                          <li className="italic">…and {placeholders.length - 8} more</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Course-shape preview: simple table of courses. Lab-shape
               preview falls through to the existing template/station

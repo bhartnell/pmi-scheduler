@@ -233,10 +233,14 @@ export async function POST(request: NextRequest) {
       changesApplied++;
     }
 
-    // 5. Update template updated_at
+    // 5. Update template updated_at + stamp updated_by so the
+    //    audit trail attributes this write to update-from-lab.
     await supabase
       .from('lab_day_templates')
-      .update({ updated_at: new Date().toISOString() })
+      .update({
+        updated_at: new Date().toISOString(),
+        updated_by: `update-from-lab:${user.email ?? 'unknown'}`,
+      })
       .eq('id', template_id);
 
     return NextResponse.json({

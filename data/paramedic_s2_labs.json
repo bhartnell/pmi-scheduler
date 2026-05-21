@@ -14,12 +14,6 @@
       "review_notes": "Group 13 Week 1 Day 1 uses a dual parallel plan — two groups running concurrently (Plan A and Plan B). Confirm whether this split-group format is standard for S2 Week 1 or specific to Group 13. Plan B includes CoAEMSP Sim Requirements (Infant NAT Trauma, Geriatric Sepsis) — confirm Sim Req documentation process for first session.",
       "stations": [
         {
-          "station_type": "skills",
-          "station_name": "Trauma Assessment — Coin Hunt",
-          "skills": [],
-          "format_notes": "Thorough trauma assessment drill — coins hidden on manikin, students must find all. Emphasizes systematic assessment habits."
-        },
-        {
           "station_type": "scenario",
           "station_name": "Unknown Unconscious",
           "scenario_title": "Unconscious / Unresponsive Patient",
@@ -34,24 +28,16 @@
           "format_notes": "Platinum documentation required. Plan A station."
         },
         {
-          "station_type": "scenario",
-          "station_name": "PALS Case — Infant NAT (Plan B concurrent group)",
-          "scenario_title": "Infant Nonaccidental Trauma — Pediatric Trauma Sim Requirement",
-          "difficulty": "intermediate",
-          "format_notes": "CoAEMSP Pediatric Trauma Sim Requirement. Platinum documentation required. Plan B concurrent group. Instructor: S. Andreas."
-        },
-        {
-          "station_type": "scenario",
-          "station_name": "Geriatric Sepsis (Plan B concurrent group)",
-          "scenario_title": "Geriatric Sepsis — CoAEMSP Sim Requirement",
-          "difficulty": "intermediate",
-          "format_notes": "CoAEMSP Other Medical Conditions Sim Requirement. Platinum documentation required. Plan B concurrent group. Instructor: R. Niedfeldt."
-        },
-        {
           "station_type": "skills",
           "station_name": "Platinum Documentation Overview",
           "skills": [],
           "format_notes": "S2 Platinum portal orientation and documentation workflow. Both plans."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 1 — orientation session. Skill review is light intro to format only."
         }
       ]
     },
@@ -66,12 +52,6 @@
       "requires_review": false,
       "review_notes": null,
       "stations": [
-        {
-          "station_type": "skills",
-          "station_name": "MOI Activity",
-          "skills": [],
-          "format_notes": "Mechanism of injury didactic and discussion exercise."
-        },
         {
           "station_type": "skills",
           "station_name": "Med Draw Drill",
@@ -90,32 +70,93 @@
           "scenario_title": "Asthma Exacerbation",
           "difficulty": "intermediate",
           "format_notes": "152 Wk 1 Cardiac A&P. 192 Wk 1 Trauma overview running concurrently."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 1 — keep at refresher level, no pressure."
         }
       ]
     },
     {
       "week_number": 2,
       "day_number": 1,
-      "title": "Week 2 Day 1 — Content Pending",
+      "title": "Shock, Hemorrhage, and Respiratory — Week 2",
       "category": "skills_lab",
-      "instructor_count": 3,
+      "instructor_count": 4,
       "is_anchor": false,
       "anchor_type": null,
-      "requires_review": true,
-      "review_notes": "Week 2 Day 1 files not uploaded in Group 13 records. Retrieve spreadsheet and populate before seeding future cohorts.",
-      "stations": []
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Hemorrhagic Shock — Penetrating Trauma",
+          "scenario_title": "Hemorrhagic Shock — Penetrating Chest/Thoracic Trauma",
+          "difficulty": "intermediate",
+          "format_notes": "Current week content (192 Wk2 — Shock & Bleeding). Penetrating chest trauma with hemorrhagic shock. Tourniquet not applicable — pressure dressing, IV access, fluid resuscitation, tension PTX consideration. Platinum documentation required."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Extremity Hemorrhage and Shock",
+          "scenario_title": "Extremity Bleed with Hemorrhagic Shock — Tourniquet and Resuscitation",
+          "difficulty": "intermediate",
+          "format_notes": "Current week content (192 Wk2 — Shock & Bleeding). Life-threatening extremity hemorrhage — tourniquet, wound packing, IV access, fluid resuscitation. Straightforward hemorrhage control appropriate for early S2."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Previous Content — Respiratory",
+          "scenario_title": "Respiratory Distress — COPD Exacerbation with Hypercapnic Failure",
+          "difficulty": "intermediate",
+          "format_notes": "Previous content rotation (Week 1 respiratory arc). COPD exacerbation progressing toward hypercapnic failure. CPAP/BiPAP decision, bronchodilators, positioning. Standard format: 2 stations current week content, 1 station previous content."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Poll students before lab. If requests: focused refresher. If no requests: instructor-selected variation. Week 2 — keep at refresher level."
+        }
+      ]
     },
     {
       "week_number": 2,
       "day_number": 2,
-      "title": "Week 2 Day 2 — Content Pending",
+      "title": "Cardiac Dysrhythmia Scenarios and ACLS Drill Cards — S2 Week 2",
       "category": "skills_lab",
       "instructor_count": 3,
       "is_anchor": false,
       "anchor_type": null,
       "requires_review": true,
-      "review_notes": "Week 2 Day 2 files not uploaded in Group 13 records. Retrieve spreadsheet and populate before seeding future cohorts.",
-      "stations": []
+      "review_notes": "Content derived from Group 10 Week 2 cardiac component only — sheep pluck removed (not ready Week 2, scheduling dependent on Dr. Kat and specimen availability). Confirm Group 13 Week 2 Day 2 content with lead instructor.",
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Cardiac Dysrhythmia — Tachy with Pulse",
+          "scenario_title": "Cardiac Dysrhythmia — Tachycardia with Pulse (ACLS Algorithm)",
+          "difficulty": "intermediate",
+          "format_notes": "ACLS algorithm introduction — tachy with pulse. Two groups: one runs scenario with monitor actions, other observes and critiques, then debrief and switch. Multiple scenarios available. See ACLS scenarios on instructor desk. Instructor: J. Lomonaco."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Cardiac Dysrhythmia — Brady with Pulse",
+          "scenario_title": "Cardiac Dysrhythmia — Bradycardia with Pulse (ACLS Algorithm)",
+          "difficulty": "intermediate",
+          "format_notes": "ACLS algorithm introduction — brady with pulse. Paired with tachy station — groups rotate. Observation and critique format. Builds toward ACLS certification Week 6."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "ACLS Drill Cards Introduction",
+          "skills": [],
+          "format_notes": "Introduction to ACLS drill card format used in Weeks 3-5 prep arc. Students familiarize with algorithm decision points. Foundation for Week 3 Day 1 formal drill card sessions."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "DAILY SKILL REVIEW — runs every regular S2 lab session.\nFormat:\n  • Poll students 24-48 hours before lab (via Cowork or group message) for skill review requests.\n  • If requests received: run as focused refresher station. No evaluation — practice and feedback only.\n  • If no requests received by lab morning: instructor runs an advanced variation from the list below.\n\nAdvanced variation options (escalate progressively as semester advances):\n  Early S2 (Weeks 1-5): Timed skill drill — ETI in 60 sec, IO access first attempt, IV with one hand\n  Mid S2 (Weeks 6-10): Difficult scenario variation — failed airway, non-standard anatomy, combative patient\n  Late S2 (Weeks 11-15): S3-style drill card format — 8-min timed station, student runs solo, instructor evaluates\n\nInstructor notes:\n  • Track what gets requested — pattern of requests = cohort comfort gaps.\n  • Track what no-requests weeks required — if advanced versions run every week, cohort is ready for S3 format.\n  • No Platinum documentation required for this station.\n  • Assign 1 instructor. Station runs concurrent with other stations."
+        }
+      ]
     },
     {
       "week_number": 3,
@@ -136,12 +177,6 @@
           "format_notes": "152 Wk 3 Cardiac Pathophysiology. 172 Wk 3 Neurology — Dr. Kaufman guest lecture window. Instructor: M. Gannon."
         },
         {
-          "station_type": "skills",
-          "station_name": "Skill Drill Card 1 — Tachycardia",
-          "skills": [],
-          "format_notes": "Tachycardia recognition and management ACLS drill card. 1–2 Lifepak monitors with rhythm generator. ACLS prep arc Wks 3–5. Instructor: M. Schaffer."
-        },
-        {
           "station_type": "scenario",
           "station_name": "Acute CVA",
           "scenario_title": "Acute CVA — Suspected LVO (Branching)",
@@ -150,23 +185,57 @@
         },
         {
           "station_type": "skills",
-          "station_name": "Skill Drill Card 2 — Bradycardia",
+          "station_name": "ACLS Drill Cards — Tachy and Brady",
           "skills": [],
-          "format_notes": "Bradycardia recognition and management ACLS drill card. 1 Lifepak 15, cardiac medications."
+          "format_notes": "Drill Card 1: Tachycardia algorithm. Drill Card 2: Bradycardia algorithm. Run both cards at same station, students rotate through. Builds toward ACLS certification Week 6."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 3 — ACLS prep arc. Advanced variation: timed drill card under 3 min."
         }
       ]
     },
     {
       "week_number": 3,
       "day_number": 2,
-      "title": "Week 3 Day 2 — Content Pending",
+      "title": "Multi-Algorithm Arrests and Trauma — ACLS Prep Arc",
       "category": "skills_lab",
-      "instructor_count": 3,
+      "instructor_count": 4,
       "is_anchor": false,
       "anchor_type": null,
-      "requires_review": true,
-      "review_notes": "Week 3 Day 2 file not uploaded in Group 13 records. Likely continued cardiac/rhythm content or ACLS prep. Retrieve and populate.",
-      "stations": []
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Multi-Algorithm Arrest 1",
+          "scenario_title": "Multi-Algorithm Arrest — VF → PEA → VF",
+          "difficulty": "advanced",
+          "format_notes": "ACLS prep arc — Week 3 of 5-week build toward Week 6 ACLS certification. Multi-algorithm arrest requiring algorithm transitions. Moved from original Wk4D2 — displaced by burn center field trip."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Multi-Algorithm Arrest 2",
+          "scenario_title": "Multi-Algorithm Arrest — PEA → VF → Asystole",
+          "difficulty": "advanced",
+          "format_notes": "ACLS prep — full algorithm sequence including asystole management and ROSC debriefing."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Trauma with Hemorrhage",
+          "scenario_title": "Trauma — Branching Path: Life-Threatening Extremity Bleed",
+          "difficulty": "advanced",
+          "format_notes": "Branching trauma scenario. Life-threatening hemorrhage with shock management. TXA, fluid resuscitation, tourniquet decision-making."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 3 — ACLS prep. Advanced: add time pressure to algorithm transitions."
+        }
+      ]
     },
     {
       "week_number": 4,
@@ -201,52 +270,29 @@
           "format_notes": "Lab Room 2. Airway compromise management in burn context. Instructor: B. Young."
         },
         {
-          "station_type": "scenario",
-          "station_name": "Seizure",
-          "scenario_title": "Seizure with Preceding Neurological Symptoms",
-          "difficulty": "intermediate",
-          "format_notes": "SimMom — Back Lab Area."
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 4 — final ACLS prep arc. Advanced: post-ROSC management decision."
         }
       ]
     },
     {
       "week_number": 4,
       "day_number": 2,
-      "title": "Multi-Algorithm Arrests and Trauma",
-      "category": "skills_lab",
-      "instructor_count": 4,
+      "title": "UMC Burn Center Field Trip",
+      "category": "field_trip",
+      "instructor_count": 1,
       "is_anchor": false,
       "anchor_type": null,
-      "requires_review": true,
-      "review_notes": "Bacterial Meningitis station in Group 13 records noted as 'Documentation or Medical scenario based on instructor availability' — execution was contingent on staffing. Confirm whether this station ran and standardize for future cohorts.",
+      "requires_review": false,
+      "review_notes": null,
       "stations": [
         {
-          "station_type": "scenario",
-          "station_name": "Multi-Algorithm Arrest 1",
-          "scenario_title": "Multi-Algorithm Arrest — VF → PEA → VF",
-          "difficulty": "advanced",
-          "format_notes": "Instructor: B. Hartnell."
-        },
-        {
-          "station_type": "scenario",
-          "station_name": "Multi-Algorithm Arrest 2",
-          "scenario_title": "Multi-Algorithm Arrest — PEA → VF → Asystole",
-          "difficulty": "advanced",
-          "format_notes": "Megacode Kelly — hospital monitor and computer. Instructor: M. Schaffer."
-        },
-        {
-          "station_type": "scenario",
-          "station_name": "Trauma — Extremity Bleed",
-          "scenario_title": "Trauma — Branching Path: Life-Threatening Extremity Bleed",
-          "difficulty": "advanced",
-          "format_notes": "Instructor: B. Young."
-        },
-        {
-          "station_type": "scenario",
-          "station_name": "Bacterial Meningitis",
-          "scenario_title": "Bacterial Meningitis (Branching)",
-          "difficulty": "advanced",
-          "format_notes": "Contingent on instructor availability. Confirm staffing before planning this station."
+          "station_type": "field_experience",
+          "station_name": "UMC Burn Center Site Visit",
+          "scenario_title": null,
+          "format_notes": "External clinical field experience at UMC Burn Center. Scheduled June 5. Replaces regular lab session for this date. Students observe burn wound care, surgical debridement, and long-term burn rehabilitation. Counts toward clinical exposure hours. No scenario stations — attendance and reflection documentation required. Coordinate transport and arrival time with burn center contact in advance."
         }
       ]
     },
@@ -283,36 +329,48 @@
           "format_notes": "192 Wk 5 Spine and Nervous System. Instructor: B. Young."
         },
         {
-          "station_type": "scenario",
-          "station_name": "Bacterial Meningitis",
-          "scenario_title": "Bacterial Meningitis (Branching)",
-          "difficulty": "advanced",
-          "format_notes": "Confirm whether intentional repeat from Week 4 Day 2 or carryover entry."
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 5 — final ACLS megacode prep. Advanced: team lead runs full code independently."
         }
       ]
     },
     {
       "week_number": 5,
       "day_number": 2,
-      "title": "Sheep Pluck Lab and/or ACLS Prep Stations",
+      "title": "Sheep Pluck Anatomy Lab — Flexible Scheduling",
       "category": "skills_lab",
-      "instructor_count": 4,
+      "instructor_count": 3,
       "is_anchor": false,
       "anchor_type": "SHEEP_PLUCK",
       "requires_review": true,
-      "review_notes": "Week 5 Day 2 file not uploaded in Group 13 records. Two possible configurations: (1) Sheep pluck lab with Dr. Kat — requires her ER schedule availability AND specimen delivery confirmation; (2) ACLS prep stations if sheep pluck not yet scheduled. Sheep pluck window spans mid-S1 airway arc through mid-S2 — placement determined by whichever variable (Dr. Kat schedule, specimen availability) resolves last. Confirm before semester start.",
+      "review_notes": "FLEXIBLE SCHEDULING: Sheep pluck placement varies each semester based on Dr. Kat ER schedule availability and specimen ordering lead time. Currently placeholder at Week 5 Day 2. May shift to any available session in Weeks 3-8. Coordinate with Dr. Kat and confirm specimen order 2-3 weeks in advance. If sheep pluck is not available this date, run ACLS prep stations instead (see format_notes).",
       "stations": [
         {
           "station_type": "skills",
-          "station_name": "Sheep Pluck Dissection",
+          "station_name": "Sheep Pluck Dissection — Lungs",
           "skills": [],
-          "format_notes": "Sheep lung/cardiac dissection lab. Requires: Dr. Kat (Medical Director) availability + specimen delivery confirmed. Half class in sheep pluck, other half ACLS practice stations, then swap."
+          "format_notes": "SCHEDULING DEPENDENT — confirm date with Dr. Kat before locking. Lung dissection: overview of lung anatomy, inflation demonstration, PEEP demonstration, tissue dissection. Equipment: sheep pluck lung dissection worksheet, one pluck per two students. Instructor: B. Hartnell (or Dr. Kat). Two-group rotation with heart station — students stay at table, instructors rotate halfway."
         },
         {
           "station_type": "skills",
-          "station_name": "ACLS Practice Stations",
+          "station_name": "Sheep Pluck Dissection — Heart",
           "skills": [],
-          "format_notes": "ACLS algorithm and skills practice for half-class not in sheep pluck."
+          "format_notes": "SCHEDULING DEPENDENT — confirm date with Dr. Kat before locking. Cardiac dissection: overview and dissection of heart anatomy. Equipment: Heart Dissection.pdf. Instructor: R. Young (or Dr. Kat). Groups rotate from lungs station halfway through."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "ACLS Prep — Fallback If Sheep Pluck Unavailable",
+          "scenario_title": "ACLS Prep Stations — Megacode Practice",
+          "difficulty": "advanced",
+          "format_notes": "FALLBACK CONTENT if sheep pluck not available this date. Run final ACLS prep megacode stations in preparation for Week 6 certification. Scenario library from Week 5 Day 1."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "DAILY SKILL REVIEW — runs every regular S2 lab session.\nFormat:\n  • Poll students 24-48 hours before lab (via Cowork or group message) for skill review requests.\n  • If requests received: run as focused refresher station. No evaluation — practice and feedback only.\n  • If no requests received by lab morning: instructor runs an advanced variation from the list below.\n\nAdvanced variation options (escalate progressively as semester advances):\n  Early S2 (Weeks 1-5): Timed skill drill — ETI in 60 sec, IO access first attempt, IV with one hand\n  Mid S2 (Weeks 6-10): Difficult scenario variation — failed airway, non-standard anatomy, combative patient\n  Late S2 (Weeks 11-15): S3-style drill card format — 8-min timed station, student runs solo, instructor evaluates\n\nInstructor notes:\n  • Track what gets requested — pattern of requests = cohort comfort gaps.\n  • Track what no-requests weeks required — if advanced versions run every week, cohort is ready for S3 format.\n  • No Platinum documentation required for this station.\n  • Assign 1 instructor. Station runs concurrent with other stations."
         }
       ]
     },
@@ -323,7 +381,7 @@
       "category": "certification",
       "instructor_count": 5,
       "is_anchor": true,
-      "anchor_type": "ACLS",
+      "anchor_type": "AHA_ACLS",
       "requires_review": false,
       "review_notes": null,
       "stations": [
@@ -344,12 +402,22 @@
           "station_type": "skills",
           "station_name": "BLS Skills Confirmation",
           "skills": [
-            { "name": "CPR Adult and Child — Two Rescuers", "platinum_skill": true, "min_attempts": 1 },
-            { "name": "Perform defibrillation", "platinum_skill": true, "min_attempts": 1 }
+            {
+              "name": "CPR Adult and Child — Two Rescuers",
+              "platinum_skill": true,
+              "min_attempts": 1
+            },
+            {
+              "name": "Perform defibrillation",
+              "platinum_skill": true,
+              "min_attempts": 1
+            }
           ],
           "format_notes": "BLS skills confirmation as part of ACLS certification requirements."
         }
-      ]
+      ],
+      "anchor_adjustable": true,
+      "anchor_notes": "AHA ACLS certification. Currently scheduled Week 6. Adjustable ±1-2 weeks — coordinate with AHA instructor availability and room booking. When rescheduled, update cohort calendar and notify students minimum 2 weeks in advance. Rescheduling affects ACLS prep arc in Weeks 3-5."
     },
     {
       "week_number": 6,
@@ -358,7 +426,7 @@
       "category": "certification",
       "instructor_count": 5,
       "is_anchor": true,
-      "anchor_type": "ACLS",
+      "anchor_type": "AHA_ACLS",
       "requires_review": false,
       "review_notes": null,
       "stations": [
@@ -369,7 +437,9 @@
           "difficulty": "advanced",
           "format_notes": "ACLS ANCHOR — FIXED. Written exam + megacode final. 162 ACLS Post-Test same window. File not uploaded in Group 13 records — confirm dates and document."
         }
-      ]
+      ],
+      "anchor_adjustable": true,
+      "anchor_notes": "AHA ACLS certification. Currently scheduled Week 6. Adjustable ±1-2 weeks — coordinate with AHA instructor availability and room booking. When rescheduled, update cohort calendar and notify students minimum 2 weeks in advance. Rescheduling affects ACLS prep arc in Weeks 3-5."
     },
     {
       "week_number": 7,
@@ -390,12 +460,6 @@
           "format_notes": "152 Wk 7 STEMI Mimics + Guest Lecturer. Instructor: M. Schaffer."
         },
         {
-          "station_type": "skills",
-          "station_name": "Neuro-Trauma Lab",
-          "skills": [],
-          "format_notes": "Sequential Neuro-Trauma Lab Station: 'Identify the Cord Lesion'. 192 Wk 7 Head/Face/Neck Trauma. Structured identification drill — confirm format (scenario vs case-based). Instructor: B. Hartnell."
-        },
-        {
           "station_type": "scenario",
           "station_name": "Facial Trauma",
           "scenario_title": "Assault with Facial Trauma and Suspected C-Spine Injury",
@@ -404,23 +468,57 @@
         },
         {
           "station_type": "skills",
-          "station_name": "Documentation and Review",
+          "station_name": "Neuro-Trauma Lab",
           "skills": [],
-          "format_notes": "Documentation / studying review station. Lower-acuity fill — possible staffing constraint. Confirm whether this is standard or situational."
+          "format_notes": "Sequential Neuro-Trauma Lab Station: 'Identify the Cord Lesion'. 192 Wk 7 Head/Face/Neck Trauma. Structured identification drill — confirm format (scenario vs case-based). Instructor: B. Hartnell."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 7 — post-ACLS. 152 Cardiology ends this day. Advanced: STEMI mimic strip identification."
         }
       ]
     },
     {
       "week_number": 7,
       "day_number": 2,
-      "title": "Week 7 Day 2 — Content Pending",
+      "title": "OB Emergencies Introduction — 182 Begins",
       "category": "skills_lab",
-      "instructor_count": 3,
+      "instructor_count": 4,
       "is_anchor": false,
       "anchor_type": null,
-      "requires_review": true,
-      "review_notes": "Week 7 Day 2 file not uploaded in Group 13 records. Likely continued neurotrauma or STEMI mimics content. Retrieve and populate.",
-      "stations": []
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Normal OB Delivery",
+          "scenario_title": "Normal Uncomplicated Delivery — OB Intro",
+          "difficulty": "intermediate",
+          "format_notes": "First 182 OB lab session. Normal delivery management — controlled emergence, cord management, newborn assessment and warming. SimMom. 182 Week 1 content: Obstetrics Ch 45."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "OB Complication — Antepartum",
+          "scenario_title": "Antepartum Hemorrhage — Placenta Previa vs Abruption",
+          "difficulty": "intermediate",
+          "format_notes": "OB bleeding emergency — differentiate placenta previa vs abruption. Management and transport decisions. 182 Week 1 OB content."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Previous Content — Cardiac",
+          "scenario_title": "STEMI with Flash Pulmonary Edema — Previous Content Rotation",
+          "difficulty": "intermediate",
+          "format_notes": "Previous content rotation (152 Cardiology final week content — STEMI mimics). Keeps cardiac skills active post-ACLS."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 7 Day 2 — 182 OB begins. Advanced variation: complicated delivery with shoulder dystocia."
+        }
+      ]
     },
     {
       "week_number": 8,
@@ -441,17 +539,11 @@
           "format_notes": "152 Wk 8 Final — 152 ENDS this week. 182 OB BEGINS."
         },
         {
-          "station_type": "skills",
-          "station_name": "OB Skills Station",
-          "skills": [],
-          "format_notes": "OB skills station — specific content not documented in Group 13 records. Expand before use. 182 OB course beginning. Instructor: R. Niedfeldt."
-        },
-        {
           "station_type": "scenario",
           "station_name": "Refractory Shock",
-          "scenario_title": "Refractory Shock — Ectopic vs. [complete title]",
+          "scenario_title": "Refractory Shock — Ectopic Pregnancy vs. Cardiogenic Shock",
           "difficulty": "advanced",
-          "format_notes": "Scenario title truncated in source — complete before use."
+          "format_notes": "Branching scenario — initial presentation ambiguous between ectopic pregnancy and cardiogenic shock. Management path diverges based on patient history and ultrasound findings."
         },
         {
           "station_type": "scenario",
@@ -459,6 +551,12 @@
           "scenario_title": "Neck Stabbing Trauma Scenario",
           "difficulty": "advanced",
           "format_notes": "Equipment: Megacode Kelly + SimPad + RT Laptop. Instructor: M. Gannon."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 8 — 182 OB + 192 bleeding/soft tissue. Advanced: failed airway in OB patient."
         }
       ]
     },
@@ -494,10 +592,10 @@
           "format_notes": "Dynamic Cardiology station — content not documented. Confirm format: rhythm drill, case-based review, or scenario. Instructor: M. Schaffer."
         },
         {
-          "station_type": "skills",
-          "station_name": "Documentation Station",
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
           "skills": [],
-          "format_notes": "Documentation review or clinical prep."
+          "format_notes": "Week 8 — 182 OB continued. Advanced: complicated delivery progression."
         }
       ]
     },
@@ -514,15 +612,9 @@
       "stations": [
         {
           "station_type": "skills",
-          "station_name": "PALS Prep — Pediatric Med Draws",
+          "station_name": "PALS Prep — Peds Med Draws and Broselow",
           "skills": [],
-          "format_notes": "Pediatric medication draw-up using 3-way stopcock method. PALS prep. Lab Tables and Classroom 1. 182 OB/Lifespan active."
-        },
-        {
-          "station_type": "skills",
-          "station_name": "PALS Prep — Broselow and Electrical Therapy",
-          "skills": [],
-          "format_notes": "Broselow tape familiarization then monitor electrical therapy application. PALS prep. 172 Wks 8–9 Abdominal/GI. 192 Wk 9 Chest Trauma."
+          "format_notes": "Combined PALS prep station. Pediatric med draws using Broselow tape, weight-based dosing calculations, electrical therapy settings. Preparation for Week 10 PALS certification."
         },
         {
           "station_type": "scenario",
@@ -537,6 +629,12 @@
           "scenario_title": "Pre-eclampsia / Eclampsia with Refractory Seizure (Branching)",
           "difficulty": "advanced",
           "format_notes": "Back Lab Area or Lab Room 1. Note in Group 13: 'Or scenario with Jack Timar'. Instructor: B. Hartnell."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 9 — PALS prep week. Advanced: pediatric cardiac arrest dosing under time pressure."
         }
       ]
     },
@@ -569,6 +667,12 @@
           "scenario_title": "Pre-eclampsia / Eclampsia with Refractory Seizure (Branching)",
           "difficulty": "advanced",
           "format_notes": "Back Lab Area or Lab Room 1. Instructor: R. Niedfeldt. Confirm if intentional repetition from Day 1."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "DAILY SKILL REVIEW — runs every regular S2 lab session.\nFormat:\n  • Poll students 24-48 hours before lab (via Cowork or group message) for skill review requests.\n  • If requests received: run as focused refresher station. No evaluation — practice and feedback only.\n  • If no requests received by lab morning: instructor runs an advanced variation from the list below.\n\nAdvanced variation options (escalate progressively as semester advances):\n  Early S2 (Weeks 1-5): Timed skill drill — ETI in 60 sec, IO access first attempt, IV with one hand\n  Mid S2 (Weeks 6-10): Difficult scenario variation — failed airway, non-standard anatomy, combative patient\n  Late S2 (Weeks 11-15): S3-style drill card format — 8-min timed station, student runs solo, instructor evaluates\n\nInstructor notes:\n  • Track what gets requested — pattern of requests = cohort comfort gaps.\n  • Track what no-requests weeks required — if advanced versions run every week, cohort is ready for S3 format.\n  • No Platinum documentation required for this station.\n  • Assign 1 instructor. Station runs concurrent with other stations."
         }
       ]
     },
@@ -579,7 +683,7 @@
       "category": "certification",
       "instructor_count": 5,
       "is_anchor": true,
-      "anchor_type": "PALS",
+      "anchor_type": "AHA_PALS",
       "requires_review": false,
       "review_notes": null,
       "stations": [
@@ -596,7 +700,9 @@
           "skills": [],
           "format_notes": "Pediatric algorithm review stations."
         }
-      ]
+      ],
+      "anchor_adjustable": true,
+      "anchor_notes": "AHA PALS certification. Currently scheduled Week 10. Adjustable ±1-2 weeks — coordinate with AHA instructor availability and room booking. When rescheduled, update cohort calendar and notify students minimum 2 weeks in advance. Rescheduling affects PALS prep arc in Weeks 9."
     },
     {
       "week_number": 10,
@@ -605,7 +711,7 @@
       "category": "certification",
       "instructor_count": 5,
       "is_anchor": true,
-      "anchor_type": "PALS",
+      "anchor_type": "AHA_PALS",
       "requires_review": false,
       "review_notes": null,
       "stations": [
@@ -616,7 +722,9 @@
           "difficulty": "advanced",
           "format_notes": "PALS ANCHOR — FIXED. Written exam + megacode final. 162 PALS Post-Assessment same window. 182 OB Quiz same window. File not uploaded in Group 13 records — confirm dates and document."
         }
-      ]
+      ],
+      "anchor_adjustable": true,
+      "anchor_notes": "AHA PALS certification. Currently scheduled Week 10. Adjustable ±1-2 weeks — coordinate with AHA instructor availability and room booking. When rescheduled, update cohort calendar and notify students minimum 2 weeks in advance. Rescheduling affects PALS prep arc in Weeks 9."
     },
     {
       "week_number": 11,
@@ -637,13 +745,6 @@
         },
         {
           "station_type": "scenario",
-          "station_name": "Cerebellar Stroke",
-          "scenario_title": "Cerebellar Stroke (Branching)",
-          "difficulty": "advanced",
-          "format_notes": "Platinum documentation required. Instructor: M. Gannon."
-        },
-        {
-          "station_type": "scenario",
           "station_name": "Traumatic Diaphragmatic Hernia",
           "scenario_title": "Traumatic Diaphragmatic Hernia",
           "difficulty": "advanced",
@@ -655,6 +756,12 @@
           "scenario_title": "Complicated Delivery — Breech (CoAEMSP Sim Requirement)",
           "difficulty": "advanced",
           "format_notes": "Platinum documentation required. SimMom — Back Lab Area. CoAEMSP Sim Requirement. Instructors: R. Niedfeldt / S. Andreas."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 11 — 182 neonatal + 192 chest/abdominal. Advanced: NRP with complication."
         }
       ]
     },
@@ -677,12 +784,6 @@
           "format_notes": "SimNewB manikin — Lab Room 1. Instructor: B. Hartnell."
         },
         {
-          "station_type": "skills",
-          "station_name": "Documentation Station",
-          "skills": [],
-          "format_notes": "Documentation review or clinical prep — content not specified in Group 13 records. Confirm whether Platinum prep, charting practice, or free review time."
-        },
-        {
           "station_type": "scenario",
           "station_name": "Abdominal Compartment Syndrome",
           "scenario_title": "Abdominal Compartment Syndrome",
@@ -695,6 +796,12 @@
           "scenario_title": "Complicated Delivery — Prolapsed Cord (CoAEMSP Sim Requirement)",
           "difficulty": "advanced",
           "format_notes": "Platinum documentation required. Back Lab Area. CoAEMSP Sim Requirement. Instructors: R. Niedfeldt / S. Andreas."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 11 — 182 neonatal + 192 abdominal. Advanced: NRP team lead role."
         }
       ]
     },
@@ -729,20 +836,59 @@
           "scenario_title": "Hypovolemic Shock from GI Bleed",
           "difficulty": "advanced",
           "format_notes": "Lab Room 1. 192 Wk 12 Shock Stage 2. Aspirational: 172 Hematology concurrent here to scaffold shock chapter — coordinate with 172 instructor."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "DAILY SKILL REVIEW — runs every regular S2 lab session.\nFormat:\n  • Poll students 24-48 hours before lab (via Cowork or group message) for skill review requests.\n  • If requests received: run as focused refresher station. No evaluation — practice and feedback only.\n  • If no requests received by lab morning: instructor runs an advanced variation from the list below.\n\nAdvanced variation options (escalate progressively as semester advances):\n  Early S2 (Weeks 1-5): Timed skill drill — ETI in 60 sec, IO access first attempt, IV with one hand\n  Mid S2 (Weeks 6-10): Difficult scenario variation — failed airway, non-standard anatomy, combative patient\n  Late S2 (Weeks 11-15): S3-style drill card format — 8-min timed station, student runs solo, instructor evaluates\n\nInstructor notes:\n  • Track what gets requested — pattern of requests = cohort comfort gaps.\n  • Track what no-requests weeks required — if advanced versions run every week, cohort is ready for S3 format.\n  • No Platinum documentation required for this station.\n  • Assign 1 instructor. Station runs concurrent with other stations."
         }
       ]
     },
     {
       "week_number": 12,
       "day_number": 2,
-      "title": "Week 12 Day 2 — Content Pending",
+      "title": "Toxicology, CCB Overdose, NRP — Shock Stage 2 Completion",
       "category": "skills_lab",
       "instructor_count": 3,
       "is_anchor": false,
       "anchor_type": null,
       "requires_review": true,
-      "review_notes": "Week 12 Day 2 file not uploaded in Group 13 records. Retrieve and populate.",
-      "stations": []
+      "review_notes": "Source: Group 12 Week 11 Day 2. Some content from that session already appears in Group 13 Wk11 and Wk14. Retained CCB OD (unique to this session) and NRP (confirm if additional NRP practice session needed here or if Wk11 coverage sufficient). Verify instructor assignments for Group 13.",
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Calcium Channel Blocker Overdose",
+          "scenario_title": "Calcium Channel Blocker Overdose — Verapamil",
+          "difficulty": "advanced",
+          "format_notes": "CCB toxidrome — bradycardia, hypotension, cardiogenic shock physiology. Management: calcium chloride, glucagon, high-dose insulin therapy, transcutaneous pacing consideration. Location: Lab Room 2."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Complicated Delivery — Prolapsed Cord",
+          "scenario_title": "Complicated OB Delivery — Prolapsed Umbilical Cord",
+          "difficulty": "advanced",
+          "format_notes": "Prolapsed cord management — elevate presenting part, maintain manual elevation throughout, emergent transport. SimMom. Instructor: R. Niedfedlt. Location: Hospital bay. NOTE: Confirm if this station runs Wk12 or if Wk11D2 coverage is sufficient."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "NRP Practice — Additional Session",
+          "skills": [
+            {
+              "name": "Neonatal resuscitation — NRP",
+              "platinum_skill": true,
+              "min_attempts": 1
+            }
+          ],
+          "format_notes": "Additional NRP practice session. Equipment: 4 ALS baby manikins (grey boxes), infant masks, airway supplies. Instructor: B. Hartnell. Location: Classroom 2. Confirm whether this is a second NRP session or if Wk11 NRP practice is sufficient — may be group-size dependent."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "DAILY SKILL REVIEW — runs every regular S2 lab session.\nFormat:\n  • Poll students 24-48 hours before lab (via Cowork or group message) for skill review requests.\n  • If requests received: run as focused refresher station. No evaluation — practice and feedback only.\n  • If no requests received by lab morning: instructor runs an advanced variation from the list below.\n\nAdvanced variation options (escalate progressively as semester advances):\n  Early S2 (Weeks 1-5): Timed skill drill — ETI in 60 sec, IO access first attempt, IV with one hand\n  Mid S2 (Weeks 6-10): Difficult scenario variation — failed airway, non-standard anatomy, combative patient\n  Late S2 (Weeks 11-15): S3-style drill card format — 8-min timed station, student runs solo, instructor evaluates\n\nInstructor notes:\n  • Track what gets requested — pattern of requests = cohort comfort gaps.\n  • Track what no-requests weeks required — if advanced versions run every week, cohort is ready for S3 format.\n  • No Platinum documentation required for this station.\n  • Assign 1 instructor. Station runs concurrent with other stations."
+        }
+      ]
     },
     {
       "week_number": 13,
@@ -763,12 +909,6 @@
           "format_notes": "Back Lab Area. Instructor: B. Hartnell."
         },
         {
-          "station_type": "skills",
-          "station_name": "Documentation and Clinical Prep",
-          "skills": [],
-          "format_notes": "Instructor-led documentation review and clinical preparation. Classroom 1. Instructor: R. Niedfeldt."
-        },
-        {
           "station_type": "scenario",
           "station_name": "Thyroid Storm",
           "scenario_title": "Thyroid Storm",
@@ -778,9 +918,15 @@
         {
           "station_type": "scenario",
           "station_name": "Multisystem Trauma",
-          "scenario_title": "Multisystem Trauma with Hypovolemic Shock — Motorcycle vs. [complete title]",
+          "scenario_title": "Multisystem Trauma with Hypovolemic Shock — Motorcycle vs. Fixed Object",
           "difficulty": "advanced",
-          "format_notes": "Lab Room 1. Instructor: J. Lomonaco. Title truncated in source — complete before use."
+          "format_notes": "Lab Room 1. Instructor: J. Lomonaco. High-mechanism MVC. Multiple injuries — TBI, thoracic trauma, pelvic instability, hemorrhagic shock. Full trauma team management."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 13 — 182 peds + 192 trauma + 172 endocrine previous content. Advanced: peds cardiac arrest."
         }
       ]
     },
@@ -804,23 +950,27 @@
         },
         {
           "station_type": "skills",
-          "station_name": "Skill Practice",
-          "skills": [],
-          "format_notes": "Skill practice or documentation/clinical prep — instructor's choice. Lab Room 2."
-        },
-        {
-          "station_type": "skills",
           "station_name": "Pelvic Binding Practice",
           "skills": [
-            { "name": "Pelvic binding application", "platinum_skill": false, "min_attempts": 1 }
+            {
+              "name": "Pelvic binding application",
+              "platinum_skill": false,
+              "min_attempts": 1
+            }
           ],
           "format_notes": "Pelvic binding skill drill."
         },
         {
           "station_type": "skills",
-          "station_name": "Blood Typing Activity",
+          "station_name": "Skill Practice",
           "skills": [],
-          "format_notes": "Lab Room 1. Instructor: J. Lomonaco. Confirm format: clinical skill vs lab science activity."
+          "format_notes": "Skill practice or documentation/clinical prep — instructor's choice. Lab Room 2."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "Week 13 — 172 psych + 192 environmental/trauma. Advanced: combative patient management."
         }
       ]
     },
@@ -857,36 +1007,106 @@
           "format_notes": "Lab Room 2. Instructor: B. Hartnell. 182 Peds Cardiac."
         },
         {
-          "station_type": "skills",
-          "station_name": "Documentation Station",
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
           "skills": [],
-          "format_notes": "Classroom 1. Instructor: R. Niedfeldt. Execution uncertain in Group 13 records — confirm and standardize."
+          "format_notes": "Week 14 — 172 toxicology + 182 peds cardiac. Advanced: tox management with airway compromise."
         }
       ]
     },
     {
       "week_number": 14,
       "day_number": 2,
-      "title": "Week 14 Day 2 — Content Pending",
+      "title": "Pregnant Cardiomyopathy, Trauma, Skills Makeup — Late S2",
       "category": "skills_lab",
       "instructor_count": 3,
       "is_anchor": false,
       "anchor_type": null,
-      "requires_review": true,
-      "review_notes": "Week 14 Day 2 file not uploaded in Group 13 records. Retrieve and populate.",
-      "stations": []
+      "requires_review": false,
+      "review_notes": null,
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Pregnant Cardiomyopathy",
+          "scenario_title": "Peripartum Cardiomyopathy — Acute Decompensation",
+          "difficulty": "advanced",
+          "format_notes": "Pregnant patient presenting with acute decompensated heart failure — peripartum cardiomyopathy. ALS management within OB constraints: avoid prone positioning, left lateral tilt, medication considerations in pregnancy. Platinum documentation required."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Trauma Station",
+          "scenario_title": "Trauma — Instructor-Selected Scenario",
+          "difficulty": "advanced",
+          "format_notes": "Trauma scenario — specific scenario at instructor discretion. Instructor: R. Niedfedlt. Late-semester trauma integration."
+        },
+        {
+          "station_type": "skills",
+          "station_name": "Skills Makeup Station",
+          "skills": [],
+          "format_notes": "Open skills makeup station for students below minimum attempt counts. Instructor: J. Lomonaco. Students rotate through based on individual Platinum tracking deficits identified prior to this session. No specific scenario — student-directed based on need."
+        },
+        {
+          "station_type": "skill_review",
+          "station_name": "Skill Review — Student Request or Advanced Variation",
+          "skills": [],
+          "format_notes": "DAILY SKILL REVIEW — runs every regular S2 lab session.\nFormat:\n  • Poll students 24-48 hours before lab (via Cowork or group message) for skill review requests.\n  • If requests received: run as focused refresher station. No evaluation — practice and feedback only.\n  • If no requests received by lab morning: instructor runs an advanced variation from the list below.\n\nAdvanced variation options (escalate progressively as semester advances):\n  Early S2 (Weeks 1-5): Timed skill drill — ETI in 60 sec, IO access first attempt, IV with one hand\n  Mid S2 (Weeks 6-10): Difficult scenario variation — failed airway, non-standard anatomy, combative patient\n  Late S2 (Weeks 11-15): S3-style drill card format — 8-min timed station, student runs solo, instructor evaluates\n\nInstructor notes:\n  • Track what gets requested — pattern of requests = cohort comfort gaps.\n  • Track what no-requests weeks required — if advanced versions run every week, cohort is ready for S3 format.\n  • No Platinum documentation required for this station.\n  • Assign 1 instructor. Station runs concurrent with other stations."
+        }
+      ]
     },
     {
       "week_number": 15,
       "day_number": 1,
-      "title": "Week 15 — Capstone Integration Scenarios",
-      "category": "skills_lab",
-      "instructor_count": 4,
+      "title": "Capstone Integration — High-Acuity Multi-System Scenarios",
+      "category": "capstone",
+      "instructor_count": 6,
       "is_anchor": false,
       "anchor_type": null,
       "requires_review": true,
-      "review_notes": "No Week 15 files uploaded in Group 13 records. Confirm whether S2 ran to 15 weeks or ended at 14. If Week 15 ran: full-scope integration scenarios drawing from all S2 content (cardiac, trauma, medical, OB, peds). 172/192/182 finals window.",
-      "stations": []
+      "review_notes": "Source: Group 12 Week 14 Day 1 — used as Group 13 Week 15 capstone. Confirm Week 15 ran for Group 13 (semester may have ended at Week 14). Verify manikin assignments match Group 13 equipment availability. Sheet 2 contains student rotation groups for Group 12 — do not import those to Group 13.",
+      "stations": [
+        {
+          "station_type": "scenario",
+          "station_name": "Addisonian Crisis",
+          "scenario_title": "Addisonian Crisis — Deceptive Nausea and Weakness",
+          "difficulty": "advanced",
+          "format_notes": "Adrenal insufficiency presenting atypically. Instructor: B. Young. Location: Lab Room 1. SimMan, Laerdal monitor. SimNet required."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Angioedema with Airway Compromise",
+          "scenario_title": "Angioedema with Airway Compromise — Cricothyrotomy Required",
+          "difficulty": "advanced",
+          "format_notes": "Failed airway scenario requiring surgical cric. SimMan Essentials (challenging airway manikin). Instructor: M. Gannon. Location: Lab Room 2. Laerdal monitor. High-stakes airway — cric decision point is the evaluation focus."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Refractory Status Epilepticus",
+          "scenario_title": "Refractory Status Epilepticus — 35-Year-Old Female",
+          "difficulty": "advanced",
+          "format_notes": "Status epilepticus not responding to first-line benzodiazepines. Sim Mom. Instructor: M. Schaffer. Location: Hospital bay. Laerdal monitor. SimNet required."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Auto-Pedestrian FBAO",
+          "scenario_title": "Auto-Pedestrian FBAO — Hidden Pit, Hidden Trauma",
+          "difficulty": "advanced",
+          "format_notes": "Complex scenario: FBAO with concealed traumatic injuries from pedestrian strike. Requires Magill forceps for ALS FBAO removal plus trauma management. Megacode Kelly. Instructor: B. Hartnell, S. Peterson. Lifepack monitor, Simpad controller. Platinum skills: FBAO Magill, needle decompression available."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Autonomic Dysreflexia",
+          "scenario_title": "Autonomic Dysreflexia — Missed Clues Lead to Crisis",
+          "difficulty": "advanced",
+          "format_notes": "Spinal cord injury patient in autonomic dysreflexia — hypertensive emergency with concealed trigger. Students must identify and eliminate stimulus. 2007 medium-fidelity manikin. Instructor: J. Lomonaco. Lifepack 2, non-networked controller."
+        },
+        {
+          "station_type": "scenario",
+          "station_name": "Pediatric Drowning",
+          "scenario_title": "Pediatric Drowning — 3-Year-Old Found Unresponsive in Pool",
+          "difficulty": "advanced",
+          "format_notes": "Pediatric submersion — resuscitation, hypothermia management, family dynamics. Sim Baby (RT manikin, toddler-sized). Instructors: B. Hartnell, S. Peterson. Lifepack 3, RT Laptop controller. SimNet required. Peds trauma scenario."
+        }
+      ]
     }
   ]
 }

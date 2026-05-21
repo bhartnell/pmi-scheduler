@@ -115,6 +115,53 @@ interface ImportPayload {
   program: string;
   semester: number;
   templates: TemplateDef[];
+  // When true, the route will skip-with-report any template that
+  // looks like a placeholder (title contains "Content Pending" OR
+  // stations is empty/missing) instead of refusing. Default is
+  // false so a stale/incomplete file can never silently overwrite
+  // real template content with placeholders — that's the bug seen
+  // on 2026-05-21 where the embedded seed file kept reverting the
+  // paramedic S2 templates to Content Pending after they had been
+  // fixed.
+  confirm_placeholders?: boolean;
+}
+
+// Placeholder detection. Returns the subset of templates that look
+// like blank/placeholder entries — i.e. that would BLANK OUT real
+// content if applied. Matches:
+//   - title (or name) containing 'Content Pending', case-insensitive
+//   - missing or empty stations array
+function detectPlaceholders(templates: TemplateDef[]): Array<{
+  week_number: number;
+  day_number: number;
+  title: string | null;
+  reasons: string[];
+}> {
+  const out: Array<{
+    week_number: number;
+    day_number: number;
+    title: string | null;
+    reasons: string[];
+  }> = [];
+  for (const t of templates) {
+    const title = (t.title ?? t.name ?? '') || null;
+    const reasons: string[] = [];
+    if ((title ?? '').toLowerCase().includes('content pending')) {
+      reasons.push('title contains "Content Pending"');
+    }
+    if (!Array.isArray(t.stations) || t.stations.length === 0) {
+      reasons.push('stations array is empty or missing');
+    }
+    if (reasons.length > 0) {
+      out.push({
+        week_number: t.week_number,
+        day_number: t.day_number,
+        title,
+        reasons,
+      });
+    }
+  }
+  return out;
 }
 
 interface CourseDef {
@@ -199,13 +246,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // ── Placeholder gate ────────────────────────────────────────
+    // Refuse uploads whose templates look like blank placeholders
+    // unless the client explicitly opted in via confirm_placeholders.
+    // This prevents the "Seed Program Templates" / re-upload class
+    // of bug where a stale file silently overwrites real content
+    // with "Content Pending" titles + empty station arrays.
+    const placeholders = detectPlaceholders(templates);
+    if (placeholders.length > 0 && !body.confirm_placeholders) {
+      return NextResponse.json(
+        {
+          error:
+            `Refusing import: ${placeholders.length} of ${templates.length} ` +
+            `templates look like placeholders (Content Pending titles or ` +
+            `empty stations). Pass confirm_placeholders=true to apply ` +
+            `non-placeholder templates and skip these. The placeholder ` +
+            `rows will NEVER overwrite existing real content.`,
+          error_code: 'placeholders_blocked',
+          placeholder_count: placeholders.length,
+          placeholders,
+        },
+        { status: 400 },
+      );
+    }
+    // When confirm_placeholders is set, we filter the placeholder
+    // templates out of the apply loop entirely — they don't get
+    // written. This means a partial file can be uploaded without
+    // its placeholder rows clobbering anything; the operator still
+    // sees the count in the response.
+    const placeholderKeys = new Set(
+      placeholders.map(p => `${p.week_number}:${p.day_number}`),
+    );
+    const skippedPlaceholders = placeholders;
+
     const supabase = getSupabaseAdmin();
+    // updated_by stamp on every row we write. Lets the audit trigger
+    // attribute changes to "import-route via <admin email>" instead
+    // of leaving updated_by NULL.
+    const writerStamp = `import-route:${user.email ?? 'unknown'}`;
     let templatesCreated = 0;
     let templatesUpdated = 0;
     let stationsCreated = 0;
     const errors: string[] = [];
 
     for (const tmpl of templates) {
+      // Skip placeholders when confirm flag is set; the gate above
+      // already refused without the flag.
+      if (placeholderKeys.has(`${tmpl.week_number}:${tmpl.day_number}`)) {
+        continue;
+      }
       try {
         // Check if template already exists for this (program, semester, week_number, day_number)
         const { data: existing } = await supabase
@@ -233,6 +322,7 @@ export async function POST(request: NextRequest) {
               requires_review: tmpl.requires_review,
               review_notes: tmpl.review_notes,
               updated_at: new Date().toISOString(),
+              updated_by: writerStamp,
             })
             .eq('id', existing.id);
 
@@ -265,6 +355,7 @@ export async function POST(request: NextRequest) {
               template_data: {},
               is_shared: true,
               created_by: user.email,
+              updated_by: writerStamp,
               updated_at: new Date().toISOString(),
             })
             .select('id')
@@ -311,6 +402,8 @@ export async function POST(request: NextRequest) {
         templates_updated: templatesUpdated,
         stations_created: stationsCreated,
         total_templates: templates.length,
+        placeholders_skipped: skippedPlaceholders.length,
+        placeholders: skippedPlaceholders.length > 0 ? skippedPlaceholders : undefined,
         errors: errors.length > 0 ? errors : undefined,
       },
     });

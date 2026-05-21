@@ -167,7 +167,10 @@ export async function PUT(
     await createVersionSnapshot(supabase, id, user.email, 'Direct template edit');
 
     // Build update object
-    const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const updates: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+      updated_by: `admin-edit:${user.email ?? 'unknown'}`,
+    };
     if (body.program !== undefined) updates.program = body.program;
     if (body.semester !== undefined) updates.semester = body.semester;
     if (body.week_number !== undefined) updates.week_number = body.week_number;

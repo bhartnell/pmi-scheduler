@@ -12,21 +12,113 @@ import path from 'path';
 // No request body needed — reads from project data files.
 // Requires admin+ role.
 // ---------------------------------------------------------------------------
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const auth = await requireAuth('admin');
     if (auth instanceof NextResponse) return auth;
     const { user } = auth;
 
+    // Same opt-in flag as /import — without confirm_placeholders the
+    // route refuses to apply files that contain "Content Pending" /
+    // empty-station templates. Default-safe: a stale data/ file
+    // (which is what we had on 2026-05-21) can never silently revert
+    // the DB. The flag is read from the request body when present.
+    let confirmPlaceholders = false;
+    try {
+      const body = await request.json();
+      if (body && typeof body === 'object' && body.confirm_placeholders === true) {
+        confirmPlaceholders = true;
+      }
+    } catch {
+      // No body / not JSON — fall through with confirmPlaceholders=false.
+    }
+
     const supabase = getSupabaseAdmin();
     const dataDir = path.join(process.cwd(), 'data');
     const files = ['paramedic_s1_labs.json', 'paramedic_s2_labs.json', 'paramedic_s3_labs.json', 'emt_s1_labs.json', 'aemt_s1_labs.json'];
-    const results: Array<{ file: string; templates: number; stations: number; errors: string[] }> = [];
+    const results: Array<{
+      file: string;
+      templates: number;
+      stations: number;
+      placeholders_skipped: number;
+      placeholders?: Array<{ week_number: number; day_number: number; title: string | null; reasons: string[] }>;
+      errors: string[];
+    }> = [];
+    const writerStamp = `seed-route:${user.email ?? 'unknown'}`;
+
+    // Pre-scan: detect placeholders across ALL files. If any file
+    // contains placeholders and confirm flag is not set, refuse the
+    // whole operation up front. We deliberately list every offending
+    // entry so the operator sees the full scope of the problem in
+    // one response.
+    interface PlaceholderEntry {
+      file: string;
+      week_number: number;
+      day_number: number;
+      title: string | null;
+      reasons: string[];
+    }
+    const allPlaceholders: PlaceholderEntry[] = [];
+    for (const file of files) {
+      const filePath = path.join(dataDir, file);
+      if (!fs.existsSync(filePath)) continue;
+      try {
+        const raw = fs.readFileSync(filePath, 'utf-8');
+        const payload = JSON.parse(raw);
+        if (!payload || !Array.isArray(payload.templates)) continue;
+        for (const t of payload.templates) {
+          const title = (t.title ?? t.name ?? '') || null;
+          const reasons: string[] = [];
+          if ((title ?? '').toLowerCase().includes('content pending')) {
+            reasons.push('title contains "Content Pending"');
+          }
+          if (!Array.isArray(t.stations) || t.stations.length === 0) {
+            reasons.push('stations array is empty or missing');
+          }
+          if (reasons.length > 0) {
+            allPlaceholders.push({
+              file,
+              week_number: t.week_number,
+              day_number: t.day_number,
+              title,
+              reasons,
+            });
+          }
+        }
+      } catch {
+        // Skip unparseable files at this stage — the main loop will
+        // surface the parse error in its per-file results.
+      }
+    }
+    if (allPlaceholders.length > 0 && !confirmPlaceholders) {
+      return NextResponse.json(
+        {
+          error:
+            `Refusing seed: ${allPlaceholders.length} placeholder ` +
+            `template(s) found in embedded data files. Either fix the ` +
+            `JSON files (preferred) or pass confirm_placeholders=true to ` +
+            `apply non-placeholder templates and skip these. Placeholders ` +
+            `will NEVER overwrite existing real content.`,
+          error_code: 'placeholders_blocked',
+          placeholder_count: allPlaceholders.length,
+          placeholders: allPlaceholders,
+        },
+        { status: 400 },
+      );
+    }
+    // Build a per-file lookup so the main loop can skip the right
+    // (week, day) entries without re-scanning.
+    const placeholderKeysByFile = new Map<string, Set<string>>();
+    for (const p of allPlaceholders) {
+      const set = placeholderKeysByFile.get(p.file) ?? new Set<string>();
+      set.add(`${p.week_number}:${p.day_number}`);
+      placeholderKeysByFile.set(p.file, set);
+    }
 
     for (const file of files) {
       const filePath = path.join(dataDir, file);
       if (!fs.existsSync(filePath)) {
-        results.push({ file, templates: 0, stations: 0, errors: [`File not found: ${file}`] });
+        results.push({ file, templates: 0, stations: 0, placeholders_skipped: 0, errors: [`File not found: ${file}`] });
         continue;
       }
 
@@ -36,9 +128,18 @@ export async function POST() {
 
       let templatesCount = 0;
       let stationsCount = 0;
+      let placeholdersSkippedThisFile = 0;
+      const fileSkipSet = placeholderKeysByFile.get(file) ?? new Set<string>();
       const errors: string[] = [];
 
       for (const tmpl of templates) {
+        // Skip placeholder rows that the pre-scan flagged. We only
+        // reach this loop if confirm_placeholders was set, otherwise
+        // the request short-circuited above.
+        if (fileSkipSet.has(`${tmpl.week_number}:${tmpl.day_number}`)) {
+          placeholdersSkippedThisFile++;
+          continue;
+        }
         try {
           // Check for existing
           const { data: existing } = await supabase
@@ -73,6 +174,7 @@ export async function POST() {
                 review_notes: tmpl.review_notes,
                 template_data: Object.keys(templateData).length > 0 ? templateData : {},
                 updated_at: new Date().toISOString(),
+                updated_by: writerStamp,
               })
               .eq('id', existing.id);
 
@@ -102,6 +204,7 @@ export async function POST() {
                 template_data: Object.keys(templateData).length > 0 ? templateData : {},
                 is_shared: true,
                 created_by: user.email,
+                updated_by: writerStamp,
                 updated_at: new Date().toISOString(),
               })
               .select('id')
@@ -160,17 +263,26 @@ export async function POST() {
         }
       }
 
-      results.push({ file, templates: templatesCount, stations: stationsCount, errors });
+      results.push({
+        file,
+        templates: templatesCount,
+        stations: stationsCount,
+        placeholders_skipped: placeholdersSkippedThisFile,
+        placeholders: allPlaceholders.filter(p => p.file === file).map(({ ...rest }) => rest),
+        errors,
+      });
     }
 
     const totalTemplates = results.reduce((sum, r) => sum + r.templates, 0);
     const totalStations = results.reduce((sum, r) => sum + r.stations, 0);
+    const totalPlaceholders = results.reduce((sum, r) => sum + r.placeholders_skipped, 0);
 
     return NextResponse.json({
       success: true,
       summary: {
         total_templates: totalTemplates,
         total_stations: totalStations,
+        total_placeholders_skipped: totalPlaceholders,
         files: results,
       },
     });
