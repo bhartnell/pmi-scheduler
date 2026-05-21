@@ -19,6 +19,7 @@ import {
   Loader2,
   Layers,
   RefreshCw,
+  GitCompare,
   GraduationCap,
   Flag,
 } from 'lucide-react';
@@ -108,6 +109,12 @@ export default function LabDayPage() {
   const [rosterIncludePhotos, setRosterIncludePhotos] = useState(true);
   const [copySuccessToast, setCopySuccessToast] = useState(false);
   const [showDiffModal, setShowDiffModal] = useState(false);
+  // Per-lab-day "Refresh from template" — pulls template content
+  // onto just this row. Distinct from the bulk "Update from Template"
+  // on the cohort page: this always overwrites the title for this day
+  // since the operator opted in explicitly. Tracked separately from
+  // the Compare modal so the spinner doesn't fight with it.
+  const [refreshingFromTemplate, setRefreshingFromTemplate] = useState(false);
   const [showRequestCoverage, setShowRequestCoverage] = useState(false);
   // Shortcut: bulk-shift generator scoped to this single lab day's
   // date + cohort. Same modal as /scheduling but pre-locked so the
@@ -313,6 +320,51 @@ export default function LabDayPage() {
     setQuickAddSaving(false);
   };
 
+  // Per-lab-day "Refresh from template". Posts to the dedicated
+  // refresh endpoint, which always overwrites the title from the
+  // template, inserts any missing stations, and never touches
+  // instructor notes / results / sign-offs / competency. Used to
+  // unstick lab_days whose generic "Lab Day - Week N" title isn't
+  // matched by the bulk Update-from-Template predicate.
+  const handleRefreshFromTemplate = async () => {
+    if (refreshingFromTemplate) return;
+    const ok = window.confirm(
+      'Refresh this lab day from the matching template?\n\n' +
+        '• Title will be overwritten\n' +
+        '• Missing stations will be added\n' +
+        '• Instructor notes, results, sign-offs are preserved\n' +
+        '• Other lab days in the cohort are not affected',
+    );
+    if (!ok) return;
+    setRefreshingFromTemplate(true);
+    try {
+      const res = await fetch('/api/admin/lab-templates/refresh-day', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lab_day_id: labDayId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        const parts: string[] = [];
+        if (data.title_changed) parts.push('title updated');
+        if (data.stations_added > 0)
+          parts.push(`${data.stations_added} station${data.stations_added === 1 ? '' : 's'} added`);
+        const msg = parts.length > 0
+          ? `Refreshed: ${parts.join(', ')}`
+          : 'Already matches template — nothing to update';
+        toast?.addToast('success', msg);
+        fetchLabDay({ silent: true });
+      } else {
+        toast?.addToast('error', data.error || 'Refresh failed');
+      }
+    } catch (err) {
+      console.error('Refresh from template error:', err);
+      toast?.addToast('error', 'Refresh request failed');
+    } finally {
+      setRefreshingFromTemplate(false);
+    }
+  };
+
   const handleToggleLabMode = async (newMode: 'group_rotations' | 'individual_testing') => {
     if (newMode === labMode || labModeLoading) return; setLabModeLoading(true);
     try { const res = await fetch(`/api/lab-management/lab-days/${labDayId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lab_mode: newMode }) }); const data = await res.json(); if (!data.error) setLabMode(newMode); }
@@ -496,7 +548,43 @@ export default function LabDayPage() {
               <p className="text-sm font-medium text-indigo-900 dark:text-indigo-200">Source Template: {labDay.source_template.name}</p>
               <p className="text-xs text-indigo-600 dark:text-indigo-400">{labDay.source_template.program?.toUpperCase()} S{labDay.source_template.semester} &bull; Week {labDay.source_template.week_number} Day {labDay.source_template.day_number}</p>
             </div>
-            {userRole && canAccessAdmin(userRole) && (<button onClick={() => setShowDiffModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-800/50 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-700/50 transition-colors"><RefreshCw className="w-3.5 h-3.5" /> Compare &amp; Update Template</button>)}
+            {userRole && canAccessAdmin(userRole) && (
+              <>
+                <button
+                  onClick={handleRefreshFromTemplate}
+                  disabled={refreshingFromTemplate}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-white dark:bg-gray-800 border border-indigo-300 dark:border-indigo-700 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors disabled:opacity-50"
+                  title="Pull title + missing stations from this template. Preserves instructor notes, results, sign-offs."
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${refreshingFromTemplate ? 'animate-spin' : ''}`} />
+                  {refreshingFromTemplate ? 'Refreshing…' : 'Refresh from template'}
+                </button>
+                <button onClick={() => setShowDiffModal(true)} className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-300 bg-indigo-100 dark:bg-indigo-800/50 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-700/50 transition-colors">
+                  <GitCompare className="w-3.5 h-3.5" /> Compare &amp; Update Template
+                </button>
+              </>
+            )}
+          </div>
+        )}
+        {/* No source_template set yet — show an admin-only quick-action
+            banner that lets the operator pull content for this single
+            day. This is the path the "Content Pending" lab_days hit,
+            since they have no source_template_id link from /apply. */}
+        {!labDay.source_template && userRole && canAccessAdmin(userRole) && (
+          <div className="flex items-center gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 mb-6 print:hidden">
+            <Layers className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-amber-900 dark:text-amber-200">No source template linked</p>
+              <p className="text-xs text-amber-700 dark:text-amber-400">Pull content from the matching template by week + day. Preserves notes, results, sign-offs.</p>
+            </div>
+            <button
+              onClick={handleRefreshFromTemplate}
+              disabled={refreshingFromTemplate}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 bg-white dark:bg-gray-800 border border-amber-300 dark:border-amber-700 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshingFromTemplate ? 'animate-spin' : ''}`} />
+              {refreshingFromTemplate ? 'Refreshing…' : 'Refresh from template'}
+            </button>
           </div>
         )}
 
