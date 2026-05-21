@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import AutoSaveIndicator from '@/components/AutoSaveIndicator';
@@ -32,6 +32,7 @@ import {
   Copy,
   Wand2,
   Download,
+  Upload,
 } from 'lucide-react';
 import { SKIN_OPTIONS } from '@/lib/constants';
 import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
@@ -1187,11 +1188,103 @@ export default function ScenarioEditorPage() {
     }
   };
 
+  // Hidden file input for the "Update from JSON" flow — the visible
+  // button just clicks this. Lets us reuse the OS picker without
+  // adding a modal layer.
+  const jsonInputRef = useRef<HTMLInputElement>(null);
+  const [updatingFromJson, setUpdatingFromJson] = useState(false);
+
+  // Update the current scenario in place from a JSON file. Targets
+  // THIS scenario's id, so the file's `title`/`id` fields are
+  // informational only — no duplicate can be created and no other
+  // scenario can be clobbered. Accepts either:
+  //   • { scenarios: [ {...} ] }  (bulk-import shape)
+  //   • { ...scenario }           (single object)
+  // Picks the first scenario when wrapped. On success, re-fetches
+  // the scenario so the editor renders the updated content.
+  const handleUpdateFromJson = async (file: File) => {
+    setUpdatingFromJson(true);
+    try {
+      const text = await file.text();
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(text);
+      } catch (e) {
+        alert(`Invalid JSON: ${e instanceof Error ? e.message : 'Parse error'}`);
+        return;
+      }
+      // Unwrap the bulk-import shape if present.
+      let body: Record<string, unknown> | null = null;
+      if (parsed && typeof parsed === 'object') {
+        const p = parsed as Record<string, unknown>;
+        if (Array.isArray(p.scenarios) && p.scenarios.length > 0) {
+          body = p.scenarios[0] as Record<string, unknown>;
+        } else if (typeof p.title === 'string' || typeof p.category === 'string') {
+          body = p;
+        }
+      }
+      if (!body) {
+        alert(
+          'Could not find a scenario in the uploaded file. Expected either ' +
+            '{ scenarios: [ {...} ] } or a single scenario object with a title.',
+        );
+        return;
+      }
+      // Strip the id from the body so the PATCH never tries to
+      // change the row's primary key. The URL carries the id we
+      // actually want to update.
+      const incomingId = typeof body.id === 'string' ? body.id : null;
+      if (incomingId && incomingId !== scenarioId) {
+        const proceed = window.confirm(
+          `The uploaded JSON has a different scenario id (${incomingId.slice(0, 8)}…). ` +
+            `\n\nIt will be APPLIED to THIS scenario (${(scenarioId ?? '').slice(0, 8)}…) anyway — ` +
+            `that prevents accidental duplicates. Proceed?`,
+        );
+        if (!proceed) return;
+      }
+      const incomingTitle = typeof body.title === 'string' ? body.title : null;
+      const proceedReplace = window.confirm(
+        `Replace this scenario's content with the uploaded JSON?\n\n` +
+          `Current: "${scenario.title || '(untitled)'}"\n` +
+          (incomingTitle ? `Incoming: "${incomingTitle}"\n` : '') +
+          `\nThis is a destructive update — existing fields will be overwritten. ` +
+          `Use Version History to revert if needed.`,
+      );
+      if (!proceedReplace) return;
+
+      const { id: _droppedId, ...patchBody } = body as Record<string, unknown>;
+      // _droppedId is intentionally unused — see the note above.
+      void _droppedId;
+
+      const res = await fetch(`/api/lab-management/scenarios/${scenarioId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(patchBody),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        alert(`Update failed: ${data.error || res.status}`);
+        return;
+      }
+      // Refresh the editor view from the server so the user sees
+      // the new content reflected. Also clears the autosave draft
+      // since the source-of-truth has just changed underfoot.
+      autoSave.clearDraft();
+      await fetchScenario();
+    } catch (err) {
+      console.error('Update from JSON failed:', err);
+      alert(`Update failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setUpdatingFromJson(false);
+    }
+  };
+
   // Export current scenario as bulk-import-compatible JSON. Uses
   // the in-memory `scenario` state so unsaved edits ARE captured.
   // See lib/scenario-export.ts for round-trip fidelity notes.
   const handleExportJson = () => {
     const payload = buildSingleExport({
+      id: scenarioId, // round-trip identity — bulk-import dedups on this
       title: scenario.title,
       category: scenario.category,
       subcategory: scenario.subcategory,
@@ -1464,6 +1557,30 @@ export default function ScenarioEditorPage() {
                   >
                     <Download className="w-4 h-4" />
                     Export JSON
+                  </button>
+                  {/* Hidden file picker — the visible button below
+                      forwards a click here. Reset value to '' on
+                      change so re-uploading the same file fires
+                      the handler again. */}
+                  <input
+                    ref={jsonInputRef}
+                    type="file"
+                    accept="application/json,.json"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUpdateFromJson(file);
+                      e.target.value = '';
+                    }}
+                  />
+                  <button
+                    onClick={() => jsonInputRef.current?.click()}
+                    disabled={updatingFromJson}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
+                    title="Replace this scenario's content from a JSON file (updates this row by id — no duplicates)"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {updatingFromJson ? 'Updating…' : 'Update from JSON'}
                   </button>
                   <button
                     onClick={handleFixStructure}

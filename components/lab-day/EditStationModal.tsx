@@ -533,7 +533,10 @@ export default function EditStationModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+      {/* Widened from max-w-lg (~512px) to max-w-2xl (~672px) so the
+          scenario picker has room to show a chief-complaint preview
+          per row. Mobile still falls back via `w-full` + p-4 padding. */}
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             Edit Station {station.station_number}
@@ -640,13 +643,19 @@ export default function EditStationModal({
                   </select>
                 </div>
               </div>
-              {/* Scrollable scenario list */}
-              <div className="max-h-48 overflow-y-auto border dark:border-gray-700 rounded-lg">
+              {/* Scrollable scenario list. Taller (max-h-72) and
+                  showing chief_complaint as a third line per row —
+                  the wider modal makes this readable instead of
+                  truncated to nothing. Helps tell apart same-named
+                  scenarios that exist as duplicates or variants. */}
+              <div className="max-h-72 overflow-y-auto border dark:border-gray-700 rounded-lg">
                 {(() => {
                   const filtered = scenarios.filter(s => {
+                    const q = scenarioSearch.toLowerCase();
                     const matchesSearch = !scenarioSearch ||
-                      s.title.toLowerCase().includes(scenarioSearch.toLowerCase()) ||
-                      s.category.toLowerCase().includes(scenarioSearch.toLowerCase());
+                      s.title.toLowerCase().includes(q) ||
+                      s.category.toLowerCase().includes(q) ||
+                      (s.chief_complaint ?? '').toLowerCase().includes(q);
                     const matchesCategory = !scenarioFilterCategory || s.category === scenarioFilterCategory;
                     const matchesDifficulty = !scenarioFilterDifficulty || s.difficulty === scenarioFilterDifficulty;
                     return matchesSearch && matchesCategory && matchesDifficulty;
@@ -661,7 +670,7 @@ export default function EditStationModal({
                   return filtered.map(scenario => (
                     <label
                       key={scenario.id}
-                      className={`flex items-center gap-3 p-2.5 cursor-pointer border-b last:border-0 dark:border-gray-700 transition-colors ${
+                      className={`flex items-start gap-3 p-2.5 cursor-pointer border-b last:border-0 dark:border-gray-700 transition-colors ${
                         editForm.scenario_id === scenario.id
                           ? 'bg-blue-50 dark:bg-blue-900/20'
                           : 'hover:bg-gray-50 dark:hover:bg-gray-800'
@@ -672,13 +681,36 @@ export default function EditStationModal({
                         name="scenario_select"
                         checked={editForm.scenario_id === scenario.id}
                         onChange={() => setEditForm(prev => ({ ...prev, scenario_id: scenario.id }))}
-                        className="text-blue-600"
+                        className="text-blue-600 mt-0.5"
                       />
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{scenario.title}</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {scenario.category}{scenario.difficulty ? ` · ${scenario.difficulty}` : ''}
-                        </p>
+                        {scenario.chief_complaint && (
+                          <p className="text-xs text-gray-700 dark:text-gray-300 truncate">
+                            {scenario.chief_complaint}
+                          </p>
+                        )}
+                        <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                          <span className="px-1.5 py-0.5 text-[10px] rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 uppercase tracking-wide">
+                            {scenario.category || 'uncat'}
+                          </span>
+                          {scenario.difficulty && (
+                            <span className={`px-1.5 py-0.5 text-[10px] rounded ${
+                              scenario.difficulty.toLowerCase() === 'beginner'
+                                ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-200'
+                                : scenario.difficulty.toLowerCase() === 'intermediate'
+                                ? 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-200'
+                                : 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'
+                            }`}>
+                              {scenario.difficulty}
+                            </span>
+                          )}
+                          {scenario.estimated_duration != null && (
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                              ~{scenario.estimated_duration} min
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </label>
                   ));

@@ -78,6 +78,11 @@ export interface Scenario {
   title: string;
   category: string;
   difficulty: string;
+  // Added 2026-05-21 so the Edit Station picker can preview a few
+  // distinguishing fields next to the title. Both come from
+  // /api/lab-management/scenarios which already returns them.
+  chief_complaint?: string | null;
+  estimated_duration?: number | null;
 }
 
 export interface SkillDocument {

@@ -31,6 +31,11 @@
 // ----------------------------------------------------------------
 
 export interface ExportableScenarioInput {
+  // Identity. When present and a UUID, the bulk-import commit
+  // endpoint uses this to UPDATE-in-place rather than create a
+  // duplicate. Always preserved by round-trips through this lib.
+  id?: string | null;
+
   // Core
   title?: string | null;
   category?: string | null;
@@ -210,6 +215,13 @@ export function scenarioToImportShape(s: ExportableScenarioInput): Record<string
     }
     out[k] = v;
   };
+
+  // Emit id first so it lands at the top of the JSON for hand-editing
+  // visibility. Only emit if it parses as a UUID — anything else
+  // would just confuse the bulk-import dedup logic.
+  if (typeof s.id === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s.id)) {
+    out.id = s.id;
+  }
 
   put('title', (s.title ?? '').trim());
   put('category', s.category);

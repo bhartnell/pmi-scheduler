@@ -21,6 +21,11 @@ interface ImportedPhase {
 }
 
 interface ImportedScenario {
+  // Optional id — present when the JSON came from this system's
+  // exporter. Passed through to ParsedScenario and used by the
+  // commit endpoint's dedup logic to UPDATE-in-place rather than
+  // create a duplicate.
+  id?: string;
   title?: string;
   category?: string;
   subcategory?: string;
@@ -59,6 +64,8 @@ interface ImportedScenario {
 }
 
 interface ParsedScenario {
+  // Optional id passthrough — see ImportedScenario.id.
+  id?: string;
   title: string;
   category: string | null;
   subcategory: string | null;
@@ -259,6 +266,8 @@ function parseScenario(imported: ImportedScenario, index: number): PreviewScenar
   // Build parsed scenario
   const phaseVitals = phases[0]?.vitals as Record<string, string> | undefined;
   const parsed: ParsedScenario = {
+    // Pass id through if present; commit-route uses it for dedup.
+    id: imported.id,
     title: (imported.title || '').trim(),
     category: imported.category || null,
     subcategory: imported.subcategory || null,

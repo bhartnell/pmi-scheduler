@@ -1229,6 +1229,7 @@ export default function ScenarioEditorPage() {
   // ignored on re-import.
   const handleExportJson = () => {
     const payload = buildSingleExport({
+      id: scenarioId, // round-trip identity — bulk-import dedups on this
       title: scenario.title,
       category: scenario.category,
       subcategory: scenario.subcategory,
