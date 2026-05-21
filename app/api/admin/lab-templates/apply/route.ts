@@ -47,6 +47,18 @@ export async function POST(request: NextRequest) {
       // length) when not provided so callers without the explicit
       // end still get a sane cutoff. Format: YYYY-MM-DD.
       semester_end_date?: string;
+      // Gap-detection granularity for the skip_existing path.
+      //   'day_pair' (default): a template is skipped only when a
+      //     lab_day exists with the same week_number AND day_number.
+      //     This is the original behavior — used when you want to
+      //     fill in just the Day 2 of a week that has Day 1.
+      //   'week': a template is skipped if ANY lab_day already exists
+      //     for that week_number, regardless of day_number. This is
+      //     the "Fill gaps only" mode requested for mid-semester
+      //     template refreshes where you only want to create lab_days
+      //     for weeks that have nothing at all.
+      // Ignored when force=true (force wipes everything first).
+      gap_mode?: 'day_pair' | 'week';
     };
 
     // Accept both `program` and legacy `program_id` from callers
@@ -57,6 +69,7 @@ export async function POST(request: NextRequest) {
     const daySpacing = body.day_spacing ?? 2;
     const skipExisting = body.skip_existing !== false; // default true
     const force = body.force === true;
+    const gapMode: 'day_pair' | 'week' = body.gap_mode === 'week' ? 'week' : 'day_pair';
     const breakWeeks = new Set(body.break_weeks ?? []);
 
     // Compute the hard end-of-semester cutoff. Anything generated
@@ -147,7 +160,10 @@ export async function POST(request: NextRequest) {
       return (a.day_number || 1) - (b.day_number || 1);
     });
 
-    // If skip_existing, get existing lab days for this cohort + semester
+    // If skip_existing, get existing lab days for this cohort +
+    // semester. The set holds different shapes depending on gap_mode:
+    //   'day_pair' → 'week-day' (skip only exact matches)
+    //   'week'     → 'week' (skip the whole week if anything exists)
     let existingKeys = new Set<string>();
     if (skipExisting && !force) {
       const { data: existing } = await supabase
@@ -158,7 +174,11 @@ export async function POST(request: NextRequest) {
 
       if (existing) {
         existingKeys = new Set(
-          existing.map(d => `${d.week_number || 0}-${d.day_number || 1}`)
+          existing.map(d =>
+            gapMode === 'week'
+              ? `${d.week_number || 0}`
+              : `${d.week_number || 0}-${d.day_number || 1}`,
+          ),
         );
       }
     }
@@ -180,10 +200,12 @@ export async function POST(request: NextRequest) {
     for (const template of sorted) {
       const weekNum = template.week_number || 1;
       const dayNum = template.day_number || 1;
-      const key = `${weekNum}-${dayNum}`;
+      const lookupKey = gapMode === 'week' ? `${weekNum}` : `${weekNum}-${dayNum}`;
 
-      // Skip if already exists
-      if (skipExisting && existingKeys.has(key)) {
+      // Skip if already exists. With gap_mode='week', any lab_day
+      // anywhere in this week wins — the operator chose "Fill gaps
+      // only" so we don't reach into populated weeks at all.
+      if (skipExisting && existingKeys.has(lookupKey)) {
         skippedCount++;
         continue;
       }
@@ -334,6 +356,7 @@ export async function POST(request: NextRequest) {
       semester_end_date: new Date(semesterEndUtc).toISOString().slice(0, 10),
       total_templates: sorted.length,
       break_weeks_applied: breakWeeks.size,
+      gap_mode: gapMode,
       lab_days: createdLabDays,
       errors: errors.length > 0 ? errors : undefined,
     });

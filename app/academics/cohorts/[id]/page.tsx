@@ -252,6 +252,27 @@ export default function CohortHubPage() {
   const [genSemester, setGenSemester] = useState<number>(1);
   const [genStartDate, setGenStartDate] = useState('');
   const [genForce, setGenForce] = useState(false);
+  // "Fill gaps only" — week-level skip. When true, the apply call
+  // sends gap_mode='week', so any week that already has even one
+  // lab_day is skipped entirely. The default skip is day-pair
+  // (week+day match), which is right for backfilling a Day 2 next
+  // to an existing Day 1; "fill gaps only" is for mid-semester
+  // template refreshes where the operator only wants empty weeks
+  // populated. Mutually exclusive with genForce.
+  const [genFillGapsOnly, setGenFillGapsOnly] = useState(false);
+  // Results-gate state for Force Regenerate. We POST to
+  // /cohort-results-check when the Generate modal opens so the UI
+  // knows whether any lab_day in this cohort+semester has results
+  // attached. If it does, Force is disabled outright — wiping
+  // student data via the apply force-delete path needs a manual
+  // intervention (e.g. delete the offending lab_day records first
+  // with full understanding), not a one-click checkbox.
+  const [genResultsCheck, setGenResultsCheck] = useState<{
+    loading: boolean;
+    has_results: boolean;
+    counts: Record<string, number>;
+    lab_day_count: number;
+  } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [genResult, setGenResult] = useState<{
     success: boolean;
@@ -609,6 +630,26 @@ export default function CohortHubPage() {
   const handleGenerateLabDays = async () => {
     if (!genStartDate || !cohort) return;
 
+    // Belt-and-braces confirm for Force Regenerate. The UI already
+    // disables the checkbox when results exist, but if someone
+    // races the check (or the check failed silently) the typed
+    // confirm here is the last guard. Operators have to type
+    // DELETE to proceed — a single misclick should never destroy
+    // student data.
+    if (genForce) {
+      const typed = window.prompt(
+        'Force Regenerate will permanently delete ALL lab day records ' +
+          'for this semester, including any completed sessions, ' +
+          'assessments, sign-offs, attendance, and debrief notes.\n\n' +
+          'This cannot be undone.\n\n' +
+          'Type DELETE to confirm:',
+      );
+      if (typed !== 'DELETE') {
+        toast.error('Force Regenerate cancelled — confirmation text did not match');
+        return;
+      }
+    }
+
     setGenerating(true);
     setGenResult(null);
 
@@ -623,6 +664,9 @@ export default function CohortHubPage() {
           start_date: genStartDate,
           force: genForce,
           skip_existing: !genForce,
+          // Force wins over fill-gaps when both somehow get set;
+          // the UI keeps them mutually exclusive anyway.
+          gap_mode: !genForce && genFillGapsOnly ? 'week' : 'day_pair',
         }),
       });
 
@@ -1107,8 +1151,51 @@ export default function CohortHubPage() {
                 onClick={() => {
                   setGenResult(null);
                   setGenForce(false);
+                  setGenFillGapsOnly(false);
                   setGenStartDate(cohort?.start_date || '');
                   setShowGenerateModal(true);
+                  // Fire-and-forget results check — drives the
+                  // Force-Regenerate gate. Skip on archived cohorts;
+                  // the modal isn't shown for them anyway. We use
+                  // the current genSemester (defaults to 1) at open
+                  // time. If the operator changes the semester
+                  // dropdown later they'll re-open the modal to
+                  // re-check; not worth a live debounce.
+                  setGenResultsCheck({
+                    loading: true,
+                    has_results: false,
+                    counts: {},
+                    lab_day_count: 0,
+                  });
+                  fetch('/api/admin/lab-templates/cohort-results-check', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      cohort_id: cohortId,
+                      semester: genSemester,
+                    }),
+                  })
+                    .then(r => r.json())
+                    .then(d => {
+                      setGenResultsCheck({
+                        loading: false,
+                        has_results: !!d.has_results,
+                        counts: d.counts || {},
+                        lab_day_count: d.lab_day_count || 0,
+                      });
+                    })
+                    .catch(() => {
+                      // On network failure leave loading=false but
+                      // has_results=false so the user isn't blocked
+                      // by an unrelated error. The strong warning +
+                      // confirm dialog still applies.
+                      setGenResultsCheck({
+                        loading: false,
+                        has_results: false,
+                        counts: {},
+                        lab_day_count: 0,
+                      });
+                    });
                 }}
               />
             )}
@@ -1684,30 +1771,108 @@ export default function CohortHubPage() {
                 </p>
               </div>
 
-              {/* Force regenerate */}
-              <div className="flex items-start gap-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg">
+              {/* Force regenerate — gated. If any lab_day in this
+                  cohort+semester has results attached, the checkbox
+                  is disabled outright. Otherwise it's enabled but
+                  styled red (not amber) to make the destruction
+                  obvious, and the submit flow adds a typed-confirm
+                  dialog. */}
+              <div
+                className={`flex items-start gap-3 p-3 border rounded-lg ${
+                  genResultsCheck?.has_results
+                    ? 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
+                }`}
+              >
                 <input
                   type="checkbox"
                   id="gen-force"
                   checked={genForce}
                   onChange={(e) => setGenForce(e.target.checked)}
-                  disabled={generating}
-                  className="w-4 h-4 mt-0.5 rounded border-gray-300 dark:border-gray-600 text-amber-600 focus:ring-amber-500"
+                  disabled={generating || genResultsCheck?.has_results || genResultsCheck?.loading}
+                  className="w-4 h-4 mt-0.5 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500 disabled:opacity-50"
                 />
-                <label htmlFor="gen-force" className="cursor-pointer">
-                  <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
-                    Regenerate (delete existing lab days first)
+                <label
+                  htmlFor="gen-force"
+                  className={`cursor-pointer flex-1 ${
+                    genResultsCheck?.has_results || genResultsCheck?.loading ? 'opacity-60' : ''
+                  }`}
+                >
+                  <span
+                    className={`text-sm font-bold flex items-center gap-1.5 ${
+                      genResultsCheck?.has_results
+                        ? 'text-gray-700 dark:text-gray-300'
+                        : 'text-red-800 dark:text-red-300'
+                    }`}
+                  >
+                    <AlertTriangle className="w-4 h-4" />
+                    Force Regenerate &mdash; deletes everything
                   </span>
-                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-                    Warning: This will delete all existing lab days and stations for this semester and recreate them. Student assessment data linked to those lab days may be affected.
+                  <p
+                    className={`text-xs mt-0.5 ${
+                      genResultsCheck?.has_results
+                        ? 'text-gray-600 dark:text-gray-400'
+                        : 'text-red-700 dark:text-red-400'
+                    }`}
+                  >
+                    {genResultsCheck?.loading
+                      ? 'Checking for student data attached to this semester…'
+                      : genResultsCheck?.has_results
+                        ? 'Disabled: this cohort has results / sign-offs / assessments attached to its lab days for this semester. Force Regenerate would permanently destroy student data.'
+                        : 'This will permanently delete ALL lab day records for this semester, including any completed sessions, assessments, sign-offs, attendance, and debrief notes. This cannot be undone.'}
+                  </p>
+                  {genResultsCheck?.has_results && (
+                    <details className="text-[11px] text-gray-600 dark:text-gray-400 mt-1.5">
+                      <summary className="cursor-pointer font-semibold">
+                        What's blocking this ({genResultsCheck.lab_day_count} lab day{genResultsCheck.lab_day_count === 1 ? '' : 's'} have data) →
+                      </summary>
+                      <ul className="mt-1 ml-4 list-disc space-y-0.5">
+                        {Object.entries(genResultsCheck.counts).map(([table, count]) => (
+                          <li key={table}>
+                            <code className="font-mono">{table}</code>: {count} row{count === 1 ? '' : 's'}
+                          </li>
+                        ))}
+                      </ul>
+                      <p className="mt-1 italic">
+                        Use &ldquo;Fill gaps only&rdquo; instead, or delete the affected lab days
+                        individually with full understanding of what you&apos;re destroying.
+                      </p>
+                    </details>
+                  )}
+                </label>
+              </div>
+
+              {/* Fill gaps only — week-level skip. Disabled when Force
+                  is checked since Force wipes everything first. */}
+              <div className="flex items-start gap-3 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg">
+                <input
+                  type="checkbox"
+                  id="gen-fill-gaps"
+                  checked={genFillGapsOnly}
+                  onChange={(e) => setGenFillGapsOnly(e.target.checked)}
+                  disabled={generating || genForce}
+                  className="w-4 h-4 mt-0.5 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 disabled:opacity-50"
+                />
+                <label htmlFor="gen-fill-gaps" className={`cursor-pointer ${genForce ? 'opacity-50' : ''}`}>
+                  <span className="text-sm font-medium text-blue-800 dark:text-blue-300">
+                    Fill gaps only (safer for mid-semester)
+                  </span>
+                  <p className="text-xs text-blue-700 dark:text-blue-400 mt-0.5">
+                    Skip any week that already has even one lab day, regardless of which day. Use this when you only want to populate empty weeks without touching anything that already has data.
                   </p>
                 </label>
               </div>
 
-              {!genForce && (
+              {!genForce && !genFillGapsOnly && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <CheckCircle className="w-3 h-3 text-green-500" />
-                  Lab days that already exist will be skipped (no duplicates).
+                  Lab days that already exist (week + day match) will be skipped — no duplicates.
+                </p>
+              )}
+              {!genForce && genFillGapsOnly && (
+                <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
+                  <CheckCircle className="w-3 h-3 text-blue-500" />
+                  Only weeks with no existing lab days will be populated.
                 </p>
               )}
 
