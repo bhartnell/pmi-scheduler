@@ -32,10 +32,12 @@ import {
   Copy,
   Wand2,
   Eye,
+  Download,
 } from 'lucide-react';
 import { SKIN_OPTIONS } from '@/lib/constants';
 import ScenarioFullDisplay from '@/components/scenario/ScenarioFullDisplay';
 import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
+import { buildSingleExport, downloadJson, sanitizeFilename } from '@/lib/scenario-export';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
 // Helper to safely convert DB values to arrays (handles string, array, null)
@@ -1219,6 +1221,49 @@ export default function ScenarioEditorPage() {
     }
   };
 
+  // Export current scenario as bulk-import-compatible JSON. Uses the
+  // in-memory `scenario` state so unsaved edits ARE captured (saves
+  // a click). Wraps a single scenario in the `{ scenarios: [...] }`
+  // shape so the file drops straight into /admin/scenarios/bulk-import.
+  // See lib/scenario-export.ts for what round-trips vs what's
+  // ignored on re-import.
+  const handleExportJson = () => {
+    const payload = buildSingleExport({
+      title: scenario.title,
+      category: scenario.category,
+      subcategory: scenario.subcategory,
+      difficulty: scenario.difficulty,
+      estimated_duration: scenario.estimated_duration,
+      applicable_programs: scenario.applicable_programs,
+      preferred_manikin: scenario.preferred_manikin,
+      dispatch_time: scenario.dispatch_time,
+      dispatch_location: scenario.dispatch_location,
+      chief_complaint: scenario.chief_complaint,
+      dispatch_notes: scenario.dispatch_notes,
+      patient_name: scenario.patient_name,
+      patient_age: scenario.patient_age,
+      patient_sex: scenario.patient_sex,
+      patient_weight: scenario.patient_weight,
+      medical_history: scenario.medical_history,
+      medications: scenario.medications,
+      allergies: scenario.allergies,
+      sample_history: scenario.sample_history,
+      assessment_x: scenario.assessment_x,
+      assessment_a: scenario.assessment_a,
+      assessment_e: scenario.assessment_e,
+      general_impression: scenario.general_impression,
+      opqrst: scenario.opqrst,
+      instructor_summary: scenario.instructor_summary,
+      key_decision_points: scenario.key_decision_points,
+      phases: scenario.phases,
+      critical_actions: scenario.critical_actions,
+      evaluation_criteria: scenario.evaluation_criteria,
+      debrief_points: scenario.debrief_points,
+    });
+    const slug = sanitizeFilename(scenario.title || 'scenario');
+    downloadJson(`${slug}.json`, payload);
+  };
+
   const handleFixStructure = async () => {
     if (!scenarioId) return;
     if (!confirm('This will transform this scenario to the correct structure format.\n\nOriginal data will be backed up in the legacy_data column.\n\nContinue?')) return;
@@ -1450,6 +1495,14 @@ export default function ScenarioEditorPage() {
                   >
                     <Copy className="w-4 h-4" />
                     {duplicating ? 'Duplicating...' : 'Duplicate'}
+                  </button>
+                  <button
+                    onClick={handleExportJson}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
+                    title="Download this scenario as bulk-import-compatible JSON (uses current unsaved edits)"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export JSON
                   </button>
                   <button
                     onClick={handleFixStructure}
