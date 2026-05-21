@@ -110,11 +110,23 @@ export async function POST(request: NextRequest) {
     // current_semester=1; cohort.semester is null on those rows.
     const semester = body.semester ?? (cohort as any).current_semester ?? cohort.semester;
     if (!program || !semester) {
+      // Return a machine-parseable error_code + the raw cohort fields
+      // we tried so the UI can show "Set program/semester manually"
+      // instead of a dead-end toast. Hit by EMT cohorts that were
+      // created before current_semester was a required field, and by
+      // any cohort whose program abbreviation isn't in mapProgramKey's
+      // whitelist (PM/PMD → paramedic, EMT → emt, AEMT → aemt).
       return NextResponse.json(
         {
           error: 'Could not resolve program + semester for cohort. Pass them explicitly.',
+          error_code: 'unresolved_program_semester',
           resolved_program: program || null,
           resolved_semester: semester ?? null,
+          cohort_info: {
+            program_abbreviation: programRel?.abbreviation ?? null,
+            current_semester: (cohort as any).current_semester ?? null,
+            legacy_semester: cohort.semester ?? null,
+          },
         },
         { status: 400 }
       );

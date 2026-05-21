@@ -38,7 +38,8 @@ import {
   BookOpen,
   Target,
   GitCompare,
-  Briefcase
+  Briefcase,
+  AlertTriangle,
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import ChecklistAttendance from '@/components/ChecklistAttendance';
@@ -280,8 +281,25 @@ export default function CohortHubPage() {
       templates_available: number;
     };
     error?: string;
+    // When the server fails to auto-resolve program/semester, surface
+    // the raw cohort fields so the operator can see WHAT was missing
+    // (e.g. "current_semester is null") and pick overrides accordingly.
+    resolve_failure?: {
+      resolved_program: string | null;
+      resolved_semester: number | null;
+      cohort_info: {
+        program_abbreviation: string | null;
+        current_semester: number | null;
+        legacy_semester: string | null;
+      };
+    };
     applied?: boolean;
   } | null>(null);
+  // Manual program/semester override — null until the operator opens
+  // the override form after a resolve failure. Passed to the API on
+  // every subsequent call within the same modal session.
+  const [updProgramOverride, setUpdProgramOverride] = useState<string | null>(null);
+  const [updSemesterOverride, setUpdSemesterOverride] = useState<number | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -640,19 +658,52 @@ export default function CohortHubPage() {
     setUpdRunning(true);
     if (dryRun) setUpdPreview(null);
     try {
+      // Build the body. Include program/semester overrides ONLY if
+      // the operator filled them in after a resolve failure — otherwise
+      // leave them off so the server's auto-resolve path runs (which
+      // works for every cohort that has current_semester set).
+      const body: {
+        cohort_id: string;
+        week_filter: 'all' | 'future';
+        dry_run: boolean;
+        program?: string;
+        semester?: number;
+      } = {
+        cohort_id: cohortId,
+        week_filter: updWeekFilter,
+        dry_run: dryRun,
+      };
+      if (updProgramOverride) body.program = updProgramOverride;
+      if (updSemesterOverride != null) body.semester = updSemesterOverride;
+
       const res = await fetch('/api/admin/lab-templates/update-existing', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cohort_id: cohortId,
-          week_filter: updWeekFilter,
-          dry_run: dryRun,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
-        setUpdPreview({ error: data.error || 'Failed to run' });
-        toast.error(data.error || 'Failed to update from template');
+        // Special-case the unresolved-program-semester error: keep
+        // the modal open and surface the override form instead of a
+        // dead-end toast. Any other 4xx/5xx falls through to the
+        // generic error display.
+        if (data.error_code === 'unresolved_program_semester') {
+          setUpdPreview({
+            error: data.error,
+            resolve_failure: {
+              resolved_program: data.resolved_program ?? null,
+              resolved_semester: data.resolved_semester ?? null,
+              cohort_info: data.cohort_info ?? {
+                program_abbreviation: null,
+                current_semester: null,
+                legacy_semester: null,
+              },
+            },
+          });
+        } else {
+          setUpdPreview({ error: data.error || 'Failed to run' });
+          toast.error(data.error || 'Failed to update from template');
+        }
       } else {
         setUpdPreview({ summary: data.summary, resolved: data.resolved, applied: !dryRun });
         if (!dryRun) {
@@ -1070,6 +1121,8 @@ export default function CohortHubPage() {
                 onClick={() => {
                   setUpdPreview(null);
                   setUpdWeekFilter('all');
+                  setUpdProgramOverride(null);
+                  setUpdSemesterOverride(null);
                   setShowUpdateModal(true);
                 }}
               />
@@ -1764,9 +1817,90 @@ export default function CohortHubPage() {
                   </div>
                 </div>
               )}
-              {updPreview?.error && (
+              {updPreview?.error && !updPreview.resolve_failure && (
                 <div className="p-3 mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-800 dark:text-red-200">
                   {updPreview.error}
+                </div>
+              )}
+
+              {/* Resolve-failure path: server couldn't pick a
+                  program/semester for this cohort. Show what it saw
+                  and let the operator override. EMT cohorts created
+                  before current_semester was required land here, and
+                  any cohort whose program abbreviation isn't in the
+                  PM/PMD/EMT/AEMT whitelist will too. */}
+              {updPreview?.resolve_failure && (
+                <div className="p-3 mb-4 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 text-sm">
+                  <div className="font-semibold text-amber-900 dark:text-amber-200 mb-1.5 flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4" />
+                    Couldn&apos;t auto-detect program / semester
+                  </div>
+                  <div className="text-[12px] text-amber-800 dark:text-amber-300 space-y-0.5 mb-3">
+                    <div>
+                      Cohort program abbreviation:{' '}
+                      <code className="font-mono">
+                        {updPreview.resolve_failure.cohort_info.program_abbreviation ?? 'null'}
+                      </code>
+                    </div>
+                    <div>
+                      cohort.current_semester:{' '}
+                      <code className="font-mono">
+                        {updPreview.resolve_failure.cohort_info.current_semester ?? 'null'}
+                      </code>
+                    </div>
+                    <div>
+                      Resolved program → semester:{' '}
+                      <code className="font-mono">
+                        {updPreview.resolve_failure.resolved_program ?? 'null'} →{' '}
+                        {updPreview.resolve_failure.resolved_semester ?? 'null'}
+                      </code>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                        Program
+                      </label>
+                      <select
+                        value={updProgramOverride ?? ''}
+                        onChange={e =>
+                          setUpdProgramOverride(e.target.value === '' ? null : e.target.value)
+                        }
+                        className="w-full px-2 py-1 text-sm border border-amber-300 dark:border-amber-700 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        disabled={updRunning}
+                      >
+                        <option value="">— select —</option>
+                        <option value="paramedic">paramedic</option>
+                        <option value="emt">emt</option>
+                        <option value="aemt">aemt</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                        Semester
+                      </label>
+                      <select
+                        value={updSemesterOverride ?? ''}
+                        onChange={e =>
+                          setUpdSemesterOverride(
+                            e.target.value === '' ? null : parseInt(e.target.value, 10),
+                          )
+                        }
+                        className="w-full px-2 py-1 text-sm border border-amber-300 dark:border-amber-700 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        disabled={updRunning}
+                      >
+                        <option value="">— select —</option>
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                      </select>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-amber-800 dark:text-amber-300 italic">
+                    Once selected, click Preview to retry with these values.
+                  </p>
                 </div>
               )}
 
@@ -1784,9 +1918,21 @@ export default function CohortHubPage() {
                     type="button"
                     onClick={() => runUpdateFromTemplate(true)}
                     className="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-lg"
-                    disabled={updRunning}
+                    // If the previous run hit a resolve-failure, only
+                    // let the operator retry once both overrides are
+                    // picked — saves a round-trip that'd return the
+                    // same error.
+                    disabled={
+                      updRunning ||
+                      (!!updPreview?.resolve_failure &&
+                        (!updProgramOverride || updSemesterOverride == null))
+                    }
                   >
-                    {updRunning ? 'Running…' : 'Preview'}
+                    {updRunning
+                      ? 'Running…'
+                      : updPreview?.resolve_failure
+                        ? 'Retry with overrides'
+                        : 'Preview'}
                   </button>
                 )}
                 {updPreview?.summary && !updPreview.applied && (
