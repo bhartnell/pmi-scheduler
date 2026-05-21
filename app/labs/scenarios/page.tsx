@@ -19,11 +19,14 @@ import {
   Thermometer,
   X,
   Star,
-  Keyboard
+  Keyboard,
+  Download,
+  Loader2,
 } from 'lucide-react';
 import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { buildBulkExport, downloadJson, ExportableScenarioInput } from '@/lib/scenario-export';
 
 interface Scenario {
   id: string;
@@ -93,6 +96,71 @@ export default function ScenariosPage() {
   const [showShortcutsHelp, setShowShortcutsHelp] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
   const selectedIndexRef = useRef(selectedIndex);
+
+  // Bulk-export multi-select. selectedIds holds the scenarios
+  // checked for export; isExporting blocks the button while we fetch
+  // the full scenarios in parallel and assemble the wrapped JSON.
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isExporting, setIsExporting] = useState(false);
+
+  // The card is a <Link>, so the checkbox click needs to swallow
+  // navigation. preventDefault + stopPropagation does both.
+  const toggleSelection = (id: string, e: React.MouseEvent | React.ChangeEvent) => {
+    if ('preventDefault' in e) e.preventDefault();
+    if ('stopPropagation' in e) e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // Bulk JSON export. Fetches each selected scenario in parallel
+  // from /api/lab-management/scenarios/[id] (full record), wraps
+  // them in { scenarios: [...] }, downloads as one file.
+  const handleBulkExport = async () => {
+    if (selectedIds.size === 0) return;
+    setIsExporting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const responses = await Promise.all(
+        ids.map(id =>
+          fetch(`/api/lab-management/scenarios/${id}`)
+            .then(r => r.json())
+            .catch(() => null),
+        ),
+      );
+      const scenarios: ExportableScenarioInput[] = [];
+      const failed: string[] = [];
+      for (let i = 0; i < responses.length; i++) {
+        const r = responses[i];
+        if (r && r.success && r.scenario) {
+          scenarios.push(r.scenario as ExportableScenarioInput);
+        } else {
+          failed.push(ids[i]);
+        }
+      }
+      if (failed.length > 0) {
+        const proceed = window.confirm(
+          `${failed.length} scenario(s) failed to load and will be skipped.\nDownload the other ${scenarios.length}?`,
+        );
+        if (!proceed) return;
+      }
+      if (scenarios.length === 0) {
+        alert('No scenarios could be loaded for export.');
+        return;
+      }
+      const payload = buildBulkExport(scenarios);
+      const today = new Date().toISOString().slice(0, 10);
+      downloadJson(`scenarios-export-${today}-${scenarios.length}-items.json`, payload);
+    } catch (err) {
+      console.error('Bulk export failed:', err);
+      alert(`Bulk export failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -432,11 +500,44 @@ export default function ScenariosPage() {
           </div>
         </div>
 
-        {/* Results count */}
-        <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-          {sortedScenarios.length} scenario{sortedScenarios.length !== 1 ? 's' : ''} found
-          {showFavoritesOnly && (
-            <span className="ml-2 text-amber-600 dark:text-amber-400">• Favorites only</span>
+        {/* Results count + bulk-export action bar */}
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm text-gray-600 dark:text-gray-400">
+            {sortedScenarios.length} scenario{sortedScenarios.length !== 1 ? 's' : ''} found
+            {showFavoritesOnly && (
+              <span className="ml-2 text-amber-600 dark:text-amber-400">• Favorites only</span>
+            )}
+          </div>
+          {/* Bulk-export controls only appear when at least one card
+              is checked. Keeps the default UI uncluttered. */}
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                {selectedIds.size} selected
+              </span>
+              <button
+                onClick={handleBulkExport}
+                disabled={isExporting}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50 dark:bg-blue-500 dark:hover:bg-blue-600"
+                title="Download selected scenarios as a single bulk-import-compatible JSON file"
+              >
+                {isExporting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                {isExporting ? 'Exporting…' : 'Export Selected as JSON'}
+              </button>
+              <button
+                onClick={() => setSelectedIds(new Set())}
+                disabled={isExporting}
+                className="inline-flex items-center gap-1 px-2 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 disabled:opacity-50"
+                title="Clear selection"
+              >
+                <X className="w-4 h-4" />
+                Clear
+              </button>
+            </div>
           )}
         </div>
 
@@ -468,6 +569,7 @@ export default function ScenariosPage() {
               const CategoryIcon = CATEGORY_ICONS[scenario.category] || FileText;
               const isFavorited = favorites.has(scenario.id);
               const isSelected = index === selectedIndex;
+              const isChecked = selectedIds.has(scenario.id);
 
               return (
                 <Link
@@ -475,8 +577,36 @@ export default function ScenariosPage() {
                   href={`/labs/scenarios/${scenario.id}`}
                   className={`relative bg-white rounded-lg shadow p-4 hover:shadow-lg transition-shadow dark:bg-gray-800 dark:hover:bg-gray-750 ${
                     isSelected ? 'ring-2 ring-blue-500 dark:ring-blue-400' : ''
-                  }`}
+                  } ${isChecked ? 'ring-2 ring-blue-400 dark:ring-blue-500' : ''}`}
                 >
+                  {/* Multi-select checkbox for bulk export. Top-left
+                      so it doesn't fight with the favorite star
+                      (top-right). Click swallows parent <Link>. */}
+                  <button
+                    onClick={(e) => toggleSelection(scenario.id, e)}
+                    className="absolute top-3 left-3 p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    title={isChecked ? 'Deselect for export' : 'Select for export'}
+                    aria-label={isChecked ? 'Deselect' : 'Select'}
+                  >
+                    <span
+                      className={`block w-5 h-5 rounded border-2 flex items-center justify-center text-white ${
+                        isChecked
+                          ? 'bg-blue-600 border-blue-600 dark:bg-blue-500 dark:border-blue-500'
+                          : 'bg-white border-gray-300 dark:bg-gray-800 dark:border-gray-500'
+                      }`}
+                    >
+                      {isChecked && (
+                        <svg viewBox="0 0 20 20" fill="currentColor" className="w-3.5 h-3.5">
+                          <path
+                            fillRule="evenodd"
+                            d="M16.704 5.29a1 1 0 0 1 0 1.42l-7.5 7.5a1 1 0 0 1-1.42 0l-3.5-3.5a1 1 0 1 1 1.42-1.42L8.5 12.09l6.79-6.8a1 1 0 0 1 1.414 0Z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      )}
+                    </span>
+                  </button>
+
                   {/* Favorite star button */}
                   <button
                     onClick={(e) => toggleFavorite(scenario.id, e)}
@@ -492,7 +622,7 @@ export default function ScenariosPage() {
                     />
                   </button>
 
-                  <div className="flex items-start gap-4 pr-8">
+                  <div className="flex items-start gap-4 pl-8 pr-8">
                     <div className="p-3 bg-blue-100 rounded-lg shrink-0 dark:bg-blue-900/50">
                       <CategoryIcon className="w-6 h-6 text-blue-600 dark:text-blue-400" />
                     </div>
