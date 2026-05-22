@@ -56,6 +56,13 @@ export async function POST(request: NextRequest) {
 
     let sent = 0;
     let errors = 0;
+    // Track students who would have received this scenario's
+    // feedback but had no email on file. The grading-page UI uses
+    // this to render an operator warning instead of silently
+    // reporting "0 sent." PM G15 surfaced this — 0/20 students
+    // had email addresses, so every "send" looked successful
+    // server-side and identical to a NREMT block client-side.
+    const noEmailRecipients: Array<{ id: string; name: string; role: 'team_lead' | 'group_member' }> = [];
 
     for (const assessment of assessments) {
       // Skip if not queued (for individual sends, allow any status except sent/do_not_send)
@@ -119,6 +126,12 @@ export async function POST(request: NextRequest) {
           const student = member.student as any;
           if (student?.email) {
             recipients.push({ email: student.email, firstName: student.first_name });
+          } else if (student?.id) {
+            noEmailRecipients.push({
+              id: student.id,
+              name: `${student.first_name ?? ''} ${student.last_name ?? ''}`.trim() || 'Unknown',
+              role: 'group_member',
+            });
           }
         }
       }
@@ -127,11 +140,23 @@ export async function POST(request: NextRequest) {
       if (recipients.length === 0 && teamLead) {
         const { data: leadStudent } = await supabase
           .from('students')
-          .select('email, first_name')
+          .select('id, email, first_name, last_name')
           .eq('id', teamLead.id)
           .single();
         if (leadStudent?.email) {
           recipients.push({ email: leadStudent.email, firstName: leadStudent.first_name });
+        } else if (leadStudent?.id) {
+          // Only push the lead-fallback once — if they're already
+          // in noEmailRecipients (because they're also a group
+          // member), don't dedupe-fail.
+          const alreadyTracked = noEmailRecipients.some(r => r.id === leadStudent.id);
+          if (!alreadyTracked) {
+            noEmailRecipients.push({
+              id: leadStudent.id,
+              name: `${leadStudent.first_name ?? ''} ${leadStudent.last_name ?? ''}`.trim() || 'Team lead',
+              role: 'team_lead',
+            });
+          }
         }
       }
 
@@ -171,7 +196,13 @@ export async function POST(request: NextRequest) {
         .eq('id', assessment.id);
     }
 
-    return NextResponse.json({ success: true, sent, errors });
+    return NextResponse.json({
+      success: true,
+      sent,
+      errors,
+      // Empty arrays omitted to keep the happy-path response tidy.
+      ...(noEmailRecipients.length > 0 ? { no_email_recipients: noEmailRecipients } : {}),
+    });
   } catch (error) {
     console.error('Error sending scenario emails:', error);
     return NextResponse.json({ success: false, error: 'Failed to send emails' }, { status: 500 });

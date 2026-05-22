@@ -799,8 +799,15 @@ export default function GradeStationPage() {
 
         setHasUnsavedChanges(false);
 
-        // If Send Now, fire scenario email immediately
+        // If Send Now, fire scenario email immediately.
         let emailSent = false;
+        // Students who would have received the email but had no
+        // address on file. Surfaced separately from emailSent so
+        // the toast can explicitly name them — silent no-op was
+        // previously indistinguishable from a successful send
+        // (May 21 lab: PM G15 had 0/20 students with emails and
+        // every "send" appeared to succeed).
+        let noEmailNames: string[] = [];
         if (!isInProgress && emailPref === 'sent' && data.assessment?.id) {
           try {
             const emailRes = await fetch('/api/lab-management/assessments/scenario/send-email', {
@@ -808,11 +815,17 @@ export default function GradeStationPage() {
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ assessment_id: data.assessment.id }),
             });
+            const emailData = await emailRes.json().catch(() => null);
             // Best-effort flag for the toast — the email path is
             // non-critical so a failure here doesn't block the save
             // confirmation; the user still sees a grade-submitted
             // toast even if Resend hiccupped.
-            emailSent = emailRes.ok;
+            emailSent = emailRes.ok && (emailData?.sent ?? 0) > 0;
+            if (Array.isArray(emailData?.no_email_recipients)) {
+              noEmailNames = emailData.no_email_recipients
+                .map((r: { name?: string }) => r.name)
+                .filter(Boolean);
+            }
           } catch { /* non-critical */ }
         }
 
@@ -844,6 +857,25 @@ export default function GradeStationPage() {
                 ? `Grade submitted; email queued for ${recipientName}`
                 : `Grade saved for ${recipientName}`,
           );
+          // Separate warning toast when one or more students in the
+          // group had no email address on file. Distinct from the
+          // success toast above so the operator sees BOTH the
+          // confirmation and the warning, instead of conflating
+          // "nothing was sent" with "send failed."
+          if (noEmailNames.length > 0) {
+            const list = noEmailNames.length <= 3
+              ? noEmailNames.join(', ')
+              : `${noEmailNames.slice(0, 3).join(', ')} +${noEmailNames.length - 3} more`;
+            // Use addToast directly so we can extend the duration —
+            // the no-email warning needs to linger longer than the
+            // default 5s success toast so the operator can read the
+            // student names before it disappears.
+            toast.addToast(
+              'error',
+              `No email address on file for ${list}. Their feedback was NOT sent — add their email in the cohort roster to enable future sends.`,
+              9000,
+            );
+          }
 
           // Reset form for the next student. Keep selectedGroupId
           // (same group typically rotates team leaders) and
