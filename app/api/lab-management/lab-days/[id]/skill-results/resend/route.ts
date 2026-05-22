@@ -21,12 +21,14 @@ export async function POST(
     const body = await request.json();
     const { student_id, evaluation_ids } = body as { student_id?: string; evaluation_ids?: string[] };
 
-    if (!student_id && (!evaluation_ids || evaluation_ids.length === 0)) {
-      return NextResponse.json(
-        { success: false, error: 'student_id or evaluation_ids required' },
-        { status: 400 }
-      );
-    }
+    // Three callable modes:
+    //   1. student_id provided        → resend for that student only
+    //   2. evaluation_ids[] provided  → resend the specific evaluations
+    //   3. neither provided           → "resend all unsent" for the lab
+    //      day (used by the "Resend Results Emails" button on the
+    //      lab day page). The query below already excludes
+    //      email_status='sent' so this won't re-send anything that
+    //      already went out.
 
     const supabase = getSupabaseAdmin();
 
@@ -63,6 +65,8 @@ export async function POST(
 
     let sent = 0;
     let errors = 0;
+    let skippedNoEmail = 0;
+    const noEmailNames: string[] = [];
 
     for (const evaluation of evaluations) {
       try {
@@ -72,12 +76,17 @@ export async function POST(
         const labDay = evaluation.lab_day as any;
 
         if (!student?.email) {
-          // Mark as do_not_send if no email
+          // No email on file — tally separately from real errors so
+          // the UI can show "Sent X, skipped Y (no email)" instead
+          // of conflating the two. Mark do_not_send so subsequent
+          // "Resend all" passes don't re-try the same row.
           await supabase
             .from('student_skill_evaluations')
             .update({ email_status: 'do_not_send' })
             .eq('id', evaluation.id);
-          errors++;
+          skippedNoEmail++;
+          const name = `${student?.first_name ?? ''} ${student?.last_name ?? ''}`.trim();
+          if (name) noEmailNames.push(name);
           continue;
         }
 
@@ -152,7 +161,13 @@ export async function POST(
       }
     }
 
-    return NextResponse.json({ success: true, sent, errors });
+    return NextResponse.json({
+      success: true,
+      sent,
+      errors,
+      skipped_no_email: skippedNoEmail,
+      no_email_names: noEmailNames.length > 0 ? noEmailNames : undefined,
+    });
   } catch (err) {
     console.error('[skill-results/resend] Error:', err);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });

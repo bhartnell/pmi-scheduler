@@ -22,6 +22,7 @@ import {
   GitCompare,
   GraduationCap,
   Flag,
+  Mail,
 } from 'lucide-react';
 import { priorityBadgeClasses, type PriorityFlag } from '@/components/lab-day/types';
 import LabTimer from '@/components/LabTimer';
@@ -84,6 +85,13 @@ export default function LabDayPage() {
   const justGraded = searchParams.get('graded');
   const openTimerParam = searchParams.get('timer') === 'open';
   const toast = useToast();
+
+  // Resend Results Emails state. Tracks the in-flight POST to
+  // /api/lab-management/lab-days/[id]/skill-results/resend so the
+  // button can show a spinner and prevent double-submit. The
+  // endpoint is idempotent (skips already-sent rows) but a double
+  // click would still fire two RPCs unnecessarily.
+  const [resendingResults, setResendingResults] = useState(false);
 
   // Core state
   const [labDay, setLabDay] = useState<LabDay | null>(null);
@@ -419,6 +427,61 @@ export default function LabDayPage() {
       toast?.addToast('error', 'Failed to set priority');
     } finally {
       setPriorityLoading(false);
+    }
+  };
+
+  // Resend skill-evaluation result emails for this lab day. Picks
+  // up anything with email_status != 'sent' (queued, do_not_send,
+  // null) and tries again. Idempotent — already-sent rows are
+  // excluded server-side. Used after Resend was down at lab time
+  // or when emails weren't fired before the grading page closed.
+  const handleResendResults = async () => {
+    if (resendingResults) return;
+    const confirmed = window.confirm(
+      `Resend grade emails to all students with email addresses on file for this lab day?\n\n` +
+      `Already-sent emails will be skipped. Students with no email on file will be listed in the result.`,
+    );
+    if (!confirmed) return;
+    setResendingResults(true);
+    try {
+      const res = await fetch(
+        `/api/lab-management/lab-days/${labDayId}/skill-results/resend`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}) },
+      );
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        toast.error(`Resend failed: ${data.error || res.statusText}`);
+        return;
+      }
+      const sent = data.sent ?? 0;
+      const skipped = data.skipped_no_email ?? 0;
+      const errors = data.errors ?? 0;
+      const noEmailNames: string[] = data.no_email_names ?? [];
+      const summary =
+        `Resend complete: sent ${sent}` +
+        (skipped > 0 ? `, ${skipped} skipped (no email on file)` : '') +
+        (errors > 0 ? `, ${errors} errored` : '');
+      if (sent > 0 && skipped === 0 && errors === 0) {
+        toast.success(summary);
+      } else {
+        // Mixed result — use addToast so we can keep the message
+        // visible long enough to read the no_email_names list.
+        toast.addToast(skipped > 0 || errors > 0 ? 'warning' : 'info', summary, 9000);
+      }
+      if (noEmailNames.length > 0) {
+        const list = noEmailNames.length <= 5
+          ? noEmailNames.join(', ')
+          : `${noEmailNames.slice(0, 5).join(', ')} +${noEmailNames.length - 5} more`;
+        toast.addToast(
+          'warning',
+          `No email on file: ${list}. Add their address in the cohort roster to enable sends.`,
+          9000,
+        );
+      }
+    } catch (err) {
+      toast.error(`Resend failed: ${err instanceof Error ? err.message : 'Network error'}`);
+    } finally {
+      setResendingResults(false);
     }
   };
 
@@ -824,6 +887,42 @@ export default function LabDayPage() {
               <AttendanceSection labDayId={labDayId} cohortId={labDay.cohort.id} />
             </div>
           </details>
+        )}
+        {/* Resend Results Emails — admin/lead_instructor only.
+            Recovers from the "Resend was down at lab time" and
+            "instructor closed the grading page before emails went
+            out" scenarios. Idempotent server-side: already-sent
+            rows are excluded by the resend route. Sits above
+            Student Performance Ratings per request from coordinator
+            workflow notes (May 22). */}
+        {userRole && hasMinRole(userRole, 'lead_instructor') && (
+          <div className="mt-6 print:hidden bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-4">
+            <div className="flex items-start gap-3">
+              <Mail className="w-5 h-5 text-indigo-600 dark:text-indigo-400 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                  Resend Results Emails
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Resend skill-evaluation result emails for this lab day. Already-sent
+                  emails are skipped — useful if Resend was down at lab time or the
+                  grading page was closed before emails fired.
+                </p>
+                <button
+                  onClick={handleResendResults}
+                  disabled={resendingResults}
+                  className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50 dark:bg-indigo-500 dark:hover:bg-indigo-600"
+                >
+                  {resendingResults ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Mail className="w-4 h-4" />
+                  )}
+                  {resendingResults ? 'Resending…' : 'Resend Results Emails'}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
         {userRole && hasMinRole(userRole, 'instructor') && cohortStudents.length > 0 && (
           <details className="mt-6 print:hidden group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">

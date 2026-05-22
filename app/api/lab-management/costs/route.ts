@@ -2,7 +2,42 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 
-const VALID_CATEGORIES = ['Equipment', 'Consumables', 'Instructor Pay', 'External', 'Other'];
+// Two-way category mapping. The lab_day_costs table has a CHECK
+// constraint that only accepts snake_case values ('equipment',
+// 'instructor_pay', etc.), but the client UI and copy here use
+// Title Case ('Equipment', 'Instructor Pay'). Without this map,
+// every POST violated the CHECK and returned 500 — surfaced
+// 2026-05-21 when Ryan tried to log instructor pay.
+const DISPLAY_TO_DB: Record<string, string> = {
+  'Equipment': 'equipment',
+  'Consumables': 'consumables',
+  'Instructor Pay': 'instructor_pay',
+  'External': 'external',
+  'Other': 'other',
+};
+// Accept either form on input — operators / future clients may
+// send the snake_case directly. The reverse map is built from
+// the display map so the two never drift.
+const VALID_CATEGORY_INPUTS = new Set<string>([
+  ...Object.keys(DISPLAY_TO_DB),
+  ...Object.values(DISPLAY_TO_DB),
+]);
+const DB_TO_DISPLAY: Record<string, string> = Object.fromEntries(
+  Object.entries(DISPLAY_TO_DB).map(([k, v]) => [v, k]),
+);
+function normalizeCategoryForDb(input: string): string | null {
+  if (!input) return null;
+  // Already snake_case → pass through if valid.
+  if (input in DB_TO_DISPLAY) return input;
+  // Title Case → translate.
+  if (input in DISPLAY_TO_DB) return DISPLAY_TO_DB[input];
+  return null;
+}
+function categoryForDisplay(stored: string | null | undefined): string | null {
+  if (!stored) return null;
+  return DB_TO_DISPLAY[stored] ?? stored; // fall back to the raw value
+}
+const VALID_CATEGORIES = Object.keys(DISPLAY_TO_DB); // kept for error message readability
 
 // GET /api/lab-management/costs
 // List cost items filtered by lab_day_id, cohort_id, or date range
@@ -28,7 +63,9 @@ export async function GET(request: NextRequest) {
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      return NextResponse.json({ success: true, items: data || [] });
+      // Map stored snake_case → display Title Case before returning.
+      const items = (data ?? []).map(it => ({ ...it, category: categoryForDisplay(it.category) }));
+      return NextResponse.json({ success: true, items });
     }
 
     // Cohort/date range query — joins through lab_days
@@ -53,7 +90,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query;
     if (error) throw error;
 
-    let items = data || [];
+    let items = (data || []).map(it => ({ ...it, category: categoryForDisplay(it.category) }));
 
     // Apply cohort filter
     if (cohortId) {
@@ -99,9 +136,18 @@ export async function POST(request: NextRequest) {
     if (!lab_day_id) {
       return NextResponse.json({ error: 'lab_day_id is required' }, { status: 400 });
     }
-    if (!category || !VALID_CATEGORIES.includes(category)) {
+    if (!category || !VALID_CATEGORY_INPUTS.has(category)) {
       return NextResponse.json(
         { error: `category must be one of: ${VALID_CATEGORIES.join(', ')}` },
+        { status: 400 }
+      );
+    }
+    const dbCategory = normalizeCategoryForDb(category);
+    if (!dbCategory) {
+      // Defensive — VALID_CATEGORY_INPUTS already filtered this,
+      // but make the failure explicit if the map drifts.
+      return NextResponse.json(
+        { error: `category "${category}" could not be normalized for storage` },
         { status: 400 }
       );
     }
@@ -118,7 +164,7 @@ export async function POST(request: NextRequest) {
       .from('lab_day_costs')
       .insert({
         lab_day_id,
-        category,
+        category: dbCategory,
         description: description.trim(),
         amount: parsedAmount,
         created_by: session.user.email,
@@ -128,7 +174,13 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, item: data });
+    // Translate the stored snake_case value back to the display
+    // label the client renders. Keeps the GET/POST/PUT response
+    // shapes identical to what the UI was already wired for.
+    return NextResponse.json({
+      success: true,
+      item: { ...data, category: categoryForDisplay(data.category) },
+    });
   } catch (error) {
     console.error('Error creating cost item:', error);
     return NextResponse.json({ success: false, error: 'Failed to create cost item' }, { status: 500 });
