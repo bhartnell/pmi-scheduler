@@ -253,26 +253,58 @@ ${report.user_agent || 'Not available'}
   };
 
   const exportCSV = async () => {
-    const csvRows = [
-      ['id', 'Date', 'Type', 'Priority', 'Status', 'Reporter', 'Page', 'Description', 'Resolution Notes'].join(',')
-    ];
+    // RFC 4180-style escape: wrap in quotes if the value contains a
+    // comma, a quote, CR, or LF; double any internal quotes. Applied
+    // to EVERY field so we never re-introduce the kind of bug we
+    // just fixed (where unquoted dates with embedded commas shifted
+    // all subsequent columns). Cheap defense — quoting a value with
+    // no special chars is a one-byte overhead per field.
+    const csvEscape = (value: unknown): string => {
+      const s = value === null || value === undefined ? '' : String(value);
+      if (s === '') return '';
+      if (/[",\r\n]/.test(s)) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return s;
+    };
+
+    const header = ['id', 'Date', 'Type', 'Priority', 'Status', 'Reporter', 'Page', 'Description', 'Resolution Notes']
+      .map(csvEscape)
+      .join(',');
+    const csvRows = [header];
 
     reports.forEach(r => {
       const row = [
         r.id,
-        formatDate(r.created_at),
+        // ISO 8601 with no spaces or commas — drops cleanly into a
+        // single CSV cell without quoting, and is human-readable
+        // enough for spreadsheet eyeballing. Use the raw DB string
+        // when it's already ISO; only fall back to a converted
+        // string when parsing succeeds. Empty stays empty.
+        r.created_at
+          ? (() => {
+              const d = new Date(r.created_at);
+              return isNaN(d.getTime()) ? r.created_at : d.toISOString();
+            })()
+          : '',
         TYPE_CONFIG[r.report_type].label,
         (r.priority || 'medium').toUpperCase(),
         STATUS_CONFIG[r.status].label,
         r.user_email,
         r.page_url || 'N/A',
-        `"${r.description.replace(/"/g, '""')}"`,
-        r.resolution_notes ? `"${r.resolution_notes.replace(/"/g, '""')}"` : ''
-      ].join(',');
+        // Multi-line descriptions: keep as-is. The CSV escape above
+        // wraps them in quotes; the import parser (rewritten in
+        // parallel) handles multi-line quoted fields so round-trip
+        // preserves Markdown / numbered lists exactly.
+        r.description ?? '',
+        r.resolution_notes ?? '',
+      ].map(csvEscape).join(',');
       csvRows.push(row);
     });
 
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    // Use RFC 4180 CRLF line endings so multi-line quoted fields
+    // are unambiguous against the row separator.
+    const blob = new Blob([csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;

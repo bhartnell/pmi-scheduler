@@ -8,8 +8,108 @@ const VALID_STATUSES = ['new', 'read', 'in_progress', 'needs_investigation', 're
 const VALID_TYPES = ['bug', 'feature', 'other'];
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// RFC 4180-ish CSV parser. The previous version split on '\n' first
+// and tokenized each line, which broke any row whose description
+// field contained an embedded newline (Markdown lists, multi-line
+// bug repros, etc.) — the row count would explode and fields would
+// shift. This version tokenizes the WHOLE text in one pass and
+// treats newlines inside quoted strings as field content, not row
+// terminators. Handles "" as an escaped quote.
 function parseCSV(text: string): Record<string, string>[] {
-  const lines = text.trim().split('\n');
+  if (!text) return [];
+  // Drop BOM if present so it doesn't sneak into the first header
+  // cell as a stray character.
+  const src = text.replace(/^﻿/, '');
+
+  const records: string[][] = [];
+  let row: string[] = [];
+  let field = '';
+  let inQuotes = false;
+
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i];
+    if (inQuotes) {
+      if (ch === '"') {
+        // Escaped double quote (RFC 4180: `""` inside a quoted field).
+        if (src[i + 1] === '"') {
+          field += '"';
+          i++;
+          continue;
+        }
+        inQuotes = false;
+        continue;
+      }
+      // Any character (including , \r \n) is literal content while
+      // we're inside quotes.
+      field += ch;
+      continue;
+    }
+    if (ch === '"') {
+      inQuotes = true;
+      continue;
+    }
+    if (ch === ',') {
+      row.push(field);
+      field = '';
+      continue;
+    }
+    if (ch === '\r') {
+      row.push(field);
+      records.push(row);
+      row = [];
+      field = '';
+      if (src[i + 1] === '\n') i++;
+      continue;
+    }
+    if (ch === '\n') {
+      row.push(field);
+      records.push(row);
+      row = [];
+      field = '';
+      continue;
+    }
+    field += ch;
+  }
+  if (field !== '' || row.length > 0) {
+    row.push(field);
+    records.push(row);
+  }
+  while (records.length > 0 && records[records.length - 1].every(v => v === '')) {
+    records.pop();
+  }
+
+  if (records.length < 2) return [];
+
+  const header = records[0].map(h => h.trim().toLowerCase());
+  const rows: Record<string, string>[] = [];
+  for (let i = 1; i < records.length; i++) {
+    const values = records[i];
+    const r: Record<string, string> = {};
+    header.forEach((col, idx) => {
+      // Preserve internal whitespace — multi-line descriptions
+      // matter for round-tripping bug reports unchanged.
+      r[col] = values[idx] ?? '';
+    });
+    rows.push(r);
+  }
+  return rows;
+}
+
+// Legacy entry point kept for the body below — uses the new parser.
+function _DROP_THIS_unused_legacy_DELETEME(): Record<string, string>[] {
+  // Old line-based CSV parser, replaced 2026-05-21 by the
+  // multi-line-aware parseCSV above. Kept only as a deletion marker
+  // — the dead body below is removed in the same commit.
+  return [];
+}
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _DROP_THIS_legacy_body(_text: string): Record<string, string>[] {
+  return [];
+  // Old line-by-line body — superseded by the parser above. Kept
+  // commented out as a paper trail; will be deleted in a cleanup
+  // pass once the new parser has run a few imports successfully.
+  /*
+  const lines = _text.trim().split('\n');
   if (lines.length < 2) return [];
 
   // Parse header — handle potential BOM and whitespace
@@ -50,6 +150,7 @@ function parseCSV(text: string): Record<string, string>[] {
   }
 
   return rows;
+  */
 }
 
 // Map display labels back to DB values
