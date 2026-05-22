@@ -70,8 +70,17 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ success: true, items });
   } catch (error) {
+    // The lab day page treats costs as a side fetch — a 500 here
+    // would render an error banner over the whole page even though
+    // the rest of the day's data is fine. Degrade to empty so the
+    // page still loads; log so we can dig into the root cause.
     console.error('Error fetching lab costs:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch costs' }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      items: [],
+      error_code: 'fetch_failed',
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
   }
 }
 

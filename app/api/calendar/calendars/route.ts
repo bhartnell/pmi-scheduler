@@ -32,8 +32,26 @@ export async function GET() {
     });
 
     if (!response.ok) {
-      console.error('[calendar/calendars] Google API error:', response.status);
-      return NextResponse.json({ success: false, error: 'Failed to fetch calendars' }, { status: 502 });
+      // Don't surface as 502 — the lab day page fans this out as a
+      // non-critical side fetch and a hard error would block its
+      // overall load. Return a successful-shape empty result with
+      // a flag so the UI can show "Google didn't respond, retry"
+      // inline without breaking the page.
+      const status = response.status;
+      console.error('[calendar/calendars] Google API error:', status);
+      const errorCode =
+        status === 401 || status === 403 ? 'auth_required' :
+        status === 429 ? 'rate_limited' :
+        status === 503 || status === 504 ? 'upstream_unavailable' :
+        'upstream_error';
+      return NextResponse.json({
+        success: true,
+        calendars: [],
+        selectedIds: user.google_calendar_ids || [],
+        connected: true,
+        error_code: errorCode,
+        upstream_status: status,
+      });
     }
 
     const data = await response.json();
@@ -59,8 +77,19 @@ export async function GET() {
       connected: true,
     });
   } catch (error) {
+    // Same defensive shape as the upstream-error branch above —
+    // exceptions during the Google fetch (network blip, parse
+    // failure, abort) shouldn't 500 the lab day page. Empty
+    // calendars + an error_code flag lets the UI degrade gracefully.
     console.error('Error fetching calendars:', error);
-    return NextResponse.json({ success: false, error: 'Failed to fetch calendars' }, { status: 500 });
+    return NextResponse.json({
+      success: true,
+      calendars: [],
+      selectedIds: [],
+      connected: false,
+      error_code: 'fetch_exception',
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
   }
 }
 

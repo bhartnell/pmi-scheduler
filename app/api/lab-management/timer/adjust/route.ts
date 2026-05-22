@@ -102,6 +102,32 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error;
 
+    // For set_duration: ALSO persist to lab_days.rotation_minutes
+    // so the new length sticks across page reloads and shows up on
+    // the lab day edit page. Without this, the timer would revert
+    // to the original rotation_minutes anytime the lab_timer_state
+    // row was reseeded (end-lab → restart, fresh page load with no
+    // active timer row, etc). Best-effort: a failure here doesn't
+    // roll back the timer-state update — the operator's running
+    // session is already on the new duration; only the persistence
+    // for next time would be missing, which a warning surfaces.
+    // add_time/subtract_time are intentionally NOT mirrored:
+    // those are mid-session nudges, not policy changes.
+    if (action === 'set_duration' && typeof new_duration === 'number') {
+      const newMinutes = Math.max(1, Math.round(new_duration / 60));
+      const { error: ldError } = await supabase
+        .from('lab_days')
+        .update({ rotation_minutes: newMinutes })
+        .eq('id', lab_day_id);
+      if (ldError) {
+        console.warn(
+          `[timer/adjust] set_duration applied to lab_timer_state but ` +
+          `failed to persist lab_days.rotation_minutes=${newMinutes}: ${ldError.message}. ` +
+          `Operator's current session is unaffected; next reset/reload may revert.`,
+        );
+      }
+    }
+
     return NextResponse.json({
       success: true,
       timer: data,

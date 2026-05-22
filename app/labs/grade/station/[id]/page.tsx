@@ -300,22 +300,37 @@ export default function GradeStationPage() {
     }
   }, [station?.scenario?.critical_actions]);
 
+  // Builds a fresh criteria-ratings array for the current station.
+  // Used by the initial mount effect AND by the post-grade form
+  // reset — the reset previously called setCriteriaRatings([]) and
+  // relied on the init effect to repopulate, but that effect only
+  // fires when station?.station_type changes, which doesn't happen
+  // between grades. Result: rubric went empty, grade buttons had
+  // nothing to render against, scoring broke. Centralizing the
+  // builder removes that drift.
+  const buildInitialCriteriaRatings = useCallback((): CriteriaRating[] => {
+    if (!station) return [];
+    const criteria = station.station_type === 'skills' ? SKILLS_EVALUATION_CRITERIA : EVALUATION_CRITERIA;
+    return criteria.map(c => {
+      const mnemonic = getMatchingMnemonic(c.name);
+      return {
+        criteria_id: c.id,
+        criteria_name: c.name,
+        rating: null,
+        notes: '',
+        ...(mnemonic ? { sub_items: buildDefaultSubItems(mnemonic) } : {}),
+      };
+    });
+  }, [station]);
+
   useEffect(() => {
-    // Initialize criteria ratings based on station type
+    // Initialize criteria ratings on first load (or when station
+    // type swaps, e.g. when the operator navigates from a skills
+    // station to a scenario station).
     if (station) {
-      const criteria = station.station_type === 'skills' ? SKILLS_EVALUATION_CRITERIA : EVALUATION_CRITERIA;
-      setCriteriaRatings(criteria.map(c => {
-        const mnemonic = getMatchingMnemonic(c.name);
-        return {
-          criteria_id: c.id,
-          criteria_name: c.name,
-          rating: null,
-          notes: '',
-          ...(mnemonic ? { sub_items: buildDefaultSubItems(mnemonic) } : {}),
-        };
-      }));
+      setCriteriaRatings(buildInitialCriteriaRatings());
     }
-  }, [station?.station_type]);
+  }, [station?.station_type, buildInitialCriteriaRatings]);
 
   // Look up skill sheets for each assigned skill by name + program
   useEffect(() => {
@@ -705,12 +720,25 @@ export default function GradeStationPage() {
         return;
       }
 
+      // NI/U ratings must be justified — either per-criterion notes
+      // OR substantive overall comments. The per-criterion-only
+      // requirement (May 21 lab) tripped up operators who typed
+      // explanatory text into the Overall Comments field and got
+      // blocked on send. Either field is now sufficient as long as
+      // the operator left A justification somewhere visible.
+      const overallCommentsTrimmed = overallComments.trim();
+      // Treat short scribbles as not-quite-justification so we still
+      // catch the "blank submit" case. Tunable.
+      const hasOverallJustification = overallCommentsTrimmed.length >= 10;
       const missingNotes = criteriaRatings.filter(r =>
         (r.rating === 'NI' || r.rating === 'U') && (!r.notes || r.notes.trim() === '')
       );
-      if (missingNotes.length > 0) {
+      if (missingNotes.length > 0 && !hasOverallJustification) {
         const criteriaNames = missingNotes.map(r => r.criteria_name).join(', ');
-        alert(`Please add notes for the following "Needs Improvement" or "Unsatisfactory" ratings: ${criteriaNames}`);
+        alert(
+          `Please add notes for the following "Needs Improvement" or "Unsatisfactory" ratings:\n\n${criteriaNames}\n\n` +
+          `OR add justification to the Overall Comments field (10+ characters).`,
+        );
         return;
       }
 
@@ -820,10 +848,20 @@ export default function GradeStationPage() {
           // Reset form for the next student. Keep selectedGroupId
           // (same group typically rotates team leaders) and
           // rotationNumber (still in the same rotation slot).
+          // Re-INITIALIZE criteriaRatings (not blank it!) so the
+          // rubric rows re-render with rating=null. Blanking to []
+          // here regressed grading in May 21 lab — buttons had
+          // nothing to bind to.
           setTeamLeaderId('');
           setSelectedStudentId('');
-          setCriticalActions({});
-          setCriteriaRatings([]);
+          setCriticalActions(() => {
+            // Also re-init critical-action checkboxes from scenario.
+            const out: Record<string, boolean> = {};
+            const actions = toArray(station?.scenario?.critical_actions);
+            actions.forEach((_a, i) => { out[`action-${i}`] = false; });
+            return out;
+          });
+          setCriteriaRatings(buildInitialCriteriaRatings());
           setOverallComments('');
           setScenarioNotes('');
           setExaminerNotes('');
