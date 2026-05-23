@@ -120,6 +120,13 @@ export default function LabDayChat({
   const [newMessage, setNewMessage] = useState('');
   const [unreadCount, setUnreadCount] = useState(0);
   const [connectedUsers, setConnectedUsers] = useState(0);
+  // Channel state for the small status indicator. 'connecting' is
+  // the bootstrap state, 'connected' is steady-state, 'reconnecting'
+  // fires during the exponential-backoff retries, 'offline' means
+  // we gave up after MAX_ATTEMPTS. The chat still loads message
+  // history via the initial GET in either failure state so the UI
+  // is usable for read-only purposes when realtime is offline.
+  const [channelStatus, setChannelStatus] = useState<'connecting' | 'connected' | 'reconnecting' | 'offline'>('connecting');
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sendError, setSendError] = useState<string | null>(null);
@@ -198,71 +205,119 @@ export default function LabDayChat({
   useEffect(() => {
     const supabase = getSupabase();
     const channelName = `lab-day-chat-${labDayId}`;
-    console.log('[LabDayChat] subscribing to channel', channelName);
 
-    const channel = supabase
-      .channel(channelName, {
-        config: { presence: { key: senderEmail || senderName || 'anon' } },
-      })
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'lab_day_messages',
-          filter: `lab_day_id=eq.${labDayId}`,
-        },
-        (payload) => {
-          console.log('[LabDayChat] postgres_changes INSERT', payload.new);
-          const newMsg = payload.new as ChatMessage;
-          setMessages((prev) => {
-            // Guard against duplicate inserts (optimistic + realtime)
-            if (prev.some((m) => m.id === newMsg.id)) return prev;
-            return [...prev, newMsg];
-          });
-          if (!isOpenRef.current && newMsg.sender_email !== senderEmail) {
-            setUnreadCount((c) => c + 1);
+    // Resilient subscribe. Realtime channels can drop for several
+    // reasons that aren't our bug — Supabase mid-deploy, momentarily
+    // suspended websocket on tab backgrounding, brief network loss
+    // during mobile handoff between WiFi and cellular. Old behavior
+    // was to log the error and give up forever, which is what flooded
+    // the console with repeated CHANNEL_ERROR / CLOSED lines on May
+    // 21 lab. New behavior:
+    //   - On CHANNEL_ERROR / TIMED_OUT / CLOSED, schedule a reconnect
+    //     with exponential backoff (1s → 2s → 4s → 8s, then cap).
+    //   - At most 5 attempts; after that we surface a sticky banner
+    //     so the operator knows the chat is offline and falls back
+    //     to direct API actions (Cleanup button etc. don't depend
+    //     on this channel — they hit /api/lab-management/timer
+    //     directly — so chat going dark doesn't break the lab).
+    //   - On unmount or labDayId change, cancel any pending retry.
+    let attempt = 0;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let currentChannel: ReturnType<typeof supabase.channel> | null = null;
+    let cancelled = false;
+    const MAX_ATTEMPTS = 5;
+
+    const subscribe = () => {
+      if (cancelled) return;
+      console.log(`[LabDayChat] subscribing to channel ${channelName} (attempt ${attempt + 1})`);
+
+      const channel = supabase
+        .channel(channelName, {
+          config: { presence: { key: senderEmail || senderName || 'anon' } },
+        })
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'lab_day_messages',
+            filter: `lab_day_id=eq.${labDayId}`,
+          },
+          (payload) => {
+            const newMsg = payload.new as ChatMessage;
+            setMessages((prev) => {
+              if (prev.some((m) => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
+            if (!isOpenRef.current && newMsg.sender_email !== senderEmail) {
+              setUnreadCount((c) => c + 1);
+            }
           }
-        }
-      )
-      .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState();
-        const count = Object.keys(state).length;
-        console.log('[LabDayChat] presence sync, connected=', count, state);
-        setConnectedUsers(count);
-      })
-      .on('presence', { event: 'join' }, ({ key }) => {
-        console.log('[LabDayChat] presence join', key);
-      })
-      .on('presence', { event: 'leave' }, ({ key }) => {
-        console.log('[LabDayChat] presence leave', key);
-      })
-      .subscribe(async (status, err) => {
-        console.log('[LabDayChat] subscribe status=', status, err || '');
-        if (status === 'SUBSCRIBED') {
-          // Now it's safe to track presence
-          const trackRes = await channel.track({
-            name: senderName,
-            email: senderEmail,
-            role: senderRole,
-            online_at: new Date().toISOString(),
-          });
-          console.log('[LabDayChat] track result=', trackRes);
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-          console.error('[LabDayChat] subscription failed with status:', status, err);
-        }
-      });
+        )
+        .on('presence', { event: 'sync' }, () => {
+          const state = channel.presenceState();
+          setConnectedUsers(Object.keys(state).length);
+        })
+        .subscribe(async (status, err) => {
+          if (status === 'SUBSCRIBED') {
+            attempt = 0; // reset so future drops get the full backoff window again
+            setChannelStatus('connected');
+            const trackRes = await channel.track({
+              name: senderName,
+              email: senderEmail,
+              role: senderRole,
+              online_at: new Date().toISOString(),
+            });
+            console.log('[LabDayChat] track result=', trackRes);
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+            // Tear down the current channel before scheduling a
+            // retry — leaving a half-dead channel attached causes
+            // Supabase's client to refuse new subscribes on the
+            // same name (the second subscribe silently never fires
+            // SUBSCRIBED).
+            console.warn(
+              `[LabDayChat] subscription dropped (${status}, attempt ${attempt + 1}/${MAX_ATTEMPTS})`,
+              err || '',
+            );
+            try { supabase.removeChannel(channel); } catch { /* ignore */ }
+            if (cancelled) return;
+            attempt++;
+            if (attempt > MAX_ATTEMPTS) {
+              setChannelStatus('offline');
+              console.error(
+                `[LabDayChat] giving up after ${MAX_ATTEMPTS} attempts. Chat is offline; ` +
+                `direct API actions (timer, cleanup, etc.) still work.`,
+              );
+              return;
+            }
+            setChannelStatus('reconnecting');
+            // 1s, 2s, 4s, 8s, 16s — exponential.
+            const delayMs = Math.min(16000, 1000 * 2 ** (attempt - 1));
+            retryTimer = setTimeout(subscribe, delayMs);
+          }
+        });
 
-    // Backup poll in case the sync event is missed
+      currentChannel = channel;
+    };
+
+    setChannelStatus('connecting');
+    subscribe();
+
+    // Backup presence poll in case sync events are dropped.
     const presenceInterval = setInterval(() => {
-      const state = channel.presenceState();
-      setConnectedUsers(Object.keys(state).length);
+      if (currentChannel) {
+        const state = currentChannel.presenceState();
+        setConnectedUsers(Object.keys(state).length);
+      }
     }, 5000);
 
     return () => {
-      console.log('[LabDayChat] cleanup channel', channelName);
+      cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
       clearInterval(presenceInterval);
-      supabase.removeChannel(channel);
+      if (currentChannel) {
+        try { supabase.removeChannel(currentChannel); } catch { /* ignore */ }
+      }
     };
   }, [labDayId, senderName, senderEmail, senderRole]);
 
@@ -388,8 +443,24 @@ export default function LabDayChat({
                 Lab Day Chat
               </span>
               <span className="flex items-center gap-1 text-[11px] text-gray-500 dark:text-gray-400">
-                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
-                {connectedUsers} connected
+                {/* Status dot colors mirror the channelStatus state:
+                    green = subscribed, amber = trying to reconnect,
+                    red = gave up after MAX_ATTEMPTS. The number is
+                    only meaningful when connected; when offline we
+                    label it explicitly. */}
+                <span
+                  className={`w-2 h-2 rounded-full inline-block ${
+                    channelStatus === 'connected'
+                      ? 'bg-green-500'
+                      : channelStatus === 'reconnecting' || channelStatus === 'connecting'
+                        ? 'bg-amber-500 animate-pulse'
+                        : 'bg-red-500'
+                  }`}
+                  aria-label={channelStatus}
+                />
+                {channelStatus === 'offline'
+                  ? 'offline — direct actions still work'
+                  : `${connectedUsers} connected${channelStatus === 'reconnecting' ? ' · reconnecting…' : ''}`}
               </span>
             </div>
             <button

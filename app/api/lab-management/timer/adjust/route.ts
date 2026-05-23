@@ -102,28 +102,53 @@ export async function PATCH(request: NextRequest) {
 
     if (error) throw error;
 
-    // For set_duration: ALSO persist to lab_days.rotation_minutes
+    // For set_duration: ALSO persist to lab_days.rotation_duration
     // so the new length sticks across page reloads and shows up on
-    // the lab day edit page. Without this, the timer would revert
-    // to the original rotation_minutes anytime the lab_timer_state
-    // row was reseeded (end-lab → restart, fresh page load with no
-    // active timer row, etc). Best-effort: a failure here doesn't
-    // roll back the timer-state update — the operator's running
-    // session is already on the new duration; only the persistence
-    // for next time would be missing, which a warning surfaces.
+    // the lab day edit page.
+    //
+    // First attempt (2026-05-21) wrote to lab_days.rotation_minutes
+    // — but that column doesn't exist on lab_days (it lives on
+    // lab_stations). The Supabase admin client silently surfaced
+    // the error via the warn log, the update never landed, and
+    // operators saw the timer keep reverting to the original
+    // 30 min default. Two corrections in this pass:
+    //   1. Write to lab_days.rotation_duration (integer minutes,
+    //      default 30, real column).
+    //   2. ALSO update lab_stations.rotation_minutes for every
+    //      station on this lab day so the per-station seed used
+    //      when initializing future rotations or recreating the
+    //      timer row stays in sync.
+    // Both writes are best-effort — the running session already
+    // got the new duration via the lab_timer_state update above.
     // add_time/subtract_time are intentionally NOT mirrored:
     // those are mid-session nudges, not policy changes.
     if (action === 'set_duration' && typeof new_duration === 'number') {
       const newMinutes = Math.max(1, Math.round(new_duration / 60));
+
       const { error: ldError } = await supabase
         .from('lab_days')
-        .update({ rotation_minutes: newMinutes })
+        .update({ rotation_duration: newMinutes })
         .eq('id', lab_day_id);
       if (ldError) {
         console.warn(
           `[timer/adjust] set_duration applied to lab_timer_state but ` +
-          `failed to persist lab_days.rotation_minutes=${newMinutes}: ${ldError.message}. ` +
+          `failed to persist lab_days.rotation_duration=${newMinutes}: ${ldError.message}. ` +
           `Operator's current session is unaffected; next reset/reload may revert.`,
+        );
+      }
+
+      // Per-station mirror. The lab day page seeds LabTimer from
+      // lab_days.rotation_duration directly (not station-level),
+      // but other surfaces (lab day edit page, station picker)
+      // read lab_stations.rotation_minutes. Keep them all aligned.
+      const { error: stError } = await supabase
+        .from('lab_stations')
+        .update({ rotation_minutes: newMinutes })
+        .eq('lab_day_id', lab_day_id);
+      if (stError) {
+        console.warn(
+          `[timer/adjust] failed to mirror rotation length to ` +
+          `lab_stations.rotation_minutes for lab_day_id=${lab_day_id}: ${stError.message}.`,
         );
       }
     }
