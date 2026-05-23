@@ -314,6 +314,15 @@ const nextConfig: NextConfig = {
       },
 
       // --- Admin pages from lab-management ---
+      // The /lab-management/admin hub itself — was previously
+      // rendered by app/lab-management/admin/page.tsx, deleted
+      // 2026-05-23 during the duplicate-route cleanup. /admin is
+      // the canonical hub.
+      {
+        source: '/lab-management/admin',
+        destination: '/admin',
+        permanent: true,
+      },
       {
         source: '/lab-management/admin/feedback',
         destination: '/admin/feedback',

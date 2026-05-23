@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
           message: `Yesterday's ${cohortLabel} lab has no debrief notes yet. Please take a moment to share your observations and feedback.`,
           type: 'lab_reminder',
           category: 'labs',
-          linkUrl: `/lab-management/schedule/${labDay.id}#debrief-notes`,
+          linkUrl: `/labs/schedule/${labDay.id}#debrief-notes`,
           referenceType: 'debrief_reminder',
           referenceId: labDay.id,
         });

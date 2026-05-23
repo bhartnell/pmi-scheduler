@@ -46,11 +46,11 @@ function buildLink(
     case 'task':
       return `/tasks?id=${referenceId}`;
     case 'lab_day':
-      return `/lab-management/schedule/${referenceId}`;
+      return `/labs/schedule/${referenceId}`;
     case 'scenario':
-      return `/lab-management/scenarios/${referenceId}`;
+      return `/labs/scenarios/${referenceId}`;
     case 'student':
-      return `/lab-management/students/${referenceId}`;
+      return `/academics/students/${referenceId}`;
     case 'shift':
       return `/scheduling/shifts`;
     case 'internship':

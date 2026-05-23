@@ -22,7 +22,7 @@ const SAMPLE_DATA: Record<string, string> = {
   '{{labDate}}':          'February 28, 2026',
   '{{cohortName}}':       'Cohort 24-A',
   '{{stationInfo}}':      'Station 1 – Airway Management',
-  '{{labUrl}}':           `${APP_URL}/lab-management/schedule`,
+  '{{labUrl}}':           `${APP_URL}/labs/schedule`,
   '{{shiftDate}}':        'February 28, 2026',
   '{{shiftDetails}}':     '0800–1600, Station 3',
   '{{signupUrl}}':        `${APP_URL}/scheduling/shifts`,

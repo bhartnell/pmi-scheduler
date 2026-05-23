@@ -184,6 +184,66 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
       },
     ],
   },
+  // Lab-management reports moved here 2026-05-23 during the
+  // /lab-management → /labs cleanup. These pages used to live under
+  // /lab-management/reports/* and were reachable from that hub —
+  // now that the parent hub is deleted, they need an entry point
+  // here. (Navigation Entry-Point Rule.) Team Lead Report is here
+  // separately because it also has a Link button on the lab day
+  // schedule page; the hub link is the cohort-wide entry.
+  {
+    heading: 'Cohort Progress',
+    reports: [
+      {
+        title: 'Lab Progress',
+        description: 'Lab day completion, attendance, and skill pass rates by cohort.',
+        href: '/reports/lab-progress',
+        icon: ClipboardList,
+        color: 'text-blue-600 dark:text-blue-400',
+        bgColor: 'bg-blue-100 dark:bg-blue-900/30',
+      },
+      {
+        title: 'Student Progress (detailed)',
+        description: 'Per-student progress detail across attendance, skills, and clinical hours.',
+        href: '/reports/student-progress',
+        icon: GraduationCap,
+        color: 'text-purple-600 dark:text-purple-400',
+        bgColor: 'bg-purple-100 dark:bg-purple-900/30',
+      },
+      {
+        title: 'Clinical Hours',
+        description: 'Clinical rotation hours tracked per student vs program requirements.',
+        href: '/reports/clinical-hours',
+        icon: Clock,
+        color: 'text-cyan-600 dark:text-cyan-400',
+        bgColor: 'bg-cyan-100 dark:bg-cyan-900/30',
+      },
+      {
+        title: 'Internship Status',
+        description: 'Internship placement and progress per student.',
+        href: '/reports/internship-status',
+        icon: Briefcase,
+        color: 'text-orange-600 dark:text-orange-400',
+        bgColor: 'bg-orange-100 dark:bg-orange-900/30',
+      },
+      {
+        title: 'Onboarding Status',
+        description: 'Where each student stands in the pre-cohort onboarding checklist.',
+        href: '/reports/onboarding-status',
+        icon: ListChecks,
+        color: 'text-green-600 dark:text-green-400',
+        bgColor: 'bg-green-100 dark:bg-green-900/30',
+      },
+      {
+        title: 'Team Leads',
+        description: 'Per-cohort tally of who has led which scenarios — used during NREMT prep.',
+        href: '/reports/team-leads',
+        icon: ClipboardSignature,
+        color: 'text-amber-600 dark:text-amber-400',
+        bgColor: 'bg-amber-100 dark:bg-amber-900/30',
+      },
+    ],
+  },
 ];
 
 export default function ReportsHubPage() {

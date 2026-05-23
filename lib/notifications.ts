@@ -265,7 +265,7 @@ export async function notifyInstructorAssigned(
     title: `Assigned to ${stationInfo.stationTitle}`,
     message: `You were assigned to a station for ${stationInfo.cohortName} on ${formattedDate}`,
     type: 'lab_assignment',
-    linkUrl: `/lab-management/grade/station/${stationInfo.stationId}`,
+    linkUrl: `/labs/grade/station/${stationInfo.stationId}`,
     referenceType: 'lab_station',
     referenceId: stationInfo.stationId,
   });
@@ -308,7 +308,7 @@ export async function notifyAdminsNewFeedback(
       title: `New ${feedbackInfo.type} report`,
       message: `${feedbackInfo.submittedBy.split('@')[0]} submitted: ${feedbackInfo.title}`,
       type: 'feedback_new' as NotificationType,
-      linkUrl: `/lab-management/admin/feedback?id=${feedbackInfo.feedbackId}`,
+      linkUrl: `/admin/feedback?id=${feedbackInfo.feedbackId}`,
       referenceType: 'feedback_report',
       referenceId: feedbackInfo.feedbackId,
     }));
@@ -334,7 +334,7 @@ export async function notifyFeedbackResolved(
     title: 'Feedback resolved',
     message: `Your feedback "${feedbackInfo.title}" has been resolved`,
     type: 'feedback_resolved',
-    linkUrl: `/lab-management/admin/feedback?id=${feedbackInfo.feedbackId}`,
+    linkUrl: `/admin/feedback?id=${feedbackInfo.feedbackId}`,
     referenceType: 'feedback_report',
     referenceId: feedbackInfo.feedbackId,
   });
@@ -370,7 +370,7 @@ export async function notifyLabReminder(
     title: 'Lab reminder',
     message: `You have a lab tomorrow${timeStr} - ${labInfo.stationTitle} for ${labInfo.cohortName}`,
     type: 'lab_reminder',
-    linkUrl: `/lab-management/grade/station/${labInfo.stationId}`,
+    linkUrl: `/labs/grade/station/${labInfo.stationId}`,
     referenceType: 'lab_station',
     referenceId: labInfo.stationId,
   });

@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
           subject,
           title,
           message,
-          actionUrl: `${process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools'}/lab-management/certifications`,
+          actionUrl: `${process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools'}/admin/certifications`,
           actionText: 'View Certifications',
         },
       });

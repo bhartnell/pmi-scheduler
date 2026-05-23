@@ -262,7 +262,7 @@ export async function GET(request: NextRequest) {
               cohort_number: cohort?.cohort_number,
               instructor_names: instructorNames,
               linked_id: ld.id,
-              linked_url: `/lab-management/schedule/${ld.id}`,
+              linked_url: `/labs/schedule/${ld.id}`,
               event_type: 'lab',
               metadata: {
                 station_count: stations.length,

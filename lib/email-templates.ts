@@ -352,7 +352,7 @@ export const labTemplates = {
         ${data.role ? `<br>${emailDetail('Role', data.role)}` : ''}
       </p>
     `, EMAIL_COLORS.warning, '#fef3c7')}
-    ${emailButton('View Lab Details', `${APP_URL}/lab-management/schedule`, EMAIL_COLORS.warning)}
+    ${emailButton('View Lab Details', `${APP_URL}/labs/schedule`, EMAIL_COLORS.warning)}
   `,
 
   reminder: (data: {
@@ -373,7 +373,7 @@ export const labTemplates = {
         ${data.role ? `<br>${emailDetail('Role', data.role)}` : ''}
       </p>
     `, EMAIL_COLORS.warning, '#fef3c7')}
-    ${emailButton('View Lab Details', `${APP_URL}/lab-management/schedule`, EMAIL_COLORS.warning)}
+    ${emailButton('View Lab Details', `${APP_URL}/labs/schedule`, EMAIL_COLORS.warning)}
   `,
 };
 

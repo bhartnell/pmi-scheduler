@@ -182,7 +182,7 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
           ${data.role ? `<strong>Role:</strong> ${data.role}` : ''}
         </p>
       </div>
-      ${emailButton('View Lab Details', `${APP_URL}/lab-management/schedule`, '#f59e0b')}
+      ${emailButton('View Lab Details', `${APP_URL}/labs/schedule`, '#f59e0b')}
     `
   }),
 
@@ -205,7 +205,7 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
           ${data.role ? `<strong>Role:</strong> ${data.role}` : ''}
         </p>
       </div>
-      ${emailButton('View Lab Details', `${APP_URL}/lab-management/schedule`, '#f59e0b')}
+      ${emailButton('View Lab Details', `${APP_URL}/labs/schedule`, '#f59e0b')}
     `
   }),
 
