@@ -1,5 +1,83 @@
 # PMI EMS Scheduler -- Dead Code Report
-> Auto-generated from comprehensive codebase scan -- March 8, 2026
+> Last refreshed 2026-05-23. Original auto-generation 2026-03-08.
+
+## What's Been Resolved Since March 2026
+
+### 2026-05-23 — /lab-management directory deletion (commit 808bb34d)
+
+The entire `app/lab-management/` directory was deleted. 28+ duplicate
+pages, ~43,000 lines of dead code removed in a single commit. These
+duplicates were HTTP-unreachable (next.config.ts redirects routed all
+`/lab-management/*` URLs to their canonical locations before file-system
+routing) but were still confusing grep, IDE jump-to-definition, and
+code review. Live links/emails/notifications across the codebase were
+also retargeted to canonical paths.
+
+Files deleted:
+- `app/lab-management/{page,error,loading}.tsx`
+- All of `app/lab-management/scenarios/`, `schedule/`, `grade/`,
+  `scenario-library/`, `templates/`, `skill-drills/`, `groups/`,
+  `flags/`, `ekg-warmup/`, `debrief-review/`, `skills/`, `stations/`,
+  `seating/`, `mentorship/`, `peer-evals/`, `protocol-tracking/`,
+  `my-certifications/`, `skill-sheets/`, `students/`, `cohorts/`,
+  `aemt-tracker/`, `emt-tracker/`
+- `app/lab-management/admin/` (page.tsx + feedback, timer-displays,
+  certifications, cohorts subdirs)
+- `app/lab-management/reports/` (after moving content to /reports/)
+
+### 2026-05-23 — /reports/team-leads infinite redirect loop FIXED
+
+`app/reports/team-leads/page.tsx` was a `useRouter().replace` stub
+pointing at `/lab-management/reports/team-leads`. With the
+next.config redirect `/lab-management/reports/:path* → /reports/:path*`
+in place, this looped forever (Chrome eventually fired
+ERR_TOO_MANY_REDIRECTS). The stub was replaced with the actual page
+content moved from `app/lab-management/reports/team-leads/page.tsx`.
+
+### 2026-05-23 — 5 lab-management/reports pages MOVED to canonical /reports/
+
+Previously orphaned under `/lab-management/reports/*`:
+- `clinical-hours`, `internship-status`, `lab-progress`,
+  `onboarding-status`, `student-progress`
+
+Now at `/reports/*` with a new "Cohort Progress" hub section linking
+them (per the Navigation Entry-Point Rule).
+
+### 2026-04 — Cleanup pass
+
+Removed earlier in April (per project notes):
+- **Case Studies** older variant (the new `/cases/*` tree is the
+  canonical home, including session/[code]/{instructor,join,student,tv}).
+- **Alumni Tracking** — moved into `/admin/alumni`.
+- **Affiliations** legacy variant — `/clinical/affiliations` is the
+  canonical, the old route was deleted.
+- **Cases Leaderboard** — `app/cases/leaderboard/page.tsx` is the
+  canonical home now (previously had a duplicate elsewhere).
+
+### 2026-04 — 4 orphaned components deleted
+
+Per project notes (specific filenames not preserved but covered the
+removed-route components above + their helper subcomponents that
+became unreferenced).
+
+### Other shipped resolutions
+
+- **Embedded paramedic_s2 seed file** (2026-05-21) — `data/paramedic_s2_labs.json`
+  had 7 templates with "Content Pending" placeholders that the Seed button
+  kept reverting over real content. Replaced with v4 content; safeguard
+  gate also added so future stale uploads can't silently corrupt the DB.
+- **NREMT broad-date kill-switch** (2026-05-21) — `isNremtTestingActiveToday()`
+  used to block result emails for ANY lab running on a calendar date that
+  ALSO had any NREMT-flagged lab. Now `isNremtLabDay(labDayId)` is preferred
+  when callers pass `labDayId`, scoped to the specific lab.
+- **Costs route schema mismatch** (2026-05-22) — DB CHECK constraint
+  required snake_case ('instructor_pay'), API was sending Title Case
+  ('Instructor Pay'). Two-way mapping at the route boundary.
+- **Debrief route schema mismatch** (2026-05-22) — Migration
+  `20260522_lab_day_debriefs_structured.sql` added the 7 structured
+  columns the route was already writing to.
+
+---
 
 ## Summary
 

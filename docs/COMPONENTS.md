@@ -1,16 +1,138 @@
 # PMI EMS Scheduler -- Component & Utility Reference
 
-> Auto-generated from codebase scan on 2026-03-08
+> Last refreshed 2026-05-23 (was auto-generated 2026-03-08).
+> See [the "New / Updated Since March 2026" section below](#new--updated-since-march-2026)
+> for additions during May; the original inventory below is still ~accurate
+> for files that haven't been touched.
 
 ## Summary
 
-| Category | Count |
-|----------|-------|
-| Components | 128 files |
-| Custom Hooks | 15 |
-| Shared Utilities (lib/) | 30 |
+| Category | Count (2026-05-23) | Δ vs March |
+|----------|--------------------|-----------|
+| Components (`components/**/*.tsx`) | 63 top-level + subdirs | +new lab-day, scenario, scheduling subdirs |
+| Custom Hooks (`hooks/`) | 15 | unchanged |
+| Shared Utilities (`lib/*.ts`) | 54 | +24 |
 
 ---
+
+## New / Updated Since March 2026
+
+### Major additions
+
+**`components/scenario/ScenarioFullDisplay.tsx`** — Read-only renderer for
+the full scenario card (dispatch, patient, SAMPLE, phases, vitals, critical
+actions, debrief points). Used on the scenario edit page's preview pane
+and inline in the grading flow. Decouples display formatting from the
+edit form's input controls.
+
+**`components/seating/Suite1Layout.tsx`** — Suite 1 SVG floor-plan layout
+component. Renders the physical room as positionable student boxes (drag-
+drop seating chart). Drives `/labs/seating/charts/[id]`. Honors print
+styles (`@media print`) so a chart prints cleanly without UI chrome.
+
+**`components/scheduling/GenerateLabShiftsModal.tsx`** — Modal flow for
+generating recurring lab instructor shifts from a cohort's lab day
+schedule. Picks date range, instructor pool, role types; previews shift
+list before committing. Triggered from cohort hub.
+
+**`components/Breadcrumbs.tsx`** (updated) — Now resolves more dynamic
+segments (UUID, numeric, slug) and accepts a `customSegments` override
+for paths where the canonical path doesn't match the displayed hierarchy.
+Used by every refactored page (LabHeader, page-level breadcrumbs throughout).
+
+**`components/lab-day/LabDayChat.tsx`** — Lab day live chat with Supabase
+realtime presence + messages. Updated 2026-05-23 with exponential backoff
+on `CHANNEL_ERROR` (1s → 2s → 4s → 8s → 16s, max 5 attempts), proper
+channel teardown before retry, and a status indicator
+('connecting' | 'connected' | 'reconnecting' | 'offline') so operators
+know when the chat is dark. Lab controls (timer next/cleanup/etc.) are
+independent of realtime — they go through direct API calls.
+
+**`components/lab-day/EditStationModal.tsx`** — Widened from `max-w-lg`
+to `max-w-2xl` on 2026-05-21; scenario picker now shows chief_complaint
++ category/difficulty/duration badges per row.
+
+### Library / utilities
+
+**`lib/scenario-export.ts`** — Pure converters for Export JSON / Update
+from JSON / Bulk Export. `scenarioToImportShape()` translates DB-shape
+or editor-shape scenarios into the bulk-import JSON shape (preserves id
+for round-trip dedup). `buildSingleExport()` / `buildBulkExport()` wrap
+in `{ scenarios: [...] }`. `downloadJson()` + `sanitizeFilename()` are
+client-only helpers used by the edit page and list page. See the file's
+header comment for what round-trips losslessly vs. what's currently
+ignored by the bulk-importer.
+
+**`lib/email.ts`** (updated) — Added per-lab-day NREMT kill-switch
+scoping via `isNremtLabDay(labDayId)`. The central `sendEmail()` now
+prefers per-lab-day scoping when callers pass `labDayId` and falls back
+to the broader `isNremtTestingActiveToday()` only when context is
+unknown. STUDENT_EVAL_TEMPLATES (`'skill_evaluation'`, `'scenario_feedback'`)
+are the gated templates. Fails closed on DB error to prevent NREMT-day
+leaks.
+
+**`lib/date-input.ts`** — Date input utilities for the various date
+pickers across the app. Handles AZ-local-date string formatting,
+ISO-string parsing tolerant of partial inputs, and Date ↔ YYYY-MM-DD
+round-tripping for `<input type="date">` controls.
+
+**`lib/poll-link.ts`** — URL builders + token validation for scheduling
+poll share links. Generates per-recipient signed tokens, normalizes
+poll URLs across `/poll/[id]`, `/admin/poll/[id]`, and
+`/scheduling/polls/[id]`.
+
+**`lib/instructor-blocks.ts`** — Helper for assembling per-instructor
+calendar blocks from `pmi_block_instructors` + `pmi_schedule_blocks`
+queries. Used by the planner (`/academics/planner`), instructor
+teaching schedule (`/instructor/teaching`), and the Google Calendar
+auto-sync flow.
+
+### Other notable additions
+
+- `components/lab-day/LabDayCheckInSection.tsx` — student/instructor
+  check-in panel embedded in the lab day view.
+- `components/lab-day/IndividualTestingGrid.tsx` — NREMT-day grid mode
+  replacing the rotation grid when `is_nremt_testing=true`.
+- `components/lab-day/CostsSection.tsx` — equipment / instructor pay
+  cost tracking per lab day.
+- `components/lab-day/EquipmentSection.tsx` — equipment checkout
+  tracking.
+- `components/lab-day/DebriefNotesSection.tsx` + `DebriefSection.tsx` —
+  post-lab debrief workflow.
+- `components/lab-day/ScenarioPickerModal.tsx` — searchable scenario
+  picker reused across station edit + checkoff flows.
+- `components/grading/ScenarioReferencePanel.tsx` — read-only scenario
+  reference panel on the grading page (so the grader can see scenario
+  details without leaving the page).
+- `components/grading/FlaggingPanel.tsx` — flag-for-follow-up panel
+  on the grading page.
+- `components/scheduling/CoordinatorCalendarView.tsx` — coordinator's
+  unified calendar view across cohorts/labs/clinical.
+- `components/scheduling/RequestCoverageModal.tsx` — instructor
+  coverage-request flow.
+
+### Library additions (full list, 2026-05-23)
+
+`achievements`, `calendar-auto-sync`, `calendar-availability`,
+`case-generation`, `case-session-realtime`, `case-validation`,
+`coordinator-calendar-colors`, `date-input`, `email`, `email-templates`,
+`endorsements`, `ferpa`, `ferpa-filter`, `fetch-utils`, `format-cohort`,
+`format-name`, `google-calendar`, `google-shared-calendar`, `ics-export`,
+`instructor-blocks`, `lvfr-availability`, `lvfr-utils`, `nremtExport`,
+`nremt-instructions`, `pharm-scoring`, `planner-semester`, `poll-link`,
+`practice-auth`, `print-utils`, `program-key`, `question-types`,
+`rate-limit`, `safe-array`, `scenario-export`, `schedule-constraints`,
+`semester-cascade`, `session-tracker`, `shift-calculator`,
+`skillSheetPrintTemplate`, `totp`, `version`, `webhooks`. Plus the
+originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
+`constants`, `export-utils`, `notifications`, `permissions`, `supabase`,
+`utils`, `validation`).
+
+---
+
+## Original Inventory (2026-03-08)
+
+
 
 ## Components
 
