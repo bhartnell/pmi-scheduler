@@ -1,6 +1,18 @@
-# PMI EMS Scheduler — Master Reference
+# PMI EMS Scheduler — Master Reference (ARCHIVED — March 8, 2026)
 
-> Updated: March 8, 2026
+> ⚠ **This file is the March 8, 2026 snapshot.** For the current state,
+> see **[PMI-MASTER-REFERENCE-2026-05-23.md](./PMI-MASTER-REFERENCE-2026-05-23.md)**.
+>
+> Significant changes since this snapshot include: the /lab-management →
+> /labs consolidation, Google Calendar Phases 1–4, scenario import/export
+> system, lab template safeguards (placeholder gate + audit trail), the
+> LVFR-AEMT module, per-lab-day NREMT scoping, and the Resend Results
+> Emails feature. The original content below is preserved for posterity
+> but should NOT be used as a current reference.
+
+---
+
+> Updated: March 8, 2026 (original document)
 
 ---
 
