@@ -135,18 +135,31 @@ export async function POST(request: NextRequest) {
           { status: 400 },
         );
       }
-      const { data: tmpl, error: tmplErr } = await supabase
+      // Fetch ALL candidate templates for this week, then pick the
+      // best match in JS. We need three-tier preference:
+      //   1. exact day match (day_number = ld.day)
+      //   2. day-agnostic template (day_number IS NULL — legacy)
+      //   3. day=1 fallback (programs like EMT only ship one
+      //      template per week with day_number=1, but cohorts run
+      //      labs on multiple days). Without this fallback the
+      //      Wednesday EMT lab would fail with no_template_match
+      //      even though the week's content is right there.
+      // Paramedic ships both Day 1 and Day 2 templates per week, so
+      // tier 1 always wins there and tiers 2/3 never fire.
+      const { data: candidates, error: tmplErr } = await supabase
         .from('lab_day_templates')
-        .select('id')
+        .select('id, day_number')
         .eq('program', resolvedProgram)
         .eq('semester', resolvedSemester)
-        .eq('week_number', week)
-        .or(`day_number.eq.${day},day_number.is.null`)
-        .limit(1)
-        .maybeSingle();
+        .eq('week_number', week);
       if (tmplErr) {
         return NextResponse.json({ error: tmplErr.message }, { status: 500 });
       }
+      const rows = candidates ?? [];
+      const tmpl =
+        rows.find(r => r.day_number === day) ??
+        rows.find(r => r.day_number === null) ??
+        (day !== 1 ? rows.find(r => r.day_number === 1) : undefined);
       if (!tmpl) {
         return NextResponse.json(
           {

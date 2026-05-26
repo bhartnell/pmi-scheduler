@@ -193,6 +193,23 @@ export async function POST(request: NextRequest) {
       templateByKey.set(key, t);
     }
 
+    // Lookup helper: prefer exact (week, day) match; fall back to
+    // (week, 1) when the cohort runs a day_number>1 but the program
+    // only ships one template per week. EMT G5 has Mon+Wed labs but
+    // emt/S1 templates are day_number=1 only, so Wednesday lab_days
+    // would never match without this fallback. Paramedic ships both
+    // Day 1 and Day 2 templates per week, so the exact match always
+    // wins there and this fallback is a no-op.
+    const lookupTemplate = (week: number, day: number) => {
+      const exact = templateByKey.get(`${week}-${day}`);
+      if (exact) return { template: exact, fallback: false as const };
+      if (day !== 1) {
+        const dayOne = templateByKey.get(`${week}-1`);
+        if (dayOne) return { template: dayOne, fallback: true as const };
+      }
+      return { template: null as null, fallback: false as const };
+    };
+
     // Title-update predicate. Returns true when the current title
     // is blank or contains "Content Pending" — never overwrites a
     // custom title.
@@ -209,6 +226,11 @@ export async function POST(request: NextRequest) {
       current_title?: string | null;
       new_title?: string | null;
       stations_added: number;
+      // true when this lab_day (day > 1) was matched to the week's
+      // day=1 template because no day-specific template exists.
+      // Useful for the response so operators can see "EMT Wed labs
+      // pulled their content from the Monday template" explicitly.
+      used_day_one_fallback?: boolean;
     };
 
     let labDaysWithMatch = 0;
@@ -218,8 +240,8 @@ export async function POST(request: NextRequest) {
     const perDay: PerDay[] = [];
 
     for (const ld of labDays) {
-      const key = `${ld.week_number ?? 1}-${ld.day_number ?? 1}`;
-      const template = templateByKey.get(key);
+      const { template, fallback: usedDayOneFallback } =
+        lookupTemplate(ld.week_number ?? 1, ld.day_number ?? 1);
       if (!template) {
         labDaysNoMatch++;
         perDay.push({
@@ -290,6 +312,7 @@ export async function POST(request: NextRequest) {
         current_title: ld.title ?? null,
         new_title: newTitle,
         stations_added: stationsToInsert.length,
+        ...(usedDayOneFallback ? { used_day_one_fallback: true } : {}),
       });
 
       if (dryRun || !willChange) {
