@@ -11,6 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-05-26
 
+- `b3ce7bcf` | Documentation Update Rule (CLAUDE.md) + initial CHANGELOG.md with 30-day backfill
 - `9e023b52` | Template matching: day=1 fallback for single-template-per-week programs + open_shifts.title trigger
 
 ## 2026-05-23
