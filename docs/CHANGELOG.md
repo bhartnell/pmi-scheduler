@@ -11,6 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-05-27
 
+- `a1f29c2d` | LabDayChat: fix attempt-counter reset + Supabase stack overflow (regression from 56a03c1d) — senderRef for stable deps, attemptRef + subscribingRef mutex, full teardown (unsubscribe + removeChannel) before each retry
 - `0ecf311d` | SMC mapping review CSV: 81 smc_requirements fuzzy-matched against canonical_skills (34 exact, 25 close, 22 no_match) for operator review before any DB writes
 
 ## 2026-05-26
