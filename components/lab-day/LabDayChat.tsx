@@ -202,38 +202,95 @@ export default function LabDayChat({
   //      not flow a Supabase JWT. The companion migration
   //      20260414_lab_day_chat_realtime_rls.sql adds an anon SELECT policy
   //      so the filter actually returns rows to the subscriber.
+  // Sender props captured in a ref so they're readable from the
+  // subscribe closure without forcing the connect effect to re-run
+  // on every parent re-render. The prior version had
+  // [senderName, senderEmail, senderRole] in the effect deps, so any
+  // unstable parent (e.g. an unmemoized session?.user?.name) would
+  // tear down and rebuild the channel on every render. With rapid
+  // CHANNEL_ERROR retries also in flight, that piled listener
+  // references onto the same channel name and exploded Supabase's
+  // `_trigger` array with "Maximum call stack size exceeded".
+  const senderRef = useRef({ senderName, senderEmail, senderRole });
+  useEffect(() => {
+    senderRef.current = { senderName, senderEmail, senderRole };
+  }, [senderName, senderEmail, senderRole]);
+
+  // Reconnect attempt counter survives effect re-runs caused by
+  // labDayId stability work above and any future dep changes.
+  // Only reset on a real SUBSCRIBED or on labDayId change.
+  const attemptRef = useRef(0);
+  // Mutex: true while a subscribe() call is in flight OR a retry
+  // is scheduled. Prevents overlapping connects when state changes
+  // race the backoff timer.
+  const subscribingRef = useRef(false);
+
   useEffect(() => {
     const supabase = getSupabase();
     const channelName = `lab-day-chat-${labDayId}`;
 
-    // Resilient subscribe. Realtime channels can drop for several
-    // reasons that aren't our bug — Supabase mid-deploy, momentarily
-    // suspended websocket on tab backgrounding, brief network loss
-    // during mobile handoff between WiFi and cellular. Old behavior
-    // was to log the error and give up forever, which is what flooded
-    // the console with repeated CHANNEL_ERROR / CLOSED lines on May
-    // 21 lab. New behavior:
-    //   - On CHANNEL_ERROR / TIMED_OUT / CLOSED, schedule a reconnect
-    //     with exponential backoff (1s → 2s → 4s → 8s, then cap).
-    //   - At most 5 attempts; after that we surface a sticky banner
-    //     so the operator knows the chat is offline and falls back
-    //     to direct API actions (Cleanup button etc. don't depend
-    //     on this channel — they hit /api/lab-management/timer
-    //     directly — so chat going dark doesn't break the lab).
-    //   - On unmount or labDayId change, cancel any pending retry.
-    let attempt = 0;
+    // Resilient subscribe with exponential backoff. Channels can
+    // drop for legit reasons that aren't our bug — Supabase mid-deploy,
+    // tab backgrounding pausing the websocket, mobile WiFi/cellular
+    // handoff. Originally we logged and gave up forever, flooding the
+    // console with repeated CHANNEL_ERROR / CLOSED lines (May 21 lab).
+    // Then we added backoff but with two regressions (May 26):
+    //   - attempt counter reset every retry because of unstable deps
+    //   - rapid reconnects overflowed Supabase's listener arrays
+    // Current behavior (post-fix):
+    //   - attempt persists in attemptRef across effect re-runs.
+    //   - subscribingRef guards against concurrent reconnects.
+    //   - Each retry FULLY tears down the prior channel
+    //     (unsubscribe + removeChannel) before creating a new one.
+    //   - 1s → 2s → 4s → 8s → 16s, max 5 attempts, then 'offline'.
+    //   - Direct API actions (timer, cleanup) DO NOT depend on this
+    //     channel, so chat going dark never breaks the lab.
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let currentChannel: ReturnType<typeof supabase.channel> | null = null;
     let cancelled = false;
     const MAX_ATTEMPTS = 5;
+    attemptRef.current = 0; // fresh count for this labDayId
+
+    // Full teardown helper. unsubscribe() first to send the LEAVE
+    // frame so server-side presence drops us; THEN removeChannel()
+    // to drop the local handle and its accumulated listeners.
+    // removeChannel alone leaves the server-side subscription
+    // active and the local listener array still attached, which is
+    // how rapid reconnects piled up references and overflowed the
+    // _trigger stack.
+    const teardown = (ch: ReturnType<typeof supabase.channel> | null) => {
+      if (!ch) return;
+      try { ch.unsubscribe(); } catch { /* ignore */ }
+      try { supabase.removeChannel(ch); } catch { /* ignore */ }
+    };
 
     const subscribe = () => {
       if (cancelled) return;
-      console.log(`[LabDayChat] subscribing to channel ${channelName} (attempt ${attempt + 1})`);
+      // Mutex: if another subscribe is already in flight, no-op.
+      // Without this, a race between the retry timer firing and a
+      // dep-change-triggered effect re-run could call subscribe()
+      // twice in the same tick → two channels with the same name,
+      // duplicated listeners, listener-array stack overflow.
+      if (subscribingRef.current) {
+        console.warn('[LabDayChat] subscribe() called while already subscribing — skipped');
+        return;
+      }
+      subscribingRef.current = true;
 
+      // Tear down any prior channel before creating a new one. This
+      // is the cleanup the original code did on the "drop" branch
+      // but NOT on the "fresh attempt" branch — leaving a stale
+      // handle around if subscribe() was called for any other
+      // reason.
+      teardown(currentChannel);
+      currentChannel = null;
+
+      console.log(`[LabDayChat] subscribing to ${channelName} (attempt ${attemptRef.current + 1}/${MAX_ATTEMPTS})`);
+
+      const { senderName: sn, senderEmail: se, senderRole: sr } = senderRef.current;
       const channel = supabase
         .channel(channelName, {
-          config: { presence: { key: senderEmail || senderName || 'anon' } },
+          config: { presence: { key: se || sn || 'anon' } },
         })
         .on(
           'postgres_changes',
@@ -249,7 +306,7 @@ export default function LabDayChat({
               if (prev.some((m) => m.id === newMsg.id)) return prev;
               return [...prev, newMsg];
             });
-            if (!isOpenRef.current && newMsg.sender_email !== senderEmail) {
+            if (!isOpenRef.current && newMsg.sender_email !== senderRef.current.senderEmail) {
               setUnreadCount((c) => c + 1);
             }
           }
@@ -260,29 +317,35 @@ export default function LabDayChat({
         })
         .subscribe(async (status, err) => {
           if (status === 'SUBSCRIBED') {
-            attempt = 0; // reset so future drops get the full backoff window again
+            subscribingRef.current = false;
+            attemptRef.current = 0;
             setChannelStatus('connected');
-            const trackRes = await channel.track({
-              name: senderName,
-              email: senderEmail,
-              role: senderRole,
-              online_at: new Date().toISOString(),
-            });
-            console.log('[LabDayChat] track result=', trackRes);
+            try {
+              const { senderName: sn2, senderEmail: se2, senderRole: sr2 } = senderRef.current;
+              const trackRes = await channel.track({
+                name: sn2,
+                email: se2,
+                role: sr2,
+                online_at: new Date().toISOString(),
+              });
+              console.log('[LabDayChat] track result=', trackRes);
+            } catch (trackErr) {
+              console.warn('[LabDayChat] track() failed (non-fatal):', trackErr);
+            }
           } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
-            // Tear down the current channel before scheduling a
-            // retry — leaving a half-dead channel attached causes
-            // Supabase's client to refuse new subscribes on the
-            // same name (the second subscribe silently never fires
-            // SUBSCRIBED).
+            const n = attemptRef.current + 1;
             console.warn(
-              `[LabDayChat] subscription dropped (${status}, attempt ${attempt + 1}/${MAX_ATTEMPTS})`,
+              `[LabDayChat] subscription dropped (${status}, attempt ${n}/${MAX_ATTEMPTS})`,
               err || '',
             );
-            try { supabase.removeChannel(channel); } catch { /* ignore */ }
-            if (cancelled) return;
-            attempt++;
-            if (attempt > MAX_ATTEMPTS) {
+            teardown(channel);
+            if (cancelled) {
+              subscribingRef.current = false;
+              return;
+            }
+            attemptRef.current = n;
+            if (n > MAX_ATTEMPTS) {
+              subscribingRef.current = false;
               setChannelStatus('offline');
               console.error(
                 `[LabDayChat] giving up after ${MAX_ATTEMPTS} attempts. Chat is offline; ` +
@@ -291,10 +354,19 @@ export default function LabDayChat({
               return;
             }
             setChannelStatus('reconnecting');
-            // 1s, 2s, 4s, 8s, 16s — exponential.
-            const delayMs = Math.min(16000, 1000 * 2 ** (attempt - 1));
-            retryTimer = setTimeout(subscribe, delayMs);
+            // 1s, 2s, 4s, 8s, 16s.
+            const delayMs = Math.min(16000, 1000 * 2 ** (n - 1));
+            // Keep subscribingRef = true through the wait so a
+            // racing effect re-run can't kick off a parallel attempt.
+            if (retryTimer) clearTimeout(retryTimer);
+            retryTimer = setTimeout(() => {
+              retryTimer = null;
+              subscribingRef.current = false;
+              subscribe();
+            }, delayMs);
           }
+          // For any other status ('CHANNEL_*' partial states) leave
+          // subscribingRef true and let the protocol settle.
         });
 
       currentChannel = channel;
@@ -306,20 +378,30 @@ export default function LabDayChat({
     // Backup presence poll in case sync events are dropped.
     const presenceInterval = setInterval(() => {
       if (currentChannel) {
-        const state = currentChannel.presenceState();
-        setConnectedUsers(Object.keys(state).length);
+        try {
+          const state = currentChannel.presenceState();
+          setConnectedUsers(Object.keys(state).length);
+        } catch {
+          /* ignore — channel may be mid-teardown */
+        }
       }
     }, 5000);
 
     return () => {
       cancelled = true;
+      subscribingRef.current = false;
       if (retryTimer) clearTimeout(retryTimer);
       clearInterval(presenceInterval);
-      if (currentChannel) {
-        try { supabase.removeChannel(currentChannel); } catch { /* ignore */ }
-      }
+      teardown(currentChannel);
+      currentChannel = null;
     };
-  }, [labDayId, senderName, senderEmail, senderRole]);
+    // CRITICAL: only depend on labDayId. Sender props read via
+    // senderRef so they update without forcing the effect to
+    // tear down and re-subscribe. That's what caused the May 26
+    // attempt-counter-reset-on-every-retry bug AND fed listener
+    // duplicates into Supabase's _trigger array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [labDayId]);
 
   // Send message
   const handleSend = useCallback(
