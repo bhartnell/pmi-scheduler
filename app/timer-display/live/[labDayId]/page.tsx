@@ -357,18 +357,19 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
     }
   }, [labDayId]);
 
-  // Adaptive poll interval based on timer state
+  // Adaptive poll interval. Tuned 2026-05-26 perf incident.
   const getTimerPollInterval = (): number | null => {
-    if (sessionExpired) return null;       // Stop polling on session expiry
-    if (!timer) return 10000;              // No timer yet, 10s (detect start quickly)
-    if (timer.status === 'stopped') return 10000; // Stopped, 10s
-    if (timer.status === 'paused') return 10000;  // Paused, 10s
-    return 5000;                           // Running, 5s
+    if (sessionExpired) return null;
+    if (!timer) return 15000;                       // was 10s
+    if (timer.status === 'stopped') return 15000;   // was 10s
+    if (timer.status === 'paused') return 15000;    // was 10s
+    return 5000;                                    // running
   };
   useVisibilityPolling(fetchTimerStatus, getTimerPollInterval());
 
-  // Ready statuses only need polling when timer is actively running
-  const readyPollInterval = sessionExpired ? null : (timer?.status === 'running' ? 5000 : null);
+  // Ready statuses only need polling when timer is actively running.
+  // Bumped 5s → 10s.
+  const readyPollInterval = sessionExpired ? null : (timer?.status === 'running' ? 10000 : null);
   useVisibilityPolling(fetchReadyStatuses, readyPollInterval);
 
   // --- Timer Display Calculation ---

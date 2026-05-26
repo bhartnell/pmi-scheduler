@@ -30,19 +30,51 @@ const nextConfig: NextConfig = {
   // Output settings
   output: 'standalone',
 
-  // Cache-control headers to prevent stale clients from caching API responses
+  // Cache-control headers. Default for /api/* is no-store so dynamic
+  // endpoints never get cached by surprise. Specific overrides come
+  // AFTER the catch-all so they win (Next.js applies later headers
+  // last, so later rules override earlier ones for the same header).
+  //
+  // 2026-05-26 perf incident: live lab generated 3,462 timer requests
+  // in ~1 hour because the catch-all forced no-store and the route
+  // handlers couldn't set their own Cache-Control. The timer endpoint
+  // returns the same data for any instructor watching the same lab
+  // day; allowing a short browser-side cache absorbs the duplicate
+  // hits from multiple components polling the same endpoint on the
+  // same page.
   async headers() {
     return [
       {
-        source: '/api/lab-management/timer/:path*',
+        // Catch-all default: no caching for API responses.
+        source: '/api/:path*',
         headers: [
           { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
         ],
       },
       {
-        source: '/api/:path*',
+        // Timer state GET: per-browser cache for 2s, serve stale up
+        // to 5s while revalidating in the background. `private` keeps
+        // it out of any shared CDN cache (route is authenticated).
+        source: '/api/lab-management/timer',
         headers: [
-          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
+          { key: 'Cache-Control', value: 'private, max-age=2, stale-while-revalidate=3' },
+        ],
+      },
+      {
+        // Ready statuses: same shape — multiple components on the
+        // lab day page poll this; let the browser dedupe.
+        source: '/api/lab-management/timer/ready',
+        headers: [
+          { key: 'Cache-Control', value: 'private, max-age=2, stale-while-revalidate=3' },
+        ],
+      },
+      {
+        // Public timer-display page reads — token-gated but the data
+        // is the same per token. Short cache absorbs rapid polls
+        // from the page itself.
+        source: '/api/timer-display/:token',
+        headers: [
+          { key: 'Cache-Control', value: 'private, max-age=2, stale-while-revalidate=3' },
         ],
       },
     ];

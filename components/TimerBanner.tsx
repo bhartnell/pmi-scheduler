@@ -180,13 +180,16 @@ export default function TimerBanner({
   };
 
   // Determine poll interval based on timer state
-  // TimerBanner is on grading page - user is actively grading
+  // TimerBanner is on grading page - user is actively grading.
+  // 2026-05-26 perf tuning: removed the "2s in final 30s" burst
+  // (client interpolates display from last known state) and bumped
+  // paused → 15s. Detecting timer start still happens at 15s when
+  // stopped, which is fast enough since the grading flow doesn't
+  // depend on instant detection.
   const getPollInterval = () => {
-    if (!timerState || timerState.status === 'stopped') return 10000; // 10s when stopped (detect timer start quickly)
-    if (timerState.status === 'paused') return 5000; // 5s when paused
-    // When running: faster polling in final 30 seconds
-    if (timerState.status === 'running' && displaySeconds <= 30) return 2000; // 2s in final 30s
-    return 5000; // 5s normally when running
+    if (!timerState || timerState.status === 'stopped') return 15000;
+    if (timerState.status === 'paused') return 15000;
+    return 5000; // running
   };
 
   // Combined polling with visibility awareness

@@ -407,21 +407,25 @@ export default function LabTimer({
     init();
   }, [labDayId, fetchTimerState, fetchReadyStatuses, initializeTimer, isController]);
 
-  // Determine polling intervals based on timer state
-  // When timer modal is open, user is actively managing the lab
+  // Determine polling intervals based on timer state.
+  // Tuned 2026-05-26 after a live-lab session generated 3,462 timer
+  // requests in 1 hour. Rule of thumb: client display already
+  // interpolates from the last known state every second locally
+  // (the 1s setInterval ticks), so we don't need server polls
+  // that often.
   const getTimerPollInterval = () => {
-    if (sessionExpired) return null; // Stop polling on session expiry
-    if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped (user may restart)
-    if (timerState.status === 'paused') return 5000; // 5s when paused
-    // When running: faster polling in final 30 seconds for smooth countdown
-    if (timerState.status === 'running' && displaySeconds <= 30) return 2000; // 2s in final 30s
-    return 5000; // 5s normally when running
+    if (sessionExpired) return null;
+    if (!timerState || timerState.status === 'stopped') return 30000; // 30s stopped
+    if (timerState.status === 'paused') return 15000;                 // 15s paused (was 5s)
+    return 5000;                                                       // 5s running
+    // Note: the "2s in final 30s" burst was REMOVED — client
+    // interpolation handles the countdown smoothly without server help.
   };
 
   const getReadyPollInterval = () => {
-    if (sessionExpired) return null; // Stop polling on session expiry
-    if (!timerState || timerState.status === 'stopped') return 30000; // 30s when stopped
-    return 5000; // 5s when active (instructors marking ready)
+    if (sessionExpired) return null;
+    if (!timerState || timerState.status === 'stopped') return 30000;
+    return 10000; // 10s when active (was 5s)
   };
 
   // Poll for updates with visibility awareness - timer state

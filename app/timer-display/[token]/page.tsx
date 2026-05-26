@@ -290,13 +290,15 @@ export default function TimerDisplayPage() {
     }
   }, [token]);
 
-  // Adaptive poll interval based on timer state
+  // Adaptive poll interval. Tuned 2026-05-26 for the perf incident.
+  // Public token-gated display screen — keep responsive when timer
+  // is actively running but back off otherwise.
   const getPollInterval = (): number => {
-    if (!display) return 5000;           // Still loading, poll fast
-    if (!labDay) return 30000;           // No lab day associated, 30s
-    if (!timer || timer.status === 'stopped') return 10000; // Stopped/no timer, 10s (detect start quickly)
-    if (timer.status === 'paused') return 10000;            // Paused, 10s
-    return 5000;                         // Running, 5s
+    if (!display) return 5000;
+    if (!labDay) return 30000;
+    if (!timer || timer.status === 'stopped') return 15000; // was 10s
+    if (timer.status === 'paused') return 15000;            // was 10s
+    return 5000;                                            // running
   };
   useVisibilityPolling(fetchTimerStatus, getPollInterval());
 
