@@ -141,6 +141,77 @@ When auditing whether existing pages have entry points, search for
 `href="<path>"` across `app/`, `components/`, and `lib/nav*` —
 the link must exist somewhere a user can click.
 
+## Documentation Update Rule (HARD REQUIREMENT)
+
+After every commit that adds, removes, or significantly changes
+a feature, route, component, or data structure, update the
+relevant documentation in the same commit or as an immediate
+follow-up commit.
+
+### What to update and when
+
+**`docs/SITEMAP.md`** — update when:
+- A new page/route is added or removed
+- A route is redirected or renamed
+- A page's access level or description changes
+
+**`docs/COMPONENTS.md`** — update when:
+- A new shared component is created
+- A component's props or behavior change significantly
+- A component is deleted
+
+**`docs/DEAD_CODE_REPORT.md`** — update when:
+- Dead code is removed (mark as resolved in the
+  "What's Been Resolved" section at the top)
+- New dead code or duplication is identified
+
+**`docs/PMI-ROADMAP-*.md`** — update when:
+- A roadmap item is completed (mark ✅)
+- A new feature is planned or specced
+- A deadline or priority changes
+
+**`docs/PMI-MASTER-REFERENCE-*.md`** — update when:
+- A major feature ships
+- Key IDs, table names, or configuration change
+- Team, cohort, or environment information changes
+- New companion doc is added
+
+**`docs/CHANGELOG.md`** — update with EVERY commit. Format:
+```
+YYYY-MM-DD | commit-hash | brief description
+```
+- One line per commit.
+- Group multiple same-day commits under a single date heading.
+- Reverse chronological order (newest first).
+- Keep the description short — readers go to `git show <hash>`
+  for the full diff.
+
+### Format guidance
+
+- One-line entry is sufficient for most changes.
+- Full section rewrite only for major architectural changes.
+- If a commit touches multiple doc areas, update all of them.
+- Dead-code removal always updates DEAD_CODE_REPORT.md.
+- New pages always update SITEMAP.md (pairs with the existing
+  Navigation Entry-Point Rule).
+
+### Why this matters
+
+This codebase has complex interconnections between lab management,
+scheduling, clinical tracking, Google Calendar sync, and LVFR.
+Poor documentation has caused, in actual incidents:
+- Fixes landing in the wrong duplicate route (/labs vs
+  /lab-management — wasted a full day before the consolidation
+  in commit `808bb34d`)
+- Hours re-investigating already-solved problems
+- Context loss between chat sessions requiring full re-orientation
+- Template content reverting undetected for days (the embedded
+  `data/paramedic_s2_labs.json` seed-file overwrite bug)
+
+A living documentation system prevents these issues and makes
+each new session faster to orient. The cost per commit is 2–5
+minutes; the cost of NOT doing it compounds every session.
+
 ## Agent Workflow (Supervisor Pattern)
 
 This project uses a supervisor pattern with two specialized sub-agents:
