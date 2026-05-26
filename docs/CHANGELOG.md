@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-05-27
+
+- `0ecf311d` | SMC mapping review CSV: 81 smc_requirements fuzzy-matched against canonical_skills (34 exact, 25 close, 22 no_match) for operator review before any DB writes
+
 ## 2026-05-26
 
 - `b3ce7bcf` | Documentation Update Rule (CLAUDE.md) + initial CHANGELOG.md with 30-day backfill
