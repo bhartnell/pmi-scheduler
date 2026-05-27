@@ -394,38 +394,44 @@ export default function LabTimer({
     }
   }, [labDayId, numRotations]);
 
-  // Initialize on mount
+  // Initialize on mount. ONE fetch to see if a timer record exists
+  // for this lab day. NO auto-create — the previous behavior created
+  // a timer row every time a controller opened this modal, which
+  // (a) silently created stale rows and (b) meant the "no timer
+  // exists, don't poll" gate below was almost never reachable in
+  // practice. Now: timer is created only when the controller
+  // explicitly clicks Start (initializeTimer is called from the
+  // Start button handler in the JSX below, not here).
   useEffect(() => {
     const init = async () => {
-      const timer = await fetchTimerState(true); // Check for stale on initial load
+      await fetchTimerState(true); // Check for stale on initial load
       await fetchReadyStatuses();
-      // If no timer exists yet and we're the controller, initialize one
-      if (!timer && isController) {
-        await initializeTimer();
-      }
     };
     init();
-  }, [labDayId, fetchTimerState, fetchReadyStatuses, initializeTimer, isController]);
+  }, [labDayId, fetchTimerState, fetchReadyStatuses]);
 
-  // Determine polling intervals based on timer state.
-  // Tuned 2026-05-26 after a live-lab session generated 3,462 timer
-  // requests in 1 hour. Rule of thumb: client display already
-  // interpolates from the last known state every second locally
-  // (the 1s setInterval ticks), so we don't need server polls
-  // that often.
+  // Determine polling intervals. Two-tier gate:
+  //   1. If no timer record exists at all → null → STOP polling.
+  //      The Start Timer button handler (handleStart) will create
+  //      one and set timerState, which makes this hook re-run with
+  //      a real interval. Most lab days never get a timer started,
+  //      so this saves the bulk of the volume.
+  //   2. If a timer exists, scale by status. Client display
+  //      interpolates locally every second, so we don't need
+  //      faster than 5s for running timers.
   const getTimerPollInterval = () => {
     if (sessionExpired) return null;
-    if (!timerState || timerState.status === 'stopped') return 30000; // 30s stopped
-    if (timerState.status === 'paused') return 15000;                 // 15s paused (was 5s)
-    return 5000;                                                       // 5s running
-    // Note: the "2s in final 30s" burst was REMOVED — client
-    // interpolation handles the countdown smoothly without server help.
+    if (!timerState) return null;                          // no timer → no poll
+    if (timerState.status === 'stopped') return 30000;
+    if (timerState.status === 'paused') return 15000;
+    return 5000;                                            // running
   };
 
   const getReadyPollInterval = () => {
     if (sessionExpired) return null;
-    if (!timerState || timerState.status === 'stopped') return 30000;
-    return 10000; // 10s when active (was 5s)
+    if (!timerState) return null;                          // no timer → no poll
+    if (timerState.status === 'stopped') return 30000;
+    return 10000;
   };
 
   // Poll for updates with visibility awareness - timer state
@@ -604,10 +610,30 @@ export default function LabTimer({
   const totalStations = allStations.length;
   const allReady = totalStations > 0 && readyCount === totalStations;
 
-  // Control handlers
+  // Control handlers.
+  //
+  // 2026-05-26 perf: this used to bail out on `!timerState` because
+  // a parent useEffect auto-created the timer row on mount, so this
+  // path was unreachable. That auto-create has been removed (it
+  // forced polling onto every lab day a controller opened). Now if
+  // the controller clicks Start with no timer record yet, we
+  // initialize it inline first, then issue the 'start' action.
   const handlePlayPause = useCallback(async () => {
-    if (!timerState) return;
     if (showRotateAlert) setShowRotateAlert(false);
+
+    // No timer record yet → controller is starting from scratch.
+    // Initialize first, then fall through to the start logic on the
+    // next render once timerState lands. (sendAction('start') here
+    // would race the POST, so we just init and let the user click
+    // again if they want to begin immediately — or initializeTimer
+    // could be wired to set running:true directly. For now: gentle
+    // two-step so we don't accidentally start before all stations
+    // are ready.)
+    if (!timerState) {
+      if (!isController) return;
+      await initializeTimer();
+      return;
+    }
 
     if (timerState.status === 'running') {
       sendAction('pause');
@@ -626,7 +652,7 @@ export default function LabTimer({
       }
       sendAction('start');
     }
-  }, [timerState, showRotateAlert, sendAction, totalStations, allReady, readyCount, checkActiveTimerConflict]);
+  }, [timerState, showRotateAlert, sendAction, totalStations, allReady, readyCount, checkActiveTimerConflict, isController, initializeTimer]);
 
   const handleStop = useCallback(() => sendAction('stop'), [sendAction]);
   const handleReset = useCallback(() => sendAction('reset'), [sendAction]);

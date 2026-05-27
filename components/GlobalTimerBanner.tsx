@@ -103,13 +103,26 @@ export default function GlobalTimerBanner() {
   const hasOwnTimerComponent = pathname.startsWith('/labs/schedule/') ||
     pathname.startsWith('/labs/grade/');
 
-  // Poll for active timer - optimized interval based on state
-  // Uses visibility-aware polling to pause when tab is hidden
+  // Poll for active timer.
+  //
+  // GlobalTimerBanner's job is to surface a timer started elsewhere
+  // (e.g. instructor on /labs/schedule/X starts a rotation; instructor
+  // on /admin/users sees the banner appear). The "idle/no timer"
+  // branch USED to poll every 10s as a discovery channel — that's
+  // 6 hits/min × every authenticated page open × every user. The bulk
+  // of the May 26 lab's timer traffic was almost certainly this poll
+  // running on tabs that just happened to be open.
+  //
+  // 2026-05-26 perf: when no timer is active anywhere, poll every
+  // 60s instead of 10s. New-timer discovery is delayed by up to a
+  // minute, which is the right tradeoff against the constant
+  // background hammering. If a timer IS active, polling stays at
+  // 5s/10s to keep the banner fresh.
   const getPollInterval = () => {
-    if (!isTimerRelevantPage || hasOwnTimerComponent || sessionExpired) return null; // Don't poll on expired session or pages with dedicated timer
-    if (timer?.status === 'running') return 5000; // 5s when running
-    if (timer?.status === 'paused') return 10000; // 10s when paused (catch resume)
-    return 10000; // 10s when idle/no timer (detect new timer quickly)
+    if (!isTimerRelevantPage || hasOwnTimerComponent || sessionExpired) return null;
+    if (timer?.status === 'running') return 5000;
+    if (timer?.status === 'paused') return 10000;
+    return 60000; // 60s discovery poll when no active timer (was 10s)
   };
   const pollInterval = getPollInterval();
   useVisibilityPolling(fetchActiveTimer, pollInterval);
