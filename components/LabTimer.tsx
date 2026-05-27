@@ -94,6 +94,15 @@ export default function LabTimer({
   const [rotateAlertCountdown, setRotateAlertCountdown] = useState(30);
   const lastAlertRotationRef = useRef(0);
   const debriefAlertShownRef = useRef(false);
+  // Tracks whether we've ever seen a timer for this lab day during
+  // this mount. Used so that when fetchTimerState returns no timer
+  // (post-End-Lab), we can distinguish "lab was never started" from
+  // "lab was running and ended remotely" — the latter case should
+  // auto-close the modal instead of leaving it frozen on stale state.
+  const hadTimerRef = useRef(false);
+  // Track mount status so async fetch responses don't try to call
+  // setState / onClose after the component has unmounted.
+  const mountedRef = useRef(true);
   const [readyStatuses, setReadyStatuses] = useState<ReadyStatus[]>([]);
   const [allStations, setAllStations] = useState<Station[]>([]);
   const [showStaleWarning, setShowStaleWarning] = useState(false);
@@ -167,12 +176,33 @@ export default function LabTimer({
       if (data.success) {
         setIsConnected(true);
         if (data.timer) {
+          hadTimerRef.current = true;
           setTimerState(data.timer);
           // Show stale warning on initial load if timer is from a previous day
           if (checkStale && data.isStale && data.timer.status !== 'stopped') {
             setShowStaleWarning(true);
           }
           return data.timer;
+        }
+        // No timer row returned. Critically: also clear LOCAL state to
+        // null so the polling-existence-gate in getTimerPollInterval()
+        // (returns null when !timerState) actually fires. Without this
+        // setTimerState(null) call, a device that polls AFTER another
+        // device's End Lab would receive {timer: null} but keep its
+        // stale "running" timerState forever, polling every 5s
+        // indefinitely. This was the bug behind the May 27 12:15 PT
+        // lab where polling continued at ~16/min for minutes after
+        // End Lab was clicked.
+        if (hadTimerRef.current) {
+          // We previously had a timer and now it's gone → lab ended
+          // remotely. Close the modal automatically so the operator
+          // isn't staring at a frozen UI. The local endLab() call
+          // path already closes the modal; this branch handles the
+          // case where another device fired End Lab.
+          setTimerState(null);
+          if (mountedRef.current) onClose();
+        } else {
+          setTimerState(null);
         }
         // Log if table doesn't exist yet
         if (data.tableExists === false) {
@@ -275,6 +305,7 @@ export default function LabTimer({
 
       const data = await res.json();
       if (data.success) {
+        hadTimerRef.current = true;
         setTimerState(data.timer);
       }
     } catch (error) {
@@ -331,6 +362,7 @@ export default function LabTimer({
 
       const data = await res.json();
       if (data.success) {
+        hadTimerRef.current = true;
         setTimerState(data.timer);
         if (action === 'next' || action === 'reset' || action === 'stop') {
           setShowRotateAlert(false);
@@ -356,6 +388,7 @@ export default function LabTimer({
       });
       const data = await res.json();
       if (data.success) {
+        hadTimerRef.current = true;
         setTimerState(data.timer);
         const mins = Math.floor(seconds / 60);
         const flashText = action === 'add_time' ? `+${mins}:00` : `-${mins}:00`;
@@ -381,6 +414,7 @@ export default function LabTimer({
       });
       const data = await res.json();
       if (data.success) {
+        hadTimerRef.current = true;
         setTimerState(data.timer);
         const newMins = Math.floor(newDurationSeconds / 60);
         const remaining = numRotations - (data.timer?.rotation_number || 1);
@@ -403,11 +437,13 @@ export default function LabTimer({
   // explicitly clicks Start (initializeTimer is called from the
   // Start button handler in the JSX below, not here).
   useEffect(() => {
+    mountedRef.current = true;
     const init = async () => {
       await fetchTimerState(true); // Check for stale on initial load
       await fetchReadyStatuses();
     };
     init();
+    return () => { mountedRef.current = false; };
   }, [labDayId, fetchTimerState, fetchReadyStatuses]);
 
   // Determine polling intervals. Two-tier gate:
