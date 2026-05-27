@@ -10,6 +10,7 @@ import {
   Edit2,
   Plus,
   ClipboardList,
+  ListChecks,
 } from 'lucide-react';
 import type { Station, SkillDocument } from './types';
 import { STATION_TYPE_COLORS, STATION_TYPE_BADGES } from './types';
@@ -183,6 +184,28 @@ export default function StationCards({
                 <span className="text-xs text-gray-400 dark:text-gray-500 italic">No skill sheet available</span>
               </div>
             ) : null}
+
+            {/* Skill-drill reference link(s).
+                When station_type='skill_drill' and the station has
+                drill_ids set, render a link to each drill's reference
+                view at /labs/skill-drills/[id]. Per the brief, skill
+                drills do NOT get Platinum / pass-fail UI here — they
+                surface the structured reference instead. */}
+            {station.station_type === 'skill_drill' && Array.isArray(station.drill_ids) && station.drill_ids.length > 0 && (
+              <div className="mb-3 print:hidden flex flex-wrap gap-1.5">
+                {station.drill_ids.map((drillId) => (
+                  <Link
+                    key={drillId}
+                    href={`/labs/skill-drills/${drillId}`}
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-orange-50 dark:bg-orange-900/30 text-orange-800 dark:text-orange-300 rounded hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800"
+                    title="Open structured reference / print view for this skill drill"
+                  >
+                    <ListChecks className="w-3 h-3" />
+                    Drill Reference
+                  </Link>
+                ))}
+              </div>
+            )}
 
             {/* Template Guide (from applied template metadata) */}
             {station.metadata && Object.keys(station.metadata).length > 0 && (

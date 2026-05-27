@@ -185,6 +185,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-blue-600',
         },
         {
+          href: '/admin/skill-drills/import',
+          icon: Upload,
+          title: 'Import Skill Drills',
+          description: 'Import skill drill JSON (concept, setups, run steps, equipment) for S2/S3 lab stations',
+          color: 'bg-orange-600',
+        },
+        {
           href: '/admin/rubrics',
           icon: Star,
           title: 'Assessment Rubrics',
