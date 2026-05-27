@@ -11,6 +11,9 @@ Format: `commit-hash | brief description`
 
 ## 2026-05-27
 
+- `69aefc48` | Skill drills: structured display + JSON import (migration adds source col + program CHECK + upsert index; new /admin/skill-drills/import UI + endpoint; /labs/skill-drills/[id] reference + print view; lab day station card adds Drill Reference pill for station_type='skill_drill')
+- `2e96bf3b` | LabTimer: stop polling after End Lab (clear local state on null response, auto-close modal on remote End Lab)
+- `f05b44eb` | Timer polling: gate on existence (no timer → no poll; remove auto-create on mount; GlobalTimerBanner discovery 10s→60s)
 - `a1f29c2d` | LabDayChat: fix attempt-counter reset + Supabase stack overflow (regression from 56a03c1d) — senderRef for stable deps, attemptRef + subscribingRef mutex, full teardown (unsubscribe + removeChannel) before each retry
 - `0ecf311d` | SMC mapping review CSV: 81 smc_requirements fuzzy-matched against canonical_skills (34 exact, 25 close, 22 no_match) for operator review before any DB writes
 
