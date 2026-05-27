@@ -212,6 +212,9 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* Feature Flags */}
+        <FeatureFlagsCard />
+
         {/* Protected Accounts */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
@@ -285,6 +288,139 @@ export default function SettingsPage() {
           </div>
         </div>
       </main>
+    </div>
+  );
+}
+
+// ─── Feature Flags Card ────────────────────────────────────────────
+// Toggles for runtime feature flags stored in system_settings.
+// Added 2026-05-26 alongside the LabDayChat feature flag (commit
+// adding this section). New flags should be added to FLAGS below
+// and wired to /api/system-settings/[key] reads where they're consumed.
+
+interface FlagDef {
+  key: string;
+  label: string;
+  description: string;
+}
+
+const FLAGS: FlagDef[] = [
+  {
+    key: 'feature.lab_day_chat',
+    label: 'Lab Day Chat',
+    description:
+      'Realtime in-page chat on the lab day view. Off by default after the 2026-05-26 perf incident — only enable when needed (e.g. NREMT testing days where coordinators want the chat panel up).',
+  },
+];
+
+function FeatureFlagsCard() {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Initial fetch — one parallel batch.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const results = await Promise.all(
+          FLAGS.map((f) =>
+            fetch(`/api/system-settings/${f.key}`)
+              .then((r) => r.json())
+              .then((d) => ({ key: f.key, value: typeof d.value === 'string' ? d.value : 'false' }))
+              .catch(() => ({ key: f.key, value: 'false' })),
+          ),
+        );
+        if (cancelled) return;
+        const next: Record<string, string> = {};
+        for (const r of results) next[r.key] = r.value;
+        setValues(next);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const toggleFlag = async (key: string) => {
+    const current = values[key] === 'true';
+    const nextVal = current ? 'false' : 'true';
+    setSaving(key);
+    setError(null);
+    try {
+      const res = await fetch(`/api/system-settings/${key}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ value: nextVal }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data?.error || `Failed (HTTP ${res.status})`);
+        return;
+      }
+      setValues((v) => ({ ...v, [key]: nextVal }));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Network error');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
+        <Settings className="w-5 h-5 text-gray-500 dark:text-gray-400" />
+        <h2 className="font-semibold text-gray-900 dark:text-white">Feature Flags</h2>
+      </div>
+      <div className="p-4 space-y-4">
+        {error && (
+          <div className="px-3 py-2 rounded bg-red-50 dark:bg-red-900/20 text-sm text-red-700 dark:text-red-300">
+            {error}
+          </div>
+        )}
+        {FLAGS.map((flag) => {
+          const enabled = values[flag.key] === 'true';
+          const isSaving = saving === flag.key;
+          return (
+            <div
+              key={flag.key}
+              className="flex items-start justify-between gap-4"
+            >
+              <div className="flex-1">
+                <h3 className="font-medium text-gray-900 dark:text-white">{flag.label}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  {flag.description}
+                </p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 font-mono">
+                  {flag.key}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={enabled}
+                disabled={loading || isSaving}
+                onClick={() => toggleFlag(flag.key)}
+                className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 ${
+                  enabled
+                    ? 'bg-blue-600 dark:bg-blue-500'
+                    : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+                title={isSaving ? 'Saving…' : enabled ? 'On (click to disable)' : 'Off (click to enable)'}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                    enabled ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

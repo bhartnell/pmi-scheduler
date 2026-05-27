@@ -22,7 +22,11 @@ const availabilityCache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 function cacheKey(emails: string[], date: string, startTime: string, endTime: string): string {
-  return `${[...emails].sort().join(',')}|${date}|${startTime}|${endTime}`;
+  // Lowercase emails before sorting so `Bob@pmi.edu` and `bob@pmi.edu`
+  // hash to the same cache entry. The downstream Google FreeBusy API
+  // is case-insensitive on email so the result IS the same either way.
+  const normalized = [...emails].map((e) => e.toLowerCase()).sort();
+  return `${normalized.join(',')}|${date}|${startTime}|${endTime}`;
 }
 
 function getCached(key: string): unknown | null {

@@ -1,32 +1,27 @@
 'use client';
 
 // ──────────────────────────────────────────────────────────────────────
-// LabDayChat — TEMPORARILY DISABLED (2026-05-26)
+// LabDayChat — feature-flag gated wrapper.
 //
-// Mitigation for site-wide performance issues during live lab. Even
-// after the May 23 + May 26 reconnect fixes (commits 56a03c1d,
-// a1f29c2d), instructors continued to report sluggishness during a
-// live lab session. To eliminate the entire LabDayChat surface as a
-// possible cause without removing the call sites, the component now
-// renders an inert placeholder (or nothing, when collapsed). The
-// realtime subscription, presence tracking, message polling,
-// reconnect machinery, and DOM-heavy chat UI are all SHORT-CIRCUITED.
+// The realtime chat component (in LabDayChatInner) was stubbed out
+// during the 2026-05-26 perf incident (commit fcfd4ec5). It's been
+// restored, but now lives behind the `feature.lab_day_chat` system
+// setting so admins can toggle it on/off without redeploying.
 //
-// The original ~700-line implementation is preserved in git history:
-//   git show 90ecef68:components/lab-day/LabDayChat.tsx
+//   Setting value | Behavior
+//   ──────────────┼──────────────────────────────────────────────
+//   'true'        | Renders the full LabDayChatInner with realtime
+//   'false' / ⌀   | Renders nothing — zero realtime, zero DOM
 //
-// Restore plan (when the cause is identified or a lighter chat is
-// designed): revert this file to the prior version, OR build a new
-// chat component behind a feature flag.
+// The flag is fetched once per mount via /api/system-settings/feature.lab_day_chat.
+// Browser cache (Cache-Control: private, max-age=10) absorbs the
+// repeat reads from multiple call sites on the same page.
 //
-// Call sites that still import this component (no edits needed —
-// component honors the same prop signature):
-//   - app/labs/schedule/[id]/page.tsx
-//   - app/labs/grade/station/[id]/page.tsx
+// Toggle from /admin/settings.
 // ──────────────────────────────────────────────────────────────────────
 
-import { useState } from 'react';
-import { MessageSquare, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import LabDayChatInner from './LabDayChatInner';
 
 interface LabDayChatProps {
   labDayId: string;
@@ -39,34 +34,52 @@ interface LabDayChatProps {
   defaultOpen?: boolean;
 }
 
-export default function LabDayChat(_props: LabDayChatProps) {
-  // Use the bottomOffset prop so it doesn't show as unused, but never
-  // actually mount the chat UI. The dismissible banner above is
-  // optional — operators can hide it if they don't want any visual.
-  const { bottomOffset } = _props;
-  const [dismissed, setDismissed] = useState(false);
+// Module-level cache so multiple <LabDayChat> mounts on the same
+// page (lab day view + grading panel + …) only fetch the flag once.
+// Cleared on full page reload; that's fine, flag changes are rare.
+let cachedEnabled: boolean | null = null;
+let inFlight: Promise<boolean> | null = null;
 
-  if (dismissed) return null;
+async function fetchChatEnabled(): Promise<boolean> {
+  if (cachedEnabled !== null) return cachedEnabled;
+  if (inFlight) return inFlight;
+  inFlight = (async () => {
+    try {
+      const res = await fetch('/api/system-settings/feature.lab_day_chat');
+      if (!res.ok) {
+        cachedEnabled = false;
+        return false;
+      }
+      const data = await res.json();
+      cachedEnabled = data?.value === 'true';
+      return cachedEnabled;
+    } catch {
+      cachedEnabled = false;
+      return false;
+    } finally {
+      inFlight = null;
+    }
+  })();
+  return inFlight;
+}
 
-  return (
-    <div
-      className="fixed right-4 z-30 print:hidden"
-      style={{ bottom: `${bottomOffset ?? 16}px` }}
-      role="status"
-      aria-label="Chat temporarily unavailable"
-    >
-      <div className="flex items-center gap-2 px-3 py-2 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 max-w-xs">
-        <MessageSquare className="w-3.5 h-3.5 flex-shrink-0" />
-        <span className="flex-1">Chat temporarily unavailable</span>
-        <button
-          type="button"
-          onClick={() => setDismissed(true)}
-          className="p-0.5 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-          aria-label="Dismiss"
-        >
-          <X className="w-3 h-3" />
-        </button>
-      </div>
-    </div>
-  );
+export default function LabDayChat(props: LabDayChatProps) {
+  // null while we're checking; once known, true renders the chat,
+  // false renders nothing. Don't flash any "loading" UI — a brief
+  // delay before chat appears is fine, and a stub banner during
+  // a fast page swap would be jarring.
+  const [enabled, setEnabled] = useState<boolean | null>(cachedEnabled);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchChatEnabled().then((val) => {
+      if (!cancelled) setEnabled(val);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!enabled) return null;
+  return <LabDayChatInner {...props} />;
 }

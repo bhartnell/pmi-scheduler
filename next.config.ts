@@ -30,27 +30,28 @@ const nextConfig: NextConfig = {
   // Output settings
   output: 'standalone',
 
-  // Cache-control headers. Default for /api/* is no-store so dynamic
-  // endpoints never get cached by surprise. Specific overrides come
-  // AFTER the catch-all so they win (Next.js applies later headers
-  // last, so later rules override earlier ones for the same header).
+  // Cache-Control header overrides for specific API routes that
+  // can safely tolerate a short browser cache.
   //
-  // 2026-05-26 perf incident: live lab generated 3,462 timer requests
-  // in ~1 hour because the catch-all forced no-store and the route
-  // handlers couldn't set their own Cache-Control. The timer endpoint
-  // returns the same data for any instructor watching the same lab
-  // day; allowing a short browser-side cache absorbs the duplicate
-  // hits from multiple components polling the same endpoint on the
-  // same page.
+  // Why NOT a catch-all no-store rule: Next.js merges headers from
+  // every matching rule into the response. A `/api/:path*` no-store
+  // rule plus a `/api/lab-management/timer` cache rule produces
+  // TWO Cache-Control headers in the same response, and browsers
+  // resolve that ambiguously. So we list only the routes that need
+  // caching; everything else gets Vercel's default for serverless
+  // functions (no Cache-Control header → browser defaults to
+  // network-only for dynamic API responses, which is what we want).
+  //
+  // Routes that explicitly need no-store can call res.headers.set()
+  // in their handler — that's the canonical Next.js pattern and
+  // doesn't conflict with the overrides below.
+  //
+  // 2026-05-26 perf incident background: a live lab generated 3,462
+  // timer requests in ~1 hour because every poll fetched fresh
+  // (catch-all was forcing no-store). The 2s browser cache lets
+  // multiple components on the same page dedupe their polls.
   async headers() {
     return [
-      {
-        // Catch-all default: no caching for API responses.
-        source: '/api/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate' },
-        ],
-      },
       {
         // Timer state GET: per-browser cache for 2s, serve stale up
         // to 5s while revalidating in the background. `private` keeps
@@ -69,9 +70,8 @@ const nextConfig: NextConfig = {
         ],
       },
       {
-        // Public timer-display page reads — token-gated but the data
-        // is the same per token. Short cache absorbs rapid polls
-        // from the page itself.
+        // Token-gated timer display page reads — data is the same
+        // per token. Short cache absorbs rapid polls.
         source: '/api/timer-display/:token',
         headers: [
           { key: 'Cache-Control', value: 'private, max-age=2, stale-while-revalidate=3' },
