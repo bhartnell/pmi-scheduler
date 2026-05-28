@@ -327,13 +327,36 @@ export async function getEventMappingsByShift(shiftId: string): Promise<EventMap
 
 // ─── Helper: Build datetime strings ──────────────────────────────────
 
+// Per-program lab time defaults — used ONLY when lab_days.start_time
+// or end_time is NULL (e.g. EMT G5 days that came in from a roster
+// that didn't carry times). Calibrated against the actual cohort
+// patterns in production as of 2026-05-28:
+//   PM  → 15:00-17:30 (paramedic afternoon labs)
+//   EMT → 09:00-12:00 (EMT morning labs)
+//   AEMT → 18:00-21:30 (AEMT evening labs)
+// Falling back to 08:00-17:00 (the pre-2026-05-28 behavior) was
+// putting all-day blocks on instructor calendars for any cohort
+// whose times happened to be missing.
+const PROGRAM_TIME_DEFAULTS: Record<string, { start: string; end: string }> = {
+  PM: { start: '15:00', end: '17:30' },
+  EMT: { start: '09:00', end: '12:00' },
+  AEMT: { start: '18:00', end: '21:30' },
+};
+
 function buildDateTimes(
   date: string,
   startTime?: string,
-  endTime?: string
+  endTime?: string,
+  /** Program abbreviation ("PM" | "EMT" | "AEMT" | ...) used to pick
+   *  a sensible default when start/end aren't on the lab_days row. */
+  program?: string
 ): { startDateTime: string; endDateTime: string } {
-  const start = startTime || '08:00';
-  const end = endTime || '17:00';
+  const defaults = (program && PROGRAM_TIME_DEFAULTS[program.toUpperCase()]) || {
+    start: '08:00',
+    end: '17:00',
+  };
+  const start = startTime || defaults.start;
+  const end = endTime || defaults.end;
   return {
     startDateTime: `${date}T${start}:00`,
     endDateTime: `${date}T${end}:00`,
@@ -433,17 +456,31 @@ export async function removeLabStationAssignment(params: {
 interface LabDayRoleParams {
   userEmail: string;
   roleId: string;
-  roleName: string; // 'Lab Lead', 'Roamer', 'Observer'
+  roleName: string; // 'Lab Lead', 'Roamer', 'Observer', 'Coordinator'
   labDayId: string;
   labDayTitle: string;
   labDayDate: string;
   startTime?: string;
   endTime?: string;
   location?: string;
+  /** Cohort label like "PM G14" or "EMT G5". When present, used in
+   *  the event title format "Lab — {cohortLabel} · {labDayTitle}".
+   *  When absent, falls back to the legacy "PMI Lab: {title}". */
+  cohortLabel?: string;
+  /** Program abbreviation for time-fallback (when lab_days has NULL
+   *  start/end). See PROGRAM_TIME_DEFAULTS. */
+  program?: string;
 }
 
 /**
- * Create a Google Calendar event for a lab day role (lead, roamer, observer).
+ * Create a Google Calendar event for a lab day role (lead, roamer,
+ * observer, coordinator).
+ *
+ * 2026-05-28: title format reworked from "PMI Lab: {title} — {role}"
+ * to "Lab — {cohortLabel} · {title}" per the calendar-sync brief.
+ * The role moves to the description so the title stays scannable in
+ * Google's compact week view. Legacy callers without cohortLabel
+ * keep the old "PMI Lab:" prefix for backwards compatibility.
  */
 export async function syncLabDayRole(params: LabDayRoleParams): Promise<void> {
   try {
@@ -455,11 +492,15 @@ export async function syncLabDayRole(params: LabDayRoleParams): Promise<void> {
     const { startDateTime, endDateTime } = buildDateTimes(
       params.labDayDate,
       params.startTime,
-      params.endTime
+      params.endTime,
+      params.program
     );
 
-    const summary = `PMI Lab: ${params.labDayTitle} — ${params.roleName}`;
+    const summary = params.cohortLabel
+      ? `Lab — ${params.cohortLabel} · ${params.labDayTitle}`
+      : `PMI Lab: ${params.labDayTitle} — ${params.roleName}`;
     const descParts = [`Role: ${params.roleName}`];
+    if (params.cohortLabel) descParts.unshift(`Cohort: ${params.cohortLabel}`);
     if (params.location) descParts.push(`Location: ${params.location}`);
     descParts.push('', 'Created by PMI EMS Scheduler');
 

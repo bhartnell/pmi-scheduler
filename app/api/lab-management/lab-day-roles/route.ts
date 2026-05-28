@@ -126,10 +126,15 @@ export async function POST(request: NextRequest) {
       const instructorData = processedRole.instructor;
       if (instructorData?.email) {
         const { syncLabDayRole } = await import('@/lib/google-calendar');
-        // Look up lab day details
+        // Look up lab day details + cohort context so the event title
+        // can read "Lab — PM G14 · {title}" and the time fallback can
+        // pick a per-program default if start/end are NULL.
         const { data: labDay } = await supabase
           .from('lab_days')
-          .select('id, title, date, start_time, end_time, location_id')
+          .select(`
+            id, title, date, start_time, end_time, location_id,
+            cohort:cohorts(cohort_number, program:programs(abbreviation))
+          `)
           .eq('id', lab_day_id)
           .single();
 
@@ -140,6 +145,16 @@ export async function POST(request: NextRequest) {
             observer: 'Observer',
             coordinator: 'Coordinator',
           };
+          const cohort = Array.isArray((labDay as any).cohort)
+            ? (labDay as any).cohort[0]
+            : (labDay as any).cohort;
+          const program = cohort?.program
+            ? (Array.isArray(cohort.program) ? cohort.program[0] : cohort.program)
+            : null;
+          const cohortLabel = cohort && program?.abbreviation
+            ? `${program.abbreviation} G${cohort.cohort_number}`
+            : undefined;
+
           syncLabDayRole({
             userEmail: instructorData.email,
             roleId: processedRole.id,
@@ -149,6 +164,8 @@ export async function POST(request: NextRequest) {
             labDayDate: labDay.date,
             startTime: labDay.start_time || undefined,
             endTime: labDay.end_time || undefined,
+            cohortLabel,
+            program: program?.abbreviation || undefined,
           }).catch(() => {}); // Fire-and-forget
         }
       }

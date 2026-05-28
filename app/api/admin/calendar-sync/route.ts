@@ -123,12 +123,22 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Sync lab day roles for future lab days
+    //    Pull cohort_number + program abbreviation so the event
+    //    title can read "Lab — PM G14 · {title}" and the time
+    //    fallback can pick a per-program default for lab_days
+    //    rows with NULL start/end.
     const { data: futureRoles } = await supabase
       .from('lab_day_roles')
       .select(`
         id, lab_day_id, role,
         instructor:instructor_id(id, name, email),
-        lab_day:lab_day_id(id, title, date, start_time, end_time)
+        lab_day:lab_day_id(
+          id, title, date, start_time, end_time,
+          cohort:cohorts(
+            cohort_number,
+            program:programs(abbreviation)
+          )
+        )
       `)
       .gte('lab_day.date', today);
 
@@ -162,6 +172,19 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
+        // Unpack cohort context for the new title format + program-aware
+        // time fallback. Supabase returns either a single object or a
+        // single-element array depending on the join shape.
+        const cohort = Array.isArray((labDay as any).cohort)
+          ? (labDay as any).cohort[0]
+          : (labDay as any).cohort;
+        const program = cohort?.program
+          ? (Array.isArray(cohort.program) ? cohort.program[0] : cohort.program)
+          : null;
+        const cohortLabel = cohort && program?.abbreviation
+          ? `${program.abbreviation} G${cohort.cohort_number}`
+          : undefined;
+
         try {
           await syncLabDayRole({
             userEmail: instructor.email,
@@ -172,6 +195,8 @@ export async function POST(request: NextRequest) {
             labDayDate: labDay.date,
             startTime: labDay.start_time || undefined,
             endTime: labDay.end_time || undefined,
+            cohortLabel,
+            program: program?.abbreviation || undefined,
           });
           synced++;
         } catch {
