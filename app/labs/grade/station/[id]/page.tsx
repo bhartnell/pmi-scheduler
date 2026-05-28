@@ -18,6 +18,7 @@ import NremtTimer, { isDualStation } from '@/components/NremtTimer';
 import type { NremtTimerHandle } from '@/components/NremtTimer';
 import NremtStickyNotesPanel from '@/components/NremtStickyNotesPanel';
 import LabDayChat from '@/components/lab-day/LabDayChat';
+import SkillDrillReference from '@/components/lab-day/SkillDrillReference';
 import { useToast } from '@/components/Toast';
 
 // Sub-components
@@ -1051,6 +1052,28 @@ export default function GradeStationPage() {
   const selectedStudent = allStudents.find(s => s.id === selectedStudentId);
   const selectedStudentName = selectedStudent ? `${selectedStudent.first_name} ${selectedStudent.last_name}` : undefined;
 
+  // Skill drill stations are practice / student-led — NO grading
+  // rubric, NO Platinum documentation, NO scenario criteria. Just
+  // show the structured drill reference (concept, run steps,
+  // equipment, setups, instructor notes) and an optional notes
+  // textarea for free-form observations.
+  //
+  // 2026-05-28: previously this page tried to render the scenario
+  // grading rubric for skill_drill stations even though no scenario
+  // is attached, resulting in an empty grading panel with no drill
+  // content. Now we early-return a dedicated view per the skill-drill
+  // brief.
+  if (station.station_type === 'skill_drill') {
+    return (
+      <SkillDrillStationView
+        station={station}
+        labDayId={station.lab_day?.id}
+        userEmail={session?.user?.email || undefined}
+        userName={session?.user?.name || undefined}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Timer Banner — FIX 4: Hidden on NREMT testing days (rotation timer irrelevant) */}
@@ -1655,6 +1678,136 @@ export default function GradeStationPage() {
           defaultOpen={!!station.lab_day.is_nremt_testing}
         />
       )}
+    </div>
+  );
+}
+
+// ─── Skill Drill Station View ────────────────────────────────────────────────
+//
+// Dedicated UI for station_type='skill_drill'. Rendered instead of
+// the full grading layout because skill drills are student-led
+// practice, not formal evaluation:
+//   • No criteria rubric, no Platinum doc prompt, no pass/fail.
+//   • Lists the attached drill(s) via SkillDrillReference (same
+//     content as /labs/skill-drills/[id]).
+//   • Print button on each drill (delegated to the standalone
+//     drill page in a new tab).
+//   • Optional "Instructor observations" textarea — stored in
+//     localStorage only since there's no formal evaluation record
+//     for drills. Not surfaced anywhere else; this is just a
+//     scratchpad for the instructor during the rotation.
+function SkillDrillStationView({
+  station,
+  labDayId,
+  userEmail,
+  userName,
+}: {
+  station: Station;
+  labDayId: string | undefined;
+  userEmail: string | undefined;
+  userName: string | undefined;
+}) {
+  const drillIds: string[] = Array.isArray(station.drill_ids) ? station.drill_ids : [];
+  const observationsKey = `pmi-drill-obs:${station.id}`;
+  const [observations, setObservations] = useState('');
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(observationsKey);
+      if (saved) setObservations(saved);
+    } catch { /* localStorage may be unavailable */ }
+  }, [observationsKey]);
+  const handleObsChange = (val: string) => {
+    setObservations(val);
+    try {
+      localStorage.setItem(observationsKey, val);
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Timer banner — visible on skill_drill stations too; the
+          rotation timer is still relevant for student transitions. */}
+      {labDayId && !station?.lab_day?.is_nremt_testing && (
+        <TimerBanner
+          labDayId={labDayId}
+          stationId={station.id}
+          userEmail={userEmail}
+          userName={userName}
+          numRotations={4}
+        />
+      )}
+
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+        {/* Back link + station header */}
+        <div className="flex items-center justify-between gap-3">
+          <Link
+            href={labDayId ? `/labs/schedule/${labDayId}` : '/labs/schedule'}
+            className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+          >
+            ← Back to lab day
+          </Link>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-xs font-medium">
+            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+            Skill Drill Station — active
+          </span>
+        </div>
+
+        <header className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+          <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+            Station {station.station_number}
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {station.custom_title || station.skill_name || 'Skill Drill'}
+          </h1>
+          {station.room && (
+            <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+              Room: {station.room}
+            </div>
+          )}
+          <p className="mt-2 text-sm text-orange-700 dark:text-orange-300">
+            Student-led practice. No formal grading or pass/fail — coach,
+            observe, and use the notes box below for anything worth
+            remembering.
+          </p>
+        </header>
+
+        {/* Drill reference card(s) */}
+        {drillIds.length > 0 ? (
+          <section className="space-y-4">
+            {drillIds.map((id) => (
+              <SkillDrillReference key={id} drillId={id} />
+            ))}
+          </section>
+        ) : (
+          <section className="rounded-lg border-2 border-dashed border-orange-300 dark:border-orange-700 p-6 text-center bg-orange-50/40 dark:bg-orange-900/10">
+            <p className="text-sm text-orange-800 dark:text-orange-200">
+              No drills attached to this station yet.
+            </p>
+            <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+              Edit the station from the lab day page to pick drills from the
+              library, or <Link href="/admin/skill-drills/import" className="underline" target="_blank">import new drills</Link>.
+            </p>
+          </section>
+        )}
+
+        {/* Instructor observations — scratchpad only, localStorage */}
+        <section className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+          <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-1.5">
+            Instructor observations (local scratchpad)
+          </label>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+            Saved to this browser only. Not submitted, not synced.
+            Use for in-the-moment notes you want during the rotation.
+          </p>
+          <textarea
+            value={observations}
+            onChange={(e) => handleObsChange(e.target.value)}
+            rows={4}
+            placeholder="Common errors observed, students who need extra reps, equipment issues…"
+            className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700 text-sm"
+          />
+        </section>
+      </main>
     </div>
   );
 }

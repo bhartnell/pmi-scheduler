@@ -223,6 +223,12 @@ export interface Station {
     };
   };
   metadata?: Record<string, unknown> | null;
+  /** Drill ids attached to this station when station_type='skill_drill'.
+   *  Populated by EditStationModal and consumed by the grade view's
+   *  skill-drill branch + the StationCards "Drill Reference" pill. */
+  drill_ids?: string[] | null;
+  /** Room/location; surfaced on the skill drill station view header. */
+  room?: string | null;
 }
 
 export interface SubItem {

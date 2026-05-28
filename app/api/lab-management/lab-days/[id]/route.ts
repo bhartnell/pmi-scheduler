@@ -51,6 +51,7 @@ export async function GET(
           instructions_url,
           station_notes,
           metadata,
+          drill_ids,
           scenario:scenarios(id, title, category, difficulty)
         )
       `)
@@ -107,6 +108,7 @@ export async function GET(
               instructions_url,
               station_notes,
               metadata,
+              drill_ids,
               scenario:scenarios(id, title, category, difficulty)
             )
           `)
