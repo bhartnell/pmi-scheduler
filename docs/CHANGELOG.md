@@ -11,8 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-05-28
 
-- `pending` | Station documents: per-station file/link attachments via new station_documents table + /api/lab-management/stations/[id]/documents (replaces dead single-slot route); EditStationModal upload+link UI; StationCards renders ad-hoc docs as indigo chips alongside inherited skill-doc chips. Reuses existing public station-documents bucket.
-- `pending` | Lab day roles: added 'coordinator' to CHECK constraint + type unions across 8 files + indigo badge group in LabDayRolesSection + history page label/icon. Bulk-assigned Hartnell as coordinator across 27 lab days (PM G14, PM G15, EMT G5; 2026-05-28 → 2026-07-06) — needs Hartnell to trigger admin calendar-sync per-user to push events to Google.
+- `d2caae4a` | Station docs + lab coordinator role + drill picker enrichment (3 changes in one commit due to shared touchpoints): (1) per-station file/link attachments via new station_documents table + multi-doc API; (2) 'coordinator' role on lab_day_roles + 27 Hartnell coordinator assignments through 2026-07-06; (3) skill_drill picker now shows program/duration/snippet + search + filter so imported drills with category=NULL surface properly. Import Skill Drills card moved from Content&Templates to Lab&Clinical and surfaced on /labs/skill-drills header.
 - `f9cb2c54` | Timer polling: status='stopped' now stops polling entirely (LabTimer, TimerBanner, GlobalTimerBanner discovery channel still polls 60s); FreeBusy reauth banner at /settings/calendar-setup surfaces above wizard card with one-click Reconnect
 
 ## 2026-05-27
