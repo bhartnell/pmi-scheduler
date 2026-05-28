@@ -20,6 +20,11 @@ import TemplateGuideSection from '@/components/TemplateGuideSection';
 interface StationCardsProps {
   stations: Station[];
   stationSkillDocs: Record<string, SkillDocument[]>;
+  /** Per-station ad-hoc documents from `station_documents` table.
+   *  Distinct from `stationSkillDocs` which mirrors the parent skill's
+   *  inherited reference docs. Loaded by parent page (see
+   *  /labs/schedule/[id]) so the card stays a pure display component. */
+  stationDocs?: Record<string, SkillDocument[]>;
   stationSkillSheetIds: Record<string, string>;
   stationNremtCodes?: Record<string, 'E201' | 'E202' | undefined>;
   stationScenarioTitles?: Record<string, string>;
@@ -35,6 +40,7 @@ interface StationCardsProps {
 export default function StationCards({
   stations,
   stationSkillDocs,
+  stationDocs,
   stationSkillSheetIds,
   stationNremtCodes,
   stationScenarioTitles,
@@ -125,8 +131,20 @@ export default function StationCards({
               )}
             </div>
 
-            {/* Document Links */}
-            {(station.skill_sheet_url || station.instructions_url || (stationSkillDocs[station.id] && stationSkillDocs[station.id].length > 0)) && (
+            {/* Document Links — three sources:
+                  • station.skill_sheet_url + instructions_url
+                      (single legacy URL slots on lab_stations)
+                  • stationSkillDocs (inherited from parent skill via
+                      skill_documents — same on every station that
+                      uses the skill)
+                  • stationDocs (uploaded directly to THIS station via
+                      station_documents — added 2026-05-28 for ad-hoc
+                      one-day attachments). Differentiated by border
+                      so instructors can tell what's canonical vs
+                      day-specific. */}
+            {(station.skill_sheet_url || station.instructions_url ||
+              (stationSkillDocs[station.id] && stationSkillDocs[station.id].length > 0) ||
+              (stationDocs?.[station.id] && stationDocs[station.id].length > 0)) && (
               <div className="flex flex-wrap gap-2 mb-3 print:hidden">
                 {station.skill_sheet_url && (
                   <a
@@ -159,6 +177,20 @@ export default function StationCards({
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded hover:bg-purple-100 dark:hover:bg-purple-900/50"
+                  >
+                    <FileText className="w-3 h-3" />
+                    {doc.document_name}
+                    <ExternalLink className="w-3 h-3" />
+                  </a>
+                ))}
+                {stationDocs?.[station.id] && stationDocs[station.id].map((doc) => (
+                  <a
+                    key={doc.id}
+                    href={doc.document_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="Uploaded for this station"
+                    className="inline-flex items-center gap-1 px-2 py-1 text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded border border-indigo-200 dark:border-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
                   >
                     <FileText className="w-3 h-3" />
                     {doc.document_name}

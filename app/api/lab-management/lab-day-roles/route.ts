@@ -6,7 +6,7 @@ export interface LabDayRole {
   id: string;
   lab_day_id: string;
   instructor_id: string;
-  role: 'lab_lead' | 'roamer' | 'observer';
+  role: 'lab_lead' | 'roamer' | 'observer' | 'coordinator';
   notes: string | null;
   created_at: string;
   instructor?: {
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (!['lab_lead', 'roamer', 'observer'].includes(role)) {
+    if (!['lab_lead', 'roamer', 'observer', 'coordinator'].includes(role)) {
       return NextResponse.json({ success: false, error: 'Invalid role' }, { status: 400 });
     }
 
@@ -138,6 +138,7 @@ export async function POST(request: NextRequest) {
             lab_lead: 'Lab Lead',
             roamer: 'Roamer',
             observer: 'Observer',
+            coordinator: 'Coordinator',
           };
           syncLabDayRole({
             userEmail: instructorData.email,

@@ -114,7 +114,7 @@ export interface LabDayRole {
   id: string;
   lab_day_id: string;
   instructor_id: string;
-  role: 'lab_lead' | 'roamer' | 'observer';
+  role: 'lab_lead' | 'roamer' | 'observer' | 'coordinator';
   notes: string | null;
   instructor?: {
     id: string;

@@ -8,6 +8,7 @@ import {
   Shield,
   RotateCcw,
   Loader2,
+  ClipboardList,
 } from 'lucide-react';
 import CalendarAvailabilityDot from '@/components/CalendarAvailabilityDot';
 import { canAccessAdmin } from '@/lib/permissions';
@@ -33,7 +34,7 @@ export default function LabDayRolesSection({
 }: LabDayRolesSectionProps) {
   const toast = useToast();
   const [showRoleAssignForm, setShowRoleAssignForm] = useState(false);
-  const [roleAssignRole, setRoleAssignRole] = useState<'lab_lead' | 'roamer' | 'observer'>('roamer');
+  const [roleAssignRole, setRoleAssignRole] = useState<'lab_lead' | 'roamer' | 'observer' | 'coordinator'>('roamer');
   const [roleAssignInstructorId, setRoleAssignInstructorId] = useState('');
   const [addingRole, setAddingRole] = useState(false);
   const [removingRoleId, setRemovingRoleId] = useState<string | null>(null);
@@ -163,12 +164,13 @@ export default function LabDayRolesSection({
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Role</label>
               <select
                 value={roleAssignRole}
-                onChange={(e) => setRoleAssignRole(e.target.value as 'lab_lead' | 'roamer' | 'observer')}
+                onChange={(e) => setRoleAssignRole(e.target.value as 'lab_lead' | 'roamer' | 'observer' | 'coordinator')}
                 className="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="lab_lead">Lab Lead</option>
                 <option value="roamer">Roamer</option>
                 <option value="observer">Observer</option>
+                <option value="coordinator">Coordinator</option>
               </select>
             </div>
             <div className="flex-[2] min-w-[200px]">
@@ -259,6 +261,16 @@ export default function LabDayRolesSection({
               badge: 'bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-300 print:bg-purple-100 print:text-purple-800',
               remove: 'text-purple-600 dark:text-purple-400 hover:text-red-600 dark:hover:text-red-400',
             }
+          )}
+          {renderRoleGroup(
+            labDayRoles.filter(r => r.role === 'coordinator'),
+            'Coordinator',
+            'logistical owner / contact',
+            {
+              badge: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 print:bg-indigo-100 print:text-indigo-800',
+              remove: 'text-indigo-600 dark:text-indigo-400 hover:text-red-600 dark:hover:text-red-400',
+            },
+            <ClipboardList className="w-3 h-3" />
           )}
         </div>
       )}

@@ -643,6 +643,16 @@ export default function SkillDrillsPage() {
             >
               {seeding ? 'Seeding...' : 'Seed S3 Drills'}
             </button>
+            {/* Import + Add buttons — Import lives at /admin/skill-drills/import
+                but is also surfaced here so the labs hub flow doesn't
+                require an admin-page detour. */}
+            <Link
+              href="/admin/skill-drills/import"
+              className="flex items-center gap-2 px-4 py-2 bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300 rounded-lg hover:bg-orange-200 dark:hover:bg-orange-900/60 transition-colors font-medium text-sm"
+            >
+              <Upload className="w-4 h-4" />
+              Import JSON
+            </Link>
             <button
               onClick={openAddModal}
               className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors font-medium"

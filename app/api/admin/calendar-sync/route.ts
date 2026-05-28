@@ -137,6 +137,7 @@ export async function POST(request: NextRequest) {
         lab_lead: 'Lab Lead',
         roamer: 'Roamer',
         observer: 'Observer',
+        coordinator: 'Coordinator',
       };
 
       for (const role of futureRoles) {

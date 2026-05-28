@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Plus,
   ClipboardCheck,
@@ -12,6 +13,9 @@ import {
   Trash2,
   ExternalLink,
   Loader2,
+  Upload,
+  Link as LinkIcon,
+  Clock,
 } from 'lucide-react';
 import BLSPlatinumChecklist from '@/components/BLSPlatinumChecklist';
 import TemplateGuideSection from '@/components/TemplateGuideSection';
@@ -62,7 +66,47 @@ export default function EditStationModal({
   const [isCustomInstructor, setIsCustomInstructor] = useState(false);
   const [stationInstructors, setStationInstructors] = useState<{id?: string; user_email: string; user_name: string; is_primary: boolean}[]>([]);
   const [editDrillData, setEditDrillData] = useState<Record<string, unknown> | null>(null);
-  const [editSkillDrills, setEditSkillDrills] = useState<{ id: string; name: string; category: string; station_id?: string }[]>([]);
+  // Skill drill picker payload (from /api/lab-management/skill-drills →
+  // skill_drills table). 2026-05-28: widened from {id,name,category}
+  // to include program, semester, duration, and description so the
+  // picker can render a richer card and operators can tell drills
+  // apart at a glance. Imported drills (e.g. "Lifepack Monitor
+  // Manipulation Drill") often have category=NULL but always have
+  // program + semester from the import flow.
+  const [editSkillDrills, setEditSkillDrills] = useState<{
+    id: string;
+    name: string;
+    category: string | null;
+    station_id?: string;
+    program?: string | null;
+    semester?: number | null;
+    estimated_duration_minutes?: number | null;
+    description?: string | null;
+  }[]>([]);
+  // Picker filter + search.
+  const [drillSearch, setDrillSearch] = useState('');
+  const [drillProgramFilter, setDrillProgramFilter] = useState<string>('');
+
+  // Per-station ad-hoc documents (station_documents table) — added
+  // 2026-05-28. Instructors can attach a PDF/DOCX/image OR a Drive
+  // link directly to this one station, distinct from the canonical
+  // skill_documents inherited from the parent skill.
+  type StationDoc = {
+    id: string;
+    document_name: string;
+    document_url: string;
+    document_type: 'skill_sheet' | 'checkoff' | 'reference' | 'protocol';
+    file_type: string | null;
+    display_order: number;
+  };
+  const [stationDocs, setStationDocs] = useState<StationDoc[]>([]);
+  const [docMode, setDocMode] = useState<'upload' | 'link'>('upload');
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docUrl, setDocUrl] = useState('');
+  const [docName, setDocName] = useState('');
+  const [docType, setDocType] = useState<'skill_sheet' | 'checkoff' | 'reference' | 'protocol'>('reference');
+  const [docUploading, setDocUploading] = useState(false);
+  const [docError, setDocError] = useState<string | null>(null);
   const [editForm, setEditForm] = useState({
     station_type: 'scenario' as string,
     scenario_id: '',
@@ -85,6 +129,8 @@ export default function EditStationModal({
   const initModal = async () => {
     // Fetch scenarios and skills
     await fetchScenariosAndSkills();
+    // Load any ad-hoc documents already attached to this station.
+    refreshStationDocs();
 
     // Fetch existing station_skills + custom_skills for this station.
     // 2026-04-18: widened from skills/skill_drill gate to any station
@@ -209,6 +255,98 @@ export default function EditStationModal({
       if (skillsData.success) setSkills(skillsData.skills || []);
     } catch (error) {
       console.error('Error fetching scenarios/skills:', error);
+    }
+  };
+
+  // ── Station document handlers ────────────────────────────────
+  // Endpoints mirror the skill-documents API so a future shared
+  // <DocumentManager> component could swap target URL only.
+
+  const refreshStationDocs = async () => {
+    try {
+      const res = await fetch(`/api/lab-management/stations/${station.id}/documents`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success) setStationDocs(data.documents || []);
+    } catch (error) {
+      console.error('Error loading station docs:', error);
+    }
+  };
+
+  const handleAddStationDoc = async () => {
+    setDocError(null);
+    if (docMode === 'upload' && !docFile) {
+      setDocError('Choose a file to upload');
+      return;
+    }
+    if (docMode === 'link' && !docUrl.trim()) {
+      setDocError('Enter a URL');
+      return;
+    }
+    if (!docName.trim() && docMode === 'link') {
+      setDocError('Enter a name for this link');
+      return;
+    }
+
+    setDocUploading(true);
+    try {
+      let res: Response;
+      if (docMode === 'upload') {
+        const fd = new FormData();
+        fd.append('file', docFile as File);
+        fd.append('documentName', docName.trim() || (docFile as File).name);
+        fd.append('documentType', docType);
+        res = await fetch(`/api/lab-management/stations/${station.id}/documents`, {
+          method: 'POST',
+          body: fd,
+        });
+      } else {
+        res = await fetch(`/api/lab-management/stations/${station.id}/documents`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: docUrl.trim(),
+            documentName: docName.trim(),
+            documentType: docType,
+          }),
+        });
+      }
+      const data = await res.json();
+      if (!data.success) {
+        setDocError(data.error || 'Failed to add document');
+        return;
+      }
+      // Reset form + refresh list.
+      setDocFile(null);
+      setDocUrl('');
+      setDocName('');
+      setDocType('reference');
+      await refreshStationDocs();
+      toast.success('Document added');
+    } catch (error) {
+      console.error('Error adding station doc:', error);
+      setDocError('Network error while uploading');
+    } finally {
+      setDocUploading(false);
+    }
+  };
+
+  const handleDeleteStationDoc = async (docId: string) => {
+    if (!confirm('Remove this document?')) return;
+    try {
+      const res = await fetch(
+        `/api/lab-management/stations/${station.id}/documents?documentId=${docId}`,
+        { method: 'DELETE' }
+      );
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error || 'Failed to delete document');
+        return;
+      }
+      await refreshStationDocs();
+    } catch (error) {
+      console.error('Error deleting station doc:', error);
+      toast.error('Network error while deleting');
     }
   };
 
@@ -728,12 +866,18 @@ export default function EditStationModal({
             </div>
           )}
 
-          {/* Skill Drill Info + Picker */}
+          {/* Skill Drill Info + Picker
+              Data source: /api/lab-management/skill-drills → skill_drills
+              table (NOT the skills library that the BLS/Platinum
+              checklist below uses). Imported drills via /admin/skill-drills/import
+              land here. 2026-05-28: enriched the picker with program
+              badge, duration chip, and description snippet so operators
+              can spot a freshly-imported drill quickly. */}
           {editForm.station_type === 'skill_drill' && (
             <div className="space-y-3">
               <div className="p-4 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
                 <p className="text-orange-800 dark:text-orange-300 text-sm">
-                  <strong>Skill Drill:</strong> Student-led practice station. Select drills from the library below.
+                  <strong>Skill Drill:</strong> Student-led practice station. Pick drills from the <Link href="/labs/skill-drills" className="underline" target="_blank">skill_drills library</Link>. To import new drills, go to <Link href="/admin/skill-drills/import" className="underline" target="_blank">/admin/skill-drills/import</Link>.
                 </p>
               </div>
 
@@ -751,28 +895,106 @@ export default function EditStationModal({
                 </div>
               )}
 
-              {editSkillDrills.length > 0 && (
-                <div className="max-h-48 overflow-y-auto border dark:border-gray-700 rounded-lg">
-                  {editSkillDrills.map(drill => {
-                    const isSelected = editForm.selectedDrillIds.includes(drill.id);
+              {/* Picker filter row — search by name + program dropdown.
+                  Keeps the imported-drill use-case fast: type "lifepack"
+                  and the entry surfaces immediately regardless of where
+                  it sits in the default category sort. */}
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={drillSearch}
+                  onChange={(e) => setDrillSearch(e.target.value)}
+                  placeholder="Search drills by name..."
+                  className="flex-1 px-3 py-1.5 text-sm border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                />
+                <select
+                  value={drillProgramFilter}
+                  onChange={(e) => setDrillProgramFilter(e.target.value)}
+                  className="px-2 py-1.5 text-sm border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                >
+                  <option value="">All programs</option>
+                  <option value="paramedic">Paramedic</option>
+                  <option value="aemt">AEMT</option>
+                  <option value="emt">EMT</option>
+                </select>
+              </div>
+
+              {editSkillDrills.length > 0 ? (
+                (() => {
+                  const q = drillSearch.trim().toLowerCase();
+                  const filtered = editSkillDrills.filter(d => {
+                    if (drillProgramFilter && d.program !== drillProgramFilter) return false;
+                    if (q && !d.name.toLowerCase().includes(q)) return false;
+                    return true;
+                  });
+                  if (filtered.length === 0) {
                     return (
-                      <label key={drill.id} className={`flex items-center gap-3 p-2.5 cursor-pointer border-b last:border-0 dark:border-gray-700 transition-colors ${isSelected ? 'bg-orange-50 dark:bg-orange-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}>
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={() => setEditForm(prev => ({
-                            ...prev,
-                            selectedDrillIds: isSelected ? prev.selectedDrillIds.filter(id => id !== drill.id) : [...prev.selectedDrillIds, drill.id]
-                          }))}
-                          className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
-                        />
-                        <div className="min-w-0">
-                          <span className="text-sm font-medium text-gray-900 dark:text-white">{drill.name}</span>
-                          {drill.category && <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{drill.category}</span>}
-                        </div>
-                      </label>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 italic p-3 border dark:border-gray-700 rounded-lg">
+                        No drills match. Clear the filter or <Link href="/admin/skill-drills/import" className="underline">import more</Link>.
+                      </div>
                     );
-                  })}
+                  }
+                  return (
+                    <div className="max-h-72 overflow-y-auto border dark:border-gray-700 rounded-lg divide-y dark:divide-gray-700">
+                      {filtered.map(drill => {
+                        const isSelected = editForm.selectedDrillIds.includes(drill.id);
+                        const programColor =
+                          drill.program === 'paramedic' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300' :
+                          drill.program === 'aemt' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300' :
+                          drill.program === 'emt' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' :
+                          'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300';
+                        const concept = (drill.description || '').slice(0, 80);
+                        return (
+                          <label
+                            key={drill.id}
+                            className={`flex items-start gap-3 p-3 cursor-pointer transition-colors ${isSelected ? 'bg-orange-50 dark:bg-orange-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-800'}`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => setEditForm(prev => ({
+                                ...prev,
+                                selectedDrillIds: isSelected
+                                  ? prev.selectedDrillIds.filter(id => id !== drill.id)
+                                  : [...prev.selectedDrillIds, drill.id]
+                              }))}
+                              className="mt-1 rounded border-gray-300 text-orange-600 focus:ring-orange-500 flex-shrink-0"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center flex-wrap gap-1.5 mb-0.5">
+                                <span className="text-sm font-medium text-gray-900 dark:text-white">{drill.name}</span>
+                                {drill.program && (
+                                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium uppercase ${programColor}`}>
+                                    {drill.program}{drill.semester ? ` S${drill.semester}` : ''}
+                                  </span>
+                                )}
+                                {drill.estimated_duration_minutes ? (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 inline-flex items-center gap-0.5">
+                                    <Clock className="w-2.5 h-2.5" />
+                                    {drill.estimated_duration_minutes} min
+                                  </span>
+                                ) : null}
+                                {drill.category && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+                                    {drill.category}
+                                  </span>
+                                )}
+                              </div>
+                              {concept && (
+                                <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2">
+                                  {concept}{(drill.description || '').length > 80 ? '…' : ''}
+                                </p>
+                              )}
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
+              ) : (
+                <div className="text-xs text-gray-500 dark:text-gray-400 italic p-3 border dark:border-gray-700 rounded-lg">
+                  No drills in library yet. <Link href="/admin/skill-drills/import" className="underline">Import drills</Link>.
                 </div>
               )}
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -929,6 +1151,140 @@ export default function EditStationModal({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Instructions URL</label>
               <input type="url" value={editForm.instructions_url} onChange={(e) => setEditForm(prev => ({ ...prev, instructions_url: e.target.value }))} placeholder="https://drive.google.com/..." className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Link to instructor instructions or setup guide</p>
+            </div>
+
+            {/* Ad-hoc Station Documents — list + add. Files upload
+                to Supabase storage; links save as URL-only entries.
+                Surfaces as indigo chips on StationCards. Distinct
+                from skill_documents which are inherited from the
+                skill definition and shown above as "Linked Skill
+                Documents". */}
+            <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Documents for this station
+              </label>
+
+              {stationDocs.length > 0 && (
+                <ul className="space-y-1.5 mb-3">
+                  {stationDocs.map(doc => (
+                    <li key={doc.id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800">
+                      <a
+                        href={doc.document_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs text-indigo-700 dark:text-indigo-300 hover:underline min-w-0 flex-1"
+                      >
+                        <FileText className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="truncate">{doc.document_name}</span>
+                        <span className="text-[10px] px-1 py-0.5 bg-indigo-100 dark:bg-indigo-800/50 rounded uppercase flex-shrink-0">
+                          {doc.file_type || doc.document_type}
+                        </span>
+                        <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteStationDoc(doc.id)}
+                        className="p-1 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded"
+                        title="Remove document"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              <div className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-3 space-y-2 bg-white dark:bg-gray-800/40">
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setDocMode('upload')}
+                    className={`flex items-center gap-1 px-2 py-1 text-xs rounded ${
+                      docMode === 'upload'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <Upload className="w-3.5 h-3.5" /> Upload file
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDocMode('link')}
+                    className={`flex items-center gap-1 px-2 py-1 text-xs rounded ${
+                      docMode === 'link'
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    <LinkIcon className="w-3.5 h-3.5" /> Link URL
+                  </button>
+                </div>
+
+                {docMode === 'upload' ? (
+                  <div>
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,.doc,.jpg,.jpeg,.png,.webp,.gif"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] || null;
+                        setDocFile(f);
+                        if (f && !docName) setDocName(f.name.replace(/\.[^.]+$/, ''));
+                      }}
+                      className="block w-full text-xs text-gray-600 dark:text-gray-400 file:mr-2 file:px-2 file:py-1 file:rounded file:border-0 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-300"
+                    />
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">PDF, DOCX, or image. Max 10 MB.</p>
+                  </div>
+                ) : (
+                  <input
+                    type="url"
+                    value={docUrl}
+                    onChange={(e) => setDocUrl(e.target.value)}
+                    placeholder="https://drive.google.com/..."
+                    className="w-full px-2 py-1.5 text-xs border dark:border-gray-600 rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                )}
+
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    value={docName}
+                    onChange={(e) => setDocName(e.target.value)}
+                    placeholder="Document name"
+                    className="px-2 py-1.5 text-xs border dark:border-gray-600 rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                  <select
+                    value={docType}
+                    onChange={(e) => setDocType(e.target.value as typeof docType)}
+                    className="px-2 py-1.5 text-xs border dark:border-gray-600 rounded text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  >
+                    <option value="reference">Reference</option>
+                    <option value="skill_sheet">Skill sheet</option>
+                    <option value="checkoff">Checkoff</option>
+                    <option value="protocol">Protocol</option>
+                  </select>
+                </div>
+
+                {docError && (
+                  <p className="text-xs text-red-600 dark:text-red-400">{docError}</p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleAddStationDoc}
+                  disabled={docUploading}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white rounded"
+                >
+                  {docUploading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Uploading…
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5" /> Add document
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
 
             <div>

@@ -95,7 +95,7 @@ interface PrintLabDay {
 
 interface LabDayRole {
   id: string;
-  role: 'lab_lead' | 'roamer' | 'observer';
+  role: 'lab_lead' | 'roamer' | 'observer' | 'coordinator';
   instructor_name: string | null;
   instructor_email: string | null;
 }

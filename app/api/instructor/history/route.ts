@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const cohortId = searchParams.get('cohortId');
-    const roleFilter = searchParams.get('role'); // 'lab_lead' | 'roamer' | 'observer' | null
+    const roleFilter = searchParams.get('role'); // 'lab_lead' | 'roamer' | 'observer' | 'coordinator' | null
 
     // Fetch lab_day_roles for the current instructor, joining lab_days and cohort/program info
     let query = supabase
@@ -162,7 +162,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: r.id,
-        role: r.role as 'lab_lead' | 'roamer' | 'observer',
+        role: r.role as 'lab_lead' | 'roamer' | 'observer' | 'coordinator',
         notes: r.notes,
         lab_day_id: labDayId,
         lab_date: labDay?.date || null,

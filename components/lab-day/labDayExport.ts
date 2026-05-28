@@ -32,7 +32,7 @@ export function handleExportCalendar(labDay: LabDay, labDayRoles: LabDayRole[]) 
   const titlePart = labDay.title || `Lab Day ${labDay.date}`;
   const descParts = [`Cohort: ${cohortName}`];
   if (stationList) descParts.push(`Stations: ${stationList}`);
-  labDayRoles.forEach(r => { const name = r.instructor?.name || r.instructor?.email || 'TBD'; const roleLabel = r.role === 'lab_lead' ? 'Lab Lead' : r.role === 'roamer' ? 'Roamer' : 'Observer'; descParts.push(`${roleLabel}: ${name}`); });
+  labDayRoles.forEach(r => { const name = r.instructor?.name || r.instructor?.email || 'TBD'; const roleLabel = r.role === 'lab_lead' ? 'Lab Lead' : r.role === 'roamer' ? 'Roamer' : r.role === 'coordinator' ? 'Coordinator' : 'Observer'; descParts.push(`${roleLabel}: ${name}`); });
   if (labDay.notes) descParts.push(`Notes: ${labDay.notes}`);
   downloadICS([{ uid: `labday-${labDay.id}@pmi-scheduler`, title: `Lab Day - ${titlePart}`, description: descParts.join('\n'), location: 'PMI Campus', startDate, endDate }], `lab-day-${labDay.date}.ics`);
 }

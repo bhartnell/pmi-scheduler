@@ -17,11 +17,12 @@ import {
   Star,
   Eye,
   Navigation,
+  ClipboardList,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-type LabRole = 'lab_lead' | 'roamer' | 'observer';
+type LabRole = 'lab_lead' | 'roamer' | 'observer' | 'coordinator';
 
 interface StationInfo {
   station_number: number;
@@ -79,6 +80,7 @@ function roleLabel(role: LabRole): string {
     case 'lab_lead': return 'Lab Lead';
     case 'roamer': return 'Roamer';
     case 'observer': return 'Observer';
+    case 'coordinator': return 'Coordinator';
   }
 }
 
@@ -99,6 +101,11 @@ function roleColorClasses(role: LabRole): { badge: string; icon: string } {
         badge: 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300',
         icon: 'text-gray-500 dark:text-gray-400',
       };
+    case 'coordinator':
+      return {
+        badge: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
+        icon: 'text-purple-600 dark:text-purple-400',
+      };
   }
 }
 
@@ -107,6 +114,7 @@ function RoleIcon({ role, className }: { role: LabRole; className?: string }) {
     case 'lab_lead': return <Star className={className} />;
     case 'roamer': return <Navigation className={className} />;
     case 'observer': return <Eye className={className} />;
+    case 'coordinator': return <ClipboardList className={className} />;
   }
 }
 

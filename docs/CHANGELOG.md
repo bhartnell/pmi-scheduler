@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-05-28
 
+- `pending` | Station documents: per-station file/link attachments via new station_documents table + /api/lab-management/stations/[id]/documents (replaces dead single-slot route); EditStationModal upload+link UI; StationCards renders ad-hoc docs as indigo chips alongside inherited skill-doc chips. Reuses existing public station-documents bucket.
+- `pending` | Lab day roles: added 'coordinator' to CHECK constraint + type unions across 8 files + indigo badge group in LabDayRolesSection + history page label/icon. Bulk-assigned Hartnell as coordinator across 27 lab days (PM G14, PM G15, EMT G5; 2026-05-28 → 2026-07-06) — needs Hartnell to trigger admin calendar-sync per-user to push events to Google.
 - `f9cb2c54` | Timer polling: status='stopped' now stops polling entirely (LabTimer, TimerBanner, GlobalTimerBanner discovery channel still polls 60s); FreeBusy reauth banner at /settings/calendar-setup surfaces above wizard card with one-click Reconnect
 
 ## 2026-05-27

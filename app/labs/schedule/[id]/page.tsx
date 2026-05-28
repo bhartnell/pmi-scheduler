@@ -99,6 +99,10 @@ export default function LabDayPage() {
   const [showTimer, setShowTimer] = useState(openTimerParam);
   const [labDayRoles, setLabDayRoles] = useState<LabDayRole[]>([]);
   const [stationSkillDocs, setStationSkillDocs] = useState<Record<string, SkillDocument[]>>({});
+  // Per-station ad-hoc documents (uploaded via EditStationModal →
+  // /api/lab-management/stations/[id]/documents). Separate from
+  // stationSkillDocs which inherits from the parent skill.
+  const [stationDocs, setStationDocs] = useState<Record<string, SkillDocument[]>>({});
   const [stationSkillSheetIds, setStationSkillSheetIds] = useState<Record<string, string>>({});
   const [stationNremtCodes, setStationNremtCodes] = useState<Record<string, 'E201' | 'E202' | undefined>>({});
   const [nremtScenarioTitles, setNremtScenarioTitles] = useState<Record<string, string>>({});
@@ -223,6 +227,25 @@ export default function LabDayPage() {
           }
           setStationSkillDocs(skillDocsMap);
         }
+        // Load per-station ad-hoc documents in parallel — one GET
+        // per station. Keeps the request shape symmetrical with the
+        // skill-docs loader above. Small N (typically 6-10 stations),
+        // each call is a fast indexed lookup on (station_id).
+        const stationDocsMap: Record<string, SkillDocument[]> = {};
+        await Promise.all(labDayData.labDay.stations.map(async (station: Station) => {
+          try {
+            const res = await fetch(`/api/lab-management/stations/${station.id}/documents`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.success && Array.isArray(data.documents) && data.documents.length > 0) {
+                stationDocsMap[station.id] = data.documents;
+              }
+            }
+          } catch (error) {
+            console.error(`Error fetching station documents for ${station.id}:`, error);
+          }
+        }));
+        setStationDocs(stationDocsMap);
         if (labDayData.labDay.cohort?.program?.abbreviation) lookupSkillSheets(labDayData.labDay.stations, labDayData.labDay.cohort.program.abbreviation);
       }
     } catch (error) { console.error('Error fetching lab day:', error); }
@@ -800,7 +823,7 @@ export default function LabDayPage() {
             rail holds the quick-reference lab info card above the checklist. */}
         <div className="space-y-6 lg:space-y-0 lg:grid lg:gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
           <div className="lg:col-start-1 lg:row-start-1">
-            <StationCards stations={labDay.stations} stationSkillDocs={stationSkillDocs} stationSkillSheetIds={stationSkillSheetIds} stationNremtCodes={stationNremtCodes} stationScenarioTitles={nremtScenarioTitles} canSelectScenario={!!userRole && hasMinRole(userRole, 'lead_instructor')} calendarAvailability={calendarAvailability} labDayId={labDayId as string} getStationTitle={getStationTitle} onEditStation={(station) => setEditingStation(station)} onOpenRoleModal={(station) => setRoleModalStation(station)} onOpenScenarioPicker={(station, code) => setScenarioPickerState({ station, code })} />
+            <StationCards stations={labDay.stations} stationSkillDocs={stationSkillDocs} stationDocs={stationDocs} stationSkillSheetIds={stationSkillSheetIds} stationNremtCodes={stationNremtCodes} stationScenarioTitles={nremtScenarioTitles} canSelectScenario={!!userRole && hasMinRole(userRole, 'lead_instructor')} calendarAvailability={calendarAvailability} labDayId={labDayId as string} getStationTitle={getStationTitle} onEditStation={(station) => setEditingStation(station)} onOpenRoleModal={(station) => setRoleModalStation(station)} onOpenScenarioPicker={(station, code) => setScenarioPickerState({ station, code })} />
           </div>
 
           <aside className="lg:col-start-2 lg:row-start-1 space-y-4 lg:sticky lg:top-4">
