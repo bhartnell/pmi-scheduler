@@ -446,27 +446,34 @@ export default function LabTimer({
     return () => { mountedRef.current = false; };
   }, [labDayId, fetchTimerState, fetchReadyStatuses]);
 
-  // Determine polling intervals. Two-tier gate:
-  //   1. If no timer record exists at all → null → STOP polling.
-  //      The Start Timer button handler (handleStart) will create
-  //      one and set timerState, which makes this hook re-run with
-  //      a real interval. Most lab days never get a timer started,
-  //      so this saves the bulk of the volume.
-  //   2. If a timer exists, scale by status. Client display
-  //      interpolates locally every second, so we don't need
-  //      faster than 5s for running timers.
+  // Determine polling intervals.
+  //   • No timer record → null (STOP polling). Created on Start.
+  //   • status='stopped' → null. End Lab DELETEs the row (handled
+  //     above by the !timerState branch); explicit Stop leaves the
+  //     row in place with status='stopped'. Either way the lab is
+  //     not actively running; no reason to keep hitting the server.
+  //   • status='paused' → 15s. Controller may resume.
+  //   • status='running' → 5s. Client display interpolates locally
+  //     every second so 5s server polls are enough.
+  //
+  // The 'stopped' tier was added 2026-05-27 after a perf review
+  // showed paused/stopped timers continuing to poll for the entire
+  // lab session if nobody clicked End Lab — the original 30s tier
+  // was an attempt at "detect a restart" but the operator who
+  // restarts is on this device and will see the change immediately
+  // without a poll round-trip.
   const getTimerPollInterval = () => {
     if (sessionExpired) return null;
-    if (!timerState) return null;                          // no timer → no poll
-    if (timerState.status === 'stopped') return 30000;
+    if (!timerState) return null;
+    if (timerState.status === 'stopped') return null;
     if (timerState.status === 'paused') return 15000;
-    return 5000;                                            // running
+    return 5000;
   };
 
   const getReadyPollInterval = () => {
     if (sessionExpired) return null;
-    if (!timerState) return null;                          // no timer → no poll
-    if (timerState.status === 'stopped') return 30000;
+    if (!timerState) return null;
+    if (timerState.status === 'stopped') return null;
     return 10000;
   };
 

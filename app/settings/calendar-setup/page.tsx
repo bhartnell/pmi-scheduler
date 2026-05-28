@@ -201,6 +201,35 @@ export default function CalendarSetupWizardPage() {
 
         <StepIndicator current={step} />
 
+        {/* Persistent reconnect banner — surfaces above the wizard
+            card so users with an older freebusy-only token (granted
+            before we requested events scope) know to take action
+            without an admin having to tell them. The Step1Connect
+            card already handles this case but it's buried inside the
+            wizard; this banner makes it impossible to miss. */}
+        {calendarStatus?.needs_reauth && (
+          <div className="mb-4 rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-900 dark:text-amber-100">
+                Calendar access needs to be updated
+              </p>
+              <p className="mt-0.5 text-xs text-amber-800 dark:text-amber-200">
+                Your Google Calendar connection only grants free/busy access. To
+                add PMI events to your calendar, reconnect and grant the
+                additional permission when prompted.
+              </p>
+              <button
+                onClick={handleConnect}
+                className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-sm"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                Reconnect now
+              </button>
+            </div>
+          </div>
+        )}
+
         {errorMessage && (
           <div className="mb-4 rounded-lg border border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-900/20 px-3 py-2.5 text-sm text-red-800 dark:text-red-200 flex items-start gap-2">
             <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />

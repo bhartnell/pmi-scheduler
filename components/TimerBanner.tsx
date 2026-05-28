@@ -179,21 +179,17 @@ export default function TimerBanner({
     setSettingReady(false);
   };
 
-  // Determine poll interval based on timer state.
-  // 2026-05-26 perf: if no timer record exists for this lab day yet,
-  // there's nothing to poll for — return null. The page that creates
-  // the timer (the lab day view) will write the row, and a refresh
-  // here will pick it up. We accept the tradeoff that a timer started
-  // remotely while the grading page is open won't auto-appear; if
-  // that becomes important, push notifications via Supabase realtime
-  // are the right pattern, not 15s polling on every grading page.
-  // If a timer exists but is stopped → still poll at a relaxed
-  // interval so the grader sees it resume if the controller restarts.
+  // Determine poll interval. 2026-05-27 update: status='stopped'
+  // also stops polling — End Lab leaves the row with status='stopped'
+  // (or DELETEs it; both paths land at null poll). A new timer or
+  // resume from the controller's device requires a refresh here.
+  // Acceptable tradeoff per the explicit "no active timer = no
+  // polling" directive.
   const getPollInterval = () => {
-    if (!timerState) return null;                   // no timer → no poll
-    if (timerState.status === 'stopped') return 15000;
+    if (!timerState) return null;
+    if (timerState.status === 'stopped') return null;
     if (timerState.status === 'paused') return 15000;
-    return 5000; // running
+    return 5000;
   };
 
   // Combined polling with visibility awareness

@@ -122,7 +122,13 @@ export default function GlobalTimerBanner() {
     if (!isTimerRelevantPage || hasOwnTimerComponent || sessionExpired) return null;
     if (timer?.status === 'running') return 5000;
     if (timer?.status === 'paused') return 10000;
-    return 60000; // 60s discovery poll when no active timer (was 10s)
+    // No timer OR status='stopped' → 60s discovery poll. This is the
+    // ONLY surface still polling when nothing's active; needed so the
+    // banner appears when a controller on another device starts a
+    // timer mid-session. Local LabTimer + TimerBanner both stop
+    // entirely (return null) on no-timer / stopped — only this
+    // cross-page discovery channel keeps a low-rate heartbeat.
+    return 60000;
   };
   const pollInterval = getPollInterval();
   useVisibilityPolling(fetchActiveTimer, pollInterval);

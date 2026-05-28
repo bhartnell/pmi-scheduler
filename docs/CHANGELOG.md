@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-05-28
+
+- `pending` | Timer polling: status='stopped' now stops polling entirely (LabTimer, TimerBanner, GlobalTimerBanner discovery channel still polls 60s); FreeBusy reauth banner at /settings/calendar-setup surfaces above wizard card with one-click Reconnect
+
 ## 2026-05-27
 
 - `69aefc48` | Skill drills: structured display + JSON import (migration adds source col + program CHECK + upsert index; new /admin/skill-drills/import UI + endpoint; /labs/skill-drills/[id] reference + print view; lab day station card adds Drill Reference pill for station_type='skill_drill')
