@@ -11,7 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-05-28
 
-- `pending` | Timer polling: status='stopped' now stops polling entirely (LabTimer, TimerBanner, GlobalTimerBanner discovery channel still polls 60s); FreeBusy reauth banner at /settings/calendar-setup surfaces above wizard card with one-click Reconnect
+- `f9cb2c54` | Timer polling: status='stopped' now stops polling entirely (LabTimer, TimerBanner, GlobalTimerBanner discovery channel still polls 60s); FreeBusy reauth banner at /settings/calendar-setup surfaces above wizard card with one-click Reconnect
 
 ## 2026-05-27
 
