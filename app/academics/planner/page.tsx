@@ -1296,7 +1296,11 @@ function GenerateWizard({
   programs?: PmiProgramSchedule[]; // kept for backwards compat but no longer used
   instructors: { id: string; name: string; email: string }[];
   semesterId: string;
-  onGenerate: (result: { blocks: PmiScheduleBlock[]; online_courses: { course_code: string; course_name: string; duration_type: string }[] }) => void;
+  onGenerate: (result: {
+    blocks: PmiScheduleBlock[];
+    online_courses: { course_code: string; course_name: string; duration_type: string }[];
+    lab_template?: { created_count?: number; errors?: string[]; warnings?: string[] };
+  }) => void;
   onClose: () => void;
   initialProgramType?: string;
   initialCohortId?: string;
@@ -2898,9 +2902,29 @@ function SemesterPlannerPage() {
     });
   }, []);
 
-  const handleGenerated = useCallback((result: { blocks: PmiScheduleBlock[]; online_courses: { course_code: string; course_name: string; duration_type: string }[] }) => {
+  const handleGenerated = useCallback((result: {
+    blocks: PmiScheduleBlock[];
+    online_courses: { course_code: string; course_name: string; duration_type: string }[];
+    lab_template?: { created_count?: number; errors?: string[]; warnings?: string[] };
+  }) => {
     setShowWizard(false);
     setOnlineCourses(prev => [...prev, ...safeArray(result.online_courses)]);
+    // Surface lab-generation warnings (e.g. "Day 1 maps to Mon but this
+    // cohort has lab blocks only on Wed"). Added 2026-05-28 after the
+    // EMT G5 Monday lab-day mismatch — root cause was lab_day_index='both'
+    // creating lab_days on every weekday in the day_mapping, even ones
+    // whose schedule blocks are lecture-only.
+    const warnings = result.lab_template?.warnings;
+    if (warnings && warnings.length > 0) {
+      // Use a simple alert so the operator can't miss it. The text
+      // identifies the specific weekday + cohort mismatch so they can
+      // decide whether to delete the off-schedule lab_days.
+      alert(
+        'Lab day generation finished with warnings:\n\n' +
+        warnings.map(w => '• ' + w).join('\n\n') +
+        '\n\nRun `node scripts/audit-lab-day-dow-mismatch.js` for a full mismatch report.'
+      );
+    }
     loadSemesterData();
   }, [loadSemesterData]);
 

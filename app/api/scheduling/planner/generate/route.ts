@@ -374,7 +374,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 6. Optionally apply lab template
-    let labResult: { created_count: number; errors?: string[] } | null = null;
+    let labResult: { created_count: number; errors?: string[]; warnings?: string[] } | null = null;
 
     if (load_lab_template && cohort_id) {
       try {
@@ -433,6 +433,7 @@ export async function POST(request: NextRequest) {
           });
 
           const labErrors: string[] = [];
+          const labWarnings: string[] = [];
           let labCreated = 0;
 
           // Determine which day_numbers should get lab days based on lab_day_index setting
@@ -442,6 +443,33 @@ export async function POST(request: NextRequest) {
           else if (effectiveLabDayIndex === 'day2') allowedDayNumbers.add(2);
           else if (effectiveLabDayIndex === 'both') { allowedDayNumbers.add(1); allowedDayNumbers.add(2); }
           // 'none' leaves allowedDayNumbers empty — skip all lab day creation
+
+          // Build set of weekdays that ALREADY carry a 'lab' block_type in
+          // the schedule we just generated, so we can warn when a
+          // requested allowedDayNumber maps to a non-lab weekday (e.g.
+          // EMT G5 schedule has lab on Wed only, but the operator
+          // requested lab_day_index='both' so day_mapping Day1=Mon
+          // would also produce Monday lab_days — that's wrong, Monday
+          // is lecture-only).
+          // This is a SOFT warning, not a block — operators sometimes
+          // intentionally create off-schedule lab_days (e.g. orientation,
+          // field trips). The warning surfaces in the API response so
+          // the wizard UI can prompt for confirmation.
+          const labWeekdays = new Set<number>();
+          for (const b of allCreated as Array<{ day_of_week?: number; block_type?: string }>) {
+            if (b.block_type === 'lab' && typeof b.day_of_week === 'number') {
+              labWeekdays.add(b.day_of_week);
+            }
+          }
+          for (const dn of allowedDayNumbers) {
+            const wd = dayIndexToWeekday[dn];
+            if (wd !== undefined && labWeekdays.size > 0 && !labWeekdays.has(wd)) {
+              const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+              labWarnings.push(
+                `Day ${dn} maps to ${DOW[wd]}, but this cohort's schedule has 'lab' blocks only on ${[...labWeekdays].sort().map(d => DOW[d]).join(', ')}. ${DOW[wd]} lab_days will be created anyway because lab_day_index='${effectiveLabDayIndex}' was selected — verify this is intentional (e.g. cross-program rotation, field trip).`
+              );
+            }
+          }
 
           for (const tpl of sortedLab) {
             const weekNum = tpl.week_number || 1;
@@ -532,6 +560,7 @@ export async function POST(request: NextRequest) {
           labResult = {
             created_count: labCreated,
             errors: labErrors.length > 0 ? labErrors : undefined,
+            warnings: labWarnings.length > 0 ? labWarnings : undefined,
           };
         }
       } catch (labErr) {
