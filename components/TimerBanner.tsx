@@ -179,14 +179,32 @@ export default function TimerBanner({
     setSettingReady(false);
   };
 
-  // Determine poll interval. 2026-05-27 update: status='stopped'
-  // also stops polling — End Lab leaves the row with status='stopped'
-  // (or DELETEs it; both paths land at null poll). A new timer or
-  // resume from the controller's device requires a refresh here.
-  // Acceptable tradeoff per the explicit "no active timer = no
-  // polling" directive.
+  // Determine poll interval.
+  //
+  //   • status='running' → 5s (active tier; client interpolates display
+  //     each second so 5s server polls are enough).
+  //   • status='paused'  → 15s (controller may resume; still relevant).
+  //   • status='stopped' → null (lab ended; explicit Stop leaves the
+  //     row in place. The hadTimerRef guard above auto-dismisses).
+  //   • !timerState       → 30s DISCOVERY POLL.
+  //
+  // 2026-05-28: !timerState used to return null. That tightening
+  // (commit f05b44eb) assumed TimerBanner always mounts AFTER a
+  // timer exists, which is true for the controller's own browser but
+  // FALSE for any instructor who opens /labs/grade/station/[id] on a
+  // separate device while the lab is already running. With null
+  // polling, the grade page never discovered the running timer and
+  // the banner never appeared.
+  //
+  // GlobalTimerBanner already does 60s discovery on idle, but it's
+  // explicitly hidden on /labs/grade/* (see GlobalTimerBanner.tsx
+  // hasOwnTimerComponent gate) on the assumption that TimerBanner
+  // here is doing its own discovery. So the discovery responsibility
+  // legitimately belongs here. 30s on grading pages (vs 60s on
+  // GlobalTimerBanner) since this is the active grading surface and
+  // sub-minute discovery matters more than the background heartbeat.
   const getPollInterval = () => {
-    if (!timerState) return null;
+    if (!timerState) return 30000;
     if (timerState.status === 'stopped') return null;
     if (timerState.status === 'paused') return 15000;
     return 5000;
