@@ -11,6 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-05-28
 
+- `19661ec6` | TimerBanner: restore 30s discovery poll on null timerState (regression from f05b44eb — grading pages opened on a separate device from the lab controller never discovered the running timer). Tiers: running 5s / paused 15s / stopped null / no-timer 30s.
 - `eb86091f` | Lab day DOW mismatch safety: generation-time warning when allowed day_number maps to a weekday that doesn't carry a 'lab' block_type in the cohort's schedule (the EMT G5 Monday root cause); audit script reports active-cohort mismatches; warnings surface as alert in /academics/planner wizard
 - `150ec556` | lab_day_role calendar sync: title format reworked to "Lab — {cohort} · {title}" (role moves to description); PROGRAM_TIME_DEFAULTS for PM/EMT/AEMT replaces 08:00-17:00 fallback when lab_days.start/end is null; cohort context plumbed through admin bulk endpoint + POST insert handler. Hartnell's 27 coordinator assignments are ready but blocked at OAuth (scope='needs_reconnect') — reconnect at /settings/calendar-setup then trigger admin/calendar-sync per-user.
 - `fb740ab3` | Skill drill stations get a dedicated grade view (no rubric / Platinum / scenario UI — just the drill reference + observations textarea) via new SkillDrillReference component shared with /labs/skill-drills/[id]; also fixed /api/lab-management/lab-days/[id] to select drill_ids so StationCards "Drill Reference" pill renders
