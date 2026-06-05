@@ -1,3 +1,0 @@
-{
-  "/api/lab-management/lab-days/[id]/debrief-notes/[noteId]/route": "app/api/lab-management/lab-days/[id]/debrief-notes/[noteId]/route.js"
-}

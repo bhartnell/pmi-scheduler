@@ -1,3 +1,0 @@
-{
-  "/api/clinical/internships/[id]/preceptors/[assignmentId]/route": "app/api/clinical/internships/[id]/preceptors/[assignmentId]/route.js"
-}

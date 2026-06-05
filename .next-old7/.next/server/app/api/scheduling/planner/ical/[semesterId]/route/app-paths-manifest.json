@@ -1,3 +1,0 @@
-{
-  "/api/scheduling/planner/ical/[semesterId]/route": "app/api/scheduling/planner/ical/[semesterId]/route.js"
-}
