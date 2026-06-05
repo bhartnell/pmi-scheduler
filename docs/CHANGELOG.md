@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-06-05
+
+- `5a7ddc90` | Remove 150,773 accidentally-committed `.next-old*` build artifacts (~99% of tracked files, ~115MB of .git bloat driving heavy OneDrive sync load); add `/.next-old*/` to .gitignore so it can't recur. Build output is regenerable and Vercel builds fresh, so no live-site impact. Also moved `node_modules`/`.next` out of the OneDrive-synced tree via directory junctions to `C:\dev-cache\pmi-scheduler` to stop sync churn (local-machine change, not committed).
+
 ## 2026-05-28
 
 - `19661ec6` | TimerBanner: restore 30s discovery poll on null timerState (regression from f05b44eb — grading pages opened on a separate device from the lab controller never discovered the running timer). Tiers: running 5s / paused 15s / stopped null / no-timer 30s.
