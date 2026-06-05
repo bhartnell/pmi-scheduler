@@ -11,8 +11,9 @@ Format: `commit-hash | brief description`
 
 ## 2026-06-05
 
+- `97be71cc` | Docs sync: CLAUDE.md adds "Development Environment (HARD REQUIREMENT)" with junction setup; CHANGELOG date headings restored per actual commit dates; PMI-MASTER-REFERENCE-2026-06-05 created with current cohort + Known Issues sections; PMI-ROADMAP-2026-03-08 gets "What Shipped May 23 → June 5" + dated Active Roadmap; DEAD_CODE_REPORT logs build-artifact + LabDayChat-stub + single-slot-station-docs cleanups; SITEMAP refreshed to 2026-06-05 with skill-drill and reauth-banner routes.
 - `40004bfe` | CHANGELOG: log 5a7ddc90 (.next-old* build-junk removal + OneDrive de-sync)
-- `5a7ddc90` | Remove 150,773 accidentally-committed .next-old* build artifacts; .gitignore widened to `/.next-old*/` so this cannot recur. ~99% of tracked files were build-cache snapshots that bloated .git to 115MB and drove heavy OneDrive sync load. Build output is regenerable and Vercel builds fresh on deploy. No effect on the live site.
+- `5a7ddc90` | Remove 150,773 accidentally-committed `.next-old*` build artifacts (~99% of tracked files, ~115MB of .git bloat driving heavy OneDrive sync load); add `/.next-old*/` to .gitignore so it can't recur. Build output is regenerable and Vercel builds fresh, so no live-site impact. Also moved `node_modules`/`.next` out of the OneDrive-synced tree via directory junctions to `C:\dev-cache\pmi-scheduler` to stop sync churn (local-machine change, not committed).
 
 ## 2026-06-04
 
