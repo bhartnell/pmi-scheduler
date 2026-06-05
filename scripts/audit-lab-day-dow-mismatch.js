@@ -36,6 +36,10 @@ const DOW_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   await c.connect();
 
   // 1. Build per-cohort set of "lab DOWs" from pmi_schedule_blocks.
+  //    Skip external-program cohorts (LVFR AEMT etc.) — they don't
+  //    use pmi_schedule_blocks at all; their schedule lives in
+  //    lvfr_day_schedule + lvfr_schedule_items. Including them
+  //    just produced "(none)" warnings for every lab_days row.
   const labBlocks = (await c.query(`
     SELECT c.id AS cohort_id,
            p.abbreviation || ' G' || c.cohort_number AS cohort_label,
@@ -47,6 +51,7 @@ const DOW_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     WHERE pb.block_type = 'lab'
       AND c.is_active = true
       AND c.is_archived = false
+      AND c.is_external_program = false
       AND pb.day_of_week IS NOT NULL
     GROUP BY 1, 2, 3
     ORDER BY 2, 3
@@ -66,7 +71,7 @@ const DOW_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     console.log(`  ${cohortLabels.get(cohortId).padEnd(10)}  ${dowList}`);
   }
 
-  // 2. Pull all lab_days for active cohorts and bucket by mismatch.
+  // 2. Pull all lab_days for active (non-external) cohorts.
   const labDays = (await c.query(`
     SELECT c.id AS cohort_id,
            p.abbreviation || ' G' || c.cohort_number AS cohort_label,
@@ -79,7 +84,9 @@ const DOW_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     FROM lab_days ld
     JOIN cohorts c ON c.id = ld.cohort_id
     JOIN programs p ON p.id = c.program_id
-    WHERE c.is_active = true AND c.is_archived = false
+    WHERE c.is_active = true
+      AND c.is_archived = false
+      AND c.is_external_program = false
     ORDER BY 2, 4
   `)).rows;
 
