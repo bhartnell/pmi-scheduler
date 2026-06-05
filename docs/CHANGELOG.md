@@ -11,12 +11,20 @@ Format: `commit-hash | brief description`
 
 ## 2026-06-05
 
+- `97be71cc` | Docs sync: CLAUDE.md adds "Development Environment (HARD REQUIREMENT)" with junction setup; CHANGELOG date headings restored per actual commit dates; PMI-MASTER-REFERENCE-2026-06-05 created with current cohort + Known Issues sections; PMI-ROADMAP-2026-03-08 gets "What Shipped May 23 → June 5" + dated Active Roadmap; DEAD_CODE_REPORT logs build-artifact + LabDayChat-stub + single-slot-station-docs cleanups; SITEMAP refreshed to 2026-06-05 with skill-drill and reauth-banner routes.
+- `40004bfe` | CHANGELOG: log 5a7ddc90 (.next-old* build-junk removal + OneDrive de-sync)
 - `5a7ddc90` | Remove 150,773 accidentally-committed `.next-old*` build artifacts (~99% of tracked files, ~115MB of .git bloat driving heavy OneDrive sync load); add `/.next-old*/` to .gitignore so it can't recur. Build output is regenerable and Vercel builds fresh, so no live-site impact. Also moved `node_modules`/`.next` out of the OneDrive-synced tree via directory junctions to `C:\dev-cache\pmi-scheduler` to stop sync churn (local-machine change, not committed).
+
+## 2026-06-04
+
+- `19661ec6` | TimerBanner: restore 30s discovery poll on null timerState (regression from f05b44eb — grading pages opened on a separate device from the lab controller never discovered the running timer). Tiers: running 5s / paused 15s / stopped null / no-timer 30s.
+
+## 2026-06-01
+
+- `eb86091f` | Lab day DOW mismatch safety: generation-time warning when allowed day_number maps to a weekday that doesn't carry a 'lab' block_type in the cohort's schedule (the EMT G5 Monday root cause); audit script reports active-cohort mismatches; warnings surface as alert in /academics/planner wizard
 
 ## 2026-05-28
 
-- `19661ec6` | TimerBanner: restore 30s discovery poll on null timerState (regression from f05b44eb — grading pages opened on a separate device from the lab controller never discovered the running timer). Tiers: running 5s / paused 15s / stopped null / no-timer 30s.
-- `eb86091f` | Lab day DOW mismatch safety: generation-time warning when allowed day_number maps to a weekday that doesn't carry a 'lab' block_type in the cohort's schedule (the EMT G5 Monday root cause); audit script reports active-cohort mismatches; warnings surface as alert in /academics/planner wizard
 - `150ec556` | lab_day_role calendar sync: title format reworked to "Lab — {cohort} · {title}" (role moves to description); PROGRAM_TIME_DEFAULTS for PM/EMT/AEMT replaces 08:00-17:00 fallback when lab_days.start/end is null; cohort context plumbed through admin bulk endpoint + POST insert handler. Hartnell's 27 coordinator assignments are ready but blocked at OAuth (scope='needs_reconnect') — reconnect at /settings/calendar-setup then trigger admin/calendar-sync per-user.
 - `fb740ab3` | Skill drill stations get a dedicated grade view (no rubric / Platinum / scenario UI — just the drill reference + observations textarea) via new SkillDrillReference component shared with /labs/skill-drills/[id]; also fixed /api/lab-management/lab-days/[id] to select drill_ids so StationCards "Drill Reference" pill renders
 - `d2caae4a` | Station docs + lab coordinator role + drill picker enrichment (3 changes in one commit due to shared touchpoints): (1) per-station file/link attachments via new station_documents table + multi-doc API; (2) 'coordinator' role on lab_day_roles + 27 Hartnell coordinator assignments through 2026-07-06; (3) skill_drill picker now shows program/duration/snippet + search + filter so imported drills with category=NULL surface properly. Import Skill Drills card moved from Content&Templates to Lab&Clinical and surfaced on /labs/skill-drills header.
@@ -27,11 +35,14 @@ Format: `commit-hash | brief description`
 - `69aefc48` | Skill drills: structured display + JSON import (migration adds source col + program CHECK + upsert index; new /admin/skill-drills/import UI + endpoint; /labs/skill-drills/[id] reference + print view; lab day station card adds Drill Reference pill for station_type='skill_drill')
 - `2e96bf3b` | LabTimer: stop polling after End Lab (clear local state on null response, auto-close modal on remote End Lab)
 - `f05b44eb` | Timer polling: gate on existence (no timer → no poll; remove auto-create on mount; GlobalTimerBanner discovery 10s→60s)
-- `a1f29c2d` | LabDayChat: fix attempt-counter reset + Supabase stack overflow (regression from 56a03c1d) — senderRef for stable deps, attemptRef + subscribingRef mutex, full teardown (unsubscribe + removeChannel) before each retry
-- `0ecf311d` | SMC mapping review CSV: 81 smc_requirements fuzzy-matched against canonical_skills (34 exact, 25 close, 22 no_match) for operator review before any DB writes
 
 ## 2026-05-26
 
+- `50c9b71b` | Evening batch: LabDayChat feature flag (default OFF) + cache header refactor + availability case-norm. LabDayChat had been adding measurable load during live labs; gated behind ENABLE_LAB_DAY_CHAT system setting so it can be turned on per-lab once the realtime stability work lands properly.
+- `9c719662` | URGENT perf: cache timer endpoints (Cache-Control max-age=3) + bump poll intervals + cache FreeBusy responses. Shipped mid-lab on 2026-05-26 in response to live-lab Vercel function exhaustion.
+- `fcfd4ec5` | URGENT: stub out LabDayChat to mitigate live-lab perf issue. Realtime subscriptions were churning faster than the visibility heuristic could throttle; emergency stub returned empty state while the proper backoff + feature flag was being prepared (see 50c9b71b).
+- `a1f29c2d` | LabDayChat: fix attempt-counter reset + Supabase stack overflow (regression from 56a03c1d) — senderRef for stable deps, attemptRef + subscribingRef mutex, full teardown (unsubscribe + removeChannel) before each retry
+- `0ecf311d` | SMC mapping review CSV: 81 smc_requirements fuzzy-matched against canonical_skills (34 exact, 25 close, 22 no_match) for operator review before any DB writes
 - `b3ce7bcf` | Documentation Update Rule (CLAUDE.md) + initial CHANGELOG.md with 30-day backfill
 - `9e023b52` | Template matching: day=1 fallback for single-template-per-week programs + open_shifts.title trigger
 

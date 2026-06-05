@@ -1,9 +1,8 @@
 # PMI EMS Scheduler — Master Roadmap
 
-> Refreshed 2026-05-23 (was last updated 2026-03-08).
-> The 2026-03-08 historical content is preserved at the bottom of
-> this file for reference. The current state and active roadmap is
-> in the sections below.
+> Refreshed 2026-06-05 (sections "What Shipped May 23 → June 5" +
+> "Active Roadmap (as of 2026-06-05)" added). Previous refresh
+> 2026-05-23. Historical 2026-03-08 content preserved at the bottom.
 
 ---
 
@@ -63,23 +62,135 @@
 
 ---
 
-## Active Roadmap (as of 2026-05-23)
+## What Shipped May 23 → June 5
+
+### Skill Drills as a first-class station type (commits 69aefc48, fb740ab3, d2caae4a)
+- New `skill_drills` table with `source` column, program CHECK,
+  upsert index on `(lower(name), program, semester)`.
+- `/admin/skill-drills/import` — JSON import (single drill, array,
+  or `{drills:[]}` wrapper).
+- `/labs/skill-drills/[id]` reference + print view (Concept → Run
+  steps → Equipment grid → Setups → Instructor notes).
+- StationCards "Drill Reference" pill for `station_type='skill_drill'`.
+- Edit Station picker queries the right table and surfaces program
+  badge / duration chip / description snippet + program filter, so
+  imported drills with `category=NULL` (like "Lifepack Monitor
+  Manipulation Drill") no longer hide at the bottom.
+- **Dedicated grade view** at `/labs/grade/station/[id]` when
+  `station_type='skill_drill'` — early returns a SkillDrillStationView
+  (no rubric / Platinum / submit), shows one SkillDrillReference card
+  per drill, observations textarea persisted to localStorage.
+
+### Station documents (commit d2caae4a)
+- New `station_documents` table — per-station file/link attachments.
+- `/api/lab-management/stations/[id]/documents` GET/POST/PATCH/DELETE
+  supports multipart upload + URL-only links. Reuses the existing
+  public `station-documents` Supabase bucket.
+- EditStationModal has an upload + link UI.
+- StationCards renders ad-hoc docs as indigo chips alongside the
+  inherited skill_documents chips.
+
+### Lab day "coordinator" role (commit d2caae4a)
+- Added `'coordinator'` to `lab_day_roles_role_check` CHECK constraint.
+- Type unions widened across 8 source files; LabDayRolesSection has
+  an indigo badge group; history page renders Coordinator label +
+  icon; admin calendar-sync surfaces it.
+- Bulk-assigned Hartnell as coordinator across PM G14 / PM G15 /
+  EMT G5 lab days between 2026-05-28 and 2026-07-06 via
+  `scripts/bulk-assign-coordinator-dryrun.js`. (6 EMT G5 Monday rows
+  were subsequently deleted because the schedule blocks only have
+  Wednesday as `block_type='lab'` — see `eb86091f`.)
+
+### lab_day_role → Google Calendar sync (commit 150ec556)
+- `syncLabDayRole` event title now reads "Lab — {cohort label} ·
+  {title}" (was "PMI Lab: {title} — {role}"); role moved to the
+  description so the title is scannable in Google's week view.
+- PROGRAM_TIME_DEFAULTS — PM 15:00-17:30, EMT 09:00-12:00, AEMT
+  18:00-21:30. Replaces the old 08:00-17:00 fallback when
+  `lab_days.start_time/end_time` is NULL.
+- Cohort context plumbed through both the admin bulk sync and the
+  POST insert handler.
+- Hartnell-specific: 27 calendar events are ready but blocked at
+  OAuth (`google_calendar_scope='needs_reconnect'`). Reconnect
+  flow at /settings/calendar-setup, then hit /admin/calendar-sync
+  per-user.
+
+### Lab day DOW mismatch safety (commit eb86091f)
+- Generator at `/api/scheduling/planner/generate` now warns when an
+  allowed `day_number` maps to a weekday that doesn't carry a
+  `block_type='lab'` block in the cohort's schedule.
+- Warnings ride out in `lab_template.warnings[]` and the wizard
+  surfaces them as an `alert()`.
+- `scripts/audit-lab-day-dow-mismatch.js` lists all active-cohort
+  mismatches. Today it flags 32 — most in archived-ish cohorts (no
+  schedule blocks). EMT G5 is now clean except for the legit
+  2026-05-11 orientation.
+
+### Timer polling
+- `f9cb2c54` + `f05b44eb` — timer endpoints stop polling when there's
+  no active timer or `status='stopped'`. LabTimer + TimerBanner go
+  to null on `!timerState` or stopped; GlobalTimerBanner keeps a 60s
+  cross-page discovery heartbeat.
+- `19661ec6` — TimerBanner regression fix: restore a 30s discovery
+  poll on `!timerState` after the perf tightening accidentally broke
+  cross-device discovery on `/labs/grade/station/[id]` (the grade page
+  was opened on a separate device from the controller and never saw
+  the running timer). Tiers: running 5s / paused 15s / stopped null /
+  no-timer 30s.
+
+### FreeBusy reauth banner (commit f9cb2c54)
+- Persistent amber banner on `/settings/calendar-setup` when
+  `needs_reauth=true` with a one-click Reconnect.
+- UserMenu already routed needs-reauth users to that page with an
+  amber link; the banner makes the call to action impossible to miss.
+
+### Performance batch (commits fcfd4ec5, 9c719662, 50c9b71b)
+- `fcfd4ec5` — Emergency LabDayChat stub mid-lab on 2026-05-26;
+  realtime subscriptions were exhausting Vercel function quota.
+- `9c719662` — Cache `Cache-Control` headers on timer + FreeBusy
+  endpoints; bump poll intervals.
+- `50c9b71b` — LabDayChat behind `ENABLE_LAB_DAY_CHAT` System
+  Setting (default OFF) + cache header refactor + availability
+  case-normalization.
+
+### Repo hygiene (commit 5a7ddc90, 2026-06-05)
+- Removed 150,773 committed `.next-old*` build artifacts (~99% of
+  tracked files; .git was 115 MB). Added `/.next-old*/` to
+  `.gitignore`. OneDrive sync should be dramatically lighter now.
+
+---
+
+## Active Roadmap (as of 2026-06-05)
 
 ### High Priority
 
-#### Pending bug-fix follow-ups
-- **email_log schema sweep** — confirmed canonical columns are
-  `to_email` and `error`; audit any writers still referencing
-  `recipient` or `error_message`. (Task #8)
-- **FreeBusy 403 reconnect prompt** — when Google returns 403 on
-  FreeBusy, set `needs_reauth=true` and surface an in-app banner
-  linking to /settings/calendar-setup. (Task #9)
+#### LabDayChat — turn back on safely
+- Component is feature-flagged OFF since 2026-05-26. The realtime
+  channel lifecycle still churns under live-lab load. Before
+  flipping back on: rewrite teardown / resubscribe path with a
+  proper state machine, add `lab_day_id` scoped channel reuse, and
+  load-test against a 4-station / 6-instructor rotation.
+
+#### Pending bug-fix follow-ups (open from May 23 list)
 - **PM G15 student email backfill** — 0/20 students have email on
-  file; result emails silently no-op. Either backfill via CSV import
-  or surface the no-email warning toast pattern (already shipped on
+  file; result emails silently no-op. Backfill via CSV import or
+  surface the no-email warning toast pattern (already shipped on
   the grading page) to prevent operator confusion.
+- **Hartnell calendar reconnect** — once Hartnell reconnects with
+  `events` scope, trigger `/admin/calendar-sync` per-user to push
+  his 27 coordinator events.
+- **Josh Lomonaco OAuth on tablet** — separate PMIops deployment
+  redirects loop. Most likely NEXTAUTH_URL ↔ public domain mismatch
+  or Safari ITP dropping the session cookie. Diagnostic playbook
+  in chat history; needs investigation in the PMIops repo (this
+  repo doesn't host that auth surface).
 
 #### Unit & Integration Tests
+- **Status**: Still not started
+- **Scope**: API route tests (auth, CRUD), component snapshot tests,
+  database query tests
+- **Priority**: Highest debt. Worth seeding with 10-20 critical-path
+  tests before another major feature batch.
 - **Status**: Still not started
 - **Scope**: API route tests (auth, CRUD), component snapshot tests,
   database query tests
