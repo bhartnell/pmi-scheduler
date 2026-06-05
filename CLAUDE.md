@@ -21,44 +21,39 @@ PMI EMS Scheduler is a comprehensive scheduling and management system for the Pi
 
 ## Development Environment (HARD REQUIREMENT)
 
-**`node_modules/` and `.next/` are NTFS junctions pointing at
-`C:\dev-cache\pmi-scheduler\`.** This intentional setup keeps the
-heaviest dev artifacts off OneDrive so OneDrive sync doesn't fight
-the dev loop.
+**The repo lives at `C:\dev\pmi-scheduler` — OUTSIDE OneDrive.**
+`node_modules/` and `.next/` are ordinary directories created by
+`npm install` and `next build/dev` respectively. No junctions, no
+symlinks, no `C:\dev-cache\` redirection. Turbopack works normally
+in dev and prod build.
 
 ### Rules
 
-1. **Never `rm -rf node_modules` or `rm -rf .next` without
-   recreating the junction.** A plain delete removes the link target
-   from `C:\dev-cache\` AND breaks the link, resurfacing the
-   OneDrive-sync lag the junction was meant to fix. If you need a
-   clean install:
-   ```powershell
-   # From the repo root (PowerShell):
-   Remove-Item node_modules -Recurse -Force        # removes the JUNCTION only
-   New-Item -ItemType Directory C:\dev-cache\pmi-scheduler\node_modules -Force
-   New-Item -ItemType Junction -Path node_modules -Target C:\dev-cache\pmi-scheduler\node_modules
-   npm install
-   ```
-   Same pattern for `.next`. Verify with
-   `Get-Item node_modules | Select-Object LinkType, Target`.
+1. **Never put this repo back under a OneDrive- or Dropbox-synced
+   path.** The earlier OneDrive location caused two compounding
+   problems: heavy sync churn that made the machine feel
+   unresponsive during dev, and a Turbopack failure ("Symlink
+   node_modules is invalid, it points out of the filesystem root")
+   that came from the junction workaround. Both vanished the
+   instant the repo moved to `C:\dev\pmi-scheduler`. Do not
+   recreate the junction workaround — fix the path instead.
 
 2. **Never commit `.next/`, `.next-old*/`, or `node_modules/`.**
-   `.gitignore` already covers these (the `/.next-old*/` pattern was
-   added 2026-06-05 after commit `5a7ddc90` removed 150,773
-   accidentally-committed `.next-old*` build artifacts; .git had
-   bloated to 115 MB).
+   `.gitignore` already covers these (the `/.next-old*/` pattern
+   was added 2026-06-05 after commit `5a7ddc90` removed 150,773
+   accidentally-committed `.next-old*` build artifacts that had
+   bloated `.git` to 115 MB).
 
-3. **Build timeouts in Windows** — Turbopack occasionally hits
-   "TurbopackInternalError: Failed to write app endpoint" with a
-   "deadline has elapsed" / "timeout while receiving message from
-   process" trailer. This is an OneDrive-sync race with the build
-   workers, not a code error. Retry the build; it typically passes
-   on the second attempt. Exit code 0 with that trailer means the
-   build actually finished — check for "Compiled successfully" /
-   the route-table footer.
+3. **A clean reinstall is just a clean reinstall now:**
+   ```powershell
+   Remove-Item node_modules -Recurse -Force
+   Remove-Item .next -Recurse -Force
+   npm install
+   ```
+   No junction recreation step needed.
 
-See `MEMORY.md` for the long-form history of this setup.
+See `docs/CHANGELOG.md` entry for the 2026-06-05 migration if you
+need the long-form history.
 
 ## Key Directories
 
