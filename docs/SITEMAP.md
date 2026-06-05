@@ -1,8 +1,14 @@
 # PMI EMS Scheduler — Site Map
-> Refreshed 2026-05-23 (was last auto-generated 2026-03-08).
+> Refreshed 2026-06-05.
 > Reflects the /lab-management → /labs consolidation that landed
 > in commit 808bb34d; the /lab-management/* tree is GONE from disk
 > and exists only as HTTP redirects in next.config.ts.
+>
+> **Routes added since 2026-05-23 refresh:**
+> - `/admin/skill-drills/import` (commit 69aefc48)
+> - `/labs/skill-drills/[id]` (commit 69aefc48)
+> - `/labs/grade/station/[id]` skill_drill branch (commit fb740ab3)
+> - `/settings/calendar-setup` FreeBusy reauth banner (commit f9cb2c54)
 
 **271 page routes across 39 top-level hubs** (count from
 `find app -name 'page.tsx'`).
@@ -143,6 +149,12 @@ Highlights with sub-pages:
   **placeholder gate** (refuses Content Pending titles unless
   `confirm_placeholders` flag set) and **audit trail**
   (lab_day_template_audit table).
+- `/admin/skill-drills/import` — JSON import for skill_drills
+  (single drill, array, or `{drills:[]}` wrapper). Maps brief
+  fields → DB columns and upserts on `(lower(name), program,
+  semester)`. Card surfaces under **Lab & Clinical** in the admin
+  hub (moved 2026-05-28 from Content & Templates) and is also
+  linked from `/labs/skill-drills` header.
 - `/admin/scenarios/{audit,bulk-import,cleanup,transform}` — scenario admin.
   Bulk-import now dedups by ID then case-insensitive title (2026-05-21).
 - `/admin/osce-events/[id]/checklist` — per-event OSCE checklist.
@@ -192,13 +204,14 @@ Canonical home for lab day operations. 38 pages.
 | `/labs/schedule/[id]/results` | Results dashboard |
 | `/labs/schedule/[id]/stations/new` | Add station |
 | `/labs/schedule/new` | New lab day |
-| `/labs/grade/station/[id]` | Grading page — has **Export JSON**, **Update from JSON**, no-email-on-file warning toast |
+| `/labs/grade/station/[id]` | Grading page — has **Export JSON**, **Update from JSON**, no-email-on-file warning toast. For `station_type='skill_drill'` early-returns a dedicated `SkillDrillStationView` (no rubric / Platinum / submit — just SkillDrillReference cards + an observations textarea persisted to localStorage). |
 | `/labs/scenarios` | Scenario library (with checkbox multi-select + **Export Selected as JSON**) |
 | `/labs/scenarios/[id]` | Scenario editor (with **Export JSON** + **Update from JSON** buttons) |
 | `/labs/scenarios/new` | New scenario |
 | `/labs/scenario-library` | Read-only library view |
 | `/labs/skills/competencies` + `/report` | Competency tracking |
-| `/labs/skill-drills` | Drill library |
+| `/labs/skill-drills` | Drill library — header has **Import JSON** (links to /admin/skill-drills/import) + **Add Drill** + **Seed S3 Drills** |
+| `/labs/skill-drills/[id]` | Drill reference + print view per Skill_Drill_Webapp_Brief — fixed section order Title → Concept → Run steps → Equipment grid → Setups → Instructor notes. Print stylesheet strips chrome. |
 | `/labs/skill-sheets` | Skill sheets (links to /academics) |
 | `/labs/stations/{log,pool}` | Station log + station pool |
 | `/labs/templates` | Lab template list |

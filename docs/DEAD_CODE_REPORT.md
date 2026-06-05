@@ -1,7 +1,40 @@
 # PMI EMS Scheduler -- Dead Code Report
-> Last refreshed 2026-05-23. Original auto-generation 2026-03-08.
+> Last refreshed 2026-06-05. Original auto-generation 2026-03-08.
 
 ## What's Been Resolved Since March 2026
+
+### 2026-06-05 — 150,773 build artifacts removed (commit 5a7ddc90)
+
+The repo had `.next-old`, `.next-old4`..`.next-old11` directories
+committed — Next.js build-cache snapshots that piled up because
+`.gitignore` only ignored `.next`, not the numbered variants. They
+made up ~99% of tracked files and bloated `.git` to 115 MB, which
+in turn drove heavy OneDrive sync load on the dev machine. The
+`/.next-old*/` pattern was added to `.gitignore` to prevent
+recurrence. Live site unaffected — Vercel always builds fresh.
+
+### 2026-05-28 — Single-slot station documents route replaced (commit d2caae4a)
+
+`/api/lab-management/stations/[id]/documents` was a scaffold that
+only modified the two legacy URL fields `skill_sheet_url` and
+`instructions_url` and uploaded to a separate `station-documents`
+bucket. **Zero callers** in the source tree — the only references
+were in the `.next` build artifacts that have since been deleted.
+Replaced wholesale with a multi-doc design backed by the new
+`station_documents` table (GET/POST/PATCH/DELETE) that supports
+both uploads and URL-only link attachments.
+
+### 2026-05-26 — LabDayChat stubbed, then feature-flagged (commits fcfd4ec5 + 50c9b71b)
+
+LabDayChat's Supabase Realtime subscriptions were churning faster
+than the visibility heuristic could throttle, exhausting Vercel
+function quota during live labs. Mid-lab on 2026-05-26 the
+component was replaced with an empty-state stub (`fcfd4ec5`), then
+gated behind an `ENABLE_LAB_DAY_CHAT` System Settings flag with
+default OFF later that day (`50c9b71b`). The component is still
+in the source tree but does nothing until an admin flips the flag.
+Long-term: rewrite the channel lifecycle properly before turning
+back on. The PMI-ROADMAP carries this as a known incomplete item.
 
 ### 2026-05-23 — /lab-management directory deletion (commit 808bb34d)
 

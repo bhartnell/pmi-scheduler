@@ -19,6 +19,47 @@ PMI EMS Scheduler is a comprehensive scheduling and management system for the Pi
 - `npm run lint` - ESLint
 - `npm run type-check` - TypeScript check (no emit)
 
+## Development Environment (HARD REQUIREMENT)
+
+**`node_modules/` and `.next/` are NTFS junctions pointing at
+`C:\dev-cache\pmi-scheduler\`.** This intentional setup keeps the
+heaviest dev artifacts off OneDrive so OneDrive sync doesn't fight
+the dev loop.
+
+### Rules
+
+1. **Never `rm -rf node_modules` or `rm -rf .next` without
+   recreating the junction.** A plain delete removes the link target
+   from `C:\dev-cache\` AND breaks the link, resurfacing the
+   OneDrive-sync lag the junction was meant to fix. If you need a
+   clean install:
+   ```powershell
+   # From the repo root (PowerShell):
+   Remove-Item node_modules -Recurse -Force        # removes the JUNCTION only
+   New-Item -ItemType Directory C:\dev-cache\pmi-scheduler\node_modules -Force
+   New-Item -ItemType Junction -Path node_modules -Target C:\dev-cache\pmi-scheduler\node_modules
+   npm install
+   ```
+   Same pattern for `.next`. Verify with
+   `Get-Item node_modules | Select-Object LinkType, Target`.
+
+2. **Never commit `.next/`, `.next-old*/`, or `node_modules/`.**
+   `.gitignore` already covers these (the `/.next-old*/` pattern was
+   added 2026-06-05 after commit `5a7ddc90` removed 150,773
+   accidentally-committed `.next-old*` build artifacts; .git had
+   bloated to 115 MB).
+
+3. **Build timeouts in Windows** — Turbopack occasionally hits
+   "TurbopackInternalError: Failed to write app endpoint" with a
+   "deadline has elapsed" / "timeout while receiving message from
+   process" trailer. This is an OneDrive-sync race with the build
+   workers, not a code error. Retry the build; it typically passes
+   on the second attempt. Exit code 0 with that trailer means the
+   build actually finished — check for "Compiled successfully" /
+   the route-table footer.
+
+See `MEMORY.md` for the long-form history of this setup.
+
 ## Key Directories
 
 - `app/api/` - API route handlers organized by feature
