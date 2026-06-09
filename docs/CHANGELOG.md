@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-06-08
+
+- `644b8816` | LVFR AEMT runsheet rebuilt as 30-day, 3-tier model (supersedes the 27-day `5bd34391` populate). New migration `20260608_lvfr_runsheet_3tier.sql` adds `requirement` (required/optional/info), `description`, `time_label` to `lvfr_schedule_items` and `brief`/`debrief` to `lvfr_day_schedule`. Parser `scripts/lvfr-rebuild/parse-sources.mjs` reads the authoritative 30-day sources (`data/lvfr-aemt/sources/`) → reviewable artifact `data/lvfr-aemt/runsheet_days.json` (30 days, 321 items: required=121, optional=48, info=152). `apply.mjs --commit` replaced live AEMT G2 data (364→321 items, Days 28-30 added, cohort `end_date`→2026-09-17; pre-replace backup written to gitignored `data/lvfr-aemt/backups/`). Day page `/lvfr-aemt/day/[date]` now renders 3 tiers (info = no checkbox), day brief above AM + debrief below PM, fixes AM-before-PM ordering, and gates progress on required items only. AEMT G2 only (is_external_program); no other cohort touched.
+
 ## 2026-06-05
 
 - `3b47d019` | `cohorts.is_external_program` flag added — marks one-off / partner cohorts (LVFR AEMT G2 flagged) that should be excluded from generic "all active cohorts" sweeps. Calendar/date surfaces still include external cohorts; only filter the flag in code paths that would apply EMT/PM-style behavior INTO the external cohort. Immediate retrofit: `audit-lab-day-dow-mismatch.js` filters on it (32 → 17 mismatches, AEMT G2 noise gone). Future retrofit notes in commit body.
