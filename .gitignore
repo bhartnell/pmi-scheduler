@@ -44,3 +44,6 @@ next-env.d.ts
 .claude/
 tmpclaude-*
 nul
+
+# LVFR runsheet rebuild — local DB backups (recovery snapshots, not source)
+data/lvfr-aemt/backups/

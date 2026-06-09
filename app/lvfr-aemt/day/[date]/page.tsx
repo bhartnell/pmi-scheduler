@@ -30,7 +30,6 @@ import {
   Trash2,
   CheckCircle2,
   Circle,
-  Clock,
   StickyNote,
   Loader2,
   ChevronLeft,
@@ -47,6 +46,9 @@ interface Item {
   id: string;
   title: string;
   item_type: string | null;
+  requirement: 'required' | 'optional' | 'info' | null;
+  description: string | null;
+  time_label: string | null;
   estimated_minutes: number | null;
   sort_order: number;
   is_completed: boolean;
@@ -61,6 +63,8 @@ interface DaySession {
   id: string;
   session: 'morning' | 'afternoon';
   notes: string | null;
+  brief: string | null;
+  debrief: string | null;
   updated_at: string;
   items: Item[];
 }
@@ -93,6 +97,15 @@ function shiftDate(yyyyMmDd: string, deltaDays: number): string {
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+// "0740-0848" → "7:40–8:48". Falls back to the raw label if it doesn't parse.
+function formatTimeLabel(label: string | null): string | null {
+  if (!label) return null;
+  const m = label.match(/^(\d{2})(\d{2})-(\d{2})(\d{2})$/);
+  if (!m) return label;
+  const fmt = (h: string, mm: string) => `${parseInt(h, 10)}:${mm}`;
+  return `${fmt(m[1], m[2])}–${fmt(m[3], m[4])}`;
 }
 
 const ITEM_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
@@ -367,28 +380,58 @@ export default function LVFRDayRunsheetPage() {
               </button>
             </div>
 
-            {data.sessions.map(s => (
-              <SessionCard
-                key={s.id}
-                session={s}
-                isAdding={addingTo === s.id}
-                onAdd={() => setAddingTo(s.id)}
-                onCancelAdd={() => setAddingTo(null)}
-                onAddSaved={() => {
-                  setAddingTo(null);
-                  fetchData();
-                }}
-                onToggle={toggleItem}
-                onDelete={deleteItem}
-                onNotesBlur={(notes) => saveNotes(s.id, notes)}
-              />
-            ))}
+            {(() => {
+              const morning = data.sessions.find(s => s.session === 'morning');
+              const afternoon = data.sessions.find(s => s.session === 'afternoon');
+              const brief = morning?.brief?.trim();
+              const debrief = afternoon?.debrief?.trim();
+              const card = (s: DaySession) => (
+                <SessionCard
+                  key={s.id}
+                  session={s}
+                  isAdding={addingTo === s.id}
+                  onAdd={() => setAddingTo(s.id)}
+                  onCancelAdd={() => setAddingTo(null)}
+                  onAddSaved={() => {
+                    setAddingTo(null);
+                    fetchData();
+                  }}
+                  onToggle={toggleItem}
+                  onDelete={deleteItem}
+                  onNotesBlur={(notes) => saveNotes(s.id, notes)}
+                />
+              );
+              return (
+                <>
+                  {/* Day brief — above the morning block */}
+                  {brief && (
+                    <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 flex items-start gap-2 text-sm text-red-900 dark:text-red-200">
+                      <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span><strong className="font-semibold">Today:</strong> {brief}</span>
+                    </div>
+                  )}
 
-            {/* Lunch banner between sessions */}
-            <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 flex items-center justify-center gap-2 text-sm text-amber-800 dark:text-amber-200">
-              <Coffee className="w-4 h-4" />
-              <span><strong>Lunch</strong> · 11:30 AM – 12:30 PM</span>
-            </div>
+                  {/* Morning first — fixes the PM-above-AM ordering bug */}
+                  {morning && card(morning)}
+
+                  {/* Lunch banner between sessions */}
+                  <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 flex items-center justify-center gap-2 text-sm text-amber-800 dark:text-amber-200">
+                    <Coffee className="w-4 h-4" />
+                    <span><strong>Lunch</strong> · 11:30 AM – 12:30 PM</span>
+                  </div>
+
+                  {afternoon && card(afternoon)}
+
+                  {/* Day debrief — below the afternoon block */}
+                  {debrief && (
+                    <div className="rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-3 flex items-start gap-2 text-sm text-indigo-900 dark:text-indigo-200">
+                      <Moon className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                      <span><strong className="font-semibold">Debrief:</strong> {debrief}</span>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </>
         )}
       </div>
@@ -424,8 +467,11 @@ function SessionCard({
     ? 'from-amber-500 to-orange-500'
     : 'from-indigo-500 to-purple-600';
 
-  const completed = session.items.filter(i => i.is_completed).length;
-  const total = session.items.length;
+  // "Day complete" depends only on required items — optional checkoffs and
+  // info lines (breaks/lunch/roll call) are excluded from the progress meter.
+  const requiredItems = session.items.filter(i => i.requirement === 'required');
+  const completed = requiredItems.filter(i => i.is_completed).length;
+  const total = requiredItems.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   const [notes, setNotes] = useState(session.notes ?? '');
@@ -445,8 +491,8 @@ function SessionCard({
           </div>
         </div>
         <div className="text-right">
-          <div className="text-sm font-semibold">{completed}/{total}</div>
-          <div className="text-xs opacity-80">{pct}% done</div>
+          <div className="text-sm font-semibold">{completed}/{total} required</div>
+          <div className="text-xs opacity-80">{total > 0 ? `${pct}% done` : 'no required items'}</div>
         </div>
       </div>
 
@@ -519,6 +565,34 @@ function ItemRow({
   onToggle: () => void;
   onDelete: () => void;
 }) {
+  const isInfo = item.requirement === 'info';
+  const isOptional = item.requirement === 'optional';
+  const time = formatTimeLabel(item.time_label);
+
+  // ── INFO line: no checkbox (breaks, lunch, roll call, transitions) ──
+  if (isInfo) {
+    return (
+      <div className="px-5 py-2 flex items-center gap-3 group bg-gray-50/50 dark:bg-gray-900/20">
+        <span className="flex-shrink-0 w-5 flex justify-center text-gray-300 dark:text-gray-600" aria-hidden>
+          <Coffee className="w-3.5 h-3.5" />
+        </span>
+        <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap text-sm text-gray-500 dark:text-gray-400">
+          {time && <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{time}</span>}
+          <span>{item.title}</span>
+        </div>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="opacity-0 group-hover:opacity-100 transition-opacity text-gray-400 hover:text-red-500"
+          aria-label="Delete item"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    );
+  }
+
+  // ── REQUIRED / OPTIONAL: checkbox line ──
   const checkedColor = item.is_completed ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500';
   return (
     <div className="px-5 py-3 flex items-start gap-3 group">
@@ -532,21 +606,26 @@ function ItemRow({
       </button>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
+          {time && (
+            <span className="font-mono text-xs text-gray-400 dark:text-gray-500">{time}</span>
+          )}
           <span className={`text-sm font-medium ${item.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
             {item.title}
           </span>
-          {item.item_type && (
+          {isOptional && (
+            <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+              optional
+            </span>
+          )}
+          {item.item_type && item.item_type !== 'other' && (
             <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
               {item.item_type}
             </span>
           )}
-          {item.estimated_minutes != null && item.estimated_minutes > 0 && (
-            <span className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
-              <Clock className="w-3 h-3" />
-              ~{item.estimated_minutes} min
-            </span>
-          )}
         </div>
+        {item.description && (
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">{item.description}</p>
+        )}
         {item.is_completed && item.completed_by_name && (
           <p className="text-xs text-green-700 dark:text-green-400 mt-0.5">
             ✓ Checked off by {item.completed_by_name}

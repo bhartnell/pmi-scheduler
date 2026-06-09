@@ -69,12 +69,17 @@ export async function GET(
       id,
       session,
       notes,
+      brief,
+      debrief,
       updated_at,
       cohort_id,
       items:lvfr_schedule_items(
         id,
         title,
         item_type,
+        requirement,
+        description,
+        time_label,
         estimated_minutes,
         sort_order,
         is_completed,
@@ -85,7 +90,9 @@ export async function GET(
       )
     `)
     .eq('date', date)
-    .order('session');
+    // morning before afternoon: 'morning' > 'afternoon' alphabetically, so
+    // descending puts morning first and fixes the PM-above-AM ordering bug.
+    .order('session', { ascending: false });
   if (fetchErr) {
     return NextResponse.json({ success: false, error: fetchErr.message }, { status: 500 });
   }
@@ -113,12 +120,17 @@ export async function GET(
     id: s.id,
     session: s.session,
     notes: s.notes,
+    brief: s.brief ?? null,
+    debrief: s.debrief ?? null,
     updated_at: s.updated_at,
     cohort_id: s.cohort_id,
     items: ((s.items ?? []) as Array<{
       id: string;
       title: string;
       item_type: string | null;
+      requirement: string | null;
+      description: string | null;
+      time_label: string | null;
       estimated_minutes: number | null;
       sort_order: number;
       is_completed: boolean;

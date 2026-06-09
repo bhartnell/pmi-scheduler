@@ -1,0 +1,3234 @@
+{
+  "generated_from": [
+    "LVFR_AEMT_Daily_Lesson_Plans (2).docx",
+    "AEMT_Instructor_Assignments (5).xlsx"
+  ],
+  "course": "30-day Jul 14 – Sep 17 2026",
+  "days": [
+    {
+      "day_number": 1,
+      "date": "2026-07-14",
+      "dow": "Tuesday",
+      "week": "1",
+      "brief": "EMSTesting.com Login and Orientation, Chapter 1: EMS Systems, Chapter 2: Workforce Safety and Wellness, Chapter 3: Medical, Legal, and Ethical Issues → PM: Group Testing - Chapters 1-3",
+      "debrief": "Preview Day 2: Ch 4-6 Reading assignment: Chapters 4, 5, 6",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Log in to EMSTesting.com, resolve any account issues",
+        "Summarize components of EMS Systems (Chapter 1)",
+        "Understand Workforce Safety and Wellness basics (Chapter 2)",
+        "Discuss Medical, Legal, and Ethical Issues in EMS (Chapter 3)",
+        "Complete learning style assessment"
+      ],
+      "notes": "Day 2 morning: quizzes on Ch 1, 2, 3 (10 questions each). Assign reading Ch 4-6.",
+      "morning": [
+        {
+          "title": "Roll Call, Introductions, Course Overview",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0800",
+          "description": "Instructor introduction and background; Student introductions; Course overview, syllabus review, academic policies (80% pass standard)",
+          "sort_order": 730
+        },
+        {
+          "title": "EMSTesting.com Login and Orientation",
+          "requirement": "required",
+          "item_type": "other",
+          "time_label": "0800-0845",
+          "description": "Students log in, fix any account issues; Walk through platform navigation; Complete a practice quiz to verify functionality",
+          "sort_order": 800
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0845-0855",
+          "description": null,
+          "sort_order": 845
+        },
+        {
+          "title": "Chapter 1: EMS Systems (Lecture)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0855-0955",
+          "description": "EMS history, levels of certification (EMR/EMT/AEMT/Paramedic); EMS system components, medical direction, QI; Where AEMT scope sits relative to EMT and Paramedic",
+          "sort_order": 855
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0955-1005",
+          "description": null,
+          "sort_order": 955
+        },
+        {
+          "title": "Chapter 2: Workforce Safety and Wellness (Lecture)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1005-1105",
+          "description": "Scene safety, standard precautions, BSI/PPE; Infectious disease exposure procedures; Stress management (acute, cumulative, PTSD); Lifting mechanics introduction",
+          "sort_order": 1005
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1105-1115",
+          "description": null,
+          "sort_order": 1105
+        },
+        {
+          "title": "Chapter 3: Medical, Legal, and Ethical Issues (Lecture)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1115-1155",
+          "description": "Scope of practice, duty to act; Consent types (expressed, implied, minor); Advance directives (DNR/POLST), HIPAA; Negligence, abandonment, documentation as legal protection",
+          "sort_order": 1115
+        },
+        {
+          "title": "Transition",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1155-1200",
+          "description": null,
+          "sort_order": 1155
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Chapter 3 Continued - Case Studies",
+          "requirement": "optional",
+          "item_type": "chapter",
+          "time_label": "1300-1400",
+          "description": "Present 4 legal/ethical scenarios for class discussion; Competent adult refusing transport, minor without parent present; DNR with family doing CPR, social media implications",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1400-1410",
+          "description": null,
+          "sort_order": 1400
+        },
+        {
+          "title": "Group Testing - Chapters 1-3",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1410-1510",
+          "description": "Introduce EMSTesting group testing format; 15-20 questions projected, class discusses each question; Focus: certification levels, consent types, BSI, HIPAA",
+          "sort_order": 1410
+        }
+      ]
+    },
+    {
+      "day_number": 2,
+      "date": "2026-07-15",
+      "dow": "Wednesday",
+      "week": "1",
+      "brief": "Quizzes: Ch 1 + Ch 2 + Ch 3, Chapter 4: Communications and Documentation, Chapter 5: Medical Terminology, Chapter 6: Lifting and Moving Patients → PM: Group Testing - Chapters 4-6",
+      "debrief": "Preview tomorrow: lab day, closed-toe shoes required Optional: PCR Narrative Activity if time allows",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete quizzes on Chapters 1, 2, 3 from Day 1",
+        "Understand communications and documentation fundamentals (Chapter 4)",
+        "Learn medical terminology basics (Chapter 5)",
+        "Understand lifting and moving principles (Chapter 6 - lecture only, lab is Day 3)"
+      ],
+      "notes": "Day 3 morning: quizzes on Ch 4 (20q), Ch 5 (15q), Ch 6 (10q). Remind: closed-toe shoes for lab.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": "Preview today's agenda",
+          "sort_order": 730
+        },
+        {
+          "title": "Quizzes: Ch 1 (10q) + Ch 2 (10q) + Ch 3 (10q) - 30 questions",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0825",
+          "description": "Students complete individually on devices; ~1.5 min per question",
+          "sort_order": 740
+        },
+        {
+          "title": "Quiz Review",
+          "requirement": "optional",
+          "item_type": "quiz",
+          "time_label": "0825-0840",
+          "description": "Review all questions on screen; Explain correct answers and why distractors are wrong",
+          "sort_order": 825
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0840-0850",
+          "description": null,
+          "sort_order": 840
+        },
+        {
+          "title": "Chapter 4: Communications and Documentation (Lecture)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0850-1005",
+          "description": "Therapeutic communication, verbal/nonverbal; Radio communication format and procedures; PCR components, legal importance of documentation",
+          "sort_order": 850
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1005-1015",
+          "description": null,
+          "sort_order": 1005
+        },
+        {
+          "title": "Chapter 5: Medical Terminology (Lecture)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1015-1045",
+          "description": "Word parts (prefix, root, suffix); Body planes, directional terms; Abdominopelvic quadrants and regions",
+          "sort_order": 1015
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1045-1055",
+          "description": null,
+          "sort_order": 1045
+        },
+        {
+          "title": "Chapter 6: Lifting and Moving Patients (Lecture)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1055-1140",
+          "description": "Body mechanics principles; Emergency, urgent, non-urgent moves; Equipment overview: backboard, scoop, KED, stair chair, gurney",
+          "sort_order": 1055
+        },
+        {
+          "title": "Transition",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1140-1200",
+          "description": null,
+          "sort_order": 1140
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Medical Terminology Worksheet",
+          "requirement": "optional",
+          "item_type": "other",
+          "time_label": "1300-1330",
+          "description": "Students work individually (~15 min) then review as class; Match prefix/suffix, identify body planes, directional terms",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1330-1340",
+          "description": null,
+          "sort_order": 1330
+        },
+        {
+          "title": "Group Testing - Chapters 4-6",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1340-1440",
+          "description": "15-20 questions covering Ch 4-6 content; Focus: radio reports, PCR, body mechanics, patient positioning",
+          "sort_order": 1340
+        }
+      ]
+    },
+    {
+      "day_number": 3,
+      "date": "2026-07-16",
+      "dow": "Thursday",
+      "week": "1",
+      "brief": "Quizzes: Ch 4 + Ch 5 + Ch 6, EMT Competency Checkoffs, Lab Prep and Safety Brief → PM: Lifting and Moving Lab",
+      "debrief": "What went well, what needs more practice Reading assignment: Ch 7 (Human Body) - longest chapter in course",
+      "lab": {
+        "name": "Lifting & Moving",
+        "instNeeded": "1",
+        "cadre": "Beneficial: Patient actors for lifting"
+      },
+      "lab_note": "Lab: Lifting & Moving | instructors needed: 1 | cadre: Beneficial: Patient actors for lifting",
+      "objectives": [
+        "Complete quizzes on Chapters 4, 5, 6",
+        "Verify EMT-level competencies (BSI/PPE, NRB, BVM basics, vitals, O2 delivery)",
+        "Demonstrate proper lifting and moving techniques using backboard, scoop, KED, stair chair, and gurney"
+      ],
+      "notes": "Monday supplementary with Sun Kang: review week 1 content. Day 4: Ch 1-6 exam + start Ch 7 A&P.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements, Lab Day Preview",
+          "requirement": "info",
+          "item_type": "lab",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quizzes: Ch 4 (20q) + Ch 5 (15q) + Ch 6 (10q) - 45 questions",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0848",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Quiz Review",
+          "requirement": "optional",
+          "item_type": "quiz",
+          "time_label": "0848-0910",
+          "description": null,
+          "sort_order": 848
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0910-0920",
+          "description": null,
+          "sort_order": 910
+        },
+        {
+          "title": "EMT Competency Checkoffs",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "0920-1100",
+          "description": "BSI/PPE donning and doffing; NRB setup and application; BVM basics - seal and squeeze technique; Vital signs - manual BP, pulse, RR, SpO2; Patient positioning, O2 delivery devices",
+          "sort_order": 920
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1100-1110",
+          "description": null,
+          "sort_order": 1100
+        },
+        {
+          "title": "Lab Prep and Safety Brief",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1110-1200",
+          "description": "Review station rotation plan; Safety: proper lifting mechanics, communicate before every lift",
+          "sort_order": 1110
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Lifting and Moving Lab (~2 hours)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1300-1500",
+          "description": "Backboard with log-roll, scoop stretcher; KED application for seated patient; Stair chair operations; Gurney: loading, height adjustment, wheel lock; If cadre available: cadre serve as patient actors for realistic practice",
+          "sort_order": 1300
+        }
+      ]
+    },
+    {
+      "day_number": 4,
+      "date": "2026-07-21",
+      "dow": "Tuesday",
+      "week": "2",
+      "brief": "Ch 1-6 Sub-Module Exam, Chapter 7: Human Body - Part 1 → PM: Chapter 7: Parts 3-4",
+      "debrief": "Reading: Ch 8-9",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete Ch 1-6 Sub-Module Exam (~35 questions)",
+        "Begin comprehensive review of human body anatomy and physiology (Chapter 7)",
+        "Identify major body systems, anatomical terminology, and organ locations"
+      ],
+      "notes": "This is the heaviest lecture chapter in the course (240 min). Mid-day gap: Ben leaves ~1015, Jimi arrives ~noon.",
+      "morning": [
+        {
+          "title": "Roll Call, Exam Prep",
+          "requirement": "info",
+          "item_type": "exam",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Ch 1-6 Sub-Module Exam (~35 questions)",
+          "requirement": "required",
+          "item_type": "exam",
+          "time_label": "0740-0850",
+          "description": "Students complete individually; ~1.5 min per question + review",
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0850-0900",
+          "description": null,
+          "sort_order": 850
+        },
+        {
+          "title": "Chapter 7: Human Body - Part 1 (75 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0900-1015",
+          "description": "Anatomical terminology review (planes, directions, cavities); Musculoskeletal system (bones, muscles, joints); Integumentary system (skin layers, functions)",
+          "sort_order": 900
+        },
+        {
+          "title": "Chapter 7: Part 2 - Self-Directed / A&P Worksheet",
+          "requirement": "optional",
+          "item_type": "chapter",
+          "time_label": "1015-1200",
+          "description": "Students work on A&P worksheet; Note: instructor transition period - cadre can proctor if available",
+          "sort_order": 1015
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Chapter 7: Parts 3-4 (90 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1300-1430",
+          "description": "Respiratory system (airway anatomy, gas exchange); Cardiovascular system (heart, vessels, blood flow); Nervous system (CNS vs PNS, sympathetic vs parasympathetic); Remaining systems: endocrine, GI, urinary, reproductive",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1430-1440",
+          "description": null,
+          "sort_order": 1430
+        },
+        {
+          "title": "A&P Worksheet Review / Body Systems Rapid Fire",
+          "requirement": "optional",
+          "item_type": "other",
+          "time_label": "1440-1520",
+          "description": null,
+          "sort_order": 1440
+        }
+      ]
+    },
+    {
+      "day_number": 5,
+      "date": "2026-07-22",
+      "dow": "Wednesday",
+      "week": "2",
+      "brief": "Quiz: Ch 7, Chapter 8: Pathophysiology, Chapter 9: Life Span Development → PM: Group Testing Ch 8-9",
+      "debrief": "Reading: Ch 10 (Patient Assessment) - most important clinical chapter",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete Ch 7 quiz",
+        "Understand cellular injury, acid-base balance, and disease pathology (Chapter 8)",
+        "Identify vital sign norms and assessment modifications by age group (Chapter 9)"
+      ],
+      "notes": "Day 6: Ch 10 Patient Assessment. Emphasize reading - everything builds on assessment.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quiz: Ch 7 (20 questions)",
+          "requirement": "required",
+          "item_type": "quiz",
+          "time_label": "0740-0810",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0810-0820",
+          "description": null,
+          "sort_order": 810
+        },
+        {
+          "title": "Chapter 8: Pathophysiology (Lecture - 90 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0820-0950",
+          "description": "Cellular environment, water balance, electrolytes; Cellular injury and death (hypoxia, ischemia, necrosis); Acid-base balance, fluid balance; Inflammation, infection, immunity basics",
+          "sort_order": 820
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0950-1000",
+          "description": null,
+          "sort_order": 950
+        },
+        {
+          "title": "Chapter 9: Life Span Development (Lecture - 45 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1000-1045",
+          "description": "Vital sign norms by age group; Pediatric vs adult anatomical differences; Geriatric physiological changes; Communication adjustments by age",
+          "sort_order": 1000
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1045-1055",
+          "description": null,
+          "sort_order": 1045
+        },
+        {
+          "title": "Life Span Case Studies (60 min)",
+          "requirement": "optional",
+          "item_type": "other",
+          "time_label": "1055-1155",
+          "description": "6 scenarios representing different age groups; Discuss vitals, anatomical differences, communication approach",
+          "sort_order": 1055
+        },
+        {
+          "title": "Transition",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1155-1200",
+          "description": null,
+          "sort_order": 1155
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Group Testing Ch 8-9 (~60 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1300-1400",
+          "description": null,
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1400-1410",
+          "description": null,
+          "sort_order": 1400
+        },
+        {
+          "title": "A&P Review / Reinforcement Activities",
+          "requirement": "optional",
+          "item_type": "other",
+          "time_label": "1410-1510",
+          "description": "If cadre available: patient assessment intro scenarios with cadre as patients",
+          "sort_order": 1410
+        }
+      ]
+    },
+    {
+      "day_number": 6,
+      "date": "2026-07-23",
+      "dow": "Thursday",
+      "week": "2",
+      "brief": "Quizzes: Ch 8 + Ch 9, Chapter 10: Patient Assessment, Assessment Demonstration → PM: Assessment Practice, Vital Signs Practice",
+      "debrief": "Monday supplementary: review + exam prep. Ch 10 Assessment Exam is Tuesday.",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete quizzes on Chapters 8-9",
+        "Master the patient assessment sequence: scene size-up through reassessment (Chapter 10)",
+        "Practice primary assessment, history taking (SAMPLE/OPQRST), and vital signs"
+      ],
+      "notes": "Ch 10 Assessment Exam on Day 7 (Tuesday). No daily quiz for Ch 10 - exam replaces it.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quizzes: Ch 8 (20q) + Ch 9 (20q) - 40 questions",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0840",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Quiz Review",
+          "requirement": "optional",
+          "item_type": "quiz",
+          "time_label": "0840-0900",
+          "description": null,
+          "sort_order": 840
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0900-0910",
+          "description": null,
+          "sort_order": 900
+        },
+        {
+          "title": "Chapter 10: Patient Assessment (Lecture - 110 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0910-1100",
+          "description": "Scene size-up (safety, MOI/NOI, resources); Primary assessment (general impression, AVPU, ABCs); History taking (SAMPLE, OPQRST); Secondary assessment (head-to-toe vs focused); Vital signs, GCS, reassessment",
+          "sort_order": 910
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1100-1110",
+          "description": null,
+          "sort_order": 1100
+        },
+        {
+          "title": "Assessment Demonstration",
+          "requirement": "required",
+          "item_type": "other",
+          "time_label": "1110-1200",
+          "description": "Instructor walks through complete patient assessment on volunteer; Talk through every step aloud",
+          "sort_order": 1110
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Assessment Practice (70 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1300-1410",
+          "description": "Students pair up, practice primary assessment sequence; If cadre available: cadre as patients at 3 stations (medical, trauma, AMS); If no cadre: students pair up, instructors circulate",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1410-1420",
+          "description": null,
+          "sort_order": 1410
+        },
+        {
+          "title": "Vital Signs Practice (50 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1420-1510",
+          "description": "Manual BP (auscultation), pulse, RR, SpO2, pupils, skin assessment",
+          "sort_order": 1420
+        }
+      ]
+    },
+    {
+      "day_number": 7,
+      "date": "2026-07-28",
+      "dow": "Tuesday",
+      "week": "3",
+      "brief": "Ch 10 Assessment Exam, Chapter 12: Principles of Pharmacology, Chapter 13: Vascular Access → PM: Chapter 13: Finish, Med Admin Demonstration: IM, SQ, IN Routes, Med Admin Practice",
+      "debrief": "Preview Day 8: IV manikin arms AM, live sticks PM",
+      "lab": {
+        "name": "Med Admin",
+        "instNeeded": "1",
+        "cadre": "Helpful: Extra eyes on injection technique"
+      },
+      "lab_note": "Lab: Med Admin | instructors needed: 1 | cadre: Helpful: Extra eyes on injection technique",
+      "objectives": [
+        "Complete Ch 10 Assessment Exam (~45 questions)",
+        "Understand drug legislation, pharmacokinetics, and pharmacodynamics (Chapter 12)",
+        "Learn IV therapy indications, equipment, and site selection (Chapter 13)",
+        "Practice medication administration routes: IM, SQ, IN, nebulized"
+      ],
+      "notes": "Day 8: IV practice all day. Quizzes on Ch 12 + Ch 13 (40 questions). Pima cadre needed PM for live stick safety.",
+      "morning": [
+        {
+          "title": "Roll Call, Exam Prep",
+          "requirement": "info",
+          "item_type": "exam",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Ch 10 Assessment Exam (~45 questions)",
+          "requirement": "required",
+          "item_type": "exam",
+          "time_label": "0740-0910",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0910-0920",
+          "description": null,
+          "sort_order": 910
+        },
+        {
+          "title": "Chapter 12: Principles of Pharmacology (Lecture - 80 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0920-1040",
+          "description": "Drug nomenclature, pharmacokinetics (ADME); Medication forms, routes of administration; SNHD formulary - medications in AEMT scope",
+          "sort_order": 920
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1040-1050",
+          "description": null,
+          "sort_order": 1040
+        },
+        {
+          "title": "Chapter 13: Vascular Access (Lecture - 70 min of 90)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1050-1200",
+          "description": "IV therapy indications, fluid types (NS vs LR); IV equipment (catheters, admin sets, macro vs micro drip); IV site selection, insertion technique overview; Complications (infiltration, phlebitis, air embolism)",
+          "sort_order": 1050
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Chapter 13: Finish (20 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1300-1320",
+          "description": "IO access overview, medication administration via IV",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1320-1330",
+          "description": null,
+          "sort_order": 1320
+        },
+        {
+          "title": "Med Admin Demonstration: IM, SQ, IN Routes (30 min)",
+          "requirement": "required",
+          "item_type": "other",
+          "time_label": "1330-1400",
+          "description": "Demonstrate each route with training equipment",
+          "sort_order": 1330
+        },
+        {
+          "title": "Med Admin Practice (70 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1400-1510",
+          "description": "IM injection technique (vastus lateralis, deltoid); SQ injection, med draws from vials; IN naloxone via mucosal atomization device; Nebulizer setup and administration",
+          "sort_order": 1400
+        }
+      ]
+    },
+    {
+      "day_number": 8,
+      "date": "2026-07-29",
+      "dow": "Wednesday",
+      "week": "3",
+      "brief": "Quizzes: Ch 12 + Ch 13, IV Manikin Arm Practice, IV Troubleshooting + Continued Arm Practice → PM: LIVE STICK IV Practice",
+      "debrief": "",
+      "lab": {
+        "name": "IV LIVE STICKS",
+        "instNeeded": "2-3 + cadre",
+        "cadre": "Essential: Sharps safety - 1 per 5-6 students"
+      },
+      "lab_note": "Lab: IV LIVE STICKS | instructors needed: 2-3 + cadre | cadre: Essential: Sharps safety - 1 per 5-6 students",
+      "objectives": [
+        "Complete quizzes on Chapters 12 and 13",
+        "Demonstrate IV insertion technique on manikin arms",
+        "Perform supervised live stick IV access on training partners"
+      ],
+      "notes": "SHARPS SAFETY: Multiple instructors + cadre required for live sticks. Day 9: Sub-module exam + IV math.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quizzes: Ch 12 (20q) + Ch 13 (20q) - 40 questions",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0840",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Quiz Review",
+          "requirement": "optional",
+          "item_type": "quiz",
+          "time_label": "0840-0900",
+          "description": null,
+          "sort_order": 840
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0900-0910",
+          "description": null,
+          "sort_order": 900
+        },
+        {
+          "title": "IV Manikin Arm Practice (110 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "0910-1100",
+          "description": "Instructor demonstrates complete IV start; Tourniquet, site selection, angle, flash, advance catheter; Students practice on IV arms - goal: 3-4 starts each",
+          "sort_order": 910
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1100-1110",
+          "description": null,
+          "sort_order": 1100
+        },
+        {
+          "title": "IV Troubleshooting + Continued Arm Practice (50 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1110-1200",
+          "description": null,
+          "sort_order": 1110
+        },
+        {
+          "title": "Lunch - Sharps Safety Briefing Before PM Session",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": "Pima cadre arrives; Review consent protocol, sharps disposal, safety procedures",
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "LIVE STICK IV Practice (120 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1300-1500",
+          "description": "Supervised live sticks on training partners; 1 instructor/cadre per 5-6 students for sharps safety; Practice: IV start, connect admin set, set drip rate",
+          "sort_order": 1300
+        }
+      ]
+    },
+    {
+      "day_number": 9,
+      "date": "2026-07-30",
+      "dow": "Thursday",
+      "week": "3",
+      "brief": "Ch 7-9, 12-13 Sub-Module Exam, IV Math and Drip Rate Calculations, EMT Competency Checkoffs → PM: Practice / Checkoffs Continued",
+      "debrief": "",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete Ch 7-9, 12-13 Sub-Module Exam (~65 questions)",
+        "Master IV drip rate calculations (gtts/min formula)",
+        "Complete EMT competency checkoffs and IV skill integration"
+      ],
+      "notes": "Monday supplementary: review. Day 10: Ch 11 Airway + Ch 17 Respiratory (heavy lecture day).",
+      "morning": [
+        {
+          "title": "Roll Call, Exam Prep",
+          "requirement": "info",
+          "item_type": "exam",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Ch 7-9, 12-13 Sub-Module Exam (~65 questions)",
+          "requirement": "required",
+          "item_type": "exam",
+          "time_label": "0740-0940",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0940-1000",
+          "description": null,
+          "sort_order": 940
+        },
+        {
+          "title": "Exam Review",
+          "requirement": "optional",
+          "item_type": "exam",
+          "time_label": "1000-1030",
+          "description": null,
+          "sort_order": 1000
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1030-1040",
+          "description": null,
+          "sort_order": 1030
+        },
+        {
+          "title": "IV Math and Drip Rate Calculations (30 min)",
+          "requirement": "required",
+          "item_type": "other",
+          "time_label": "1040-1110",
+          "description": "gtts/min = (Volume x Drop factor) / Time in minutes; Practice with macro (10 gtts/mL) and micro (60 gtts/mL) sets; Weight-based fluid bolus calculations",
+          "sort_order": 1040
+        },
+        {
+          "title": "EMT Competency Checkoffs (50 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1110-1200",
+          "description": null,
+          "sort_order": 1110
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Practice / Checkoffs Continued (120 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1300-1500",
+          "description": "IV skill integration scenarios if cadre available; Remaining EMT competency checkoffs",
+          "sort_order": 1300
+        }
+      ]
+    },
+    {
+      "day_number": 10,
+      "date": "2026-08-04",
+      "dow": "Tuesday",
+      "week": "4",
+      "brief": "Chapter 11: Airway Part 1, Chapter 11: Airway Part 2, Chapter 11: Airway Part 3, Chapter 17: Respiratory Part 1 → PM: Chapter 17: Respiratory Part 2, Chapter 17: Respiratory Part 3",
+      "debrief": "Preview tomorrow: airway lab PM. Reading: review Ch 11 supraglottic insertion steps.",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Master airway anatomy, assessment, and management techniques (Chapter 11)",
+        "Understand oxygen delivery devices, supraglottic airways, and CPAP",
+        "Identify respiratory emergencies and AEMT treatment protocols (Chapter 17)"
+      ],
+      "notes": "Heavy lecture day (~350 min). Day 11: Ch 14 Shock lecture AM + Airway Lab PM.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Chapter 11: Airway Part 1 (60 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0840",
+          "description": "Airway anatomy review (upper/lower); Airway assessment (look/listen/feel); Manual maneuvers (head-tilt chin-lift, jaw thrust); Basic adjuncts (OPA sizing/insertion, NPA sizing/insertion); Suctioning technique",
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0840-0850",
+          "description": null,
+          "sort_order": 840
+        },
+        {
+          "title": "Chapter 11: Airway Part 2 (60 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0850-0950",
+          "description": "Oxygen delivery devices (NC, NRB, BVM); Pulse oximetry and capnography; BVM technique (1-person and 2-person)",
+          "sort_order": 850
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0950-1000",
+          "description": null,
+          "sort_order": 950
+        },
+        {
+          "title": "Chapter 11: Airway Part 3 (60 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1000-1100",
+          "description": "Supraglottic airways (King LT, i-gel) - indications, sizing, insertion; CPAP - indications, setup, application, monitoring; SNHD protocol for advanced airways at AEMT level",
+          "sort_order": 1000
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1100-1110",
+          "description": null,
+          "sort_order": 1100
+        },
+        {
+          "title": "Chapter 17: Respiratory Part 1 (50 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1110-1200",
+          "description": "Respiratory assessment, lung sounds (wheezes, crackles, rhonchi, stridor); Pulse oximetry and capnography interpretation; Respiratory distress vs failure vs arrest",
+          "sort_order": 1110
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Chapter 17: Respiratory Part 2 (80 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1300-1420",
+          "description": "Asthma, COPD, pneumonia, pulmonary edema; Pulmonary embolism, pneumothorax (simple and tension); Epiglottitis, croup; For each: assessment findings and AEMT treatment",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1420-1430",
+          "description": null,
+          "sort_order": 1420
+        },
+        {
+          "title": "Chapter 17: Respiratory Part 3 (40 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1430-1510",
+          "description": "Remaining conditions + treatment review; Albuterol nebulizer indications and setup",
+          "sort_order": 1430
+        }
+      ]
+    },
+    {
+      "day_number": 11,
+      "date": "2026-08-05",
+      "dow": "Wednesday",
+      "week": "4",
+      "brief": "Quizzes: Ch 11 + Ch 17, Chapter 14: Shock, Airway Lab Setup and Safety Brief → PM: Airway Management Lab",
+      "debrief": "",
+      "lab": {
+        "name": "Airway Lab",
+        "instNeeded": "1",
+        "cadre": "High value: Airway station supervision"
+      },
+      "lab_note": "Lab: Airway Lab | instructors needed: 1 | cadre: High value: Airway station supervision",
+      "objectives": [
+        "Complete quizzes on Chapters 11 and 17",
+        "Understand shock pathophysiology, types, and AEMT treatment (Chapter 14)",
+        "Demonstrate airway management skills: OPA/NPA, BVM, suctioning, supraglottic, CPAP"
+      ],
+      "notes": "Day 12: Ch 15 BLS + Ch 18 Cardio lecture AM + BLS Lab PM.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quizzes: Ch 11 (20q) + Ch 17 (20q) - 40 questions",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0840",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Quiz Review",
+          "requirement": "optional",
+          "item_type": "quiz",
+          "time_label": "0840-0900",
+          "description": null,
+          "sort_order": 840
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0900-0910",
+          "description": null,
+          "sort_order": 900
+        },
+        {
+          "title": "Chapter 14: Shock (Lecture - 120 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0910-1110",
+          "description": "Shock definition, perfusion triangle (pump/pipes/fluid); Types: hypovolemic, cardiogenic, distributive (anaphylactic/septic/neurogenic); Stages: compensated, decompensated, irreversible; AEMT treatment: O2, IV access, fluid resuscitation, positioning, rapid transport",
+          "sort_order": 910
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1110-1120",
+          "description": null,
+          "sort_order": 1110
+        },
+        {
+          "title": "Airway Lab Setup and Safety Brief",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1120-1200",
+          "description": null,
+          "sort_order": 1120
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Airway Management Lab (~120 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1300-1500",
+          "description": "OPA/NPA sizing and insertion on manikins; Suctioning - rigid and flexible catheter technique; BVM ventilation (1-person and 2-person); Supraglottic airway insertion (King LT or i-gel) - minimum 3 times each; CPAP setup and application (if equipment available); If cadre available: additional station supervision",
+          "sort_order": 1300
+        }
+      ]
+    },
+    {
+      "day_number": 12,
+      "date": "2026-08-06",
+      "dow": "Thursday",
+      "week": "4",
+      "brief": "Quiz: Ch 14, Chapter 15: BLS Resuscitation, Chapter 18: Cardiovascular Emergencies → PM: BLS Lab: CPR + AED + Team Resuscitation",
+      "debrief": "Resuscitation Module Exam next Tuesday after weekend + Monday review",
+      "lab": {
+        "name": "BLS/CPR Lab",
+        "instNeeded": "1",
+        "cadre": "High value: Pit crew roles"
+      },
+      "lab_note": "Lab: BLS/CPR Lab | instructors needed: 1 | cadre: High value: Pit crew roles",
+      "objectives": [
+        "Complete quiz on Chapter 14",
+        "Understand BLS resuscitation and team-based CPR concepts (Chapter 15)",
+        "Identify cardiovascular emergencies and AEMT treatment (Chapter 18)",
+        "Demonstrate high-quality CPR, AED use, and pit crew resuscitation"
+      ],
+      "notes": "Monday supplementary: Ch 15+18 quizzes + Resuscitation Module exam prep. Exam Day 13.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quiz: Ch 14 (20q)",
+          "requirement": "required",
+          "item_type": "quiz",
+          "time_label": "0740-0810",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0810-0820",
+          "description": null,
+          "sort_order": 810
+        },
+        {
+          "title": "Chapter 15: BLS Resuscitation (Lecture - 60 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0820-0920",
+          "description": "Chain of survival, CPR quality metrics (rate, depth, recoil, fraction); Adult/child/infant CPR differences; AED use, team-based resuscitation (pit crew model)",
+          "sort_order": 820
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0920-0930",
+          "description": null,
+          "sort_order": 920
+        },
+        {
+          "title": "Chapter 18: Cardiovascular Emergencies (Lecture - 90 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0930-1100",
+          "description": "ACS (angina vs MI), assessment, 12-lead indication; AEMT treatment: aspirin, nitroglycerin, O2, IV, rapid transport; Heart failure (left vs right sided); Hypertensive emergencies",
+          "sort_order": 930
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1100-1110",
+          "description": null,
+          "sort_order": 1100
+        },
+        {
+          "title": "Group Testing Ch 15 + 18 / LVFR Pit Crew Review (50 min)",
+          "requirement": "optional",
+          "item_type": "chapter",
+          "time_label": "1110-1200",
+          "description": null,
+          "sort_order": 1110
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "BLS Lab: CPR + AED + Team Resuscitation (~120 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1300-1500",
+          "description": "High-quality CPR on manikins - rate, depth, recoil focus; AED application and integration with CPR; Team resuscitation scenarios - pit crew role rotations; If cadre available: cadre fill team roles for realistic crew dynamics",
+          "sort_order": 1300
+        }
+      ]
+    },
+    {
+      "day_number": 13,
+      "date": "2026-08-11",
+      "dow": "Tuesday",
+      "week": "5",
+      "brief": "Resuscitation Module Exam, Chapter 26: Trauma Overview, Chapter 27: Bleeding → PM: Chapter 27: Finish, Chapter 28: Soft-Tissue Injuries",
+      "debrief": "",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete Resuscitation Module Exam (~75 questions, covers Ch 11, 14, 15, 17, 18)",
+        "Understand trauma as disease, mechanisms of injury, and energy transfer (Chapter 26)",
+        "Identify hemorrhage types and control methods (Chapter 27)",
+        "Understand soft-tissue injury classification and burn management (Chapter 28)"
+      ],
+      "notes": "Day 14: Ch 29-30 lectures + Stop the Bleed Lab PM.",
+      "morning": [
+        {
+          "title": "Roll Call, Exam Prep",
+          "requirement": "info",
+          "item_type": "exam",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Resuscitation Module Exam (~75 questions)",
+          "requirement": "required",
+          "item_type": "exam",
+          "time_label": "0740-0935",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0935-0950",
+          "description": null,
+          "sort_order": 935
+        },
+        {
+          "title": "Exam Review",
+          "requirement": "optional",
+          "item_type": "exam",
+          "time_label": "0950-1030",
+          "description": null,
+          "sort_order": 950
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1030-1040",
+          "description": null,
+          "sort_order": 1030
+        },
+        {
+          "title": "Chapter 26: Trauma Overview (Lecture - 50 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1040-1130",
+          "description": "MOI (blunt vs penetrating), energy transfer; MVA biomechanics, blast injuries; Trauma scoring, trauma center designation",
+          "sort_order": 1040
+        },
+        {
+          "title": "Chapter 27: Bleeding (Lecture - 30 min of 40)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1130-1200",
+          "description": "Blood volume, types of bleeding (arterial/venous/capillary); External hemorrhage control methods",
+          "sort_order": 1130
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Chapter 27: Finish (10 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1300-1310",
+          "description": null,
+          "sort_order": 1300
+        },
+        {
+          "title": "Chapter 28: Soft-Tissue Injuries (Lecture - 75 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1310-1425",
+          "description": "Closed injuries, open injuries; Burn classification (depth, extent - rule of nines); Burn management, dressing and bandaging principles",
+          "sort_order": 1310
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1425-1435",
+          "description": null,
+          "sort_order": 1425
+        },
+        {
+          "title": "Group Testing Ch 26-28 / Trauma Scenarios (45 min)",
+          "requirement": "optional",
+          "item_type": "chapter",
+          "time_label": "1435-1520",
+          "description": null,
+          "sort_order": 1435
+        }
+      ]
+    },
+    {
+      "day_number": 14,
+      "date": "2026-08-12",
+      "dow": "Wednesday",
+      "week": "5",
+      "brief": "Quizzes: Ch 26 + Ch 27 + Ch 28, Chapter 29: Face and Neck Injuries, Chapter 30: Head and Spine Injuries → PM: Stop the Bleed / Hemorrhage Control Lab",
+      "debrief": "",
+      "lab": {
+        "name": "Stop the Bleed",
+        "instNeeded": "1",
+        "cadre": "Beneficial: Bleeding scenarios"
+      },
+      "lab_note": "Lab: Stop the Bleed | instructors needed: 1 | cadre: Beneficial: Bleeding scenarios",
+      "objectives": [
+        "Complete quizzes on Chapters 26, 27, 28",
+        "Identify facial, eye, and neck injury management (Chapter 29)",
+        "Understand TBI, spinal cord injury, and immobilization indications (Chapter 30)",
+        "Demonstrate tourniquet application, wound packing, and hemostatic gauze use"
+      ],
+      "notes": "Day 15: Ch 31-32 lectures + C-Spine Lab PM.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quizzes: Ch 26 (10q) + Ch 27 (20q) + Ch 28 (15q) - 45 questions",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0848",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Quiz Review",
+          "requirement": "optional",
+          "item_type": "quiz",
+          "time_label": "0848-0910",
+          "description": null,
+          "sort_order": 848
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0910-0920",
+          "description": null,
+          "sort_order": 910
+        },
+        {
+          "title": "Chapter 29: Face and Neck Injuries (Lecture - 70 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0920-1030",
+          "description": "Eye injuries, ear/nose injuries, dental injuries; Neck injuries (vascular, airway, spine); Airway management in facial trauma",
+          "sort_order": 920
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1030-1040",
+          "description": null,
+          "sort_order": 1030
+        },
+        {
+          "title": "Chapter 30: Head and Spine Injuries (Lecture - 80 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1040-1200",
+          "description": "TBI (concussion, contusion, epidural/subdural hematoma); Spinal anatomy and injury patterns; Spinal assessment, immobilization techniques",
+          "sort_order": 1040
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Stop the Bleed / Hemorrhage Control Lab (~120 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1300-1500",
+          "description": "Tourniquet application (CAT - high and tight) - minimum 3 times each; Wound packing (junctional and extremity wounds); Hemostatic gauze application; Direct pressure techniques; If cadre available: cadre as bleeding patients for scenario realism",
+          "sort_order": 1300
+        }
+      ]
+    },
+    {
+      "day_number": 15,
+      "date": "2026-08-13",
+      "dow": "Thursday",
+      "week": "5",
+      "brief": "Quizzes: Ch 29 + Ch 30, Chapter 31: Chest Injuries, Chapter 32: Abdominal and GU Injuries → PM: C-Spine Immobilization Lab",
+      "debrief": "Monday supplementary: trauma quizzes + review",
+      "lab": {
+        "name": "C-Spine",
+        "instNeeded": "1",
+        "cadre": "Beneficial: C-spine scenarios"
+      },
+      "lab_note": "Lab: C-Spine | instructors needed: 1 | cadre: Beneficial: C-spine scenarios",
+      "objectives": [
+        "Complete quizzes on Chapters 29 and 30",
+        "Identify chest injury types and management (Chapter 31)",
+        "Understand abdominal and GU trauma assessment (Chapter 32)",
+        "Demonstrate C-collar application, backboard immobilization, and helmet removal"
+      ],
+      "notes": "Day 16: Ch 33-34 + Splinting Lab PM. Last day of Pima summer semester.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quizzes: Ch 29 (20q) + Ch 30 (20q) - 40 questions",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0840",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Quiz Review",
+          "requirement": "optional",
+          "item_type": "quiz",
+          "time_label": "0840-0900",
+          "description": null,
+          "sort_order": 840
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0900-0910",
+          "description": null,
+          "sort_order": 900
+        },
+        {
+          "title": "Chapter 31: Chest Injuries (Lecture - 90 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0910-1050",
+          "description": "Rib fractures, flail chest, pneumothorax types; Hemothorax, cardiac tamponade; Chest seal application, positioning, rapid transport",
+          "sort_order": 910
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1050-1100",
+          "description": null,
+          "sort_order": 1050
+        },
+        {
+          "title": "Chapter 32: Abdominal and GU Injuries (Lecture - 60 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1100-1200",
+          "description": "Solid vs hollow organ injuries; Evisceration management; GU trauma assessment and management",
+          "sort_order": 1100
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "C-Spine Immobilization Lab (~120 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1300-1500",
+          "description": "Manual inline stabilization; C-collar sizing and application; Supine backboard immobilization with log-roll; Seated patient with KED; Motorcycle helmet removal (2-person technique); If cadre available: cadre as patients for realistic scenarios",
+          "sort_order": 1300
+        }
+      ]
+    },
+    {
+      "day_number": 16,
+      "date": "2026-08-18",
+      "dow": "Tuesday",
+      "week": "6",
+      "brief": "Quizzes: Ch 31 + Ch 32, Chapter 33: Orthopedic Injuries, Chapter 34: Environmental Emergencies → PM: Chapter 34: Finish, Splinting Lab",
+      "debrief": "Monday: trauma quizzes + Trauma Module exam prep",
+      "lab": {
+        "name": "Splinting",
+        "instNeeded": "1",
+        "cadre": "Beneficial: Splinting scenarios"
+      },
+      "lab_note": "Lab: Splinting | instructors needed: 1 | cadre: Beneficial: Splinting scenarios",
+      "objectives": [
+        "Complete quizzes on Chapters 31 and 32",
+        "Understand fracture types, assessment (6 Ps), and splinting principles (Chapter 33)",
+        "Identify heat, cold, drowning, and envenomation emergencies (Chapter 34)",
+        "Demonstrate splint application including traction splint"
+      ],
+      "notes": "Pima off week - Ben available full day. Trauma Module Exam is Day 17 (Wednesday).",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quizzes: Ch 31 (20q) + Ch 32 (15q) - 35 questions",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0840",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Quiz Review",
+          "requirement": "optional",
+          "item_type": "quiz",
+          "time_label": "0840-0900",
+          "description": null,
+          "sort_order": 840
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0900-0910",
+          "description": null,
+          "sort_order": 900
+        },
+        {
+          "title": "Chapter 33: Orthopedic Injuries (Lecture - 95 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0910-1025",
+          "description": "Fracture types, dislocations, sprains/strains; Assessment: 6 Ps (pain, paralysis, paresthesia, pulselessness, pallor, pressure); Splinting principles, PMS checks before and after; Pelvic fractures, compartment syndrome, crush syndrome",
+          "sort_order": 910
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1025-1035",
+          "description": null,
+          "sort_order": 1025
+        },
+        {
+          "title": "Chapter 34: Environmental Emergencies (Lecture - 80 min of 120)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1035-1155",
+          "description": "Heat emergencies (cramps, exhaustion, heat stroke); Cold emergencies (hypothermia, frostbite); Drowning, diving emergencies, altitude",
+          "sort_order": 1035
+        },
+        {
+          "title": "Transition",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1155-1200",
+          "description": null,
+          "sort_order": 1155
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Chapter 34: Finish (40 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1300-1340",
+          "description": "Bites and envenomations, lightning injuries",
+          "sort_order": 1300
+        },
+        {
+          "title": "Splinting Lab (~80 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1340-1500",
+          "description": "SAM splint application (forearm fracture); Rigid splint (lower leg); Sling and swathe (shoulder/clavicle); Traction splint application (femur fracture) - minimum 2 times each; PMS check before and after each application; If cadre available: cadre as patients for fracture scenarios",
+          "sort_order": 1340
+        }
+      ]
+    },
+    {
+      "day_number": 17,
+      "date": "2026-08-19",
+      "dow": "Wednesday",
+      "week": "6",
+      "brief": "Quizzes: Ch 33 + Ch 34, Trauma Module Exam → PM: Chapter 16: Medical Overview, Chapter 19: Neurologic Emergencies",
+      "debrief": "",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete Trauma Module Exam (~65 questions, covers Ch 26-34)",
+        "Understand medical patient assessment approach (Chapter 16)",
+        "Identify stroke, seizures, and AMS (Chapter 19)"
+      ],
+      "notes": "Day 18: Ch 20-22 + medical scenarios PM.",
+      "morning": [
+        {
+          "title": "Roll Call, Exam Prep",
+          "requirement": "info",
+          "item_type": "exam",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quizzes: Ch 33 (15q) + Ch 34 (15q) - 30 questions",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0810",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0810-0820",
+          "description": null,
+          "sort_order": 810
+        },
+        {
+          "title": "Trauma Module Exam (~65 questions)",
+          "requirement": "required",
+          "item_type": "exam",
+          "time_label": "0820-1100",
+          "description": null,
+          "sort_order": 820
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1100-1110",
+          "description": null,
+          "sort_order": 1100
+        },
+        {
+          "title": "Exam Review",
+          "requirement": "optional",
+          "item_type": "exam",
+          "time_label": "1110-1155",
+          "description": null,
+          "sort_order": 1110
+        },
+        {
+          "title": "Transition",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1155-1200",
+          "description": null,
+          "sort_order": 1155
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Chapter 16: Medical Overview (Lecture - 45 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1300-1345",
+          "description": "Medical vs trauma patients; Medical patient assessment approach; Infectious disease overview and standard precautions",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1345-1355",
+          "description": null,
+          "sort_order": 1345
+        },
+        {
+          "title": "Chapter 19: Neurologic Emergencies (Lecture - 60 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1355-1455",
+          "description": "Stroke (ischemic vs hemorrhagic, FAST/RACE scales, time windows); Seizures (types, status epilepticus); AMS (differential diagnosis), syncope",
+          "sort_order": 1355
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1455-1510",
+          "description": null,
+          "sort_order": 1455
+        }
+      ]
+    },
+    {
+      "day_number": 18,
+      "date": "2026-08-20",
+      "dow": "Thursday",
+      "week": "6",
+      "brief": "Quizzes: Ch 16 + Ch 19, Chapter 20: GI and Urologic Emergencies, Chapter 21: Endocrine and Hematologic, Chapter 22: Immunologic Emergencies → PM: Group Testing Ch 20-22",
+      "debrief": "",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete quizzes on Chapters 16 and 19",
+        "Understand GI and urologic emergency assessment and management (Chapter 20)",
+        "Identify diabetic emergencies and glucometer use (Chapter 21)",
+        "Understand anaphylaxis pathophysiology and epinephrine administration (Chapter 22)"
+      ],
+      "notes": "Day 19: Ch 23-25 (finish all medical content).",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quizzes: Ch 16 (10q) + Ch 19 (15q) - 25 questions",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0818",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Quiz Review",
+          "requirement": "optional",
+          "item_type": "quiz",
+          "time_label": "0818-0830",
+          "description": null,
+          "sort_order": 818
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0830-0840",
+          "description": null,
+          "sort_order": 830
+        },
+        {
+          "title": "Chapter 20: GI and Urologic Emergencies (Lecture - 90 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0840-1010",
+          "description": "Acute abdomen assessment; Specific conditions by quadrant/location; GI bleeding (upper vs lower), kidney stones, UTI",
+          "sort_order": 840
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1010-1020",
+          "description": null,
+          "sort_order": 1010
+        },
+        {
+          "title": "Chapter 21: Endocrine and Hematologic (Lecture - 60 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1020-1120",
+          "description": "Diabetes (Type 1 vs Type 2); Hypoglycemia (assessment, oral glucose, glucagon); Hyperglycemia and DKA (Kussmaul respirations); Sickle cell crisis, clotting disorders",
+          "sort_order": 1020
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1120-1130",
+          "description": null,
+          "sort_order": 1120
+        },
+        {
+          "title": "Chapter 22: Immunologic Emergencies (Lecture - 40 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1130-1210",
+          "description": "Allergic reactions vs anaphylaxis; Anaphylaxis treatment algorithm (epi + airway + IV + albuterol)",
+          "sort_order": 1130
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1210-1300",
+          "description": null,
+          "sort_order": 1210
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Medical Scenario Practice (90 min)",
+          "requirement": "optional",
+          "item_type": "lab",
+          "time_label": "1300-1430",
+          "description": "If cadre available: 4 stations (stroke/AMS, diabetic, anaphylaxis, abdominal pain); If no cadre: facilitated case study discussion - same scenarios",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1430-1440",
+          "description": null,
+          "sort_order": 1430
+        },
+        {
+          "title": "Group Testing Ch 20-22 (40 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1440-1520",
+          "description": null,
+          "sort_order": 1440
+        }
+      ]
+    },
+    {
+      "day_number": 19,
+      "date": "2026-08-25",
+      "dow": "Tuesday",
+      "week": "7",
+      "brief": "Quizzes: Ch 20 + Ch 21 + Ch 22, Chapter 23: Toxicology, Chapter 24: Psychiatric Emergencies → PM: Chapter 25: Gynecologic Emergencies",
+      "debrief": "All medical content complete. Medical Module Exam Day 22 (Tuesday).",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete quizzes on Chapters 20, 21, 22",
+        "Identify toxidromes and overdose management including naloxone (Chapter 23)",
+        "Understand psychiatric emergencies and de-escalation (Chapter 24)",
+        "Identify gynecologic emergencies and trauma-informed care (Chapter 25)"
+      ],
+      "notes": "Heavy quiz morning (60 questions). Monday supplementary: Ch 23-25 quizzes + Medical Module exam prep.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quizzes: Ch 20 (20q) + Ch 21 (20q) + Ch 22 (20q) - 60 questions",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0920",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Quiz Review",
+          "requirement": "optional",
+          "item_type": "quiz",
+          "time_label": "0920-0950",
+          "description": null,
+          "sort_order": 920
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0950-1000",
+          "description": null,
+          "sort_order": 950
+        },
+        {
+          "title": "Chapter 23: Toxicology (Lecture - 75 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1000-1115",
+          "description": "Toxicology assessment approach; Toxidromes (sympathomimetic, cholinergic, anticholinergic, opioid, sedative); Naloxone administration (IN/IV/IM); Carbon monoxide, organophosphates",
+          "sort_order": 1000
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1115-1125",
+          "description": null,
+          "sort_order": 1115
+        },
+        {
+          "title": "Chapter 24: Psychiatric Emergencies (Lecture - 45 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1125-1210",
+          "description": "Behavioral emergencies, psychiatric conditions; Suicidal/homicidal ideation assessment; Scene safety, de-escalation techniques",
+          "sort_order": 1125
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1210-1300",
+          "description": null,
+          "sort_order": 1210
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Chapter 25: Gynecologic Emergencies (Lecture - 50 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1300-1350",
+          "description": "Vaginal bleeding (ectopic pregnancy, miscarriage); Sexual assault (evidence preservation, trauma-informed care); PID, ovarian torsion",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1350-1400",
+          "description": null,
+          "sort_order": 1350
+        },
+        {
+          "title": "Medical Case Studies / Group Testing Ch 23-25 (60 min)",
+          "requirement": "optional",
+          "item_type": "chapter",
+          "time_label": "1400-1500",
+          "description": null,
+          "sort_order": 1400
+        }
+      ]
+    },
+    {
+      "day_number": 20,
+      "date": "2026-08-26",
+      "dow": "Wednesday",
+      "week": "7",
+      "brief": "Quizzes: Ch 23 + Ch 24 + Ch 25 → PM: Integrated Medical Scenarios",
+      "debrief": "Medical Module Exam Tuesday. Study all medical chapters.",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete outstanding chapter quizzes if not done Monday",
+        "Review all medical module content through group testing",
+        "Practice integrated medical patient scenarios"
+      ],
+      "notes": "Day 21: Ch 35 OB lecture + OB Lab PM.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quizzes: Ch 23 (20q) + Ch 24 (15q) + Ch 25 (10q) if not done Monday",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0810",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0810-0820",
+          "description": null,
+          "sort_order": 810
+        },
+        {
+          "title": "Medical Module Review - Group Testing (100 min)",
+          "requirement": "optional",
+          "item_type": "other",
+          "time_label": "0820-1000",
+          "description": "Comprehensive questions across Ch 16, 19-25; Focus on commonly missed areas from quizzes",
+          "sort_order": 820
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1000-1010",
+          "description": null,
+          "sort_order": 1000
+        },
+        {
+          "title": "Medical Review Continued + Case Studies (110 min)",
+          "requirement": "optional",
+          "item_type": "other",
+          "time_label": "1010-1200",
+          "description": "Differential diagnosis practice; Complex patient presentations requiring field impression",
+          "sort_order": 1010
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Integrated Medical Scenarios (90 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1300-1430",
+          "description": "If cadre available: 4 stations (tox/OD, psych crisis, diabetic, chest pain); If no cadre: facilitated case studies - same scenarios; Full assessment, treatment, transport decision for each",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1430-1440",
+          "description": null,
+          "sort_order": 1430
+        },
+        {
+          "title": "Skill Checkoffs - Catch Up Outstanding (40 min)",
+          "requirement": "optional",
+          "item_type": "lab",
+          "time_label": "1440-1520",
+          "description": null,
+          "sort_order": 1440
+        }
+      ]
+    },
+    {
+      "day_number": 21,
+      "date": "2026-08-27",
+      "dow": "Thursday",
+      "week": "7",
+      "brief": "Chapter 35: OB and Neonatal Care - Parts 1-2 → PM: OB Delivery / NRP Lab",
+      "debrief": "",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Understand pregnancy physiology, stages of labor, and normal delivery (Chapter 35)",
+        "Identify delivery complications and management",
+        "Demonstrate neonatal resuscitation (NRP basics)",
+        "Practice delivery procedure on manikin"
+      ],
+      "notes": "Day 22: Medical Module Exam + Ch 36 Pediatrics begins.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Chapter 35: OB and Neonatal Care - Parts 1-2 (160 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0940",
+          "description": "Pregnancy anatomy and physiology; Stages of labor, normal delivery procedure step by step; Complications: breech, prolapsed cord, nuchal cord, shoulder dystocia, meconium; Postpartum hemorrhage, preeclampsia/eclampsia; Neonatal assessment (APGAR), NRP basics; Include break ~0840-0850",
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0940-0950",
+          "description": null,
+          "sort_order": 940
+        },
+        {
+          "title": "OB Scenarios Discussion (70 min)",
+          "requirement": "optional",
+          "item_type": "lab",
+          "time_label": "0950-1100",
+          "description": "Walk through delivery complications as group; Nuchal cord management, breech support, prolapsed cord positioning",
+          "sort_order": 950
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1100-1110",
+          "description": null,
+          "sort_order": 1100
+        },
+        {
+          "title": "Group Testing Ch 35 / Delivery Review (50 min)",
+          "requirement": "optional",
+          "item_type": "chapter",
+          "time_label": "1110-1200",
+          "description": null,
+          "sort_order": 1110
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "OB Delivery / NRP Lab (~90 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1300-1430",
+          "description": "Normal delivery on manikin - each student performs minimum 2 times; Neonatal resuscitation: stimulate, dry, warm, suction, BVM, compressions; If cadre available: cadre as laboring patient for scenario realism",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1430-1440",
+          "description": null,
+          "sort_order": 1430
+        },
+        {
+          "title": "Peds Preview Discussion / Additional Practice (40 min)",
+          "requirement": "optional",
+          "item_type": "lab",
+          "time_label": "1440-1520",
+          "description": null,
+          "sort_order": 1440
+        }
+      ]
+    },
+    {
+      "day_number": 22,
+      "date": "2026-09-01",
+      "dow": "Tuesday",
+      "week": "8",
+      "brief": "Medical Module Exam, Chapter 35: OB Part 1 → PM: Chapter 35: Part 2, Group Testing Ch 35 / OB Discussion",
+      "debrief": "Preview tomorrow: OB Lab + birth scenarios",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete Medical Module Exam (~65 questions, covers Ch 16, 19-25)",
+        "Understand pregnancy physiology, stages of labor, and delivery (Chapter 35)",
+        "Identify delivery complications and neonatal resuscitation basics"
+      ],
+      "notes": "Day 23: OB Lab with delivery practice and birth scenarios.",
+      "morning": [
+        {
+          "title": "Roll Call, Exam Prep",
+          "requirement": "info",
+          "item_type": "exam",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Medical Module Exam (~65 questions)",
+          "requirement": "required",
+          "item_type": "exam",
+          "time_label": "0740-0940",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0940-0955",
+          "description": null,
+          "sort_order": 940
+        },
+        {
+          "title": "Exam Review",
+          "requirement": "optional",
+          "item_type": "exam",
+          "time_label": "0955-1030",
+          "description": null,
+          "sort_order": 955
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1030-1040",
+          "description": null,
+          "sort_order": 1030
+        },
+        {
+          "title": "Chapter 35: OB Part 1 (80 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1040-1200",
+          "description": "Pregnancy anatomy and physiology; Stages of labor, normal delivery step by step",
+          "sort_order": 1040
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Chapter 35: Part 2 (80 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1300-1420",
+          "description": "Delivery complications: breech, prolapsed cord, nuchal cord; Postpartum hemorrhage, preeclampsia/eclampsia; APGAR scoring, NRP basics",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1420-1430",
+          "description": null,
+          "sort_order": 1420
+        },
+        {
+          "title": "Group Testing Ch 35 / OB Discussion (50 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1430-1520",
+          "description": null,
+          "sort_order": 1430
+        }
+      ]
+    },
+    {
+      "day_number": 23,
+      "date": "2026-09-02",
+      "dow": "Wednesday",
+      "week": "8",
+      "brief": "Quiz: Ch 35 → PM: OB Delivery Lab",
+      "debrief": "Preview: Pediatrics Day 1",
+      "lab": {
+        "name": "OB/NRP Lab",
+        "instNeeded": "1",
+        "cadre": "High value: OB delivery scenarios"
+      },
+      "lab_note": "Lab: OB/NRP Lab | instructors needed: 1 | cadre: High value: OB delivery scenarios",
+      "objectives": [
+        "Complete quiz on Chapter 35",
+        "Demonstrate normal delivery procedure on manikin",
+        "Practice neonatal resuscitation (NRP)",
+        "Work through delivery complication scenarios"
+      ],
+      "notes": "Day 24: Ch 36 Pediatrics begins - 320 min spread across 2 days.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quiz: Ch 35 (20q)",
+          "requirement": "required",
+          "item_type": "quiz",
+          "time_label": "0740-0810",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0810-0820",
+          "description": null,
+          "sort_order": 810
+        },
+        {
+          "title": "OB Review and Delivery Walkthrough (100 min)",
+          "requirement": "optional",
+          "item_type": "other",
+          "time_label": "0820-1000",
+          "description": "Review delivery steps; Group Testing Ch 35",
+          "sort_order": 820
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1000-1010",
+          "description": null,
+          "sort_order": 1000
+        },
+        {
+          "title": "NRP Review and Practice (110 min)",
+          "requirement": "optional",
+          "item_type": "lab",
+          "time_label": "1010-1200",
+          "description": "Neonatal assessment, APGAR practice; NRP algorithm on infant manikins - minimum 2 times each",
+          "sort_order": 1010
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "OB Delivery Lab (~90 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1300-1430",
+          "description": "Normal delivery on manikin - minimum 2 times each; Complication scenarios: nuchal cord, postpartum hemorrhage; If cadre available: cadre as laboring patient",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1430-1440",
+          "description": null,
+          "sort_order": 1430
+        },
+        {
+          "title": "Birth Scenario Practice (40 min)",
+          "requirement": "optional",
+          "item_type": "lab",
+          "time_label": "1440-1520",
+          "description": null,
+          "sort_order": 1440
+        }
+      ]
+    },
+    {
+      "day_number": 24,
+      "date": "2026-09-03",
+      "dow": "Thursday",
+      "week": "8",
+      "brief": "Chapter 36: Peds Part 1, Chapter 36: Peds Part 2 → PM: Peds Scenarios Continued",
+      "debrief": "~170 of 320 min peds done. Day 25 finishes peds.",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Understand pediatric assessment triangle (Chapter 36)",
+        "Identify pediatric vital sign norms by age",
+        "Recognize pediatric respiratory emergencies",
+        "Apply concepts through case studies or scenarios"
+      ],
+      "notes": "Labor Day Monday (Sep 7) - no Sun Kang. Day 25: Peds Day 2.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Chapter 36: Peds Part 1 (60 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0840",
+          "description": "Pediatric assessment triangle; Anatomy and physiology differences; Vital signs by age",
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0840-0850",
+          "description": null,
+          "sort_order": 840
+        },
+        {
+          "title": "Chapter 36: Peds Part 2 (70 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0850-1000",
+          "description": "Pediatric assessment approach; Respiratory emergencies: croup, epiglottitis, bronchiolitis, asthma; Pediatric seizures",
+          "sort_order": 850
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1000-1010",
+          "description": null,
+          "sort_order": 1000
+        },
+        {
+          "title": "Peds Case Studies / Scenarios (110 min)",
+          "requirement": "optional",
+          "item_type": "lab",
+          "time_label": "1010-1200",
+          "description": "Group-led case studies covering AM content; If cadre available: scenario stations with cadre as parents/patients",
+          "sort_order": 1010
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Peds Scenarios Continued (90 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1300-1430",
+          "description": "Additional case studies or scenario stations; Broselow tape intro and practice; If cadre available: pediatric scenario stations",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1430-1440",
+          "description": null,
+          "sort_order": 1430
+        },
+        {
+          "title": "Group Testing - Peds Part 1-2 Review (40 min)",
+          "requirement": "optional",
+          "item_type": "other",
+          "time_label": "1440-1520",
+          "description": null,
+          "sort_order": 1440
+        }
+      ]
+    },
+    {
+      "day_number": 25,
+      "date": "2026-09-08",
+      "dow": "Tuesday",
+      "week": "9",
+      "brief": "Chapter 36: Peds Part 3, Chapter 36: Peds Part 4 → PM: Group Testing - Peds Comprehensive",
+      "debrief": "All peds done (320 min across 2 days).",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Understand pediatric shock and fluid resuscitation (Chapter 36)",
+        "Identify pediatric trauma patterns and abuse indicators",
+        "Understand pediatric cardiac arrest and medication dosing",
+        "Apply concepts through case studies or scenarios"
+      ],
+      "notes": "Day 26: Ch 37 Geriatrics + Ch 38 Special Challenges.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Chapter 36: Peds Part 3 (90 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0740-0910",
+          "description": "Pediatric shock, trauma, non-accidental trauma; SIDS",
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0910-0920",
+          "description": null,
+          "sort_order": 910
+        },
+        {
+          "title": "Chapter 36: Peds Part 4 (60 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0920-1020",
+          "description": "Medication dosing, Broselow tape; Pediatric cardiac arrest; Consent for minors, family support",
+          "sort_order": 920
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1020-1030",
+          "description": null,
+          "sort_order": 1020
+        },
+        {
+          "title": "Peds Case Studies / Scenarios (90 min)",
+          "requirement": "optional",
+          "item_type": "lab",
+          "time_label": "1030-1200",
+          "description": "Group-led or scenario stations covering AM content; If cadre available: peds trauma, abuse recognition scenarios",
+          "sort_order": 1030
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Peds Scenarios Continued (90 min)",
+          "requirement": "optional",
+          "item_type": "lab",
+          "time_label": "1300-1430",
+          "description": "If cadre available: full pediatric patient contact scenarios; If no cadre: additional case studies, Broselow practice",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1430-1440",
+          "description": null,
+          "sort_order": 1430
+        },
+        {
+          "title": "Group Testing - Peds Comprehensive (40 min)",
+          "requirement": "required",
+          "item_type": "other",
+          "time_label": "1440-1520",
+          "description": null,
+          "sort_order": 1440
+        }
+      ]
+    },
+    {
+      "day_number": 26,
+      "date": "2026-09-09",
+      "dow": "Wednesday",
+      "week": "9",
+      "brief": "Quiz: Ch 36, Chapter 37: Geriatric Emergencies, Chapter 38: Special Challenges, Group Testing Ch 37-38 → PM: Skill Checkoffs",
+      "debrief": "",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete quiz on Chapter 36",
+        "Identify geriatric assessment modifications (Chapter 37)",
+        "Understand special patient populations (Chapter 38)",
+        "Practice integrated special population scenarios"
+      ],
+      "notes": "Day 27: Special Populations review + scenarios.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quiz: Ch 36 (30q)",
+          "requirement": "required",
+          "item_type": "quiz",
+          "time_label": "0740-0840",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Quiz Review",
+          "requirement": "optional",
+          "item_type": "quiz",
+          "time_label": "0840-0900",
+          "description": null,
+          "sort_order": 840
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0900-0910",
+          "description": null,
+          "sort_order": 900
+        },
+        {
+          "title": "Chapter 37: Geriatric Emergencies (80 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "0910-1030",
+          "description": "Physiological changes of aging, polypharmacy; Atypical presentations, elder abuse",
+          "sort_order": 910
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1030-1040",
+          "description": null,
+          "sort_order": 1030
+        },
+        {
+          "title": "Chapter 38: Special Challenges (50 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1040-1130",
+          "description": "Tracheostomies, bariatric patients; Developmental disabilities, chronic conditions",
+          "sort_order": 1040
+        },
+        {
+          "title": "Group Testing Ch 37-38 (30 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1130-1200",
+          "description": null,
+          "sort_order": 1130
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Integrated Special Pop Scenarios (90 min)",
+          "requirement": "optional",
+          "item_type": "lab",
+          "time_label": "1300-1430",
+          "description": "If cadre: mixed peds/OB/geri scenario stations; If no cadre: group-led case studies",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1430-1440",
+          "description": null,
+          "sort_order": 1430
+        },
+        {
+          "title": "Skill Checkoffs (40 min)",
+          "requirement": "required",
+          "item_type": "lab",
+          "time_label": "1440-1520",
+          "description": null,
+          "sort_order": 1440
+        }
+      ]
+    },
+    {
+      "day_number": 27,
+      "date": "2026-09-10",
+      "dow": "Thursday",
+      "week": "9",
+      "brief": "Quiz: Ch 37 + Ch 38 → PM: Final Skill Checkoffs",
+      "debrief": "Special Pop Exam next Tuesday.",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete quizzes on Chapters 37 and 38",
+        "Review all special populations content",
+        "Practice integrated scenarios",
+        "Complete final skill checkoffs"
+      ],
+      "notes": "Monday supplementary: Ch 37-38 quizzes + Special Pop exam prep.",
+      "morning": [
+        {
+          "title": "Roll Call, Announcements",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Quiz: Ch 37 (20q) + Ch 38 (15q) - 35 questions",
+          "requirement": "required",
+          "item_type": "quiz",
+          "time_label": "0740-0840",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Quiz Review",
+          "requirement": "optional",
+          "item_type": "quiz",
+          "time_label": "0840-0900",
+          "description": null,
+          "sort_order": 840
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0900-0910",
+          "description": null,
+          "sort_order": 900
+        },
+        {
+          "title": "Special Pop Review - Group Testing (110 min)",
+          "requirement": "optional",
+          "item_type": "other",
+          "time_label": "0910-1100",
+          "description": "Comprehensive questions across Ch 35-38",
+          "sort_order": 910
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1100-1110",
+          "description": null,
+          "sort_order": 1100
+        },
+        {
+          "title": "Skills Catch-Up (50 min)",
+          "requirement": "optional",
+          "item_type": "other",
+          "time_label": "1110-1200",
+          "description": null,
+          "sort_order": 1110
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Integrated Special Pop Scenarios (90 min)",
+          "requirement": "optional",
+          "item_type": "lab",
+          "time_label": "1300-1430",
+          "description": "If cadre: 3-4 stations (peds, trauma, geri, OB); If no cadre: group-led case studies",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1430-1440",
+          "description": null,
+          "sort_order": 1430
+        },
+        {
+          "title": "Final Skill Checkoffs (40 min)",
+          "requirement": "required",
+          "item_type": "exam",
+          "time_label": "1440-1520",
+          "description": null,
+          "sort_order": 1440
+        }
+      ]
+    },
+    {
+      "day_number": 28,
+      "date": "2026-09-15",
+      "dow": "Tuesday",
+      "week": "10",
+      "brief": "Special Populations Module Exam, Chapter 39: Transport Operations, Chapter 40: Extrication, Rescue, Hazmat, Chapter 41: Incident Management → PM: Chapter 41: Finish, Chapter 42: Terrorism and Disaster, MCI Tabletop Exercise, Group Testing Ch 39-42",
+      "debrief": "All 42 chapters complete. EMS Ops Exam tomorrow.",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete Special Populations Module Exam (~55 questions)",
+        "Understand transport operations and air medical (Chapter 39)",
+        "Identify extrication, hazmat, and rescue roles (Chapter 40)",
+        "Understand ICS and START/JumpSTART triage (Chapter 41)",
+        "Identify WMD types and terrorism response (Chapter 42)"
+      ],
+      "notes": "Day 29: EMS Ops Exam + comprehensive review + final scenarios.",
+      "morning": [
+        {
+          "title": "Roll Call, Exam Prep",
+          "requirement": "info",
+          "item_type": "exam",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "Special Populations Module Exam (~55 questions)",
+          "requirement": "required",
+          "item_type": "exam",
+          "time_label": "0740-0920",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0920-0935",
+          "description": null,
+          "sort_order": 920
+        },
+        {
+          "title": "Exam Review",
+          "requirement": "optional",
+          "item_type": "exam",
+          "time_label": "0935-1005",
+          "description": null,
+          "sort_order": 935
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1005-1015",
+          "description": null,
+          "sort_order": 1005
+        },
+        {
+          "title": "Chapter 39: Transport Operations (30 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1015-1045",
+          "description": null,
+          "sort_order": 1015
+        },
+        {
+          "title": "Chapter 40: Extrication, Rescue, Hazmat (45 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1045-1130",
+          "description": null,
+          "sort_order": 1045
+        },
+        {
+          "title": "Chapter 41: Incident Management (30 min of 40)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1130-1200",
+          "description": null,
+          "sort_order": 1130
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Chapter 41: Finish (10 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1300-1310",
+          "description": null,
+          "sort_order": 1300
+        },
+        {
+          "title": "Chapter 42: Terrorism and Disaster (45 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1310-1355",
+          "description": null,
+          "sort_order": 1310
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1355-1405",
+          "description": null,
+          "sort_order": 1355
+        },
+        {
+          "title": "MCI Tabletop Exercise (40 min)",
+          "requirement": "required",
+          "item_type": "other",
+          "time_label": "1405-1445",
+          "description": "Students triage patients using START algorithm",
+          "sort_order": 1405
+        },
+        {
+          "title": "Group Testing Ch 39-42 (35 min)",
+          "requirement": "required",
+          "item_type": "chapter",
+          "time_label": "1445-1520",
+          "description": null,
+          "sort_order": 1445
+        }
+      ]
+    },
+    {
+      "day_number": 29,
+      "date": "2026-09-16",
+      "dow": "Wednesday",
+      "week": "10",
+      "brief": "EMS Ops Module Exam → PM: Final Scenario Practice",
+      "debrief": "Final Exam tomorrow. Rest and trust your training.",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete EMS Operations Module Exam (~35 questions)",
+        "Review all modules through comprehensive group testing",
+        "Practice integrated patient scenarios",
+        "Complete remaining skill checkoffs"
+      ],
+      "notes": "FINAL EXAM TOMORROW.",
+      "morning": [
+        {
+          "title": "Roll Call, Exam Prep",
+          "requirement": "info",
+          "item_type": "exam",
+          "time_label": "0730-0740",
+          "description": null,
+          "sort_order": 730
+        },
+        {
+          "title": "EMS Ops Module Exam (~35 questions)",
+          "requirement": "required",
+          "item_type": "exam",
+          "time_label": "0740-0840",
+          "description": null,
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "0840-0850",
+          "description": null,
+          "sort_order": 840
+        },
+        {
+          "title": "Comprehensive Review - All Modules (100 min)",
+          "requirement": "optional",
+          "item_type": "other",
+          "time_label": "0850-1030",
+          "description": "Group testing, focus weak areas; High-yield NREMT topics",
+          "sort_order": 850
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1030-1040",
+          "description": null,
+          "sort_order": 1030
+        },
+        {
+          "title": "Review Continued + Q&A (80 min)",
+          "requirement": "optional",
+          "item_type": "other",
+          "time_label": "1040-1200",
+          "description": null,
+          "sort_order": 1040
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "Final Scenario Practice (90 min)",
+          "requirement": "required",
+          "item_type": "exam",
+          "time_label": "1300-1430",
+          "description": "If cadre: 4 stations (medical, trauma, peds, cardiac arrest); If no cadre: practice exam format review",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1430-1440",
+          "description": null,
+          "sort_order": 1430
+        },
+        {
+          "title": "Final Skills Remediation (40 min)",
+          "requirement": "optional",
+          "item_type": "exam",
+          "time_label": "1440-1520",
+          "description": null,
+          "sort_order": 1440
+        }
+      ]
+    },
+    {
+      "day_number": 30,
+      "date": "2026-09-17",
+      "dow": "Thursday",
+      "week": "10",
+      "brief": "Comprehensive Final Exam → PM: NREMT Preparation Briefing, Course Evaluations + Admin Closeout",
+      "debrief": "Final words, congratulations, dismiss",
+      "lab": null,
+      "lab_note": null,
+      "objectives": [
+        "Complete Comprehensive Final Exam (~100-150 questions)",
+        "Understand NREMT exam format and preparation",
+        "Complete course evaluations and admin closeout",
+        "Celebrate course completion"
+      ],
+      "notes": "Students must pass the final and complete all requirements.",
+      "morning": [
+        {
+          "title": "Roll Call, Final Exam Prep",
+          "requirement": "info",
+          "item_type": "exam",
+          "time_label": "0730-0740",
+          "description": "Confirm devices; Exam protocol: individual work, no talking, no phones",
+          "sort_order": 730
+        },
+        {
+          "title": "Comprehensive Final Exam (~100-150 questions)",
+          "requirement": "required",
+          "item_type": "exam",
+          "time_label": "0740-1100",
+          "description": "Students complete individually",
+          "sort_order": 740
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1100-1110",
+          "description": null,
+          "sort_order": 1100
+        },
+        {
+          "title": "Exam Review (50 min)",
+          "requirement": "optional",
+          "item_type": "exam",
+          "time_label": "1110-1200",
+          "description": null,
+          "sort_order": 1110
+        },
+        {
+          "title": "Lunch",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1200-1300",
+          "description": null,
+          "sort_order": 1200
+        }
+      ],
+      "afternoon": [
+        {
+          "title": "NREMT Preparation Briefing (60 min)",
+          "requirement": "required",
+          "item_type": "other",
+          "time_label": "1300-1400",
+          "description": "Exam format (CAT); Registration, scheduling, tips",
+          "sort_order": 1300
+        },
+        {
+          "title": "Break",
+          "requirement": "info",
+          "item_type": "break",
+          "time_label": "1400-1410",
+          "description": null,
+          "sort_order": 1400
+        },
+        {
+          "title": "Course Evaluations + Admin Closeout (50 min)",
+          "requirement": "required",
+          "item_type": "other",
+          "time_label": "1410-1500",
+          "description": null,
+          "sort_order": 1410
+        }
+      ]
+    }
+  ]
+}
