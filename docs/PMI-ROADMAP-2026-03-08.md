@@ -3,6 +3,14 @@
 > Refreshed 2026-06-05 (sections "What Shipped May 23 → June 5" +
 > "Active Roadmap (as of 2026-06-05)" added). Previous refresh
 > 2026-05-23. Historical 2026-03-08 content preserved at the bottom.
+>
+> **Update 2026-06-08:**
+> - ✅ Shipped: LVFR AEMT runsheet rebuilt as the 30-day course
+>   (3-tier items + brief/debrief) — `644b8816`.
+> - ✅ Shipped: `DATABASE_SCHEMA.md` reconciled to live DB + Schema-First
+>   Rule added to CLAUDE.md.
+> - 🔜 In discovery: Exam self-scheduling (final summative WRITTEN exam),
+>   replacing the unused poll-based exam scheduler.
 
 ---
 

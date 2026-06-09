@@ -112,6 +112,27 @@ became unreferenced).
 
 ---
 
+## Identified 2026-06-08 — Poll-based exam scheduler (pending retirement)
+
+Surfaced during exam-self-scheduling discovery. NOT yet removed — dead-code
+removal follows redirects per the standing rule. Recorded here so retirement
+is scoped:
+- **Stale duplicate pages** `app/scheduler/page.tsx` + `app/scheduler/create/page.tsx`
+  — shadowed by permanent redirects in `next.config.ts` (`/scheduler` →
+  `/scheduling/polls`); unreachable in prod, never deleted.
+- **Dead "Send Email" button** in `components/scheduler/SchedulerAdmin.tsx`
+  — POSTs to `/api/notifications/send-email`, which **does not exist**.
+- **Defunct report block** in `app/api/reports/instructor-workload/route.ts`
+  — queries tables `scheduling_polls` / `poll_submissions` that **do not
+  exist** in any migration; try/catch silently zeroes the metric.
+- **Caveat:** the `polls`/`submissions` system itself is NOT fully dead — it
+  was used through late May 2026 for internship *meeting* coordination
+  (18 polls, 57 submissions, all `mode='individual'`, meeting_type
+  initial/midpoint). Only the (unused) exam-poll path is safe to drop;
+  the meeting-scheduling use must be preserved or migrated.
+
+---
+
 ## Summary
 
 | Category | Count |

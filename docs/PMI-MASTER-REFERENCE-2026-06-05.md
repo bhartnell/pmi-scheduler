@@ -1,5 +1,14 @@
 # PMI EMS Scheduler — Master Reference
 
+> **Updates since this snapshot (2026-06-08):**
+> - LVFR AEMT runsheet rebuilt as the 30-day course (Jul 14 → Sep 17),
+>   3-tier item model + day brief/debrief; AEMT G2 `end_date` → 2026-09-17
+>   (`644b8816`).
+> - `docs/DATABASE_SCHEMA.md` reconciled to the live DB (288→345 tables,
+>   +97 columns); new **Schema-First Rule** in `CLAUDE.md`.
+> - Exam self-scheduling (final summative WRITTEN exam) is in discovery —
+>   will replace the unused poll-based exam scheduler.
+>
 > Snapshot 2026-06-05. Supersedes PMI-MASTER-REFERENCE-2026-05-23.
 > Companion docs: SITEMAP.md, COMPONENTS.md, DEAD_CODE_REPORT.md,
 > DATABASE_SCHEMA.md, ARCHITECTURE.md, PMI-ROADMAP-2026-03-08.md

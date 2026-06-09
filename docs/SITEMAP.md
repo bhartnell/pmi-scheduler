@@ -1,5 +1,6 @@
 # PMI EMS Scheduler — Site Map
-> Refreshed 2026-06-05.
+> Refreshed 2026-06-08 (LVFR-AEMT runsheet section expanded for the 30-day rebuild).
+> Previously refreshed 2026-06-05.
 > Reflects the /lab-management → /labs consolidation that landed
 > in commit 808bb34d; the /lab-management/* tree is GONE from disk
 > and exists only as HTTP redirects in next.config.ts.
@@ -313,8 +314,21 @@ Student-facing portal. 11 pages.
 
 ## LVFR-AEMT
 
-10 pages — Las Vegas Fire & Rescue AEMT partner program. Self-contained
-module with its own calendar, planner, grading, files, pharm tracking.
+Las Vegas Fire & Rescue AEMT partner program (cohort AEMT G2,
+`is_external_program=true`). Self-contained module with its own calendar,
+planner, grading, files, pharm tracking.
+
+| Path | Notes |
+|------|-------|
+| `/lvfr-aemt` | Module dashboard (role-aware: instructor / student / agency) |
+| `/lvfr-aemt/day/[date]` | **Day runsheet** — AM/PM blocks, 3-tier items (required/optional/info; info = no checkbox), day brief + debrief. Rebuilt 2026-06-08 as the 30-day course (Jul 14 → Sep 17). See `644b8816`. |
+| `/lvfr-aemt/calendar` | Course calendar |
+| `/lvfr-aemt/planner` | Instructor/lab planner |
+| `/lvfr-aemt/scheduling` | Instructor availability / coverage |
+| `/lvfr-aemt/skills` | Skills tracker |
+| `/lvfr-aemt/pharm` | Pharmacology checkpoints |
+| `/lvfr-aemt/grades`, `/lvfr-aemt/grades/import` | Gradebook + CSV import |
+| `/lvfr-aemt/files` | Files |
 
 ## Cases
 

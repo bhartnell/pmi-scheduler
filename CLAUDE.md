@@ -177,6 +177,22 @@ When auditing whether existing pages have entry points, search for
 `href="<path>"` across `app/`, `components/`, and `lib/nav*` —
 the link must exist somewhere a user can click.
 
+## Schema-First Rule (HARD REQUIREMENT)
+
+Before any database or schema work, read `docs/DATABASE_SCHEMA.md`
+first to locate the relevant tables and columns — do not rediscover
+the layout from scratch. Then verify against the live database
+before relying on it. If the doc and the live database disagree,
+**the live database is the source of truth** and the doc is
+corrected in the SAME commit.
+
+**Rationale:** a stale schema doc is worse than no doc, because it
+is trusted and sends work to the wrong place with confidence.
+Reading the doc and updating the doc are one loop; doing only one
+half lets the doc rot. (This is the companion to the Documentation
+Update Rule below — the read-first and update-always halves are the
+same loop.)
+
 ## Documentation Update Rule (HARD REQUIREMENT)
 
 After every commit that adds, removes, or significantly changes
@@ -185,6 +201,13 @@ relevant documentation in the same commit or as an immediate
 follow-up commit.
 
 ### What to update and when
+
+**`docs/DATABASE_SCHEMA.md`** — update when (per the Schema-First Rule):
+- A table is added, renamed, or removed
+- A column is added, renamed, removed, or its type/constraint changes
+- A foreign-key relationship changes
+Update it in the SAME commit as the schema change — never let the
+doc lag the live database.
 
 **`docs/SITEMAP.md`** — update when:
 - A new page/route is added or removed

@@ -1,11 +1,12 @@
 # PMI EMS Scheduler -- Database Schema
 
 > Auto-generated from Supabase production -- March 8, 2026
+> Reconciled to live database -- June 8, 2026 (see "Schema Reconciliation Additions")
 
 ## Summary
 
-- **Total tables:** 288
-- **Foreign key relationships:** 371
+- **Total tables:** 345
+- **Foreign key relationships:** 483
 - **Indexes:** 931
 - **RLS policies:** 473
 - **Check constraints:** 1008
@@ -71,6 +72,15 @@
 | google_calendar_connected | boolean | YES | false |  |
 | google_calendar_scope | text | YES | 'freebusy'::text |  |
 | google_calendar_ids | text[] | YES | '{}'::text[] |  |
+| agency_affiliation | text | YES |  |  |
+| agency_scope | ARRAY | YES | '{}'::text[] |  |
+| auth_provider | text | YES | 'google'::text |  |
+| is_open_lab_instructor | boolean | NO | false |  |
+| primary_cohort_id | uuid | YES |  | FK -> cohorts.id |
+| monthly_hours_target | integer | YES |  |  |
+| unavailable_weekdays | ARRAY | YES |  |  |
+| notify_lab_availability | boolean | NO | false |  |
+| lvfr_platoon | text | YES |  |  |
 
 **Foreign Keys:**
 - `department_id` -> `departments.id` (`lab_users_department_id_fkey`)
@@ -135,6 +145,7 @@
 | tour_completed | boolean | YES | false |  |
 | tour_step | integer | YES | 0 |  |
 | tour_completed_at | timestamptz | YES |  |  |
+| dismissed_calendar_banner | boolean | YES | false |  |
 
 **Unique Constraints:**
 - `user_preferences_user_email_key`: (user_email)
@@ -388,6 +399,8 @@
 | archived_at | timestamptz | YES |  |  |
 | archived_by | text | YES |  |  |
 | archive_summary | jsonb | YES |  | Summary stats at archive time |
+| track_clinical_hours | boolean | YES | false |  |
+| is_external_program | boolean | NO | false |  |
 
 **Foreign Keys:**
 - `program_id` -> `programs.id` (`cohorts_program_id_fkey`)
@@ -441,6 +454,11 @@
 | emergency_contact_name | text | YES |  |  |
 | emergency_contact_phone | text | YES |  |  |
 | learning_style | text | YES |  |  |
+| ferpa_agency_release | boolean | YES | false |  |
+| ferpa_release_date | date | YES |  |  |
+| ferpa_release_agency | text | YES |  |  |
+| emstesting_id | text | YES |  |  |
+| graduation_date | date | YES |  |  |
 
 **Foreign Keys:**
 - `cohort_id` -> `cohorts.id` (`students_cohort_id_fkey`)
@@ -834,6 +852,7 @@
 | achievement_name | text | NO |  |  |
 | earned_at | timestamptz | YES | now() |  |
 | metadata | jsonb | YES | '{}'::jsonb |  |
+| practitioner_email | text | YES |  |  |
 
 **Foreign Keys:**
 - `student_id` -> `students.id` (`student_achievements_student_id_fkey`)
@@ -1220,6 +1239,16 @@
 | snhd_course_completion_submitted_date | date | YES |  |  |
 | field_internship_docs_submitted_date | date | YES |  |  |
 | closeout_overrides | jsonb | YES | '{}'::jsonb |  |
+| provisional_license_obtained | boolean | YES | false |  |
+| provisional_license_date | date | YES |  |  |
+| pre_internship_meeting_scheduled | date | YES |  |  |
+| pre_internship_meeting_link | text | YES |  |  |
+| phase_1_meeting_link | text | YES |  |  |
+| phase_2_meeting_link | text | YES |  |  |
+| final_exam_meeting_link | text | YES |  |  |
+| pre_internship_meeting_completed | boolean | NO | false |  |
+| nremt_passed | boolean | NO | false |  |
+| nremt_passed_date | date | YES |  |  |
 
 **Foreign Keys:**
 - `preceptor_id` -> `field_preceptors.id` (`student_internships_preceptor_id_fkey`)
@@ -1486,6 +1515,19 @@
 | notes | text | YES |  |  |
 | flagged_items | jsonb | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
+| step_details | jsonb | YES |  |  |
+| email_status | text | YES | 'pending'::text |  |
+| step_marks | jsonb | YES |  |  |
+| status | text | YES | 'complete'::text |  |
+| attempt_number | integer | YES | 1 |  |
+| team_role | text | YES |  |  |
+| team_evaluation_id | uuid | YES |  | FK -> student_skill_evaluations.id |
+| evaluator_type | text | YES | 'instructor'::text |  |
+| critical_fail | boolean | YES | false |  |
+| critical_fail_notes | text | YES |  |  |
+| is_retake | boolean | YES | false |  |
+| original_evaluation_id | uuid | YES |  | FK -> student_skill_evaluations.id |
+| cert_level | text | YES |  |  |
 
 **Foreign Keys:**
 - `lab_day_id` -> `lab_days.id` (`student_skill_evaluations_lab_day_id_fkey`)
@@ -1628,6 +1670,11 @@
 | source_template_id | uuid | YES |  |  |
 | checkin_token | text | YES |  |  |
 | checkin_enabled | boolean | YES | false |  |
+| lab_mode | text | YES | 'group_rotations'::text |  |
+| is_nremt_testing | boolean | YES | false |  |
+| checkoff_skill_sheet_id | uuid | YES |  | FK -> skill_sheets.id |
+| priority_flag | text | NO | 'normal'::text |  |
+| priority_reason | text | YES |  |  |
 
 **Foreign Keys:**
 - `created_by` -> `lab_users.id` (`lab_days_created_by_fkey`)
@@ -1686,6 +1733,8 @@
 | station_notes | text | YES |  |  |
 | metadata | jsonb | YES |  |  |
 | drill_ids | text[] | YES | '{}'::uuid[] |  |
+| skill_sheet_id | uuid | YES |  | FK -> skill_sheets.id |
+| is_retake_station | boolean | YES | false |  |
 
 **Foreign Keys:**
 - `scenario_id` -> `scenarios.id` (`lab_stations_scenario_id_fkey`)
@@ -1793,6 +1842,8 @@
 | legacy_data | jsonb | YES |  |  |
 | ai_generated_fields | text[] | YES | '{}'::text[] |  |
 | content_review_status | text | YES | 'approved'::text |  |
+| dispatch_info | text | YES |  |  |
+| preferred_manikin | text | YES |  |  |
 
 **Foreign Keys:**
 - `created_by` -> `lab_users.id` (`scenarios_created_by_fkey`)
@@ -1849,6 +1900,9 @@
 | flag_resolved_by | uuid | YES |  |  |
 | flag_resolved_at | timestamptz | YES |  |  |
 | overall_score | integer | YES |  |  |
+| email_status | text | YES | 'pending'::text |  |
+| status | text | YES | 'complete'::text |  |
+| scenario_notes | text | YES |  |  |
 
 **Foreign Keys:**
 - `cohort_id` -> `cohorts.id` (`scenario_assessments_cohort_id_fkey`)
@@ -2014,6 +2068,7 @@
 | created_at | timestamptz | YES | now() |  |
 | updated_at | timestamptz | YES | now() |  |
 | marked_by | text | YES |  |  |
+| cert_level | text | YES |  |  |
 
 **Foreign Keys:**
 - `lab_day_id` -> `lab_days.id` (`lab_day_attendance_lab_day_id_fkey`)
@@ -2112,6 +2167,13 @@
 | content | text | YES |  |  |
 | author | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
+| instructor_email | text | YES |  |  |
+| went_well | text | YES |  |  |
+| to_improve | text | YES |  |  |
+| student_concerns | text | YES |  |  |
+| equipment_issues | text | YES |  |  |
+| rating | smallint | YES |  |  |
+| updated_at | timestamp with time zone | YES | now() |  |
 
 **Foreign Keys:**
 - `lab_day_id` -> `lab_days.id` (`lab_day_debriefs_lab_day_id_fkey`)
@@ -2138,6 +2200,9 @@
 | returned_by | text | YES |  |  |
 | returned_at | timestamptz | YES |  |  |
 | condition_notes | text | YES |  |  |
+| checked_out_by_name | text | YES |  |  |
+| updated_at | timestamp with time zone | YES |  |  |
+| station_id | uuid | YES |  | FK -> lab_stations.id |
 
 **Foreign Keys:**
 - `lab_day_id` -> `lab_days.id` (`lab_day_equipment_lab_day_id_fkey`)
@@ -2198,6 +2263,7 @@
 | anchor_type | text | YES |  |  |
 | requires_review | boolean | YES | false |  |
 | review_notes | text | YES |  |  |
+| updated_by | text | YES |  |  |
 
 **Check Constraints:**
 - `lab_day_templates_category_check`: `(category = ANY (ARRAY['orientation'::text, 'skills_lab'::text, 'scenario_lab'::text, 'assessment'::text, 'capstone'::text, 'certification'::text, 'mixed'::text, 'other'::text]))`
@@ -2977,6 +3043,7 @@
 | semester | integer | YES |  |  |
 | format | text | YES |  |  |
 | estimated_duration | integer | YES | 15 |  |
+| source | text | YES | 'internal'::text |  |
 
 **Indexes:**
 - `idx_skill_drills_active`: `CREATE INDEX idx_skill_drills_active ON public.skill_drills USING btree (is_active) WHERE (is_active = true)`
@@ -3026,6 +3093,10 @@
 | is_critical | boolean | YES | false |  |
 | detail_notes | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
+| possible_points | integer | YES | 1 |  |
+| sub_items | jsonb | YES |  |  |
+| section_header | text | YES |  |  |
+| proctor_prompt | text | YES |  |  |
 
 **Foreign Keys:**
 - `skill_sheet_id` -> `skill_sheets.id` (`skill_sheet_steps_skill_sheet_id_fkey`)
@@ -3059,6 +3130,9 @@
 | platinum_skill_type | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
 | updated_at | timestamptz | YES | now() |  |
+| is_active | boolean | NO | true |  |
+| nremt_code | text | YES |  |  |
+| is_nremt | boolean | YES | false |  |
 
 **Foreign Keys:**
 - `canonical_skill_id` -> `canonical_skills.id` (`skill_sheets_canonical_skill_id_fkey`)
@@ -3120,6 +3194,7 @@
 | display_order | integer | YES | 0 |  |
 | created_at | timestamptz | YES | now() |  |
 | cert_levels | text[] | YES | ARRAY['PM'::text] |  |
+| is_nremt | boolean | YES | false |  |
 
 **Indexes:**
 - `idx_skills_category`: `CREATE INDEX idx_skills_category ON public.skills USING btree (category)`
@@ -3337,6 +3412,8 @@
 | created_by | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
 | updated_at | timestamptz | YES | now() |  |
+| is_pmi_contract | boolean | YES | false |  |
+| notification_dismissed | boolean | YES | false |  |
 
 **Check Constraints:**
 - `clinical_affiliations_agreement_status_check`: `(agreement_status = ANY (ARRAY['active'::text, 'expired'::text, 'pending_renewal'::text, 'terminated'::text]))`
@@ -3683,6 +3760,7 @@
 | recurrence_rule | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
 | updated_at | timestamptz | YES | now() |  |
+| source_template_id | uuid | YES |  | FK -> recurring_availability_templates.id |
 
 **Foreign Keys:**
 - `instructor_id` -> `lab_users.id` (`instructor_availability_instructor_id_fkey`)
@@ -4012,6 +4090,10 @@
 | participant_link | text | NO |  |  |
 | admin_link | text | NO |  |  |
 | available_slots | jsonb | YES | '[]'::jsonb |  |
+| scheduled_at | timestamp with time zone | YES |  |  |
+| scheduled_end_at | timestamp with time zone | YES |  |  |
+| google_event_id | text | YES |  |  |
+| google_event_link | text | YES |  |  |
 
 **Unique Constraints:**
 - `polls_admin_link_key`: (admin_link)
@@ -4085,6 +4167,8 @@
 | created_by | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
 | updated_at | timestamptz | YES | now() |  |
+| event_pin | text | YES | 'OSCE2026'::text |  |
+| checklist_state | jsonb | YES | '{}'::jsonb |  |
 
 **Unique Constraints:**
 - `osce_events_slug_key`: (slug)
@@ -4300,6 +4384,7 @@
 | completed_at | timestamptz | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
 | updated_at | timestamptz | YES | now() |  |
+| practitioner_email | text | YES |  |  |
 
 **Foreign Keys:**
 - `case_id` -> `case_studies.id` (`case_practice_progress_case_id_fkey`)
@@ -4340,6 +4425,7 @@
 | hints_used | integer | YES | 0 |  |
 | attempt_number | integer | YES | 1 |  |
 | submitted_at | timestamptz | YES | now() |  |
+| practitioner_email | text | YES |  |  |
 
 **Foreign Keys:**
 - `session_id` -> `case_sessions.id` (`case_responses_session_id_fkey`)
@@ -4817,6 +4903,11 @@
 | subject | text | NO |  |  |
 | notification_type | text | YES |  |  |
 | sent_at | timestamptz | YES | now() |  |
+| template | text | YES |  |  |
+| status | text | YES |  |  |
+| resend_id | text | YES |  |  |
+| error | text | YES |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
 
 **Foreign Keys:**
 - `user_id` -> `lab_users.id` (`email_log_user_id_fkey`)
@@ -5944,6 +6035,11 @@
 | updated_at | timestamptz | YES | now() |  |
 | created_by | uuid | YES |  |  |
 | updated_by | uuid | YES |  |  |
+| generic_name | text | YES |  |  |
+| trade_name | text | YES |  |  |
+| concentration | text | YES |  |  |
+| purchase_url | text | YES |  |  |
+| last_purchase_price | numeric | YES |  |  |
 
 **Foreign Keys:**
 - `location_id` -> `locations.id` (`supply_items_location_id_fkey`)
@@ -6864,6 +6960,8 @@ END) <= 1)`
 | max_students_per_rotation | integer | YES |  |  |
 | capacity_notes | text | YES |  |  |
 | updated_at | timestamptz | YES | now() |  |
+| clinical_coordinator_name | text | YES |  |  |
+| clinical_coordinator_email | text | YES |  |  |
 
 **Indexes:**
 - `idx_agencies_capacity`: `CREATE INDEX idx_agencies_capacity ON public.agencies USING btree (max_students_per_day) WHERE (is_active = true)`
@@ -8783,4 +8881,2132 @@ Key foreign key relationships across the schema:
 | user_endorsements | departments | department_id -> id | user_endorsements_department_id_fkey |
 | user_roles | lab_users | user_id -> id | user_roles_user_id_fkey |
 | webhook_deliveries | webhooks | webhook_id -> id | webhook_deliveries_webhook_id_fkey |
+
+---
+
+## Schema Reconciliation Additions (2026-06-08)
+
+> Tables present in the live Supabase database but missing from the original
+> 2026-03-08 auto-generation. Generated directly from live introspection
+> (columns, PK/FK, indexes, RLS). Source of truth = live DB.
+
+### LVFR AEMT (23 tables)
+
+#### `lvfr_aemt_assessments`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | text | NO |  | PK |
+| category | text | NO |  |  |
+| day_number | integer | YES |  |  |
+| date | date | YES |  |  |
+| title | text | NO |  |  |
+| question_count | integer | YES |  |  |
+| chapters | ARRAY | YES |  |  |
+| pass_score | integer | YES | 80 |  |
+| note | text | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `lvfr_aemt_assessments_pkey`
+
+**RLS Policies:**
+- `service_role_lvfr_assessments` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_chapters`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | text | NO |  | PK |
+| number | integer | NO |  |  |
+| title | text | NO |  |  |
+| module_id | text | YES |  | FK -> lvfr_aemt_modules.id |
+| teaching_day | jsonb | YES |  |  |
+| estimated_lecture_min | integer | YES | 0 |  |
+| estimated_lab_min | integer | YES | 0 |  |
+| key_topics | ARRAY | YES |  |  |
+| note | text | YES |  |  |
+| status | text | YES | 'not_started'::text |  |
+| completed_date | date | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `module_id` -> `lvfr_aemt_modules.id` (lvfr_aemt_chapters_module_id_fkey)
+
+**Indexes:**
+- `lvfr_aemt_chapters_pkey`
+- `idx_lvfr_chapters_module`
+
+**RLS Policies:**
+- `service_role_lvfr_chapters` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_content_blocks`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | text | NO |  | PK |
+| name | text | NO |  |  |
+| duration_min | integer | NO |  |  |
+| block_type | text | NO |  |  |
+| min_instructors | integer | YES | 1 |  |
+| equipment | ARRAY | YES |  |  |
+| chapter_id | text | YES |  |  |
+| module_id | text | YES |  |  |
+| can_split | boolean | YES | false |  |
+| notes | text | YES |  |  |
+| color | text | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `lvfr_aemt_content_blocks_pkey`
+
+**RLS Policies:**
+- `content_blocks_service` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_course_days`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| day_number | integer | NO |  |  |
+| date | date | NO |  |  |
+| day_of_week | text | NO |  |  |
+| week_number | integer | NO |  |  |
+| module_id | text | YES |  | FK -> lvfr_aemt_modules.id |
+| day_type | text | NO |  |  |
+| title | text | YES |  |  |
+| chapters_covered | ARRAY | YES |  |  |
+| has_lab | boolean | YES | false |  |
+| lab_name | text | YES |  |  |
+| has_exam | boolean | YES | false |  |
+| exam_name | text | YES |  |  |
+| exam_module | text | YES |  |  |
+| has_quiz | boolean | YES | false |  |
+| quiz_chapters | ARRAY | YES |  |  |
+| time_blocks | jsonb | YES |  |  |
+| reinforcement_activities | jsonb | YES |  |  |
+| status | text | YES | 'scheduled'::text |  |
+| completion_notes | text | YES |  |  |
+| completed_by | text | YES |  |  |
+| completed_at | timestamp with time zone | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `module_id` -> `lvfr_aemt_modules.id` (lvfr_aemt_course_days_module_id_fkey)
+
+**Indexes:**
+- `lvfr_aemt_course_days_pkey`
+- `lvfr_aemt_course_days_day_number_key`
+- `idx_lvfr_course_days_module`
+- `idx_lvfr_course_days_date`
+
+**RLS Policies:**
+- `service_role_lvfr_course_days` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_files`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| title | text | NO |  |  |
+| description | text | YES |  |  |
+| file_url | text | NO |  |  |
+| file_type | text | YES |  |  |
+| file_size | integer | YES |  |  |
+| module_id | text | YES |  |  |
+| chapter_id | text | YES |  |  |
+| day_number | integer | YES |  |  |
+| uploaded_by | uuid | YES |  | FK -> lab_users.id |
+| uploaded_at | timestamp with time zone | YES | now() |  |
+| visible_to_students | boolean | YES | true |  |
+
+**Foreign Keys:**
+- `uploaded_by` -> `lab_users.id` (lvfr_aemt_files_uploaded_by_fkey)
+
+**Indexes:**
+- `lvfr_aemt_files_pkey`
+- `idx_lvfr_files_module`
+
+**RLS Policies:**
+- `service_role_lvfr_files` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_grades`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| student_id | uuid | YES |  | FK -> students.id |
+| assessment_id | text | YES |  | FK -> lvfr_aemt_assessments.id |
+| date_taken | date | YES |  |  |
+| score_percent | numeric | YES |  |  |
+| passed | boolean | YES |  |  |
+| questions_correct | integer | YES |  |  |
+| questions_total | integer | YES |  |  |
+| source | text | YES | 'manual'::text |  |
+| imported_at | timestamp with time zone | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `assessment_id` -> `lvfr_aemt_assessments.id` (lvfr_aemt_grades_assessment_id_fkey)
+- `student_id` -> `students.id` (lvfr_aemt_grades_student_id_fkey)
+
+**Indexes:**
+- `lvfr_aemt_grades_pkey`
+- `lvfr_aemt_grades_student_id_assessment_id_key`
+- `idx_lvfr_grades_student`
+- `idx_lvfr_grades_assessment`
+
+**RLS Policies:**
+- `service_role_lvfr_grades` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_instructor_assignments`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| day_number | integer | NO |  |  |
+| date | date | NO |  |  |
+| primary_instructor_id | uuid | YES |  | FK -> lab_users.id |
+| secondary_instructor_id | uuid | YES |  | FK -> lab_users.id |
+| additional_instructors | ARRAY | YES |  |  |
+| min_instructors | integer | YES | 1 |  |
+| notes | text | YES |  |  |
+
+**Foreign Keys:**
+- `primary_instructor_id` -> `lab_users.id` (lvfr_aemt_instructor_assignments_primary_instructor_id_fkey)
+- `secondary_instructor_id` -> `lab_users.id` (lvfr_aemt_instructor_assignments_secondary_instructor_id_fkey)
+
+**Indexes:**
+- `lvfr_aemt_instructor_assignments_pkey`
+- `lvfr_aemt_instructor_assignments_day_number_key`
+- `idx_lvfr_assignments_date`
+
+**RLS Policies:**
+- `service_role_lvfr_assign` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_instructor_availability`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| instructor_id | uuid | YES |  | FK -> lab_users.id |
+| date | date | NO |  |  |
+| am1_available | boolean | YES | false |  |
+| mid_available | boolean | YES | false |  |
+| pm1_available | boolean | YES | false |  |
+| pm2_available | boolean | YES | false |  |
+| status | text | YES | 'available'::text |  |
+| notes | text | YES |  |  |
+| source | text | YES | 'manual'::text |  |
+
+**Foreign Keys:**
+- `instructor_id` -> `lab_users.id` (lvfr_aemt_instructor_availability_instructor_id_fkey)
+
+**Indexes:**
+- `lvfr_aemt_instructor_availability_pkey`
+- `lvfr_aemt_instructor_availability_instructor_id_date_key`
+- `idx_lvfr_avail_instructor`
+- `idx_lvfr_avail_date`
+
+**RLS Policies:**
+- `service_role_lvfr_avail` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_medications`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | text | NO |  | PK |
+| generic_name | text | NO |  |  |
+| brand_names | ARRAY | YES |  |  |
+| drug_class | text | YES |  |  |
+| mechanism_of_action | text | YES |  |  |
+| indications | ARRAY | YES |  |  |
+| contraindications | ARRAY | YES |  |  |
+| dose_adult | text | YES |  |  |
+| dose_pediatric | text | YES |  |  |
+| route | ARRAY | YES |  |  |
+| onset | text | YES |  |  |
+| duration | text | YES |  |  |
+| side_effects | ARRAY | YES |  |  |
+| special_considerations | text | YES |  |  |
+| snhd_formulary | boolean | YES | false |  |
+| checkpoint_blanks | ARRAY | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `lvfr_aemt_medications_pkey`
+
+**RLS Policies:**
+- `service_role_lvfr_medications` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_modules`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | text | NO |  | PK |
+| number | integer | NO |  |  |
+| name | text | NO |  |  |
+| chapters | ARRAY | YES |  |  |
+| exam_day | integer | YES |  |  |
+| week_range | text | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `lvfr_aemt_modules_pkey`
+
+**RLS Policies:**
+- `service_role_lvfr_modules` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_pharm_checkpoints`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| student_id | uuid | YES |  | FK -> students.id |
+| practitioner_email | text | YES |  |  |
+| checkpoint_date | date | YES |  |  |
+| difficulty_level | integer | YES |  |  |
+| medications_tested | ARRAY | YES |  |  |
+| responses | jsonb | YES |  |  |
+| score_percent | numeric | YES |  |  |
+| passed | boolean | YES |  |  |
+| completed_at | timestamp with time zone | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `student_id` -> `students.id` (lvfr_aemt_pharm_checkpoints_student_id_fkey)
+
+**Indexes:**
+- `lvfr_aemt_pharm_checkpoints_pkey`
+- `idx_lvfr_pharm_ck_student`
+
+**RLS Policies:**
+- `service_role_lvfr_pharm_ck` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_plan_instances`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| template_id | uuid | YES |  | FK -> lvfr_aemt_plan_templates.id |
+| name | text | NO |  |  |
+| start_date | date | NO |  |  |
+| status | text | YES | 'draft'::text |  |
+| published_at | timestamp with time zone | YES |  |  |
+| published_by | uuid | YES |  | FK -> lab_users.id |
+| notes | text | YES |  |  |
+| created_by | uuid | YES |  | FK -> lab_users.id |
+| created_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `template_id` -> `lvfr_aemt_plan_templates.id` (lvfr_aemt_plan_instances_template_id_fkey)
+- `published_by` -> `lab_users.id` (lvfr_aemt_plan_instances_published_by_fkey)
+- `created_by` -> `lab_users.id` (lvfr_aemt_plan_instances_created_by_fkey)
+
+**Indexes:**
+- `lvfr_aemt_plan_instances_pkey`
+- `idx_plan_instances_template`
+- `idx_plan_instances_created`
+
+**RLS Policies:**
+- `plan_instances_service` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_plan_placements`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| instance_id | uuid | YES |  | FK -> lvfr_aemt_plan_instances.id |
+| content_block_id | text | YES |  | FK -> lvfr_aemt_content_blocks.id |
+| day_number | integer | NO |  |  |
+| date | date | YES |  |  |
+| start_time | time without time zone | NO |  |  |
+| end_time | time without time zone | NO |  |  |
+| duration_min | integer | NO |  |  |
+| instructor_id | uuid | YES |  | FK -> lab_users.id |
+| instructor_name | text | YES |  |  |
+| confirmed | boolean | YES | false |  |
+| confirmed_by | text | YES |  |  |
+| confirmed_at | timestamp with time zone | YES |  |  |
+| custom_title | text | YES |  |  |
+| custom_notes | text | YES |  |  |
+| sort_order | integer | YES | 0 |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `instance_id` -> `lvfr_aemt_plan_instances.id` (lvfr_aemt_plan_placements_instance_id_fkey)
+- `content_block_id` -> `lvfr_aemt_content_blocks.id` (lvfr_aemt_plan_placements_content_block_id_fkey)
+- `instructor_id` -> `lab_users.id` (lvfr_aemt_plan_placements_instructor_id_fkey)
+
+**Indexes:**
+- `lvfr_aemt_plan_placements_pkey`
+- `lvfr_aemt_plan_placements_instance_id_content_block_id_day__key`
+- `idx_placements_instance`
+- `idx_placements_day`
+
+**RLS Policies:**
+- `plan_placements_service` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_plan_templates`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| name | text | NO |  |  |
+| description | text | YES |  |  |
+| total_weeks | integer | YES | 10 |  |
+| days_per_week | integer | YES | 3 |  |
+| class_days | ARRAY | YES | ARRAY['Tuesday'::text, 'Wednesday'::text, 'Thursday'::text] |  |
+| day_start_time | time without time zone | YES | '07:30:00'::time without time zone |  |
+| day_end_time | time without time zone | YES | '15:30:00'::time without time zone |  |
+| lunch_start | time without time zone | YES | '12:00:00'::time without time zone |  |
+| lunch_end | time without time zone | YES | '13:00:00'::time without time zone |  |
+| created_by | uuid | YES |  | FK -> lab_users.id |
+| created_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+| placement_snapshot | jsonb | YES |  |  |
+
+**Foreign Keys:**
+- `created_by` -> `lab_users.id` (lvfr_aemt_plan_templates_created_by_fkey)
+
+**Indexes:**
+- `lvfr_aemt_plan_templates_pkey`
+- `lvfr_plan_templates_name_unique`
+
+**RLS Policies:**
+- `plan_templates_service` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_prerequisites`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| block_id | text | NO |  | FK -> lvfr_aemt_content_blocks.id |
+| requires_block_id | text | NO |  | FK -> lvfr_aemt_content_blocks.id |
+| rule_type | text | YES | 'must_precede'::text |  |
+
+**Foreign Keys:**
+- `block_id` -> `lvfr_aemt_content_blocks.id` (lvfr_aemt_prerequisites_block_id_fkey)
+- `requires_block_id` -> `lvfr_aemt_content_blocks.id` (lvfr_aemt_prerequisites_requires_block_id_fkey)
+
+**Indexes:**
+- `lvfr_aemt_prerequisites_pkey`
+- `lvfr_aemt_prerequisites_block_id_requires_block_id_rule_typ_key`
+- `idx_prerequisites_block`
+- `idx_prerequisites_requires`
+
+**RLS Policies:**
+- `prerequisites_service` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_shift_patterns`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| instructor_id | uuid | YES |  | FK -> lab_users.id |
+| pattern_type | text | YES |  |  |
+| pattern_config | jsonb | YES |  |  |
+| effective_start | date | YES |  |  |
+| effective_end | date | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `instructor_id` -> `lab_users.id` (lvfr_aemt_shift_patterns_instructor_id_fkey)
+
+**Indexes:**
+- `lvfr_aemt_shift_patterns_pkey`
+
+**RLS Policies:**
+- `service_role_lvfr_shift` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_skill_attempts`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| student_id | uuid | YES |  | FK -> students.id |
+| skill_id | text | YES |  | FK -> lvfr_aemt_skills.id |
+| attempt_number | integer | YES | 1 |  |
+| date | date | YES |  |  |
+| evaluator_id | uuid | YES |  | FK -> lab_users.id |
+| result | text | YES |  |  |
+| notes | text | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `skill_id` -> `lvfr_aemt_skills.id` (lvfr_aemt_skill_attempts_skill_id_fkey)
+- `evaluator_id` -> `lab_users.id` (lvfr_aemt_skill_attempts_evaluator_id_fkey)
+- `student_id` -> `students.id` (lvfr_aemt_skill_attempts_student_id_fkey)
+
+**Indexes:**
+- `lvfr_aemt_skill_attempts_pkey`
+- `idx_lvfr_skill_att_student`
+- `idx_lvfr_skill_att_skill`
+
+**RLS Policies:**
+- `service_role_lvfr_skill_att` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_skill_status`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| student_id | uuid | YES |  | FK -> students.id |
+| skill_id | text | YES |  | FK -> lvfr_aemt_skills.id |
+| status | text | YES | 'not_started'::text |  |
+| total_attempts | integer | YES | 0 |  |
+| last_attempt_date | date | YES |  |  |
+| completed_date | date | YES |  |  |
+
+**Foreign Keys:**
+- `skill_id` -> `lvfr_aemt_skills.id` (lvfr_aemt_skill_status_skill_id_fkey)
+- `student_id` -> `students.id` (lvfr_aemt_skill_status_student_id_fkey)
+
+**Indexes:**
+- `lvfr_aemt_skill_status_pkey`
+- `lvfr_aemt_skill_status_student_id_skill_id_key`
+- `idx_lvfr_skill_status_student`
+- `idx_lvfr_skill_status_skill`
+
+**RLS Policies:**
+- `service_role_lvfr_skill_status` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_skills`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | text | NO |  | PK |
+| category | text | NO |  |  |
+| name | text | NO |  |  |
+| description | text | YES |  |  |
+| nremt_tested | boolean | YES | false |  |
+| introduced_day | integer | YES |  |  |
+| practice_days | ARRAY | YES |  |  |
+| evaluation_day | integer | YES |  |  |
+| min_practice_attempts | integer | YES | 1 |  |
+| equipment_needed | ARRAY | YES |  |  |
+| safety_note | text | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `lvfr_aemt_skills_pkey`
+
+**RLS Policies:**
+- `service_role_lvfr_skills` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_supplementary_days`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| day_number | integer | YES |  |  |
+| date | date | NO |  |  |
+| day_of_week | text | YES |  |  |
+| week_number | integer | YES |  |  |
+| title | text | YES |  |  |
+| description | text | YES |  |  |
+| time_start | text | YES |  |  |
+| time_end | text | YES |  |  |
+| type | text | YES | 'supplementary'::text |  |
+| instructor | text | YES |  |  |
+| instructor_id | uuid | YES |  | FK -> lab_users.id |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `instructor_id` -> `lab_users.id` (lvfr_aemt_supplementary_days_instructor_id_fkey)
+
+**Indexes:**
+- `lvfr_aemt_supplementary_days_pkey`
+- `lvfr_aemt_supplementary_days_day_number_key`
+
+**RLS Policies:**
+- `service_role_lvfr_supplementary` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_day_schedule`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| date | date | NO |  |  |
+| cohort_id | uuid | YES |  | FK -> cohorts.id |
+| session | text | NO |  |  |
+| notes | text | YES |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
+| updated_at | timestamp with time zone | NO | now() |  |
+| brief | text | YES |  |  |
+| debrief | text | YES |  |  |
+
+**Foreign Keys:**
+- `cohort_id` -> `cohorts.id` (lvfr_day_schedule_cohort_id_fkey)
+
+**Indexes:**
+- `lvfr_day_schedule_pkey`
+- `uq_lvfr_day_schedule_date_session`
+- `idx_lvfr_day_schedule_date`
+
+**RLS Policies:**
+- `authenticated can read day schedule` (SELECT, PERMISSIVE, roles: {authenticated})
+- `realtime anon can read day schedule` (SELECT, PERMISSIVE, roles: {anon})
+
+#### `lvfr_platoon_schedule`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| date | date | NO |  |  |
+| platoon | text | NO |  |  |
+| is_bid_day | boolean | NO | false |  |
+| notes | text | YES |  |  |
+| year | integer | NO |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
+| updated_at | timestamp with time zone | NO | now() |  |
+
+**Indexes:**
+- `lvfr_platoon_schedule_pkey`
+- `lvfr_platoon_schedule_date_key`
+- `idx_lvfr_platoon_schedule_year`
+
+#### `lvfr_schedule_items`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| day_schedule_id | uuid | NO |  | FK -> lvfr_day_schedule.id |
+| title | text | NO |  |  |
+| item_type | text | YES |  |  |
+| estimated_minutes | integer | YES |  |  |
+| sort_order | integer | NO | 0 |  |
+| is_completed | boolean | NO | false |  |
+| completed_at | timestamp with time zone | YES |  |  |
+| completed_by | uuid | YES |  | FK -> lab_users.id |
+| notes | text | YES |  |  |
+| source_block_id | uuid | YES |  | FK -> pmi_schedule_blocks.id |
+| created_at | timestamp with time zone | NO | now() |  |
+| updated_at | timestamp with time zone | NO | now() |  |
+| requirement | text | NO | 'required'::text |  |
+| description | text | YES |  |  |
+| time_label | text | YES |  |  |
+
+**Foreign Keys:**
+- `day_schedule_id` -> `lvfr_day_schedule.id` (lvfr_schedule_items_day_schedule_id_fkey)
+- `completed_by` -> `lab_users.id` (lvfr_schedule_items_completed_by_fkey)
+- `source_block_id` -> `pmi_schedule_blocks.id` (lvfr_schedule_items_source_block_id_fkey)
+
+**Indexes:**
+- `lvfr_schedule_items_pkey`
+- `idx_lvfr_schedule_items_day_schedule_id`
+- `idx_lvfr_schedule_items_source_block_id`
+
+**RLS Policies:**
+- `authenticated can read items` (SELECT, PERMISSIVE, roles: {authenticated})
+- `realtime anon can read items` (SELECT, PERMISSIVE, roles: {anon})
+
+### PMI Scheduling (Master Calendar) (9 tables)
+
+#### `pmi_academic_years`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| year | integer | NO |  |  |
+| s1_start_date | date | NO |  |  |
+| notes | text | YES |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
+| updated_at | timestamp with time zone | NO | now() |  |
+
+**Indexes:**
+- `pmi_academic_years_pkey`
+- `pmi_academic_years_year_unique`
+
+#### `pmi_block_instructors`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| schedule_block_id | uuid | NO |  | FK -> pmi_schedule_blocks.id |
+| instructor_id | uuid | NO |  | FK -> lab_users.id |
+| role | text | YES | 'primary'::text |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `instructor_id` -> `lab_users.id` (pmi_block_instructors_instructor_id_fkey)
+- `schedule_block_id` -> `pmi_schedule_blocks.id` (pmi_block_instructors_schedule_block_id_fkey)
+
+**Indexes:**
+- `pmi_block_instructors_pkey`
+- `pmi_block_instructors_schedule_block_id_instructor_id_key`
+- `idx_block_instructors_block`
+- `idx_block_instructors_instr`
+
+**RLS Policies:**
+- `Authenticated users can read pmi_block_instructors` (SELECT, PERMISSIVE, roles: {authenticated})
+- `Service role bypass for pmi_block_instructors` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `pmi_course_templates`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| program_type | text | NO |  |  |
+| semester_number | integer | YES |  |  |
+| course_code | text | NO |  |  |
+| course_name | text | NO |  |  |
+| duration_type | text | YES | 'full'::text |  |
+| day_index | integer | NO |  |  |
+| start_time | time without time zone | NO |  |  |
+| end_time | time without time zone | NO |  |  |
+| block_type | text | YES | 'lecture'::text |  |
+| is_online | boolean | YES | false |  |
+| replaces_course_id | uuid | YES |  | FK -> pmi_course_templates.id |
+| color | text | YES |  |  |
+| notes | text | YES |  |  |
+| sort_order | integer | YES | 0 |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| default_instructor_id | uuid | YES |  | FK -> lab_users.id |
+| default_instructor_name | text | YES |  |  |
+| active_weeks | text | YES | 'all'::text |  |
+| default_instructor_ids | ARRAY | YES | '{}'::uuid[] |  |
+| lab_day_index | text | YES | 'day2'::text |  |
+
+**Foreign Keys:**
+- `replaces_course_id` -> `pmi_course_templates.id` (pmi_course_templates_replaces_course_id_fkey)
+- `default_instructor_id` -> `lab_users.id` (pmi_course_templates_default_instructor_id_fkey)
+
+**Indexes:**
+- `pmi_course_templates_pkey`
+- `idx_course_templates_program`
+- `idx_course_templates_replaces`
+- `idx_course_templates_default_instructor`
+
+**RLS Policies:**
+- `Authenticated users can read course templates` (SELECT, PERMISSIVE, roles: {authenticated})
+- `Lead instructors can manage course templates` (ALL, PERMISSIVE, roles: {authenticated})
+
+#### `pmi_instructor_workload`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| semester_id | uuid | NO |  | FK -> pmi_semesters.id |
+| instructor_id | uuid | NO |  | FK -> lab_users.id |
+| week_number | integer | NO |  |  |
+| week_start_date | date | NO |  |  |
+| total_hours | numeric | YES | 0 |  |
+| block_count | integer | YES | 0 |  |
+| programs | ARRAY | YES |  |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+| class_hours | numeric | YES | 0 |  |
+| lab_hours | numeric | YES | 0 |  |
+| lvfr_hours | numeric | YES | 0 |  |
+
+**Foreign Keys:**
+- `instructor_id` -> `lab_users.id` (pmi_instructor_workload_instructor_id_fkey)
+- `semester_id` -> `pmi_semesters.id` (pmi_instructor_workload_semester_id_fkey)
+
+**Indexes:**
+- `pmi_instructor_workload_pkey`
+- `pmi_instructor_workload_semester_id_instructor_id_week_numb_key`
+- `idx_instructor_workload_sem`
+
+**RLS Policies:**
+- `Authenticated users can read pmi_instructor_workload` (SELECT, PERMISSIVE, roles: {authenticated})
+- `Service role bypass for pmi_instructor_workload` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `pmi_program_schedules`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| semester_id | uuid | NO |  | FK -> pmi_semesters.id |
+| cohort_id | uuid | NO |  | FK -> cohorts.id |
+| class_days | ARRAY | NO |  |  |
+| color | text | YES | '#3B82F6'::text |  |
+| label | text | YES |  |  |
+| notes | text | YES |  |  |
+| is_active | boolean | YES | true |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `cohort_id` -> `cohorts.id` (pmi_program_schedules_cohort_id_fkey)
+- `semester_id` -> `pmi_semesters.id` (pmi_program_schedules_semester_id_fkey)
+
+**Indexes:**
+- `pmi_program_schedules_pkey`
+- `pmi_program_schedules_semester_id_cohort_id_key`
+- `idx_program_schedules_sem`
+
+**RLS Policies:**
+- `Authenticated users can read pmi_program_schedules` (SELECT, PERMISSIVE, roles: {authenticated})
+- `Service role bypass for pmi_program_schedules` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `pmi_room_availability`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| room_id | uuid | NO |  | FK -> pmi_rooms.id |
+| day_of_week | integer | YES |  |  |
+| start_time | time without time zone | YES |  |  |
+| end_time | time without time zone | YES |  |  |
+| rule_type | text | NO |  |  |
+| label | text | YES |  |  |
+| semester_id | uuid | YES |  | FK -> pmi_semesters.id |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `room_id` -> `pmi_rooms.id` (pmi_room_availability_room_id_fkey)
+- `semester_id` -> `pmi_semesters.id` (pmi_room_availability_semester_id_fkey)
+
+**Indexes:**
+- `pmi_room_availability_pkey`
+- `idx_room_availability_room`
+
+**RLS Policies:**
+- `Authenticated users can read pmi_room_availability` (SELECT, PERMISSIVE, roles: {authenticated})
+- `Service role bypass for pmi_room_availability` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `pmi_rooms`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| name | text | NO |  |  |
+| room_type | text | NO |  |  |
+| capacity | integer | YES |  |  |
+| notes | text | YES |  |  |
+| is_active | boolean | YES | true |  |
+| display_order | integer | YES | 0 |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `pmi_rooms_pkey`
+- `pmi_rooms_name_key`
+
+**RLS Policies:**
+- `Authenticated users can read pmi_rooms` (SELECT, PERMISSIVE, roles: {authenticated})
+- `Service role bypass for pmi_rooms` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `pmi_schedule_blocks`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| program_schedule_id | uuid | YES |  | FK -> pmi_program_schedules.id |
+| room_id | uuid | YES |  | FK -> pmi_rooms.id |
+| day_of_week | integer | YES |  |  |
+| start_time | time without time zone | NO |  |  |
+| end_time | time without time zone | NO |  |  |
+| block_type | text | YES | 'class'::text |  |
+| title | text | YES |  |  |
+| is_recurring | boolean | YES | true |  |
+| specific_date | date | YES |  |  |
+| sort_order | integer | YES | 0 |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+| course_name | text | YES |  |  |
+| content_notes | text | YES |  |  |
+| semester_id | uuid | NO |  | FK -> pmi_semesters.id |
+| color | text | YES |  |  |
+| date | date | YES |  |  |
+| week_number | integer | YES |  |  |
+| recurring_group_id | uuid | YES |  |  |
+| linked_lab_day_id | uuid | YES |  | FK -> lab_days.id |
+| chapter_references | ARRAY | YES |  |  |
+| status | text | YES | 'draft'::text |  |
+| instructor_id | uuid | YES |  | FK -> lab_users.id |
+| additional_instructor_id | uuid | YES |  | FK -> lab_users.id |
+
+**Foreign Keys:**
+- `program_schedule_id` -> `pmi_program_schedules.id` (pmi_schedule_blocks_program_schedule_id_fkey)
+- `room_id` -> `pmi_rooms.id` (pmi_schedule_blocks_room_id_fkey)
+- `semester_id` -> `pmi_semesters.id` (pmi_schedule_blocks_semester_id_fkey)
+- `linked_lab_day_id` -> `lab_days.id` (pmi_schedule_blocks_linked_lab_day_id_fkey)
+- `instructor_id` -> `lab_users.id` (pmi_schedule_blocks_instructor_id_fkey)
+- `additional_instructor_id` -> `lab_users.id` (pmi_schedule_blocks_additional_instructor_id_fkey)
+
+**Indexes:**
+- `pmi_schedule_blocks_pkey`
+- `idx_schedule_blocks_room`
+- `idx_schedule_blocks_program`
+- `idx_pmi_schedule_blocks_course_name`
+- `idx_pmi_schedule_blocks_semester`
+- `idx_schedule_blocks_date`
+- `idx_schedule_blocks_recurring_group`
+- `idx_schedule_blocks_semester_date`
+- `idx_schedule_blocks_linked_lab_day`
+- `idx_schedule_blocks_status`
+- `idx_psb_instructor_id`
+- `idx_psb_additional_instructor_id`
+
+**RLS Policies:**
+- `Authenticated users can read pmi_schedule_blocks` (SELECT, PERMISSIVE, roles: {authenticated})
+- `Service role bypass for pmi_schedule_blocks` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `pmi_semesters`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| name | text | NO |  |  |
+| start_date | date | NO |  |  |
+| end_date | date | NO |  |  |
+| is_active | boolean | YES | true |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| academic_year_id | uuid | YES |  | FK -> pmi_academic_years.id |
+| semester_number | integer | YES |  |  |
+
+**Foreign Keys:**
+- `academic_year_id` -> `pmi_academic_years.id` (pmi_semesters_academic_year_id_fkey)
+
+**Indexes:**
+- `pmi_semesters_pkey`
+- `pmi_semesters_name_key`
+- `pmi_semesters_year_number_unique`
+- `idx_pmi_semesters_academic_year`
+
+**RLS Policies:**
+- `Authenticated users can read pmi_semesters` (SELECT, PERMISSIVE, roles: {authenticated})
+- `Service role bypass for pmi_semesters` (ALL, PERMISSIVE, roles: {service_role})
+
+### Lab Management (additions) (14 tables)
+
+#### `checklist_attendance`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| checklist_id | uuid | YES |  | FK -> checklists.id |
+| student_id | uuid | YES |  | FK -> students.id |
+| attended | boolean | YES | false |  |
+| notes | text | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `student_id` -> `students.id` (checklist_attendance_student_id_fkey)
+- `checklist_id` -> `checklists.id` (checklist_attendance_checklist_id_fkey)
+
+**Indexes:**
+- `idx_field_trip_attendance_trip`
+- `idx_field_trip_attendance_student`
+- `field_trip_attendance_pkey`
+- `checklist_attendance_checklist_id_student_id_key`
+
+**RLS Policies:**
+- `Allow all access to checklist_attendance` (ALL, PERMISSIVE, roles: {public})
+
+#### `checklists`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| cohort_id | uuid | YES |  | FK -> cohorts.id |
+| title | text | NO |  |  |
+| destination | text | YES |  |  |
+| trip_date | date | YES |  |  |
+| departure_time | time without time zone | YES |  |  |
+| return_time | time without time zone | YES |  |  |
+| notes | text | YES |  |  |
+| created_by | uuid | YES |  | FK -> lab_users.id |
+| created_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+| is_active | boolean | YES | true |  |
+| description | text | YES |  |  |
+
+**Foreign Keys:**
+- `created_by` -> `lab_users.id` (checklists_created_by_fkey)
+- `cohort_id` -> `cohorts.id` (checklists_cohort_id_fkey)
+
+**Indexes:**
+- `idx_field_trips_cohort`
+- `idx_field_trips_date`
+- `idx_field_trips_active`
+- `field_trips_pkey`
+
+**RLS Policies:**
+- `Allow all access to checklists` (ALL, PERMISSIVE, roles: {public})
+
+#### `lab_day_checkoff_status`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| lab_day_id | uuid | NO |  | FK -> lab_days.id |
+| student_id | uuid | NO |  | FK -> students.id |
+| skill_sheet_id | uuid | YES |  | FK -> skill_sheets.id |
+| status | text | NO |  |  |
+| station_id | uuid | YES |  | FK -> lab_stations.id |
+| examiner_id | uuid | YES |  | FK -> lab_users.id |
+| marked_at | timestamp with time zone | NO | now() |  |
+| marked_by | text | YES |  |  |
+| notes | text | YES |  |  |
+
+**Foreign Keys:**
+- `lab_day_id` -> `lab_days.id` (lab_day_checkoff_status_lab_day_id_fkey)
+- `student_id` -> `students.id` (lab_day_checkoff_status_student_id_fkey)
+- `skill_sheet_id` -> `skill_sheets.id` (lab_day_checkoff_status_skill_sheet_id_fkey)
+- `station_id` -> `lab_stations.id` (lab_day_checkoff_status_station_id_fkey)
+- `examiner_id` -> `lab_users.id` (lab_day_checkoff_status_examiner_id_fkey)
+
+**Indexes:**
+- `lab_day_checkoff_status_pkey`
+- `lab_day_checkoff_status_lab_day_id_student_id_skill_sheet_i_key`
+- `idx_lab_day_checkoff_lab_day`
+- `idx_lab_day_checkoff_student`
+
+**RLS Policies:**
+- `instructors read checkoff status` (SELECT, PERMISSIVE, roles: {public})
+- `instructors write checkoff status` (ALL, PERMISSIVE, roles: {public})
+
+#### `lab_day_debrief_notes`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| lab_day_id | uuid | NO |  | FK -> lab_days.id |
+| author_id | uuid | YES |  | FK -> lab_users.id |
+| author_name | text | YES |  |  |
+| category | text | YES | 'general'::text |  |
+| content | text | NO |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES |  |  |
+
+**Foreign Keys:**
+- `author_id` -> `lab_users.id` (lab_day_debrief_notes_author_id_fkey)
+- `lab_day_id` -> `lab_days.id` (lab_day_debrief_notes_lab_day_id_fkey)
+
+**Indexes:**
+- `lab_day_debrief_notes_pkey`
+- `idx_debrief_notes_lab_day`
+
+**RLS Policies:**
+- `debrief_notes_all_authenticated` (ALL, PERMISSIVE, roles: {public})
+
+#### `lab_day_messages`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| lab_day_id | uuid | NO |  | FK -> lab_days.id |
+| sender_name | text | NO |  |  |
+| sender_email | text | NO |  |  |
+| sender_role | text | NO | 'instructor'::text |  |
+| message | text | NO |  |  |
+| message_type | text | NO | 'chat'::text |  |
+| station_context | text | YES |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
+
+**Foreign Keys:**
+- `lab_day_id` -> `lab_days.id` (lab_day_messages_lab_day_id_fkey)
+
+**Indexes:**
+- `lab_day_messages_pkey`
+- `idx_lab_day_messages_lab_day`
+
+**RLS Policies:**
+- `authenticated users can insert messages` (INSERT, PERMISSIVE, roles: {authenticated})
+- `authenticated users can read messages` (SELECT, PERMISSIVE, roles: {authenticated})
+- `realtime anon can read messages` (SELECT, PERMISSIVE, roles: {anon})
+- `service_role full access` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lab_day_station_assignments`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| lab_day_id | uuid | NO |  | FK -> lab_days.id |
+| station_id | uuid | NO |  | FK -> lab_stations.id |
+| student_id | uuid | NO |  | FK -> students.id |
+| assigned_by | text | YES |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
+
+**Foreign Keys:**
+- `lab_day_id` -> `lab_days.id` (lab_day_station_assignments_lab_day_id_fkey)
+- `station_id` -> `lab_stations.id` (lab_day_station_assignments_station_id_fkey)
+- `student_id` -> `students.id` (lab_day_station_assignments_student_id_fkey)
+
+**Indexes:**
+- `lab_day_station_assignments_pkey`
+- `lab_day_station_assignments_lab_day_id_student_id_key`
+- `idx_lab_day_station_assignments_lab_day`
+- `idx_lab_day_station_assignments_station`
+
+**RLS Policies:**
+- `instructors read station assignments` (SELECT, PERMISSIVE, roles: {public})
+- `instructors write station assignments` (ALL, PERMISSIVE, roles: {public})
+
+#### `lab_day_student_queue`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| lab_day_id | uuid | YES |  | FK -> lab_days.id |
+| student_id | uuid | YES |  | FK -> students.id |
+| station_id | uuid | YES |  | FK -> lab_stations.id |
+| status | text | YES | 'queued'::text |  |
+| queued_at | timestamp with time zone | YES | now() |  |
+| started_at | timestamp with time zone | YES |  |  |
+| completed_at | timestamp with time zone | YES |  |  |
+| result | text | YES |  |  |
+| evaluation_id | uuid | YES |  | FK -> student_skill_evaluations.id |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `student_id` -> `students.id` (lab_day_student_queue_student_id_fkey)
+- `station_id` -> `lab_stations.id` (lab_day_student_queue_station_id_fkey)
+- `lab_day_id` -> `lab_days.id` (lab_day_student_queue_lab_day_id_fkey)
+- `evaluation_id` -> `student_skill_evaluations.id` (lab_day_student_queue_evaluation_id_fkey)
+
+**Indexes:**
+- `lab_day_student_queue_pkey`
+- `idx_student_queue_lab_day`
+- `idx_student_queue_student`
+- `idx_student_queue_station`
+
+**RLS Policies:**
+- `Authenticated users can view lab_day_student_queue` (SELECT, PERMISSIVE, roles: {public})
+- `Service role can do anything on lab_day_student_queue` (ALL, PERMISSIVE, roles: {public})
+
+#### `lab_day_template_audit`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| template_id | uuid | YES |  |  |
+| template_program | text | YES |  |  |
+| template_semester | integer | YES |  |  |
+| template_week | integer | YES |  |  |
+| template_day | integer | YES |  |  |
+| changed_at | timestamp with time zone | NO | now() |  |
+| changed_by | text | YES |  |  |
+| change_type | text | NO |  |  |
+| old_name | text | YES |  |  |
+| new_name | text | YES |  |  |
+| old_station_count | integer | YES |  |  |
+
+**Indexes:**
+- `lab_day_template_audit_pkey`
+- `lab_day_template_audit_template_idx`
+- `lab_day_template_audit_when_idx`
+
+#### `open_lab_sessions`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| date | date | NO |  |  |
+| start_time | time without time zone | NO | '13:00:00'::time without time zone |  |
+| end_time | time without time zone | NO | '16:00:00'::time without time zone |  |
+| is_cancelled | boolean | NO | false |  |
+| cancellation_reason | text | YES |  |  |
+| is_recurring | boolean | NO | true |  |
+| notes | text | YES |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
+| created_by | text | YES |  |  |
+
+**Indexes:**
+- `open_lab_sessions_pkey`
+- `open_lab_sessions_date_key`
+- `idx_open_lab_sessions_date`
+
+**RLS Policies:**
+- `open_lab_sessions_authenticated_write` (ALL, PERMISSIVE, roles: {public})
+- `open_lab_sessions_public_read` (SELECT, PERMISSIVE, roles: {public})
+
+#### `open_lab_signups`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| session_id | uuid | NO |  | FK -> open_lab_sessions.id |
+| student_name | text | NO |  |  |
+| student_email | text | NO |  |  |
+| student_user_id | uuid | YES |  | FK -> lab_users.id |
+| program_level | text | NO |  |  |
+| what_to_work_on | text | NO |  |  |
+| requested_instructor_id | uuid | YES |  | FK -> lab_users.id |
+| notification_sent | boolean | NO | false |  |
+| created_at | timestamp with time zone | NO | now() |  |
+| updated_at | timestamp with time zone | NO | now() |  |
+| edit_token | uuid | NO | gen_random_uuid() |  |
+| cancelled_at | timestamp with time zone | YES |  |  |
+
+**Foreign Keys:**
+- `session_id` -> `open_lab_sessions.id` (open_lab_signups_session_id_fkey)
+- `student_user_id` -> `lab_users.id` (open_lab_signups_student_user_id_fkey)
+- `requested_instructor_id` -> `lab_users.id` (open_lab_signups_requested_instructor_id_fkey)
+
+**Indexes:**
+- `open_lab_signups_pkey`
+- `idx_open_lab_signups_session`
+- `idx_open_lab_signups_email`
+- `idx_open_lab_signups_token`
+- `idx_open_lab_signups_user`
+
+**RLS Policies:**
+- `open_lab_signups_public_delete` (DELETE, PERMISSIVE, roles: {public})
+- `open_lab_signups_public_insert` (INSERT, PERMISSIVE, roles: {public})
+- `open_lab_signups_public_read` (SELECT, PERMISSIVE, roles: {public})
+- `open_lab_signups_public_update` (UPDATE, PERMISSIVE, roles: {public})
+
+#### `skill_template_items`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| template_id | uuid | NO |  | FK -> skill_templates.id |
+| item_name | text | NO |  |  |
+| qty_per_attempt | integer | NO | 1 |  |
+| sort_order | integer | YES | 0 |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `template_id` -> `skill_templates.id` (skill_template_items_template_id_fkey)
+
+**Indexes:**
+- `skill_template_items_pkey`
+- `idx_skill_template_items_template_id`
+
+**RLS Policies:**
+- `Authenticated can read skill template items` (SELECT, PERMISSIVE, roles: {public})
+- `Inventory admins can manage skill template items` (ALL, PERMISSIVE, roles: {public})
+- `Superadmins have full access to skill template items` (ALL, PERMISSIVE, roles: {public})
+
+#### `skill_templates`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| name | text | NO |  |  |
+| description | text | YES |  |  |
+| is_active | boolean | YES | true |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+| created_by | uuid | YES |  |  |
+
+**Indexes:**
+- `skill_templates_pkey`
+
+**RLS Policies:**
+- `Authenticated can read skill templates` (SELECT, PERMISSIVE, roles: {public})
+- `Inventory admins can manage skill templates` (ALL, PERMISSIVE, roles: {public})
+- `Superadmins have full access to skill templates` (ALL, PERMISSIVE, roles: {public})
+
+#### `station_assistance_alerts`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| lab_day_id | uuid | NO |  | FK -> lab_days.id |
+| station_id | uuid | YES |  | FK -> lab_stations.id |
+| station_name | text | NO |  |  |
+| requested_by | uuid | YES |  | FK -> lab_users.id |
+| requested_at | timestamp with time zone | NO | now() |  |
+| resolved_at | timestamp with time zone | YES |  |  |
+| resolved_by | uuid | YES |  | FK -> lab_users.id |
+| notes | text | YES |  |  |
+
+**Foreign Keys:**
+- `lab_day_id` -> `lab_days.id` (station_assistance_alerts_lab_day_id_fkey)
+- `station_id` -> `lab_stations.id` (station_assistance_alerts_station_id_fkey)
+- `requested_by` -> `lab_users.id` (station_assistance_alerts_requested_by_fkey)
+- `resolved_by` -> `lab_users.id` (station_assistance_alerts_resolved_by_fkey)
+
+**Indexes:**
+- `station_assistance_alerts_pkey`
+- `idx_assistance_alerts_lab_day`
+- `idx_assistance_alerts_unresolved`
+
+**RLS Policies:**
+- `station_assistance_alerts_insert` (INSERT, PERMISSIVE, roles: {authenticated})
+- `station_assistance_alerts_select` (SELECT, PERMISSIVE, roles: {authenticated})
+- `station_assistance_alerts_update` (UPDATE, PERMISSIVE, roles: {authenticated})
+
+#### `station_documents`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| station_id | uuid | NO |  | FK -> lab_stations.id |
+| document_name | text | NO |  |  |
+| document_url | text | NO |  |  |
+| document_type | text | NO | 'reference'::text |  |
+| file_type | text | YES |  |  |
+| file_size_bytes | integer | YES |  |  |
+| display_order | integer | YES | 0 |  |
+| created_by | text | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `station_id` -> `lab_stations.id` (station_documents_station_id_fkey)
+
+**Indexes:**
+- `station_documents_pkey`
+- `idx_station_documents_station`
+- `idx_station_documents_type`
+
+**RLS Policies:**
+- `Anyone can read station_documents` (SELECT, PERMISSIVE, roles: {public})
+- `Authenticated can manage station_documents` (ALL, PERMISSIVE, roles: {public})
+
+### OSCE (Scoring) (4 tables)
+
+#### `osce_assessments`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| student_name | text | NO |  |  |
+| scenario | text | NO |  |  |
+| slot_number | integer | YES |  |  |
+| day_number | integer | YES |  |  |
+| assessment_date | date | NO |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| event_id | uuid | YES |  | FK -> osce_events.id |
+
+**Foreign Keys:**
+- `event_id` -> `osce_events.id` (osce_assessments_event_id_fkey)
+
+**Indexes:**
+- `osce_assessments_pkey`
+- `idx_osce_assessments_day`
+- `idx_osce_assessments_date`
+- `idx_osce_assessments_event`
+
+**RLS Policies:**
+- `osce_assessments_all` (ALL, PERMISSIVE, roles: {public})
+
+#### `osce_evaluator_scores`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| assessment_id | uuid | NO |  | FK -> osce_assessments.id |
+| evaluator_name | text | NO |  |  |
+| evaluator_role | text | YES |  |  |
+| scene_safety | text | YES |  |  |
+| initial_assessment | text | YES |  |  |
+| history_cc | text | YES |  |  |
+| physical_exam_vs | text | YES |  |  |
+| protocol_treatment | text | YES |  |  |
+| affective_domain | text | YES |  |  |
+| communication | text | YES |  |  |
+| skills_overall | text | YES |  |  |
+| scene_safety_notes | text | YES |  |  |
+| initial_assessment_notes | text | YES |  |  |
+| history_cc_notes | text | YES |  |  |
+| physical_exam_vs_notes | text | YES |  |  |
+| protocol_treatment_notes | text | YES |  |  |
+| affective_domain_notes | text | YES |  |  |
+| communication_notes | text | YES |  |  |
+| skills_overall_notes | text | YES |  |  |
+| oral_prioritization | text | YES |  |  |
+| oral_differential | text | YES |  |  |
+| oral_decision_defense | text | YES |  |  |
+| oral_reassessment | text | YES |  |  |
+| oral_transport_handoff | text | YES |  |  |
+| oral_notes | text | YES |  |  |
+| readiness | text | YES |  |  |
+| concerns_notes | text | YES |  |  |
+| general_notes | text | YES |  |  |
+| submitted_at | timestamp with time zone | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `assessment_id` -> `osce_assessments.id` (osce_evaluator_scores_assessment_id_fkey)
+
+**Indexes:**
+- `osce_evaluator_scores_pkey`
+- `unique_evaluator_assessment`
+- `idx_osce_evaluator_scores_assessment`
+- `idx_osce_evaluator_scores_evaluator`
+
+**RLS Policies:**
+- `osce_evaluator_scores_all` (ALL, PERMISSIVE, roles: {public})
+
+#### `osce_guest_tokens`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| token | text | NO | encode(gen_random_bytes(16), 'hex'::text) |  |
+| evaluator_name | text | NO |  |  |
+| evaluator_role | text | YES |  |  |
+| valid_from | timestamp with time zone | YES | now() |  |
+| valid_until | timestamp with time zone | YES | (now() + '24:00:00'::interval) |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| event_id | uuid | YES |  | FK -> osce_events.id |
+
+**Foreign Keys:**
+- `event_id` -> `osce_events.id` (osce_guest_tokens_event_id_fkey)
+
+**Indexes:**
+- `osce_guest_tokens_pkey`
+- `osce_guest_tokens_token_key`
+- `idx_osce_guest_tokens_token`
+- `idx_osce_guest_tokens_event`
+
+**RLS Policies:**
+- `osce_guest_tokens_all` (ALL, PERMISSIVE, roles: {public})
+- `osce_guest_tokens_select` (SELECT, PERMISSIVE, roles: {public})
+
+#### `osce_scenarios`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| scenario_letter | text | NO |  |  |
+| title | text | NO |  |  |
+| patient_name | text | YES |  |  |
+| patient_age | text | YES |  |  |
+| patient_gender | text | YES |  |  |
+| chief_complaint | text | YES |  |  |
+| dispatch_text | text | YES |  |  |
+| instructor_notes | text | YES |  |  |
+| critical_actions | jsonb | YES |  |  |
+| expected_interventions | jsonb | YES |  |  |
+| oral_board_domains | jsonb | YES |  |  |
+| vital_sign_progressions | jsonb | YES |  |  |
+| full_content | text | YES |  |  |
+| is_active | boolean | YES | true |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `osce_scenarios_pkey`
+- `osce_scenarios_scenario_letter_key`
+- `idx_osce_scenarios_letter`
+- `idx_osce_scenarios_active`
+
+**RLS Policies:**
+- `Admins can manage scenarios` (ALL, PERMISSIVE, roles: {authenticated})
+- `Authenticated users can read scenarios` (SELECT, PERMISSIVE, roles: {authenticated})
+
+### Ride-Along (5 tables)
+
+#### `ride_along_assignments`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| shift_id | uuid | YES |  | FK -> ride_along_shifts.id |
+| student_id | uuid | YES |  |  |
+| status | text | YES | 'assigned'::text |  |
+| hours_completed | numeric | YES |  |  |
+| preceptor_name | text | YES |  |  |
+| notes | text | YES |  |  |
+| assigned_by | uuid | YES |  |  |
+| assigned_at | timestamp with time zone | YES | now() |  |
+| confirmed_at | timestamp with time zone | YES |  |  |
+| completed_at | timestamp with time zone | YES |  |  |
+
+**Foreign Keys:**
+- `shift_id` -> `ride_along_shifts.id` (ride_along_assignments_shift_id_fkey)
+
+**Indexes:**
+- `ride_along_assignments_pkey`
+- `idx_ride_along_assignments_shift`
+- `idx_ride_along_assignments_student`
+- `idx_ride_along_assignments_status`
+
+**RLS Policies:**
+- `Service role full access on ride_along_assignments` (ALL, PERMISSIVE, roles: {public})
+
+#### `ride_along_availability`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| student_id | uuid | YES |  |  |
+| cohort_id | uuid | YES |  |  |
+| semester_id | uuid | YES |  |  |
+| available_days | jsonb | YES | '{}'::jsonb |  |
+| preferred_shift_type | ARRAY | YES |  |  |
+| preferred_dates | ARRAY | YES |  |  |
+| unavailable_dates | ARRAY | YES |  |  |
+| notes | text | YES |  |  |
+| submitted_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+| poll_token | text | YES | (gen_random_uuid())::text |  |
+| poll_deadline | timestamp with time zone | YES |  |  |
+| poll_status | text | YES | 'draft'::text |  |
+
+**Indexes:**
+- `ride_along_availability_pkey`
+- `idx_ride_along_availability_student`
+- `idx_ride_along_availability_cohort`
+- `ride_along_availability_poll_token_key`
+
+**RLS Policies:**
+- `Service role full access on ride_along_availability` (ALL, PERMISSIVE, roles: {public})
+
+#### `ride_along_polls`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| cohort_id | uuid | YES |  |  |
+| semester_id | uuid | YES |  |  |
+| token | text | YES | (gen_random_uuid())::text |  |
+| title | text | NO | 'EMT Ride-Along Availability'::text |  |
+| deadline | timestamp with time zone | YES |  |  |
+| status | text | YES | 'draft'::text |  |
+| created_by | uuid | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `ride_along_polls_pkey`
+- `ride_along_polls_token_key`
+- `idx_ride_along_polls_token`
+- `idx_ride_along_polls_status`
+
+**RLS Policies:**
+- `Service role full access on ride_along_polls` (ALL, PERMISSIVE, roles: {public})
+
+#### `ride_along_shifts`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| semester_id | uuid | YES |  |  |
+| cohort_id | uuid | YES |  |  |
+| agency_id | uuid | YES |  |  |
+| shift_date | date | NO |  |  |
+| shift_type | text | YES |  |  |
+| start_time | time without time zone | YES |  |  |
+| end_time | time without time zone | YES |  |  |
+| max_students | integer | YES | 1 |  |
+| location | text | YES |  |  |
+| unit_number | text | YES |  |  |
+| preceptor_name | text | YES |  |  |
+| notes | text | YES |  |  |
+| status | text | YES | 'open'::text |  |
+| created_by | uuid | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `ride_along_shifts_pkey`
+- `idx_ride_along_shifts_date`
+- `idx_ride_along_shifts_status`
+- `idx_ride_along_shifts_cohort`
+- `idx_ride_along_shifts_agency`
+- `idx_ride_along_shifts_semester`
+
+**RLS Policies:**
+- `Service role full access on ride_along_shifts` (ALL, PERMISSIVE, roles: {public})
+
+#### `ride_along_templates`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| name | text | NO |  |  |
+| agency_id | uuid | YES |  |  |
+| day_of_week | integer | YES |  |  |
+| shift_type | text | YES |  |  |
+| start_time | time without time zone | YES |  |  |
+| end_time | time without time zone | YES |  |  |
+| max_students | integer | YES | 1 |  |
+| unit_number | text | YES |  |  |
+| preceptor_name | text | YES |  |  |
+| is_active | boolean | YES | true |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `ride_along_templates_pkey`
+- `idx_ride_along_templates_agency`
+
+**RLS Policies:**
+- `Service role full access on ride_along_templates` (ALL, PERMISSIVE, roles: {public})
+
+### Volunteers (4 tables)
+
+#### `volunteer_events`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| name | text | NO |  |  |
+| event_type | text | YES |  |  |
+| date | date | NO |  |  |
+| start_time | time without time zone | YES |  |  |
+| end_time | time without time zone | YES |  |  |
+| location | text | YES |  |  |
+| description | text | YES |  |  |
+| max_volunteers | integer | YES |  |  |
+| linked_lab_day_id | uuid | YES |  |  |
+| is_active | boolean | YES | true |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| correction_email_sent_at | timestamp with time zone | YES |  |  |
+| correction_email_count | integer | NO | 0 |  |
+
+**Indexes:**
+- `volunteer_events_pkey`
+- `idx_volunteer_events_date`
+
+**RLS Policies:**
+- `Allow all for authenticated` (ALL, PERMISSIVE, roles: {public})
+
+#### `volunteer_invites`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| name | text | NO |  |  |
+| invite_type | text | YES |  |  |
+| token | text | YES | encode(gen_random_bytes(8), 'hex'::text) |  |
+| event_ids | ARRAY | YES |  |  |
+| message | text | YES |  |  |
+| deadline | timestamp with time zone | YES |  |  |
+| is_active | boolean | YES | true |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `volunteer_invites_pkey`
+- `volunteer_invites_token_key`
+- `idx_volunteer_invites_token`
+
+**RLS Policies:**
+- `Allow all for authenticated` (ALL, PERMISSIVE, roles: {public})
+
+#### `volunteer_lab_tokens`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| token | text | YES | encode(gen_random_bytes(16), 'hex'::text) |  |
+| registration_id | uuid | YES |  | FK -> volunteer_registrations.id |
+| volunteer_name | text | NO |  |  |
+| volunteer_email | text | YES |  |  |
+| lab_day_id | uuid | YES |  | FK -> lab_days.id |
+| event_id | uuid | YES |  | FK -> volunteer_events.id |
+| role | text | YES | 'volunteer_grader'::text |  |
+| valid_from | timestamp with time zone | YES | now() |  |
+| valid_until | timestamp with time zone | YES | (now() + '24:00:00'::interval) |  |
+| is_active | boolean | YES | true |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `registration_id` -> `volunteer_registrations.id` (volunteer_lab_tokens_registration_id_fkey)
+- `lab_day_id` -> `lab_days.id` (volunteer_lab_tokens_lab_day_id_fkey)
+- `event_id` -> `volunteer_events.id` (volunteer_lab_tokens_event_id_fkey)
+
+**Indexes:**
+- `volunteer_lab_tokens_pkey`
+- `volunteer_lab_tokens_token_key`
+- `idx_volunteer_lab_tokens_token`
+- `idx_volunteer_lab_tokens_lab_day`
+
+**RLS Policies:**
+- `Allow all for authenticated` (ALL, PERMISSIVE, roles: {public})
+
+#### `volunteer_registrations`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| event_id | uuid | YES |  | FK -> volunteer_events.id |
+| invite_id | uuid | YES |  | FK -> volunteer_invites.id |
+| name | text | NO |  |  |
+| email | text | NO |  |  |
+| phone | text | YES |  |  |
+| volunteer_type | text | YES |  |  |
+| agency_affiliation | text | YES |  |  |
+| needs_evaluation | boolean | YES | false |  |
+| evaluation_skill | text | YES |  |  |
+| evaluation_status | text | YES | 'not_applicable'::text |  |
+| evaluation_id | uuid | YES |  |  |
+| status | text | YES | 'registered'::text |  |
+| notes | text | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `event_id` -> `volunteer_events.id` (volunteer_registrations_event_id_fkey)
+- `invite_id` -> `volunteer_invites.id` (volunteer_registrations_invite_id_fkey)
+
+**Indexes:**
+- `volunteer_registrations_pkey`
+- `volunteer_registrations_event_id_email_key`
+- `idx_volunteer_registrations_event`
+- `idx_volunteer_registrations_email`
+
+**RLS Policies:**
+- `Allow all for authenticated` (ALL, PERMISSIVE, roles: {public})
+
+### Cohort, Student & Clinical (additions) (8 tables)
+
+#### `cohort_semester_overrides`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| cohort_id | uuid | NO |  | FK -> cohorts.id |
+| semester_id | uuid | NO |  | FK -> pmi_semesters.id |
+| start_date | date | NO |  |  |
+| end_date | date | NO |  |  |
+| notes | text | YES |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
+| updated_at | timestamp with time zone | NO | now() |  |
+
+**Foreign Keys:**
+- `cohort_id` -> `cohorts.id` (cohort_semester_overrides_cohort_id_fkey)
+- `semester_id` -> `pmi_semesters.id` (cohort_semester_overrides_semester_id_fkey)
+
+**Indexes:**
+- `cohort_semester_overrides_pkey`
+- `cohort_semester_overrides_unique`
+- `idx_cso_cohort_date`
+
+#### `coverage_requests`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| requested_by | uuid | NO |  | FK -> lab_users.id |
+| lab_day_id | uuid | YES |  | FK -> lab_days.id |
+| date | date | NO |  |  |
+| start_time | time without time zone | NO |  |  |
+| end_time | time without time zone | NO |  |  |
+| request_type | text | NO | 'lab'::text |  |
+| notes | text | YES |  |  |
+| urgency | text | NO | 'normal'::text |  |
+| status | text | NO | 'pending'::text |  |
+| approved_by | uuid | YES |  | FK -> lab_users.id |
+| approved_at | timestamp with time zone | YES |  |  |
+| created_shift_id | uuid | YES |  | FK -> open_shifts.id |
+| created_at | timestamp with time zone | NO | now() |  |
+| updated_at | timestamp with time zone | NO | now() |  |
+
+**Foreign Keys:**
+- `requested_by` -> `lab_users.id` (coverage_requests_requested_by_fkey)
+- `lab_day_id` -> `lab_days.id` (coverage_requests_lab_day_id_fkey)
+- `approved_by` -> `lab_users.id` (coverage_requests_approved_by_fkey)
+- `created_shift_id` -> `open_shifts.id` (coverage_requests_created_shift_id_fkey)
+
+**Indexes:**
+- `coverage_requests_pkey`
+- `idx_coverage_requests_status_date`
+- `idx_coverage_requests_requester`
+
+**RLS Policies:**
+- `read coverage requests` (SELECT, PERMISSIVE, roles: {public})
+- `write coverage requests` (ALL, PERMISSIVE, roles: {public})
+
+#### `internship_closeout_items`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| internship_id | uuid | NO |  | FK -> student_internships.id |
+| item_name | text | NO |  |  |
+| display_order | integer | NO | 0 |  |
+| is_checked | boolean | NO | false |  |
+| checked_by | uuid | YES |  | FK -> lab_users.id |
+| checked_at | timestamp with time zone | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `internship_id` -> `student_internships.id` (internship_closeout_items_internship_id_fkey)
+- `checked_by` -> `lab_users.id` (internship_closeout_items_checked_by_fkey)
+
+**Indexes:**
+- `internship_closeout_items_pkey`
+- `internship_closeout_items_internship_id_item_name_key`
+- `idx_closeout_items_internship`
+- `idx_closeout_items_checked`
+
+**RLS Policies:**
+- `closeout_items_delete` (DELETE, PERMISSIVE, roles: {public})
+- `closeout_items_insert` (INSERT, PERMISSIVE, roles: {public})
+- `closeout_items_select` (SELECT, PERMISSIVE, roles: {public})
+- `closeout_items_update` (UPDATE, PERMISSIVE, roles: {public})
+
+#### `manual_hour_logs`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| user_id | uuid | NO |  | FK -> lab_users.id |
+| logged_by | uuid | YES |  | FK -> lab_users.id |
+| date | date | NO |  |  |
+| duration_minutes | integer | NO |  |  |
+| entry_type | text | NO | 'class'::text |  |
+| notes | text | YES |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
+| start_time | time without time zone | YES |  |  |
+| end_time | time without time zone | YES |  |  |
+| course_label | text | YES |  |  |
+| covering_for | uuid | YES |  | FK -> lab_users.id |
+
+**Foreign Keys:**
+- `user_id` -> `lab_users.id` (manual_hour_logs_user_id_fkey)
+- `logged_by` -> `lab_users.id` (manual_hour_logs_logged_by_fkey)
+- `covering_for` -> `lab_users.id` (manual_hour_logs_covering_for_fkey)
+
+**Indexes:**
+- `manual_hour_logs_pkey`
+- `idx_manual_hour_logs_user_date`
+- `idx_manual_hour_logs_date`
+
+**RLS Policies:**
+- `read manual hour logs` (SELECT, PERMISSIVE, roles: {public})
+- `write manual hour logs` (ALL, PERMISSIVE, roles: {public})
+
+#### `nremt_scenarios`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | uuid_generate_v4() | PK |
+| skill_code | text | NO |  |  |
+| title | text | NO |  |  |
+| scenario_data | jsonb | NO |  |  |
+| is_active | boolean | NO | true |  |
+| created_at | timestamp with time zone | NO | now() |  |
+
+**Indexes:**
+- `nremt_scenarios_pkey`
+- `idx_nremt_scenarios_skill_code`
+
+**RLS Policies:**
+- `nremt_scenarios_read` (SELECT, PERMISSIVE, roles: {authenticated})
+- `nremt_scenarios_service_write` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `smc_requirements`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| program_id | uuid | NO |  | FK -> programs.id |
+| semester | integer | NO |  |  |
+| skill_id | uuid | YES |  | FK -> skills.id |
+| skill_name | text | NO |  |  |
+| category | text | YES |  |  |
+| min_attempts | integer | YES | 1 |  |
+| is_platinum | boolean | YES | false |  |
+| notes | text | YES |  |  |
+| display_order | integer | YES | 0 |  |
+| is_active | boolean | YES | true |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| updated_at | timestamp with time zone | YES | now() |  |
+| week_number | integer | YES |  |  |
+| sim_permitted | boolean | YES | false |  |
+| lab_tracked | boolean | YES | true |  |
+
+**Foreign Keys:**
+- `program_id` -> `programs.id` (smc_requirements_program_id_fkey)
+- `skill_id` -> `skills.id` (smc_requirements_skill_id_fkey)
+
+**Indexes:**
+- `smc_requirements_pkey`
+- `smc_requirements_program_id_semester_skill_name_key`
+- `idx_smc_requirements_program_semester`
+- `idx_smc_requirements_skill_id`
+- `idx_smc_requirements_week`
+
+#### `student_cohort_history`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| student_id | uuid | NO |  | FK -> students.id |
+| from_cohort_id | uuid | YES |  | FK -> cohorts.id |
+| to_cohort_id | uuid | NO |  | FK -> cohorts.id |
+| previous_status | text | YES |  |  |
+| new_status | text | YES |  |  |
+| notes | text | YES |  |  |
+| transferred_by | text | YES |  |  |
+| transferred_at | timestamp with time zone | NO | now() |  |
+| event_type | text | YES |  |  |
+| from_cert_level | text | YES |  |  |
+| to_cert_level | text | YES |  |  |
+
+**Foreign Keys:**
+- `student_id` -> `students.id` (student_cohort_history_student_id_fkey)
+- `from_cohort_id` -> `cohorts.id` (student_cohort_history_from_cohort_id_fkey)
+- `to_cohort_id` -> `cohorts.id` (student_cohort_history_to_cohort_id_fkey)
+
+**Indexes:**
+- `student_cohort_history_pkey`
+- `idx_student_cohort_history_student`
+- `idx_student_cohort_history_to_cohort`
+
+**RLS Policies:**
+- `instructors read cohort history` (SELECT, PERMISSIVE, roles: {public})
+- `lead instructors write cohort history` (ALL, PERMISSIVE, roles: {public})
+
+#### `student_program_enrollments`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| student_id | uuid | NO |  | FK -> students.id |
+| cohort_id | uuid | NO |  | FK -> cohorts.id |
+| program | text | NO |  |  |
+| status | text | NO | 'active'::text |  |
+| start_date | date | YES |  |  |
+| end_date | date | YES |  |  |
+| notes | text | YES |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
+| updated_at | timestamp with time zone | NO | now() |  |
+
+**Foreign Keys:**
+- `student_id` -> `students.id` (student_program_enrollments_student_id_fkey)
+- `cohort_id` -> `cohorts.id` (student_program_enrollments_cohort_id_fkey)
+
+**Indexes:**
+- `idx_student_program_enrollments_cohort`
+- `one_active_enrollment_per_student`
+- `student_program_enrollments_pkey`
+- `idx_student_program_enrollments_student`
+
+### Access, Compliance & Audit (additions) (8 tables)
+
+#### `approved_external_emails`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| email | text | NO |  |  |
+| domain | text | NO |  |  |
+| organization | text | NO |  |  |
+| default_role | text | YES | 'pending'::text |  |
+| default_scope | ARRAY | YES |  |  |
+| approved_by | text | NO |  |  |
+| approved_at | timestamp with time zone | YES | now() |  |
+| revoked_at | timestamp with time zone | YES |  |  |
+| is_active | boolean | YES | true |  |
+| notes | text | YES |  |  |
+
+**Indexes:**
+- `approved_external_emails_pkey`
+- `approved_external_emails_email_key`
+- `idx_approved_external_email`
+- `idx_approved_external_domain`
+
+**RLS Policies:**
+- `service_role_approved_external` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `compliance_audit_log`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| audit_id | uuid | YES |  | FK -> compliance_audits.id |
+| completed_at | timestamp with time zone | YES | now() |  |
+| completed_by | text | NO |  |  |
+| result | text | NO |  |  |
+| findings | text | YES |  |  |
+| actions_taken | text | YES |  |  |
+| script_output | jsonb | YES |  |  |
+| next_due_at | timestamp with time zone | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Foreign Keys:**
+- `audit_id` -> `compliance_audits.id` (compliance_audit_log_audit_id_fkey)
+
+**Indexes:**
+- `compliance_audit_log_pkey`
+- `idx_compliance_audit_log_audit`
+- `idx_compliance_audit_log_date`
+
+**RLS Policies:**
+- `compliance_audit_log_service` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `compliance_audits`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| audit_type | text | NO |  |  |
+| frequency | text | NO |  |  |
+| tool_method | text | YES |  |  |
+| description | text | YES |  |  |
+| last_completed_at | timestamp with time zone | YES |  |  |
+| last_completed_by | text | YES |  |  |
+| last_result | text | YES |  |  |
+| last_findings | text | YES |  |  |
+| last_actions | text | YES |  |  |
+| next_due_at | timestamp with time zone | YES |  |  |
+| is_overdue | boolean | YES | false |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `compliance_audits_pkey`
+- `compliance_audits_audit_type_key`
+
+**RLS Policies:**
+- `compliance_audits_service` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `data_consent_agreements`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| user_email | text | NO |  |  |
+| user_role | text | NO |  |  |
+| agreement_type | text | NO |  |  |
+| agreement_version | integer | YES | 1 |  |
+| accepted | boolean | NO |  |  |
+| accepted_at | timestamp with time zone | YES |  |  |
+| ip_address | text | YES |  |  |
+| user_agent | text | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `data_consent_agreements_pkey`
+- `data_consent_agreements_user_email_agreement_type_agreement_key`
+- `idx_consent_user_email`
+- `idx_consent_type`
+
+**RLS Policies:**
+- `service_role_consent` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `data_export_archives`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| export_type | text | NO |  |  |
+| label | text | YES |  |  |
+| cohort_id | uuid | YES |  | FK -> cohorts.id |
+| folder_path | text | NO |  |  |
+| files | jsonb | NO | '[]'::jsonb |  |
+| total_size | bigint | YES | 0 |  |
+| total_records | integer | YES | 0 |  |
+| created_by | text | YES |  |  |
+| created_at | timestamp with time zone | YES | now() |  |
+| expires_at | timestamp with time zone | YES |  |  |
+| status | text | YES | 'completed'::text |  |
+
+**Foreign Keys:**
+- `cohort_id` -> `cohorts.id` (data_export_archives_cohort_id_fkey)
+
+**Indexes:**
+- `data_export_archives_pkey`
+- `idx_data_export_archives_type`
+- `idx_data_export_archives_created`
+- `idx_data_export_archives_expires`
+
+**RLS Policies:**
+- `Allow all for authenticated` (ALL, PERMISSIVE, roles: {public})
+
+#### `grade_access_log`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| user_email | text | NO |  |  |
+| user_role | text | NO |  |  |
+| student_id | uuid | YES |  |  |
+| data_type | text | YES |  |  |
+| action | text | YES |  |  |
+| ip_address | text | YES |  |  |
+| accessed_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `grade_access_log_pkey`
+
+#### `link_clicks`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| link_id | text | NO |  |  |
+| source | text | YES |  |  |
+| referrer | text | YES |  |  |
+| user_agent | text | YES |  |  |
+| clicked_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `link_clicks_pkey`
+- `idx_link_clicks_link_id`
+- `idx_link_clicks_clicked_at`
+
+#### `record_access_log`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| user_email | text | NO |  |  |
+| user_role | text | NO |  |  |
+| student_id | uuid | YES |  |  |
+| data_type | text | NO |  |  |
+| action | text | NO |  |  |
+| route | text | YES |  |  |
+| details | jsonb | YES |  |  |
+| accessed_at | timestamp with time zone | YES | now() |  |
+
+**Indexes:**
+- `record_access_log_pkey`
+- `idx_record_access_log_user`
+- `idx_record_access_log_student`
+- `idx_record_access_log_date`
+
+**RLS Policies:**
+- `service_role_access_log` (ALL, PERMISSIVE, roles: {service_role})
+
+### Other (reconciliation additions) (2 tables)
+
+#### `recurring_availability_templates`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| instructor_id | uuid | NO |  | FK -> lab_users.id |
+| created_by | uuid | YES |  | FK -> lab_users.id |
+| weekdays | ARRAY | NO |  |  |
+| start_time | time without time zone | NO |  |  |
+| end_time | time without time zone | NO |  |  |
+| is_all_day | boolean | NO | false |  |
+| frequency | text | NO | 'weekly'::text |  |
+| start_date | date | NO |  |  |
+| end_date | date | NO |  |  |
+| notes | text | YES |  |  |
+| is_active | boolean | NO | true |  |
+| created_at | timestamp with time zone | NO | now() |  |
+| updated_at | timestamp with time zone | NO | now() |  |
+
+**Foreign Keys:**
+- `instructor_id` -> `lab_users.id` (recurring_availability_templates_instructor_id_fkey)
+- `created_by` -> `lab_users.id` (recurring_availability_templates_created_by_fkey)
+
+**Indexes:**
+- `recurring_availability_templates_pkey`
+- `idx_recurring_availability_instructor`
+
+**RLS Policies:**
+- `read recurring availability templates` (SELECT, PERMISSIVE, roles: {public})
+- `write recurring availability templates` (ALL, PERMISSIVE, roles: {public})
+
+#### `shared_calendar_events`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| recurring_group_id | uuid | YES |  |  |
+| block_id | uuid | YES |  | FK -> pmi_schedule_blocks.id |
+| google_event_id | text | NO |  |  |
+| google_calendar_id | text | NO |  |  |
+| instructor_id | uuid | YES |  | FK -> lab_users.id |
+| semester_id | uuid | YES |  | FK -> pmi_semesters.id |
+| last_synced_at | timestamp with time zone | NO | now() |  |
+| last_error | text | YES |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
+| updated_at | timestamp with time zone | NO | now() |  |
+
+**Foreign Keys:**
+- `block_id` -> `pmi_schedule_blocks.id` (shared_calendar_events_block_id_fkey)
+- `instructor_id` -> `lab_users.id` (shared_calendar_events_instructor_id_fkey)
+- `semester_id` -> `pmi_semesters.id` (shared_calendar_events_semester_id_fkey)
+
+**Indexes:**
+- `shared_calendar_events_pkey`
+- `shared_cal_events_unique_recurring`
+- `shared_cal_events_unique_block`
+- `idx_shared_cal_events_semester`
+- `idx_shared_cal_events_google_event`
 
