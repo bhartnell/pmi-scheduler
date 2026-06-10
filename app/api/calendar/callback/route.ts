@@ -64,12 +64,43 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // VALIDATE the scope Google ACTUALLY granted before stamping anything.
+    // The old code hardcoded scope='events' without reading tokens.scope —
+    // it stored an assumption, not the grant. Google's granular-consent
+    // screen lets users untick individual scopes, so a connection can come
+    // back missing one. Both are required: calendar.events for pushes,
+    // calendar.freebusy for the availability checker (whose 403 on an
+    // events-only token was the needs_reconnect root cause). If either is
+    // missing we bounce WITHOUT overwriting the user's stored state, so a
+    // partial re-consent can't brick an existing connection.
+    const grantedScope: string = typeof tokens.scope === 'string' ? tokens.scope : '';
+    const hasEvents = grantedScope.includes('https://www.googleapis.com/auth/calendar.events');
+    const hasFreeBusy =
+      grantedScope.includes('https://www.googleapis.com/auth/calendar.freebusy') ||
+      // broader scopes that also authorize freeBusy.query
+      grantedScope.includes('https://www.googleapis.com/auth/calendar.readonly') ||
+      /https:\/\/www\.googleapis\.com\/auth\/calendar(\s|$)/.test(grantedScope);
+    if (!hasEvents || !hasFreeBusy) {
+      console.error(
+        `Calendar connect: incomplete scope grant for ${session.user.email}: "${grantedScope}" ` +
+        `(events=${hasEvents}, freebusy=${hasFreeBusy})`
+      );
+      return NextResponse.redirect(
+        `${baseUrl}/settings?calendar=error&message=${encodeURIComponent(
+          'incomplete_scope_grant: please reconnect and leave BOTH calendar permissions checked'
+        )}`
+      );
+    }
+
     // Calculate token expiry
     const expiresAt = new Date(
       Date.now() + (tokens.expires_in || 3600) * 1000
     ).toISOString();
 
-    // Store tokens in lab_users
+    // Store tokens in lab_users. google_calendar_scope is an app-level
+    // enum ('events' | 'freebusy' | 'needs_reconnect') consumed by 8 call
+    // sites — 'events' here means "verified: full events+freebusy grant",
+    // which the validation above now guarantees.
     const supabase = getSupabaseAdmin();
     const { error: dbError } = await supabase
       .from('lab_users')

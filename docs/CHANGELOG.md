@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-06-10
+
+- `_pending_` | Calendar connection scope fix (PREREQUISITE from the calendar root-cause investigation). Connect flow now requests `calendar.events` + `calendar.freebusy` (freeBusy.query was never authorized by the old events-only grant — every connection 403'd on its first availability check and was stamped `needs_reconnect`; pushes frozen since 05-06). Callback now VALIDATES Google's actually-returned scope (granular consent can omit boxes) and refuses to overwrite stored state on a partial grant, instead of hardcoding `scope='events'`. Stale comments corrected. New `scripts/verify-calendar-scope.mjs` one-account test (refresh → freeBusy → self-deleting event push → scope-stability check). Login/sign-in flow untouched; no DB structure change; rollout = users reconnect once (one-account test first per spec).
+
 ## 2026-06-09
 
 - `d26c7d04` | Exam scheduler doors hotfix + admin placement. Part A (nav clarity): home student card relabeled "Students sign up here"; new admin-only home card "Manage Exam Sessions" → `/admin/exam-sessions`; clinical hub gets an admin-gated "Manage Exam Sessions" entry; `/exam-scheduling` blocked-state now detects staff and routes them to the admin console instead of the "account not linked" dead-end. Part B: understated "Sign up a student on their behalf" action on `/admin/exam-sessions` + `POST /api/exam-scheduling/signups/admin` — bypasses the self-service roster/email gate (admin picks the student directly), enforces one-active-slot + capacity/Pima pool, confirms directly (admin placement = approval), fires the standard notifications, audit-logged; warns when the student has no roster email (no confirmation email possible). Poll system untouched; no schema change.

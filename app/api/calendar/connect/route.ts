@@ -4,7 +4,15 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 
 /**
  * GET /api/calendar/connect
- * Redirects to Google OAuth consent screen requesting calendar.freebusy.read scope
+ * Redirects to Google OAuth consent screen requesting BOTH
+ * calendar.events (event pushes) AND calendar.freebusy (availability).
+ *
+ * Why both: the availability checker calls Google's freeBusy API, which
+ * calendar.events does NOT authorize. The previous events-only grant meant
+ * every connection 403'd on its first availability check and was stamped
+ * needs_reconnect — the self-perpetuating lapse that froze all calendar
+ * pushes from 2026-05-06. calendar.freebusy is the narrowest scope that
+ * authorizes freeBusy.query (deliberately not calendar.readonly).
  */
 export async function GET() {
   const auth = await requireAuth();
@@ -24,7 +32,7 @@ export async function GET() {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'https://www.googleapis.com/auth/calendar.events',
+    scope: 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.freebusy',
     access_type: 'offline',
     prompt: 'consent',
     state: auth.user.email, // pass email in state for callback verification

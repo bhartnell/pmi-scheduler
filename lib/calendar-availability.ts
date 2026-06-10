@@ -191,12 +191,16 @@ export async function checkInstructorAvailability(
       : undefined; // undefined = default to primary
     const { busy, staleScope } = await queryFreeBusy(accessToken, email, timeMin, timeMax, calendarIds);
 
-    // Stale-scope path: token connected before the events-scope
-    // upgrade, FreeBusy 403'd. Stamp the scope column so other
-    // surfaces (e.g. the settings page) can show a "Reconnect Google
-    // Calendar" prompt, and return the optimistic "no data → assume
-    // available" shape so the requesting UI degrades silently
-    // instead of erroring.
+    // Stale-scope path: FreeBusy 403'd because the token's grant does
+    // not authorize freeBusy.query. (Historic root cause: the connect
+    // flow used to request calendar.events ONLY, which freeBusy does
+    // not accept — every connection tripped this on its first
+    // availability check and relapsed to needs_reconnect until the
+    // 2026-06 scope fix added calendar.freebusy to the grant.) Stamp
+    // the scope column so other surfaces (e.g. the settings page) can
+    // show a "Reconnect Google Calendar" prompt, and return the
+    // optimistic "no data → assume available" shape so the requesting
+    // UI degrades silently instead of erroring.
     if (staleScope) {
       await supabase
         .from('lab_users')
