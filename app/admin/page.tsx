@@ -251,6 +251,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-amber-600',
         },
         {
+          href: '/admin/exam-sessions',
+          icon: CalendarDays,
+          title: 'Written Exam Sessions',
+          description: 'Build final written exam sessions, approve phase-1 signups, record results',
+          color: 'bg-blue-600',
+        },
+        {
           href: '/admin/calendar-sync',
           icon: RefreshCw,
           title: 'Calendar Sync',

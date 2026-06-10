@@ -804,6 +804,29 @@ export default function HomePage() {
             </Link>
           )}
 
+          {/* Written Exam Self-Scheduling — students (incl. roster students
+              holding an instructor role) + staff */}
+          {currentUser && effectiveRole && (effectiveRole === 'student' || hasMinRole(effectiveRole, 'instructor')) && (
+          <Link
+            href="/exam-scheduling"
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
+          >
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
+                <Calendar className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Written Exam Signup</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                Pick your final written exam session and computer option.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 text-xs">
+                <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Self-Schedule</span>
+                <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">LockDown Browser</span>
+              </div>
+            </div>
+          </Link>
+          )}
+
           {/* Scheduling Card - instructor+ only */}
           {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
           <Link

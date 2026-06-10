@@ -1,6 +1,13 @@
 # PMI EMS Scheduler — Site Map
-> Refreshed 2026-06-08 (LVFR-AEMT runsheet section expanded for the 30-day rebuild).
-> Previously refreshed 2026-06-05.
+> Refreshed 2026-06-09 (Exam Self-Scheduling pages added).
+> Previously refreshed 2026-06-08 (LVFR-AEMT runsheet section expanded).
+
+## Exam Self-Scheduling (final written exam)
+
+| Path | Notes |
+|------|-------|
+| `/exam-scheduling` | Student self-scheduling for the final summative WRITTEN exam. Roster-scoped (email ↔ students table, NOT role) so dual-role student-instructors can sign up. Lockdown own-computer vs Pima-computer seat logic; phase-2 auto-confirm, phase-1 pending. Entry: home-page "Written Exam Signup" card. |
+| `/admin/exam-sessions` | Director console: build sessions, approve/deny phase-1 queue, record written-exam results. Entry: Admin hub → Lab & Clinical. |
 > Reflects the /lab-management → /labs consolidation that landed
 > in commit 808bb34d; the /lab-management/* tree is GONE from disk
 > and exists only as HTTP redirects in next.config.ts.

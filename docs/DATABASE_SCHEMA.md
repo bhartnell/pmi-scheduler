@@ -11010,3 +11010,60 @@ Key foreign key relationships across the schema:
 - `idx_shared_cal_events_semester`
 - `idx_shared_cal_events_google_event`
 
+
+---
+
+## Exam Self-Scheduling (2026-06-09)
+
+> Net-new pair of tables for the final summative WRITTEN exam self-scheduling
+> feature (replaces the unused Group-Session poll path; Individual Meeting
+> polls untouched). Seats are DERIVED from confirmed signups — never stored.
+> Capacity is enforced by trigger `trg_exam_signups_capacity` at confirm time.
+> Migration: `20260609_exam_self_scheduling.sql`.
+
+### `exam_sessions`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| date | date | NO |  |  |
+| start_time | time without time zone | NO |  |  |
+| end_time | time without time zone | NO |  |  |
+| total_spots | integer | NO |  | CHECK > 0 |
+| pima_computers | integer | NO | 4 | Lockdown-capable Pima machines; CHECK 0..total_spots |
+| primary_instructor_id | uuid | YES |  | FK -> lab_users.id (the proctor — gets the calendar invite) |
+| created_by | uuid | YES |  | FK -> lab_users.id |
+| status | text | NO | 'open'::text | CHECK IN ('open','closed') |
+| notes | text | YES |  |  |
+| google_event_id | text | YES |  | main shared-calendar event |
+| google_event_link | text | YES |  |  |
+| created_at | timestamptz | NO | now() |  |
+| updated_at | timestamptz | NO | now() |  |
+
+**Foreign Keys:** `primary_instructor_id` -> `lab_users.id`, `created_by` -> `lab_users.id`
+(TWO FKs to lab_users — embeds need explicit `!exam_sessions_primary_instructor_id_fkey` hints.)
+
+**Indexes:** `idx_exam_sessions_date`, `idx_exam_sessions_status`
+
+### `exam_signups`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| session_id | uuid | NO |  | FK -> exam_sessions.id (CASCADE) |
+| student_id | uuid | NO |  | FK -> students.id (CASCADE) |
+| student_email | text | NO |  | roster/login email at signup time |
+| uses_own_computer | boolean | NO |  | false = consumes a Pima-computer seat AND a total seat |
+| status | text | NO | 'pending'::text | CHECK IN ('pending','confirmed','denied'); only 'confirmed' consumes seats |
+| decided_by | uuid | YES |  | FK -> lab_users.id |
+| decided_at | timestamptz | YES |  |  |
+| created_at | timestamptz | NO | now() |  |
+| updated_at | timestamptz | NO | now() |  |
+
+**Foreign Keys:** `session_id` -> `exam_sessions.id`, `student_id` -> `students.id`, `decided_by` -> `lab_users.id`
+
+**Indexes:** `uq_exam_signups_one_active_per_student` (UNIQUE on student_id WHERE status IN ('pending','confirmed') — one slot per student), `idx_exam_signups_session`, `idx_exam_signups_student`
+
+**Trigger:** `trg_exam_signups_capacity` — advisory-locks the session and rejects a row becoming 'confirmed' when total seats or Pima-computer seats are exhausted (race-proof seat enforcement).
+
+**Write-back note:** exam completion writes ONLY `student_internships.written_exam_passed` + `.written_exam_date` (via `/api/exam-scheduling/signups/[id]/result`). No other internship columns; OSCE/summative untouched.
