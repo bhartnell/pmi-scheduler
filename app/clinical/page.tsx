@@ -25,7 +25,7 @@ import {
   Shuffle,
   ClipboardCheck,
 } from 'lucide-react';
-import { canAccessClinical, canAccessAffiliations, type Role } from '@/lib/permissions';
+import { canAccessClinical, canAccessAffiliations, hasMinRole, type Role } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
@@ -289,6 +289,14 @@ export default function ClinicalDashboardPage() {
                   description="Fire & ambulance services"
                   badge={stats.totalInternshipAgencies}
                 />
+                {effectiveRole && hasMinRole(effectiveRole, 'admin') && (
+                  <SecondaryCard
+                    href="/admin/exam-sessions"
+                    icon={CalendarDays}
+                    title="Manage Exam Sessions"
+                    description="Written exam sessions, approvals, results"
+                  />
+                )}
                 <SecondaryCard
                   href="/clinical/compliance"
                   icon={FileCheck}

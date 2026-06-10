@@ -49,6 +49,7 @@ interface MeResponse {
   student: { id: string; name: string; isPhase2: boolean; current_semester: number | null; program: string | null } | null;
   signup: MySignup | null;
   blocked?: string;
+  isAdmin?: boolean;
 }
 
 function fmtDate(d: string): string {
@@ -175,13 +176,22 @@ export default function ExamSchedulingPage() {
           </div>
         )}
 
-        {/* Unlinked account — explicit blocked state, never silent */}
+        {/* Unlinked account — explicit blocked state, never silent. Staff
+            get routed to the ADMIN door instead of a dead-end. */}
         {!loading && me?.blocked && (
           <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-5 text-sm text-amber-900 dark:text-amber-200 flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-semibold mb-1">Account not linked</p>
+              <p className="font-semibold mb-1">{me.isAdmin ? 'This is the student page' : 'Account not linked'}</p>
               <p>{me.blocked}</p>
+              {me.isAdmin && (
+                <a
+                  href="/admin/exam-sessions"
+                  className="inline-flex items-center gap-1 mt-3 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold"
+                >
+                  <CalendarDays className="w-4 h-4" /> Manage Exam Sessions
+                </a>
+              )}
             </div>
           </div>
         )}

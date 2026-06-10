@@ -4,10 +4,12 @@
 
 ## Exam Self-Scheduling (final written exam)
 
+Two doors — labeled to keep directors out of the student dead-end:
+
 | Path | Notes |
 |------|-------|
-| `/exam-scheduling` | Student self-scheduling for the final summative WRITTEN exam. Roster-scoped (email ↔ students table, NOT role) so dual-role student-instructors can sign up. Lockdown own-computer vs Pima-computer seat logic; phase-2 auto-confirm, phase-1 pending. Entry: home-page "Written Exam Signup" card. |
-| `/admin/exam-sessions` | Director console: build sessions, approve/deny phase-1 queue, record written-exam results. Entry: Admin hub → Lab & Clinical. |
+| `/exam-scheduling` | **STUDENT door** — students sign up for their own exam. Roster-scoped (email ↔ students table, NOT role) so dual-role student-instructors can sign up. Lockdown own-computer vs Pima-computer seat logic; phase-2 auto-confirm, phase-1 pending. Admins who land here get routed to the admin door (blocked-state banner). Entry: home-page "Written Exam Signup" card (labeled "Students sign up here"). |
+| `/admin/exam-sessions` | **ADMIN door** — directors create/manage sessions, approve/deny the phase-1 queue, record written-exam results, and can "sign up a student on their behalf" (understated action; bypasses the roster/email gate, confirms directly, same notifications). Entries: home-page "Manage Exam Sessions" card (admin+), Clinical hub → More clinical tools, Admin hub → Lab & Clinical. |
 > Reflects the /lab-management → /labs consolidation that landed
 > in commit 808bb34d; the /lab-management/* tree is GONE from disk
 > and exists only as HTTP redirects in next.config.ts.

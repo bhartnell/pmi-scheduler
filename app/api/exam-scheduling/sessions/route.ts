@@ -54,7 +54,9 @@ export async function GET(request: NextRequest) {
   const usage = await getSeatUsage(ids);
 
   // Admin extras: per-session signups + proctor candidates (instructor+ staff)
+  // + the active student roster for the "sign up a student" admin action.
   let proctorCandidates: Array<{ id: string; name: string; email: string; role: string }> = [];
+  let rosterStudents: Array<Record<string, unknown>> = [];
   if (wantAdmin) {
     const { data: staff } = await supabase
       .from('lab_users')
@@ -63,6 +65,17 @@ export async function GET(request: NextRequest) {
       .eq('is_active', true)
       .order('name');
     proctorCandidates = staff ?? [];
+
+    const { data: roster } = await supabase
+      .from('students')
+      .select(`
+        id, first_name, last_name, email,
+        cohort:cohorts!students_cohort_id_fkey(cohort_number, current_semester,
+          program:programs(abbreviation))
+      `)
+      .eq('status', 'active')
+      .order('last_name');
+    rosterStudents = roster ?? [];
   }
 
   let signupsBySession: Record<string, unknown[]> = {};
@@ -97,7 +110,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     success: true,
     sessions: shaped,
-    ...(wantAdmin ? { proctorCandidates } : {}),
+    ...(wantAdmin ? { proctorCandidates, rosterStudents } : {}),
   });
 }
 

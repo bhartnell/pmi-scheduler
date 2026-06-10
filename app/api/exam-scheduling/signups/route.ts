@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { hasMinRole } from '@/lib/permissions';
 import {
   getRosterStudent,
   getSeatUsage,
@@ -43,11 +44,23 @@ export async function GET() {
   const student = await getRosterStudent(session.user.email);
   if (!student) {
     // Spec §3: unlinked email → explicit blocked state, not a silent failure.
+    // Staff hit this state by design (they're not on the student roster) —
+    // tell the page so it can route directors to the management console
+    // instead of presenting a dead-end (the "two doors" fix).
+    const { data: lu } = await getSupabaseAdmin()
+      .from('lab_users')
+      .select('role')
+      .ilike('email', session.user.email)
+      .single();
+    const isStaff = !!lu && hasMinRole(lu.role, 'admin');
     return NextResponse.json({
       success: true,
       student: null,
       signup: null,
-      blocked: 'Your account is not linked to a student record yet. Contact an administrator to link your email before signing up.',
+      isAdmin: isStaff,
+      blocked: isStaff
+        ? 'This page is where STUDENTS sign up for their own exam. Director accounts are not on the student roster — to create or manage sessions, use Manage Exam Sessions.'
+        : 'Your account is not linked to a student record yet. Contact an administrator to link your email before signing up.',
     });
   }
 

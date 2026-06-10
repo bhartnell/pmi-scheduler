@@ -54,6 +54,14 @@ interface SessionRow {
 
 interface Candidate { id: string; name: string; email: string; role: string }
 
+interface RosterStudent {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string | null;
+  cohort: { cohort_number: number | null; current_semester: number | null; program: { abbreviation: string } | null } | null;
+}
+
 function fmtDate(d: string): string {
   return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
 }
@@ -67,6 +75,9 @@ const EMPTY_FORM = { date: '', start_time: '08:00', end_time: '12:00', total_spo
 export default function AdminExamSessionsPage() {
   const [sessions, setSessions] = useState<SessionRow[]>([]);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
+  const [roster, setRoster] = useState<RosterStudent[]>([]);
+  const [showPlace, setShowPlace] = useState(false);
+  const [place, setPlace] = useState<{ student_id: string; session_id: string; uses_own_computer: boolean | null }>({ student_id: '', session_id: '', uses_own_computer: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -82,6 +93,7 @@ export default function AdminExamSessionsPage() {
       if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
       setSessions(json.sessions ?? []);
       setCandidates(json.proctorCandidates ?? []);
+      setRoster(json.rosterStudents ?? []);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load');
@@ -194,6 +206,29 @@ export default function AdminExamSessionsPage() {
     }
   }
 
+  async function placeStudent() {
+    if (!place.student_id || !place.session_id || place.uses_own_computer === null) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const res = await fetch('/api/exam-scheduling/signups/admin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(place),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
+      setNotice(`Student placed and confirmed.${json.warning ? ` ⚠ ${json.warning}` : ''}`);
+      setShowPlace(false);
+      setPlace({ student_id: '', session_id: '', uses_own_computer: null });
+      load();
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Placement failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const pendingAll = sessions.flatMap(s => s.signups.filter(g => g.status === 'pending').map(g => ({ ...g, _session: s })));
 
   return (
@@ -283,6 +318,75 @@ export default function AdminExamSessionsPage() {
               <button type="button" onClick={createSession} disabled={busy || !form.date}
                 className="inline-flex items-center gap-2 px-4 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-50">
                 {busy && <Loader2 className="w-4 h-4 animate-spin" />} Create
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Understated admin side door: book a student on their behalf
+            (bypasses the self-service roster/email gate; admin placement
+            confirms directly). Never present on any student-facing view. */}
+        <div className="text-right">
+          <button
+            type="button"
+            onClick={() => { setShowPlace(v => !v); setNotice(null); }}
+            className="text-xs text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 underline decoration-dotted"
+          >
+            Sign up a student on their behalf…
+          </button>
+        </div>
+        {showPlace && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 p-5 space-y-3">
+            <h2 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Place a student into a session</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Books directly as <strong>confirmed</strong> (your placement is the approval) and sends the usual
+              notifications. Works even if the student&apos;s own login isn&apos;t linked to the roster yet.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-xs text-gray-600 dark:text-gray-300">Student
+                <select value={place.student_id} onChange={e => setPlace(p => ({ ...p, student_id: e.target.value }))}
+                  className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                  <option value="">— pick a student —</option>
+                  {roster.map(r => (
+                    <option key={r.id} value={r.id}>
+                      {r.last_name}, {r.first_name}
+                      {r.cohort ? ` — ${r.cohort.program?.abbreviation ?? ''} ${r.cohort.cohort_number ?? ''} (S${r.cohort.current_semester ?? '?'})` : ''}
+                      {r.email ? '' : ' — no email on roster'}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs text-gray-600 dark:text-gray-300">Session
+                <select value={place.session_id} onChange={e => setPlace(p => ({ ...p, session_id: e.target.value }))}
+                  className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                  <option value="">— pick a session —</option>
+                  {sessions.map(s => (
+                    <option key={s.id} value={s.id}>
+                      {fmtDate(s.date)} {fmtTime(s.start_time)} — {s.total_left} seats / {s.pima_left} Pima left{s.status === 'closed' ? ' (closed to self-service)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm text-gray-800 dark:text-gray-200">
+              <label className="flex items-center gap-2">
+                <input type="radio" name="placeComputer" checked={place.uses_own_computer === true}
+                  onChange={() => setPlace(p => ({ ...p, uses_own_computer: true }))} />
+                <Laptop className="w-4 h-4" /> Own computer (LockDown Browser)
+              </label>
+              <label className="flex items-center gap-2">
+                <input type="radio" name="placeComputer" checked={place.uses_own_computer === false}
+                  onChange={() => setPlace(p => ({ ...p, uses_own_computer: false }))} />
+                <Monitor className="w-4 h-4" /> Pima computer
+              </label>
+            </div>
+            <div className="flex justify-end gap-2">
+              <button type="button" onClick={() => setShowPlace(false)}
+                className="px-3 py-1.5 text-sm rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</button>
+              <button type="button" onClick={placeStudent}
+                disabled={busy || !place.student_id || !place.session_id || place.uses_own_computer === null}
+                className="inline-flex items-center gap-2 px-4 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-50">
+                {busy && <Loader2 className="w-4 h-4 animate-spin" />} Place &amp; confirm
               </button>
             </div>
           </div>
