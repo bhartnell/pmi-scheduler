@@ -343,6 +343,25 @@ const PROGRAM_TIME_DEFAULTS: Record<string, { start: string; end: string }> = {
   AEMT: { start: '18:00', end: '21:30' },
 };
 
+/**
+ * Normalize a time string to HH:MM:SS. Accepts both shapes that reach
+ * buildDateTimes:
+ *   - 'HH:MM:SS' — Postgres TIME columns via PostgREST (lab_days etc.)
+ *   - 'HH:MM'    — the PROGRAM_TIME_DEFAULTS fallbacks
+ * The old code appended ':00' unconditionally, turning stored DB times
+ * into 'HH:MM:SS:00' — invalid RFC3339 that Google rejected with a 400.
+ * Because createGoogleEvent swallows errors (returns null) and the sync
+ * wrappers never throw, EVERY assignment push (lab_day_role /
+ * station_assignment / shift_signup / site_visit) for a record with
+ * stored times failed silently — zero such mappings ever existed.
+ * Class blocks were unaffected (different compose path, no suffix).
+ */
+function toHms(t: string): string {
+  const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(t.trim());
+  if (!m) return t; // unknown shape — pass through rather than mangle
+  return `${m[1].padStart(2, '0')}:${m[2]}:${m[3] ?? '00'}`;
+}
+
 function buildDateTimes(
   date: string,
   startTime?: string,
@@ -358,8 +377,8 @@ function buildDateTimes(
   const start = startTime || defaults.start;
   const end = endTime || defaults.end;
   return {
-    startDateTime: `${date}T${start}:00`,
-    endDateTime: `${date}T${end}:00`,
+    startDateTime: `${date}T${toHms(start)}`,
+    endDateTime: `${date}T${toHms(end)}`,
   };
 }
 

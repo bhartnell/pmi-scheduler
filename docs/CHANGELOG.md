@@ -11,6 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-06-10
 
+- `_pending_` | Calendar: fix buildDateTimes malformed timestamps — the shared compose for all four assignment sync types (lab_day_role, station_assignment, shift_signup, site_visit) appended ':00' unconditionally, turning stored Postgres TIME values ('15:00:00') into invalid 'HH:MM:SS:00' RFC3339 that Google rejected with a silent 400 (createGoogleEvent returns null, sync wrappers never throw) — zero assignment-type mappings ever existed as a result. New toHms() normalizer handles both DB times and the HH:MM PROGRAM_TIME_DEFAULTS fallbacks; class-block series path (separate compose, already working) untouched. Verified on 7 input shapes.
 - `db915fcc` | Calendar connection scope fix (PREREQUISITE from the calendar root-cause investigation). Connect flow now requests `calendar.events` + `calendar.freebusy` (freeBusy.query was never authorized by the old events-only grant — every connection 403'd on its first availability check and was stamped `needs_reconnect`; pushes frozen since 05-06). Callback now VALIDATES Google's actually-returned scope (granular consent can omit boxes) and refuses to overwrite stored state on a partial grant, instead of hardcoding `scope='events'`. Stale comments corrected. New `scripts/verify-calendar-scope.mjs` one-account test (refresh → freeBusy → self-deleting event push → scope-stability check). Login/sign-in flow untouched; no DB structure change; rollout = users reconnect once (one-account test first per spec).
 
 ## 2026-06-09
