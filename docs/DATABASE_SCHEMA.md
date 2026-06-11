@@ -3,6 +3,7 @@
 > Auto-generated from Supabase production -- March 8, 2026
 > Reconciled to live database -- June 8, 2026 (see "Schema Reconciliation Additions")
 > Check constraints re-verified against live -- June 10, 2026 (all 146 documented CHECK definitions normalized to exact pg_get_constraintdef output; 4 had real value-list drift)
+> Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
 
 ## Summary
 
@@ -91,6 +92,7 @@
 
 **Check Constraints:**
 - `lab_users_role_check`: `((role = ANY (ARRAY['superadmin'::text, 'admin'::text, 'lead_instructor'::text, 'agency_liaison'::text, 'instructor'::text, 'program_director'::text, 'volunteer_instructor'::text, 'agency_observer'::text, 'student'::text, 'guest'::text, 'pending'::text])))`
+- `lab_users_lvfr_platoon_check`: `(((lvfr_platoon IS NULL) OR (lvfr_platoon = ANY (ARRAY['A'::text, 'B'::text, 'C'::text]))))`
 
 **Indexes:**
 - `idx_lab_users_email`: `CREATE INDEX idx_lab_users_email ON public.lab_users USING btree (email)`
@@ -1539,6 +1541,11 @@
 **Check Constraints:**
 - `student_skill_evaluations_result_check`: `((result = ANY (ARRAY['pass'::text, 'fail'::text, 'remediation'::text])))`
 - `student_skill_evaluations_evaluation_type_check`: `((evaluation_type = ANY (ARRAY['formative'::text, 'final_competency'::text])))`
+- `student_skill_evaluations_cert_level_check`: `((cert_level = ANY (ARRAY['emt'::text, 'aemt'::text, 'paramedic'::text])))`
+- `student_skill_evaluations_email_status_check`: `((email_status = ANY (ARRAY['pending'::text, 'sent'::text, 'do_not_send'::text, 'queued'::text])))`
+- `student_skill_evaluations_evaluator_type_check`: `((evaluator_type = ANY (ARRAY['instructor'::text, 'volunteer'::text, 'guest'::text, 'md'::text])))`
+- `student_skill_evaluations_status_check`: `((status = ANY (ARRAY['in_progress'::text, 'complete'::text])))`
+- `student_skill_evaluations_team_role_check`: `((team_role = ANY (ARRAY['leader'::text, 'assistant'::text, 'solo'::text])))`
 
 **Indexes:**
 - `idx_eval_sheet`: `CREATE INDEX idx_eval_sheet ON public.student_skill_evaluations USING btree (skill_sheet_id)`
@@ -1686,6 +1693,10 @@
 **Unique Constraints:**
 - `lab_days_checkin_token_key`: (checkin_token)
 - `lab_days_date_cohort_id_key`: (date, cohort_id)
+
+**Check Constraints:**
+- `lab_days_lab_mode_check`: `((lab_mode = ANY (ARRAY['group_rotations'::text, 'individual_testing'::text])))`
+- `lab_days_priority_flag_check`: `((priority_flag = ANY (ARRAY['normal'::text, 'high'::text, 'critical'::text])))`
 
 **Indexes:**
 - `idx_lab_days_assigned_timer`: `CREATE INDEX idx_lab_days_assigned_timer ON public.lab_days USING btree (assigned_timer_id)`
@@ -1852,6 +1863,7 @@
 **Check Constraints:**
 - `scenarios_content_review_status_check`: `((content_review_status = ANY (ARRAY['approved'::text, 'pending_review'::text, 'rejected'::text])))`
 - `scenarios_difficulty_check`: `((difficulty = ANY (ARRAY['beginner'::text, 'intermediate'::text, 'advanced'::text])))`
+- `scenarios_preferred_manikin_check`: `(((preferred_manikin IS NULL) OR (preferred_manikin = ANY (ARRAY['simmom'::text, 'simnewb'::text, 'standard_manikin'::text, 'task_trainer'::text, 'none_specified'::text]))))`
 
 **Indexes:**
 - `idx_scenarios_active`: `CREATE INDEX idx_scenarios_active ON public.scenarios USING btree (is_active) WHERE (is_active = true)`
@@ -1918,6 +1930,8 @@
 - `scenario_assessments_communication_score_check`: `(((communication_score >= 0) AND (communication_score <= 4)))`
 - `scenario_assessments_treatment_score_check`: `(((treatment_score >= 0) AND (treatment_score <= 4)))`
 - `scenario_assessments_assessment_score_check`: `(((assessment_score >= 0) AND (assessment_score <= 4)))`
+- `scenario_assessments_email_status_check`: `((email_status = ANY (ARRAY['pending'::text, 'sent'::text, 'do_not_send'::text, 'queued'::text])))`
+- `scenario_assessments_status_check`: `((status = ANY (ARRAY['in_progress'::text, 'complete'::text])))`
 
 **Indexes:**
 - `idx_scenario_assessments_cohort`: `CREATE INDEX idx_scenario_assessments_cohort ON public.scenario_assessments USING btree (cohort_id)`
@@ -2080,6 +2094,7 @@
 
 **Check Constraints:**
 - `lab_day_attendance_status_check`: `((status = ANY (ARRAY['present'::text, 'absent'::text, 'excused'::text, 'late'::text])))`
+- `lab_day_attendance_cert_level_check`: `((cert_level = ANY (ARRAY['emt'::text, 'aemt'::text, 'paramedic'::text])))`
 
 **Indexes:**
 - `idx_attendance_lab_day`: `CREATE INDEX idx_attendance_lab_day ON public.lab_day_attendance USING btree (lab_day_id)`
@@ -2178,6 +2193,9 @@
 
 **Foreign Keys:**
 - `lab_day_id` -> `lab_days.id` (`lab_day_debriefs_lab_day_id_fkey`)
+
+**Check Constraints:**
+- `lab_day_debriefs_rating_check`: `(((rating IS NULL) OR ((rating >= 1) AND (rating <= 5))))`
 
 **Indexes:**
 - `idx_lab_day_debriefs_lab_day`: `CREATE INDEX idx_lab_day_debriefs_lab_day ON public.lab_day_debriefs USING btree (lab_day_id)`
@@ -3045,6 +3063,9 @@
 | format | text | YES |  |  |
 | estimated_duration | integer | YES | 15 |  |
 | source | text | YES | 'internal'::text |  |
+
+**Check Constraints:**
+- `skill_drills_program_check`: `(((program IS NULL) OR (program = ANY (ARRAY['emt'::text, 'aemt'::text, 'paramedic'::text, 'all'::text]))))`
 
 **Indexes:**
 - `idx_skill_drills_active`: `CREATE INDEX idx_skill_drills_active ON public.skill_drills USING btree (is_active) WHERE (is_active = true)`
@@ -6564,19 +6585,7 @@
 **Check Constraints:**
 - `access_cards_type_check`: `((card_type = ANY (ARRAY['standard'::text, 'master'::text, 'visitor'::text, 'temporary'::text])))`
 - `access_cards_status_check`: `((status = ANY (ARRAY['active'::text, 'inactive'::text, 'lost'::text, 'revoked'::text])))`
-- `access_cards_single_owner`: `(((
-CASE
-    WHEN (lab_user_id IS NOT NULL) THEN 1
-    ELSE 0
-END +
-CASE
-    WHEN (student_id IS NOT NULL) THEN 1
-    ELSE 0
-END) +
-CASE
-    WHEN (visitor_name IS NOT NULL) THEN 1
-    ELSE 0
-END) <= 1)`
+- `access_cards_single_owner`: `(((( CASE WHEN (lab_user_id IS NOT NULL) THEN 1 ELSE 0 END + CASE WHEN (student_id IS NOT NULL) THEN 1 ELSE 0 END) + CASE WHEN (visitor_name IS NOT NULL) THEN 1 ELSE 0 END) <= 1))`
 
 **Indexes:**
 - `access_cards_card_uid_key`: `CREATE UNIQUE INDEX access_cards_card_uid_key ON public.access_cards USING btree (card_uid)`
@@ -8934,6 +8943,9 @@ Key foreign key relationships across the schema:
 **Foreign Keys:**
 - `module_id` -> `lvfr_aemt_modules.id` (lvfr_aemt_chapters_module_id_fkey)
 
+**Check Constraints:**
+- `lvfr_aemt_chapters_status_check`: `((status = ANY (ARRAY['not_started'::text, 'in_progress'::text, 'completed'::text])))`
+
 **Indexes:**
 - `lvfr_aemt_chapters_pkey`
 - `idx_lvfr_chapters_module`
@@ -8957,6 +8969,9 @@ Key foreign key relationships across the schema:
 | notes | text | YES |  |  |
 | color | text | YES |  |  |
 | created_at | timestamp with time zone | YES | now() |  |
+
+**Check Constraints:**
+- `lvfr_aemt_content_blocks_block_type_check`: `((block_type = ANY (ARRAY['lecture'::text, 'lab'::text, 'exam'::text, 'quiz'::text, 'checkpoint'::text, 'activity'::text, 'group_testing'::text, 'admin'::text, 'break'::text])))`
 
 **Indexes:**
 - `lvfr_aemt_content_blocks_pkey`
@@ -8994,6 +9009,10 @@ Key foreign key relationships across the schema:
 
 **Foreign Keys:**
 - `module_id` -> `lvfr_aemt_modules.id` (lvfr_aemt_course_days_module_id_fkey)
+
+**Check Constraints:**
+- `lvfr_aemt_course_days_day_type_check`: `((day_type = ANY (ARRAY['new_content'::text, 'lab_day'::text, 'lab_review'::text, 'exam_and_content'::text, 'content_and_exam'::text, 'exam_and_practice'::text, 'review_practice'::text, 'exam_and_review'::text, 'final_exam'::text, 'supplementary'::text])))`
+- `lvfr_aemt_course_days_status_check`: `((status = ANY (ARRAY['scheduled'::text, 'completed'::text, 'modified'::text, 'cancelled'::text])))`
 
 **Indexes:**
 - `lvfr_aemt_course_days_pkey`
@@ -9051,6 +9070,9 @@ Key foreign key relationships across the schema:
 - `assessment_id` -> `lvfr_aemt_assessments.id` (lvfr_aemt_grades_assessment_id_fkey)
 - `student_id` -> `students.id` (lvfr_aemt_grades_student_id_fkey)
 
+**Check Constraints:**
+- `lvfr_aemt_grades_source_check`: `((source = ANY (ARRAY['emstesting_import'::text, 'manual'::text, 'webapp'::text])))`
+
 **Indexes:**
 - `lvfr_aemt_grades_pkey`
 - `lvfr_aemt_grades_student_id_assessment_id_key`
@@ -9102,6 +9124,10 @@ Key foreign key relationships across the schema:
 
 **Foreign Keys:**
 - `instructor_id` -> `lab_users.id` (lvfr_aemt_instructor_availability_instructor_id_fkey)
+
+**Check Constraints:**
+- `lvfr_aemt_instructor_availability_source_check`: `((source = ANY (ARRAY['shift_calc'::text, 'manual_override'::text, 'imported'::text])))`
+- `lvfr_aemt_instructor_availability_status_check`: `((status = ANY (ARRAY['available'::text, 'partial'::text, 'conflict'::text, 'on_shift'::text, 'coming_off'::text])))`
 
 **Indexes:**
 - `lvfr_aemt_instructor_availability_pkey`
@@ -9177,6 +9203,9 @@ Key foreign key relationships across the schema:
 **Foreign Keys:**
 - `student_id` -> `students.id` (lvfr_aemt_pharm_checkpoints_student_id_fkey)
 
+**Check Constraints:**
+- `lvfr_aemt_pharm_checkpoints_difficulty_level_check`: `((difficulty_level = ANY (ARRAY[1, 2, 3])))`
+
 **Indexes:**
 - `lvfr_aemt_pharm_checkpoints_pkey`
 - `idx_lvfr_pharm_ck_student`
@@ -9204,6 +9233,9 @@ Key foreign key relationships across the schema:
 - `template_id` -> `lvfr_aemt_plan_templates.id` (lvfr_aemt_plan_instances_template_id_fkey)
 - `published_by` -> `lab_users.id` (lvfr_aemt_plan_instances_published_by_fkey)
 - `created_by` -> `lab_users.id` (lvfr_aemt_plan_instances_created_by_fkey)
+
+**Check Constraints:**
+- `lvfr_aemt_plan_instances_status_check`: `((status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text])))`
 
 **Indexes:**
 - `lvfr_aemt_plan_instances_pkey`
@@ -9292,6 +9324,9 @@ Key foreign key relationships across the schema:
 - `block_id` -> `lvfr_aemt_content_blocks.id` (lvfr_aemt_prerequisites_block_id_fkey)
 - `requires_block_id` -> `lvfr_aemt_content_blocks.id` (lvfr_aemt_prerequisites_requires_block_id_fkey)
 
+**Check Constraints:**
+- `lvfr_aemt_prerequisites_rule_type_check`: `((rule_type = ANY (ARRAY['must_precede'::text, 'same_day'::text, 'consecutive_day'::text, 'within_2_days'::text])))`
+
 **Indexes:**
 - `lvfr_aemt_prerequisites_pkey`
 - `lvfr_aemt_prerequisites_block_id_requires_block_id_rule_typ_key`
@@ -9315,6 +9350,9 @@ Key foreign key relationships across the schema:
 
 **Foreign Keys:**
 - `instructor_id` -> `lab_users.id` (lvfr_aemt_shift_patterns_instructor_id_fkey)
+
+**Check Constraints:**
+- `lvfr_aemt_shift_patterns_pattern_type_check`: `((pattern_type = ANY (ARRAY['48_96'::text, 'weekly'::text, 'custom'::text, 'conditional'::text])))`
 
 **Indexes:**
 - `lvfr_aemt_shift_patterns_pkey`
@@ -9341,6 +9379,9 @@ Key foreign key relationships across the schema:
 - `evaluator_id` -> `lab_users.id` (lvfr_aemt_skill_attempts_evaluator_id_fkey)
 - `student_id` -> `students.id` (lvfr_aemt_skill_attempts_student_id_fkey)
 
+**Check Constraints:**
+- `lvfr_aemt_skill_attempts_result_check`: `((result = ANY (ARRAY['pass'::text, 'fail'::text])))`
+
 **Indexes:**
 - `lvfr_aemt_skill_attempts_pkey`
 - `idx_lvfr_skill_att_student`
@@ -9364,6 +9405,9 @@ Key foreign key relationships across the schema:
 **Foreign Keys:**
 - `skill_id` -> `lvfr_aemt_skills.id` (lvfr_aemt_skill_status_skill_id_fkey)
 - `student_id` -> `students.id` (lvfr_aemt_skill_status_student_id_fkey)
+
+**Check Constraints:**
+- `lvfr_aemt_skill_status_status_check`: `((status = ANY (ARRAY['not_started'::text, 'in_progress'::text, 'satisfactory'::text, 'needs_remediation'::text, 'failed'::text])))`
 
 **Indexes:**
 - `lvfr_aemt_skill_status_pkey`
@@ -9418,6 +9462,9 @@ Key foreign key relationships across the schema:
 **Foreign Keys:**
 - `instructor_id` -> `lab_users.id` (lvfr_aemt_supplementary_days_instructor_id_fkey)
 
+**Check Constraints:**
+- `lvfr_aemt_supplementary_days_type_check`: `((type = ANY (ARRAY['supplementary'::text, 'ride_along'::text, 'testing'::text, 'graduation'::text])))`
+
 **Indexes:**
 - `lvfr_aemt_supplementary_days_pkey`
 - `lvfr_aemt_supplementary_days_day_number_key`
@@ -9442,6 +9489,9 @@ Key foreign key relationships across the schema:
 **Foreign Keys:**
 - `cohort_id` -> `cohorts.id` (lvfr_day_schedule_cohort_id_fkey)
 
+**Check Constraints:**
+- `lvfr_day_schedule_session_check`: `((session = ANY (ARRAY['morning'::text, 'afternoon'::text, 'full_day'::text])))`
+
 **Indexes:**
 - `lvfr_day_schedule_pkey`
 - `uq_lvfr_day_schedule_date_session`
@@ -9463,6 +9513,9 @@ Key foreign key relationships across the schema:
 | year | integer | NO |  |  |
 | created_at | timestamp with time zone | NO | now() |  |
 | updated_at | timestamp with time zone | NO | now() |  |
+
+**Check Constraints:**
+- `lvfr_platoon_schedule_platoon_check`: `((platoon = ANY (ARRAY['A'::text, 'B'::text, 'C'::text, 'off'::text])))`
 
 **Indexes:**
 - `lvfr_platoon_schedule_pkey`
@@ -9494,6 +9547,10 @@ Key foreign key relationships across the schema:
 - `day_schedule_id` -> `lvfr_day_schedule.id` (lvfr_schedule_items_day_schedule_id_fkey)
 - `completed_by` -> `lab_users.id` (lvfr_schedule_items_completed_by_fkey)
 - `source_block_id` -> `pmi_schedule_blocks.id` (lvfr_schedule_items_source_block_id_fkey)
+
+**Check Constraints:**
+- `lvfr_schedule_items_item_type_check`: `(((item_type IS NULL) OR (item_type = ANY (ARRAY['chapter'::text, 'quiz'::text, 'skills'::text, 'break'::text, 'lab'::text, 'exam'::text, 'other'::text]))))`
+- `lvfr_schedule_items_requirement_check`: `((requirement = ANY (ARRAY['required'::text, 'optional'::text, 'info'::text])))`
 
 **Indexes:**
 - `lvfr_schedule_items_pkey`
@@ -9535,6 +9592,9 @@ Key foreign key relationships across the schema:
 - `instructor_id` -> `lab_users.id` (pmi_block_instructors_instructor_id_fkey)
 - `schedule_block_id` -> `pmi_schedule_blocks.id` (pmi_block_instructors_schedule_block_id_fkey)
 
+**Check Constraints:**
+- `pmi_block_instructors_role_check`: `((role = ANY (ARRAY['primary'::text, 'secondary'::text, 'observer'::text])))`
+
 **Indexes:**
 - `pmi_block_instructors_pkey`
 - `pmi_block_instructors_schedule_block_id_instructor_id_key`
@@ -9574,6 +9634,10 @@ Key foreign key relationships across the schema:
 **Foreign Keys:**
 - `replaces_course_id` -> `pmi_course_templates.id` (pmi_course_templates_replaces_course_id_fkey)
 - `default_instructor_id` -> `lab_users.id` (pmi_course_templates_default_instructor_id_fkey)
+
+**Check Constraints:**
+- `pmi_course_templates_duration_type_check`: `((duration_type = ANY (ARRAY['full'::text, 'first_half'::text, 'second_half'::text])))`
+- `pmi_course_templates_program_type_check`: `((program_type = ANY (ARRAY['paramedic'::text, 'emt'::text, 'aemt'::text, 'other'::text])))`
 
 **Indexes:**
 - `pmi_course_templates_pkey`
@@ -9660,6 +9724,10 @@ Key foreign key relationships across the schema:
 - `room_id` -> `pmi_rooms.id` (pmi_room_availability_room_id_fkey)
 - `semester_id` -> `pmi_semesters.id` (pmi_room_availability_semester_id_fkey)
 
+**Check Constraints:**
+- `pmi_room_availability_day_of_week_check`: `(((day_of_week >= 0) AND (day_of_week <= 6)))`
+- `pmi_room_availability_rule_type_check`: `((rule_type = ANY (ARRAY['available'::text, 'blocked'::text, 'shared'::text])))`
+
 **Indexes:**
 - `pmi_room_availability_pkey`
 - `idx_room_availability_room`
@@ -9680,6 +9748,9 @@ Key foreign key relationships across the schema:
 | is_active | boolean | YES | true |  |
 | display_order | integer | YES | 0 |  |
 | created_at | timestamp with time zone | YES | now() |  |
+
+**Check Constraints:**
+- `pmi_rooms_room_type_check`: `((room_type = ANY (ARRAY['classroom'::text, 'lab'::text, 'computer_lab'::text, 'commons'::text, 'other'::text])))`
 
 **Indexes:**
 - `pmi_rooms_pkey`
@@ -9727,6 +9798,11 @@ Key foreign key relationships across the schema:
 - `instructor_id` -> `lab_users.id` (pmi_schedule_blocks_instructor_id_fkey)
 - `additional_instructor_id` -> `lab_users.id` (pmi_schedule_blocks_additional_instructor_id_fkey)
 
+**Check Constraints:**
+- `pmi_schedule_blocks_block_type_check`: `((block_type = ANY (ARRAY['class'::text, 'lecture'::text, 'lab'::text, 'clinical'::text, 'exam'::text, 'study'::text, 'admin'::text, 'meeting'::text, 'other'::text])))`
+- `pmi_schedule_blocks_day_of_week_check`: `(((day_of_week >= 0) AND (day_of_week <= 6)))`
+- `pmi_schedule_blocks_status_check`: `((status = ANY (ARRAY['draft'::text, 'published'::text, 'cancelled'::text])))`
+
 **Indexes:**
 - `pmi_schedule_blocks_pkey`
 - `idx_schedule_blocks_room`
@@ -9760,6 +9836,9 @@ Key foreign key relationships across the schema:
 
 **Foreign Keys:**
 - `academic_year_id` -> `pmi_academic_years.id` (pmi_semesters_academic_year_id_fkey)
+
+**Check Constraints:**
+- `pmi_semesters_semester_number_check`: `(((semester_number IS NULL) OR ((semester_number >= 1) AND (semester_number <= 4))))`
 
 **Indexes:**
 - `pmi_semesters_pkey`
@@ -9850,6 +9929,9 @@ Key foreign key relationships across the schema:
 - `station_id` -> `lab_stations.id` (lab_day_checkoff_status_station_id_fkey)
 - `examiner_id` -> `lab_users.id` (lab_day_checkoff_status_examiner_id_fkey)
 
+**Check Constraints:**
+- `lab_day_checkoff_status_status_check`: `((status = ANY (ARRAY['complete'::text, 'retake_needed'::text])))`
+
 **Indexes:**
 - `lab_day_checkoff_status_pkey`
 - `lab_day_checkoff_status_lab_day_id_student_id_skill_sheet_i_key`
@@ -9877,6 +9959,9 @@ Key foreign key relationships across the schema:
 - `author_id` -> `lab_users.id` (lab_day_debrief_notes_author_id_fkey)
 - `lab_day_id` -> `lab_days.id` (lab_day_debrief_notes_lab_day_id_fkey)
 
+**Check Constraints:**
+- `lab_day_debrief_notes_category_check`: `((category = ANY (ARRAY['general'::text, 'timing'::text, 'station_feedback'::text, 'student_performance'::text, 'equipment'::text, 'improvement'::text, 'positive'::text])))`
+
 **Indexes:**
 - `lab_day_debrief_notes_pkey`
 - `idx_debrief_notes_lab_day`
@@ -9900,6 +9985,10 @@ Key foreign key relationships across the schema:
 
 **Foreign Keys:**
 - `lab_day_id` -> `lab_days.id` (lab_day_messages_lab_day_id_fkey)
+
+**Check Constraints:**
+- `lab_day_messages_message_check`: `((char_length(message) <= 500))`
+- `lab_day_messages_message_type_check`: `((message_type = ANY (ARRAY['chat'::text, 'alert'::text, 'system'::text])))`
 
 **Indexes:**
 - `lab_day_messages_pkey`
@@ -9959,6 +10048,10 @@ Key foreign key relationships across the schema:
 - `lab_day_id` -> `lab_days.id` (lab_day_student_queue_lab_day_id_fkey)
 - `evaluation_id` -> `student_skill_evaluations.id` (lab_day_student_queue_evaluation_id_fkey)
 
+**Check Constraints:**
+- `lab_day_student_queue_result_check`: `((result = ANY (ARRAY['pass'::text, 'fail'::text, 'incomplete'::text])))`
+- `lab_day_student_queue_status_check`: `((status = ANY (ARRAY['queued'::text, 'in_progress'::text, 'completed'::text])))`
+
 **Indexes:**
 - `lab_day_student_queue_pkey`
 - `idx_student_queue_lab_day`
@@ -9985,6 +10078,9 @@ Key foreign key relationships across the schema:
 | old_name | text | YES |  |  |
 | new_name | text | YES |  |  |
 | old_station_count | integer | YES |  |  |
+
+**Check Constraints:**
+- `lab_day_template_audit_change_type_check`: `((change_type = ANY (ARRAY['insert'::text, 'update'::text, 'delete'::text])))`
 
 **Indexes:**
 - `lab_day_template_audit_pkey`
@@ -10037,6 +10133,9 @@ Key foreign key relationships across the schema:
 - `session_id` -> `open_lab_sessions.id` (open_lab_signups_session_id_fkey)
 - `student_user_id` -> `lab_users.id` (open_lab_signups_student_user_id_fkey)
 - `requested_instructor_id` -> `lab_users.id` (open_lab_signups_requested_instructor_id_fkey)
+
+**Check Constraints:**
+- `open_lab_signups_program_level_check`: `((program_level = ANY (ARRAY['EMT'::text, 'AEMT'::text, 'Paramedic'::text])))`
 
 **Indexes:**
 - `open_lab_signups_pkey`
@@ -10143,6 +10242,9 @@ Key foreign key relationships across the schema:
 **Foreign Keys:**
 - `station_id` -> `lab_stations.id` (station_documents_station_id_fkey)
 
+**Check Constraints:**
+- `station_documents_document_type_check`: `((document_type = ANY (ARRAY['skill_sheet'::text, 'checkoff'::text, 'reference'::text, 'protocol'::text])))`
+
 **Indexes:**
 - `station_documents_pkey`
 - `idx_station_documents_station`
@@ -10169,6 +10271,10 @@ Key foreign key relationships across the schema:
 
 **Foreign Keys:**
 - `event_id` -> `osce_events.id` (osce_assessments_event_id_fkey)
+
+**Check Constraints:**
+- `osce_assessments_day_number_check`: `((day_number = ANY (ARRAY[1, 2])))`
+- `osce_assessments_scenario_check`: `((scenario = ANY (ARRAY['A'::text, 'B'::text, 'C'::text, 'D'::text, 'E'::text, 'F'::text])))`
 
 **Indexes:**
 - `osce_assessments_pkey`
@@ -10219,6 +10325,23 @@ Key foreign key relationships across the schema:
 **Foreign Keys:**
 - `assessment_id` -> `osce_assessments.id` (osce_evaluator_scores_assessment_id_fkey)
 
+**Check Constraints:**
+- `osce_evaluator_scores_affective_domain_check`: `((affective_domain = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+- `osce_evaluator_scores_communication_check`: `((communication = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+- `osce_evaluator_scores_evaluator_role_check`: `((evaluator_role = ANY (ARRAY['md'::text, 'faculty'::text, 'agency'::text])))`
+- `osce_evaluator_scores_history_cc_check`: `((history_cc = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+- `osce_evaluator_scores_initial_assessment_check`: `((initial_assessment = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+- `osce_evaluator_scores_oral_decision_defense_check`: `((oral_decision_defense = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+- `osce_evaluator_scores_oral_differential_check`: `((oral_differential = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+- `osce_evaluator_scores_oral_prioritization_check`: `((oral_prioritization = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+- `osce_evaluator_scores_oral_reassessment_check`: `((oral_reassessment = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+- `osce_evaluator_scores_oral_transport_handoff_check`: `((oral_transport_handoff = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+- `osce_evaluator_scores_physical_exam_vs_check`: `((physical_exam_vs = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+- `osce_evaluator_scores_protocol_treatment_check`: `((protocol_treatment = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+- `osce_evaluator_scores_readiness_check`: `((readiness = ANY (ARRAY['ready'::text, 'ready_with_concerns'::text, 'not_yet_ready'::text])))`
+- `osce_evaluator_scores_scene_safety_check`: `((scene_safety = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+- `osce_evaluator_scores_skills_overall_check`: `((skills_overall = ANY (ARRAY['S'::text, 'N'::text, 'U'::text])))`
+
 **Indexes:**
 - `osce_evaluator_scores_pkey`
 - `unique_evaluator_assessment`
@@ -10243,6 +10366,9 @@ Key foreign key relationships across the schema:
 
 **Foreign Keys:**
 - `event_id` -> `osce_events.id` (osce_guest_tokens_event_id_fkey)
+
+**Check Constraints:**
+- `osce_guest_tokens_evaluator_role_check`: `((evaluator_role = ANY (ARRAY['md'::text, 'faculty'::text, 'agency'::text])))`
 
 **Indexes:**
 - `osce_guest_tokens_pkey`
@@ -10307,6 +10433,9 @@ Key foreign key relationships across the schema:
 **Foreign Keys:**
 - `shift_id` -> `ride_along_shifts.id` (ride_along_assignments_shift_id_fkey)
 
+**Check Constraints:**
+- `ride_along_assignments_status_check`: `((status = ANY (ARRAY['assigned'::text, 'confirmed'::text, 'completed'::text, 'no_show'::text, 'cancelled'::text])))`
+
 **Indexes:**
 - `ride_along_assignments_pkey`
 - `idx_ride_along_assignments_shift`
@@ -10335,6 +10464,9 @@ Key foreign key relationships across the schema:
 | poll_deadline | timestamp with time zone | YES |  |  |
 | poll_status | text | YES | 'draft'::text |  |
 
+**Check Constraints:**
+- `ride_along_availability_poll_status_check`: `((poll_status = ANY (ARRAY['draft'::text, 'active'::text, 'closed'::text])))`
+
 **Indexes:**
 - `ride_along_availability_pkey`
 - `idx_ride_along_availability_student`
@@ -10357,6 +10489,9 @@ Key foreign key relationships across the schema:
 | status | text | YES | 'draft'::text |  |
 | created_by | uuid | YES |  |  |
 | created_at | timestamp with time zone | YES | now() |  |
+
+**Check Constraints:**
+- `ride_along_polls_status_check`: `((status = ANY (ARRAY['draft'::text, 'active'::text, 'closed'::text])))`
 
 **Indexes:**
 - `ride_along_polls_pkey`
@@ -10389,6 +10524,10 @@ Key foreign key relationships across the schema:
 | created_at | timestamp with time zone | YES | now() |  |
 | updated_at | timestamp with time zone | YES | now() |  |
 
+**Check Constraints:**
+- `ride_along_shifts_shift_type_check`: `((shift_type = ANY (ARRAY['day'::text, 'night'::text, 'swing'::text])))`
+- `ride_along_shifts_status_check`: `((status = ANY (ARRAY['open'::text, 'filled'::text, 'cancelled'::text])))`
+
 **Indexes:**
 - `ride_along_shifts_pkey`
 - `idx_ride_along_shifts_date`
@@ -10416,6 +10555,9 @@ Key foreign key relationships across the schema:
 | preceptor_name | text | YES |  |  |
 | is_active | boolean | YES | true |  |
 | created_at | timestamp with time zone | YES | now() |  |
+
+**Check Constraints:**
+- `ride_along_templates_shift_type_check`: `((shift_type = ANY (ARRAY['day'::text, 'night'::text, 'swing'::text])))`
 
 **Indexes:**
 - `ride_along_templates_pkey`
@@ -10445,6 +10587,9 @@ Key foreign key relationships across the schema:
 | correction_email_sent_at | timestamp with time zone | YES |  |  |
 | correction_email_count | integer | NO | 0 |  |
 
+**Check Constraints:**
+- `volunteer_events_event_type_check`: `((event_type = ANY (ARRAY['nremt_testing'::text, 'lab_day'::text, 'other'::text])))`
+
 **Indexes:**
 - `volunteer_events_pkey`
 - `idx_volunteer_events_date`
@@ -10465,6 +10610,9 @@ Key foreign key relationships across the schema:
 | deadline | timestamp with time zone | YES |  |  |
 | is_active | boolean | YES | true |  |
 | created_at | timestamp with time zone | YES | now() |  |
+
+**Check Constraints:**
+- `volunteer_invites_invite_type_check`: `((invite_type = ANY (ARRAY['instructor1'::text, 'general'::text])))`
 
 **Indexes:**
 - `volunteer_invites_pkey`
@@ -10495,6 +10643,9 @@ Key foreign key relationships across the schema:
 - `registration_id` -> `volunteer_registrations.id` (volunteer_lab_tokens_registration_id_fkey)
 - `lab_day_id` -> `lab_days.id` (volunteer_lab_tokens_lab_day_id_fkey)
 - `event_id` -> `volunteer_events.id` (volunteer_lab_tokens_event_id_fkey)
+
+**Check Constraints:**
+- `volunteer_lab_tokens_role_check`: `((role = ANY (ARRAY['volunteer_grader'::text, 'volunteer_observer'::text, 'instructor1_evaluee'::text])))`
 
 **Indexes:**
 - `volunteer_lab_tokens_pkey`
@@ -10529,6 +10680,11 @@ Key foreign key relationships across the schema:
 - `event_id` -> `volunteer_events.id` (volunteer_registrations_event_id_fkey)
 - `invite_id` -> `volunteer_invites.id` (volunteer_registrations_invite_id_fkey)
 
+**Check Constraints:**
+- `volunteer_registrations_evaluation_status_check`: `((evaluation_status = ANY (ARRAY['pending'::text, 'scheduled'::text, 'completed'::text, 'not_applicable'::text])))`
+- `volunteer_registrations_status_check`: `((status = ANY (ARRAY['registered'::text, 'confirmed'::text, 'attended'::text, 'no_show'::text, 'cancelled'::text])))`
+- `volunteer_registrations_volunteer_type_check`: `((volunteer_type = ANY (ARRAY['instructor1'::text, 'general'::text, 'former_student'::text, 'community'::text])))`
+
 **Indexes:**
 - `volunteer_registrations_pkey`
 - `volunteer_registrations_event_id_email_key`
@@ -10556,6 +10712,9 @@ Key foreign key relationships across the schema:
 **Foreign Keys:**
 - `cohort_id` -> `cohorts.id` (cohort_semester_overrides_cohort_id_fkey)
 - `semester_id` -> `pmi_semesters.id` (cohort_semester_overrides_semester_id_fkey)
+
+**Check Constraints:**
+- `cohort_semester_overrides_check`: `((end_date >= start_date))`
 
 **Indexes:**
 - `cohort_semester_overrides_pkey`
@@ -10587,6 +10746,11 @@ Key foreign key relationships across the schema:
 - `lab_day_id` -> `lab_days.id` (coverage_requests_lab_day_id_fkey)
 - `approved_by` -> `lab_users.id` (coverage_requests_approved_by_fkey)
 - `created_shift_id` -> `open_shifts.id` (coverage_requests_created_shift_id_fkey)
+
+**Check Constraints:**
+- `coverage_requests_request_type_check`: `((request_type = ANY (ARRAY['lab'::text, 'class'::text, 'other'::text])))`
+- `coverage_requests_status_check`: `((status = ANY (ARRAY['pending'::text, 'approved'::text, 'filled'::text, 'cancelled'::text])))`
+- `coverage_requests_urgency_check`: `((urgency = ANY (ARRAY['normal'::text, 'urgent'::text])))`
 
 **Indexes:**
 - `coverage_requests_pkey`
@@ -10647,6 +10811,10 @@ Key foreign key relationships across the schema:
 - `user_id` -> `lab_users.id` (manual_hour_logs_user_id_fkey)
 - `logged_by` -> `lab_users.id` (manual_hour_logs_logged_by_fkey)
 - `covering_for` -> `lab_users.id` (manual_hour_logs_covering_for_fkey)
+
+**Check Constraints:**
+- `manual_hour_logs_duration_minutes_check`: `(((duration_minutes > 0) AND (duration_minutes <= (24 * 60))))`
+- `manual_hour_logs_entry_type_check`: `((entry_type = ANY (ARRAY['class'::text, 'lab'::text, 'prep'::text, 'online'::text, 'other'::text])))`
 
 **Indexes:**
 - `manual_hour_logs_pkey`
@@ -10730,6 +10898,11 @@ Key foreign key relationships across the schema:
 - `from_cohort_id` -> `cohorts.id` (student_cohort_history_from_cohort_id_fkey)
 - `to_cohort_id` -> `cohorts.id` (student_cohort_history_to_cohort_id_fkey)
 
+**Check Constraints:**
+- `student_cohort_history_event_type_check`: `((event_type = ANY (ARRAY['withdrawal'::text, 're-enrollment'::text, 'program_upgrade'::text, 'graduation'::text, 'transfer'::text])))`
+- `student_cohort_history_from_cert_level_check`: `(((from_cert_level IS NULL) OR (from_cert_level = ANY (ARRAY['emt'::text, 'aemt'::text, 'paramedic'::text]))))`
+- `student_cohort_history_to_cert_level_check`: `(((to_cert_level IS NULL) OR (to_cert_level = ANY (ARRAY['emt'::text, 'aemt'::text, 'paramedic'::text]))))`
+
 **Indexes:**
 - `student_cohort_history_pkey`
 - `idx_student_cohort_history_student`
@@ -10757,6 +10930,10 @@ Key foreign key relationships across the schema:
 **Foreign Keys:**
 - `student_id` -> `students.id` (student_program_enrollments_student_id_fkey)
 - `cohort_id` -> `cohorts.id` (student_program_enrollments_cohort_id_fkey)
+
+**Check Constraints:**
+- `student_program_enrollments_program_check`: `((program = ANY (ARRAY['emt'::text, 'aemt'::text, 'paramedic'::text])))`
+- `student_program_enrollments_status_check`: `((status = ANY (ARRAY['active'::text, 'withdrawn'::text, 'graduated'::text])))`
 
 **Indexes:**
 - `idx_student_program_enrollments_cohort`
@@ -10809,6 +10986,9 @@ Key foreign key relationships across the schema:
 **Foreign Keys:**
 - `audit_id` -> `compliance_audits.id` (compliance_audit_log_audit_id_fkey)
 
+**Check Constraints:**
+- `compliance_audit_log_result_check`: `((result = ANY (ARRAY['pass'::text, 'fail'::text, 'info'::text, 'n_a'::text])))`
+
 **Indexes:**
 - `compliance_audit_log_pkey`
 - `idx_compliance_audit_log_audit`
@@ -10835,6 +11015,10 @@ Key foreign key relationships across the schema:
 | is_overdue | boolean | YES | false |  |
 | created_at | timestamp with time zone | YES | now() |  |
 
+**Check Constraints:**
+- `compliance_audits_frequency_check`: `((frequency = ANY (ARRAY['per_deploy'::text, 'per_migration'::text, 'monthly'::text, 'quarterly'::text, 'per_enrollment'::text])))`
+- `compliance_audits_last_result_check`: `((last_result = ANY (ARRAY['pass'::text, 'fail'::text, 'info'::text, 'n_a'::text])))`
+
 **Indexes:**
 - `compliance_audits_pkey`
 - `compliance_audits_audit_type_key`
@@ -10856,6 +11040,9 @@ Key foreign key relationships across the schema:
 | ip_address | text | YES |  |  |
 | user_agent | text | YES |  |  |
 | created_at | timestamp with time zone | YES | now() |  |
+
+**Check Constraints:**
+- `data_consent_agreements_agreement_type_check`: `((agreement_type = ANY (ARRAY['student_data_use'::text, 'agency_data_sharing'::text, 'instructor_confidentiality'::text])))`
 
 **Indexes:**
 - `data_consent_agreements_pkey`
@@ -10885,6 +11072,10 @@ Key foreign key relationships across the schema:
 
 **Foreign Keys:**
 - `cohort_id` -> `cohorts.id` (data_export_archives_cohort_id_fkey)
+
+**Check Constraints:**
+- `data_export_archives_export_type_check`: `((export_type = ANY (ARRAY['weekly'::text, 'semester_end'::text, 'course_end'::text, 'manual'::text])))`
+- `data_export_archives_status_check`: `((status = ANY (ARRAY['in_progress'::text, 'completed'::text, 'failed'::text])))`
 
 **Indexes:**
 - `data_export_archives_pkey`
@@ -10975,6 +11166,10 @@ Key foreign key relationships across the schema:
 - `instructor_id` -> `lab_users.id` (recurring_availability_templates_instructor_id_fkey)
 - `created_by` -> `lab_users.id` (recurring_availability_templates_created_by_fkey)
 
+**Check Constraints:**
+- `recurring_availability_templates_check`: `((end_date >= start_date))`
+- `recurring_availability_templates_frequency_check`: `((frequency = ANY (ARRAY['weekly'::text, 'biweekly'::text])))`
+
 **Indexes:**
 - `recurring_availability_templates_pkey`
 - `idx_recurring_availability_instructor`
@@ -11003,6 +11198,9 @@ Key foreign key relationships across the schema:
 - `block_id` -> `pmi_schedule_blocks.id` (shared_calendar_events_block_id_fkey)
 - `instructor_id` -> `lab_users.id` (shared_calendar_events_instructor_id_fkey)
 - `semester_id` -> `pmi_semesters.id` (shared_calendar_events_semester_id_fkey)
+
+**Check Constraints:**
+- `shared_calendar_events_check`: `((((recurring_group_id IS NOT NULL) AND (block_id IS NULL)) OR ((recurring_group_id IS NULL) AND (block_id IS NOT NULL))))`
 
 **Indexes:**
 - `shared_calendar_events_pkey`
@@ -11044,6 +11242,10 @@ Key foreign key relationships across the schema:
 **Foreign Keys:** `primary_instructor_id` -> `lab_users.id`, `created_by` -> `lab_users.id`
 (TWO FKs to lab_users — embeds need explicit `!exam_sessions_primary_instructor_id_fkey` hints.)
 
+**Check Constraints:**
+- `exam_sessions_spots_check`: `(((total_spots > 0) AND (pima_computers >= 0) AND (pima_computers <= total_spots)))`
+- `exam_sessions_status_check`: `((status = ANY (ARRAY['open'::text, 'closed'::text])))`
+
 **Indexes:** `idx_exam_sessions_date`, `idx_exam_sessions_status`
 
 ### `exam_signups`
@@ -11062,6 +11264,9 @@ Key foreign key relationships across the schema:
 | updated_at | timestamptz | NO | now() |  |
 
 **Foreign Keys:** `session_id` -> `exam_sessions.id`, `student_id` -> `students.id`, `decided_by` -> `lab_users.id`
+
+**Check Constraints:**
+- `exam_signups_status_check`: `((status = ANY (ARRAY['pending'::text, 'confirmed'::text, 'denied'::text])))`
 
 **Indexes:** `uq_exam_signups_one_active_per_student` (UNIQUE on student_id WHERE status IN ('pending','confirmed') — one slot per student), `idx_exam_signups_session`, `idx_exam_signups_student`
 
