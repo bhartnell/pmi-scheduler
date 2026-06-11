@@ -1,100 +1,995 @@
 {
   "course": {
-    "name": "AEMT Course — LVFR Fire Academy 2026-2",
+    "name": "AEMT Course - LVFR Fire Academy 2026-2",
     "institution": "Pima Medical Institute / LVFR",
     "start_date": "2026-07-14",
-    "end_date": "2026-09-10",
-    "duration_weeks": 9,
-    "instruction_days": ["Tuesday", "Wednesday", "Thursday"],
-    "supplementary_day": "Monday (Sun Kang — quizzes, review, exam prep)",
+    "end_date": "2026-09-17",
+    "duration_weeks": 10,
+    "instruction_days": [
+      "Tuesday",
+      "Wednesday",
+      "Thursday"
+    ],
+    "supplementary_day": "Monday (Sun Kang)",
     "daily_schedule": {
       "start_time": "07:30",
       "end_time": "15:30",
-      "lunch_start": "12:00",
-      "lunch_end": "13:00",
-      "total_hours": 8,
+      "lunch": "12:00-13:00",
       "instructional_hours": 7
     },
-    "total_instruction_days": 27,
+    "total_instruction_days": 30,
     "students": 25,
     "pass_standard": 80,
-    "quiz_formula": {"quiz_min_per_question": 1.5, "review_min_per_question": 0.5, "total_min_per_question": 2.0}
+    "quiz_formula": {
+      "quiz_min_per_q": 1.5,
+      "review_min_per_q": 0.5,
+      "total_min_per_q": 2
+    }
   },
   "modules": [
-    {"id": "mod_prep_ops", "name": "Preparatory — Operations", "chapters": ["ch01","ch02","ch03","ch04","ch05","ch06"], "exam_day": 4, "exam_questions": 35},
-    {"id": "mod_assess", "name": "Assessment", "chapters": ["ch10"], "exam_day": 7, "exam_questions": 45},
-    {"id": "mod_prep_med", "name": "Preparatory — Medical", "chapters": ["ch07","ch08","ch09","ch12","ch13"], "exam_day": 9, "exam_questions": 65},
-    {"id": "mod_resus", "name": "Resuscitation (ABCs)", "chapters": ["ch11","ch14","ch15","ch17","ch18"], "exam_day": 13, "exam_questions": 75},
-    {"id": "mod_trauma", "name": "Trauma", "chapters": ["ch26","ch27","ch28","ch29","ch30","ch31","ch32","ch33","ch34"], "exam_day": 17, "exam_questions": 65},
-    {"id": "mod_medical", "name": "Medical", "chapters": ["ch16","ch19","ch20","ch21","ch22","ch23","ch24","ch25"], "exam_day": 22, "exam_questions": 65},
-    {"id": "mod_special", "name": "Special Populations", "chapters": ["ch35","ch36","ch37","ch38"], "exam_day": 25, "exam_questions": 55},
-    {"id": "mod_ops", "name": "EMS Operations", "chapters": ["ch39","ch40","ch41","ch42"], "exam_day": 26, "exam_questions": 35}
+    {
+      "id": "mod_prep_ops",
+      "name": "Preparatory - Operations",
+      "chapters": [
+        "ch01",
+        "ch02",
+        "ch03",
+        "ch04",
+        "ch05",
+        "ch06"
+      ],
+      "exam_day": 4,
+      "exam_q": 35
+    },
+    {
+      "id": "mod_assess",
+      "name": "Assessment",
+      "chapters": [
+        "ch10"
+      ],
+      "exam_day": 7,
+      "exam_q": 45
+    },
+    {
+      "id": "mod_prep_med",
+      "name": "Preparatory - Medical",
+      "chapters": [
+        "ch07",
+        "ch08",
+        "ch09",
+        "ch12",
+        "ch13"
+      ],
+      "exam_day": 9,
+      "exam_q": 65
+    },
+    {
+      "id": "mod_resus",
+      "name": "Resuscitation (ABCs)",
+      "chapters": [
+        "ch11",
+        "ch14",
+        "ch15",
+        "ch17",
+        "ch18"
+      ],
+      "exam_day": 13,
+      "exam_q": 75
+    },
+    {
+      "id": "mod_trauma",
+      "name": "Trauma",
+      "chapters": [
+        "ch26",
+        "ch27",
+        "ch28",
+        "ch29",
+        "ch30",
+        "ch31",
+        "ch32",
+        "ch33",
+        "ch34"
+      ],
+      "exam_day": 17,
+      "exam_q": 65
+    },
+    {
+      "id": "mod_medical",
+      "name": "Medical",
+      "chapters": [
+        "ch16",
+        "ch19",
+        "ch20",
+        "ch21",
+        "ch22",
+        "ch23",
+        "ch24",
+        "ch25"
+      ],
+      "exam_day": 22,
+      "exam_q": 65
+    },
+    {
+      "id": "mod_special",
+      "name": "Special Populations",
+      "chapters": [
+        "ch35",
+        "ch36",
+        "ch37",
+        "ch38"
+      ],
+      "exam_day": 28,
+      "exam_q": 55
+    },
+    {
+      "id": "mod_ops",
+      "name": "EMS Operations",
+      "chapters": [
+        "ch39",
+        "ch40",
+        "ch41",
+        "ch42"
+      ],
+      "exam_day": 29,
+      "exam_q": 35
+    }
   ],
   "days": [
-    {"day_number":1, "date":"2026-07-14", "dow":"Tuesday", "week":1, "chapters_covered":["ch01","ch02","ch03"], "title":"EMS Systems, Safety & Wellness, Legal/Ethics", "day_type":"new_content", "has_lab":false, "has_exam":false, "quiz_chapters":[], "lab_name":"", "exam_name":"", "primary_instructor":"Ben Hartnell", "instructor_note":"Full day — Pima adjusted or Ryan backfill. PM coverage needed.", "cadre_needed":"0-3", "cadre_activity":"Legal/Ethics scenario stations", "min_instructors":1, "flagged":true, "pm_track_a":"Legal/Ethics scenario stations — cadre as patients in 3 scenarios", "pm_track_b":"Legal/Ethics case discussion + Group Testing Ch 1-3"},
-    {"day_number":2, "date":"2026-07-15", "dow":"Wednesday", "week":1, "chapters_covered":["ch04","ch05","ch06"], "title":"Communications, Med Terminology, Lifting & Moving", "day_type":"new_content", "has_lab":false, "has_exam":false, "quiz_chapters":["ch01","ch02","ch03"], "lab_name":"", "exam_name":"", "primary_instructor":"Trevor Paul", "instructor_note":"Trevor leads. Jimi PM. Ben full day.", "cadre_needed":"0-3", "cadre_activity":"Radio report practice stations", "min_instructors":1, "pm_track_a":"Radio Report Practice — 4 stations, cadre as dispatch/patients", "pm_track_b":"Med Term worksheet + Group Testing Ch 4-6"},
-    {"day_number":3, "date":"2026-07-16", "dow":"Thursday", "week":1, "chapters_covered":["ch06"], "title":"EMT Competency Checkoffs + Lifting & Moving Lab", "day_type":"lab_day", "has_lab":true, "has_exam":false, "quiz_chapters":["ch04","ch05","ch06"], "lab_name":"Lifting & Moving", "exam_name":"", "primary_instructor":"Jimi Vargas", "instructor_note":"Jimi + Trevor. Ben at PALS.", "cadre_needed":"0-3", "cadre_activity":"Patient actors for lifting lab", "min_instructors":2, "pm_track_a":"Lifting Lab — cadre as patients, 3-4 stations", "pm_track_b":"Lifting Lab — 2 stations, larger groups"},
-    {"day_number":4, "date":"2026-07-21", "dow":"Tuesday", "week":2, "chapters_covered":["ch07"], "title":"Ch 1-6 Exam + Human Body (A&P)", "day_type":"exam_and_content", "has_lab":false, "has_exam":true, "quiz_chapters":[], "lab_name":"", "exam_name":"Ch 1-6 Sub-Module", "exam_questions":35, "primary_instructor":"Ben Hartnell", "instructor_note":"Ben AM, Jimi PM. Mid-day gap ~1015-noon.", "cadre_needed":"1-2", "cadre_activity":"Proctor A&P worksheet during gap", "min_instructors":1, "flagged":true, "pm_track_a":"Ch 7 continued + A&P worksheet", "pm_track_b":"Ch 7 continued + A&P worksheet"},
-    {"day_number":5, "date":"2026-07-22", "dow":"Wednesday", "week":2, "chapters_covered":["ch08","ch09"], "title":"Pathophysiology, Life Span Development", "day_type":"new_content", "has_lab":false, "has_exam":false, "quiz_chapters":["ch07"], "lab_name":"", "exam_name":"", "primary_instructor":"Jimi Vargas", "instructor_note":"Jimi + Ben full day.", "cadre_needed":"0-3", "cadre_activity":"Patient assessment intro scenarios", "min_instructors":1, "pm_track_a":"Assessment intro scenarios — cadre as patients, 3 stations", "pm_track_b":"Group Testing Ch 8-9 + case studies"},
-    {"day_number":6, "date":"2026-07-23", "dow":"Thursday", "week":2, "chapters_covered":["ch10"], "title":"Patient Assessment + Practice", "day_type":"new_content", "has_lab":false, "has_exam":false, "quiz_chapters":["ch08","ch09"], "lab_name":"", "exam_name":"", "primary_instructor":"Jimi Vargas", "instructor_note":"Jimi + Trevor + Ben. Best cadre value Week 2.", "cadre_needed":"0-4", "cadre_activity":"Assessment practice stations — cadre as patients", "min_instructors":1, "pm_track_a":"Assessment stations — 3 stations, cadre as patients, groups rotate", "pm_track_b":"Assessment practice — students pair up, instructors circulate"},
-    {"day_number":7, "date":"2026-07-28", "dow":"Tuesday", "week":3, "chapters_covered":["ch12","ch13"], "title":"Ch 10 Exam + Pharmacology + Vascular Access + Med Admin Lab", "day_type":"exam_and_content", "has_lab":true, "has_exam":true, "quiz_chapters":[], "lab_name":"Med Admin (IM/SQ/IN/Neb)", "exam_name":"Ch 10 Assessment Exam", "exam_questions":45, "primary_instructor":"Jimi Vargas", "instructor_note":"Jimi leads all day. Ben AM oversight.", "cadre_needed":"0-3", "cadre_activity":"Extra eyes on injection technique", "min_instructors":1, "pm_track_a":"Med Admin Practice — cadre assist at injection stations", "pm_track_b":"Med Admin Practice — Jimi supervises solo"},
-    {"day_number":8, "date":"2026-07-29", "dow":"Wednesday", "week":3, "chapters_covered":["ch13"], "title":"IV Manikin Arms AM + Live Sticks PM", "day_type":"lab_day", "has_lab":true, "has_exam":false, "quiz_chapters":["ch12","ch13"], "lab_name":"IV Access — LIVE STICKS", "exam_name":"", "primary_instructor":"Jimi Vargas", "instructor_note":"Jimi + Trevor + Ben + Pima Cadre PM. LVFR cadre for sharps safety.", "cadre_needed":"2-4", "cadre_activity":"Sharps safety supervision — 1 per 5-6 students", "min_instructors":3, "safety_critical":true, "pm_track_a":"LIVE STICKS — max supervision with cadre", "pm_track_b":"LIVE STICKS — Jimi + Ben + Pima cadre (minimum)"},
-    {"day_number":9, "date":"2026-07-30", "dow":"Thursday", "week":3, "chapters_covered":[], "title":"Sub-Module Exam + IV Math + Checkoffs", "day_type":"exam_and_practice", "has_lab":false, "has_exam":true, "quiz_chapters":[], "lab_name":"", "exam_name":"Ch 7-9, 12-13 Sub-Module", "exam_questions":65, "primary_instructor":"Jimi Vargas", "instructor_note":"Jimi + Trevor. Ben oversight.", "cadre_needed":"0-3", "cadre_activity":"IV integration scenarios — cadre as patients", "min_instructors":1, "pm_track_a":"IV integration scenarios — cadre as patients, 3 stations", "pm_track_b":"IV additional practice + EMT checkoffs"},
-    {"day_number":10, "date":"2026-08-04", "dow":"Tuesday", "week":4, "chapters_covered":["ch11","ch17"], "title":"Airway Management + Respiratory Emergencies", "day_type":"new_content", "has_lab":false, "has_exam":false, "quiz_chapters":[], "lab_name":"", "exam_name":"", "primary_instructor":"Jimi Vargas", "instructor_note":"Jimi leads all day. Heavy lecture (350 min).", "cadre_needed":"0", "cadre_activity":"", "min_instructors":1, "pm_track_a":"Lecture day — no cadre benefit", "pm_track_b":"Ch 17 continued"},
-    {"day_number":11, "date":"2026-08-05", "dow":"Wednesday", "week":4, "chapters_covered":["ch14"], "title":"Shock Lecture + Airway Lab PM", "day_type":"new_content", "has_lab":true, "has_exam":false, "quiz_chapters":["ch11","ch17"], "lab_name":"Airway Management", "exam_name":"", "primary_instructor":"Jimi Vargas", "instructor_note":"Jimi + Ben. Trevor working (long wk).", "cadre_needed":"0-4", "cadre_activity":"Extra station supervision for airway lab", "min_instructors":2, "pm_track_a":"Airway Lab — 3-4 stations, cadre assist", "pm_track_b":"Airway Lab — Jimi + Ben, 2 stations"},
-    {"day_number":12, "date":"2026-08-06", "dow":"Thursday", "week":4, "chapters_covered":["ch15","ch18"], "title":"BLS Resuscitation + Cardiovascular + BLS Lab PM", "day_type":"new_content", "has_lab":true, "has_exam":false, "quiz_chapters":["ch14"], "lab_name":"BLS / CPR / AED", "exam_name":"", "primary_instructor":"Trevor Paul", "instructor_note":"Trevor + Ben. Jimi on shift.", "cadre_needed":"0-4", "cadre_activity":"Pit crew team roles — cadre fill crew positions", "min_instructors":2, "pm_track_a":"BLS Lab — pit crew with cadre filling team roles, 3 stations", "pm_track_b":"BLS Lab — Trevor + Ben, 2 stations"},
-    {"day_number":13, "date":"2026-08-11", "dow":"Tuesday", "week":5, "chapters_covered":["ch26","ch27","ch28"], "title":"Resuscitation Exam + Trauma begins", "day_type":"exam_and_content", "has_lab":false, "has_exam":true, "quiz_chapters":[], "lab_name":"", "exam_name":"Resuscitation Module", "exam_questions":75, "primary_instructor":"Jimi Vargas", "instructor_note":"Jimi leads. Ben oversight for exam.", "cadre_needed":"0", "cadre_activity":"", "min_instructors":1, "pm_track_a":"Lecture + group testing day", "pm_track_b":"Lecture + group testing day"},
-    {"day_number":14, "date":"2026-08-12", "dow":"Wednesday", "week":5, "chapters_covered":["ch29","ch30"], "title":"Face/Neck + Head/Spine + Stop the Bleed Lab", "day_type":"new_content", "has_lab":true, "has_exam":false, "quiz_chapters":["ch26","ch27","ch28"], "lab_name":"Stop the Bleed", "exam_name":"", "primary_instructor":"Trevor Paul", "instructor_note":"Trevor + Ben. Jimi on shift.", "cadre_needed":"0-3", "cadre_activity":"Patient actors for bleeding scenarios", "min_instructors":2, "pm_track_a":"Stop the Bleed — cadre as bleeding patients, 3 stations", "pm_track_b":"Stop the Bleed — Trevor + Ben, 2 stations"},
-    {"day_number":15, "date":"2026-08-13", "dow":"Thursday", "week":5, "chapters_covered":["ch31","ch32"], "title":"Chest + Abdominal/GU + C-Spine Lab", "day_type":"new_content", "has_lab":true, "has_exam":false, "quiz_chapters":["ch29","ch30"], "lab_name":"C-Spine Immobilization", "exam_name":"", "primary_instructor":"Trevor Paul", "instructor_note":"Trevor + Ben. Jimi on shift. Last Pima summer day.", "cadre_needed":"0-3", "cadre_activity":"Patient actors for c-spine scenarios", "min_instructors":2, "pm_track_a":"C-Spine Lab — cadre as patients, 3 stations", "pm_track_b":"C-Spine Lab — Trevor + Ben, 2 stations"},
-    {"day_number":16, "date":"2026-08-18", "dow":"Tuesday", "week":6, "chapters_covered":["ch33","ch34"], "title":"Orthopaedic + Environmental + Splinting Lab", "day_type":"new_content", "has_lab":true, "has_exam":false, "quiz_chapters":["ch31","ch32"], "lab_name":"Splinting", "exam_name":"", "primary_instructor":"Ben Hartnell", "instructor_note":"Ben solo (Pima off week). Workable.", "cadre_needed":"0-3", "cadre_activity":"Patient actors for splinting lab", "min_instructors":1, "pm_track_a":"Splinting Lab — cadre as patients, 3 stations", "pm_track_b":"Splinting Lab — Ben solo, demo + practice"},
-    {"day_number":17, "date":"2026-08-19", "dow":"Wednesday", "week":6, "chapters_covered":["ch16","ch19"], "title":"Trauma Exam + Medical Overview + Neuro", "day_type":"exam_and_content", "has_lab":false, "has_exam":true, "quiz_chapters":["ch33","ch34"], "lab_name":"", "exam_name":"Trauma Module", "exam_questions":65, "primary_instructor":"Ben Hartnell", "instructor_note":"Ben solo (Pima off week). Workable.", "cadre_needed":"0", "cadre_activity":"", "min_instructors":1, "pm_track_a":"Lecture + stroke scale practice", "pm_track_b":"Lecture + stroke scale practice"},
-    {"day_number":18, "date":"2026-08-20", "dow":"Thursday", "week":6, "chapters_covered":["ch20","ch21","ch22"], "title":"GI/Urologic + Endocrine + Immunologic", "day_type":"new_content", "has_lab":false, "has_exam":false, "quiz_chapters":["ch16","ch19"], "lab_name":"", "exam_name":"", "primary_instructor":"Trevor Paul", "instructor_note":"Trevor + Jimi PM + Ben. Best staffed day Week 6.", "cadre_needed":"0-4", "cadre_activity":"Medical scenario stations — 4 patient presentations", "min_instructors":1, "pm_track_a":"Medical scenario stations — 4 stations, cadre as patients", "pm_track_b":"Medical case studies + Group Testing Ch 20-22"},
-    {"day_number":19, "date":"2026-08-25", "dow":"Tuesday", "week":7, "chapters_covered":["ch23","ch24","ch25"], "title":"Toxicology + Psychiatric + Gynecologic (all medical done)", "day_type":"new_content", "has_lab":false, "has_exam":false, "quiz_chapters":["ch20","ch21","ch22"], "lab_name":"", "exam_name":"", "primary_instructor":"Ben Hartnell", "instructor_note":"Ben solo (fall semester). All medical complete.", "cadre_needed":"0", "cadre_activity":"", "min_instructors":1, "pm_track_a":"Medical case studies + Group Testing", "pm_track_b":"Medical case studies + Group Testing"},
-    {"day_number":20, "date":"2026-08-26", "dow":"Wednesday", "week":7, "chapters_covered":[], "title":"Medical Review + Scenario Practice", "day_type":"review_practice", "has_lab":false, "has_exam":false, "quiz_chapters":["ch23","ch24","ch25"], "lab_name":"", "exam_name":"", "primary_instructor":"Trevor Paul", "instructor_note":"Trevor + Jimi PM + Ben.", "cadre_needed":"0-4", "cadre_activity":"Integrated medical scenarios — 4 patient stations", "min_instructors":1, "pm_track_a":"Integrated medical scenarios — cadre as patients, 4 stations", "pm_track_b":"Medical case studies — differential diagnosis practice"},
-    {"day_number":21, "date":"2026-08-27", "dow":"Thursday", "week":7, "chapters_covered":["ch35"], "title":"OB & Neonatal Care + OB Lab PM", "day_type":"new_content", "has_lab":true, "has_exam":false, "quiz_chapters":[], "lab_name":"OB Delivery / NRP", "exam_name":"", "primary_instructor":"Jimi Vargas", "instructor_note":"All 3 instructors. Best staffed day.", "cadre_needed":"0-4", "cadre_activity":"Patient actor for laboring patient + delivery scenarios", "min_instructors":2, "pm_track_a":"OB Lab — cadre as laboring patient, 3 stations", "pm_track_b":"OB Lab — Jimi + Trevor + Ben, 3 stations"},
-    {"day_number":22, "date":"2026-09-01", "dow":"Tuesday", "week":8, "chapters_covered":["ch36"], "title":"Medical Exam + Pediatrics Part 1-2", "day_type":"exam_and_content", "has_lab":false, "has_exam":true, "quiz_chapters":[], "lab_name":"", "exam_name":"Medical Module", "exam_questions":65, "primary_instructor":"Ben Hartnell", "instructor_note":"Ben leads. Jimi PM.", "cadre_needed":"0", "cadre_activity":"", "min_instructors":1, "pm_track_a":"Peds lecture continued + case studies", "pm_track_b":"Peds lecture continued + case studies"},
-    {"day_number":23, "date":"2026-09-02", "dow":"Wednesday", "week":8, "chapters_covered":["ch36","ch37","ch38"], "title":"Peds finish + Geriatrics + Special Challenges", "day_type":"new_content", "has_lab":false, "has_exam":false, "quiz_chapters":["ch35"], "lab_name":"", "exam_name":"", "primary_instructor":"Jimi Vargas", "instructor_note":"Jimi + Ben. All special pop complete.", "cadre_needed":"0", "cadre_activity":"", "min_instructors":1, "pm_track_a":"Group Testing Ch 36-38 + scenarios", "pm_track_b":"Group Testing Ch 36-38 + scenarios"},
-    {"day_number":24, "date":"2026-09-03", "dow":"Thursday", "week":8, "chapters_covered":[], "title":"Special Pop Review + Scenarios", "day_type":"review_practice", "has_lab":false, "has_exam":false, "quiz_chapters":["ch36"], "lab_name":"", "exam_name":"", "primary_instructor":"Jimi Vargas", "instructor_note":"All 3 instructors.", "cadre_needed":"0-4", "cadre_activity":"Peds/OB/Geri scenario stations", "min_instructors":1, "pm_track_a":"Peds/OB/Geri scenarios — cadre as patients, 3-4 stations", "pm_track_b":"Case studies — peds/geri/OB differentials"},
-    {"day_number":25, "date":"2026-09-08", "dow":"Tuesday", "week":9, "chapters_covered":["ch39","ch40","ch41","ch42"], "title":"Special Pop Exam + EMS Ops (all 4 chapters)", "day_type":"exam_and_content", "has_lab":false, "has_exam":true, "quiz_chapters":[], "lab_name":"", "exam_name":"Special Populations Module", "exam_questions":55, "primary_instructor":"Jimi Vargas", "instructor_note":"Jimi + Ben. All 42 chapters complete.", "cadre_needed":"0-2", "cadre_activity":"MCI tabletop patients", "min_instructors":1, "pm_track_a":"MCI tabletop + Group Testing EMS Ops", "pm_track_b":"MCI tabletop + Group Testing EMS Ops"},
-    {"day_number":26, "date":"2026-09-09", "dow":"Wednesday", "week":9, "chapters_covered":[], "title":"EMS Ops Exam + Comprehensive Review + Final Scenarios", "day_type":"exam_and_review", "has_lab":false, "has_exam":true, "quiz_chapters":[], "lab_name":"", "exam_name":"EMS Operations Module", "exam_questions":35, "primary_instructor":"Jimi Vargas", "instructor_note":"All 3 instructors. Last practice day.", "cadre_needed":"0-4", "cadre_activity":"Final scenario stations — 4 integrated patient contacts", "min_instructors":1, "pm_track_a":"Final scenario stations — 4 stations, cadre as patients. HIGHEST VALUE.", "pm_track_b":"Comprehensive review — practice exam format + skills remediation"},
-    {"day_number":27, "date":"2026-09-10", "dow":"Thursday", "week":9, "chapters_covered":[], "title":"COMPREHENSIVE FINAL EXAM + Course Closeout", "day_type":"final_exam", "has_lab":false, "has_exam":true, "quiz_chapters":[], "lab_name":"", "exam_name":"Comprehensive Final", "exam_questions":150, "primary_instructor":"Jimi Vargas", "instructor_note":"All 3 instructors.", "cadre_needed":"0", "cadre_activity":"", "min_instructors":1, "pm_track_a":"NREMT Prep Briefing + Course Closeout", "pm_track_b":"NREMT Prep Briefing + Course Closeout"}
+    {
+      "day_number": 1,
+      "date": "2026-07-14",
+      "dow": "Tuesday",
+      "week": 1,
+      "chapters_covered": [
+        "ch01",
+        "ch02",
+        "ch03"
+      ],
+      "title": "EMS Systems, Safety, Legal/Ethics",
+      "day_type": "new_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [],
+      "primary_instructor": "Ben Hartnell",
+      "instructor_note": "Full day - Pima adjusted",
+      "cadre_needed": "0-3",
+      "cadre_activity": "Legal/Ethics scenario stations",
+      "day_of_week": "Tuesday",
+      "module_id": "mod_prep_ops",
+      "has_quiz": false,
+      "exam_module": null
+    },
+    {
+      "day_number": 2,
+      "date": "2026-07-15",
+      "dow": "Wednesday",
+      "week": 1,
+      "chapters_covered": [
+        "ch04",
+        "ch05",
+        "ch06"
+      ],
+      "title": "Communications, Med Term, Lifting & Moving",
+      "day_type": "new_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch01",
+        "ch02",
+        "ch03"
+      ],
+      "primary_instructor": "Trevor Paul",
+      "instructor_note": "Trevor leads. Jimi PM.",
+      "cadre_needed": "0-3",
+      "cadre_activity": "Radio report practice stations",
+      "day_of_week": "Wednesday",
+      "module_id": "mod_prep_ops",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 3,
+      "date": "2026-07-16",
+      "dow": "Thursday",
+      "week": 1,
+      "chapters_covered": [
+        "ch06"
+      ],
+      "title": "EMT Competency Checkoffs + Lifting Lab PM",
+      "day_type": "lab_day",
+      "has_lab": true,
+      "lab_name": "Lifting & Moving",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch04",
+        "ch05",
+        "ch06"
+      ],
+      "primary_instructor": "Jimi Vargas",
+      "instructor_note": "Jimi + Trevor. Ben PALS.",
+      "cadre_needed": "0-3",
+      "cadre_activity": "Patient actors for lifting",
+      "day_of_week": "Thursday",
+      "module_id": "mod_prep_ops",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 4,
+      "date": "2026-07-21",
+      "dow": "Tuesday",
+      "week": 2,
+      "chapters_covered": [
+        "ch07"
+      ],
+      "title": "Ch 1-6 Exam + Human Body (A&P)",
+      "day_type": "exam_and_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": true,
+      "exam_name": "Ch 1-6 Sub-Module",
+      "quiz_chapters": [],
+      "primary_instructor": "Ben Hartnell",
+      "instructor_note": "Ben AM, Jimi PM. Mid-day gap.",
+      "cadre_needed": "1-2",
+      "cadre_activity": "Proctor during gap",
+      "exam_questions": 35,
+      "flagged": true,
+      "day_of_week": "Tuesday",
+      "module_id": "mod_prep_med",
+      "has_quiz": false,
+      "exam_module": "mod_prep_ops"
+    },
+    {
+      "day_number": 5,
+      "date": "2026-07-22",
+      "dow": "Wednesday",
+      "week": 2,
+      "chapters_covered": [
+        "ch08",
+        "ch09"
+      ],
+      "title": "Pathophysiology, Life Span Development",
+      "day_type": "new_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch07"
+      ],
+      "primary_instructor": "Jimi Vargas",
+      "instructor_note": "Jimi leads. Ben available.",
+      "cadre_needed": "0-3",
+      "cadre_activity": "Assessment intro scenarios",
+      "day_of_week": "Wednesday",
+      "module_id": "mod_prep_med",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 6,
+      "date": "2026-07-23",
+      "dow": "Thursday",
+      "week": 2,
+      "chapters_covered": [
+        "ch10"
+      ],
+      "title": "Patient Assessment + Practice",
+      "day_type": "new_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch08",
+        "ch09"
+      ],
+      "primary_instructor": "Jimi Vargas",
+      "instructor_note": "Jimi leads, Trevor assists.",
+      "cadre_needed": "0-4",
+      "cadre_activity": "Patient actors for assessment stations",
+      "day_of_week": "Thursday",
+      "module_id": "mod_assess",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 7,
+      "date": "2026-07-28",
+      "dow": "Tuesday",
+      "week": 3,
+      "chapters_covered": [
+        "ch12",
+        "ch13"
+      ],
+      "title": "Ch 10 Exam + Pharmacology + Vascular Access + Med Admin Lab",
+      "day_type": "exam_and_content",
+      "has_lab": true,
+      "lab_name": "Med Admin (IM/SQ/IN/Neb)",
+      "has_exam": true,
+      "exam_name": "Ch 10 Assessment Exam",
+      "quiz_chapters": [],
+      "primary_instructor": "Jimi Vargas",
+      "instructor_note": "Jimi leads all day.",
+      "cadre_needed": "0-3",
+      "cadre_activity": "Extra eyes on injection technique",
+      "exam_questions": 45,
+      "day_of_week": "Tuesday",
+      "module_id": "mod_prep_med",
+      "has_quiz": false,
+      "exam_module": "mod_assess"
+    },
+    {
+      "day_number": 8,
+      "date": "2026-07-29",
+      "dow": "Wednesday",
+      "week": 3,
+      "chapters_covered": [
+        "ch13"
+      ],
+      "title": "IV Manikin Arms AM + Live Sticks PM",
+      "day_type": "lab_day",
+      "has_lab": true,
+      "lab_name": "IV Access - LIVE STICKS",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch12",
+        "ch13"
+      ],
+      "primary_instructor": "Jimi Vargas",
+      "instructor_note": "Jimi + Ben + Pima Cadre PM. Sharps safety.",
+      "cadre_needed": "2-4",
+      "cadre_activity": "Sharps safety - 1 per 5-6 students",
+      "safety_critical": true,
+      "day_of_week": "Wednesday",
+      "module_id": "mod_prep_med",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 9,
+      "date": "2026-07-30",
+      "dow": "Thursday",
+      "week": 3,
+      "chapters_covered": [],
+      "title": "Sub-Module Exam + IV Math + Checkoffs",
+      "day_type": "exam_and_practice",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": true,
+      "exam_name": "Ch 7-9, 12-13 Sub-Module",
+      "quiz_chapters": [],
+      "primary_instructor": "Jimi Vargas",
+      "instructor_note": "Jimi + Trevor.",
+      "cadre_needed": "0-3",
+      "cadre_activity": "Patient actors for IV scenarios",
+      "exam_questions": 65,
+      "day_of_week": "Thursday",
+      "module_id": null,
+      "has_quiz": false,
+      "exam_module": "mod_prep_med"
+    },
+    {
+      "day_number": 10,
+      "date": "2026-08-04",
+      "dow": "Tuesday",
+      "week": 4,
+      "chapters_covered": [
+        "ch11",
+        "ch17"
+      ],
+      "title": "Airway Management + Respiratory Emergencies",
+      "day_type": "new_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [],
+      "primary_instructor": "Jimi Vargas",
+      "instructor_note": "Jimi leads. Heavy lecture (350 min).",
+      "cadre_needed": "0",
+      "cadre_activity": "",
+      "day_of_week": "Tuesday",
+      "module_id": "mod_resus",
+      "has_quiz": false,
+      "exam_module": null
+    },
+    {
+      "day_number": 11,
+      "date": "2026-08-05",
+      "dow": "Wednesday",
+      "week": 4,
+      "chapters_covered": [
+        "ch14"
+      ],
+      "title": "Shock + Airway Lab PM",
+      "day_type": "new_content",
+      "has_lab": true,
+      "lab_name": "Airway Management",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch11",
+        "ch17"
+      ],
+      "primary_instructor": "Jimi Vargas",
+      "instructor_note": "Jimi leads AM. Ben PM for lab.",
+      "cadre_needed": "0-4",
+      "cadre_activity": "Station supervision for airway lab",
+      "day_of_week": "Wednesday",
+      "module_id": "mod_resus",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 12,
+      "date": "2026-08-06",
+      "dow": "Thursday",
+      "week": 4,
+      "chapters_covered": [
+        "ch15",
+        "ch18"
+      ],
+      "title": "BLS Resuscitation + Cardiovascular + BLS Lab PM",
+      "day_type": "new_content",
+      "has_lab": true,
+      "lab_name": "BLS / CPR / AED",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch14"
+      ],
+      "primary_instructor": "Trevor Paul",
+      "instructor_note": "Trevor leads. Ben PM for lab. Jimi on shift.",
+      "cadre_needed": "0-4",
+      "cadre_activity": "Pit crew team roles",
+      "day_of_week": "Thursday",
+      "module_id": "mod_resus",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 13,
+      "date": "2026-08-11",
+      "dow": "Tuesday",
+      "week": 5,
+      "chapters_covered": [
+        "ch26",
+        "ch27",
+        "ch28"
+      ],
+      "title": "Resuscitation Exam + Trauma begins",
+      "day_type": "exam_and_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": true,
+      "exam_name": "Resuscitation Module",
+      "quiz_chapters": [],
+      "primary_instructor": "Jimi Vargas",
+      "instructor_note": "Jimi leads.",
+      "cadre_needed": "0",
+      "cadre_activity": "",
+      "exam_questions": 75,
+      "day_of_week": "Tuesday",
+      "module_id": "mod_trauma",
+      "has_quiz": false,
+      "exam_module": "mod_resus"
+    },
+    {
+      "day_number": 14,
+      "date": "2026-08-12",
+      "dow": "Wednesday",
+      "week": 5,
+      "chapters_covered": [
+        "ch29",
+        "ch30"
+      ],
+      "title": "Face/Neck + Head/Spine + Stop the Bleed Lab",
+      "day_type": "new_content",
+      "has_lab": true,
+      "lab_name": "Stop the Bleed",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch26",
+        "ch27",
+        "ch28"
+      ],
+      "primary_instructor": "Trevor Paul",
+      "instructor_note": "Trevor leads. Ben PM for lab.",
+      "cadre_needed": "0-3",
+      "cadre_activity": "Patient actors for bleeding scenarios",
+      "day_of_week": "Wednesday",
+      "module_id": "mod_trauma",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 15,
+      "date": "2026-08-13",
+      "dow": "Thursday",
+      "week": 5,
+      "chapters_covered": [
+        "ch31",
+        "ch32"
+      ],
+      "title": "Chest + Abdominal/GU + C-Spine Lab",
+      "day_type": "new_content",
+      "has_lab": true,
+      "lab_name": "C-Spine Immobilization",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch29",
+        "ch30"
+      ],
+      "primary_instructor": "Trevor Paul",
+      "instructor_note": "Trevor leads. Ben PM for lab.",
+      "cadre_needed": "0-3",
+      "cadre_activity": "Patient actors for c-spine",
+      "day_of_week": "Thursday",
+      "module_id": "mod_trauma",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 16,
+      "date": "2026-08-18",
+      "dow": "Tuesday",
+      "week": 6,
+      "chapters_covered": [
+        "ch33",
+        "ch34"
+      ],
+      "title": "Orthopedic + Environmental + Splinting Lab",
+      "day_type": "new_content",
+      "has_lab": true,
+      "lab_name": "Splinting",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch31",
+        "ch32"
+      ],
+      "primary_instructor": "Ben Hartnell",
+      "instructor_note": "Ben leads (Pima off week).",
+      "cadre_needed": "0-3",
+      "cadre_activity": "Patient actors for splinting",
+      "day_of_week": "Tuesday",
+      "module_id": "mod_trauma",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 17,
+      "date": "2026-08-19",
+      "dow": "Wednesday",
+      "week": 6,
+      "chapters_covered": [
+        "ch16",
+        "ch19"
+      ],
+      "title": "Trauma Exam + Medical Overview + Neuro",
+      "day_type": "exam_and_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": true,
+      "exam_name": "Trauma Module",
+      "quiz_chapters": [
+        "ch33",
+        "ch34"
+      ],
+      "primary_instructor": "Ben Hartnell",
+      "instructor_note": "Ben leads (Pima off week).",
+      "cadre_needed": "0",
+      "cadre_activity": "",
+      "exam_questions": 65,
+      "day_of_week": "Wednesday",
+      "module_id": "mod_medical",
+      "has_quiz": true,
+      "exam_module": "mod_trauma"
+    },
+    {
+      "day_number": 18,
+      "date": "2026-08-20",
+      "dow": "Thursday",
+      "week": 6,
+      "chapters_covered": [
+        "ch20",
+        "ch21",
+        "ch22"
+      ],
+      "title": "GI, Endocrine, Immunologic + Medical Scenarios PM",
+      "day_type": "new_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch16",
+        "ch19"
+      ],
+      "primary_instructor": "Trevor Paul",
+      "instructor_note": "Trevor + Jimi PM + Ben.",
+      "cadre_needed": "0-4",
+      "cadre_activity": "Patient actors for medical scenarios",
+      "day_of_week": "Thursday",
+      "module_id": "mod_medical",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 19,
+      "date": "2026-08-25",
+      "dow": "Tuesday",
+      "week": 7,
+      "chapters_covered": [
+        "ch23",
+        "ch24",
+        "ch25"
+      ],
+      "title": "Toxicology, Psychiatric, Gynecologic (finish medical)",
+      "day_type": "new_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch20",
+        "ch21",
+        "ch22"
+      ],
+      "primary_instructor": "Ben Hartnell",
+      "instructor_note": "Ben leads.",
+      "cadre_needed": "0",
+      "cadre_activity": "",
+      "day_of_week": "Tuesday",
+      "module_id": "mod_medical",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 20,
+      "date": "2026-08-26",
+      "dow": "Wednesday",
+      "week": 7,
+      "chapters_covered": [],
+      "title": "Medical Review - Group Testing + Case Studies",
+      "day_type": "review_practice",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch23",
+        "ch24",
+        "ch25"
+      ],
+      "primary_instructor": "Instructor TBD",
+      "instructor_note": "Review day.",
+      "cadre_needed": "0-4",
+      "cadre_activity": "Medical scenario stations",
+      "day_of_week": "Wednesday",
+      "module_id": null,
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 21,
+      "date": "2026-08-27",
+      "dow": "Thursday",
+      "week": 7,
+      "chapters_covered": [],
+      "title": "Medical Review - Group Testing + Skills Practice",
+      "day_type": "review_practice",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [],
+      "primary_instructor": "Jimi Vargas",
+      "instructor_note": "Jimi leads.",
+      "cadre_needed": "0-3",
+      "cadre_activity": "Patient scenarios with skills integration",
+      "day_of_week": "Thursday",
+      "module_id": null,
+      "has_quiz": false,
+      "exam_module": null
+    },
+    {
+      "day_number": 22,
+      "date": "2026-09-01",
+      "dow": "Tuesday",
+      "week": 8,
+      "chapters_covered": [
+        "ch35"
+      ],
+      "title": "Medical Exam + OB & Neonatal Care",
+      "day_type": "exam_and_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": true,
+      "exam_name": "Medical Module",
+      "quiz_chapters": [],
+      "primary_instructor": "Ben Hartnell",
+      "instructor_note": "Ben leads. Jimi PM.",
+      "cadre_needed": "0",
+      "cadre_activity": "",
+      "exam_questions": 65,
+      "day_of_week": "Tuesday",
+      "module_id": "mod_special",
+      "has_quiz": false,
+      "exam_module": "mod_medical"
+    },
+    {
+      "day_number": 23,
+      "date": "2026-09-02",
+      "dow": "Wednesday",
+      "week": 8,
+      "chapters_covered": [
+        "ch35"
+      ],
+      "title": "OB Lab + Birth Scenarios",
+      "day_type": "lab_day",
+      "has_lab": true,
+      "lab_name": "OB Delivery / NRP",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch35"
+      ],
+      "primary_instructor": "Instructor TBD",
+      "instructor_note": "OB Lab PM.",
+      "cadre_needed": "0-4",
+      "cadre_activity": "Patient actor for laboring patient + delivery scenarios",
+      "day_of_week": "Wednesday",
+      "module_id": "mod_special",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 24,
+      "date": "2026-09-03",
+      "dow": "Thursday",
+      "week": 8,
+      "chapters_covered": [
+        "ch36"
+      ],
+      "title": "Pediatrics Part 1-2 + Peds Scenarios PM",
+      "day_type": "new_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [],
+      "primary_instructor": "Instructor TBD",
+      "instructor_note": "Peds Day 1.",
+      "cadre_needed": "0-4",
+      "cadre_activity": "Cadre as parents/patients for peds scenarios",
+      "day_of_week": "Thursday",
+      "module_id": "mod_special",
+      "has_quiz": false,
+      "exam_module": null
+    },
+    {
+      "day_number": 25,
+      "date": "2026-09-08",
+      "dow": "Tuesday",
+      "week": 9,
+      "chapters_covered": [
+        "ch36"
+      ],
+      "title": "Pediatrics Part 3-4 + Peds Scenarios PM",
+      "day_type": "new_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [],
+      "primary_instructor": "Instructor TBD",
+      "instructor_note": "Peds Day 2. Labor Day Mon - no Sun Kang.",
+      "cadre_needed": "0-4",
+      "cadre_activity": "Pediatric trauma and scenario stations",
+      "day_of_week": "Tuesday",
+      "module_id": "mod_special",
+      "has_quiz": false,
+      "exam_module": null
+    },
+    {
+      "day_number": 26,
+      "date": "2026-09-09",
+      "dow": "Wednesday",
+      "week": 9,
+      "chapters_covered": [
+        "ch37",
+        "ch38"
+      ],
+      "title": "Geriatrics + Special Challenges + Scenarios PM",
+      "day_type": "new_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch36"
+      ],
+      "primary_instructor": "Instructor TBD",
+      "instructor_note": "",
+      "cadre_needed": "0-4",
+      "cadre_activity": "Peds/OB/Geri scenario stations",
+      "day_of_week": "Wednesday",
+      "module_id": "mod_special",
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 27,
+      "date": "2026-09-10",
+      "dow": "Thursday",
+      "week": 9,
+      "chapters_covered": [],
+      "title": "Special Pop Review + Scenarios",
+      "day_type": "review_practice",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": false,
+      "exam_name": "",
+      "quiz_chapters": [
+        "ch37",
+        "ch38"
+      ],
+      "primary_instructor": "Instructor TBD",
+      "instructor_note": "",
+      "cadre_needed": "0-4",
+      "cadre_activity": "Final special pop scenario practice",
+      "day_of_week": "Thursday",
+      "module_id": null,
+      "has_quiz": true,
+      "exam_module": null
+    },
+    {
+      "day_number": 28,
+      "date": "2026-09-15",
+      "dow": "Tuesday",
+      "week": 10,
+      "chapters_covered": [
+        "ch39",
+        "ch40",
+        "ch41",
+        "ch42"
+      ],
+      "title": "Special Pop Exam + EMS Ops (all 4 chapters)",
+      "day_type": "exam_and_content",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": true,
+      "exam_name": "Special Populations Module",
+      "quiz_chapters": [],
+      "primary_instructor": "Instructor TBD",
+      "instructor_note": "All 42 chapters complete.",
+      "cadre_needed": "0-2",
+      "cadre_activity": "MCI tabletop patients",
+      "exam_questions": 55,
+      "day_of_week": "Tuesday",
+      "module_id": "mod_ops",
+      "has_quiz": false,
+      "exam_module": "mod_special"
+    },
+    {
+      "day_number": 29,
+      "date": "2026-09-16",
+      "dow": "Wednesday",
+      "week": 10,
+      "chapters_covered": [],
+      "title": "EMS Ops Exam + Review + Final Scenarios PM",
+      "day_type": "exam_and_review",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": true,
+      "exam_name": "EMS Operations Module",
+      "quiz_chapters": [],
+      "primary_instructor": "Instructor TBD",
+      "instructor_note": "Last practice day.",
+      "cadre_needed": "0-4",
+      "cadre_activity": "Final integrated scenario stations",
+      "exam_questions": 35,
+      "day_of_week": "Wednesday",
+      "module_id": null,
+      "has_quiz": false,
+      "exam_module": "mod_ops"
+    },
+    {
+      "day_number": 30,
+      "date": "2026-09-17",
+      "dow": "Thursday",
+      "week": 10,
+      "chapters_covered": [],
+      "title": "COMPREHENSIVE FINAL EXAM + Course Closeout",
+      "day_type": "final_exam",
+      "has_lab": false,
+      "lab_name": "",
+      "has_exam": true,
+      "exam_name": "Comprehensive Final",
+      "quiz_chapters": [],
+      "primary_instructor": "Instructor TBD",
+      "instructor_note": "All instructors.",
+      "cadre_needed": "0",
+      "cadre_activity": "",
+      "exam_questions": 150,
+      "day_of_week": "Thursday",
+      "module_id": null,
+      "has_quiz": false,
+      "exam_module": null
+    }
   ],
   "supplementary_days": [
-    {"date":"2026-07-13", "week":1, "content":"Course orientation / Admin setup"},
-    {"date":"2026-07-20", "week":2, "content":"Ch 1-6 quizzes (outstanding) + sub-module exam prep"},
-    {"date":"2026-07-27", "week":3, "content":"Ch 7-10 quizzes + assessment exam prep"},
-    {"date":"2026-08-03", "week":4, "content":"Outstanding quizzes + module review"},
-    {"date":"2026-08-10", "week":5, "content":"Ch 15+18 quizzes + Resuscitation module exam prep"},
-    {"date":"2026-08-17", "week":6, "content":"Trauma chapter quizzes + Trauma module exam prep"},
-    {"date":"2026-08-24", "week":7, "content":"Ch 23-25 quizzes + Medical module exam prep"},
-    {"date":"2026-08-31", "week":8, "content":"Ch 36-38 quizzes + Special Pop exam prep"},
-    {"date":"2026-09-07", "week":9, "content":"LABOR DAY — No class"}
-  ],
-  "cadre_schedule": [
-    {"priority":"★★★", "day":8, "date":"2026-07-29", "activity":"IV Live Sticks", "cadre_needed":"2-4"},
-    {"priority":"★★★", "day":26, "date":"2026-09-09", "activity":"Final Scenario Stations", "cadre_needed":"3-4"},
-    {"priority":"★★", "day":6, "date":"2026-07-23", "activity":"Assessment Practice Stations", "cadre_needed":"3-4"},
-    {"priority":"★★", "day":12, "date":"2026-08-06", "activity":"BLS/CPR Team Resuscitation", "cadre_needed":"3-4"},
-    {"priority":"★★", "day":18, "date":"2026-08-20", "activity":"Medical Scenario Stations", "cadre_needed":"3-4"},
-    {"priority":"★★", "day":21, "date":"2026-08-27", "activity":"OB Delivery / NRP Lab", "cadre_needed":"2-4"},
-    {"priority":"★★", "day":24, "date":"2026-09-03", "activity":"Peds/OB/Geri Scenarios", "cadre_needed":"3-4"},
-    {"priority":"★", "day":3, "date":"2026-07-16", "activity":"Lifting & Moving Lab", "cadre_needed":"2-3"},
-    {"priority":"★", "day":9, "date":"2026-07-30", "activity":"IV Integration Scenarios", "cadre_needed":"2-3"},
-    {"priority":"★", "day":11, "date":"2026-08-05", "activity":"Airway Lab Stations", "cadre_needed":"3-4"},
-    {"priority":"★", "day":14, "date":"2026-08-12", "activity":"Stop the Bleed Lab", "cadre_needed":"2-3"},
-    {"priority":"★", "day":15, "date":"2026-08-13", "activity":"C-Spine Lab", "cadre_needed":"2-3"},
-    {"priority":"★", "day":16, "date":"2026-08-18", "activity":"Splinting Lab", "cadre_needed":"2-3"},
-    {"priority":"★", "day":20, "date":"2026-08-26", "activity":"Medical Scenario Practice", "cadre_needed":"3-4"}
+    {
+      "date": "2026-07-13",
+      "week": 1,
+      "content": "Course orientation / Admin setup"
+    },
+    {
+      "date": "2026-07-20",
+      "week": 2,
+      "content": "Ch 1-6 quizzes (outstanding) + sub-module exam prep"
+    },
+    {
+      "date": "2026-07-27",
+      "week": 3,
+      "content": "Ch 7-10 quizzes + assessment exam prep"
+    },
+    {
+      "date": "2026-08-03",
+      "week": 4,
+      "content": "Outstanding quizzes + module review"
+    },
+    {
+      "date": "2026-08-10",
+      "week": 5,
+      "content": "Ch 15+18 quizzes + Resuscitation module exam prep"
+    },
+    {
+      "date": "2026-08-17",
+      "week": 6,
+      "content": "Trauma chapter quizzes + Trauma module exam prep"
+    },
+    {
+      "date": "2026-08-24",
+      "week": 7,
+      "content": "Ch 23-25 quizzes + Medical module exam prep"
+    },
+    {
+      "date": "2026-08-31",
+      "week": 8,
+      "content": "OB/Peds quizzes + review"
+    },
+    {
+      "date": "2026-09-07",
+      "week": 9,
+      "content": "LABOR DAY - No class"
+    },
+    {
+      "date": "2026-09-14",
+      "week": 10,
+      "content": "Ch 37-38 quizzes + Special Pop exam prep"
+    }
   ],
   "key_dates": {
     "course_start": "2026-07-14",
-    "course_end": "2026-09-10",
+    "course_end": "2026-09-17",
     "labor_day": "2026-09-07",
     "pals_conflict": "2026-07-16",
     "pima_summer_end": "2026-08-13",
     "pima_off_week_start": "2026-08-17",
-    "nremt_test_1": "~2026-09-14",
-    "nremt_test_2": "~2026-10-02",
+    "nremt_test_1": "~2026-09-21",
+    "nremt_test_2": "~2026-10-09",
     "graduation": "2026-11-05"
   }
 }

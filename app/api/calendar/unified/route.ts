@@ -303,6 +303,13 @@ export async function GET(request: NextRequest) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const instance = p.instance as any;
 
+            // Only PUBLISHED plan instances render on the master calendar.
+            // The status was always fetched here but never checked — which
+            // let a stale DRAFT plan (Jul 7 start, abandoned 2026-03) render
+            // as if real while the actual course runs Jul 14 → Sep 17.
+            // Draft plans are planner working data, not schedule truth.
+            if (instance?.status !== 'published') continue;
+
             if (programFilter && !programFilter.has('lvfr')) continue;
 
             if (instructorId && !p.instructor_name) continue;
