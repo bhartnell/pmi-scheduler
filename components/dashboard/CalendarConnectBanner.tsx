@@ -2,18 +2,27 @@
 
 /**
  * CalendarConnectBanner — dismissible amber prompt rendered on the
- * home dashboard for instructors / lead_instructors / admins who
- * have NOT connected Google Calendar (and haven't dismissed the
- * prompt). Links to the 3-step setup wizard.
+ * home dashboard for instructors / lead_instructors / admins whose
+ * Google Calendar is NOT connected OR needs re-authorization.
+ * Links to the 3-step setup wizard (which handles both cases).
  *
- * Visibility rules (all must hold):
+ * Visibility rules:
  *   - session is authenticated
  *   - role is instructor / lead_instructor / admin / superadmin
- *   - /api/calendar/status reports connected=false
- *   - /api/user/preferences reports dismissed_calendar_banner=false
+ *   - AND either:
+ *     · CONNECT case:   /api/calendar/status connected=false AND
+ *       dismissed_calendar_banner=false, or
+ *     · RECONNECT case: /api/calendar/status needs_reauth=true —
+ *       shown REGARDLESS of a prior dismissal. Rationale: the
+ *       dismissal was made in the first-time-connect context;
+ *       needs_reconnect is a new, broken-state condition (event
+ *       pushes have silently stopped) — during the 2026-05/06 scope
+ *       outage the affected users were exactly the ones the banner
+ *       never prompted. The X still hides it for the current visit.
  *
- * The banner is rendered with `null` while data loads so it doesn't
- * flash on for connected users.
+ * A fully-connected user (connected=true, scope='events' →
+ * needs_reauth=false) sees nothing. Rendered as `null` while data
+ * loads so it doesn't flash for connected users.
  */
 
 import { useEffect, useState } from 'react';
@@ -31,6 +40,7 @@ const ELIGIBLE_ROLES = new Set([
 export default function CalendarConnectBanner() {
   const { status } = useSession();
   const [show, setShow] = useState(false);
+  const [needsReauth, setNeedsReauth] = useState(false);
   const [dismissing, setDismissing] = useState(false);
 
   useEffect(() => {
@@ -58,13 +68,19 @@ export default function CalendarConnectBanner() {
         const role = meData?.user?.role || meData?.role;
         const dismissed = !!prefData?.preferences?.dismissed_calendar_banner;
         const connected = !!calData?.connected;
+        const reauth = !!calData?.needs_reauth;
 
-        if (
-          role &&
-          ELIGIBLE_ROLES.has(role) &&
-          !dismissed &&
-          !connected
-        ) {
+        if (!role || !ELIGIBLE_ROLES.has(role)) return;
+
+        // RECONNECT case: broken connection (e.g. lapsed scope) —
+        // overrides a prior dismissal; pushes are silently failing.
+        if (reauth) {
+          setNeedsReauth(true);
+          setShow(true);
+          return;
+        }
+        // CONNECT case: never connected — respects prior dismissal.
+        if (!connected && !dismissed) {
           setShow(true);
         }
       } catch {
@@ -102,16 +118,18 @@ export default function CalendarConnectBanner() {
         </div>
         <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-100">
-            Sync your schedule
+            {needsReauth ? 'Reconnect your Google Calendar' : 'Sync your schedule'}
           </h3>
           <p className="mt-0.5 text-sm text-amber-800 dark:text-amber-200">
-            Connect your Google Calendar to automatically see your assigned classes and labs.
+            {needsReauth
+              ? 'Your calendar connection needs to be re-authorized — your classes and labs have stopped syncing. Reconnecting takes about 30 seconds.'
+              : 'Connect your Google Calendar to automatically see your assigned classes and labs.'}
           </p>
           <Link
             href="/settings/calendar-setup"
             className="mt-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-medium shadow-sm"
           >
-            Connect Now
+            {needsReauth ? 'Reconnect Now' : 'Connect Now'}
             <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
