@@ -2,6 +2,7 @@
 
 > Auto-generated from Supabase production -- March 8, 2026
 > Reconciled to live database -- June 8, 2026 (see "Schema Reconciliation Additions")
+> Check constraints re-verified against live -- June 10, 2026 (all 146 documented CHECK definitions normalized to exact pg_get_constraintdef output; 4 had real value-list drift)
 
 ## Summary
 
@@ -89,7 +90,7 @@
 - `lab_users_email_key`: (email)
 
 **Check Constraints:**
-- `lab_users_role_check`: `(role = ANY (ARRAY['superadmin'::text, 'admin'::text, 'lead_instructor'::text, 'instructor'::text, 'volunteer_instructor'::text, 'program_director'::text, 'student'::text, 'guest'::text, 'pending'::text]))`
+- `lab_users_role_check`: `((role = ANY (ARRAY['superadmin'::text, 'admin'::text, 'lead_instructor'::text, 'agency_liaison'::text, 'instructor'::text, 'program_director'::text, 'volunteer_instructor'::text, 'agency_observer'::text, 'student'::text, 'guest'::text, 'pending'::text])))`
 
 **Indexes:**
 - `idx_lab_users_email`: `CREATE INDEX idx_lab_users_email ON public.lab_users USING btree (email)`
@@ -251,8 +252,8 @@
 | is_archived | boolean | YES | false |  |
 
 **Check Constraints:**
-- `user_notifications_type_check`: `(type = ANY (ARRAY['lab_assignment'::text, 'lab_reminder'::text, 'feedback_new'::text, 'feedback_resolved'::text, 'task_assigned'::text, 'task_completed'::text, 'task_comment'::text, 'role_approved'::text, 'shift_available'::text, 'shift_confirmed'::text, 'clinical_hours'::text, 'compliance_due'::text, 'general'::text]))`
-- `user_notifications_category_check`: `(category = ANY (ARRAY['tasks'::text, 'labs'::text, 'scheduling'::text, 'feedback'::text, 'clinical'::text, 'system'::text]))`
+- `user_notifications_type_check`: `((type = ANY (ARRAY['lab_assignment'::text, 'lab_reminder'::text, 'feedback_new'::text, 'feedback_resolved'::text, 'task_assigned'::text, 'task_completed'::text, 'task_comment'::text, 'role_approved'::text, 'shift_available'::text, 'shift_confirmed'::text, 'clinical_hours'::text, 'compliance_due'::text, 'general'::text])))`
+- `user_notifications_category_check`: `((category = ANY (ARRAY['tasks'::text, 'labs'::text, 'scheduling'::text, 'feedback'::text, 'clinical'::text, 'system'::text])))`
 
 **Indexes:**
 - `idx_notifications_archived`: `CREATE INDEX idx_notifications_archived ON public.user_notifications USING btree (user_email, archived_at) WHERE (archived_at IS NOT NULL)`
@@ -290,7 +291,7 @@
 - `user_roles_user_id_role_key`: (role, user_id)
 
 **Check Constraints:**
-- `user_roles_role_check`: `(role = ANY (ARRAY['operator'::text, 'inventory_admin'::text, 'access_admin'::text]))`
+- `user_roles_role_check`: `((role = ANY (ARRAY['operator'::text, 'inventory_admin'::text, 'access_admin'::text])))`
 
 **Indexes:**
 - `user_roles_user_id_role_key`: `CREATE UNIQUE INDEX user_roles_user_id_role_key ON public.user_roles USING btree (user_id, role)`
@@ -467,8 +468,8 @@
 - `students_student_id_key`: (student_id)
 
 **Check Constraints:**
-- `students_status_check`: `(status = ANY (ARRAY['active'::text, 'graduated'::text, 'withdrawn'::text, 'on_hold'::text]))`
-- `students_learning_style_check`: `((learning_style = ANY (ARRAY['visual'::text, 'auditory'::text, 'kinesthetic'::text, 'reading'::text])) OR (learning_style IS NULL))`
+- `students_status_check`: `((status = ANY (ARRAY['active'::text, 'graduated'::text, 'withdrawn'::text, 'on_hold'::text])))`
+- `students_learning_style_check`: `(((learning_style = ANY (ARRAY['visual'::text, 'auditory'::text, 'kinesthetic'::text, 'reading'::text])) OR (learning_style IS NULL)))`
 
 **Indexes:**
 - `idx_students_cohort`: `CREATE INDEX idx_students_cohort ON public.students USING btree (cohort_id)`
@@ -505,10 +506,10 @@
 - `student_learning_styles_student_id_key`: (student_id)
 
 **Check Constraints:**
-- `student_learning_styles_structure_style_check`: `(structure_style = ANY (ARRAY['structured'::text, 'flexible'::text]))`
-- `student_learning_styles_social_style_check`: `(social_style = ANY (ARRAY['social'::text, 'independent'::text]))`
-- `student_learning_styles_primary_style_check`: `(primary_style = ANY (ARRAY['audio'::text, 'visual'::text, 'kinesthetic'::text]))`
-- `student_learning_styles_processing_style_check`: `(processing_style = ANY (ARRAY['analytical'::text, 'global'::text]))`
+- `student_learning_styles_structure_style_check`: `((structure_style = ANY (ARRAY['structured'::text, 'flexible'::text])))`
+- `student_learning_styles_social_style_check`: `((social_style = ANY (ARRAY['social'::text, 'independent'::text])))`
+- `student_learning_styles_primary_style_check`: `((primary_style = ANY (ARRAY['audio'::text, 'visual'::text, 'kinesthetic'::text])))`
+- `student_learning_styles_processing_style_check`: `((processing_style = ANY (ARRAY['analytical'::text, 'global'::text])))`
 
 **Indexes:**
 - `idx_learning_styles_student`: `CREATE INDEX idx_learning_styles_student ON public.student_learning_styles USING btree (student_id)`
@@ -680,7 +681,7 @@
 - `student_id` -> `students.id` (`student_documents_student_id_fkey`)
 
 **Check Constraints:**
-- `student_documents_status_check`: `(status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text]))`
+- `student_documents_status_check`: `((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text])))`
 
 **Indexes:**
 - `idx_student_documents_student`: `CREATE INDEX idx_student_documents_student ON public.student_documents USING btree (student_id)`
@@ -710,8 +711,8 @@
 - `author_id` -> `lab_users.id` (`student_notes_author_id_fkey`)
 
 **Check Constraints:**
-- `student_notes_flag_level_check`: `(flag_level = ANY (ARRAY['none'::text, 'yellow'::text, 'red'::text]))`
-- `student_notes_category_check`: `(category = ANY (ARRAY['academic'::text, 'behavioral'::text, 'medical'::text, 'other'::text]))`
+- `student_notes_flag_level_check`: `((flag_level = ANY (ARRAY['none'::text, 'yellow'::text, 'red'::text])))`
+- `student_notes_category_check`: `((category = ANY (ARRAY['academic'::text, 'behavioral'::text, 'medical'::text, 'other'::text])))`
 
 **Indexes:**
 - `idx_student_notes_author`: `CREATE INDEX idx_student_notes_author ON public.student_notes USING btree (author_id)`
@@ -908,7 +909,7 @@
 - `student_id` -> `students.id` (`student_communications_student_id_fkey`)
 
 **Check Constraints:**
-- `student_communications_type_check`: `(type = ANY (ARRAY['phone'::text, 'email'::text, 'meeting'::text, 'text'::text, 'other'::text]))`
+- `student_communications_type_check`: `((type = ANY (ARRAY['phone'::text, 'email'::text, 'meeting'::text, 'text'::text, 'other'::text])))`
 
 **Indexes:**
 - `idx_student_communications_flagged`: `CREATE INDEX idx_student_communications_flagged ON public.student_communications USING btree (flagged) WHERE (flagged = true)`
@@ -1012,7 +1013,7 @@
 - `student_compliance_records_student_id_doc_type_id_key`: (student_id, doc_type_id)
 
 **Check Constraints:**
-- `student_compliance_records_status_check`: `(status = ANY (ARRAY['complete'::text, 'missing'::text, 'expiring'::text, 'expired'::text]))`
+- `student_compliance_records_status_check`: `((status = ANY (ARRAY['complete'::text, 'missing'::text, 'expiring'::text, 'expired'::text])))`
 
 **Indexes:**
 - `idx_compliance_records_expiration`: `CREATE INDEX idx_compliance_records_expiration ON public.student_compliance_records USING btree (expiration_date)`
@@ -1291,7 +1292,7 @@
 - `student_lab_ratings_student_id_lab_day_id_instructor_email_key`: (lab_day_id, student_id, instructor_email)
 
 **Check Constraints:**
-- `student_lab_ratings_rating_check`: `((rating >= 1) AND (rating <= 5))`
+- `student_lab_ratings_rating_check`: `(((rating >= 1) AND (rating <= 5)))`
 
 **Indexes:**
 - `idx_student_lab_ratings_instructor`: `CREATE INDEX idx_student_lab_ratings_instructor ON public.student_lab_ratings USING btree (instructor_email)`
@@ -1323,7 +1324,7 @@
 - `student_lab_signups_lab_day_id_student_id_key`: (lab_day_id, student_id)
 
 **Check Constraints:**
-- `student_lab_signups_status_check`: `(status = ANY (ARRAY['confirmed'::text, 'waitlisted'::text, 'cancelled'::text]))`
+- `student_lab_signups_status_check`: `((status = ANY (ARRAY['confirmed'::text, 'waitlisted'::text, 'cancelled'::text])))`
 
 **Indexes:**
 - `idx_student_lab_signups_lab`: `CREATE INDEX idx_student_lab_signups_lab ON public.student_lab_signups USING btree (lab_day_id)`
@@ -1360,7 +1361,7 @@
 - `student_mce_clearance_student_id_key`: (student_id)
 
 **Check Constraints:**
-- `student_mce_clearance_clearance_status_check`: `(clearance_status = ANY (ARRAY['not_started'::text, 'in_progress'::text, 'submitted'::text, 'cleared'::text]))`
+- `student_mce_clearance_clearance_status_check`: `((clearance_status = ANY (ARRAY['not_started'::text, 'in_progress'::text, 'submitted'::text, 'cleared'::text])))`
 
 **Indexes:**
 - `idx_mce_clearance_status`: `CREATE INDEX idx_mce_clearance_status ON public.student_mce_clearance USING btree (clearance_status)`
@@ -1536,8 +1537,8 @@
 - `skill_sheet_id` -> `skill_sheets.id` (`student_skill_evaluations_skill_sheet_id_fkey`)
 
 **Check Constraints:**
-- `student_skill_evaluations_result_check`: `(result = ANY (ARRAY['pass'::text, 'fail'::text, 'remediation'::text]))`
-- `student_skill_evaluations_evaluation_type_check`: `(evaluation_type = ANY (ARRAY['formative'::text, 'final_competency'::text]))`
+- `student_skill_evaluations_result_check`: `((result = ANY (ARRAY['pass'::text, 'fail'::text, 'remediation'::text])))`
+- `student_skill_evaluations_evaluation_type_check`: `((evaluation_type = ANY (ARRAY['formative'::text, 'final_competency'::text])))`
 
 **Indexes:**
 - `idx_eval_sheet`: `CREATE INDEX idx_eval_sheet ON public.student_skill_evaluations USING btree (skill_sheet_id)`
@@ -1770,7 +1771,7 @@
 - `lab_day_roles_lab_day_id_instructor_id_role_key`: (role, instructor_id, lab_day_id)
 
 **Check Constraints:**
-- `lab_day_roles_role_check`: `(role = ANY (ARRAY['lab_lead'::text, 'roamer'::text, 'observer'::text]))`
+- `lab_day_roles_role_check`: `((role = ANY (ARRAY['lab_lead'::text, 'roamer'::text, 'observer'::text, 'coordinator'::text])))`
 
 **Indexes:**
 - `idx_lab_day_roles_instructor`: `CREATE INDEX idx_lab_day_roles_instructor ON public.lab_day_roles USING btree (instructor_id)`
@@ -1849,8 +1850,8 @@
 - `created_by` -> `lab_users.id` (`scenarios_created_by_fkey`)
 
 **Check Constraints:**
-- `scenarios_content_review_status_check`: `(content_review_status = ANY (ARRAY['approved'::text, 'pending_review'::text, 'rejected'::text]))`
-- `scenarios_difficulty_check`: `(difficulty = ANY (ARRAY['beginner'::text, 'intermediate'::text, 'advanced'::text]))`
+- `scenarios_content_review_status_check`: `((content_review_status = ANY (ARRAY['approved'::text, 'pending_review'::text, 'rejected'::text])))`
+- `scenarios_difficulty_check`: `((difficulty = ANY (ARRAY['beginner'::text, 'intermediate'::text, 'advanced'::text])))`
 
 **Indexes:**
 - `idx_scenarios_active`: `CREATE INDEX idx_scenarios_active ON public.scenarios USING btree (is_active) WHERE (is_active = true)`
@@ -1914,9 +1915,9 @@
 - `graded_by` -> `lab_users.id` (`scenario_assessments_graded_by_fkey`)
 
 **Check Constraints:**
-- `scenario_assessments_communication_score_check`: `((communication_score >= 0) AND (communication_score <= 4))`
-- `scenario_assessments_treatment_score_check`: `((treatment_score >= 0) AND (treatment_score <= 4))`
-- `scenario_assessments_assessment_score_check`: `((assessment_score >= 0) AND (assessment_score <= 4))`
+- `scenario_assessments_communication_score_check`: `(((communication_score >= 0) AND (communication_score <= 4)))`
+- `scenario_assessments_treatment_score_check`: `(((treatment_score >= 0) AND (treatment_score <= 4)))`
+- `scenario_assessments_assessment_score_check`: `(((assessment_score >= 0) AND (assessment_score <= 4)))`
 
 **Indexes:**
 - `idx_scenario_assessments_cohort`: `CREATE INDEX idx_scenario_assessments_cohort ON public.scenario_assessments USING btree (cohort_id)`
@@ -1960,11 +1961,11 @@
 - `graded_by` -> `lab_users.id` (`skill_assessments_graded_by_fkey`)
 
 **Check Constraints:**
-- `skill_assessments_overall_competency_check`: `((overall_competency >= 1) AND (overall_competency <= 5))`
-- `skill_assessments_critical_thinking_check`: `((critical_thinking >= 1) AND (critical_thinking <= 5))`
-- `skill_assessments_technical_performance_check`: `((technical_performance >= 1) AND (technical_performance <= 5))`
-- `skill_assessments_preparation_safety_check`: `((preparation_safety >= 1) AND (preparation_safety <= 5))`
-- `skill_assessments_time_management_check`: `((time_management >= 1) AND (time_management <= 5))`
+- `skill_assessments_overall_competency_check`: `(((overall_competency >= 1) AND (overall_competency <= 5)))`
+- `skill_assessments_critical_thinking_check`: `(((critical_thinking >= 1) AND (critical_thinking <= 5)))`
+- `skill_assessments_technical_performance_check`: `(((technical_performance >= 1) AND (technical_performance <= 5)))`
+- `skill_assessments_preparation_safety_check`: `(((preparation_safety >= 1) AND (preparation_safety <= 5)))`
+- `skill_assessments_time_management_check`: `(((time_management >= 1) AND (time_management <= 5)))`
 
 **Indexes:**
 - `idx_skill_assessments_station`: `CREATE INDEX idx_skill_assessments_station ON public.skill_assessments USING btree (lab_station_id)`
@@ -1987,7 +1988,7 @@
 | updated_at | timestamptz | YES | now() |  |
 
 **Check Constraints:**
-- `assessment_rubrics_rating_scale_check`: `(rating_scale = ANY (ARRAY['numeric_5'::text, 'pass_fail'::text, 'qualitative_4'::text]))`
+- `assessment_rubrics_rating_scale_check`: `((rating_scale = ANY (ARRAY['numeric_5'::text, 'pass_fail'::text, 'qualitative_4'::text])))`
 
 #### `canonical_skills`
 
@@ -2005,7 +2006,7 @@
 - `canonical_skills_canonical_name_key`: (canonical_name)
 
 **Check Constraints:**
-- `canonical_skills_skill_category_check`: `(skill_category = ANY (ARRAY['airway'::text, 'vascular_access'::text, 'medication'::text, 'assessment'::text, 'cardiac'::text, 'trauma'::text, 'immobilization'::text, 'obstetrics'::text, 'pediatric'::text, 'movement'::text]))`
+- `canonical_skills_skill_category_check`: `((skill_category = ANY (ARRAY['airway'::text, 'vascular_access'::text, 'medication'::text, 'assessment'::text, 'cardiac'::text, 'trauma'::text, 'immobilization'::text, 'obstetrics'::text, 'pediatric'::text, 'movement'::text])))`
 
 **Indexes:**
 - `canonical_skills_canonical_name_key`: `CREATE UNIQUE INDEX canonical_skills_canonical_name_key ON public.canonical_skills USING btree (canonical_name)`
@@ -2078,7 +2079,7 @@
 - `lab_day_attendance_lab_day_id_student_id_key`: (student_id, lab_day_id)
 
 **Check Constraints:**
-- `lab_day_attendance_status_check`: `(status = ANY (ARRAY['present'::text, 'absent'::text, 'excused'::text, 'late'::text]))`
+- `lab_day_attendance_status_check`: `((status = ANY (ARRAY['present'::text, 'absent'::text, 'excused'::text, 'late'::text])))`
 
 **Indexes:**
 - `idx_attendance_lab_day`: `CREATE INDEX idx_attendance_lab_day ON public.lab_day_attendance USING btree (lab_day_id)`
@@ -2153,7 +2154,7 @@
 - `lab_day_id` -> `lab_days.id` (`lab_day_costs_lab_day_id_fkey`)
 
 **Check Constraints:**
-- `lab_day_costs_category_check`: `(category = ANY (ARRAY['equipment'::text, 'consumables'::text, 'instructor_pay'::text, 'external'::text, 'other'::text]))`
+- `lab_day_costs_category_check`: `((category = ANY (ARRAY['equipment'::text, 'consumables'::text, 'instructor_pay'::text, 'external'::text, 'other'::text])))`
 
 **Indexes:**
 - `idx_lab_day_costs_lab_day`: `CREATE INDEX idx_lab_day_costs_lab_day ON public.lab_day_costs USING btree (lab_day_id)`
@@ -2234,7 +2235,7 @@
 - `lab_day_signups_lab_day_id_student_id_key`: (student_id, lab_day_id)
 
 **Check Constraints:**
-- `lab_day_signups_status_check`: `(status = ANY (ARRAY['registered'::text, 'waitlisted'::text, 'cancelled'::text]))`
+- `lab_day_signups_status_check`: `((status = ANY (ARRAY['registered'::text, 'waitlisted'::text, 'cancelled'::text])))`
 
 **Indexes:**
 - `idx_lab_day_signups_lab`: `CREATE INDEX idx_lab_day_signups_lab ON public.lab_day_signups USING btree (lab_day_id)`
@@ -2266,7 +2267,7 @@
 | updated_by | text | YES |  |  |
 
 **Check Constraints:**
-- `lab_day_templates_category_check`: `(category = ANY (ARRAY['orientation'::text, 'skills_lab'::text, 'scenario_lab'::text, 'assessment'::text, 'capstone'::text, 'certification'::text, 'mixed'::text, 'other'::text]))`
+- `lab_day_templates_category_check`: `((category = ANY (ARRAY['orientation'::text, 'skills_lab'::text, 'scenario_lab'::text, 'assessment'::text, 'capstone'::text, 'certification'::text, 'mixed'::text, 'field_trip'::text, 'other'::text])))`
 
 **Indexes:**
 - `idx_lab_day_templates_anchor`: `CREATE INDEX idx_lab_day_templates_anchor ON public.lab_day_templates USING btree (is_anchor) WHERE (is_anchor = true)`
@@ -2307,7 +2308,7 @@
 - `lab_day_id` -> `lab_days.id` (`lab_equipment_items_lab_day_id_fkey`)
 
 **Check Constraints:**
-- `lab_equipment_items_status_check`: `(status = ANY (ARRAY['checked_out'::text, 'returned'::text, 'damaged'::text, 'missing'::text]))`
+- `lab_equipment_items_status_check`: `((status = ANY (ARRAY['checked_out'::text, 'returned'::text, 'damaged'::text, 'missing'::text])))`
 
 **Indexes:**
 - `idx_equipment_lab_day`: `CREATE INDEX idx_equipment_lab_day ON public.lab_equipment_items USING btree (lab_day_id)`
@@ -2336,7 +2337,7 @@
 - `lab_day_id` -> `lab_days.id` (`lab_equipment_tracking_lab_day_id_fkey`)
 
 **Check Constraints:**
-- `lab_equipment_tracking_status_check`: `(status = ANY (ARRAY['checked_out'::text, 'returned'::text, 'damaged'::text, 'missing'::text]))`
+- `lab_equipment_tracking_status_check`: `((status = ANY (ARRAY['checked_out'::text, 'returned'::text, 'damaged'::text, 'missing'::text])))`
 
 **Indexes:**
 - `idx_lab_equipment_tracking_lab_day`: `CREATE INDEX idx_lab_equipment_tracking_lab_day ON public.lab_equipment_tracking USING btree (lab_day_id)`
@@ -2359,7 +2360,7 @@
 - `group_id` -> `lab_groups.id` (`lab_group_assignment_history_group_id_fkey`)
 
 **Check Constraints:**
-- `lab_group_assignment_history_action_check`: `(action = ANY (ARRAY['added'::text, 'removed'::text, 'moved'::text]))`
+- `lab_group_assignment_history_action_check`: `((action = ANY (ARRAY['added'::text, 'removed'::text, 'moved'::text])))`
 
 **Indexes:**
 - `idx_group_history_group`: `CREATE INDEX idx_group_history_group ON public.lab_group_assignment_history USING btree (group_id)`
@@ -2565,8 +2566,8 @@
 - `lab_timer_state_lab_day_id_key`: (lab_day_id)
 
 **Check Constraints:**
-- `lab_timer_state_status_check`: `(status = ANY (ARRAY['running'::text, 'paused'::text, 'stopped'::text]))`
-- `lab_timer_state_mode_check`: `(mode = ANY (ARRAY['countdown'::text, 'countup'::text]))`
+- `lab_timer_state_status_check`: `((status = ANY (ARRAY['running'::text, 'paused'::text, 'stopped'::text])))`
+- `lab_timer_state_mode_check`: `((mode = ANY (ARRAY['countdown'::text, 'countup'::text])))`
 
 **Indexes:**
 - `idx_lab_timer_state_lab_day_id`: `CREATE INDEX idx_lab_timer_state_lab_day_id ON public.lab_timer_state USING btree (lab_day_id)`
@@ -2680,7 +2681,7 @@
 - `lab_day_id` -> `lab_days.id` (`station_completions_lab_day_id_fkey`)
 
 **Check Constraints:**
-- `station_completions_result_check`: `(result = ANY (ARRAY['pass'::text, 'needs_review'::text, 'incomplete'::text]))`
+- `station_completions_result_check`: `((result = ANY (ARRAY['pass'::text, 'needs_review'::text, 'incomplete'::text])))`
 
 **Indexes:**
 - `idx_station_completions_date`: `CREATE INDEX idx_station_completions_date ON public.station_completions USING btree (completed_at DESC)`
@@ -2748,7 +2749,7 @@
 - `station_pool_station_code_key`: (station_code)
 
 **Check Constraints:**
-- `station_pool_category_check`: `(category = ANY (ARRAY['cardiology'::text, 'trauma'::text, 'airway'::text, 'pediatrics'::text, 'pharmacology'::text, 'medical'::text, 'obstetrics'::text, 'other'::text]))`
+- `station_pool_category_check`: `((category = ANY (ARRAY['cardiology'::text, 'trauma'::text, 'airway'::text, 'pediatrics'::text, 'pharmacology'::text, 'medical'::text, 'obstetrics'::text, 'other'::text])))`
 
 **Indexes:**
 - `idx_station_pool_active`: `CREATE INDEX idx_station_pool_active ON public.station_pool USING btree (is_active, semester)`
@@ -2906,7 +2907,7 @@
 - `scenario_ratings_scenario_id_user_email_key`: (scenario_id, user_email)
 
 **Check Constraints:**
-- `scenario_ratings_rating_check`: `((rating >= 1) AND (rating <= 5))`
+- `scenario_ratings_rating_check`: `(((rating >= 1) AND (rating <= 5)))`
 
 **Indexes:**
 - `idx_scenario_ratings_scenario`: `CREATE INDEX idx_scenario_ratings_scenario ON public.scenario_ratings USING btree (scenario_id)`
@@ -2965,7 +2966,7 @@
 - `skill_competencies_student_id_skill_id_key`: (skill_id, student_id)
 
 **Check Constraints:**
-- `skill_competencies_level_check`: `(level = ANY (ARRAY['introduced'::text, 'practiced'::text, 'competent'::text, 'proficient'::text]))`
+- `skill_competencies_level_check`: `((level = ANY (ARRAY['introduced'::text, 'practiced'::text, 'competent'::text, 'proficient'::text])))`
 
 **Indexes:**
 - `idx_skill_competencies_skill`: `CREATE INDEX idx_skill_competencies_skill ON public.skill_competencies USING btree (skill_id)`
@@ -3102,7 +3103,7 @@
 - `skill_sheet_id` -> `skill_sheets.id` (`skill_sheet_steps_skill_sheet_id_fkey`)
 
 **Check Constraints:**
-- `skill_sheet_steps_phase_check`: `(phase = ANY (ARRAY['preparation'::text, 'procedure'::text, 'assessment'::text, 'packaging'::text]))`
+- `skill_sheet_steps_phase_check`: `((phase = ANY (ARRAY['preparation'::text, 'procedure'::text, 'assessment'::text, 'packaging'::text])))`
 
 **Indexes:**
 - `idx_steps_sheet_order`: `CREATE INDEX idx_steps_sheet_order ON public.skill_sheet_steps USING btree (skill_sheet_id, step_number)`
@@ -3138,9 +3139,9 @@
 - `canonical_skill_id` -> `canonical_skills.id` (`skill_sheets_canonical_skill_id_fkey`)
 
 **Check Constraints:**
-- `skill_sheets_source_check`: `(source = ANY (ARRAY['nremt'::text, 'platinum'::text, 'publisher'::text, 'internal'::text]))`
-- `skill_sheets_platinum_skill_type_check`: `(platinum_skill_type = ANY (ARRAY['individual'::text, 'emt_competency'::text]))`
-- `skill_sheets_program_check`: `(program = ANY (ARRAY['emt'::text, 'aemt'::text, 'paramedic'::text, 'aemt_paramedic'::text, 'all'::text]))`
+- `skill_sheets_source_check`: `((source = ANY (ARRAY['nremt'::text, 'platinum'::text, 'publisher'::text, 'internal'::text])))`
+- `skill_sheets_platinum_skill_type_check`: `((platinum_skill_type = ANY (ARRAY['individual'::text, 'emt_competency'::text])))`
+- `skill_sheets_program_check`: `((program = ANY (ARRAY['emt'::text, 'aemt'::text, 'paramedic'::text, 'aemt_paramedic'::text, 'all'::text])))`
 
 **Indexes:**
 - `idx_skill_sheets_canonical`: `CREATE INDEX idx_skill_sheets_canonical ON public.skill_sheets USING btree (canonical_skill_id)`
@@ -3262,8 +3263,8 @@
 | visit_urgent_days | integer | YES | 28 |  |
 
 **Check Constraints:**
-- `chk_visit_alert_days_order`: `(visit_alert_days < visit_urgent_days)`
-- `chk_visit_alert_days_positive`: `((visit_alert_days > 0) AND (visit_urgent_days > 0))`
+- `chk_visit_alert_days_order`: `((visit_alert_days < visit_urgent_days))`
+- `chk_visit_alert_days_positive`: `(((visit_alert_days > 0) AND (visit_urgent_days > 0)))`
 
 **Indexes:**
 - `idx_clinical_sites_active`: `CREATE INDEX idx_clinical_sites_active ON public.clinical_sites USING btree (is_active)`
@@ -3323,7 +3324,7 @@
 - `cohort_id` -> `cohorts.id` (`clinical_site_visits_cohort_id_fkey`)
 
 **Check Constraints:**
-- `chk_site_or_agency`: `((site_id IS NOT NULL) OR (agency_id IS NOT NULL))`
+- `chk_site_or_agency`: `(((site_id IS NOT NULL) OR (agency_id IS NOT NULL)))`
 
 **Indexes:**
 - `idx_clinical_site_visits_agency`: `CREATE INDEX idx_clinical_site_visits_agency ON public.clinical_site_visits USING btree (agency_id)`
@@ -3382,7 +3383,7 @@
 - `clinical_rotations_student_id_rotation_date_key`: (rotation_date, student_id)
 
 **Check Constraints:**
-- `clinical_rotations_status_check`: `(status = ANY (ARRAY['scheduled'::text, 'completed'::text, 'cancelled'::text, 'no_show'::text]))`
+- `clinical_rotations_status_check`: `((status = ANY (ARRAY['scheduled'::text, 'completed'::text, 'cancelled'::text, 'no_show'::text])))`
 
 **Indexes:**
 - `clinical_rotations_student_id_rotation_date_key`: `CREATE UNIQUE INDEX clinical_rotations_student_id_rotation_date_key ON public.clinical_rotations USING btree (student_id, rotation_date)`
@@ -3416,7 +3417,7 @@
 | notification_dismissed | boolean | YES | false |  |
 
 **Check Constraints:**
-- `clinical_affiliations_agreement_status_check`: `(agreement_status = ANY (ARRAY['active'::text, 'expired'::text, 'pending_renewal'::text, 'terminated'::text]))`
+- `clinical_affiliations_agreement_status_check`: `((agreement_status = ANY (ARRAY['active'::text, 'expired'::text, 'pending_renewal'::text, 'terminated'::text])))`
 
 **Indexes:**
 - `idx_clinical_affiliations_expiration`: `CREATE INDEX idx_clinical_affiliations_expiration ON public.clinical_affiliations USING btree (expiration_date)`
@@ -3649,7 +3650,7 @@
 - `preceptor_eval_tokens_token_key`: (token)
 
 **Check Constraints:**
-- `preceptor_eval_tokens_status_check`: `(status = ANY (ARRAY['active'::text, 'submitted'::text, 'expired'::text]))`
+- `preceptor_eval_tokens_status_check`: `((status = ANY (ARRAY['active'::text, 'submitted'::text, 'expired'::text])))`
 
 **Indexes:**
 - `idx_preceptor_tokens_internship`: `CREATE INDEX idx_preceptor_tokens_internship ON public.preceptor_eval_tokens USING btree (internship_id)`
@@ -3695,10 +3696,10 @@
 - `student_id` -> `students.id` (`preceptor_feedback_student_id_fkey`)
 
 **Check Constraints:**
-- `preceptor_feedback_communication_check`: `((communication >= 1) AND (communication <= 5))`
-- `preceptor_feedback_overall_check`: `((overall >= 1) AND (overall <= 5))`
-- `preceptor_feedback_professionalism_check`: `((professionalism >= 1) AND (professionalism <= 5))`
-- `preceptor_feedback_clinical_skills_check`: `((clinical_skills >= 1) AND (clinical_skills <= 5))`
+- `preceptor_feedback_communication_check`: `(((communication >= 1) AND (communication <= 5)))`
+- `preceptor_feedback_overall_check`: `(((overall >= 1) AND (overall <= 5)))`
+- `preceptor_feedback_professionalism_check`: `(((professionalism >= 1) AND (professionalism <= 5)))`
+- `preceptor_feedback_clinical_skills_check`: `(((clinical_skills >= 1) AND (clinical_skills <= 5)))`
 
 **Indexes:**
 - `idx_preceptor_feedback_date`: `CREATE INDEX idx_preceptor_feedback_date ON public.preceptor_feedback USING btree (shift_date)`
@@ -3843,7 +3844,7 @@
 - `shift_signups_shift_id_instructor_id_key`: (shift_id, instructor_id)
 
 **Check Constraints:**
-- `shift_signups_status_check`: `(status = ANY (ARRAY['pending'::text, 'confirmed'::text, 'declined'::text, 'withdrawn'::text]))`
+- `shift_signups_status_check`: `((status = ANY (ARRAY['pending'::text, 'confirmed'::text, 'declined'::text, 'withdrawn'::text])))`
 
 **Indexes:**
 - `idx_signups_instructor`: `CREATE INDEX idx_signups_instructor ON public.shift_signups USING btree (instructor_id)`
@@ -3876,7 +3877,7 @@
 - `lab_day_id` -> `lab_days.id` (`instructor_time_entries_lab_day_id_fkey`)
 
 **Check Constraints:**
-- `instructor_time_entries_status_check`: `(status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text]))`
+- `instructor_time_entries_status_check`: `((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])))`
 
 **Indexes:**
 - `idx_time_entries_date`: `CREATE INDEX idx_time_entries_date ON public.instructor_time_entries USING btree (clock_in)`
@@ -3917,9 +3918,9 @@
 - `assigned_by` -> `lab_users.id` (`instructor_tasks_assigned_by_fkey`)
 
 **Check Constraints:**
-- `instructor_tasks_completion_mode_check`: `(completion_mode = ANY (ARRAY['single'::text, 'any'::text, 'all'::text]))`
-- `instructor_tasks_status_check`: `(status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'completed'::text, 'cancelled'::text]))`
-- `instructor_tasks_priority_check`: `(priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text]))`
+- `instructor_tasks_completion_mode_check`: `((completion_mode = ANY (ARRAY['single'::text, 'any'::text, 'all'::text])))`
+- `instructor_tasks_status_check`: `((status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'completed'::text, 'cancelled'::text])))`
+- `instructor_tasks_priority_check`: `((priority = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))`
 
 **Indexes:**
 - `idx_instructor_tasks_assigned`: `CREATE INDEX idx_instructor_tasks_assigned ON public.instructor_tasks USING btree (assigned_to)`
@@ -3958,7 +3959,7 @@
 - `swap_request_id` -> `shift_trade_requests.id` (`shift_swap_interest_swap_request_id_fkey`)
 
 **Check Constraints:**
-- `shift_swap_interest_status_check`: `(status = ANY (ARRAY['interested'::text, 'selected'::text, 'declined'::text]))`
+- `shift_swap_interest_status_check`: `((status = ANY (ARRAY['interested'::text, 'selected'::text, 'declined'::text])))`
 
 **Indexes:**
 - `idx_swap_interest_request`: `CREATE INDEX idx_swap_interest_request ON public.shift_swap_interest USING btree (swap_request_id)`
@@ -3992,7 +3993,7 @@
 - `requester_id` -> `lab_users.id` (`shift_trade_requests_requester_id_fkey`)
 
 **Check Constraints:**
-- `shift_trade_requests_status_check`: `(status = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text, 'approved'::text, 'cancelled'::text]))`
+- `shift_trade_requests_status_check`: `((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text, 'approved'::text, 'cancelled'::text])))`
 
 **Indexes:**
 - `idx_trade_requester`: `CREATE INDEX idx_trade_requester ON public.shift_trade_requests USING btree (requester_id)`
@@ -4022,7 +4023,7 @@
 - `original_shift_id` -> `open_shifts.id` (`shift_trades_original_shift_id_fkey`)
 
 **Check Constraints:**
-- `shift_trades_status_check`: `(status = ANY (ARRAY['pending'::text, 'accepted'::text, 'approved'::text, 'declined'::text, 'cancelled'::text]))`
+- `shift_trades_status_check`: `((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'approved'::text, 'declined'::text, 'cancelled'::text])))`
 
 **Indexes:**
 - `idx_shift_trades_original_instructor`: `CREATE INDEX idx_shift_trades_original_instructor ON public.shift_trades USING btree (original_instructor_email)`
@@ -4050,7 +4051,7 @@
 - `lab_day_id` -> `lab_days.id` (`substitute_requests_lab_day_id_fkey`)
 
 **Check Constraints:**
-- `substitute_requests_status_check`: `(status = ANY (ARRAY['pending'::text, 'approved'::text, 'denied'::text, 'covered'::text]))`
+- `substitute_requests_status_check`: `((status = ANY (ARRAY['pending'::text, 'approved'::text, 'denied'::text, 'covered'::text])))`
 
 **Indexes:**
 - `idx_substitute_requests_lab_day`: `CREATE INDEX idx_substitute_requests_lab_day ON public.substitute_requests USING btree (lab_day_id)`
@@ -4100,7 +4101,7 @@
 - `polls_participant_link_key`: (participant_link)
 
 **Check Constraints:**
-- `polls_mode_check`: `(mode = ANY (ARRAY['individual'::text, 'group'::text]))`
+- `polls_mode_check`: `((mode = ANY (ARRAY['individual'::text, 'group'::text])))`
 
 **Indexes:**
 - `idx_polls_admin_link`: `CREATE INDEX idx_polls_admin_link ON public.polls USING btree (admin_link)`
@@ -4174,7 +4175,7 @@
 - `osce_events_slug_key`: (slug)
 
 **Check Constraints:**
-- `osce_events_status_check`: `(status = ANY (ARRAY['draft'::text, 'open'::text, 'closed'::text, 'archived'::text]))`
+- `osce_events_status_check`: `((status = ANY (ARRAY['draft'::text, 'open'::text, 'closed'::text, 'archived'::text])))`
 
 **Indexes:**
 - `idx_osce_events_slug`: `CREATE INDEX idx_osce_events_slug ON public.osce_events USING btree (slug)`
@@ -4202,8 +4203,8 @@
 - `event_id` -> `osce_events.id` (`osce_time_blocks_event_id_fkey`)
 
 **Check Constraints:**
-- `osce_time_blocks_day_number_check`: `(day_number = ANY (ARRAY[1, 2]))`
-- `valid_time_range`: `(end_time > start_time)`
+- `osce_time_blocks_day_number_check`: `((day_number = ANY (ARRAY[1, 2])))`
+- `valid_time_range`: `((end_time > start_time))`
 
 **Indexes:**
 - `idx_osce_time_blocks_event`: `CREATE INDEX idx_osce_time_blocks_event ON public.osce_time_blocks USING btree (event_id)`
@@ -4347,9 +4348,9 @@
 - `generation_brief_id` -> `case_briefs.id` (`case_studies_generation_brief_id_fkey`)
 
 **Check Constraints:**
-- `case_studies_content_review_status_check`: `(content_review_status = ANY (ARRAY['not_applicable'::text, 'pending_review'::text, 'approved'::text, 'changes_requested'::text, 'rejected'::text]))`
-- `case_studies_difficulty_check`: `(difficulty = ANY (ARRAY['beginner'::text, 'intermediate'::text, 'advanced'::text]))`
-- `case_studies_visibility_check`: `(visibility = ANY (ARRAY['private'::text, 'program'::text, 'community'::text, 'official'::text]))`
+- `case_studies_content_review_status_check`: `((content_review_status = ANY (ARRAY['not_applicable'::text, 'pending_review'::text, 'approved'::text, 'changes_requested'::text, 'rejected'::text])))`
+- `case_studies_difficulty_check`: `((difficulty = ANY (ARRAY['beginner'::text, 'intermediate'::text, 'advanced'::text])))`
+- `case_studies_visibility_check`: `((visibility = ANY (ARRAY['private'::text, 'program'::text, 'community'::text, 'official'::text])))`
 
 **Indexes:**
 - `idx_case_studies_category`: `CREATE INDEX idx_case_studies_category ON public.case_studies USING btree (category)`
@@ -4394,7 +4395,7 @@
 - `case_practice_progress_student_id_case_id_attempt_number_key`: (case_id, student_id, attempt_number)
 
 **Check Constraints:**
-- `case_practice_progress_status_check`: `(status = ANY (ARRAY['in_progress'::text, 'completed'::text, 'abandoned'::text]))`
+- `case_practice_progress_status_check`: `((status = ANY (ARRAY['in_progress'::text, 'completed'::text, 'abandoned'::text])))`
 
 **Indexes:**
 - `case_practice_progress_student_id_case_id_attempt_number_key`: `CREATE UNIQUE INDEX case_practice_progress_student_id_case_id_attempt_number_key ON public.case_practice_progress USING btree (student_id, case_id, attempt_number)`
@@ -4467,7 +4468,7 @@
 - `case_sessions_session_code_key`: (session_code)
 
 **Check Constraints:**
-- `case_sessions_status_check`: `(status = ANY (ARRAY['waiting'::text, 'active'::text, 'paused'::text, 'completed'::text, 'cancelled'::text]))`
+- `case_sessions_status_check`: `((status = ANY (ARRAY['waiting'::text, 'active'::text, 'paused'::text, 'completed'::text, 'cancelled'::text])))`
 
 **Indexes:**
 - `case_sessions_session_code_key`: `CREATE UNIQUE INDEX case_sessions_session_code_key ON public.case_sessions USING btree (session_code)`
@@ -4527,7 +4528,7 @@
 - `case_id` -> `case_studies.id` (`case_assignments_case_id_fkey`)
 
 **Check Constraints:**
-- `case_assignments_grading_mode_check`: `(grading_mode = ANY (ARRAY['best_attempt'::text, 'latest_attempt'::text, 'average'::text]))`
+- `case_assignments_grading_mode_check`: `((grading_mode = ANY (ARRAY['best_attempt'::text, 'latest_attempt'::text, 'average'::text])))`
 
 **Indexes:**
 - `idx_case_assignments_case`: `CREATE INDEX idx_case_assignments_case ON public.case_assignments USING btree (case_id)`
@@ -4558,8 +4559,8 @@
 - `generated_case_id` -> `case_studies.id` (`case_briefs_generated_case_id_fkey`)
 
 **Check Constraints:**
-- `case_briefs_difficulty_check`: `(difficulty = ANY (ARRAY['beginner'::text, 'intermediate'::text, 'advanced'::text]))`
-- `case_briefs_status_check`: `(status = ANY (ARRAY['pending'::text, 'generating'::text, 'generated'::text, 'failed'::text, 'skipped'::text]))`
+- `case_briefs_difficulty_check`: `((difficulty = ANY (ARRAY['beginner'::text, 'intermediate'::text, 'advanced'::text])))`
+- `case_briefs_status_check`: `((status = ANY (ARRAY['pending'::text, 'generating'::text, 'generated'::text, 'failed'::text, 'skipped'::text])))`
 
 **Indexes:**
 - `idx_case_briefs_batch`: `CREATE INDEX idx_case_briefs_batch ON public.case_briefs USING btree (batch_name)`
@@ -4589,8 +4590,8 @@
 - `case_id` -> `case_studies.id` (`case_flags_case_id_fkey`)
 
 **Check Constraints:**
-- `case_flags_status_check`: `(status = ANY (ARRAY['pending'::text, 'reviewed'::text, 'resolved'::text, 'dismissed'::text]))`
-- `case_flags_reason_check`: `(reason = ANY (ARRAY['inaccurate'::text, 'inappropriate'::text, 'duplicate'::text, 'outdated'::text, 'other'::text]))`
+- `case_flags_status_check`: `((status = ANY (ARRAY['pending'::text, 'reviewed'::text, 'resolved'::text, 'dismissed'::text])))`
+- `case_flags_reason_check`: `((reason = ANY (ARRAY['inaccurate'::text, 'inappropriate'::text, 'duplicate'::text, 'outdated'::text, 'other'::text])))`
 
 **RLS Policies:**
 - `Service role full access to case_flags` (ALL, permissive, roles: {public})
@@ -4611,7 +4612,7 @@
 - `case_id` -> `case_studies.id` (`case_reviews_case_id_fkey`)
 
 **Check Constraints:**
-- `case_reviews_status_check`: `(status = ANY (ARRAY['approved'::text, 'rejected'::text, 'revision_needed'::text]))`
+- `case_reviews_status_check`: `((status = ANY (ARRAY['approved'::text, 'rejected'::text, 'revision_needed'::text])))`
 
 **RLS Policies:**
 - `Service role full access to case_reviews` (ALL, permissive, roles: {public})
@@ -4637,7 +4638,7 @@
 - `google_calendar_events_user_email_source_type_source_id_key`: (source_id, user_email, source_type)
 
 **Check Constraints:**
-- `google_calendar_events_source_type_check`: `(source_type = ANY (ARRAY['station_assignment'::text, 'lab_day_role'::text, 'shift_signup'::text, 'site_visit'::text, 'osce_block'::text, 'osce_instructor'::text]))`
+- `google_calendar_events_source_type_check`: `((source_type = ANY (ARRAY['station_assignment'::text, 'lab_day_role'::text, 'shift_signup'::text, 'site_visit'::text, 'osce_block'::text, 'osce_instructor'::text, 'schedule_block'::text, 'schedule_block_series'::text, 'poll_meeting'::text])))`
 
 **Indexes:**
 - `google_calendar_events_user_email_source_type_source_id_key`: `CREATE UNIQUE INDEX google_calendar_events_user_email_source_type_source_id_key ON public.google_calendar_events USING btree (user_email, source_type, source_id)`
@@ -4667,7 +4668,7 @@
 | created_at | timestamptz | YES | now() |  |
 
 **Check Constraints:**
-- `calendar_sync_log_run_type_check`: `(run_type = ANY (ARRAY['cron'::text, 'manual'::text]))`
+- `calendar_sync_log_run_type_check`: `((run_type = ANY (ARRAY['cron'::text, 'manual'::text])))`
 
 **Indexes:**
 - `idx_calendar_sync_log_run_at`: `CREATE INDEX idx_calendar_sync_log_run_at ON public.calendar_sync_log USING btree (run_at DESC)`
@@ -4691,7 +4692,7 @@
 | next_run_at | timestamptz | YES |  |  |
 
 **Check Constraints:**
-- `scheduled_exports_schedule_type_check`: `(schedule_type = ANY (ARRAY['weekly'::text, 'monthly'::text]))`
+- `scheduled_exports_schedule_type_check`: `((schedule_type = ANY (ARRAY['weekly'::text, 'monthly'::text])))`
 
 **Indexes:**
 - `idx_scheduled_exports_active`: `CREATE INDEX idx_scheduled_exports_active ON public.scheduled_exports USING btree (is_active) WHERE (is_active = true)`
@@ -4774,7 +4775,7 @@
 - `task_assignees_task_id_assignee_id_key`: (task_id, assignee_id)
 
 **Check Constraints:**
-- `task_assignees_status_check`: `(status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'completed'::text, 'cancelled'::text]))`
+- `task_assignees_status_check`: `((status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'completed'::text, 'cancelled'::text])))`
 
 **Indexes:**
 - `idx_task_assignees_assignee`: `CREATE INDEX idx_task_assignees_assignee ON public.task_assignees USING btree (assignee_id)`
@@ -4819,8 +4820,8 @@
 - `poll_id` -> `polls.id` (`notifications_log_poll_id_fkey`)
 
 **Check Constraints:**
-- `notifications_log_status_check`: `(status = ANY (ARRAY['sent'::text, 'failed'::text, 'pending'::text]))`
-- `notifications_log_type_check`: `(type = ANY (ARRAY['calendar_invite'::text, 'email'::text]))`
+- `notifications_log_status_check`: `((status = ANY (ARRAY['sent'::text, 'failed'::text, 'pending'::text])))`
+- `notifications_log_type_check`: `((type = ANY (ARRAY['calendar_invite'::text, 'email'::text])))`
 
 **Indexes:**
 - `idx_notifications_log_created`: `CREATE INDEX idx_notifications_log_created ON public.notifications_log USING btree (created_at DESC)`
@@ -4854,8 +4855,8 @@
 | updated_at | timestamptz | YES | now() |  |
 
 **Check Constraints:**
-- `announcements_audience_check`: `(audience = ANY (ARRAY['all'::text, 'instructors'::text, 'students'::text]))`
-- `announcements_priority_check`: `(priority = ANY (ARRAY['info'::text, 'warning'::text, 'critical'::text]))`
+- `announcements_audience_check`: `((audience = ANY (ARRAY['all'::text, 'instructors'::text, 'students'::text])))`
+- `announcements_priority_check`: `((priority = ANY (ARRAY['info'::text, 'warning'::text, 'critical'::text])))`
 
 **Indexes:**
 - `idx_announcements_active`: `CREATE INDEX idx_announcements_active ON public.announcements USING btree (is_active, starts_at, ends_at)`
@@ -4939,7 +4940,7 @@
 - `user_id` -> `lab_users.id` (`email_queue_user_id_fkey`)
 
 **Check Constraints:**
-- `email_queue_status_check`: `(status = ANY (ARRAY['pending'::text, 'sent'::text, 'failed'::text]))`
+- `email_queue_status_check`: `((status = ANY (ARRAY['pending'::text, 'sent'::text, 'failed'::text])))`
 
 **Indexes:**
 - `idx_email_queue_created_at`: `CREATE INDEX idx_email_queue_created_at ON public.email_queue USING btree (created_at)`
@@ -5092,8 +5093,8 @@
 - `onboarding_assignments_template_id_instructor_email_key`: (instructor_email, template_id)
 
 **Check Constraints:**
-- `onboarding_assignments_status_check`: `(status = ANY (ARRAY['active'::text, 'completed'::text, 'paused'::text, 'overdue'::text]))`
-- `onboarding_assignments_instructor_type_check`: `(instructor_type = ANY (ARRAY['full_time'::text, 'part_time'::text, 'lab_only'::text, 'adjunct'::text]))`
+- `onboarding_assignments_status_check`: `((status = ANY (ARRAY['active'::text, 'completed'::text, 'paused'::text, 'overdue'::text])))`
+- `onboarding_assignments_instructor_type_check`: `((instructor_type = ANY (ARRAY['full_time'::text, 'part_time'::text, 'lab_only'::text, 'adjunct'::text])))`
 
 **Indexes:**
 - `idx_onboarding_assignments_instructor`: `CREATE INDEX idx_onboarding_assignments_instructor ON public.onboarding_assignments USING btree (instructor_email)`
@@ -5144,7 +5145,7 @@
 - `phase_id` -> `onboarding_phases.id` (`onboarding_events_phase_id_fkey`)
 
 **Check Constraints:**
-- `onboarding_events_event_type_check`: `(event_type = ANY (ARRAY['assignment_created'::text, 'assignment_completed'::text, 'assignment_paused'::text, 'assignment_resumed'::text, 'task_started'::text, 'task_completed'::text, 'task_reopened'::text, 'task_blocked'::text, 'task_unblocked'::text, 'task_waived'::text, 'sign_off_requested'::text, 'sign_off_approved'::text, 'sign_off_rejected'::text, 'mentor_check_in'::text, 'observation_scheduled'::text, 'observation_completed'::text, 'escalation_triggered'::text, 'note_added'::text, 'phase_completed'::text, 'resource_accessed'::text]))`
+- `onboarding_events_event_type_check`: `((event_type = ANY (ARRAY['assignment_created'::text, 'assignment_completed'::text, 'assignment_paused'::text, 'assignment_resumed'::text, 'task_started'::text, 'task_completed'::text, 'task_reopened'::text, 'task_blocked'::text, 'task_unblocked'::text, 'task_waived'::text, 'sign_off_requested'::text, 'sign_off_approved'::text, 'sign_off_rejected'::text, 'mentor_check_in'::text, 'observation_scheduled'::text, 'observation_completed'::text, 'escalation_triggered'::text, 'note_added'::text, 'phase_completed'::text, 'resource_accessed'::text])))`
 
 **Indexes:**
 - `idx_onboarding_events_actor`: `CREATE INDEX idx_onboarding_events_actor ON public.onboarding_events USING btree (actor_email)`
@@ -5261,7 +5262,7 @@
 - `onboarding_phase_progress_assignment_id_phase_id_key`: (phase_id, assignment_id)
 
 **Check Constraints:**
-- `onboarding_phase_progress_status_check`: `(status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'completed'::text]))`
+- `onboarding_phase_progress_status_check`: `((status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'completed'::text])))`
 
 **Indexes:**
 - `onboarding_phase_progress_assignment_id_phase_id_key`: `CREATE UNIQUE INDEX onboarding_phase_progress_assignment_id_phase_id_key ON public.onboarding_phase_progress USING btree (assignment_id, phase_id)`
@@ -5311,8 +5312,8 @@
 - `onboarding_task_dependencies_task_id_depends_on_task_id_key`: (task_id, depends_on_task_id)
 
 **Check Constraints:**
-- `onboarding_task_dependencies_check`: `(task_id <> depends_on_task_id)`
-- `onboarding_task_dependencies_gate_type_check`: `(gate_type = ANY (ARRAY['hard'::text, 'soft'::text]))`
+- `onboarding_task_dependencies_check`: `((task_id <> depends_on_task_id))`
+- `onboarding_task_dependencies_gate_type_check`: `((gate_type = ANY (ARRAY['hard'::text, 'soft'::text])))`
 
 **Indexes:**
 - `onboarding_task_dependencies_task_id_depends_on_task_id_key`: `CREATE UNIQUE INDEX onboarding_task_dependencies_task_id_depends_on_task_id_key ON public.onboarding_task_dependencies USING btree (task_id, depends_on_task_id)`
@@ -5352,7 +5353,7 @@
 - `onboarding_task_progress_assignment_id_task_id_key`: (task_id, assignment_id)
 
 **Check Constraints:**
-- `onboarding_task_progress_status_check`: `(status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'completed'::text, 'waived'::text, 'blocked'::text]))`
+- `onboarding_task_progress_status_check`: `((status = ANY (ARRAY['pending'::text, 'in_progress'::text, 'completed'::text, 'waived'::text, 'blocked'::text])))`
 
 **Indexes:**
 - `idx_onboarding_task_progress_assignment`: `CREATE INDEX idx_onboarding_task_progress_assignment ON public.onboarding_task_progress USING btree (assignment_id)`
@@ -5408,9 +5409,9 @@
 - `phase_id` -> `onboarding_phases.id` (`onboarding_tasks_phase_id_fkey`)
 
 **Check Constraints:**
-- `onboarding_tasks_sign_off_role_check`: `((sign_off_role = ANY (ARRAY['admin'::text, 'mentor'::text, 'program_director'::text])) OR (sign_off_role IS NULL))`
-- `onboarding_tasks_task_type_check`: `(task_type = ANY (ARRAY['video'::text, 'document'::text, 'form'::text, 'sign_off'::text, 'checklist'::text, 'observation'::text, 'zoom_session'::text]))`
-- `onboarding_tasks_lane_check`: `(lane = ANY (ARRAY['institutional'::text, 'operational'::text, 'mentorship'::text]))`
+- `onboarding_tasks_sign_off_role_check`: `(((sign_off_role = ANY (ARRAY['admin'::text, 'mentor'::text, 'program_director'::text])) OR (sign_off_role IS NULL)))`
+- `onboarding_tasks_task_type_check`: `((task_type = ANY (ARRAY['video'::text, 'document'::text, 'form'::text, 'sign_off'::text, 'checklist'::text, 'observation'::text, 'zoom_session'::text])))`
+- `onboarding_tasks_lane_check`: `((lane = ANY (ARRAY['institutional'::text, 'operational'::text, 'mentorship'::text])))`
 
 **Indexes:**
 - `idx_onboarding_tasks_phase`: `CREATE INDEX idx_onboarding_tasks_phase ON public.onboarding_tasks USING btree (phase_id)`
@@ -5433,7 +5434,7 @@
 | updated_at | timestamptz | YES | now() |  |
 
 **Check Constraints:**
-- `onboarding_templates_instructor_type_check`: `(instructor_type = ANY (ARRAY['full_time'::text, 'part_time'::text, 'lab_only'::text, 'adjunct'::text, 'all'::text]))`
+- `onboarding_templates_instructor_type_check`: `((instructor_type = ANY (ARRAY['full_time'::text, 'part_time'::text, 'lab_only'::text, 'adjunct'::text, 'all'::text])))`
 
 **RLS Policies:**
 - `admins_manage_templates` (ALL, permissive, roles: {public})
@@ -5464,7 +5465,7 @@
 | out_of_service_reason | text | YES |  |  |
 
 **Check Constraints:**
-- `equipment_condition_check`: `(condition = ANY (ARRAY['new'::text, 'good'::text, 'fair'::text, 'poor'::text, 'out_of_service'::text]))`
+- `equipment_condition_check`: `((condition = ANY (ARRAY['new'::text, 'good'::text, 'fair'::text, 'poor'::text, 'out_of_service'::text])))`
 
 **RLS Policies:**
 - `equipment_read` (SELECT, permissive, roles: {authenticated})
@@ -5657,7 +5658,7 @@
 - `bin_contents_bin_id_inventory_item_id_key`: (inventory_item_id, bin_id)
 
 **Check Constraints:**
-- `bin_contents_quantity_check`: `(quantity >= 0)`
+- `bin_contents_quantity_check`: `((quantity >= 0))`
 
 **Indexes:**
 - `bin_contents_bin_id_inventory_item_id_key`: `CREATE UNIQUE INDEX bin_contents_bin_id_inventory_item_id_key ON public.bin_contents USING btree (bin_id, inventory_item_id)`
@@ -5690,7 +5691,7 @@
 - `student_id` -> `students.id` (`custody_checkouts_student_id_fkey`)
 
 **Check Constraints:**
-- `custody_checkouts_status_check`: `(status = ANY (ARRAY['checked_out'::text, 'returned'::text, 'overdue'::text, 'lost'::text]))`
+- `custody_checkouts_status_check`: `((status = ANY (ARRAY['checked_out'::text, 'returned'::text, 'overdue'::text, 'lost'::text])))`
 
 **Indexes:**
 - `idx_custody_checkouts_status`: `CREATE INDEX idx_custody_checkouts_status ON public.custody_checkouts USING btree (status)`
@@ -5719,8 +5720,8 @@
 - `custody_checkout_id` -> `custody_checkouts.id` (`custody_checkout_items_custody_checkout_id_fkey`)
 
 **Check Constraints:**
-- `custody_checkout_items_quantity_checked_out_check`: `(quantity_checked_out > 0)`
-- `custody_checkout_items_quantity_returned_check`: `(quantity_returned >= 0)`
+- `custody_checkout_items_quantity_checked_out_check`: `((quantity_checked_out > 0))`
+- `custody_checkout_items_quantity_returned_check`: `((quantity_returned >= 0))`
 
 **RLS Policies:**
 - `Authenticated can read custody checkout items` (SELECT, permissive, roles: {public})
@@ -5800,8 +5801,8 @@
 - `filament_type_id` -> `filament_types.id` (`filament_adjustments_filament_type_id_fkey`)
 
 **Check Constraints:**
-- `filament_adjustments_adjustment_type_check`: `(adjustment_type = ANY (ARRAY['add'::text, 'remove'::text]))`
-- `filament_adjustments_grams_check`: `(grams > 0)`
+- `filament_adjustments_adjustment_type_check`: `((adjustment_type = ANY (ARRAY['add'::text, 'remove'::text])))`
+- `filament_adjustments_grams_check`: `((grams > 0))`
 
 **Indexes:**
 - `idx_filament_adjustments_created_at`: `CREATE INDEX idx_filament_adjustments_created_at ON public.filament_adjustments USING btree (created_at)`
@@ -5851,7 +5852,7 @@
 - `bin_content_id` -> `inventory_bin_contents.id` (`inventory_bin_transactions_bin_content_id_fkey`)
 
 **Check Constraints:**
-- `inventory_bin_transactions_transaction_type_check`: `(transaction_type = ANY (ARRAY['in'::text, 'out'::text, 'adjustment'::text, 'expired'::text]))`
+- `inventory_bin_transactions_transaction_type_check`: `((transaction_type = ANY (ARRAY['in'::text, 'out'::text, 'adjustment'::text, 'expired'::text])))`
 
 #### `inventory_bins`
 
@@ -6283,7 +6284,7 @@
 - `printer_id` -> `printers.id` (`print_failures_printer_id_fkey`)
 
 **Check Constraints:**
-- `print_failures_failure_type_check`: `(failure_type = ANY (ARRAY['adhesion'::text, 'warping'::text, 'stringing'::text, 'layer_shift'::text, 'nozzle_clog'::text, 'power_loss'::text, 'file_error'::text, 'material_issue'::text, 'other'::text]))`
+- `print_failures_failure_type_check`: `((failure_type = ANY (ARRAY['adhesion'::text, 'warping'::text, 'stringing'::text, 'layer_shift'::text, 'nozzle_clog'::text, 'power_loss'::text, 'file_error'::text, 'material_issue'::text, 'other'::text])))`
 
 **RLS Policies:**
 - `Operators can manage failures` (ALL, permissive, roles: {public})
@@ -6307,7 +6308,7 @@
 - `request_id` -> `print_requests.id` (`print_notifications_request_id_fkey`)
 
 **Check Constraints:**
-- `print_notifications_type_check`: `(type = ANY (ARRAY['status_change'::text, 'mention'::text, 'comment'::text, 'completion'::text]))`
+- `print_notifications_type_check`: `((type = ANY (ARRAY['status_change'::text, 'mention'::text, 'comment'::text, 'completion'::text])))`
 
 **Indexes:**
 - `idx_print_notifications_read_at`: `CREATE INDEX idx_print_notifications_read_at ON public.print_notifications USING btree (read_at) WHERE (read_at IS NULL)`
@@ -6429,8 +6430,8 @@
 - `material_preference_id` -> `filament_types.id` (`print_requests_material_preference_id_fkey`)
 
 **Check Constraints:**
-- `print_requests_purpose_check`: `(purpose = ANY (ARRAY['student'::text, 'administrative'::text]))`
-- `print_requests_cost_type_check`: `(cost_type = ANY (ARRAY['cost_savings'::text, 'value_add'::text, 'rd_prototype'::text, 'gift_promotional'::text, 'maintenance_repair'::text]))`
+- `print_requests_purpose_check`: `((purpose = ANY (ARRAY['student'::text, 'administrative'::text])))`
+- `print_requests_cost_type_check`: `((cost_type = ANY (ARRAY['cost_savings'::text, 'value_add'::text, 'rd_prototype'::text, 'gift_promotional'::text, 'maintenance_repair'::text])))`
 
 **Indexes:**
 - `idx_print_requests_cost_type`: `CREATE INDEX idx_print_requests_cost_type ON public.print_requests USING btree (cost_type)`
@@ -6466,8 +6467,8 @@
 - `printer_id` -> `printers.id` (`printer_hour_adjustments_printer_id_fkey`)
 
 **Check Constraints:**
-- `printer_hour_adjustments_hours_check`: `(hours > (0)::numeric)`
-- `printer_hour_adjustments_adjustment_type_check`: `(adjustment_type = ANY (ARRAY['add'::text, 'remove'::text]))`
+- `printer_hour_adjustments_hours_check`: `((hours > (0)::numeric))`
+- `printer_hour_adjustments_adjustment_type_check`: `((adjustment_type = ANY (ARRAY['add'::text, 'remove'::text])))`
 
 **Indexes:**
 - `idx_printer_hour_adj_created`: `CREATE INDEX idx_printer_hour_adj_created ON public.printer_hour_adjustments USING btree (created_at)`
@@ -6497,7 +6498,7 @@
 - `printer_id` -> `printers.id` (`printer_maintenance_printer_id_fkey`)
 
 **Check Constraints:**
-- `printer_maintenance_maintenance_type_check`: `(maintenance_type = ANY (ARRAY['routine'::text, 'repair'::text, 'calibration'::text, 'cleaning'::text, 'upgrade'::text]))`
+- `printer_maintenance_maintenance_type_check`: `((maintenance_type = ANY (ARRAY['routine'::text, 'repair'::text, 'calibration'::text, 'cleaning'::text, 'upgrade'::text])))`
 
 **RLS Policies:**
 - `Anyone can view maintenance` (SELECT, permissive, roles: {public})
@@ -6522,7 +6523,7 @@
 | updated_at | timestamptz | YES | now() |  |
 
 **Check Constraints:**
-- `printers_status_check`: `(status = ANY (ARRAY['active'::text, 'maintenance'::text, 'offline'::text]))`
+- `printers_status_check`: `((status = ANY (ARRAY['active'::text, 'maintenance'::text, 'offline'::text])))`
 
 **RLS Policies:**
 - `Anyone can view printers` (SELECT, permissive, roles: {public})
@@ -6561,8 +6562,8 @@
 - `access_cards_card_uid_key`: (card_uid)
 
 **Check Constraints:**
-- `access_cards_type_check`: `(card_type = ANY (ARRAY['standard'::text, 'master'::text, 'visitor'::text, 'temporary'::text]))`
-- `access_cards_status_check`: `(status = ANY (ARRAY['active'::text, 'inactive'::text, 'lost'::text, 'revoked'::text]))`
+- `access_cards_type_check`: `((card_type = ANY (ARRAY['standard'::text, 'master'::text, 'visitor'::text, 'temporary'::text])))`
+- `access_cards_status_check`: `((status = ANY (ARRAY['active'::text, 'inactive'::text, 'lost'::text, 'revoked'::text])))`
 - `access_cards_single_owner`: `(((
 CASE
     WHEN (lab_user_id IS NOT NULL) THEN 1
@@ -6678,7 +6679,7 @@ END) <= 1)`
 - `location_id` -> `locations.id` (`access_doors_location_id_fkey`)
 
 **Check Constraints:**
-- `access_doors_status_check`: `(status = ANY (ARRAY['active'::text, 'disabled'::text, 'maintenance'::text]))`
+- `access_doors_status_check`: `((status = ANY (ARRAY['active'::text, 'disabled'::text, 'maintenance'::text])))`
 
 **Indexes:**
 - `idx_access_doors_active`: `CREATE INDEX idx_access_doors_active ON public.access_doors USING btree (is_active) WHERE (is_active = true)`
@@ -6717,7 +6718,7 @@ END) <= 1)`
 - `access_logs_pi_event_id_key`: (pi_event_id)
 
 **Check Constraints:**
-- `access_logs_result_check`: `(result = ANY (ARRAY['granted'::text, 'denied_unknown_card'::text, 'denied_inactive_card'::text, 'denied_no_rule'::text, 'denied_schedule'::text, 'denied_expired'::text, 'denied_door_disabled'::text, 'rex_unlock'::text, 'door_held_open'::text, 'door_forced'::text]))`
+- `access_logs_result_check`: `((result = ANY (ARRAY['granted'::text, 'denied_unknown_card'::text, 'denied_inactive_card'::text, 'denied_no_rule'::text, 'denied_schedule'::text, 'denied_expired'::text, 'denied_door_disabled'::text, 'rex_unlock'::text, 'door_held_open'::text, 'door_forced'::text])))`
 
 **Indexes:**
 - `access_logs_pi_event_id_key`: `CREATE UNIQUE INDEX access_logs_pi_event_id_key ON public.access_logs USING btree (pi_event_id)`
@@ -6838,7 +6839,7 @@ END) <= 1)`
 - `timer_display_tokens_token_key`: (token)
 
 **Check Constraints:**
-- `timer_display_tokens_timer_type_check`: `(timer_type = ANY (ARRAY['fixed'::text, 'mobile'::text]))`
+- `timer_display_tokens_timer_type_check`: `((timer_type = ANY (ARRAY['fixed'::text, 'mobile'::text])))`
 
 **Indexes:**
 - `idx_timer_display_tokens_active`: `CREATE INDEX idx_timer_display_tokens_active ON public.timer_display_tokens USING btree (is_active)`
@@ -7148,7 +7149,7 @@ END) <= 1)`
 - `seating_preferences_student_id_other_student_id_key`: (student_id, other_student_id)
 
 **Check Constraints:**
-- `seating_preferences_preference_type_check`: `(preference_type = ANY (ARRAY['avoid'::text, 'prefer_near'::text]))`
+- `seating_preferences_preference_type_check`: `((preference_type = ANY (ARRAY['avoid'::text, 'prefer_near'::text])))`
 
 **Indexes:**
 - `idx_seating_preferences_student`: `CREATE INDEX idx_seating_preferences_student ON public.seating_preferences USING btree (student_id)`
@@ -7214,7 +7215,7 @@ END) <= 1)`
 - `resource_id` -> `bookable_resources.id` (`resource_bookings_resource_id_fkey`)
 
 **Check Constraints:**
-- `resource_bookings_status_check`: `(status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'cancelled'::text]))`
+- `resource_bookings_status_check`: `((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'cancelled'::text])))`
 
 **Indexes:**
 - `idx_resource_bookings_date`: `CREATE INDEX idx_resource_bookings_date ON public.resource_bookings USING btree (booking_date)`
@@ -7247,7 +7248,7 @@ END) <= 1)`
 - `locations_qr_code_key`: (qr_code)
 
 **Check Constraints:**
-- `locations_location_type_check`: `(location_type = ANY (ARRAY['room'::text, 'cabinet'::text, 'shelf'::text, 'drawer'::text, 'cart'::text, 'bin_location'::text]))`
+- `locations_location_type_check`: `((location_type = ANY (ARRAY['room'::text, 'cabinet'::text, 'shelf'::text, 'drawer'::text, 'cart'::text, 'bin_location'::text])))`
 
 **Indexes:**
 - `locations_qr_code_key`: `CREATE UNIQUE INDEX locations_qr_code_key ON public.locations USING btree (qr_code)`
@@ -7283,7 +7284,7 @@ END) <= 1)`
 | is_active | boolean | YES | true |  |
 
 **Check Constraints:**
-- `resources_category_check`: `(category = ANY (ARRAY['protocols'::text, 'skill_sheets'::text, 'policies'::text, 'forms'::text, 'other'::text]))`
+- `resources_category_check`: `((category = ANY (ARRAY['protocols'::text, 'skill_sheets'::text, 'policies'::text, 'forms'::text, 'other'::text])))`
 
 **Indexes:**
 - `idx_resources_active`: `CREATE INDEX idx_resources_active ON public.resources USING btree (is_active) WHERE (is_active = true)`
@@ -7343,9 +7344,9 @@ END) <= 1)`
 - `peer_evaluations_lab_day_id_evaluator_id_evaluated_id_key`: (evaluator_id, lab_day_id, evaluated_id)
 
 **Check Constraints:**
-- `peer_evaluations_teamwork_score_check`: `((teamwork_score >= 1) AND (teamwork_score <= 5))`
-- `peer_evaluations_leadership_score_check`: `((leadership_score >= 1) AND (leadership_score <= 5))`
-- `peer_evaluations_communication_score_check`: `((communication_score >= 1) AND (communication_score <= 5))`
+- `peer_evaluations_teamwork_score_check`: `(((teamwork_score >= 1) AND (teamwork_score <= 5)))`
+- `peer_evaluations_leadership_score_check`: `(((leadership_score >= 1) AND (leadership_score <= 5)))`
+- `peer_evaluations_communication_score_check`: `(((communication_score >= 1) AND (communication_score <= 5)))`
 
 **Indexes:**
 - `idx_peer_evaluations_evaluated`: `CREATE INDEX idx_peer_evaluations_evaluated ON public.peer_evaluations USING btree (evaluated_id)`
@@ -7531,8 +7532,8 @@ END) <= 1)`
 | updated_at | timestamptz | YES | now() |  |
 
 **Check Constraints:**
-- `program_requirements_program_check`: `(program = ANY (ARRAY['paramedic'::text, 'aemt'::text, 'emt'::text]))`
-- `program_requirements_requirement_type_check`: `(requirement_type = ANY (ARRAY['clinical_hours'::text, 'skills'::text, 'scenarios'::text]))`
+- `program_requirements_program_check`: `((program = ANY (ARRAY['paramedic'::text, 'aemt'::text, 'emt'::text])))`
+- `program_requirements_requirement_type_check`: `((requirement_type = ANY (ARRAY['clinical_hours'::text, 'skills'::text, 'scenarios'::text])))`
 
 **Indexes:**
 - `idx_program_requirements_program`: `CREATE INDEX idx_program_requirements_program ON public.program_requirements USING btree (program)`
@@ -7556,7 +7557,7 @@ END) <= 1)`
 - `logged_by` -> `lab_users.id` (`protocol_completions_logged_by_fkey`)
 
 **Check Constraints:**
-- `protocol_completions_protocol_category_check`: `(protocol_category = ANY (ARRAY['cardiac'::text, 'respiratory'::text, 'trauma'::text, 'medical'::text, 'pediatric'::text, 'obstetric'::text, 'behavioral'::text, 'other'::text]))`
+- `protocol_completions_protocol_category_check`: `((protocol_category = ANY (ARRAY['cardiac'::text, 'respiratory'::text, 'trauma'::text, 'medical'::text, 'pediatric'::text, 'obstetric'::text, 'behavioral'::text, 'other'::text])))`
 
 **Indexes:**
 - `idx_protocol_completions_category`: `CREATE INDEX idx_protocol_completions_category ON public.protocol_completions USING btree (protocol_category)`
@@ -7644,7 +7645,7 @@ END) <= 1)`
 | screenshot_url | text | YES |  |  |
 
 **Check Constraints:**
-- `feedback_reports_status_check`: `(status = ANY (ARRAY['new'::text, 'read'::text, 'in_progress'::text, 'needs_investigation'::text, 'resolved'::text, 'archived'::text]))`
+- `feedback_reports_status_check`: `((status = ANY (ARRAY['new'::text, 'read'::text, 'in_progress'::text, 'needs_investigation'::text, 'resolved'::text, 'archived'::text])))`
 
 **Indexes:**
 - `idx_feedback_reports_created`: `CREATE INDEX idx_feedback_reports_created ON public.feedback_reports USING btree (created_at DESC)`
@@ -7705,8 +7706,8 @@ END) <= 1)`
 | created_at | timestamptz | YES | now() |  |
 
 **Check Constraints:**
-- `incidents_status_check`: `(status = ANY (ARRAY['open'::text, 'investigating'::text, 'resolved'::text, 'closed'::text]))`
-- `incidents_severity_check`: `(severity = ANY (ARRAY['minor'::text, 'moderate'::text, 'severe'::text, 'critical'::text]))`
+- `incidents_status_check`: `((status = ANY (ARRAY['open'::text, 'investigating'::text, 'resolved'::text, 'closed'::text])))`
+- `incidents_severity_check`: `((severity = ANY (ARRAY['minor'::text, 'moderate'::text, 'severe'::text, 'critical'::text])))`
 
 **Indexes:**
 - `idx_incidents_date`: `CREATE INDEX idx_incidents_date ON public.incidents USING btree (incident_date DESC)`
@@ -7786,7 +7787,7 @@ END) <= 1)`
 - `mentor_id` -> `students.id` (`mentorship_pairs_mentor_id_fkey`)
 
 **Check Constraints:**
-- `mentorship_pairs_status_check`: `(status = ANY (ARRAY['active'::text, 'completed'::text, 'cancelled'::text]))`
+- `mentorship_pairs_status_check`: `((status = ANY (ARRAY['active'::text, 'completed'::text, 'cancelled'::text])))`
 
 **Indexes:**
 - `idx_mentorship_pairs_mentee`: `CREATE INDEX idx_mentorship_pairs_mentee ON public.mentorship_pairs USING btree (mentee_id)`
@@ -7902,7 +7903,7 @@ END) <= 1)`
 - `student_id` -> `students.id` (`document_requests_student_id_fkey`)
 
 **Check Constraints:**
-- `document_requests_status_check`: `(status = ANY (ARRAY['pending'::text, 'submitted'::text, 'overdue'::text]))`
+- `document_requests_status_check`: `((status = ANY (ARRAY['pending'::text, 'submitted'::text, 'overdue'::text])))`
 
 **Indexes:**
 - `idx_document_requests_student`: `CREATE INDEX idx_document_requests_student ON public.document_requests USING btree (student_id)`
@@ -8004,7 +8005,7 @@ END) <= 1)`
 - `internship_id` -> `student_internships.id` (`employment_verifications_internship_id_fkey`)
 
 **Check Constraints:**
-- `employment_verifications_employment_status_check`: `(employment_status = ANY (ARRAY['pt'::text, 'ft'::text]))`
+- `employment_verifications_employment_status_check`: `((employment_status = ANY (ARRAY['pt'::text, 'ft'::text])))`
 
 **Indexes:**
 - `idx_employment_verifications_internship`: `CREATE INDEX idx_employment_verifications_internship ON public.employment_verifications USING btree (internship_id)`
@@ -8054,7 +8055,7 @@ END) <= 1)`
 - `internship_id` -> `student_internships.id` (`closeout_surveys_internship_id_fkey`)
 
 **Check Constraints:**
-- `closeout_surveys_survey_type_check`: `(survey_type = ANY (ARRAY['hospital_preceptor'::text, 'field_preceptor'::text]))`
+- `closeout_surveys_survey_type_check`: `((survey_type = ANY (ARRAY['hospital_preceptor'::text, 'field_preceptor'::text])))`
 
 **Indexes:**
 - `idx_closeout_surveys_internship`: `CREATE INDEX idx_closeout_surveys_internship ON public.closeout_surveys USING btree (internship_id)`
@@ -8083,7 +8084,7 @@ END) <= 1)`
 | created_at | timestamptz | YES | now() |  |
 
 **Check Constraints:**
-- `system_alerts_severity_check`: `(severity = ANY (ARRAY['critical'::text, 'warning'::text, 'info'::text]))`
+- `system_alerts_severity_check`: `((severity = ANY (ARRAY['critical'::text, 'warning'::text, 'info'::text])))`
 
 **Indexes:**
 - `idx_system_alerts_date`: `CREATE INDEX idx_system_alerts_date ON public.system_alerts USING btree (created_at DESC)`
@@ -8147,7 +8148,7 @@ END) <= 1)`
 - `student_id` -> `students.id` (`attendance_appeals_student_id_fkey`)
 
 **Check Constraints:**
-- `attendance_appeals_status_check`: `(status = ANY (ARRAY['pending'::text, 'approved'::text, 'denied'::text]))`
+- `attendance_appeals_status_check`: `((status = ANY (ARRAY['pending'::text, 'approved'::text, 'denied'::text])))`
 
 **Indexes:**
 - `idx_attendance_appeals_status`: `CREATE INDEX idx_attendance_appeals_status ON public.attendance_appeals USING btree (status)`
@@ -8194,7 +8195,7 @@ END) <= 1)`
 - `review_id` -> `template_reviews.id` (`template_review_items_review_id_fkey`)
 
 **Check Constraints:**
-- `template_review_items_disposition_check`: `(disposition = ANY (ARRAY['pending'::text, 'accept_changes'::text, 'keep_original'::text, 'revised'::text]))`
+- `template_review_items_disposition_check`: `((disposition = ANY (ARRAY['pending'::text, 'accept_changes'::text, 'keep_original'::text, 'revised'::text])))`
 
 **Indexes:**
 - `idx_template_review_items_disposition`: `CREATE INDEX idx_template_review_items_disposition ON public.template_review_items USING btree (disposition)`
@@ -8226,7 +8227,7 @@ END) <= 1)`
 - `cohort_id` -> `cohorts.id` (`template_reviews_cohort_id_fkey`)
 
 **Check Constraints:**
-- `template_reviews_status_check`: `(status = ANY (ARRAY['draft'::text, 'in_review'::text, 'completed'::text, 'archived'::text]))`
+- `template_reviews_status_check`: `((status = ANY (ARRAY['draft'::text, 'in_review'::text, 'completed'::text, 'archived'::text])))`
 
 **Indexes:**
 - `idx_template_reviews_cohort_id`: `CREATE INDEX idx_template_reviews_cohort_id ON public.template_reviews USING btree (cohort_id)`
