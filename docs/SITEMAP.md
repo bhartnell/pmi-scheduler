@@ -215,6 +215,7 @@ Canonical home for lab day operations. 38 pages.
 | `/labs/schedule/[id]/stations/new` | Add station |
 | `/labs/schedule/new` | New lab day |
 | `/labs/grade/station/[id]` | Grading page — has **Export JSON**, **Update from JSON**, no-email-on-file warning toast. For `station_type='skill_drill'` early-returns a dedicated `SkillDrillStationView` (no rubric / Platinum / submit — just SkillDrillReference cards + an observations textarea persisted to localStorage). |
+| `/labs/adv-cert/grade` | **Advanced-Cert (ACLS/PALS) megacode grading** (instructor+). Pick course → testing day → group → team-lead + members → drawn scenario; renders the scenario's ordered segments + criteria checklist, per-segment pass/fail, instructor-set overall group pass/fail. Saves to `adv_cert_test_attempts` (+ attempt_students / segment_results / criterion_results) with a client-minted `client_uuid` for offline-readiness, and writes a `team_lead_log` row for the test team-lead. Backed by `/api/adv-cert/*`. Linked from the Labs hub (Megacode Grading tile). |
 | `/labs/scenarios` | Scenario library (with checkbox multi-select + **Export Selected as JSON**) |
 | `/labs/scenarios/[id]` | Scenario editor (with **Export JSON** + **Update from JSON** buttons) |
 | `/labs/scenarios/new` | New scenario |

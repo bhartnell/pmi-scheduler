@@ -19,6 +19,7 @@ import {
   Zap,
   Layers,
   Monitor,
+  HeartPulse,
 } from 'lucide-react';
 import { PageLoader } from '@/components/ui';
 import { hasMinRole, canManageContent } from '@/lib/permissions';
@@ -113,6 +114,14 @@ export default function LabsPage() {
       href: '/labs/skill-drills',
       icon: Zap,
       color: 'orange',
+      show: isInstructor,
+    },
+    {
+      title: 'Megacode Grading',
+      description: 'ACLS / PALS station testing and scoring',
+      href: '/labs/adv-cert/grade',
+      icon: HeartPulse,
+      color: 'sky',
       show: isInstructor,
     },
     {

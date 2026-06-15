@@ -221,3 +221,21 @@ export interface TimeRange {
   start_time: string;
   end_time: string;
 }
+
+// ============================================
+// Advanced-Cert (ACLS/PALS) Megacode Module
+// ============================================
+export {
+  type CertCourse,
+  type CertTier,
+  type AdvCertResult,
+  type AdvCertCriterion,
+  type AdvCertSegment,
+  type AdvCertScenarioSegment,
+  type AdvCertScenario,
+  type AdvCertCriterionResultInput,
+  type AdvCertSegmentResultInput,
+  type SaveAttemptInput,
+  type AdvCertTestAttempt,
+  ADV_CERT_SCALE,
+} from './adv-cert';
