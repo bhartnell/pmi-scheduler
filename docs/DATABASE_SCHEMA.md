@@ -1684,6 +1684,8 @@
 | checkoff_skill_sheet_id | uuid | YES |  | FK -> skill_sheets.id |
 | priority_flag | text | NO | 'normal'::text |  |
 | priority_reason | text | YES |  |  |
+| is_adv_cert_testing | boolean | NO | false |  |
+| cert_course | text | YES |  |  |
 
 **Foreign Keys:**
 - `created_by` -> `lab_users.id` (`lab_days_created_by_fkey`)
@@ -1698,6 +1700,7 @@
 **Check Constraints:**
 - `lab_days_lab_mode_check`: `((lab_mode = ANY (ARRAY['group_rotations'::text, 'individual_testing'::text])))`
 - `lab_days_priority_flag_check`: `((priority_flag = ANY (ARRAY['normal'::text, 'high'::text, 'critical'::text])))`
+- `lab_days_cert_course_check`: `(((cert_course IS NULL) OR (cert_course = ANY (ARRAY['acls'::text, 'pals'::text]))))`
 
 **Indexes:**
 - `idx_lab_days_assigned_timer`: `CREATE INDEX idx_lab_days_assigned_timer ON public.lab_days USING btree (assigned_timer_id)`
@@ -1857,6 +1860,11 @@
 | content_review_status | text | YES | 'approved'::text |  |
 | dispatch_info | text | YES |  |  |
 | preferred_manikin | text | YES |  |  |
+| grading_model | text | YES |  |  |
+| case_code | text | YES |  |  |
+| cert_course | text | YES |  |  |
+| cert_tier | text | YES |  |  |
+| scenario_scope | text | YES |  |  |
 
 **Foreign Keys:**
 - `created_by` -> `lab_users.id` (`scenarios_created_by_fkey`)
@@ -1865,6 +1873,10 @@
 - `scenarios_content_review_status_check`: `((content_review_status = ANY (ARRAY['approved'::text, 'pending_review'::text, 'rejected'::text])))`
 - `scenarios_difficulty_check`: `((difficulty = ANY (ARRAY['beginner'::text, 'intermediate'::text, 'advanced'::text])))`
 - `scenarios_preferred_manikin_check`: `(((preferred_manikin IS NULL) OR (preferred_manikin = ANY (ARRAY['simmom'::text, 'simnewb'::text, 'standard_manikin'::text, 'task_trainer'::text, 'none_specified'::text]))))`
+- `scenarios_cert_course_check`: `(((cert_course IS NULL) OR (cert_course = ANY (ARRAY['acls'::text, 'pals'::text]))))`
+- `scenarios_cert_tier_check`: `(((cert_tier IS NULL) OR (cert_tier = ANY (ARRAY['skill'::text, 'learning_station'::text, 'megacode_practice'::text, 'megacode_testing'::text]))))`
+- `scenarios_grading_model_check`: `(((grading_model IS NULL) OR (grading_model = ANY (ARRAY['scenario_assessment_0_4'::text, 'adv_cert_checklist'::text]))))`
+- `scenarios_scenario_scope_check`: `(((scenario_scope IS NULL) OR (scenario_scope = ANY (ARRAY['full'::text, 'skill_focused_mini'::text]))))`
 
 **Indexes:**
 - `idx_scenarios_active`: `CREATE INDEX idx_scenarios_active ON public.scenarios USING btree (is_active) WHERE (is_active = true)`
@@ -3064,9 +3076,13 @@
 | format | text | YES |  |  |
 | estimated_duration | integer | YES | 15 |  |
 | source | text | YES | 'internal'::text |  |
+| cert_course | text | YES |  |  |
+| cert_tier | text | YES |  |  |
 
 **Check Constraints:**
 - `skill_drills_program_check`: `(((program IS NULL) OR (program = ANY (ARRAY['emt'::text, 'aemt'::text, 'paramedic'::text, 'all'::text]))))`
+- `skill_drills_cert_course_check`: `(((cert_course IS NULL) OR (cert_course = ANY (ARRAY['acls'::text, 'pals'::text]))))`
+- `skill_drills_cert_tier_check`: `(((cert_tier IS NULL) OR (cert_tier = ANY (ARRAY['skill'::text, 'learning_station'::text, 'megacode_practice'::text, 'megacode_testing'::text]))))`
 
 **Indexes:**
 - `idx_skill_drills_active`: `CREATE INDEX idx_skill_drills_active ON public.skill_drills USING btree (is_active) WHERE (is_active = true)`
@@ -3218,6 +3234,12 @@
 | created_at | timestamptz | YES | now() |  |
 | cert_levels | text[] | YES | ARRAY['PM'::text] |  |
 | is_nremt | boolean | YES | false |  |
+| cert_course | text | YES |  |  |
+| cert_tier | text | YES |  |  |
+
+**Check Constraints:**
+- `skills_cert_course_check`: `(((cert_course IS NULL) OR (cert_course = ANY (ARRAY['acls'::text, 'pals'::text]))))`
+- `skills_cert_tier_check`: `(((cert_tier IS NULL) OR (cert_tier = ANY (ARRAY['skill'::text, 'learning_station'::text, 'megacode_practice'::text, 'megacode_testing'::text]))))`
 
 **Indexes:**
 - `idx_skills_category`: `CREATE INDEX idx_skills_category ON public.skills USING btree (category)`
@@ -11274,3 +11296,179 @@ Key foreign key relationships across the schema:
 **Trigger:** `trg_exam_signups_capacity` — advisory-locks the session and rejects a row becoming 'confirmed' when total seats or Pima-computer seats are exhausted (race-proof seat enforcement).
 
 **Write-back note:** exam completion writes ONLY `student_internships.written_exam_passed` + `.written_exam_date` (via `/api/exam-scheduling/signups/[id]/result`); a CONFIRMED signup writes `.written_exam_scheduled` (set on confirm/approve/admin-placement, updated on reschedule, cleared on cancel — best-effort, most-recent internship row). No other internship columns; OSCE/summative untouched.
+
+---
+
+## Advanced-Cert Module (ACLS/PALS) — 2026-06-15
+
+> Net-new megacode-testing tables (uuid PKs; generic adv_cert_ prefix, cert_course discriminator for PALS reuse). Plus bank-tagging / grading columns added to existing scenarios, skills, skill_drills, lab_days (documented in their own sections too). See ACLS_Testing_Spec.md.
+
+#### `adv_cert_segments`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| key | text | NO |  |  |
+| name | text | NO |  |  |
+| algorithm_type | text | NO |  |  |
+| always_present | boolean | NO | false |  |
+| cert_course | text | NO | 'acls'::text |  |
+| content_version | text | NO | 'AHA 2020'::text |  |
+| active | boolean | NO | true |  |
+| created_at | timestamp with time zone | NO | now() |  |
+| updated_at | timestamp with time zone | NO | now() |  |
+
+**Indexes:**
+- `adv_cert_segments_pkey`
+- `uq_adv_cert_segments_key_course`
+
+**RLS Policies:**
+- `Authenticated can read adv_cert_segments` (SELECT, PERMISSIVE, roles: {authenticated})
+
+#### `adv_cert_segment_criteria`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| segment_id | uuid | NO |  | FK -> adv_cert_segments.id |
+| text | text | NO |  |  |
+| display_order | integer | NO |  |  |
+| is_critical | boolean | YES |  |  |
+| active | boolean | NO | true |  |
+| created_at | timestamp with time zone | NO | now() |  |
+
+**Foreign Keys:**
+- `segment_id` -> `adv_cert_segments.id` (adv_cert_segment_criteria_segment_id_fkey)
+
+**Indexes:**
+- `adv_cert_segment_criteria_pkey`
+- `idx_adv_cert_segment_criteria_segment`
+
+**RLS Policies:**
+- `Authenticated can read adv_cert_segment_criteria` (SELECT, PERMISSIVE, roles: {authenticated})
+
+#### `adv_cert_scenario_segments`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| scenario_id | uuid | NO |  | FK -> scenarios.id |
+| segment_id | uuid | NO |  | FK -> adv_cert_segments.id |
+| sequence_order | integer | NO |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
+
+**Foreign Keys:**
+- `scenario_id` -> `scenarios.id` (adv_cert_scenario_segments_scenario_id_fkey)
+- `segment_id` -> `adv_cert_segments.id` (adv_cert_scenario_segments_segment_id_fkey)
+
+**Indexes:**
+- `idx_adv_cert_scenario_segments_scenario`
+- `adv_cert_scenario_segments_pkey`
+- `adv_cert_scenario_segments_scenario_id_sequence_order_key`
+
+**RLS Policies:**
+- `Authenticated can read adv_cert_scenario_segments` (SELECT, PERMISSIVE, roles: {authenticated})
+
+#### `adv_cert_test_attempts`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| lab_day_id | uuid | NO |  | FK -> lab_days.id |
+| lab_station_id | uuid | YES |  | FK -> lab_stations.id |
+| lab_group_id | uuid | NO |  | FK -> lab_groups.id |
+| scenario_id | uuid | NO |  | FK -> scenarios.id |
+| team_lead_id | uuid | YES |  | FK -> students.id |
+| grader_id | uuid | YES |  | FK -> lab_users.id |
+| cert_course | text | NO | 'acls'::text |  |
+| overall_result | text | NO |  |  |
+| started_at | timestamp with time zone | NO | now() |  |
+| comments | text | YES |  |  |
+| client_uuid | uuid | YES |  |  |
+| synced_at | timestamp with time zone | YES |  |  |
+| created_at | timestamp with time zone | NO | now() |  |
+| updated_at | timestamp with time zone | NO | now() |  |
+
+**Foreign Keys:**
+- `grader_id` -> `lab_users.id` (adv_cert_test_attempts_grader_id_fkey)
+- `lab_day_id` -> `lab_days.id` (adv_cert_test_attempts_lab_day_id_fkey)
+- `lab_group_id` -> `lab_groups.id` (adv_cert_test_attempts_lab_group_id_fkey)
+- `lab_station_id` -> `lab_stations.id` (adv_cert_test_attempts_lab_station_id_fkey)
+- `scenario_id` -> `scenarios.id` (adv_cert_test_attempts_scenario_id_fkey)
+- `team_lead_id` -> `students.id` (adv_cert_test_attempts_team_lead_id_fkey)
+
+**Check Constraints:**
+- `adv_cert_test_attempts_course_check`: `((cert_course = ANY (ARRAY['acls'::text, 'pals'::text])))`
+- `adv_cert_test_attempts_result_check`: `((overall_result = ANY (ARRAY['pass'::text, 'fail'::text])))`
+
+**Indexes:**
+- `adv_cert_test_attempts_pkey`
+- `adv_cert_test_attempts_client_uuid_key`
+- `idx_adv_cert_attempts_lab_day`
+- `idx_adv_cert_attempts_group`
+- `idx_adv_cert_attempts_scenario`
+
+**RLS Policies:**
+- `Authenticated can read adv_cert_test_attempts` (SELECT, PERMISSIVE, roles: {authenticated})
+
+#### `adv_cert_attempt_students`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| attempt_id | uuid | NO |  | PK; FK -> adv_cert_test_attempts.id |
+| student_id | uuid | NO |  | PK; FK -> students.id |
+
+**Foreign Keys:**
+- `attempt_id` -> `adv_cert_test_attempts.id` (adv_cert_attempt_students_attempt_id_fkey)
+- `student_id` -> `students.id` (adv_cert_attempt_students_student_id_fkey)
+
+**Indexes:**
+- `adv_cert_attempt_students_pkey`
+
+**RLS Policies:**
+- `Authenticated can read adv_cert_attempt_students` (SELECT, PERMISSIVE, roles: {authenticated})
+
+#### `adv_cert_segment_results`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| attempt_id | uuid | NO |  | FK -> adv_cert_test_attempts.id |
+| scenario_segment_id | uuid | NO |  | FK -> adv_cert_scenario_segments.id |
+| result | text | YES |  |  |
+| comments | text | YES |  |  |
+
+**Foreign Keys:**
+- `attempt_id` -> `adv_cert_test_attempts.id` (adv_cert_segment_results_attempt_id_fkey)
+- `scenario_segment_id` -> `adv_cert_scenario_segments.id` (adv_cert_segment_results_scenario_segment_id_fkey)
+
+**Check Constraints:**
+- `adv_cert_segment_results_result_check`: `(((result IS NULL) OR (result = ANY (ARRAY['pass'::text, 'fail'::text]))))`
+
+**Indexes:**
+- `adv_cert_segment_results_pkey`
+- `adv_cert_segment_results_attempt_id_scenario_segment_id_key`
+
+**RLS Policies:**
+- `Authenticated can read adv_cert_segment_results` (SELECT, PERMISSIVE, roles: {authenticated})
+
+#### `adv_cert_criterion_results`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| segment_result_id | uuid | NO |  | FK -> adv_cert_segment_results.id |
+| criterion_id | uuid | NO |  | FK -> adv_cert_segment_criteria.id |
+| met | boolean | NO | false |  |
+
+**Foreign Keys:**
+- `criterion_id` -> `adv_cert_segment_criteria.id` (adv_cert_criterion_results_criterion_id_fkey)
+- `segment_result_id` -> `adv_cert_segment_results.id` (adv_cert_criterion_results_segment_result_id_fkey)
+
+**Indexes:**
+- `adv_cert_criterion_results_pkey`
+- `adv_cert_criterion_results_segment_result_id_criterion_id_key`
+
+**RLS Policies:**
+- `Authenticated can read adv_cert_criterion_results` (SELECT, PERMISSIVE, roles: {authenticated})
+
