@@ -46,7 +46,7 @@ interface MySignup {
 
 interface MeResponse {
   success: boolean;
-  student: { id: string; name: string; isPhase2: boolean; current_semester: number | null; program: string | null } | null;
+  student: { id: string; name: string; isPhase2: boolean; willAutoConfirm: boolean; current_semester: number | null; program: string | null } | null;
   signup: MySignup | null;
   blocked?: string;
   isAdmin?: boolean;
@@ -207,7 +207,7 @@ export default function ExamSchedulingPage() {
             {/* Phase banner */}
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Signed in as <strong>{me.student.name}</strong>
-              {me.student.isPhase2
+              {me.student.willAutoConfirm
                 ? ' — phase 2: your signup confirms instantly.'
                 : ' — signups require director approval before they\'re confirmed.'}
             </p>
@@ -344,7 +344,7 @@ export default function ExamSchedulingPage() {
                 className="inline-flex items-center gap-2 px-4 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-50"
               >
                 {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                {me?.signup ? 'Move my slot' : me?.student?.isPhase2 ? 'Confirm signup' : 'Request slot'}
+                {me?.signup ? 'Move my slot' : me?.student?.willAutoConfirm ? 'Confirm signup' : 'Request slot'}
               </button>
             </div>
           </div>

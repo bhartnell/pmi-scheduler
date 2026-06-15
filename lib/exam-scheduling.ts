@@ -32,6 +32,13 @@ export interface RosterStudent {
   current_semester: number | null;
   program_abbreviation: string | null;
   isPhase2: boolean;
+  /** True when the student has an internship row the SCHEDULED write-back can
+   *  land on. A phase-2 student WITHOUT one is routed to pending approval
+   *  (not auto-confirmed) so a director confirms + catches the stale/missing
+   *  internship record — never silently unscheduled, never blocked. */
+  hasInternship: boolean;
+  /** Effective auto-confirm: phase-2 AND has a usable internship row. */
+  willAutoConfirm: boolean;
 }
 
 export interface SeatUsage {
@@ -77,6 +84,17 @@ export async function getRosterStudent(email: string): Promise<RosterStudent | n
   const cohort = s.cohort as { current_semester?: number | null; program?: { abbreviation?: string } | null } | null;
   const sem = cohort?.current_semester ?? null;
   const abbr = cohort?.program?.abbreviation ?? null;
+  // NULL semester fails safe to NOT phase-2 (→ pending) per spec §3.
+  const isPhase2 = sem === 4 && (abbr === 'PM' || abbr === 'PMD');
+
+  // Does an internship row exist for the SCHEDULED write-back to land on?
+  // (Same row-pick basis as setWrittenExamScheduled / the result endpoint.)
+  const { count } = await supabase
+    .from('student_internships')
+    .select('id', { count: 'exact', head: true })
+    .eq('student_id', s.id);
+  const hasInternship = (count ?? 0) > 0;
+
   return {
     id: s.id,
     first_name: s.first_name,
@@ -85,8 +103,12 @@ export async function getRosterStudent(email: string): Promise<RosterStudent | n
     cohort_id: s.cohort_id,
     current_semester: sem,
     program_abbreviation: abbr,
-    // NULL semester fails safe to NOT phase-2 (→ pending) per spec §3.
-    isPhase2: sem === 4 && (abbr === 'PM' || abbr === 'PMD'),
+    isPhase2,
+    hasInternship,
+    // A phase-2 student auto-confirms ONLY with a usable internship row;
+    // otherwise the signup goes to director approval (which surfaces the
+    // missing/stale internship data) rather than auto-confirming.
+    willAutoConfirm: isPhase2 && hasInternship,
   };
 }
 

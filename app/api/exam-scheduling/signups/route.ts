@@ -79,6 +79,7 @@ export async function GET() {
       id: student.id,
       name: `${student.first_name} ${student.last_name}`,
       isPhase2: student.isPhase2,
+      willAutoConfirm: student.willAutoConfirm,
       current_semester: student.current_semester,
       program: student.program_abbreviation,
     },
@@ -139,7 +140,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const status = student.isPhase2 ? 'confirmed' : 'pending';
+  // Phase-2 auto-confirms ONLY with a usable internship row. A phase-2
+  // student whose internship record is missing/stale (so the SCHEDULED
+  // write-back can't land) is routed to pending approval instead of being
+  // auto-confirmed or silently shown as unscheduled — a director confirms
+  // and catches the data gap.
+  const status = student.willAutoConfirm ? 'confirmed' : 'pending';
+  const pendingReason = student.isPhase2 && !student.hasInternship
+    ? 'PENDING — phase 2 but internship record missing/incomplete; confirm and check their internship data'
+    : 'PENDING approval (phase 1)';
   const { data: signup, error } = await supabase
     .from('exam_signups')
     .insert({
@@ -172,7 +181,7 @@ export async function POST(request: NextRequest) {
   // Notifications (best-effort; failures logged, never block the signup)
   await notifyDirectorsOfChange(
     'signed_up', studentName, examSession,
-    `${compDetail} Status: ${status === 'confirmed' ? 'auto-confirmed (phase 2)' : 'PENDING approval (phase 1)'}.`,
+    `${compDetail} Status: ${status === 'confirmed' ? 'auto-confirmed (phase 2)' : pendingReason}.`,
   );
   if (status === 'confirmed') {
     await notifyStudentDecision('auto_confirmed', student.email, examSession);
