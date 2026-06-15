@@ -1205,8 +1205,9 @@
 | badge_issued | boolean | YES | false |  |
 | ryan_notified | boolean | YES | false |  |
 | ryan_notified_date | date | YES |  |  |
-| written_exam_date | date | YES |  |  |
+| written_exam_date | date | YES |  | written-exam COMPLETION date |
 | written_exam_passed | boolean | YES | false |  |
+| written_exam_scheduled | date | YES |  | CONFIRMED exam-scheduler signup date (set on confirm/approve/placement, updated on reschedule, cleared on cancel); distinct from final_exam_scheduled |
 | psychomotor_exam_date | date | YES |  |  |
 | psychomotor_exam_passed | boolean | YES | false |  |
 | phase_1_meeting_poll_id | text | YES |  |  |
@@ -11272,4 +11273,4 @@ Key foreign key relationships across the schema:
 
 **Trigger:** `trg_exam_signups_capacity` — advisory-locks the session and rejects a row becoming 'confirmed' when total seats or Pima-computer seats are exhausted (race-proof seat enforcement).
 
-**Write-back note:** exam completion writes ONLY `student_internships.written_exam_passed` + `.written_exam_date` (via `/api/exam-scheduling/signups/[id]/result`). No other internship columns; OSCE/summative untouched.
+**Write-back note:** exam completion writes ONLY `student_internships.written_exam_passed` + `.written_exam_date` (via `/api/exam-scheduling/signups/[id]/result`); a CONFIRMED signup writes `.written_exam_scheduled` (set on confirm/approve/admin-placement, updated on reschedule, cleared on cancel — best-effort, most-recent internship row). No other internship columns; OSCE/summative untouched.

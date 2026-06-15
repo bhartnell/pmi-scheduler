@@ -6,6 +6,7 @@ import {
   getRosterStudent,
   getSeatUsage,
   notifyDirectorsOfChange,
+  setWrittenExamScheduled,
 } from '@/lib/exam-scheduling';
 
 /**
@@ -119,6 +120,11 @@ export async function PATCH(
     target,
     usesOwn ? 'Bringing their own computer (LockDown Browser).' : 'Needs a Pima Lockdown computer.',
   );
+  // SCHEDULED write-back — move the date for a confirmed signup. A pending
+  // signup never had a scheduled date set, so leave it unset.
+  if (signup.status === 'confirmed') {
+    await setWrittenExamScheduled(student.id, target.date);
+  }
 
   return NextResponse.json({ success: true, signup: updated });
 }
@@ -156,5 +162,7 @@ export async function DELETE(
       'Their seat has been released.',
     );
   }
+  // SCHEDULED write-back — clear on cancel (harmless no-op if it was pending).
+  await setWrittenExamScheduled(student.id, null);
   return NextResponse.json({ success: true });
 }

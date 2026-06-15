@@ -8,6 +8,7 @@ import {
   getSeatUsage,
   notifyDirectorsOfChange,
   notifyStudentDecision,
+  setWrittenExamScheduled,
 } from '@/lib/exam-scheduling';
 
 /**
@@ -175,6 +176,8 @@ export async function POST(request: NextRequest) {
   );
   if (status === 'confirmed') {
     await notifyStudentDecision('auto_confirmed', student.email, examSession);
+    // SCHEDULED write-back — confirmed only (phase-1 pending stays unset).
+    await setWrittenExamScheduled(student.id, examSession.date);
   }
 
   return NextResponse.json({ success: true, signup, autoConfirmed: status === 'confirmed' });

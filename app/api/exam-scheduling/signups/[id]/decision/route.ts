@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { notifyStudentDecision } from '@/lib/exam-scheduling';
+import { notifyStudentDecision, setWrittenExamScheduled } from '@/lib/exam-scheduling';
 import { logAuditEvent } from '@/lib/audit';
 
 /**
@@ -76,7 +76,12 @@ export async function POST(
   const sess = signup.session as unknown as { date: string; start_time: string; end_time: string };
   await notifyStudentDecision(newStatus === 'confirmed' ? 'approved' : 'denied', signup.student_email, sess);
 
-  const student = signup.student as unknown as { first_name: string; last_name: string };
+  const student = signup.student as unknown as { id: string; first_name: string; last_name: string };
+  // SCHEDULED write-back — approval is the pending→confirmed transition.
+  // (Deny leaves it unset; a pending signup never had a scheduled date.)
+  if (newStatus === 'confirmed') {
+    await setWrittenExamScheduled(student.id, sess.date);
+  }
   await logAuditEvent({
     user,
     action: 'update',

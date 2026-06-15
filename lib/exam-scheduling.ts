@@ -110,6 +110,48 @@ export async function getSeatUsage(sessionIds: string[]): Promise<Record<string,
   return usage;
 }
 
+// ── Internship-tracker write-back: SCHEDULED state ─────────────────
+/**
+ * Set (or clear) `student_internships.written_exam_scheduled` for a student,
+ * so the internship tracker reflects a CONFIRMED exam booking. Mirrors the
+ * result endpoint's row-pick exactly (most-recent internship by created_at —
+ * student_id is nullable and a student can have multiple rows, flag F3).
+ *
+ * Best-effort by design: if the student has no internship row yet, this is a
+ * no-op — a signup must never fail because the tracker write-back couldn't
+ * land (same posture as the notification calls). Pass null to clear (cancel).
+ *
+ * Decisions (baked in per spec): dedicated column, written-exam-specific —
+ * NOT the generic `final_exam_scheduled`. Written ONLY for confirmed signups;
+ * callers must not invoke this for pending/phase-1 signups.
+ */
+export async function setWrittenExamScheduled(
+  studentId: string,
+  scheduledDate: string | null,
+): Promise<void> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: internships } = await supabase
+      .from('student_internships')
+      .select('id, created_at')
+      .eq('student_id', studentId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    const internship = internships?.[0];
+    if (!internship) {
+      console.warn(`[exam-scheduling] written_exam_scheduled write-back skipped — no internship row for student ${studentId}`);
+      return;
+    }
+    const { error } = await supabase
+      .from('student_internships')
+      .update({ written_exam_scheduled: scheduledDate })
+      .eq('id', internship.id);
+    if (error) console.warn(`[exam-scheduling] written_exam_scheduled update failed (student ${studentId}): ${error.message}`);
+  } catch (err) {
+    console.warn('[exam-scheduling] setWrittenExamScheduled exception:', err);
+  }
+}
+
 // ── Directors (notification recipients) ────────────────────────────
 /**
  * The three program directors (Ben, Rae, Ryan) are the active admin /

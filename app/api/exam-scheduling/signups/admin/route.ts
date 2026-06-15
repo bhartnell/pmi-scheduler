@@ -5,6 +5,7 @@ import {
   getSeatUsage,
   notifyDirectorsOfChange,
   notifyStudentDecision,
+  setWrittenExamScheduled,
 } from '@/lib/exam-scheduling';
 import { logAuditEvent } from '@/lib/audit';
 
@@ -125,6 +126,8 @@ export async function POST(request: NextRequest) {
   if (student.email) {
     await notifyStudentDecision('auto_confirmed', student.email, examSession);
   }
+  // SCHEDULED write-back — admin placement is always confirmed.
+  await setWrittenExamScheduled(student.id, examSession.date);
 
   await logAuditEvent({
     user,

@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-06-15
+
+- `_pending_` | Exam scheduler — SCHEDULED write-back to internship tracker (Piece 1 of completeness task; Piece 2 cohort view gated for after testing). New additive column `student_internships.written_exam_scheduled` (date, migration `20260615_written_exam_scheduled.sql`, applied). Dedicated column (NOT the legacy generic `final_exam_scheduled`). Helper `setWrittenExamScheduled()` (best-effort, most-recent-internship-row pattern matching the result/completed path) wired at the confirmed-only transitions: self-signup auto-confirm, admin approval (pending→confirmed), admin placement → set; reschedule → update; cancel → clear. Pending/phase-1 signups never set it. COMPLETED path (written_exam_passed/date) unchanged. Verified live: column writable, row-pick correct, set/update/clear behave (restored after). DATABASE_SCHEMA.md updated same commit.
+
 ## 2026-06-10
 
 - `e1a83ada` | DATABASE_SCHEMA.md: CHECK-constraint coverage completed (doc-only). Added the 105 live-but-undocumented CHECK constraints (104 via section-aware generator across 61 tables — LVFR AEMT, OSCE scoring incl. 15 on osce_evaluator_scores, ride-along, volunteers, lab_day, PMI scheduling — + 3 exam-table entries that needed ###-header handling; 1 pre-existing multi-line entry, access_cards_single_owner, collapsed to single-line and updated to live def). Final verification: ALL 251 live CHECK constraints documented, byte-exact vs pg_get_constraintdef after whitespace-normalization, 0 mismatches, 0 missing, 0 merged lines. No database structure changed.
