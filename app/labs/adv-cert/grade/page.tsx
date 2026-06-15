@@ -19,7 +19,7 @@ interface DayOpt {
 interface StudentOpt { id: string; first_name: string; last_name: string; status?: string | null }
 interface GroupOpt { id: string; name: string; members: StudentOpt[] }
 interface StationOpt { id: string; station_number: number; scenario_id: string | null }
-interface ScenarioOpt { id: string; name: string; case_code: string | null; scenario_scope: string | null; segment_count: number }
+interface ScenarioOpt { id: string; name: string; case_code: string | null; cert_tier: string | null; scenario_scope: string | null; segment_count: number }
 
 export default function AdvCertGradePage() {
   const { data: session, status } = useSession();
@@ -67,7 +67,7 @@ export default function AdvCertGradePage() {
   // scenario pool for the chosen course
   useEffect(() => {
     if (!session) return;
-    fetch(`/api/adv-cert/scenarios?course=${course}&tier=megacode_testing`)
+    fetch(`/api/adv-cert/scenarios?course=${course}&tier=megacode_practice,megacode_testing`)
       .then((r) => r.json())
       .then((d) => { if (d.success) setScenarioOpts(d.scenarios || []); })
       .catch(() => toast.error('Failed to load scenarios'));
@@ -232,7 +232,9 @@ export default function AdvCertGradePage() {
             <option value="">Select a megacode scenario…</option>
             {scenarioOpts.map((s) => (
               <option key={s.id} value={s.id}>
-                {s.case_code ? `[${s.case_code}] ` : ''}{s.name} ({s.segment_count} segments)
+                {s.case_code ? `[${s.case_code}] ` : ''}{s.name}
+                {s.cert_tier === 'megacode_testing' ? ' • TEST' : ' • practice'}
+                {s.segment_count === 0 ? ' — no segments yet' : ` (${s.segment_count} segments)`}
               </option>
             ))}
           </select>

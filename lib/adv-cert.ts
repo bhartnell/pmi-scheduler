@@ -18,28 +18,31 @@ import type {
  */
 export async function listScenarios(
   course: CertCourse,
-  tier: CertTier = 'megacode_testing'
+  tier: CertTier | CertTier[] = ['megacode_practice', 'megacode_testing']
 ): Promise<
   Array<{
     id: string;
     name: string;
     case_code: string | null;
+    cert_tier: string | null;
     scenario_scope: string | null;
     segment_count: number;
   }>
 > {
   const supabase = getSupabaseAdmin();
+  const tiers = Array.isArray(tier) ? tier : [tier];
   const { data, error } = await supabase
     .from('scenarios')
-    .select('id, name:title, case_code, scenario_scope, adv_cert_scenario_segments(id)')
+    .select('id, name:title, case_code, cert_tier, scenario_scope, adv_cert_scenario_segments(id)')
     .eq('cert_course', course)
-    .eq('cert_tier', tier)
+    .in('cert_tier', tiers)
     .order('case_code', { ascending: true });
   if (error) throw error;
   return (data || []).map((s: any) => ({
     id: s.id,
     name: s.name,
     case_code: s.case_code,
+    cert_tier: s.cert_tier,
     scenario_scope: s.scenario_scope,
     segment_count: Array.isArray(s.adv_cert_scenario_segments)
       ? s.adv_cert_scenario_segments.length
