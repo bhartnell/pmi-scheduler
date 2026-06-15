@@ -768,7 +768,11 @@ export default function SeatingChartBuilderPage() {
                       <div key={tableNum} className="bg-white dark:bg-gray-800 rounded-lg shadow p-3 print:shadow-none print:border">
                         <div className="text-xs text-gray-400 text-center mb-2">Table {tableNum}</div>
                         <div className="flex gap-2">
-                          {[1, 2, 3].map((seat) => {
+                          {/* When flipped (viewed from the opposite side), mirror the
+                              within-table seat order too — not just row order + table
+                              sides — so left↔right matches the physical view. Render
+                              order only; seat identity/data unchanged. */}
+                          {(isFlipped ? [3, 2, 1] : [1, 2, 3]).map((seat) => {
                             const student = getStudentAtSeat(tableNum, seat);
                             const ls = student ? getLearningStyle(student.id) : null;
                             const conflicts = student ? getConflicts(student.id, tableNum) : [];
