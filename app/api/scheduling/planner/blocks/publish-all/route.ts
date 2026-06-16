@@ -8,13 +8,31 @@ export async function POST(request: NextRequest) {
     if (auth instanceof NextResponse) return auth;
 
     const body = await request.json();
-    const { semester_id } = body;
+    const { semester_id, program_schedule_id, date_from, date_to } = body;
 
     if (!semester_id) {
       return NextResponse.json({ error: 'semester_id is required' }, { status: 400 });
     }
 
     const supabase = getSupabaseAdmin();
+
+    // Scoped publish (planning workspace): publish only a single cohort's draft
+    // blocks, optionally within a date range (the visible week). Keeps the
+    // workspace's "publish what's in view" tight instead of the whole semester.
+    if (program_schedule_id) {
+      let q = supabase
+        .from('pmi_schedule_blocks')
+        .update({ status: 'published' })
+        .eq('status', 'draft')
+        .eq('program_schedule_id', program_schedule_id);
+      if (date_from) q = q.gte('date', date_from);
+      if (date_to) q = q.lte('date', date_to);
+      const { data: scoped, error: scopedErr } = await q.select('id');
+      if (scopedErr) {
+        return NextResponse.json({ error: scopedErr.message }, { status: 500 });
+      }
+      return NextResponse.json({ count: scoped?.length || 0 });
+    }
 
     // Find the program_schedule_ids for this semester
     const { data: schedules } = await supabase

@@ -22,7 +22,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, Calendar as CalendarIcon, Upload } from 'lucide-react';
 
 // ── Light local types (subset of the planner shapes we use) ──
 interface WsBlock {
@@ -249,6 +249,27 @@ export default function PlanningWorkspacePage() {
     persist(changed);
   }, [blocks, programId, persist]);
 
+  // Publish the selected cohort's draft blocks in the visible week.
+  const publishDrafts = useCallback(async () => {
+    if (!programId || !semesterId) return;
+    setSaving(true);
+    try {
+      await fetch('/api/scheduling/planner/blocks/publish-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          semester_id: semesterId,
+          program_schedule_id: programId,
+          date_from: toDateStr(weekStart),
+          date_to: toDateStr(addDays(weekStart, 6)),
+        }),
+      });
+    } catch { /* reload reconciles */ } finally {
+      setSaving(false);
+      loadBlocks();
+    }
+  }, [programId, semesterId, weekStart, loadBlocks]);
+
   if (status === 'loading') {
     return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
   }
@@ -275,6 +296,12 @@ export default function PlanningWorkspacePage() {
             <span className="px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
               {draftCount} draft{draftCount === 1 ? '' : 's'} in view
             </span>
+            {programId && draftCount > 0 && (
+              <button onClick={publishDrafts} disabled={saving}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white">
+                <Upload className="w-3.5 h-3.5" /> Publish {draftCount} draft{draftCount === 1 ? '' : 's'}
+              </button>
+            )}
           </div>
         </div>
 

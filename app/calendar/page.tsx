@@ -1374,6 +1374,14 @@ function CalendarContent() {
             {weeklyHours} hrs this week
           </span>
         )}
+
+        {/* Planning workspace — drag-to-arrange + publish (Stage 4b) */}
+        <Link
+          href="/scheduling/workspace"
+          className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-indigo-600 hover:bg-indigo-700 text-white"
+        >
+          <LayoutGrid className="h-3.5 w-3.5" /> Planning Workspace
+        </Link>
       </div>
 
       {/* ── Calendar content ──────────────────────────────────────────── */}
