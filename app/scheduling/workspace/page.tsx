@@ -22,7 +22,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, Calendar as CalendarIcon, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, Calendar as CalendarIcon, Upload, User, AlertTriangle } from 'lucide-react';
 
 // ── Light local types (subset of the planner shapes we use) ──
 interface WsBlock {
@@ -122,6 +122,8 @@ export default function PlanningWorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [instructorsList, setInstructorsList] = useState<{ id: string; name: string }[]>([]);
+  const [editingInstrId, setEditingInstrId] = useState<string | null>(null); // block id whose instructor picker is open
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin');
@@ -154,6 +156,15 @@ export default function PlanningWorkspacePage() {
       })
       .catch(() => {});
   }, [semesterId]);
+
+  // Load instructor list once (for per-block assignment).
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/scheduling/planner/instructors')
+      .then(r => r.json())
+      .then(d => setInstructorsList(d.instructors || []))
+      .catch(() => {});
+  }, [status]);
 
   // Load blocks for the semester + week.
   const loadBlocks = useCallback(async () => {
@@ -270,12 +281,61 @@ export default function PlanningWorkspacePage() {
     }
   }, [programId, semesterId, weekStart, loadBlocks]);
 
+  // Assign / clear a block's instructor (single primary). Writes the
+  // pmi_block_instructors join via the block PUT (instructor_ids).
+  const assignInstructor = useCallback(async (blockId: string, instrId: string | null) => {
+    const inst = instrId ? instructorsList.find(i => i.id === instrId) : null;
+    setEditingInstrId(null);
+    setBlocks(prev => prev.map(b => b.id === blockId
+      ? { ...b, instructors: inst ? [{ instructor: { id: inst.id, name: inst.name } }] : [] }
+      : b)); // optimistic
+    setSaving(true);
+    try {
+      await fetch(`/api/scheduling/planner/blocks/${blockId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instructor_ids: instrId ? [instrId] : [] }),
+      });
+    } catch { /* reload reconciles */ } finally {
+      setSaving(false);
+      loadBlocks();
+    }
+  }, [instructorsList, loadBlocks]);
+
+  // Live conflict detection: same instructor on time-overlapping blocks on the
+  // same date (across ALL cohorts in the week). Recomputes on every blocks
+  // change, so dragging shows/clears conflicts immediately.
+  const conflictIds = useMemo(() => {
+    const ids = new Set<string>();
+    const byInstrDate = new Map<string, WsBlock[]>();
+    for (const b of blocks) {
+      if (!b.date || !b.start_time || !b.end_time) continue;
+      for (const iu of b.instructors || []) {
+        const iid = iu.instructor?.id;
+        if (!iid) continue;
+        const k = `${iid}|${b.date}`;
+        const a = byInstrDate.get(k); if (a) a.push(b); else byInstrDate.set(k, [b]);
+      }
+    }
+    for (const [, arr] of byInstrDate) {
+      if (arr.length < 2) continue;
+      arr.sort((x, y) => toMin(x.start_time) - toMin(y.start_time));
+      for (let i = 1; i < arr.length; i++) {
+        if (toMin(arr[i].start_time) < toMin(arr[i - 1].end_time)) {
+          ids.add(arr[i].id); ids.add(arr[i - 1].id);
+        }
+      }
+    }
+    return ids;
+  }, [blocks]);
+
   if (status === 'loading') {
     return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
   }
   if (!session) return null;
 
   const draftCount = blocks.filter(b => (!programId || b.program_schedule_id === programId) && b.status === 'draft').length;
+  const visibleConflicts = blocks.filter(b => (!programId || b.program_schedule_id === programId) && conflictIds.has(b.id)).length;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -293,6 +353,11 @@ export default function PlanningWorkspacePage() {
           </div>
           <div className="flex items-center gap-2 text-xs">
             {saving && <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</span>}
+            {visibleConflicts > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+                <AlertTriangle className="w-3.5 h-3.5" /> {visibleConflicts} instructor conflict{visibleConflicts === 1 ? '' : 's'}
+              </span>
+            )}
             <span className="px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
               {draftCount} draft{draftCount === 1 ? '' : 's'} in view
             </span>
@@ -354,17 +419,42 @@ export default function PlanningWorkspacePage() {
                       const instrs = (b.instructors || []).map(iu => iu.instructor?.name).filter(Boolean);
                       return (
                         <div key={b.id}
-                          draggable={editable}
+                          draggable={editable && editingInstrId !== b.id}
                           onDragStart={e => { if (!editable) return; setDraggingId(b.id); e.dataTransfer.effectAllowed = 'move'; }}
                           onDragEnd={() => setDraggingId(null)}
                           onDragOver={e => { if (draggingId && editable) e.preventDefault(); }}
                           onDrop={e => { if (!draggingId || !editable) return; e.preventDefault(); e.stopPropagation(); moveBlock(draggingId, key, i); }}
-                          className={`rounded-md border-l-4 px-2 py-1 text-[11px] ${editable ? 'cursor-grab active:cursor-grabbing' : ''} ${draggingId === b.id ? 'opacity-40' : ''} ${b.status === 'draft' ? 'bg-amber-50 dark:bg-amber-900/10 border-dashed' : 'bg-gray-50 dark:bg-gray-700/40'}`}
+                          className={`rounded-md border-l-4 px-2 py-1 text-[11px] ${editable ? 'cursor-grab active:cursor-grabbing' : ''} ${draggingId === b.id ? 'opacity-40' : ''} ${conflictIds.has(b.id) ? 'ring-2 ring-red-500' : ''} ${b.status === 'draft' ? 'bg-amber-50 dark:bg-amber-900/10 border-dashed' : 'bg-gray-50 dark:bg-gray-700/40'}`}
                           style={{ borderLeftColor: color }}>
-                          <div className="font-medium text-gray-800 dark:text-gray-100 leading-tight">{b.course_name || b.title || '(untitled)'}</div>
+                          <div className="font-medium text-gray-800 dark:text-gray-100 leading-tight flex items-start gap-1">
+                            <span className="flex-1">{b.course_name || b.title || '(untitled)'}</span>
+                            {conflictIds.has(b.id) && <AlertTriangle className="w-3 h-3 text-red-500 shrink-0 mt-0.5" />}
+                          </div>
                           <div className="text-gray-500 dark:text-gray-400">{fmtTime(b.start_time)}–{fmtTime(b.end_time)}</div>
-                          {instrs.length > 0 && <div className="text-gray-400 truncate">{instrs.join(', ')}</div>}
-                          {b.status === 'draft' && <span className="text-amber-600 dark:text-amber-400">draft</span>}
+                          {/* Instructor chip / picker */}
+                          {editable && editingInstrId === b.id ? (
+                            <select
+                              autoFocus
+                              value={(b.instructors?.[0]?.instructor?.id) || ''}
+                              onClick={e => e.stopPropagation()}
+                              onChange={e => assignInstructor(b.id, e.target.value || null)}
+                              onBlur={() => setEditingInstrId(null)}
+                              className="mt-0.5 w-full text-[11px] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
+                            >
+                              <option value="">— Unassigned —</option>
+                              {instructorsList.map(inst => <option key={inst.id} value={inst.id}>{inst.name}</option>)}
+                            </select>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={e => { e.stopPropagation(); if (editable) setEditingInstrId(b.id); }}
+                              className={`mt-0.5 inline-flex items-center gap-1 ${editable ? 'hover:text-blue-600 dark:hover:text-blue-400' : ''} ${instrs.length ? 'text-gray-500 dark:text-gray-400' : 'text-gray-300 dark:text-gray-600'}`}
+                            >
+                              <User className="w-3 h-3" />
+                              <span className="truncate">{instrs.length ? instrs.join(', ') : (editable ? 'assign' : '—')}</span>
+                            </button>
+                          )}
+                          {b.status === 'draft' && <span className="ml-1 text-amber-600 dark:text-amber-400">· draft</span>}
                         </div>
                       );
                     })}
