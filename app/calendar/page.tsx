@@ -53,7 +53,19 @@ interface CalendarEvent {
 }
 
 type ViewMode = 'week' | 'month' | 'list';
-type PresetView = 'all' | 'instructor' | 'labs';
+// Phase 2 filterable view set on the unified calendar. Each preset sets a
+// combination of program + event-type filters (and, for 'cohort'/'instructor',
+// an extra selector). 'all' = full master.
+type PresetView = 'all' | 'instructor' | 'labs' | 'cohort' | 'medic' | 'didactic';
+
+const PRESET_BUTTONS: { key: PresetView; label: string }[] = [
+  { key: 'all', label: 'Full Master' },
+  { key: 'labs', label: 'Lab-only' },
+  { key: 'cohort', label: 'Cohort' },
+  { key: 'medic', label: 'Medic-only' },
+  { key: 'didactic', label: 'Didactic-only' },
+  { key: 'instructor', label: 'By Instructor' },
+];
 
 const PROGRAMS = ['paramedic', 'emt', 'aemt', 'lvfr'] as const;
 const EVENT_TYPES = ['class', 'lab', 'clinical', 'exam', 'shift'] as const;
@@ -532,6 +544,9 @@ function CalendarContent() {
   const [presetView, setPresetView] = useState<PresetView>('all');
   const [selectedInstructor, setSelectedInstructor] = useState<string>('');
   const [instructorList, setInstructorList] = useState<{ id: string; name: string }[]>([]);
+  // Cohort view (Phase 2): list + selected cohort for the 'cohort' preset.
+  const [viewCohorts, setViewCohorts] = useState<CohortOption[]>([]);
+  const [viewCohortId, setViewCohortId] = useState<string>('');
 
   // Filters from URL params or defaults
   const [activePrograms, setActivePrograms] = useState<Set<string>>(
@@ -666,6 +681,9 @@ function CalendarContent() {
       if (presetView === 'instructor' && selectedInstructor) {
         params.set('instructor_id', selectedInstructor);
       }
+      if (presetView === 'cohort' && viewCohortId) {
+        params.set('cohort_id', viewCohortId);
+      }
 
       const res = await fetch(`/api/calendar/unified?${params}`);
       const data = await res.json();
@@ -677,13 +695,48 @@ function CalendarContent() {
     } finally {
       setLoading(false);
     }
-  }, [dateRange, activePrograms, activeEventTypes, presetView, selectedInstructor]);
+  }, [dateRange, activePrograms, activeEventTypes, presetView, selectedInstructor, viewCohortId]);
 
   useEffect(() => {
     if (status === 'authenticated') {
       fetchEvents();
     }
   }, [fetchEvents, status]);
+
+  // Load cohorts once (for the 'cohort' preset selector).
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/lab-management/cohorts?activeOnly=true')
+      .then(res => res.json())
+      .then(data => { if (data.cohorts) setViewCohorts(data.cohorts); })
+      .catch(() => { /* non-blocking */ });
+  }, [status]);
+
+  // Apply a preset view: set the program + event-type filters together so each
+  // view is self-contained (also fixes the prior bug where 'all' left
+  // activeEventTypes stuck at {lab} after using Labs Only).
+  const applyPreset = useCallback((view: PresetView) => {
+    setPresetView(view);
+    if (view !== 'instructor') setSelectedInstructor('');
+    if (view !== 'cohort') setViewCohortId('');
+    switch (view) {
+      case 'labs':
+        setActivePrograms(new Set(PROGRAMS));
+        setActiveEventTypes(new Set(['lab']));
+        break;
+      case 'medic':
+        setActivePrograms(new Set(['paramedic']));
+        setActiveEventTypes(new Set(EVENT_TYPES));
+        break;
+      case 'didactic':
+        setActivePrograms(new Set(PROGRAMS));
+        setActiveEventTypes(new Set(['class', 'exam']));
+        break;
+      default: // 'all' | 'cohort' | 'instructor' → full filters, narrowed by the extra selector
+        setActivePrograms(new Set(PROGRAMS));
+        setActiveEventTypes(new Set(EVENT_TYPES));
+    }
+  }, []);
 
   // LVFR platoon overlay fetch — runs in parallel with the events
   // fetch when the LVFR program filter is active. Skipped (and the
@@ -1271,39 +1324,35 @@ function CalendarContent() {
       {/* ── Preset views ──────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2 mb-4 print:hidden">
         <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">View:</span>
-        <button
-          onClick={() => { setPresetView('all'); setSelectedInstructor(''); }}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            presetView === 'all'
-              ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-          }`}
-        >
-          All Programs
-        </button>
-        <button
-          onClick={() => setPresetView('instructor')}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            presetView === 'instructor'
-              ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-          }`}
-        >
-          By Instructor
-        </button>
-        <button
-          onClick={() => {
-            setPresetView('labs');
-            setActiveEventTypes(new Set(['lab']));
-          }}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-            presetView === 'labs'
-              ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
-              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-          }`}
-        >
-          Labs Only
-        </button>
+        {PRESET_BUTTONS.map(btn => (
+          <button
+            key={btn.key}
+            onClick={() => applyPreset(btn.key)}
+            className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+              presetView === btn.key
+                ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+            }`}
+          >
+            {btn.label}
+          </button>
+        ))}
+
+        {/* Cohort selector (Phase 2 cohort view) */}
+        {presetView === 'cohort' && (
+          <select
+            value={viewCohortId}
+            onChange={e => setViewCohortId(e.target.value)}
+            className="ml-2 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+          >
+            <option value="">Select cohort...</option>
+            {viewCohorts.map(c => (
+              <option key={c.id} value={c.id}>
+                {`${c.program?.abbreviation || c.program?.name || ''} C${c.cohort_number}`.trim()}
+              </option>
+            ))}
+          </select>
+        )}
 
         {/* Instructor selector */}
         {presetView === 'instructor' && (
