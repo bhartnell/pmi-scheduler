@@ -90,5 +90,132 @@ management/detail screens stay on lab-management.** Shared READ, separate detail
   mirror + freeBusy. Never merge physical stores; never force planner editing onto
   the unified read; never fold lab operational detail into the calendar.
 
-**Status:** Phase 1 in progress (this commit). Phases 3+ deliberately held for
-post-course.
+**Status:** Phase 0 + Phase 1 done. Phases 2–5 sequenced inside the MASTER
+SEQUENCE below (which supersedes this bare phase list for ordering).
+
+---
+
+# MASTER SEQUENCE (consolidated build order)
+
+Consolidates the calendar phases + lab-structure/team-lead + planning workspace +
+day-builder + availability layer into ONE dependency-ordered plan.
+
+**Principles:** foundational shared layers before what sits on them; within that,
+small + high-value + reversible first. **High-stakes-DB rule** for anything that
+reshapes existing structure: map dependencies BEFORE changing, back up, dry-run,
+reversible path — never a blind change. **A proven ACLS fallback exists** (Google
+forms + sheets), so nothing is rushed pre-course — that's what lets the high-care
+pieces be done properly.
+
+Sizes: **S** small · **M** medium · **L** large. Risk: **safe** (additive) ·
+**careful** (touches shared structure / needs dependency map).
+
+## The two foundations
+1. **Unified calendar READ** (Phase 0+1) — ✅ DONE. Foundation for all views + the
+   planning workspace.
+2. **Lab-structure model** (the `lab_days` constraint) — foundation for team-lead
+   tracking AND the day-builder. NOT yet done; high-care. This is the gating
+   foundation for the top-priority value work.
+
+## Ordered stages
+
+### Stage 1 — Dependency maps (read-only) — S, safe — START HERE
+- **1a. Lab-constraint dependency audit.** Map everything that assumes ONE lab_day
+  per (date, cohort): the calendar link trigger (`20260429_calendar_link_triggers.sql`),
+  lab-day lists/detail, assignment displays, `lab-templates/apply`, the unified
+  aggregator's lab block + dedup (`linked_lab_day_id` + date/cohort fallback), and
+  any "find THE lab day for this cohort/date" singular query. Output = the exact
+  change-list for Stage 2. **Prereq for Stage 2.**
+- **1b. Availability-layer audit.** Confirm what's built (full-timer
+  always-available; part-timer availability input) and pin the exact gap
+  (class-load conflict detection). Informs Stage 7 priority.
+
+### Stage 2 — Lab-structure constraint correction — L, CAREFUL — TOP PRIORITY (foundation)
+Depends on 1a. The `UNIQUE(date, cohort_id)` is a false assumption (multiple
+distinct labs/day happen program-wide, not just ACLS/PALS). Correct it to allow
+**multiple lab sections per cohort per date**, and update EVERY dependent from 1a
+to handle multiple (trigger, views, dedup, template apply, singular "find the lab
+day" code). Back up, dry-run, reversible. Preferred over the "sections inside one
+lab_day" workaround because the constraint itself is wrong.
+- **2b. Migrate the monolithic G14 ACLS day → sectioned structure** (M, careful) —
+  validates the new model on real data; back up the 30 blocks + lab_day/stations first.
+- **2c. Consistent sectioned structure across ALL section types** incl. BLS
+  (check-box, no team-leads) — consistency of process over a BLS special case.
+
+### Stage 3 — Team-lead tracking per section — M — TOP-PRIORITY VALUE (the driver)
+Depends on Stage 2 (sections exist). Make-or-break competency (AHA requires
+team-lead proficiency for paramedics; students have failed the program over it).
+- Capture team-lead PER section (scenario/learning stations, megacode practice,
+  megacode testing); BLS exempt but same structure.
+- ACLS team-leads **feed each student's program-wide OVERALL team-lead count** —
+  not isolated.
+- Verify every student team-led ≥1 scenario/learning or megacode station.
+- Reuse existing `scenario_assessments.team_lead_id` + `team_lead_log`.
+
+### Stage 4 — Calendar Phase 2: filterable views + planning workspace — M→L
+Depends on Phase 1 (done). Separate surface from Stage 2–3, so it can run in
+PARALLEL with the lab-structure track.
+- **4a. View set** (M, safe): lab-only / cohort / medic-only / didactic-only /
+  full master on `/calendar`, building on existing filters/presets.
+- **4b. Planning workspace** (L, mostly additive) — CENTRAL, not an add-on. Ryan +
+  Ben schedule spatially (whiteboards + magnets); the LVFR drag-to-arrange planner
+  was the deliberate prototype. Generalize it to the main calendar: draggable
+  draft view (keep block content/length, drag to rearrange, resolve conflicts) that
+  PUBLISHES to the calendar when finalized. Draft-then-publish. It's a first-class
+  unified-calendar view.
+
+### Stage 5 — Calendar Phase 3: adopt unified on high-use surfaces — M-L, CAREFUL
+Depends on Phase 2 AND Stage 2 settled (so "show full day" reflects sections, and
+the lab views already handle multiple sections — avoids double-work). Give the
+planner + lab views a "show full day" read via the unified endpoint (didactic +
+labs together) WITHOUT changing their edit paths. The "feels like one calendar" heart.
+
+### Stage 6 — Repeatable ACLS/adv-cert day-builder — M-L (post-course)
+Depends on **Stage 2 (section model)** + new save-as-template plumbing. Flag a day
+adv-cert → standard sections + default cases populate → assign instructors / swap
+cases per section. Directives (in memory): **cascade timing** (store length +
+day-anchor, compute starts; never fixed starts) · **modular** sections/blocks
+(never pre-combined) · **instructor FK-or-blank** (match sheet name → record, else
+blank for dropdown; custom text only for genuine guests/RT) · **save-as-NEW-template
+endpoint** (today only `update-from-lab` patches existing) + templates must store
+section + time info (currently station-lists only). Generic `adv_cert_` already
+built so PALS = content load.
+
+### Stage 7 — Instructor-availability: class-load conflict detection — M, CONTINGENT
+Feeds BOTH the manual lab dropdown AND the builder's auto-assign (assign-or-blank
+instead of custom text). Core availability is BUILT (full-timer always-available;
+part-timer input) + simple manual time-off/sick overrides. **Unbuilt linchpin:**
+read an instructor's actual class load → mark UNAVAILABLE when a class conflicts
+with a lab's time. **Priority is CONTINGENT on the August-cohort decision** (extra
+August cohort + EMT + LVFR AEMT running off the standard week create the overlaps
+where this earns its keep; otherwise conflicts are rare/mental). The builder's
+basic FK-or-blank works WITHOUT this; this makes it truly availability-aware.
+- **Future (low priority):** read Google Calendar for directors' external meetings
+  (builds on this + the Google integration). Not initial.
+
+### Stage 8 — Calendar Phase 4 (feeds) + Phase 5 (harden/clean) — S-M, careful
+Last; depends on the readers being settled. Point ICS endpoints at the unified
+aggregator (retire the redundant ICS route after checking consumers); always-link
+lab blocks; dedup hardening; dead-code removal (`components/LabCalendarPanel.tsx`).
+
+## Dependency summary (the prerequisites you asked about)
+- **Constraint fix (Stage 2) MUST precede:** team-lead-per-section (Stage 3), the
+  day-builder's section generation (Stage 6), and Phase 3's lab "show full day"
+  (Stage 5).
+- **Day-builder (Stage 6) needs:** Stage 2 (sections) + save-as-template plumbing;
+  availability-aware auto-assign additionally wants Stage 7 (but FK-or-blank works
+  without it).
+- **Planning workspace (4b) needs:** unified read (done) + ideally the view set (4a).
+- **Availability conflict-detection (Stage 7):** core data link EXISTS (full/part-
+  timer availability); the conflict-detection compute is the unbuilt piece.
+- **Parallelism:** Stage 4 (calendar views/workspace) is a different surface from
+  Stages 2–3 (lab data) and can proceed concurrently; Stage 5 should wait for both.
+
+## Recommended execution order
+1a → **2 → 2b → 3** (top-value lab/team-lead core) · in parallel: 4a → 4b · then
+5 · then 6 (post-course) · 7 (when August decided) · 8 (cleanup last).
+
+**Realistic next ~1.5 days:** 1a (map, today) → Stage 2 (the careful constraint
+correction + dependents) → 2b (migrate ACLS) → begin Stage 3. That delivers the
+top-priority value (multi-section labs + team-lead tracking) on the solid corrected
+foundation, with the fallback covering ACLS meanwhile.
