@@ -219,3 +219,57 @@ lab blocks; dedup hardening; dead-code removal (`components/LabCalendarPanel.tsx
 correction + dependents) → 2b (migrate ACLS) → begin Stage 3. That delivers the
 top-priority value (multi-section labs + team-lead tracking) on the solid corrected
 foundation, with the fallback covering ACLS meanwhile.
+
+> **Thursday guardrail (decided 2026-06-15):** Stage 2 (constraint reshape) and
+> ESPECIALLY 2b (migrating the live G14 ACLS day to sections) are **HELD until
+> AFTER Thursday's ACLS course**, unless an ironclad "G14 stays fully
+> runnable/gradeable" guarantee is met. The Google-forms fallback covers Thursday
+> team-lead tracking. Stage 1a (read-only map, below) was done now; Stage 2+ waits.
+
+---
+
+# Stage 1a — Dependency map: `lab_days` UNIQUE(date, cohort_id) (DONE, read-only)
+
+The change-list gating Stage 2. Adding a section dimension means a new identifier —
+recommend **`section_number INT NOT NULL DEFAULT 1`** (+ optional `section_label`),
+new UNIQUE **(date, cohort_id, section_number)**.
+
+### Highest-risk spots (silent wrong-row / data corruption — fix first)
+1. **Calendar link triggers** `supabase/migrations/20260429_calendar_link_triggers.sql`
+   — both functions match a block↔lab_day on `(cohort_id, date)` only and copy
+   times. With >1 lab_day/date they link the FIRST/ALL ambiguously and copy one
+   block's times onto every section. Must key on section.
+2. **Unified calendar dedup** `app/api/calendar/unified/route.ts` (the
+   `labBlockDateCohortKeys` set) — a single lab block on (date,cohort) suppresses
+   **ALL** lab_days that day → extra sections become invisible. Must dedup on
+   (date, cohort, section).
+3. **`scripts/build-acls-days.js`** (`SELECT … WHERE cohort_id AND date` → `[0]`) —
+   updates only the first section; others go stale. Must key on section.
+4. **Template apply** `app/api/admin/lab-templates/apply/route.ts` — inserts one
+   lab_day per (date,cohort); relies on the UNIQUE to dedupe. Multiple sections
+   collide on the old constraint. Needs section + transactional apply.
+5. **Planner block modal** `app/scheduling/planner/page.tsx` (~618-623) — fetches
+   `/api/lab-management/lab-days?date=` and takes `labDays[0]` (no cohort filter!).
+   Picks a wrong/arbitrary lab_day when multiple exist. Needs cohort+section scope.
+
+### Full categorized change-list
+- **DB:** drop `lab_days_date_cohort_id_key`; add `section_number` (+ label);
+  new UNIQUE (date, cohort_id, section_number); add `pmi_schedule_blocks.linked_section_number`
+  (so a block links to a specific section). Back up + dry-run.
+- **Triggers:** rewrite both link functions to match on section; deterministic
+  `LIMIT 1` as a safety net.
+- **Unified + ICS dedup:** `unified/route.ts` and `calendar/feed.ics/route.ts` —
+  dedup key → (date, cohort, section).
+- **"Find THE lab day" singular reads:** planner modal (`labDays[0]`),
+  `/api/lab-management/lab-days` GET (require cohort when date given; return all
+  sections), `build-acls-days.js`, exam/grading flows.
+- **Writers keyed by UUID (safe — but selection logic must disambiguate):**
+  `scenario_assessments.lab_day_id`, `team_lead_log.lab_day_id`,
+  `volunteer_events.linked_lab_day_id`, `open_shifts.lab_day_id`.
+- **Lab-management POST/GET + UI:** accept/show `section_number`; section picker
+  when multiple exist; lab-day detail shows a section badge; `[id]` routes safe.
+- **Dashboards/reports:** group by (date, cohort, section); gradebook / team-lead
+  reports per section.
+
+This map is the prerequisite for Stage 2 and is now captured. Stage 2 execution
+waits for post-Thursday (or the runnable-guarantee).
