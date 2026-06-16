@@ -117,11 +117,20 @@ async function main(){
       for(const [s,e,type,label,instr,lab] of rows){
         sort++;
         const iid=await resolveInstr(client,instr,cache);
-        await client.query(
+        const insRow=await client.query(
           `INSERT INTO pmi_schedule_blocks (semester_id,program_schedule_id,start_time,end_time,block_type,title,course_name,content_notes,date,day_of_week,sort_order,instructor_id,linked_lab_day_id,status,is_recurring)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'published',false)`,
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,'published',false) RETURNING id`,
           [semId[d],G14_PS,s+':00',e+':00',type,label,label, instr?`Instructor: ${instr}`:null, d,dow(d),sort,iid, lab?labDays[d]:null]
         );
+        // Also write the pmi_block_instructors JOIN row — the planner + unified
+        // calendar read instructors from the join, not the FK column. Writing
+        // both keeps every reader consistent.
+        if (iid) {
+          await client.query(
+            `INSERT INTO pmi_block_instructors (schedule_block_id, instructor_id, role) VALUES ($1,$2,'primary')`,
+            [insRow.rows[0].id, iid]
+          );
+        }
         inserted++;
       }
     }

@@ -695,9 +695,11 @@ function BlockEditModal({
       payload.course_name = null;
     }
 
-    if (formData.instructor_ids.length > 0) {
-      payload.instructor_ids = formData.instructor_ids;
-    }
+    // Always send instructor_ids (even when empty) so de-assigning the last
+    // instructor persists — the PUT handles an empty array by clearing the
+    // pmi_block_instructors join. Omitting it on empty meant the last
+    // instructor could never be removed.
+    payload.instructor_ids = formData.instructor_ids;
 
     return payload;
   };
