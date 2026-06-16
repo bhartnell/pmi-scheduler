@@ -65,6 +65,38 @@ function fmtTime(t: string | null): string {
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
   return `${h12}:${String(m).padStart(2, '0')}${ap}`;
 }
+function toMin(t: string | null): number {
+  if (!t) return 0;
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + (m || 0);
+}
+function minToTime(m: number): string {
+  const h = Math.floor(m / 60), mm = m % 60;
+  return `${String(h).padStart(2, '0')}:${String(mm).padStart(2, '0')}`;
+}
+function durationMin(b: WsBlock): number {
+  const d = toMin(b.end_time) - toMin(b.start_time);
+  return d > 0 ? d : 30; // default 30 if missing/invalid
+}
+/**
+ * Tetris cascade: re-lay a day's blocks in array order from the day's anchor
+ * (its earliest existing start, else 08:00), each block starting where the
+ * previous ended, preserving each block's length. Returns blocks with corrected
+ * start/end/sort_order. Removing gaps is the intended drag-to-arrange behavior;
+ * keep an explicit Break/Lunch block to hold a gap.
+ */
+function cascadeDay(dayBlocks: WsBlock[]): WsBlock[] {
+  if (dayBlocks.length === 0) return [];
+  const anchor = Math.min(...dayBlocks.map(b => toMin(b.start_time)).filter(n => n > 0).concat([8 * 60]));
+  let cur = anchor;
+  return dayBlocks.map((b, i) => {
+    const dur = durationMin(b);
+    const start = cur, end = cur + dur;
+    cur = end;
+    return { ...b, start_time: minToTime(start), end_time: minToTime(end), sort_order: i };
+  });
+}
+
 function programLabel(p: WsProgram | undefined): string {
   if (!p) return '';
   if (p.label) return p.label;
@@ -88,6 +120,8 @@ export default function PlanningWorkspacePage() {
   const [weekStart, setWeekStart] = useState<Date>(getMonday(new Date()));
   const [blocks, setBlocks] = useState<WsBlock[]>([]);
   const [loading, setLoading] = useState(true);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin');
@@ -156,6 +190,65 @@ export default function PlanningWorkspacePage() {
     return map;
   }, [blocks, programId]);
 
+  // Persist changed blocks (start/end/date/sort) via the existing block PUT.
+  const persist = useCallback(async (changed: WsBlock[]) => {
+    if (!changed.length) return;
+    setSaving(true);
+    try {
+      await Promise.all(changed.map(b =>
+        fetch(`/api/scheduling/planner/blocks/${b.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ start_time: b.start_time, end_time: b.end_time, date: b.date, sort_order: b.sort_order }),
+        })
+      ));
+    } catch { /* reload below reconciles */ } finally {
+      setSaving(false);
+      loadBlocks();
+    }
+  }, [loadBlocks]);
+
+  // Move a block to (targetDate, targetIndex), re-cascade affected days, save.
+  const moveBlock = useCallback((blockId: string, targetDate: string, targetIndex: number) => {
+    if (!programId) return; // editing requires a single cohort selected
+    const moving = blocks.find(b => b.id === blockId);
+    if (!moving || !moving.date) return;
+    const sourceDate = moving.date;
+    if (sourceDate === targetDate) {
+      // no-op if dropped onto itself in the same slot
+    }
+    // Group this cohort's blocks by date (ordered).
+    const byDate = new Map<string, WsBlock[]>();
+    for (const b of blocks) {
+      if (b.program_schedule_id !== programId || !b.date) continue;
+      const a = byDate.get(b.date); if (a) a.push(b); else byDate.set(b.date, [b]);
+    }
+    for (const [, a] of byDate) {
+      a.sort((x, y) => (x.start_time || '').localeCompare(y.start_time || '') || (x.sort_order ?? 0) - (y.sort_order ?? 0));
+    }
+    // Remove from source, insert into target.
+    byDate.set(sourceDate, (byDate.get(sourceDate) || []).filter(b => b.id !== blockId));
+    const tgt = (byDate.get(targetDate) || []).filter(b => b.id !== blockId);
+    const idx = Math.max(0, Math.min(targetIndex, tgt.length));
+    tgt.splice(idx, 0, { ...moving, date: targetDate });
+    byDate.set(targetDate, tgt);
+    // Cascade affected day(s).
+    const affected = sourceDate === targetDate ? [targetDate] : [sourceDate, targetDate];
+    const updated = new Map<string, WsBlock>();
+    for (const d of affected) for (const b of cascadeDay(byDate.get(d) || [])) updated.set(b.id, b);
+    // Diff vs current.
+    const changed: WsBlock[] = [];
+    for (const [, nb] of updated) {
+      const ob = blocks.find(b => b.id === nb.id);
+      if (!ob || ob.start_time !== nb.start_time || ob.end_time !== nb.end_time || ob.date !== nb.date || (ob.sort_order ?? 0) !== (nb.sort_order ?? 0)) {
+        changed.push(nb);
+      }
+    }
+    if (!changed.length) return;
+    setBlocks(prev => prev.map(b => updated.get(b.id) || b)); // optimistic
+    persist(changed);
+  }, [blocks, programId, persist]);
+
   if (status === 'loading') {
     return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
   }
@@ -178,6 +271,7 @@ export default function PlanningWorkspacePage() {
             </p>
           </div>
           <div className="flex items-center gap-2 text-xs">
+            {saving && <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</span>}
             <span className="px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
               {draftCount} draft{draftCount === 1 ? '' : 's'} in view
             </span>
@@ -202,6 +296,12 @@ export default function PlanningWorkspacePage() {
           </div>
         </div>
 
+        {!programId && (
+          <div className="mb-3 text-xs text-gray-500 dark:text-gray-400 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md px-3 py-2">
+            Select a cohort above to drag-arrange its week. (&quot;All cohorts&quot; is view-only.)
+          </div>
+        )}
+
         {/* Day columns */}
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 className="animate-spin text-gray-400" /></div>
@@ -210,19 +310,29 @@ export default function PlanningWorkspacePage() {
             {weekDays.map(day => {
               const key = toDateStr(day);
               const dayBlocks = blocksByDate.get(key) || [];
+              const editable = !!programId;
               return (
                 <div key={key} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 min-h-[120px]">
                   <div className="px-2 py-1.5 border-b border-gray-100 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300">
                     {day.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' })}
                   </div>
-                  <div className="p-1.5 space-y-1.5">
+                  <div
+                    className={`p-1.5 space-y-1.5 min-h-[80px] ${draggingId && editable ? 'bg-blue-50/40 dark:bg-blue-900/10' : ''}`}
+                    onDragOver={e => { if (draggingId && editable) e.preventDefault(); }}
+                    onDrop={e => { if (!draggingId || !editable) return; e.preventDefault(); moveBlock(draggingId, key, dayBlocks.length); }}
+                  >
                     {dayBlocks.length === 0 && <div className="text-[11px] text-gray-300 dark:text-gray-600 px-1 py-2">—</div>}
-                    {dayBlocks.map(b => {
+                    {dayBlocks.map((b, i) => {
                       const color = b.color || TYPE_COLORS[b.block_type || 'other'] || TYPE_COLORS.other;
-                      const instrs = (b.instructors || []).map(i => i.instructor?.name).filter(Boolean);
+                      const instrs = (b.instructors || []).map(iu => iu.instructor?.name).filter(Boolean);
                       return (
                         <div key={b.id}
-                          className={`rounded-md border-l-4 px-2 py-1 text-[11px] ${b.status === 'draft' ? 'bg-amber-50 dark:bg-amber-900/10 border-dashed' : 'bg-gray-50 dark:bg-gray-700/40'}`}
+                          draggable={editable}
+                          onDragStart={e => { if (!editable) return; setDraggingId(b.id); e.dataTransfer.effectAllowed = 'move'; }}
+                          onDragEnd={() => setDraggingId(null)}
+                          onDragOver={e => { if (draggingId && editable) e.preventDefault(); }}
+                          onDrop={e => { if (!draggingId || !editable) return; e.preventDefault(); e.stopPropagation(); moveBlock(draggingId, key, i); }}
+                          className={`rounded-md border-l-4 px-2 py-1 text-[11px] ${editable ? 'cursor-grab active:cursor-grabbing' : ''} ${draggingId === b.id ? 'opacity-40' : ''} ${b.status === 'draft' ? 'bg-amber-50 dark:bg-amber-900/10 border-dashed' : 'bg-gray-50 dark:bg-gray-700/40'}`}
                           style={{ borderLeftColor: color }}>
                           <div className="font-medium text-gray-800 dark:text-gray-100 leading-tight">{b.course_name || b.title || '(untitled)'}</div>
                           <div className="text-gray-500 dark:text-gray-400">{fmtTime(b.start_time)}–{fmtTime(b.end_time)}</div>
