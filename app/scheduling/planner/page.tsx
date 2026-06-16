@@ -2343,6 +2343,7 @@ function SemesterPlannerPage() {
   const [error, setError] = useState<string | null>(null);
   const [hiddenPrograms, setHiddenPrograms] = useState<Set<string>>(new Set());
   const [roomFilter, setRoomFilter] = useState<string>('');
+  const [cohortFilter, setCohortFilter] = useState<string>(''); // scope calendar to one cohort (else all cohorts on a date mix together)
   const [selectedInstructor, setSelectedInstructor] = useState<string>('');
   const [editingBlock, setEditingBlock] = useState<(Partial<PmiScheduleBlock> & { day_of_week: number }) | null>(null);
   const [showWizard, setShowWizard] = useState(false);
@@ -2561,8 +2562,24 @@ function SemesterPlannerPage() {
   const visibleBlocks = safeArray(blocks).filter(b => {
     if (b.program_schedule_id && hiddenPrograms.has(b.program_schedule_id)) return false;
     if (roomFilter && b.room_id !== roomFilter) return false;
+    // Cohort scope: when set, show only this cohort's blocks (resolved via the
+    // block's program_schedule → cohort). Stops other cohorts' same-date blocks
+    // (e.g. another cohort's lecture) from cluttering the view.
+    if (cohortFilter) {
+      const ps = b.program_schedule_id ? programMap.get(b.program_schedule_id) : null;
+      if (ps?.cohort?.id !== cohortFilter) return false;
+    }
     return true;
   });
+
+  // Distinct cohorts present in the loaded program schedules, for the filter.
+  const cohortOptions = Array.from(
+    new Map(
+      safeArray(programs)
+        .filter(p => p.cohort?.id)
+        .map(p => [p.cohort!.id, p])
+    ).values()
+  );
 
   // Group blocks by date for week view
   const blocksByDate = new Map<string, PmiScheduleBlock[]>();
@@ -2875,6 +2892,23 @@ function SemesterPlannerPage() {
                 <option value="">All Rooms</option>
                 {safeArray(rooms).map(r => (
                   <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Cohort filter — scope the calendar to one cohort */}
+            <div className="relative">
+              <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+              <select
+                value={cohortFilter}
+                onChange={(e) => setCohortFilter(e.target.value)}
+                className="pl-8 pr-3 py-1.5 text-sm border border-gray-200 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+              >
+                <option value="">All Cohorts</option>
+                {cohortOptions.map(p => (
+                  <option key={p.cohort!.id} value={p.cohort!.id}>
+                    {getProgramLabel(p)}
+                  </option>
                 ))}
               </select>
             </div>

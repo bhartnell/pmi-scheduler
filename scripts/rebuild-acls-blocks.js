@@ -52,14 +52,21 @@ const DAY1 = [
   ['16:30','17:00','lab','ACLS LAB · Brady & Tachy Scenario','All instructors',true],
   ['17:00','17:30','meeting','ACLS · Debrief — End of Day 1','',false],
 ];
+// Day 2 afternoon is intentionally FLEXIBLE: lunch defaults to noon; the
+// 1300-1400 block is a "Megacode Practice (if needed)" buffer the group often
+// SKIPS (front-loaded prep) and goes straight to testing — so it's labeled as
+// optional, not pinned. The written exam is the AHA ONLINE exam taken on
+// students' own computers via the AHA site (external — our system doesn't
+// administer it).
 const DAY2 = [
   ['08:30','09:00','admin','ACLS · Roster & Review','',false],
   ['09:00','09:30','lab','ACLS LAB · L16 Megacode Practice — Intro & Demo','',true],
   ['09:30','10:00','other','ACLS · Break','All instructors',false],
-  ['10:00','13:00','lab','ACLS LAB · L16 Megacode Practice (Cases 16/17/26/27 → 48-55)','All instructors',true],
-  ['13:00','14:00','other','ACLS · Lunch','',false],
+  ['10:00','12:00','lab','ACLS LAB · L16 Megacode Practice (Cases 16/17/26/27 → 48-55)','All instructors',true],
+  ['12:00','13:00','other','ACLS · Lunch','',false],
+  ['13:00','14:00','lab','ACLS LAB · Megacode Practice (if needed) — flexible buffer','All instructors',true],
   ['14:00','15:00','lab','ACLS LAB · Megacode Testing (Megacode 2/4/9/10)','All instructors',true],
-  ['15:00','16:00','exam','ACLS · Written Exam','',false],
+  ['15:00','16:00','exam','ACLS · AHA Online Written Exam (external — student computers)','',false],
   ['16:00','17:00','other','ACLS · Remediation','',false],
   ['17:00','17:30','meeting','ACLS · End of Day 2','',false],
 ];
@@ -95,7 +102,7 @@ async function main(){
     // backup existing G14 ACLS blocks
     const existing=(await client.query(`SELECT * FROM pmi_schedule_blocks WHERE date IN($1,$2) AND program_schedule_id=$3`,[D1,D2,G14_PS])).rows;
     fs.mkdirSync(path.join(__dirname,'..','data','acls','backups'),{recursive:true});
-    fs.writeFileSync(path.join(__dirname,'..','data','acls','backups','g14_acls_blocks_pre_rebuild_20260615.json'),JSON.stringify(existing,null,2));
+    fs.writeFileSync(path.join(__dirname,'..','data','acls','backups','g14_acls_blocks_pre_rebuild2_20260615.json'),JSON.stringify(existing,null,2));
     console.log(`Backed up ${existing.length} existing G14 ACLS blocks.`);
     // delete them
     const del=await client.query(`DELETE FROM pmi_schedule_blocks WHERE date IN($1,$2) AND program_schedule_id=$3`,[D1,D2,G14_PS]);
