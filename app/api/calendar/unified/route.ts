@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 
 export interface CalendarEvent {
   id: string;
-  source: 'planner' | 'lab_day' | 'lvfr' | 'clinical' | 'shift' | 'meeting' | 'ride_along';
+  source: 'planner' | 'lab_day' | 'lvfr' | 'clinical' | 'shift' | 'meeting' | 'ride_along' | 'exam' | 'volunteer';
   title: string;
   date: string;
   start_time: string | null;
@@ -16,7 +16,7 @@ export interface CalendarEvent {
   room?: string;
   linked_id?: string;
   linked_url?: string;
-  event_type: 'class' | 'lab' | 'exam' | 'clinical' | 'shift' | 'meeting' | 'other';
+  event_type: 'class' | 'lab' | 'exam' | 'clinical' | 'shift' | 'meeting' | 'volunteer' | 'other';
   status?: 'draft' | 'published' | 'cancelled';
   content_notes?: string;
   linked_lab_day_id?: string;
@@ -30,6 +30,7 @@ const PROGRAM_COLORS: Record<string, string> = {
   lvfr: '#F97316',
   clinical: '#8B5CF6',
   exam: '#EF4444',
+  volunteer: '#14B8A6',
   other: '#6B7280',
 };
 
@@ -46,6 +47,7 @@ function mapProgramAbbr(abbr: string | undefined | null): CalendarEvent['program
 function getColor(program: CalendarEvent['program'], eventType: CalendarEvent['event_type']): string {
   if (eventType === 'clinical') return PROGRAM_COLORS.clinical;
   if (eventType === 'exam') return PROGRAM_COLORS.exam;
+  if (eventType === 'volunteer') return PROGRAM_COLORS.volunteer;
   return PROGRAM_COLORS[program || 'other'] || PROGRAM_COLORS.other;
 }
 
@@ -59,7 +61,7 @@ export async function GET(request: NextRequest) {
 
     const startDate = searchParams.get('start_date') || searchParams.get('start');
     const endDate = searchParams.get('end_date') || searchParams.get('end');
-    const includeParam = searchParams.get('include') || 'classes,labs,clinical,lvfr,shifts,ride_along';
+    const includeParam = searchParams.get('include') || 'classes,labs,clinical,lvfr,shifts,ride_along,exams,volunteers';
     const include = new Set(includeParam.split(',').map(s => s.trim()));
     const programsParam = searchParams.get('programs');
     const programFilter = programsParam ? new Set(programsParam.split(',').map(s => s.trim())) : null;
@@ -539,6 +541,98 @@ export async function GET(request: NextRequest) {
         }
       } catch (err) {
         console.error('Error fetching ride-along shifts:', err);
+      }
+    }
+
+    // 7. Exam sessions (self-scheduler written exam). Own store, previously
+    //    absent from every calendar — so an exam day showed nothing.
+    if (include.has('exams')) {
+      try {
+        const { data: exams } = await supabase
+          .from('exam_sessions')
+          .select('id, date, start_time, end_time, total_spots, status')
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .order('date')
+          .order('start_time');
+
+        if (exams) {
+          for (const e of exams) {
+            if (!e.date) continue;
+            // exam sessions aren't cohort-tagged; honor a cohort filter by
+            // hiding them only when the caller scoped to a specific cohort.
+            if (cohortId) continue;
+            if (programFilter && !programFilter.has('other')) continue;
+
+            events.push({
+              id: `exam-${e.id}`,
+              source: 'exam',
+              title: 'Written Exam (self-scheduled)',
+              date: e.date,
+              start_time: e.start_time ?? null,
+              end_time: e.end_time ?? null,
+              program: 'other',
+              color: getColor('other', 'exam'),
+              linked_id: e.id,
+              linked_url: '/exam-scheduling',
+              event_type: 'exam',
+              metadata: {
+                total_spots: e.total_spots,
+                session_status: e.status,
+              },
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching exam sessions:', err);
+      }
+    }
+
+    // 8. Volunteer events (recruitment for NREMT testing / lab days / other).
+    //    Own store, previously absent from every calendar.
+    if (include.has('volunteers')) {
+      try {
+        const { data: vols } = await supabase
+          .from('volunteer_events')
+          .select('id, name, date, start_time, end_time, event_type, description, location, max_volunteers, is_active, linked_lab_day_id')
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .eq('is_active', true)
+          .order('date')
+          .order('start_time');
+
+        if (vols) {
+          for (const v of vols) {
+            if (!v.date) continue;
+            if (cohortId) continue; // volunteer events aren't cohort-scoped
+            if (programFilter && !programFilter.has('other')) continue;
+
+            const vType = (v.event_type as string) || 'other';
+            const label = vType === 'nremt_testing' ? 'NREMT Testing' : vType === 'lab_day' ? 'Lab Day' : 'Event';
+
+            events.push({
+              id: `volunteer-${v.id}`,
+              source: 'volunteer',
+              title: `Volunteers: ${(v.name as string) || v.description || label}`,
+              date: v.date,
+              start_time: v.start_time ?? null,
+              end_time: v.end_time ?? null,
+              program: 'other',
+              color: getColor('other', 'volunteer'),
+              room: (v.location as string) || undefined,
+              linked_id: v.id,
+              linked_url: '/admin/volunteer-events',
+              event_type: 'volunteer',
+              linked_lab_day_id: (v.linked_lab_day_id as string) || undefined,
+              metadata: {
+                volunteer_event_type: vType,
+                max_volunteers: v.max_volunteers,
+              },
+            });
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching volunteer events:', err);
       }
     }
 
