@@ -557,6 +557,45 @@ export async function notifyAdminsNewPendingUser(
 }
 
 /**
+ * Notify admins when an @my.pmi.edu user is auto-provisioned as `student` on
+ * first login but matched NO roster enrollment (the A1 "student floor + notify"
+ * path). The user is NOT blocked — they get the restricted student role — but
+ * admins should review and assign the right cohort/role.
+ */
+export async function notifyAdminsUnmatchedStudentSignup(
+  newUserInfo: {
+    userId: string;
+    name: string;
+    email: string;
+  }
+): Promise<void> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data: admins } = await supabase
+      .from('lab_users')
+      .select('email')
+      .in('role', ['admin', 'superadmin'])
+      .eq('is_active', true);
+
+    if (!admins || admins.length === 0) return;
+
+    const notifications = admins.map(admin => ({
+      userEmail: admin.email,
+      title: 'Student sign-in needs roster review',
+      message: `${newUserInfo.name} (${newUserInfo.email}) signed in with a my.pmi.edu address but matched no roster enrollment. Auto-set to student — review and assign the correct cohort/role.`,
+      type: 'general' as NotificationType,
+      linkUrl: '/admin/users',
+      referenceType: 'lab_user',
+      referenceId: newUserInfo.userId,
+    }));
+
+    await createBulkNotifications(notifications);
+  } catch (error) {
+    console.error('Error notifying admins of unmatched student signup:', error);
+  }
+}
+
+/**
  * Get eligible recipients for shift signup notifications.
  *
  * Only includes users who are:

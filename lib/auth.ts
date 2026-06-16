@@ -2,7 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import AzureADProvider from "next-auth/providers/azure-ad";
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { notifyAdminsNewPendingUser, insertDefaultNotificationPreferences } from '@/lib/notifications';
+import { notifyAdminsNewPendingUser, notifyAdminsUnmatchedStudentSignup, insertDefaultNotificationPreferences } from '@/lib/notifications';
 
 // PMI-internal domains (Google OAuth)
 const PMI_DOMAINS = ['pmi.edu', 'my.pmi.edu'];
@@ -174,23 +174,59 @@ export const authOptions: NextAuthOptions = {
           return true;
         }
 
-        // If user doesn't exist, create them
+        // If user doesn't exist, create them.
+        //
+        // FIRST-PROVISION ONLY: this block runs solely when there is no
+        // lab_users row yet. Subsequent logins short-circuit above, so an
+        // already-assigned role is NEVER auto-changed (e.g. a my.pmi.edu
+        // instructor candidate manually set to volunteer_instructor stays put).
+        //
+        // Role-default rule (decision A1 + B1):
+        //   - @my.pmi.edu (student domain) -> ALWAYS default to the restricted
+        //     `student` role (safe to auto-grant; one-directional). We also try
+        //     a roster-enrollment match (same students.email match the exam
+        //     signup gate uses). On a match we set primary_cohort_id (B1); on
+        //     NO match we still grant student (A1 floor) but notify admins to
+        //     review/assign the right cohort.
+        //   - @pmi.edu (instructors) -> `pending`, admin notified. NEVER
+        //     auto-elevated to any staff/faculty role.
         if (!existingUser) {
-          // Students (@my.pmi.edu) get auto-approved with 'student' role
-          // Instructors (@pmi.edu) get 'pending' role and require admin approval
           const isStudent = isStudentEmail;
           const newRole = isStudent ? 'student' : 'pending';
 
+          // Roster-enrollment match (students.email, case-insensitive) — mirrors
+          // getRosterStudent() in lib/exam-scheduling.ts. Kept inline so the auth
+          // module doesn't take on the exam module's dependencies.
+          let rosterCohortId: string | null = null;
+          let rosterMatched = false;
+          if (isStudent) {
+            const { data: rosterRow } = await supabase
+              .from('students')
+              .select('cohort_id')
+              .ilike('email', email)
+              .limit(1)
+              .maybeSingle();
+            if (rosterRow) {
+              rosterMatched = true;
+              rosterCohortId = rosterRow.cohort_id ?? null;
+            }
+          }
+
+          const insertRow: Record<string, unknown> = {
+            email,
+            name: user.name || email.split('@')[0],
+            role: newRole,
+            is_active: true,
+            auth_provider: 'google',
+            approved_at: isStudent ? new Date().toISOString() : null,
+          };
+          if (isStudent && rosterCohortId) {
+            insertRow.primary_cohort_id = rosterCohortId; // B1
+          }
+
           const { data: newUser, error: insertError } = await supabase
             .from('lab_users')
-            .insert({
-              email,
-              name: user.name || email.split('@')[0],
-              role: newRole,
-              is_active: true,
-              auth_provider: 'google',
-              approved_at: isStudent ? new Date().toISOString() : null,
-            })
+            .insert(insertRow)
             .select('id, name, email, role')
             .single();
 
@@ -201,11 +237,20 @@ export const authOptions: NextAuthOptions = {
               .catch(err => console.error('Failed to insert default notification prefs:', err));
 
             if (!isStudent) {
+              // @pmi.edu instructor — pending, needs admin role assignment.
               notifyAdminsNewPendingUser({
                 userId: newUser.id,
                 name: newUser.name,
                 email: newUser.email,
               }).catch(err => console.error('Failed to notify admins of new user:', err));
+            } else if (!rosterMatched) {
+              // A1: student-domain login with no roster match — granted student
+              // (floor) but flagged for admin review.
+              notifyAdminsUnmatchedStudentSignup({
+                userId: newUser.id,
+                name: newUser.name,
+                email: newUser.email,
+              }).catch(err => console.error('Failed to notify admins of unmatched student:', err));
             }
           }
         }
