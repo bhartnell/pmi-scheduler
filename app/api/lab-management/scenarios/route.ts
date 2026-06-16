@@ -16,6 +16,13 @@ export async function GET(request: NextRequest) {
   const program = searchParams.get('program');
   const search = searchParams.get('search');
   const activeOnly = searchParams.get('activeOnly') !== 'false';
+  // Cert-tagged scenarios (cert_course set — ACLS/PALS megacode practice &
+  // testing) are DEFAULT-EXCLUDED from the normal lab picker so they don't
+  // clutter/leak into ILS/EMT lab building. Categorization, not lockout: the
+  // content stays in the bank and the advanced-cert grader still sees it via
+  // /api/adv-cert/scenarios. Pass ?includeCert=true to opt in (e.g. when
+  // building an actual advanced-cert day from this surface in future).
+  const includeCert = searchParams.get('includeCert') === 'true';
   // Bumped 50→500 default + 100→1000 hard cap so the station-edit
   // scenario picker (which calls this without ?limit) can see every
   // active scenario. Previously the picker silently dropped any
@@ -29,12 +36,18 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('scenarios')
-      .select('id, title, chief_complaint, difficulty, category, subcategory, applicable_programs, estimated_duration, is_active, created_at, updated_at', { count: 'exact' })
+      .select('id, title, chief_complaint, difficulty, category, subcategory, applicable_programs, estimated_duration, is_active, cert_course, cert_tier, created_at, updated_at', { count: 'exact' })
       .order('title')
       .range(offset, offset + limit - 1);
 
     if (activeOnly) {
       query = query.eq('is_active', true);
+    }
+
+    if (!includeCert) {
+      // Hide advanced-cert content (ACLS/PALS megacode practice & testing) from
+      // the normal lab picker. cert_course is only set on cert-tagged scenarios.
+      query = query.is('cert_course', null);
     }
 
     if (category) {
