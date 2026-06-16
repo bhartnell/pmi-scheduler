@@ -47,3 +47,6 @@ nul
 
 # LVFR runsheet rebuild — local DB backups (recovery snapshots, not source)
 data/lvfr-aemt/backups/
+
+# ACLS day-builder — local DB backups (pre-replace snapshots, not source)
+data/acls/backups/

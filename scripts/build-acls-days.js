@@ -219,16 +219,19 @@ async function main() {
       let sortOrder = 0;
       for (const b of (skipBlocks ? [] : blocks)) {
         sortOrder++;
-        const isStationBlock = stationBlocks.includes(b);
-        if (isStationBlock) continue; // already represented as lab_day stations
-        // type: teaching -> mapped; practical-without-stations -> 'lab'
+        // Every block gets a calendar block. Practical blocks (incl. the
+        // scenario sessions whose stations already live on the lab_day) are
+        // 'lab' type and link to the lab_day so the calendar shows the session.
         const blockType = TEACHING_TYPES[b.type] || (PRACTICAL_TYPES.has(b.type) ? 'lab' : 'other');
         if (!semesterId) { plan.push(`SKIP block "${b.title}" (no semester_id for ${date})`); continue; }
         const instrId = await resolveInstructorId(client, b.instructor, instrCache);
         if (b.instructor && !instrId && !GENERIC_INSTRUCTORS.has((b.instructor || '').toLowerCase())) stats.instrUnresolved.add(b.instructor);
         const note = `ACLS Day ${day.day} — ${b.lesson_ref || ''}`.trim();
+        // Scope match to THIS cohort's program_schedule so we never touch
+        // another cohort's block that happens to share date/time/title.
         const ex = (await client.query(
-          `SELECT id FROM pmi_schedule_blocks WHERE date=$1 AND start_time=$2 AND title=$3`, [date, b.start, b.title]
+          `SELECT id FROM pmi_schedule_blocks WHERE date=$1 AND start_time=$2 AND title=$3 AND program_schedule_id IS NOT DISTINCT FROM $4`,
+          [date, b.start, b.title, programScheduleId]
         )).rows[0];
         if (ex) {
           await client.query(
