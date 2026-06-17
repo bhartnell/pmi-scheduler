@@ -569,6 +569,21 @@ export default function LabDayPage() {
           </div>
         )}
 
+        {/* Lab section indicator — shown only for section 2+ so a coordinator
+            knows this is one of several parallel lab sections that share the
+            date + cohort (multi-section labs, Stage 2). Section 1 reads as the
+            normal single day with no extra chrome. */}
+        {(labDay.section_number ?? 1) > 1 && (
+          <div className="flex items-center gap-2 px-4 py-2 mb-4 rounded-lg font-semibold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-800 dark:text-indigo-200 border border-indigo-300 dark:border-indigo-800 print:hidden">
+            <Layers className="w-5 h-5 flex-shrink-0" />
+            <span className="uppercase tracking-wide text-xs">
+              {labDay.section_label || `Section ${labDay.section_number}`}
+            </span>
+            <span className="text-gray-400 dark:text-gray-600">·</span>
+            <span className="text-sm font-normal">one of several lab sections this day</span>
+          </div>
+        )}
+
         {/* Checkoff-day banner. Renders when 2+ stations share the same
             skill_sheet_id (the same heuristic the coordinator API uses).
             Links straight to the mobile coordinator view so Ryan can tap

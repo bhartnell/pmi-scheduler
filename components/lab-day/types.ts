@@ -22,6 +22,9 @@ export interface LabDay {
     };
   };
   is_nremt_testing?: boolean;
+  /** Multi-section labs per (date, cohort). Defaults to 1; section 2+ shows a badge. */
+  section_number?: number | null;
+  section_label?: string | null;
   /** Advanced-cert (ACLS/PALS) testing-day flag + course tag (adv_cert module). */
   is_adv_cert_testing?: boolean;
   cert_course?: 'acls' | 'pals' | null;

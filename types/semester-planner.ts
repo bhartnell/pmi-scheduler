@@ -75,6 +75,7 @@ export interface PmiScheduleBlock {
   chapter_references: string[] | null;
   status: 'draft' | 'published' | 'cancelled';
   linked_lab_day_id: string | null;    // links this block to a lab_days record
+  linked_section_number?: number | null; // which lab_days.section_number it targets (NULL = section 1)
   color: string | null;                // block-level color override
   is_recurring: boolean;
   specific_date: string | null;

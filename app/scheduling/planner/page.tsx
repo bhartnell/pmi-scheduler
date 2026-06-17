@@ -613,15 +613,32 @@ function BlockEditModal({
 
   // Look up lab day when block has a date and is type 'lab'
   useEffect(() => {
+    // If the block already carries an explicit FK link, trust it — don't do a
+    // date lookup that could pick a wrong/arbitrary section when several exist.
+    if (block.linked_lab_day?.id) {
+      setLabDayLink({ id: block.linked_lab_day.id, title: block.linked_lab_day.title, date: block.linked_lab_day.date });
+      return;
+    }
     const blockDate = formData.date || block.date;
     if (!blockDate) return;
 
+    // Scope by cohort (multiple cohorts/sections can share a date) and prefer
+    // the section this block targets.
+    const cohortId = block.program_schedule?.cohort?.id;
+    const targetSection = block.linked_section_number ?? 1;
+
     setLabDayLoading(true);
-    fetch(`/api/lab-management/lab-days?date=${blockDate}`)
+    const url = cohortId
+      ? `/api/lab-management/lab-days?date=${blockDate}&cohortId=${cohortId}`
+      : `/api/lab-management/lab-days?date=${blockDate}`;
+    fetch(url)
       .then(res => res.json())
       .then(data => {
         if (data.success && data.labDays && data.labDays.length > 0) {
-          const ld = data.labDays[0];
+          const list = [...data.labDays].sort(
+            (a, b) => (a.section_number ?? 1) - (b.section_number ?? 1)
+          );
+          const ld = list.find(d => (d.section_number ?? 1) === targetSection) ?? list[0];
           setLabDayLink({ id: ld.id, title: ld.title, date: ld.date });
         } else {
           setLabDayLink(null);
@@ -629,7 +646,7 @@ function BlockEditModal({
       })
       .catch(() => setLabDayLink(null))
       .finally(() => setLabDayLoading(false));
-  }, [formData.date, block.date]);
+  }, [formData.date, block.date, block.linked_lab_day, block.program_schedule, block.linked_section_number]);
 
   useEffect(() => {
     const blockInstructors = safeArray(block.instructors);

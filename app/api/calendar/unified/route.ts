@@ -86,8 +86,14 @@ export async function GET(request: NextRequest) {
     //      lab_day event would just be a redundant tile.
     const linkedLabDayIds = new Set<string>();
     const labBlockDateCohortKeys = new Set<string>();
-    const dateCohortKey = (date: string, cohortId: string | null | undefined) =>
-      `${date}|${cohortId ?? ''}`;
+    // Section-aware dedup key: a lab block only suppresses the lab_day SECTION
+    // it represents (block target section = COALESCE(linked_section_number, 1)),
+    // so additional sections on the same (date, cohort) stay visible.
+    const dateCohortSectionKey = (
+      date: string,
+      cohortId: string | null | undefined,
+      section: number | null | undefined,
+    ) => `${date}|${cohortId ?? ''}|${section ?? 1}`;
 
     // 1. Schedule blocks (classes/exams) from pmi_schedule_blocks
     if (include.has('classes')) {
@@ -96,7 +102,7 @@ export async function GET(request: NextRequest) {
           .from('pmi_schedule_blocks')
           .select(`
             id, date, start_time, end_time, block_type, title, course_name, color,
-            content_notes, status, linked_lab_day_id,
+            content_notes, status, linked_lab_day_id, linked_section_number,
             room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(id, name),
             program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
               id, label,
@@ -168,7 +174,10 @@ export async function GET(request: NextRequest) {
               blockType === 'lab' ||
               titleLower.includes('lab')
             ) {
-              labBlockDateCohortKeys.add(dateCohortKey(block.date, cohort?.id));
+              // Only suppresses the matching SECTION (block linked_section_number,
+              // NULL = section 1) so extra sections that day remain visible.
+              const blockSection = (block.linked_section_number as number | null) ?? 1;
+              labBlockDateCohortKeys.add(dateCohortSectionKey(block.date, cohort?.id, blockSection));
             }
 
             events.push({
@@ -207,7 +216,7 @@ export async function GET(request: NextRequest) {
         let query = supabase
           .from('lab_days')
           .select(`
-            id, date, title, start_time, end_time,
+            id, date, title, start_time, end_time, section_number, section_label,
             cohort:cohorts(
               id, cohort_number,
               program:programs(id, name, abbreviation)
@@ -235,7 +244,9 @@ export async function GET(request: NextRequest) {
             if (linkedLabDayIds.has(ld.id)) continue;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const ldCohortId = (ld.cohort as any)?.id;
-            if (labBlockDateCohortKeys.has(dateCohortKey(ld.date, ldCohortId))) continue;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const ldSection = ((ld as any).section_number as number | null) ?? 1;
+            if (labBlockDateCohortKeys.has(dateCohortSectionKey(ld.date, ldCohortId, ldSection))) continue;
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cohort = ld.cohort as any;
@@ -252,10 +263,18 @@ export async function GET(request: NextRequest) {
 
             if (instructorId && !instructorNames.length) continue;
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const ldSec = ((ld as any).section_number as number | null) ?? 1;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const ldSecLabel = (ld as any).section_label as string | null;
+            // Suffix a section tag only for section 2+ so single-section days
+            // (the overwhelming majority) read unchanged.
+            const sectionSuffix = ldSec > 1 ? ` · ${ldSecLabel || `Section ${ldSec}`}` : '';
+
             events.push({
               id: `lab-${ld.id}`,
               source: 'lab_day',
-              title: ld.title || `Lab Day - C${cohort?.cohort_number || '?'}`,
+              title: (ld.title || `Lab Day - C${cohort?.cohort_number || '?'}`) + sectionSuffix,
               date: ld.date,
               start_time: ld.start_time ?? null,
               end_time: ld.end_time ?? null,
@@ -268,6 +287,8 @@ export async function GET(request: NextRequest) {
               event_type: 'lab',
               metadata: {
                 station_count: stations.length,
+                section_number: ldSec,
+                section_label: ldSecLabel || undefined,
               },
             });
           }

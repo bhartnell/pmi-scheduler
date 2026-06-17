@@ -46,6 +46,8 @@ interface LabDayRow {
   title: string | null;
   start_time: string | null;
   end_time: string | null;
+  section_number: number | null;
+  section_label: string | null;
   cohort: {
     id: string;
     cohort_number: number | null;
@@ -64,6 +66,7 @@ interface BlockRow {
   status: string | null;
   content_notes: string | null;
   linked_lab_day_id: string | null;
+  linked_section_number: number | null;
   room: { name: string | null } | null;
   program_schedule: {
     cohort: {
@@ -202,7 +205,7 @@ export async function GET(request: NextRequest) {
       .from('pmi_schedule_blocks')
       .select(`
         id, date, start_time, end_time, title, course_name, block_type, status,
-        content_notes, linked_lab_day_id,
+        content_notes, linked_lab_day_id, linked_section_number,
         room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(name),
         program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
           cohort:cohorts!pmi_program_schedules_cohort_id_fkey(
@@ -222,7 +225,7 @@ export async function GET(request: NextRequest) {
     const { data: labsData, error: labsErr } = await supabase
       .from('lab_days')
       .select(`
-        id, date, title, start_time, end_time,
+        id, date, title, start_time, end_time, section_number, section_label,
         cohort:cohorts!inner(
           id, cohort_number, is_active, is_archived,
           program:programs(abbreviation)
@@ -240,12 +243,15 @@ export async function GET(request: NextRequest) {
     //         lab-typed schedule block on the same (date, cohort) ──
     const linkedLabDayIds = new Set<string>();
     const labBlockKeys = new Set<string>();
-    const key = (date: string, cohortId: string | null | undefined) => `${date}|${cohortId ?? ''}`;
+    // Section-aware: a lab block only suppresses its own section (block section
+    // = COALESCE(linked_section_number, 1)); extra sections stay in the feed.
+    const key = (date: string, cohortId: string | null | undefined, section: number | null | undefined) =>
+      `${date}|${cohortId ?? ''}|${section ?? 1}`;
     for (const b of blocks) {
       if (b.linked_lab_day_id) linkedLabDayIds.add(b.linked_lab_day_id);
       const titleLower = (b.title || '').toLowerCase();
       if (b.block_type === 'lab' || titleLower.includes('lab')) {
-        labBlockKeys.add(key(b.date, b.program_schedule?.cohort?.id));
+        labBlockKeys.add(key(b.date, b.program_schedule?.cohort?.id, b.linked_section_number ?? 1));
       }
     }
 
@@ -297,9 +303,10 @@ export async function GET(request: NextRequest) {
     for (const ld of labs) {
       if (!ld.date) continue;
       if (linkedLabDayIds.has(ld.id)) continue;
-      if (labBlockKeys.has(key(ld.date, ld.cohort?.id))) continue;
+      if (labBlockKeys.has(key(ld.date, ld.cohort?.id, ld.section_number ?? 1))) continue;
       const cl = cohortLabel(ld.cohort);
-      const base = ld.title?.trim() || 'Lab Day';
+      const sectionSuffix = (ld.section_number ?? 1) > 1 ? ` · ${ld.section_label || `Section ${ld.section_number}`}` : '';
+      const base = (ld.title?.trim() || 'Lab Day') + sectionSuffix;
       const title = cl ? `${base} — ${cl}` : base;
       icsLines.push(...buildVEVENT({
         uid: `lab-${ld.id}`,

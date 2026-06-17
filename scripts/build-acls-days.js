@@ -161,8 +161,11 @@ async function main() {
         const isTest = practical.some((b) => !!b.is_adv_cert_testing);
         const starts = practical.map((b) => b.start).sort();
         const ends = practical.map((b) => b.end).sort();
+        // Section-aware (Stage 2): this builder emits ONE lab_day per date =
+        // section 1. Scope explicitly to section_number=1 so a re-run can't grab
+        // a manually-added section 2+, and set it explicitly on insert.
         const ex = (await client.query(
-          `SELECT id FROM lab_days WHERE cohort_id=$1 AND date=$2`, [cohortId, date]
+          `SELECT id FROM lab_days WHERE cohort_id=$1 AND date=$2 AND section_number=1`, [cohortId, date]
         )).rows[0];
         if (ex) {
           labDayId = ex.id;
@@ -173,8 +176,8 @@ async function main() {
           stats.labDaysUpd++;
         } else {
           const ins = await client.query(
-            `INSERT INTO lab_days (cohort_id, date, title, semester, start_time, end_time, cert_course, is_adv_cert_testing, notes)
-             VALUES ($1,$2,$3,$4,$5,$6,'acls',$7,$8) RETURNING id`,
+            `INSERT INTO lab_days (cohort_id, date, title, semester, start_time, end_time, cert_course, is_adv_cert_testing, notes, section_number)
+             VALUES ($1,$2,$3,$4,$5,$6,'acls',$7,$8,1) RETURNING id`,
             [cohortId, date, dayTitle, semester, starts[0], ends[ends.length - 1], isTest, `ACLS course Day ${day.day}`]
           );
           labDayId = ins.rows[0].id;

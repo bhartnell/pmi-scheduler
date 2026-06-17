@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       .from('lab_days')
       .select(`
         id, date, cohort_id, title, start_time, end_time, semester, week_number, day_number, num_rotations, rotation_duration, notes,
-        priority_flag, priority_reason, is_nremt_testing,
+        priority_flag, priority_reason, is_nremt_testing, section_number, section_label,
         cohort:cohorts(
           id,
           cohort_number,
@@ -178,6 +178,26 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { stations, ...labDayData } = body;
 
+    // Section number (multi-section labs per cohort per date). If the caller
+    // doesn't specify one, auto-assign the next free section for this
+    // (date, cohort): 1 when none exist, else max+1. This lets "add another
+    // lab on the same day" just work without colliding on the
+    // (date, cohort_id, section_number) unique. An explicit section_number
+    // (e.g. re-creating section 2) is respected as-is.
+    let sectionNumber = Number(labDayData.section_number) || null;
+    if (!sectionNumber && labDayData.date && labDayData.cohort_id) {
+      const { data: existingSections } = await supabase
+        .from('lab_days')
+        .select('section_number')
+        .eq('date', labDayData.date)
+        .eq('cohort_id', labDayData.cohort_id)
+        .order('section_number', { ascending: false })
+        .limit(1);
+      const maxSection = existingSections?.[0]?.section_number || 0;
+      sectionNumber = maxSection + 1;
+    }
+    if (!sectionNumber) sectionNumber = 1;
+
     // Create lab day — sanitize UUID fields so empty strings become null
     const insertData: Record<string, unknown> = {
       date: labDayData.date,
@@ -193,6 +213,8 @@ export async function POST(request: NextRequest) {
       notes: labDayData.notes || null,
       source_template_id: labDayData.source_template_id || null,
       is_nremt_testing: labDayData.is_nremt_testing || false,
+      section_number: sectionNumber,
+      section_label: labDayData.section_label || null,
     };
 
     const { data: labDay, error: labDayError } = await supabase

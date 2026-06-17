@@ -127,6 +127,8 @@ interface LabDay {
   priority_flag?: 'normal' | 'high' | 'critical';
   priority_reason?: string | null;
   is_nremt_testing?: boolean;
+  section_number?: number | null;
+  section_label?: string | null;
 }
 
 interface DailyNote {
@@ -1117,6 +1119,11 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                                 {labDay.priority_flag === 'critical' ? 'Critical' : 'High priority'}
                               </span>
                             )}
+                            {(labDay.section_number ?? 1) > 1 && (
+                              <span className="ml-2 px-1.5 py-0.5 text-[10px] font-semibold rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 align-middle">
+                                {labDay.section_label || `Section ${labDay.section_number}`}
+                              </span>
+                            )}
                           </h4>
                           <p className="text-sm text-gray-600 dark:text-gray-400">
                             {labDay.title || (labDay.week_number && labDay.day_number
@@ -1380,6 +1387,13 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-200 dark:bg-blue-800 text-blue-800 dark:text-blue-200 mb-1">
                             {labDay.cohort.program.abbreviation} G{formatCohortNumber(labDay.cohort.cohort_number)}
                           </span>
+
+                          {/* Section badge (only for section 2+) */}
+                          {(labDay.section_number ?? 1) > 1 && (
+                            <span className="inline-block px-1 py-0.5 text-[9px] font-semibold rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 leading-tight">
+                              {labDay.section_label || `Section ${labDay.section_number}`}
+                            </span>
+                          )}
 
                           {/* Title / week-day info */}
                           {labDay.title && (
