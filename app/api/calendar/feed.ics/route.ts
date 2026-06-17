@@ -312,6 +312,93 @@ export async function GET(request: NextRequest) {
       labsEmitted++;
     }
 
+    // ── Additional unified sources (Phase 4: feed matches the in-app
+    //    unified calendar). Kept inline per this route's self-contained
+    //    pattern; a future cleanup can consolidate all readers onto one
+    //    shared aggregation lib (see CALENDAR_ARCHITECTURE.md). ──
+    let extraEmitted = 0;
+    const cohortAbbrLabel = (c: { cohort_number?: number | null; program?: { abbreviation?: string | null } | null } | null | undefined) =>
+      c ? `${c.program?.abbreviation ?? ''} G${c.cohort_number ?? '?'}`.trim() : '';
+
+    // LVFR plan placements (published instances only)
+    try {
+      const { data: lvfr } = await supabase
+        .from('lvfr_aemt_plan_placements')
+        .select(`id, date, start_time, end_time, custom_title,
+          content_block:lvfr_aemt_content_blocks!lvfr_aemt_plan_placements_content_block_id_fkey(name),
+          instance:lvfr_aemt_plan_instances!lvfr_aemt_plan_placements_instance_id_fkey(status)`)
+        .gte('date', startDate).lte('date', endDate).order('date');
+      for (const p of (lvfr as unknown as { id: string; date: string; start_time: string | null; end_time: string | null; custom_title: string | null; content_block: { name: string | null } | null; instance: { status: string | null } | null }[]) || []) {
+        if (!p.date || p.instance?.status !== 'published') continue;
+        icsLines.push(...buildVEVENT({ uid: `lvfr-${p.id}`, title: `${p.custom_title || p.content_block?.name || 'LVFR Block'} — LVFR`, date: p.date, start_time: p.start_time, end_time: p.end_time }));
+        extraEmitted++;
+      }
+    } catch (e) { console.error('[feed.ics] lvfr', e); }
+
+    // Clinical site visits
+    try {
+      const { data: visits } = await supabase
+        .from('clinical_site_visits')
+        .select(`id, visit_date, start_time, end_time, site:clinical_sites(name, abbreviation), cohort:cohorts(cohort_number, program:programs(abbreviation))`)
+        .gte('visit_date', startDate).lte('visit_date', endDate).order('visit_date');
+      for (const v of (visits as unknown as { id: string; visit_date: string; start_time: string | null; end_time: string | null; site: { name: string | null; abbreviation: string | null } | null; cohort: { cohort_number: number | null; program: { abbreviation: string | null } | null } | null }[]) || []) {
+        if (!v.visit_date) continue;
+        const cl = cohortAbbrLabel(v.cohort);
+        icsLines.push(...buildVEVENT({ uid: `clinical-${v.id}`, title: `Clinical: ${v.site?.name || v.site?.abbreviation || 'Site Visit'}${cl ? ` — ${cl}` : ''}`, date: v.visit_date, start_time: v.start_time || '06:00:00', end_time: v.end_time || '18:00:00' }));
+        extraEmitted++;
+      }
+    } catch (e) { console.error('[feed.ics] clinical', e); }
+
+    // Open shifts (non-lab-coverage), ride-alongs, exams, volunteer events
+    try {
+      const { data: shifts } = await supabase
+        .from('open_shifts')
+        .select('id, title, date, start_time, end_time, location')
+        .gte('date', startDate).lte('date', endDate).eq('is_cancelled', false).is('lab_day_id', null).order('date');
+      for (const s of (shifts as unknown as { id: string; title: string | null; date: string; start_time: string | null; end_time: string | null; location: string | null }[]) || []) {
+        if (!s.date) continue;
+        icsLines.push(...buildVEVENT({ uid: `shift-${s.id}`, title: s.title || 'Open Shift', date: s.date, start_time: s.start_time || '08:00:00', end_time: s.end_time || '17:00:00', location: s.location }));
+        extraEmitted++;
+      }
+    } catch (e) { console.error('[feed.ics] shifts', e); }
+
+    try {
+      const { data: ra } = await supabase
+        .from('ride_along_shifts')
+        .select('id, shift_date, start_time, end_time, shift_type, unit_number, location, status')
+        .gte('shift_date', startDate).lte('shift_date', endDate).neq('status', 'cancelled').order('shift_date');
+      for (const s of (ra as unknown as { id: string; shift_date: string; start_time: string | null; end_time: string | null; shift_type: string | null; unit_number: string | null; location: string | null }[]) || []) {
+        if (!s.shift_date) continue;
+        const lbl = s.shift_type ? `${s.shift_type.charAt(0).toUpperCase()}${s.shift_type.slice(1)} Shift` : 'Shift';
+        icsLines.push(...buildVEVENT({ uid: `ride-${s.id}`, title: `Ride-Along: ${lbl}${s.unit_number ? ` (${s.unit_number})` : ''}`, date: s.shift_date, start_time: s.start_time || '08:00:00', end_time: s.end_time || '16:00:00', location: s.location }));
+        extraEmitted++;
+      }
+    } catch (e) { console.error('[feed.ics] ride_along', e); }
+
+    try {
+      const { data: exams } = await supabase
+        .from('exam_sessions')
+        .select('id, date, start_time, end_time')
+        .gte('date', startDate).lte('date', endDate).order('date');
+      for (const ex of (exams as unknown as { id: string; date: string; start_time: string | null; end_time: string | null }[]) || []) {
+        if (!ex.date) continue;
+        icsLines.push(...buildVEVENT({ uid: `exam-${ex.id}`, title: 'Written Exam (self-scheduled)', date: ex.date, start_time: ex.start_time, end_time: ex.end_time }));
+        extraEmitted++;
+      }
+    } catch (e) { console.error('[feed.ics] exams', e); }
+
+    try {
+      const { data: vols } = await supabase
+        .from('volunteer_events')
+        .select('id, name, date, start_time, end_time, location')
+        .gte('date', startDate).lte('date', endDate).eq('is_active', true).order('date');
+      for (const v of (vols as unknown as { id: string; name: string | null; date: string; start_time: string | null; end_time: string | null; location: string | null }[]) || []) {
+        if (!v.date) continue;
+        icsLines.push(...buildVEVENT({ uid: `vol-${v.id}`, title: `Volunteers: ${v.name || 'Event'}`, date: v.date, start_time: v.start_time, end_time: v.end_time, location: v.location }));
+        extraEmitted++;
+      }
+    } catch (e) { console.error('[feed.ics] volunteers', e); }
+
     icsLines.push('END:VCALENDAR');
 
     const body = icsLines.join('\r\n');
@@ -327,6 +414,7 @@ export async function GET(request: NextRequest) {
         'Content-Disposition': 'inline; filename="pmi-schedule.ics"',
         'X-Feed-Block-Count': String(blocks.length),
         'X-Feed-Lab-Count': String(labsEmitted),
+        'X-Feed-Extra-Count': String(extraEmitted),
       },
     });
   } catch (err) {
