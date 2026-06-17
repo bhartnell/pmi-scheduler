@@ -22,7 +22,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, Calendar as CalendarIcon, Upload, User, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, Calendar as CalendarIcon, Upload, User, AlertTriangle, X, Plus } from 'lucide-react';
 
 // ── Light local types (subset of the planner shapes we use) ──
 interface WsBlock {
@@ -126,6 +126,7 @@ export default function PlanningWorkspacePage() {
   const [saving, setSaving] = useState(false);
   const [instructorsList, setInstructorsList] = useState<{ id: string; name: string }[]>([]);
   const [editingInstrId, setEditingInstrId] = useState<string | null>(null); // block id whose instructor picker is open
+  const [editingTitleId, setEditingTitleId] = useState<string | null>(null); // block id whose title is being edited
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin');
@@ -304,6 +305,69 @@ export default function PlanningWorkspacePage() {
     }
   }, [instructorsList, loadBlocks]);
 
+  // Add a new DRAFT block at the end of a day (appended after the last block;
+  // status defaults to 'draft' so it stays off the live calendar until publish).
+  const addBlock = useCallback(async (dateKey: string) => {
+    if (!programId || !semesterId) return;
+    const dayBlocks = blocks
+      .filter(b => b.program_schedule_id === programId && b.date === dateKey)
+      .sort((x, y) => toMin(x.start_time) - toMin(y.start_time) || (x.sort_order ?? 0) - (y.sort_order ?? 0));
+    const startMin = dayBlocks.length ? toMin(dayBlocks[dayBlocks.length - 1].end_time) : 8 * 60;
+    setSaving(true);
+    try {
+      await fetch('/api/scheduling/planner/blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          semester_id: semesterId,
+          program_schedule_id: programId,
+          date: dateKey,
+          start_time: minToTime(startMin),
+          end_time: minToTime(startMin + 30),
+          title: 'New block',
+          block_type: 'lecture',
+        }),
+      });
+    } catch { /* reload reconciles */ } finally { setSaving(false); loadBlocks(); }
+  }, [programId, semesterId, blocks, loadBlocks]);
+
+  // Remove a block, then tetris-cascade the day so no gap is left behind.
+  const removeBlock = useCallback(async (blockId: string) => {
+    if (typeof window !== 'undefined' && !window.confirm('Remove this block?')) return;
+    const removed = blocks.find(b => b.id === blockId);
+    const date = removed?.date || null;
+    setBlocks(prev => prev.filter(b => b.id !== blockId)); // optimistic
+    setSaving(true);
+    try {
+      await fetch(`/api/scheduling/planner/blocks/${blockId}`, { method: 'DELETE' });
+      if (date && programId) {
+        const remaining = blocks
+          .filter(b => b.id !== blockId && b.program_schedule_id === programId && b.date === date)
+          .sort((x, y) => toMin(x.start_time) - toMin(y.start_time) || (x.sort_order ?? 0) - (y.sort_order ?? 0));
+        const cascaded = cascadeDay(remaining);
+        const changed = cascaded.filter(nb => {
+          const ob = remaining.find(b => b.id === nb.id);
+          return ob && (ob.start_time !== nb.start_time || ob.end_time !== nb.end_time || (ob.sort_order ?? 0) !== (nb.sort_order ?? 0));
+        });
+        if (changed.length) { await persist(changed); return; }
+      }
+    } catch { /* reload reconciles */ } finally { setSaving(false); loadBlocks(); }
+  }, [blocks, programId, persist, loadBlocks]);
+
+  // Inline title edit.
+  const saveTitle = useCallback(async (blockId: string, title: string) => {
+    setEditingTitleId(null);
+    const trimmed = title.trim();
+    setBlocks(prev => prev.map(b => b.id === blockId ? { ...b, course_name: trimmed || b.course_name, title: trimmed || b.title } : b));
+    setSaving(true);
+    try {
+      await fetch(`/api/scheduling/planner/blocks/${blockId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: trimmed, course_name: trimmed }),
+      });
+    } catch { /* reload reconciles */ } finally { setSaving(false); loadBlocks(); }
+  }, [loadBlocks]);
+
   // Live conflict detection: same INSTRUCTOR or same ROOM on time-overlapping
   // blocks on the same date (across ALL cohorts in the week). Recomputes on
   // every blocks change, so dragging shows/clears conflicts immediately.
@@ -445,7 +509,7 @@ export default function PlanningWorkspacePage() {
                       const instrs = (b.instructors || []).map(iu => iu.instructor?.name).filter(Boolean);
                       return (
                         <div key={b.id}
-                          draggable={editable && editingInstrId !== b.id}
+                          draggable={editable && editingInstrId !== b.id && editingTitleId !== b.id}
                           onDragStart={e => { if (!editable) return; setDraggingId(b.id); e.dataTransfer.effectAllowed = 'move'; }}
                           onDragEnd={() => setDraggingId(null)}
                           onDragOver={e => { if (draggingId && editable) e.preventDefault(); }}
@@ -453,10 +517,29 @@ export default function PlanningWorkspacePage() {
                           className={`rounded-md border-l-4 px-2 py-1 text-[11px] ${editable ? 'cursor-grab active:cursor-grabbing' : ''} ${draggingId === b.id ? 'opacity-40' : ''} ${conflicts.ids.has(b.id) ? 'ring-2 ring-red-500' : ''} ${b.status === 'draft' ? 'bg-amber-50 dark:bg-amber-900/10 border-dashed' : 'bg-gray-50 dark:bg-gray-700/40'}`}
                           style={{ borderLeftColor: color }}>
                           <div className="font-medium text-gray-800 dark:text-gray-100 leading-tight flex items-start gap-1">
-                            <span className="flex-1">{b.course_name || b.title || '(untitled)'}</span>
+                            {editable && editingTitleId === b.id ? (
+                              <input autoFocus defaultValue={b.course_name || b.title || ''}
+                                onClick={e => e.stopPropagation()}
+                                onBlur={e => saveTitle(b.id, e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') { e.preventDefault(); saveTitle(b.id, (e.target as HTMLInputElement).value); }
+                                  else if (e.key === 'Escape') setEditingTitleId(null);
+                                }}
+                                className="flex-1 min-w-0 text-[11px] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 px-1" />
+                            ) : (
+                              <span className={`flex-1 ${editable ? 'cursor-text hover:underline decoration-dotted' : ''}`}
+                                onClick={e => { if (editable) { e.stopPropagation(); setEditingTitleId(b.id); } }}>
+                                {b.course_name || b.title || '(untitled)'}
+                              </span>
+                            )}
                             {conflicts.ids.has(b.id) && (
                               <AlertTriangle className="w-3 h-3 text-red-500 shrink-0 mt-0.5"
                                 aria-label={`${[...(conflicts.reason.get(b.id) || [])].join(' + ')} conflict`} />
+                            )}
+                            {editable && (
+                              <button type="button" aria-label="Remove block"
+                                onClick={e => { e.stopPropagation(); removeBlock(b.id); }}
+                                className="shrink-0 text-gray-300 hover:text-red-500 mt-0.5"><X className="w-3 h-3" /></button>
                             )}
                           </div>
                           <div className="text-gray-500 dark:text-gray-400">
@@ -489,6 +572,12 @@ export default function PlanningWorkspacePage() {
                         </div>
                       );
                     })}
+                    {editable && (
+                      <button type="button" onClick={() => addBlock(key)}
+                        className="w-full mt-1 inline-flex items-center justify-center gap-1 text-[11px] text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 border border-dashed border-gray-300 dark:border-gray-600 rounded-md py-1">
+                        <Plus className="w-3 h-3" /> Add block
+                      </button>
+                    )}
                   </div>
                 </div>
               );
