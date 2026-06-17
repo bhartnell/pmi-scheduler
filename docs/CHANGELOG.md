@@ -11,7 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-06-17
 
-- `PENDING` | **ACLS Coordinator Tracker — print view + auto-refresh** (Thursday-relevant). Added a print-only **team-lead tracking sheet** (paper backup for the ACLS course, complements the Google-forms fallback): per-group tables with Student / Team-led? / Scenario / Pass-Fail / Notes columns; students already recorded in the grader are pre-checked (✓) at print time, blanks for handwriting during the day. Screen UI hidden on print, sheet hidden on screen (`print:` variants). Also an **auto-refresh** toggle (Off/30s/60s) + "updated HH:MM:SS" timestamp so the live view tracks grading progress hands-free. One file (`app/labs/schedule/[id]/acls-coordinator/page.tsx`); additive/safe. Build green. **Fallback floor for the Stage 2 multi-section work that follows.**
+- `ab95a0b0` | **ACLS Coordinator Tracker — print view + auto-refresh** (Thursday-relevant). Added a print-only **team-lead tracking sheet** (paper backup for the ACLS course, complements the Google-forms fallback): per-group tables with Student / Team-led? / Scenario / Pass-Fail / Notes columns; students already recorded in the grader are pre-checked (✓) at print time, blanks for handwriting during the day. Screen UI hidden on print, sheet hidden on screen (`print:` variants). Also an **auto-refresh** toggle (Off/30s/60s) + "updated HH:MM:SS" timestamp so the live view tracks grading progress hands-free. One file (`app/labs/schedule/[id]/acls-coordinator/page.tsx`); additive/safe. Build green. **Fallback floor for the Stage 2 multi-section work that follows.**
 
 ## 2026-06-15
 
