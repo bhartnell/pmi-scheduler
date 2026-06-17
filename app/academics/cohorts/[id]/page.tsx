@@ -1136,6 +1136,13 @@ export default function CohortHubPage() {
               href={`/academics/cohorts/${cohortId}/completion`}
             />
             <ToolCard
+              icon={BarChart3}
+              title="Progress (mid-semester stats)"
+              status="Scenarios · skills · team-lead coverage"
+              actionLabel="View Progress"
+              href={`/academics/cohorts/${cohortId}/progress`}
+            />
+            <ToolCard
               icon={Users}
               title="Day 1 Intake"
               status="EMS level, agency, intro notes"
