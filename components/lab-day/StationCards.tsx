@@ -29,6 +29,10 @@ interface StationCardsProps {
   stationNremtCodes?: Record<string, 'E201' | 'E202' | undefined>;
   stationScenarioTitles?: Record<string, string>;
   canSelectScenario?: boolean;
+  /** When true, this lab day is an ACLS/PALS MEGACODE section — the Grade button
+   *  routes to the adv-cert grader (ACLS rubric) instead of the standard 0-4
+   *  grader. Non-megacode stations keep the standard/generic grader. */
+  isAdvCertMegacode?: boolean;
   calendarAvailability: Map<string, { status: 'free' | 'partial' | 'busy' | 'disconnected'; events: { title: string; start: string; end: string }[] }>;
   labDayId: string;
   getStationTitle: (station: Station) => string;
@@ -45,6 +49,7 @@ export default function StationCards({
   stationNremtCodes,
   stationScenarioTitles,
   canSelectScenario,
+  isAdvCertMegacode,
   calendarAvailability,
   labDayId,
   getStationTitle,
@@ -310,11 +315,13 @@ export default function StationCards({
                 </>
               )}
               <Link
-                href={`/labs/grade/station/${station.id}`}
-                className="flex-1 min-w-[100px] inline-flex items-center justify-center gap-2 px-3 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                href={isAdvCertMegacode
+                  ? `/labs/adv-cert/grade?labDayId=${labDayId}&stationId=${station.id}`
+                  : `/labs/grade/station/${station.id}`}
+                className={`flex-1 min-w-[100px] inline-flex items-center justify-center gap-2 px-3 py-2 text-sm text-white rounded-lg ${isAdvCertMegacode ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
               >
                 <ClipboardCheck className="w-4 h-4" />
-                Grade
+                {isAdvCertMegacode ? 'Grade (ACLS)' : 'Grade'}
               </Link>
             </div>
           </div>

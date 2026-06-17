@@ -841,7 +841,7 @@ export default function LabDayPage() {
             rail holds the quick-reference lab info card above the checklist. */}
         <div className="space-y-6 lg:space-y-0 lg:grid lg:gap-6 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start">
           <div className="lg:col-start-1 lg:row-start-1">
-            <StationCards stations={labDay.stations} stationSkillDocs={stationSkillDocs} stationDocs={stationDocs} stationSkillSheetIds={stationSkillSheetIds} stationNremtCodes={stationNremtCodes} stationScenarioTitles={nremtScenarioTitles} canSelectScenario={!!userRole && hasMinRole(userRole, 'lead_instructor')} calendarAvailability={calendarAvailability} labDayId={labDayId as string} getStationTitle={getStationTitle} onEditStation={(station) => setEditingStation(station)} onOpenRoleModal={(station) => setRoleModalStation(station)} onOpenScenarioPicker={(station, code) => setScenarioPickerState({ station, code })} />
+            <StationCards stations={labDay.stations} stationSkillDocs={stationSkillDocs} stationDocs={stationDocs} stationSkillSheetIds={stationSkillSheetIds} stationNremtCodes={stationNremtCodes} stationScenarioTitles={nremtScenarioTitles} canSelectScenario={!!userRole && hasMinRole(userRole, 'lead_instructor')} isAdvCertMegacode={!!labDay.is_adv_cert_testing || /megacode/i.test(labDay.section_label || '')} calendarAvailability={calendarAvailability} labDayId={labDayId as string} getStationTitle={getStationTitle} onEditStation={(station) => setEditingStation(station)} onOpenRoleModal={(station) => setRoleModalStation(station)} onOpenScenarioPicker={(station, code) => setScenarioPickerState({ station, code })} />
           </div>
 
           <aside className="lg:col-start-2 lg:row-start-1 space-y-4 lg:sticky lg:top-4">

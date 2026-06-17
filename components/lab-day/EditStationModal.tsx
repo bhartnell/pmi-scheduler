@@ -249,13 +249,29 @@ export default function EditStationModal({
 
   const fetchScenariosAndSkills = async () => {
     try {
+      // MEGACODE sections (ACLS/PALS) need the cert scenario bank, which the
+      // normal picker hides (cert_course IS NULL filter). Opt in with
+      // includeCert and scope to this day's course so the ACLS scenarios are
+      // selectable and an already-assigned one renders (not blank). Non-megacode
+      // days keep the standard bank.
+      const isMegacode = !!labDay?.is_adv_cert_testing || /megacode/i.test(labDay?.section_label || '');
+      const scenarioUrl = isMegacode
+        ? '/api/lab-management/scenarios?includeCert=true'
+        : '/api/lab-management/scenarios';
       const [scenariosRes, skillsRes] = await Promise.all([
-        fetch('/api/lab-management/scenarios'),
+        fetch(scenarioUrl),
         fetch('/api/lab-management/skills?includeDocuments=true')
       ]);
       const scenariosData = await scenariosRes.json();
       const skillsData = await skillsRes.json();
-      if (scenariosData.success) setScenarios(scenariosData.scenarios || []);
+      if (scenariosData.success) {
+        let list = scenariosData.scenarios || [];
+        if (isMegacode && labDay?.cert_course) {
+          // Only this course's cert scenarios (don't show PALS on an ACLS day).
+          list = list.filter((s: { cert_course?: string | null }) => s.cert_course === labDay.cert_course);
+        }
+        setScenarios(list);
+      }
       if (skillsData.success) setSkills(skillsData.skills || []);
     } catch (error) {
       console.error('Error fetching scenarios/skills:', error);

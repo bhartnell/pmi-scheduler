@@ -50,10 +50,30 @@ export default function AdvCertGradePage() {
 
   const [loadingScenario, setLoadingScenario] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Preselect from URL (the lab-day station "Grade (ACLS)" button links here with
+  // ?labDayId=&stationId=). Read once on mount; window avoids a Suspense boundary.
+  const [urlStationId, setUrlStationId] = useState('');
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin');
   }, [status, router]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const p = new URLSearchParams(window.location.search);
+    const ld = p.get('labDayId');
+    const st = p.get('stationId');
+    if (ld) setLabDayId(ld);
+    if (st) setUrlStationId(st);
+  }, []);
+
+  // Once the day's stations load, apply the preselected station from the URL.
+  useEffect(() => {
+    if (urlStationId && stations.some((s) => s.id === urlStationId)) {
+      setStationId(urlStationId);
+      setUrlStationId('');
+    }
+  }, [stations, urlStationId]);
 
   // candidate days
   useEffect(() => {

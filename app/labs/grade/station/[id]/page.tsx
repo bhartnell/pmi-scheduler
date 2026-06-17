@@ -700,6 +700,12 @@ export default function GradeStationPage() {
 
   const handleSave = async (emailPref: string = 'queued', saveAsStatus: string = 'complete') => {
     const isInProgress = saveAsStatus === 'in_progress';
+    // NREMT psychomotor testing (E204 sheet) stays STRICT — completeness +
+    // justification are required there. Everything else is the generic/formative
+    // sheet, which must be NON-BLOCKING: an instructor can mark a concern (incl.
+    // affective/behavioral, kept via the flag) and still submit and move on.
+    // (Per the ACLS-day flow: new instructors must flag-and-go, not get stuck.)
+    const strictNremt = nremtSheetCode === 'E204';
 
     // Validation - different for skills vs scenario stations
     if (isSkillsStation) {
@@ -716,31 +722,27 @@ export default function GradeStationPage() {
         alert('Please select a team leader');
         return;
       }
-      if (!allRated) {
+      // Completeness + NI/U justification BLOCK only for strict NREMT testing.
+      // On the generic sheet they're skipped so submission is never blocked.
+      if (strictNremt && !allRated) {
         alert(`Please rate all ${criteriaRatings.length} criteria`);
         return;
       }
 
-      // NI/U ratings must be justified — either per-criterion notes
-      // OR substantive overall comments. The per-criterion-only
-      // requirement (May 21 lab) tripped up operators who typed
-      // explanatory text into the Overall Comments field and got
-      // blocked on send. Either field is now sufficient as long as
-      // the operator left A justification somewhere visible.
-      const overallCommentsTrimmed = overallComments.trim();
-      // Treat short scribbles as not-quite-justification so we still
-      // catch the "blank submit" case. Tunable.
-      const hasOverallJustification = overallCommentsTrimmed.length >= 10;
-      const missingNotes = criteriaRatings.filter(r =>
-        (r.rating === 'NI' || r.rating === 'U') && (!r.notes || r.notes.trim() === '')
-      );
-      if (missingNotes.length > 0 && !hasOverallJustification) {
-        const criteriaNames = missingNotes.map(r => r.criteria_name).join(', ');
-        alert(
-          `Please add notes for the following "Needs Improvement" or "Unsatisfactory" ratings:\n\n${criteriaNames}\n\n` +
-          `OR add justification to the Overall Comments field (10+ characters).`,
+      if (strictNremt) {
+        const overallCommentsTrimmed = overallComments.trim();
+        const hasOverallJustification = overallCommentsTrimmed.length >= 10;
+        const missingNotes = criteriaRatings.filter(r =>
+          (r.rating === 'NI' || r.rating === 'U') && (!r.notes || r.notes.trim() === '')
         );
-        return;
+        if (missingNotes.length > 0 && !hasOverallJustification) {
+          const criteriaNames = missingNotes.map(r => r.criteria_name).join(', ');
+          alert(
+            `Please add notes for the following "Needs Improvement" or "Unsatisfactory" ratings:\n\n${criteriaNames}\n\n` +
+            `OR add justification to the Overall Comments field (10+ characters).`,
+          );
+          return;
+        }
       }
 
       if (issueLevel === 'needs_followup' && flagCategories.length === 0) {
