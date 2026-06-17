@@ -119,7 +119,9 @@ export default function EditStationModal({
     instructor_name: '',
     instructor_email: '',
     room: '',
-    notes: ''
+    notes: '',
+    rotation_minutes: '' as string | number,
+    num_rotations: '' as string | number,
   });
 
   useEffect(() => {
@@ -170,7 +172,9 @@ export default function EditStationModal({
       instructor_name: station.instructor_name || '',
       instructor_email: station.instructor_email || '',
       room: station.room || '',
-      notes: station.notes || ''
+      notes: station.notes || '',
+      rotation_minutes: (station as { rotation_minutes?: number | null }).rotation_minutes ?? '',
+      num_rotations: (station as { num_rotations?: number | null }).num_rotations ?? '',
     });
 
     setEditCustomSkills(customSkillsList);
@@ -473,7 +477,9 @@ export default function EditStationModal({
           instructor_name: primaryInstructor?.user_name || null,
           instructor_email: primaryInstructor?.user_email || null,
           room: editForm.room || null,
-          notes: editForm.notes || null
+          notes: editForm.notes || null,
+          rotation_minutes: editForm.rotation_minutes === '' ? null : Number(editForm.rotation_minutes),
+          num_rotations: editForm.num_rotations === '' ? null : Number(editForm.num_rotations),
         })
       });
 
@@ -1392,6 +1398,24 @@ export default function EditStationModal({
                 <option key={loc.id} value={loc.name}>{loc.name}</option>
               ))}
             </select>
+          </div>
+
+          {/* Rotation timing (per-station) */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Minutes per rotation</label>
+              <input type="number" min={0} value={editForm.rotation_minutes}
+                onChange={(e) => setEditForm(prev => ({ ...prev, rotation_minutes: e.target.value }))}
+                placeholder="e.g. 30"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"># of rotations</label>
+              <input type="number" min={0} value={editForm.num_rotations}
+                onChange={(e) => setEditForm(prev => ({ ...prev, num_rotations: e.target.value }))}
+                placeholder="e.g. 4"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
+            </div>
           </div>
 
           {/* Notes */}
