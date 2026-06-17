@@ -1686,6 +1686,8 @@
 | priority_reason | text | YES |  |  |
 | is_adv_cert_testing | boolean | NO | false |  |
 | cert_course | text | YES |  |  |
+| section_number | integer | NO | 1 | Multiple lab sections per (date, cohort); part of UNIQUE(date, cohort_id, section_number) |
+| section_label | text | YES |  | Optional display label for the section |
 
 **Foreign Keys:**
 - `created_by` -> `lab_users.id` (`lab_days_created_by_fkey`)
@@ -1695,7 +1697,7 @@
 
 **Unique Constraints:**
 - `lab_days_checkin_token_key`: (checkin_token)
-- `lab_days_date_cohort_id_key`: (date, cohort_id)
+- `lab_days_date_cohort_section_key`: (date, cohort_id, section_number) — replaced the old (date, cohort_id) unique on 2026-06-17 to allow multiple lab sections per cohort per date
 
 **Check Constraints:**
 - `lab_days_lab_mode_check`: `((lab_mode = ANY (ARRAY['group_rotations'::text, 'individual_testing'::text])))`
@@ -9812,6 +9814,7 @@ Key foreign key relationships across the schema:
 | status | text | YES | 'draft'::text |  |
 | instructor_id | uuid | YES |  | FK -> lab_users.id |
 | additional_instructor_id | uuid | YES |  | FK -> lab_users.id |
+| linked_section_number | integer | YES |  | Which lab_days.section_number this block links to; NULL = section 1 |
 
 **Foreign Keys:**
 - `program_schedule_id` -> `pmi_program_schedules.id` (pmi_schedule_blocks_program_schedule_id_fkey)
