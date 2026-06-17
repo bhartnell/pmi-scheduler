@@ -101,27 +101,52 @@ export default function AclsHubPage() {
 
   const visibleDates = activeDate === 'all' ? dates : dates.filter(d => d === activeDate);
 
-  // Two-day / all-section aggregate stats.
+  // MEGACODE-ONLY scope for this view: ACLS passing is about megacode team-lead
+  // experience, so the hub counts team-leads from the megacode sections only
+  // (practice — now testing-graded — + final testing), NOT brady/tachy or
+  // cardiac-arrest learning. (The semester/course overview tracks ALL TLs.)
+  const megacodeLabDayIds = useMemo(() => new Set(
+    labDays
+      .filter(d => d.is_adv_cert_testing || (d.section_label || '').toLowerCase().includes('megacode'))
+      .map(d => d.id)
+  ), [labDays]);
+  const megAttempts = useMemo(
+    () => attempts.filter(a => megacodeLabDayIds.has(a.lab_day_id)),
+    [attempts, megacodeLabDayIds]
+  );
+
   const stats = useMemo(() => {
-    const passed = attempts.filter(a => a.overall_result === 'pass').length;
-    const failed = attempts.filter(a => a.overall_result === 'fail').length;
-    const groupsTested = new Set(attempts.map(a => a.lab_group_id)).size;
-    const ledStudentIds = new Set(attempts.map(a => a.team_lead?.id).filter(Boolean) as string[]);
+    const passed = megAttempts.filter(a => a.overall_result === 'pass').length;
+    const failed = megAttempts.filter(a => a.overall_result === 'fail').length;
+    const groupsTested = new Set(megAttempts.map(a => a.lab_group_id)).size;
+    // "Passed as TL" = led a PASS megacode (practice OR testing — both count
+    // toward the AHA team-lead distinction).
+    const passedTLIds = new Set(
+      megAttempts.filter(a => a.overall_result === 'pass').map(a => a.team_lead?.id).filter(Boolean) as string[]
+    );
+    // Attempted as TL but with no pass yet (explicit failure marker).
+    const failedTLIds = new Set(
+      megAttempts.filter(a => a.overall_result === 'fail').map(a => a.team_lead?.id).filter(Boolean) as string[]
+    );
     const allStudents = groups.flatMap(g => g.members);
-    const ledCount = allStudents.filter(s => ledStudentIds.has(s.id)).length;
+    const passedTLCount = allStudents.filter(s => passedTLIds.has(s.id)).length;
+    // Failure/not-yet marker: who has NOT passed megacode as TL.
+    const notPassed = allStudents
+      .filter(s => !passedTLIds.has(s.id))
+      .map(s => ({ ...s, failed: failedTLIds.has(s.id) }));
     const sections = labDays.filter(d => (d.section_number ?? 1) > 1).length;
     return {
       passed, failed, groupsTested, totalGroups: groups.length,
-      ledStudentIds, totalStudents: allStudents.length, ledCount,
-      sections, labDaysCount: labDays.length, totalAttempts: attempts.length,
+      passedTLIds, totalStudents: allStudents.length, passedTLCount, notPassed,
+      sections, labDaysCount: labDays.length, totalAttempts: megAttempts.length,
     };
-  }, [attempts, groups, labDays]);
+  }, [megAttempts, groups, labDays]);
 
   const attemptsByGroup = useMemo(() => {
     const m = new Map<string, Attempt[]>();
-    for (const a of attempts) { (m.get(a.lab_group_id) || m.set(a.lab_group_id, []).get(a.lab_group_id)!).push(a); }
+    for (const a of megAttempts) { (m.get(a.lab_group_id) || m.set(a.lab_group_id, []).get(a.lab_group_id)!).push(a); }
     return m;
-  }, [attempts]);
+  }, [megAttempts]);
 
   // By-instructor: every station assignment across all sections, grouped by name.
   const byInstructor = useMemo(() => {
@@ -207,24 +232,41 @@ export default function AclsHubPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {/* Aggregated coordinator stats — BOTH days, ALL sections */}
+            {/* Megacode coordinator stats — practice + testing, both days */}
             <section>
               <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
-                <UserCheck className="w-4 h-4" /> Coordinator stats — across both days &amp; all sections
+                <UserCheck className="w-4 h-4" /> Megacode TL stats — practice + testing, both days
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                <Stat label="Lab days / sections" value={`${dates.length} / ${labDays.length}`} />
+                <Stat label="Megacode lab days" value={megacodeLabDayIds.size} />
                 <Stat label="Groups" value={stats.totalGroups} />
-                <Stat label="Groups tested" value={stats.groupsTested} />
+                <Stat label="Megacode attempts" value={stats.totalAttempts} />
                 <Stat label="Passed" value={stats.passed} tone="text-green-600 dark:text-green-400" />
                 <Stat label="Failed" value={stats.failed} tone="text-red-600 dark:text-red-400" />
-                <Stat label="Team-led" value={`${stats.ledCount}/${stats.totalStudents}`} />
+                <Stat label="Passed as TL" value={`${stats.passedTLCount}/${stats.totalStudents}`} tone={stats.passedTLCount === stats.totalStudents && stats.totalStudents > 0 ? 'text-green-600 dark:text-green-400' : undefined} />
               </div>
-              <p className="mt-1 text-[11px] text-gray-400">Aggregated over every ACLS section both days — not a single lab day. Team-led = students who led ≥1 scored attempt across the event.</p>
+              <p className="mt-1 text-[11px] text-gray-400">MEGACODE ONLY (practice — now testing-graded — + final testing). A TL pass in practice counts toward the AHA team-lead distinction. Other ACLS scenarios (brady/tachy, cardiac-arrest learning) are tracked in the semester/course overview, not here.</p>
             </section>
 
+            {/* FAILURE MARKER — who hasn't passed megacode as TL yet */}
+            {stats.notPassed.length > 0 && (
+              <section style={{ breakInside: 'avoid' }} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-800 rounded-lg p-3">
+                <h2 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1 flex items-center gap-1">
+                  <XCircle className="w-4 h-4" /> Not yet passed megacode as TL — {stats.notPassed.length} of {stats.totalStudents}
+                </h2>
+                <div className="flex flex-wrap gap-1.5">
+                  {stats.notPassed.map(s => (
+                    <span key={s.id} className={`text-[11px] px-2 py-0.5 rounded-full ${s.failed ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                      {s.last_name}, {s.first_name}{s.failed ? ' — failed' : ' — not yet'}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">Red = attempted &amp; failed a megacode as TL; gray = hasn&apos;t led a passing megacode yet. AHA goal: every student passes ≥1 megacode as team-lead.</p>
+              </section>
+            )}
+
             {/* Per day: schedule + sections */}
-            {visibleDates.map((date, idx) => {
+            {visibleDates.map((date) => {
               const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
               const daySections = labDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
               return (
@@ -294,9 +336,9 @@ export default function AclsHubPage() {
               );
             })}
 
-            {/* Per-group team-lead coverage (across the whole event) */}
+            {/* Per-group MEGACODE team-lead coverage (whole event) */}
             <section style={{ breakInside: 'avoid' }}>
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Users className="w-4 h-4" /> Groups — team-lead coverage (whole event)</h2>
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Users className="w-4 h-4" /> Groups — megacode TL coverage (practice + testing)</h2>
               <div className="space-y-2">
                 {groups.map(g => {
                   const gAttempts = attemptsByGroup.get(g.id) || [];
@@ -313,7 +355,7 @@ export default function AclsHubPage() {
                       </div>
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {g.members.map(m => {
-                          const led = stats.ledStudentIds.has(m.id);
+                          const led = stats.passedTLIds.has(m.id);
                           return (
                             <span key={m.id} className={`text-[10px] px-1.5 py-0.5 rounded-full ${led ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
                               {led ? '✓ ' : ''}{m.last_name}
