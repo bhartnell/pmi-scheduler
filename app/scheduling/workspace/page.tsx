@@ -127,6 +127,8 @@ export default function PlanningWorkspacePage() {
   const [instructorsList, setInstructorsList] = useState<{ id: string; name: string }[]>([]);
   const [editingInstrId, setEditingInstrId] = useState<string | null>(null); // block id whose instructor picker is open
   const [editingTitleId, setEditingTitleId] = useState<string | null>(null); // block id whose title is being edited
+  const [roomsList, setRoomsList] = useState<{ id: string; name: string }[]>([]);
+  const [editingRoomId, setEditingRoomId] = useState<string | null>(null); // block id whose room picker is open
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin');
@@ -166,6 +168,10 @@ export default function PlanningWorkspacePage() {
     fetch('/api/scheduling/planner/instructors')
       .then(r => r.json())
       .then(d => setInstructorsList(d.instructors || []))
+      .catch(() => {});
+    fetch('/api/scheduling/planner/rooms')
+      .then(r => r.json())
+      .then(d => setRoomsList(d.rooms || []))
       .catch(() => {});
   }, [status]);
 
@@ -354,6 +360,22 @@ export default function PlanningWorkspacePage() {
     } catch { /* reload reconciles */ } finally { setSaving(false); loadBlocks(); }
   }, [blocks, programId, persist, loadBlocks]);
 
+  // Assign / clear a block's room (feeds room-conflict detection).
+  const assignRoom = useCallback(async (blockId: string, roomId: string | null) => {
+    const room = roomId ? roomsList.find(r => r.id === roomId) : null;
+    setEditingRoomId(null);
+    setBlocks(prev => prev.map(b => b.id === blockId
+      ? { ...b, room_id: roomId, room: room ? { id: room.id, name: room.name } : null }
+      : b)); // optimistic
+    setSaving(true);
+    try {
+      await fetch(`/api/scheduling/planner/blocks/${blockId}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room_id: roomId }),
+      });
+    } catch { /* reload reconciles */ } finally { setSaving(false); loadBlocks(); }
+  }, [roomsList, loadBlocks]);
+
   // Inline title edit.
   const saveTitle = useCallback(async (blockId: string, title: string) => {
     setEditingTitleId(null);
@@ -509,7 +531,7 @@ export default function PlanningWorkspacePage() {
                       const instrs = (b.instructors || []).map(iu => iu.instructor?.name).filter(Boolean);
                       return (
                         <div key={b.id}
-                          draggable={editable && editingInstrId !== b.id && editingTitleId !== b.id}
+                          draggable={editable && editingInstrId !== b.id && editingTitleId !== b.id && editingRoomId !== b.id}
                           onDragStart={e => { if (!editable) return; setDraggingId(b.id); e.dataTransfer.effectAllowed = 'move'; }}
                           onDragEnd={() => setDraggingId(null)}
                           onDragOver={e => { if (draggingId && editable) e.preventDefault(); }}
@@ -542,8 +564,24 @@ export default function PlanningWorkspacePage() {
                                 className="shrink-0 text-gray-300 hover:text-red-500 mt-0.5"><X className="w-3 h-3" /></button>
                             )}
                           </div>
-                          <div className="text-gray-500 dark:text-gray-400">
-                            {fmtTime(b.start_time)}–{fmtTime(b.end_time)}{b.room?.name ? ` · ${b.room.name}` : ''}
+                          <div className="text-gray-500 dark:text-gray-400 flex items-center gap-1 flex-wrap">
+                            <span>{fmtTime(b.start_time)}–{fmtTime(b.end_time)}</span>
+                            {editable && editingRoomId === b.id ? (
+                              <select autoFocus value={b.room_id || ''}
+                                onClick={e => e.stopPropagation()}
+                                onChange={e => assignRoom(b.id, e.target.value || null)}
+                                onBlur={() => setEditingRoomId(null)}
+                                className="text-[11px] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
+                                <option value="">— No room —</option>
+                                {roomsList.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
+                              </select>
+                            ) : (
+                              <button type="button"
+                                onClick={e => { e.stopPropagation(); if (editable) setEditingRoomId(b.id); }}
+                                className={`${editable ? 'hover:text-blue-600 dark:hover:text-blue-400' : ''} ${b.room?.name ? '' : 'text-gray-300 dark:text-gray-600'}`}>
+                                · {b.room?.name || (editable ? 'room' : '—')}
+                              </button>
+                            )}
                           </div>
                           {/* Instructor chip / picker */}
                           {editable && editingInstrId === b.id ? (
