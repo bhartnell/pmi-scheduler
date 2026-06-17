@@ -257,10 +257,13 @@ export default function MyProgressPage() {
   const [data, setData] = useState<ProgressData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Privacy-scoped group aggregate (averages only; never other students' rows).
+  const [group, setGroup] = useState<{ group: { name: string; memberCount: number } | null; averages?: { scenariosAssessed: number; scenarioScore: number; skillsCompleted: number; teamLeadCount: number } } | null>(null);
 
   useEffect(() => {
     if (session?.user?.email) {
       fetchProgress();
+      fetch('/api/student/group-stats').then(r => r.json()).then(setGroup).catch(() => {});
     }
   }, [session]);
 
@@ -419,6 +422,30 @@ export default function MyProgressPage() {
           </p>
         )}
       </div>
+
+      {/* ── Group comparison (privacy-scoped: averages only, no other students' data) ── */}
+      {group?.group && group.averages && (
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+            You vs {group.group.name} <span className="font-normal text-gray-400">({group.group.memberCount} members · group averages only)</span>
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-2">
+            {[
+              { label: 'Scenarios', you: overview?.scenariosAssessed ?? 0, avg: group.averages.scenariosAssessed },
+              { label: 'Avg score', you: scenarios && scenarios.length ? Math.round((scenarios.reduce((a, s) => a + (s.score || 0), 0) / scenarios.length) * 10) / 10 : 0, avg: group.averages.scenarioScore },
+              { label: 'Skills', you: overview?.skillsCompleted ?? 0, avg: group.averages.skillsCompleted },
+              { label: 'Team-lead', you: null as number | null, avg: group.averages.teamLeadCount },
+            ].map(m => (
+              <div key={m.label} className="text-center">
+                <div className="text-[11px] text-gray-500 dark:text-gray-400">{m.label}</div>
+                <div className="text-lg font-bold text-gray-900 dark:text-white">{m.you != null ? m.you : '—'}</div>
+                <div className="text-[11px] text-gray-400">group {m.avg}</div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-[11px] text-gray-400">Group figures are averages across all members — individual classmates&apos; progress is private.</p>
+        </div>
+      )}
 
       {/* ── Section 1: Progress Overview ── */}
       <SectionCard
