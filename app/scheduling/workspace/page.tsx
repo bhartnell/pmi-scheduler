@@ -37,6 +37,8 @@ interface WsBlock {
   status: string | null;
   sort_order: number | null;
   program_schedule_id: string | null;
+  room_id?: string | null;
+  room?: { id: string; name: string } | null;
   instructors?: { instructor?: { id: string; name: string } | null }[];
 }
 interface WsSemester { id: string; name: string; start_date: string; end_date: string }
@@ -302,31 +304,35 @@ export default function PlanningWorkspacePage() {
     }
   }, [instructorsList, loadBlocks]);
 
-  // Live conflict detection: same instructor on time-overlapping blocks on the
-  // same date (across ALL cohorts in the week). Recomputes on every blocks
-  // change, so dragging shows/clears conflicts immediately.
-  const conflictIds = useMemo(() => {
-    const ids = new Set<string>();
-    const byInstrDate = new Map<string, WsBlock[]>();
-    for (const b of blocks) {
-      if (!b.date || !b.start_time || !b.end_time) continue;
-      for (const iu of b.instructors || []) {
-        const iid = iu.instructor?.id;
-        if (!iid) continue;
-        const k = `${iid}|${b.date}`;
-        const a = byInstrDate.get(k); if (a) a.push(b); else byInstrDate.set(k, [b]);
-      }
-    }
-    for (const [, arr] of byInstrDate) {
-      if (arr.length < 2) continue;
-      arr.sort((x, y) => toMin(x.start_time) - toMin(y.start_time));
-      for (let i = 1; i < arr.length; i++) {
-        if (toMin(arr[i].start_time) < toMin(arr[i - 1].end_time)) {
-          ids.add(arr[i].id); ids.add(arr[i - 1].id);
+  // Live conflict detection: same INSTRUCTOR or same ROOM on time-overlapping
+  // blocks on the same date (across ALL cohorts in the week). Recomputes on
+  // every blocks change, so dragging shows/clears conflicts immediately.
+  const conflicts = useMemo(() => {
+    const reason = new Map<string, Set<string>>(); // blockId -> {'instructor','room'}
+    const addOverlaps = (keysOf: (b: WsBlock) => string[], label: string) => {
+      const groups = new Map<string, WsBlock[]>();
+      for (const b of blocks) {
+        if (!b.date || !b.start_time || !b.end_time) continue;
+        for (const k of keysOf(b)) {
+          const gk = `${k}|${b.date}`;
+          const a = groups.get(gk); if (a) a.push(b); else groups.set(gk, [b]);
         }
       }
-    }
-    return ids;
+      for (const [, arr] of groups) {
+        if (arr.length < 2) continue;
+        arr.sort((x, y) => toMin(x.start_time) - toMin(y.start_time));
+        for (let i = 1; i < arr.length; i++) {
+          if (toMin(arr[i].start_time) < toMin(arr[i - 1].end_time)) {
+            for (const id of [arr[i].id, arr[i - 1].id]) {
+              const s = reason.get(id) || new Set<string>(); s.add(label); reason.set(id, s);
+            }
+          }
+        }
+      }
+    };
+    addOverlaps(b => (b.instructors || []).map(iu => iu.instructor?.id).filter(Boolean) as string[], 'instructor');
+    addOverlaps(b => (b.room_id ? [b.room_id] : []), 'room');
+    return { ids: new Set(reason.keys()), reason };
   }, [blocks]);
 
   if (status === 'loading') {
@@ -335,7 +341,9 @@ export default function PlanningWorkspacePage() {
   if (!session) return null;
 
   const draftCount = blocks.filter(b => (!programId || b.program_schedule_id === programId) && b.status === 'draft').length;
-  const visibleConflicts = blocks.filter(b => (!programId || b.program_schedule_id === programId) && conflictIds.has(b.id)).length;
+  const conflictBlocks = blocks.filter(b => (!programId || b.program_schedule_id === programId) && conflicts.ids.has(b.id));
+  const instrConflicts = conflictBlocks.filter(b => conflicts.reason.get(b.id)?.has('instructor')).length;
+  const roomConflicts = conflictBlocks.filter(b => conflicts.reason.get(b.id)?.has('room')).length;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -353,9 +361,14 @@ export default function PlanningWorkspacePage() {
           </div>
           <div className="flex items-center gap-2 text-xs">
             {saving && <span className="inline-flex items-center gap-1 text-gray-500 dark:text-gray-400"><Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving…</span>}
-            {visibleConflicts > 0 && (
+            {instrConflicts > 0 && (
               <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
-                <AlertTriangle className="w-3.5 h-3.5" /> {visibleConflicts} instructor conflict{visibleConflicts === 1 ? '' : 's'}
+                <AlertTriangle className="w-3.5 h-3.5" /> {instrConflicts} instructor
+              </span>
+            )}
+            {roomConflicts > 0 && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300">
+                <AlertTriangle className="w-3.5 h-3.5" /> {roomConflicts} room
               </span>
             )}
             <span className="px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
@@ -424,13 +437,18 @@ export default function PlanningWorkspacePage() {
                           onDragEnd={() => setDraggingId(null)}
                           onDragOver={e => { if (draggingId && editable) e.preventDefault(); }}
                           onDrop={e => { if (!draggingId || !editable) return; e.preventDefault(); e.stopPropagation(); moveBlock(draggingId, key, i); }}
-                          className={`rounded-md border-l-4 px-2 py-1 text-[11px] ${editable ? 'cursor-grab active:cursor-grabbing' : ''} ${draggingId === b.id ? 'opacity-40' : ''} ${conflictIds.has(b.id) ? 'ring-2 ring-red-500' : ''} ${b.status === 'draft' ? 'bg-amber-50 dark:bg-amber-900/10 border-dashed' : 'bg-gray-50 dark:bg-gray-700/40'}`}
+                          className={`rounded-md border-l-4 px-2 py-1 text-[11px] ${editable ? 'cursor-grab active:cursor-grabbing' : ''} ${draggingId === b.id ? 'opacity-40' : ''} ${conflicts.ids.has(b.id) ? 'ring-2 ring-red-500' : ''} ${b.status === 'draft' ? 'bg-amber-50 dark:bg-amber-900/10 border-dashed' : 'bg-gray-50 dark:bg-gray-700/40'}`}
                           style={{ borderLeftColor: color }}>
                           <div className="font-medium text-gray-800 dark:text-gray-100 leading-tight flex items-start gap-1">
                             <span className="flex-1">{b.course_name || b.title || '(untitled)'}</span>
-                            {conflictIds.has(b.id) && <AlertTriangle className="w-3 h-3 text-red-500 shrink-0 mt-0.5" />}
+                            {conflicts.ids.has(b.id) && (
+                              <AlertTriangle className="w-3 h-3 text-red-500 shrink-0 mt-0.5"
+                                aria-label={`${[...(conflicts.reason.get(b.id) || [])].join(' + ')} conflict`} />
+                            )}
                           </div>
-                          <div className="text-gray-500 dark:text-gray-400">{fmtTime(b.start_time)}–{fmtTime(b.end_time)}</div>
+                          <div className="text-gray-500 dark:text-gray-400">
+                            {fmtTime(b.start_time)}–{fmtTime(b.end_time)}{b.room?.name ? ` · ${b.room.name}` : ''}
+                          </div>
                           {/* Instructor chip / picker */}
                           {editable && editingInstrId === b.id ? (
                             <select
