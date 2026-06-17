@@ -407,6 +407,14 @@ export default function PlanningWorkspacePage() {
           </div>
         )}
 
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-3 mb-2 text-[11px] text-gray-500 dark:text-gray-400">
+          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-gray-200 dark:bg-gray-600 border-l-4 border-blue-500" /> Published</span>
+          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm bg-amber-100 dark:bg-amber-900/30 border-l-4 border-dashed border-amber-500" /> Draft</span>
+          <span className="inline-flex items-center gap-1"><span className="inline-block w-3 h-3 rounded-sm ring-2 ring-red-500" /> Conflict</span>
+          <span className="ml-auto">Drag a block to re-time its day · click a name to assign · tetris cascade keeps lengths</span>
+        </div>
+
         {/* Day columns */}
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 className="animate-spin text-gray-400" /></div>
@@ -418,8 +426,13 @@ export default function PlanningWorkspacePage() {
               const editable = !!programId;
               return (
                 <div key={key} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 min-h-[120px]">
-                  <div className="px-2 py-1.5 border-b border-gray-100 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    {day.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' })}
+                  <div className="px-2 py-1.5 border-b border-gray-100 dark:border-gray-700 text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center justify-between">
+                    <span>{day.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' })}</span>
+                    {dayBlocks.length > 0 && (
+                      <span className="font-normal text-[10px] text-gray-400">
+                        {dayBlocks.length} · {fmtTime(dayBlocks[0].start_time)}–{fmtTime(dayBlocks[dayBlocks.length - 1].end_time)}
+                      </span>
+                    )}
                   </div>
                   <div
                     className={`p-1.5 space-y-1.5 min-h-[80px] ${draggingId && editable ? 'bg-blue-50/40 dark:bg-blue-900/10' : ''}`}
