@@ -345,6 +345,7 @@ function TimeGridBlock({
   column = 0,
   totalColumns = 1,
   dimmed,
+  conflict,
 }: {
   block: PmiScheduleBlock;
   program: PmiProgramSchedule | undefined;
@@ -353,6 +354,7 @@ function TimeGridBlock({
   column?: number;
   totalColumns?: number;
   dimmed?: boolean;
+  conflict?: boolean;
 }) {
   const top = getBlockTop(block.start_time);
   const height = getBlockHeight(block.start_time, block.end_time);
@@ -386,7 +388,7 @@ function TimeGridBlock({
         }));
         e.dataTransfer.effectAllowed = 'move';
       }}
-      className="absolute rounded-md px-1.5 py-0.5 text-left overflow-hidden hover:ring-2 hover:ring-white/40 transition-shadow cursor-pointer group"
+      className={`absolute rounded-md px-1.5 py-0.5 text-left overflow-hidden hover:ring-2 hover:ring-white/40 transition-shadow cursor-pointer group ${conflict ? 'ring-2 ring-red-500' : ''}`}
       style={{
         top: `${top}px`,
         height: `${height}px`,
@@ -2583,6 +2585,32 @@ function SemesterPlannerPage() {
     ).values()
   );
 
+  // Live conflict detection (mirrors the Planning Workspace): same instructor
+  // or same room on time-overlapping blocks on the same date. Recomputes on
+  // every block change so drag/edit highlights conflicts immediately — a live
+  // complement to the static precomputed ConflictBanner.
+  const liveConflictIds = (() => {
+    const tm = (t: string | null | undefined) => { if (!t) return 0; const [h, m] = t.split(':').map(Number); return h * 60 + (m || 0); };
+    const ids = new Set<string>();
+    const add = (keysOf: (b: PmiScheduleBlock) => string[]) => {
+      const groups = new Map<string, PmiScheduleBlock[]>();
+      for (const b of safeArray(blocks)) {
+        if (!b.date || !b.start_time || !b.end_time) continue;
+        for (const k of keysOf(b)) { const gk = `${k}|${b.date}`; const a = groups.get(gk); if (a) a.push(b); else groups.set(gk, [b]); }
+      }
+      for (const [, arr] of groups) {
+        if (arr.length < 2) continue;
+        arr.sort((x, y) => tm(x.start_time) - tm(y.start_time));
+        for (let i = 1; i < arr.length; i++) {
+          if (tm(arr[i].start_time) < tm(arr[i - 1].end_time)) { ids.add(arr[i].id); ids.add(arr[i - 1].id); }
+        }
+      }
+    };
+    add(b => safeArray(b.instructors).map(iu => iu.instructor_id).filter(Boolean) as string[]);
+    add(b => (b.room_id ? [b.room_id] : []));
+    return ids;
+  })();
+
   // Group blocks by date for week view
   const blocksByDate = new Map<string, PmiScheduleBlock[]>();
   for (const b of visibleBlocks) {
@@ -3254,6 +3282,7 @@ function SemesterPlannerPage() {
                             column={col}
                             totalColumns={total}
                             dimmed={isDimmed}
+                            conflict={liveConflictIds.has(block.id)}
                           />
                         );
                       })}
