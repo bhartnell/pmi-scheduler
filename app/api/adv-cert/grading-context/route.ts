@@ -50,9 +50,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Stations on the day (each may carry a default drawn scenario_id).
+    // instructor_name/room/custom_title/station_notes power the coordinator
+    // tracker's "who's teaching / where / what phase" plan-state view.
     const { data: stations } = await supabase
       .from('lab_stations')
-      .select('id, station_number, scenario_id')
+      .select('id, station_number, scenario_id, instructor_name, instructor_id, room, custom_title, station_notes')
       .eq('lab_day_id', labDayId)
       .order('station_number', { ascending: true });
 

@@ -759,6 +759,9 @@ export default function LabDayPage() {
               <Link href={`/labs/schedule/${labDayId}/coordinator`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-900/30 rounded-lg hover:bg-orange-100 dark:hover:bg-orange-900/50 border border-orange-200 dark:border-orange-800"><Users className="w-3.5 h-3.5" /> Coordinator View</Link>
             </>
           )}
+          {(labDay.is_adv_cert_testing || labDay.cert_course === 'acls' || labDay.cert_course === 'pals') && (
+            <Link href={`/labs/schedule/${labDayId}/acls-coordinator`} className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/30 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-800"><Users className="w-3.5 h-3.5" /> ACLS Tracker</Link>
+          )}
           {/* Checkoff view — mobile-first combined tracker for days where two
               stations run the same skill (e.g. Intubation Checkoff). Auto-
               detects from stations; shows an empty state otherwise. */}

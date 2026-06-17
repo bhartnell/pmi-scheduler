@@ -22,6 +22,9 @@ export interface LabDay {
     };
   };
   is_nremt_testing?: boolean;
+  /** Advanced-cert (ACLS/PALS) testing-day flag + course tag (adv_cert module). */
+  is_adv_cert_testing?: boolean;
+  cert_course?: 'acls' | 'pals' | null;
   /** Scheduling Overhaul Phase 1.1 — drives the priority badge on calendars and the open-shift sort. */
   priority_flag?: 'normal' | 'high' | 'critical';
   /** Free-form context shown alongside the priority badge ("ACLS recert", "Guest cardiologist", etc.). */
