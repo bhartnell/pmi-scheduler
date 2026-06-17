@@ -15,7 +15,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, RefreshCw, CheckCircle2, XCircle, Clock, Users, UserCheck, MapPin } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, CheckCircle2, XCircle, Clock, Users, UserCheck, MapPin, Printer } from 'lucide-react';
 
 interface Student { id: string; first_name: string; last_name: string; status?: string | null }
 interface Group { id: string; name: string; members: Student[] }
@@ -41,6 +41,8 @@ export default function AclsCoordinatorPage() {
   const [stations, setStations] = useState<Station[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [autoRefreshSec, setAutoRefreshSec] = useState(0); // 0 = off
+  const [lastRefreshed, setLastRefreshed] = useState<string | null>(null);
 
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/signin'); }, [status, router]);
 
@@ -56,10 +58,18 @@ export default function AclsCoordinatorPage() {
       const att = await attRes.json();
       if (ctx.success) { setDay(ctx.day); setGroups(ctx.groups || []); setStations(ctx.stations || []); }
       if (att.success) setAttempts(att.attempts || []);
+      setLastRefreshed(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
     } catch { /* non-blocking */ } finally { setLoading(false); }
   }, [labDayId]);
 
   useEffect(() => { if (status === 'authenticated') load(); }, [load, status]);
+
+  // Auto-refresh: poll on the selected interval (live-updating display during the course).
+  useEffect(() => {
+    if (status !== 'authenticated' || autoRefreshSec === 0) return;
+    const t = setInterval(() => load(), autoRefreshSec * 1000);
+    return () => clearInterval(t);
+  }, [autoRefreshSec, status, load]);
 
   // Attempts indexed by group.
   const attemptsByGroup = useMemo(() => {
@@ -94,11 +104,11 @@ export default function AclsCoordinatorPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-5xl mx-auto px-4 py-5">
-        <Link href={`/labs/schedule/${labDayId}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-3">
+        <Link href={`/labs/schedule/${labDayId}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-3 print:hidden">
           <ArrowLeft className="w-4 h-4" /> Lab Day
         </Link>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 print:hidden">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ACLS Coordinator Tracker</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -106,11 +116,90 @@ export default function AclsCoordinatorPage() {
               {day?.is_adv_cert_testing ? ' · scored testing day' : ''} — stats & plan-state (not dispatch)
             </p>
           </div>
-          <button onClick={load} disabled={loading} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            <label className="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+              Auto
+              <select
+                value={autoRefreshSec}
+                onChange={e => setAutoRefreshSec(Number(e.target.value))}
+                className="text-xs rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1.5 py-1"
+              >
+                <option value={0}>Off</option>
+                <option value={30}>30s</option>
+                <option value={60}>60s</option>
+              </select>
+            </label>
+            {lastRefreshed && <span className="text-[11px] text-gray-400 hidden sm:inline">updated {lastRefreshed}</span>}
+            <button onClick={load} disabled={loading} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+            <button onClick={() => window.print()} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+              <Printer className="w-3.5 h-3.5" /> Print
+            </button>
+          </div>
         </div>
 
+        {/* Print-only team-lead tracking sheet — paper backup for the course (complements the Google-forms fallback). */}
+        {day && (
+          <div className="hidden print:block text-black">
+            <div className="mb-3 border-b border-black pb-2">
+              <h1 className="text-xl font-bold">
+                {(day.cert_course || 'ACLS').toUpperCase()} Team-Lead Tracking Sheet
+              </h1>
+              <p className="text-sm">
+                {day.date}{day.cohort?.cohort_number ? ` · Cohort ${day.cohort.cohort_number}` : ''}
+                {day.is_adv_cert_testing ? ' · scored testing day' : ''}
+                {'   '}Coordinator: ____________________
+              </p>
+            </div>
+            {groups.map(g => {
+              const gAttempts = attemptsByGroup.get(g.id) || [];
+              return (
+                <div key={g.id} className="mb-4" style={{ breakInside: 'avoid' }}>
+                  <div className="font-bold text-sm border-b border-black mb-1">
+                    {g.name} ({g.members.length})
+                    {gAttempts.length > 0 && (
+                      <span className="font-normal">
+                        {'  — recorded: '}
+                        {gAttempts.map(a => `${a.overall_result.toUpperCase()} (TL ${sname(a.team_lead)})`).join(', ')}
+                      </span>
+                    )}
+                  </div>
+                  <table className="w-full text-xs border-collapse">
+                    <thead>
+                      <tr className="text-left">
+                        <th className="border border-black px-1 py-0.5 w-1/3">Student</th>
+                        <th className="border border-black px-1 py-0.5">Team-led?</th>
+                        <th className="border border-black px-1 py-0.5">Scenario / case</th>
+                        <th className="border border-black px-1 py-0.5">Pass / Fail</th>
+                        <th className="border border-black px-1 py-0.5 w-1/4">Notes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {g.members.map(m => (
+                        <tr key={m.id}>
+                          <td className="border border-black px-1 py-1">
+                            {m.last_name}, {m.first_name}
+                            {stats.ledStudentIds.has(m.id) ? ' ✓' : ''}
+                          </td>
+                          <td className="border border-black px-1 py-1">☐</td>
+                          <td className="border border-black px-1 py-1"></td>
+                          <td className="border border-black px-1 py-1">P / F</td>
+                          <td className="border border-black px-1 py-1"></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+            <p className="text-[10px] mt-2">
+              ✓ = already recorded in the grader at print time. Use this sheet as a paper backup; enter results in the Megacode Grader when back online.
+            </p>
+          </div>
+        )}
+
+        <div className="print:hidden">
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 className="animate-spin text-gray-400" /></div>
         ) : !day ? (
@@ -192,6 +281,7 @@ export default function AclsCoordinatorPage() {
             </section>
           </div>
         )}
+        </div>
       </div>
     </div>
   );
