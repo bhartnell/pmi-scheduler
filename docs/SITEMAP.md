@@ -205,6 +205,7 @@ Canonical home for lab day operations. 38 pages.
 | Path | Notes |
 |------|-------|
 | `/labs` | Hub (formerly `/lab-management`) |
+| `/labs/acls-hub` | ACLS Hub — read-only aggregator for the full ACLS event (Day 1/Day 2 schedule, lab sections, two-day/all-section coordinator stats, by-instructor, print). Linked from `/calendar`. |
 | `/labs/schedule` | Lab day list |
 | `/labs/schedule/[id]` | Lab day details — primary lab-day view |
 | `/labs/schedule/[id]/assignments` | Per-station assignments |

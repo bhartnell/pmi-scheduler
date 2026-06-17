@@ -11,6 +11,7 @@ import {
   List,
   Grid3X3,
   LayoutGrid,
+  GraduationCap,
   Filter,
   Printer,
   Clock,
@@ -1375,10 +1376,18 @@ function CalendarContent() {
           </span>
         )}
 
+        {/* ACLS Hub — read-only aggregator for the full ACLS event */}
+        <Link
+          href="/labs/acls-hub"
+          className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-red-600 hover:bg-red-700 text-white"
+        >
+          <GraduationCap className="h-3.5 w-3.5" /> ACLS Hub
+        </Link>
+
         {/* Planning workspace — drag-to-arrange + publish (Stage 4b) */}
         <Link
           href="/scheduling/workspace"
-          className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-indigo-600 hover:bg-indigo-700 text-white"
+          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-indigo-600 hover:bg-indigo-700 text-white"
         >
           <LayoutGrid className="h-3.5 w-3.5" /> Planning Workspace
         </Link>
