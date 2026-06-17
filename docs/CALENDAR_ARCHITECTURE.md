@@ -130,17 +130,27 @@ Sizes: **S** small · **M** medium · **L** large. Risk: **safe** (additive) ·
   always-available; part-timer availability input) and pin the exact gap
   (class-load conflict detection). Informs Stage 7 priority.
 
-### Stage 2 — Lab-structure constraint correction — L, CAREFUL — TOP PRIORITY (foundation)
-Depends on 1a. The `UNIQUE(date, cohort_id)` is a false assumption (multiple
-distinct labs/day happen program-wide, not just ACLS/PALS). Correct it to allow
-**multiple lab sections per cohort per date**, and update EVERY dependent from 1a
-to handle multiple (trigger, views, dedup, template apply, singular "find the lab
-day" code). Back up, dry-run, reversible. Preferred over the "sections inside one
-lab_day" workaround because the constraint itself is wrong.
-- **2b. Migrate the monolithic G14 ACLS day → sectioned structure** (M, careful) —
-  validates the new model on real data; back up the 30 blocks + lab_day/stations first.
+### Stage 2 — Lab-structure constraint correction — ✅ DONE (2026-06-17), inc 1–3
+Depended on 1a. The `UNIQUE(date, cohort_id)` was a false assumption (multiple
+distinct labs/day happen program-wide, not just ACLS/PALS). **Corrected on
+2026-06-17 (commits `4382e036`, `befdd390`, `d1980d80`)** to allow **multiple
+lab sections per cohort per date**, with EVERY 1a dependent updated:
+- **inc 1** (`4382e036`): migration `20260617_lab_days_sections.sql` — `section_number`
+  (NOT NULL DEFAULT 1) + `section_label` on lab_days; `UNIQUE(date, cohort_id)` →
+  superset `UNIQUE(date, cohort_id, section_number)`; `pmi_schedule_blocks.linked_section_number`.
+- **inc 2** (`befdd390`): `20260617_calendar_link_triggers_section.sql` — both link
+  triggers key on `(cohort, date, section)` with deterministic LIMIT 1.
+- **inc 3** (`d1980d80`): lab-days POST auto-assigns next section; unified + feed.ics
+  dedup on `(date, cohort, section)`; planner lookup cohort+section scoped (was
+  `labDays[0]`); `build-acls-days.js` scoped to section 1; section badges/banner UI.
+- Purely additive — existing rows became section 1; **G14 ACLS day unaffected**.
+  Verified: build green, constraint smoke test (2 sections OK, dup rejected 23505).
+- **2b. Migrate the monolithic G14 ACLS day → sectioned structure** — NOT done
+  (deferred). G14 runs Thursday as section 1 (monolithic, grades fine). Splitting
+  it into learning/testing sections is an optional post-course cleanup; back up the
+  30 blocks + lab_day/stations first.
 - **2c. Consistent sectioned structure across ALL section types** incl. BLS
-  (check-box, no team-leads) — consistency of process over a BLS special case.
+  (check-box, no team-leads) — consistency of process over a BLS special case. Pending.
 
 ### Stage 3 — Team-lead tracking per section — M — TOP-PRIORITY VALUE (the driver)
 Depends on Stage 2 (sections exist). Make-or-break competency (AHA requires
@@ -220,11 +230,15 @@ correction + dependents) → 2b (migrate ACLS) → begin Stage 3. That delivers 
 top-priority value (multi-section labs + team-lead tracking) on the solid corrected
 foundation, with the fallback covering ACLS meanwhile.
 
-> **Thursday guardrail (decided 2026-06-15):** Stage 2 (constraint reshape) and
-> ESPECIALLY 2b (migrating the live G14 ACLS day to sections) are **HELD until
-> AFTER Thursday's ACLS course**, unless an ironclad "G14 stays fully
-> runnable/gradeable" guarantee is met. The Google-forms fallback covers Thursday
-> team-lead tracking. Stage 1a (read-only map, below) was done now; Stage 2+ waits.
+> **Thursday guardrail (decided 2026-06-15; superseded 2026-06-17):** Stage 2 was
+> originally HELD until after Thursday. **On 2026-06-17 the user re-prioritized:
+> multi-section labs are vital and were built on main (inc 1–3) with disciplined
+> fallback points** because the "G14 stays fully runnable/gradeable" guarantee is
+> met — the change is a purely additive constraint superset, G14's day stays
+> section 1 and grades identically, and every increment is independently
+> revertable. 2b (actually splitting G14 into sections) remains deferred; G14 runs
+> Thursday monolithic. Fallback floor: `ab95a0b0` (pre-constraint). Revert path in
+> CHANGELOG per-increment.
 
 ---
 
