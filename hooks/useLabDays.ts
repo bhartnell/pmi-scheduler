@@ -63,6 +63,10 @@ interface LabDay {
   priority_flag?: 'normal' | 'high' | 'critical';
   priority_reason?: string | null;
   is_nremt_testing?: boolean;
+  // Multi-section labs (Stage 2) — explicit so list/grid consumers read them as
+  // number/string, not `unknown` via the index signature below.
+  section_number?: number | null;
+  section_label?: string | null;
   [key: string]: unknown;
 }
 
