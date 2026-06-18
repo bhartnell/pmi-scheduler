@@ -52,11 +52,16 @@ export interface ScenarioFullDisplayProps {
   scenario: AnyObj;
   /** When true, all phases start expanded. Default: only first. */
   expandAllPhases?: boolean;
+  /** When true, hide the few always-rendering sections (Patient Info, Secondary
+   *  Assessment, SAMPLE) if they have no data — for sparse cases (e.g. OCR'd
+   *  ACLS cards). Default false → unchanged for existing consumers. */
+  hideEmpty?: boolean;
 }
 
 export default function ScenarioFullDisplay({
   scenario,
   expandAllPhases = false,
+  hideEmpty = false,
 }: ScenarioFullDisplayProps) {
   const [expandedPhases, setExpandedPhases] = useState<Set<number>>(() => {
     const phases = Array.isArray(scenario?.phases) ? scenario.phases : [];
@@ -93,6 +98,18 @@ export default function ScenarioFullDisplay({
     scenario?.avpu ||
     scenario?.gcs ||
     scenario?.pupils;
+
+  // Data-presence checks for the always-rendering sections (used by hideEmpty).
+  const patientInfoHasData = !!(scenario?.patient_name || scenario?.patient_age != null || scenario?.patient_sex || scenario?.patient_weight || scenario?.chief_complaint);
+  const vitalsHasData = !!(initialVitals && Object.values(initialVitals).some(v => v));
+  const medHistHasData = !!(scenario?.medical_history?.length || scenario?.medications?.length || scenario?.allergies);
+  const sampleHasData = !!(sample?.signs_symptoms || sample?.last_oral_intake || sample?.events_leading || scenario?.medications?.length || scenario?.medical_history?.length || scenario?.allergies || scenario?.chief_complaint);
+  const opqrstHasData = !!(opqrst && Object.values(opqrst).some(v => v));
+  const secondaryHasData = !!(secondary && Object.values(secondary).some(v => v));
+  const secondaryWrapperHasData = vitalsHasData || medHistHasData || sampleHasData || opqrstHasData || secondaryHasData;
+  const showPatientInfo = !hideEmpty || patientInfoHasData;
+  const showSecondary = !hideEmpty || secondaryWrapperHasData;
+  const showSample = !hideEmpty || sampleHasData;
 
   return (
     <div className="space-y-6">
@@ -146,6 +163,7 @@ export default function ScenarioFullDisplay({
       )}
 
       {/* 3. PATIENT INFORMATION & SCENE */}
+      {showPatientInfo && (
       <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
         <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
           <User className="w-4 h-4" />
@@ -171,6 +189,7 @@ export default function ScenarioFullDisplay({
           </div>
         </div>
       </div>
+      )}
 
       {/* 4. PRIMARY ASSESSMENT (XABCDE) */}
       {hasPrimaryAssessment && (
@@ -224,6 +243,7 @@ export default function ScenarioFullDisplay({
       )}
 
       {/* 5. SECONDARY ASSESSMENT */}
+      {showSecondary && (
       <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800 space-y-4">
         <h4 className="font-semibold text-blue-800 dark:text-blue-300 flex items-center gap-2">
           <Thermometer className="w-4 h-4" />
@@ -310,6 +330,7 @@ export default function ScenarioFullDisplay({
         )}
 
         {/* SAMPLE History */}
+        {showSample && (
         <div>
           <h5 className="text-sm font-medium text-blue-700 dark:text-blue-400 mb-2 flex items-center gap-1">
             <ClipboardList className="w-3 h-3" /> SAMPLE History
@@ -349,6 +370,7 @@ export default function ScenarioFullDisplay({
             </div>
           </div>
         </div>
+        )}
 
         {/* OPQRST */}
         {opqrst && Object.values(opqrst).some(v => v) && (
@@ -390,6 +412,7 @@ export default function ScenarioFullDisplay({
           </div>
         )}
       </div>
+      )}
 
       {/* 6. CRITICAL ACTIONS */}
       {scenario?.critical_actions?.length ? (

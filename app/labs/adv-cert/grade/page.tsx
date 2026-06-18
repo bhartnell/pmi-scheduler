@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, XCircle, Loader2, Save } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import ScenarioFullDisplay from '@/components/scenario/ScenarioFullDisplay';
 import type { AdvCertScenario, CertCourse } from '@/types/adv-cert';
 
 interface DayOpt {
@@ -40,6 +41,10 @@ export default function AdvCertGradePage() {
 
   const [scenarioId, setScenarioId] = useState('');
   const [scenario, setScenario] = useState<AdvCertScenario | null>(null);
+  // Full scenario row for the rich, FAMILIAR display (same component the
+  // standard scenarios use) — separate from `scenario` (segments/criteria).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [fullScenario, setFullScenario] = useState<any>(null);
 
   // grading state keyed by scenario_segment_id
   const [criteriaMet, setCriteriaMet] = useState<Record<string, boolean>>({});
@@ -132,6 +137,15 @@ export default function AdvCertGradePage() {
       .catch(() => toast.error('Failed to load scenario'))
       .finally(() => setLoadingScenario(false));
   }, [session, scenarioId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Full scenario row (all columns) for the rich familiar display.
+  useEffect(() => {
+    if (!session || !scenarioId) { setFullScenario(null); return; }
+    fetch(`/api/lab-management/scenarios/${scenarioId}`)
+      .then((r) => r.json())
+      .then((d) => { setFullScenario(d?.scenario ?? d ?? null); })
+      .catch(() => setFullScenario(null));
+  }, [session, scenarioId]);
 
   function resetGrading() {
     setCriteriaMet({}); setSegResult({}); setSegComments({});
@@ -340,52 +354,33 @@ export default function AdvCertGradePage() {
               </p>
             )}
 
-            {/* Phase 2 — narrative case content (familiar format). Shown when the
-                OCR'd content exists; otherwise just the case-identity header. */}
-            {(() => {
-              const vitals = scenario.initial_vitals && typeof scenario.initial_vitals === 'object'
-                ? Object.entries(scenario.initial_vitals as Record<string, unknown>).filter(([, v]) => v != null && v !== '')
-                : [];
-              const hasNarrative = !!(scenario.patient_presentation || scenario.history || scenario.instructor_notes || vitals.length || scenario.patient_age);
-              if (!hasNarrative) {
-                return <p className="mt-1 text-[11px] text-gray-400">Grade each segment below. (No case narrative on file for this scenario.)</p>;
-              }
-              return (
-                <div className="mt-3 space-y-2 border-t border-gray-100 dark:border-gray-700 pt-3">
-                  {scenario.patient_presentation && (
-                    <p className="text-sm text-gray-800 dark:text-gray-100"><span className="font-semibold">Scenario:</span> {scenario.patient_presentation}</p>
-                  )}
-                  {(scenario.patient_age != null || scenario.patient_sex) && (
-                    <p className="text-xs text-gray-600 dark:text-gray-300">
-                      {scenario.patient_age != null ? `Age ${scenario.patient_age}` : ''}{scenario.patient_age != null && scenario.patient_sex ? ' · ' : ''}{scenario.patient_sex || ''}
-                    </p>
-                  )}
-                  {vitals.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {vitals.map(([k, v]) => (
-                        <span key={k} className="text-[11px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
-                          <span className="uppercase text-gray-400">{k}</span> {String(v)}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {scenario.history && (
-                    <details className="text-xs text-gray-600 dark:text-gray-300">
-                      <summary className="cursor-pointer font-medium text-gray-500 dark:text-gray-400">Case narrative / progression</summary>
-                      <p className="mt-1 whitespace-pre-line">{scenario.history}</p>
-                    </details>
-                  )}
-                  {scenario.instructor_notes && (
-                    <details className="text-xs text-gray-600 dark:text-gray-300">
-                      <summary className="cursor-pointer font-medium text-gray-500 dark:text-gray-400">Instructor notes</summary>
-                      <p className="mt-1 whitespace-pre-line">{scenario.instructor_notes}</p>
-                    </details>
-                  )}
-                  <p className="text-[10px] text-gray-400">Content is OCR-derived from the case cards — proofread as needed.</p>
-                </div>
-              );
-            })()}
+            {/* Free-text lead-in + narrative (OCR) — the structured panel below
+                has no home for these, so they show here. */}
+            {scenario.patient_presentation && (
+              <p className="mt-2 text-sm text-gray-800 dark:text-gray-100">
+                <span className="font-semibold">Scenario:</span> {scenario.patient_presentation}
+              </p>
+            )}
+            {scenario.history && (
+              <details className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                <summary className="cursor-pointer font-medium text-gray-500 dark:text-gray-400">Case narrative / progression</summary>
+                <p className="mt-1 whitespace-pre-line">{scenario.history}</p>
+              </details>
+            )}
+            <p className="mt-1 text-[11px] text-gray-400">
+              Grade each segment below. Case content (OCR-derived — proofread as needed) shows in the panel.
+            </p>
           </div>
+
+          {/* Scenario reference — the SAME structured display the standard
+              scenarios use (patient info, vitals, secondary assessment, phases,
+              critical actions). Shows whatever the case has populated. */}
+          {fullScenario && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+              <ScenarioFullDisplay scenario={fullScenario} hideEmpty />
+            </div>
+          )}
+
           {scenario.segments.length === 0 && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-sm text-yellow-800 dark:text-yellow-300">
               This scenario has no segments assembled yet. Import or assemble segments before grading.
