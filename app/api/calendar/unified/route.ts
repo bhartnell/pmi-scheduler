@@ -234,8 +234,18 @@ export async function GET(request: NextRequest) {
         const { data: labDays } = await query;
 
         if (labDays) {
+          // Hide the monolithic section-1 fallback on dates that have real
+          // sections (2+) — mirrors the ACLS Hub. Keeps the old one-lab-per-day
+          // record as the grading fallback without showing it as a duplicate.
+          const sectionedDates = new Set(
+            (labDays as Array<{ date?: string | null; section_number?: number | null }>)
+              .filter((d) => (d.section_number ?? 1) > 1)
+              .map((d) => d.date)
+          );
           for (const ld of labDays) {
             if (!ld.date) continue;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            if (((ld as any).section_number ?? 1) === 1 && sectionedDates.has(ld.date)) continue;
 
             // Skip lab days already represented on the calendar by a
             // matching schedule block (either FK-linked or covered by
