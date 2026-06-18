@@ -69,7 +69,7 @@ async function main() {
   // older structural-only seeds omit them → this is a no-op. Column types are
   // exact (see docs/ACLS_SEED_SCHEMA.md). text[] takes a JS array; jsonb takes
   // an object/array (stringified + ::jsonb cast).
-  const NARR_TEXT = ['chief_complaint', 'dispatch_time', 'dispatch_location', 'dispatch_notes', 'patient_name', 'patient_sex', 'patient_weight', 'general_impression', 'environment_notes', 'history', 'patient_presentation', 'instructor_notes', 'allergies'];
+  const NARR_TEXT = ['chief_complaint', 'dispatch_time', 'dispatch_location', 'dispatch_notes', 'patient_name', 'patient_sex', 'patient_weight', 'general_impression', 'environment_notes', 'history', 'patient_presentation', 'instructor_notes', 'allergies', 'assessment_x', 'assessment_a', 'assessment_b', 'assessment_c', 'assessment_d', 'assessment_e', 'avpu', 'gcs', 'pupils'];
   const NARR_INT = ['patient_age'];
   const NARR_ARR = ['medical_history', 'medications', 'learning_objectives', 'critical_actions', 'debrief_points', 'equipment_needed', 'expected_interventions'];
   const NARR_JSONB = ['initial_vitals', 'vitals', 'sample_history', 'opqrst', 'phases', 'secondary_survey', 'ekg_findings'];
@@ -192,11 +192,15 @@ async function main() {
       let scenId;
       if (ex.rows[0]) {
         scenId = ex.rows[0].id;
+        // COALESCE so a CONTENT-ONLY seed (case_code + content fields, no
+        // structural tags) never nulls the existing identity/tags. Pass null
+        // for any omitted structural field → keeps the existing value.
         await client.query(
           `UPDATE scenarios
-             SET title=$1, grading_model=$2, cert_tier=$3, scenario_scope=$4, is_active=true
+             SET title=COALESCE($1,title), grading_model=COALESCE($2,grading_model),
+                 cert_tier=COALESCE($3,cert_tier), scenario_scope=COALESCE($4,scenario_scope), is_active=true
            WHERE id=$5`,
-          [sc.name, sc.grading_model || null, sc.cert_tier || null, sc.scenario_scope || null, scenId]
+          [sc.name || null, sc.grading_model || null, sc.cert_tier || null, sc.scenario_scope || null, scenId]
         );
         stats.scenUpd++;
       } else {
