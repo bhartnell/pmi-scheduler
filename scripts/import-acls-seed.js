@@ -61,8 +61,31 @@ async function main() {
 
   const stats = {
     segIns: 0, segUpd: 0, critIns: 0, critUpd: 0, critDeact: 0,
-    scenIns: 0, scenUpd: 0, ssIns: 0, ssUpd: 0,
+    scenIns: 0, scenUpd: 0, ssIns: 0, ssUpd: 0, scenNarr: 0,
   };
+
+  // Path A — narrative content mapping. Cowork's OCR'd seed may include these
+  // case-card fields (flat on the scenario object, or nested under `content`);
+  // older structural-only seeds omit them → this is a no-op. Column types are
+  // exact (see docs/ACLS_SEED_SCHEMA.md). text[] takes a JS array; jsonb takes
+  // an object/array (stringified + ::jsonb cast).
+  const NARR_TEXT = ['chief_complaint', 'dispatch_time', 'dispatch_location', 'dispatch_notes', 'patient_name', 'patient_sex', 'patient_weight', 'general_impression', 'environment_notes', 'history', 'patient_presentation', 'instructor_notes', 'allergies'];
+  const NARR_INT = ['patient_age'];
+  const NARR_ARR = ['medical_history', 'medications', 'learning_objectives', 'critical_actions', 'debrief_points', 'equipment_needed', 'expected_interventions'];
+  const NARR_JSONB = ['initial_vitals', 'vitals', 'sample_history', 'opqrst', 'phases', 'secondary_survey', 'ekg_findings'];
+  async function applyNarrative(client, scenId, sc) {
+    const content = { ...sc, ...(sc.content && typeof sc.content === 'object' ? sc.content : {}) };
+    const sets = []; const vals = []; let p = 1;
+    const add = (col, val, cast = '') => { sets.push(`${col}=$${p}${cast}`); vals.push(val); p++; };
+    for (const col of NARR_TEXT) if (content[col] != null && content[col] !== '') add(col, String(content[col]));
+    for (const col of NARR_INT) if (content[col] != null && content[col] !== '') add(col, parseInt(content[col], 10));
+    for (const col of NARR_ARR) if (Array.isArray(content[col]) && content[col].length) add(col, content[col]);
+    for (const col of NARR_JSONB) if (content[col] != null) add(col, JSON.stringify(content[col]), '::jsonb');
+    if (!sets.length) return false;
+    vals.push(scenId);
+    await client.query(`UPDATE scenarios SET ${sets.join(', ')} WHERE id=$${p}`, vals);
+    return true;
+  }
 
   try {
     await client.query('BEGIN');
@@ -153,6 +176,9 @@ async function main() {
         stats.scenIns++;
       }
 
+      // Path A: map any narrative case content present on the seed scenario.
+      if (await applyNarrative(client, scenId, sc)) stats.scenNarr++;
+
       // assembly: upsert adv_cert_scenario_segments by (scenario_id, sequence_order)
       for (const seg of sc.segments || []) {
         const key = `${seg.segment_key}|${course}`;
@@ -189,7 +215,7 @@ async function main() {
     console.log(
       `Segments: ${stats.segIns} new / ${stats.segUpd} updated | ` +
       `Criteria: ${stats.critIns} new / ${stats.critUpd} updated / ${stats.critDeact} deactivated | ` +
-      `Scenarios: ${stats.scenIns} new / ${stats.scenUpd} updated | ` +
+      `Scenarios: ${stats.scenIns} new / ${stats.scenUpd} updated (${stats.scenNarr} with narrative content) | ` +
       `Assembly rows: ${stats.ssIns} new / ${stats.ssUpd} updated`
     );
   } catch (e) {

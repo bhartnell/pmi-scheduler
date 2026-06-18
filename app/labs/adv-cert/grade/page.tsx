@@ -75,6 +75,16 @@ export default function AdvCertGradePage() {
     }
   }, [stations, urlStationId]);
 
+  // Auto-select the station's drawn scenario when a station is chosen — so the
+  // grader doesn't make you re-pick the case every rotation. A manual scenario
+  // change afterward sticks (this only re-fires when the station changes).
+  useEffect(() => {
+    if (!stationId) return;
+    const st = stations.find((s) => s.id === stationId);
+    if (st?.scenario_id && st.scenario_id !== scenarioId) setScenarioId(st.scenario_id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stationId, stations]);
+
   // candidate days
   useEffect(() => {
     if (!session) return;
@@ -306,6 +316,33 @@ export default function AdvCertGradePage() {
 
       {scenario && !loadingScenario && (
         <div className="space-y-4">
+          {/* Case identity + structure (Phase 1). Phase 2 will render the full
+              narrative (lead-in, vitals, progression) here once the OCR'd case
+              content is seeded + imported. */}
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border-l-4 border-red-500">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-base font-bold text-gray-900 dark:text-white">
+                {scenario.case_code ? `[${scenario.case_code}] ` : ''}{scenario.name}
+              </span>
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                scenario.cert_tier === 'megacode_testing'
+                  ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                  : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+              }`}>
+                {scenario.cert_tier === 'megacode_testing' ? 'TESTING (scored)'
+                  : scenario.cert_tier === 'megacode_practice' ? 'Practice' : scenario.cert_tier}
+              </span>
+            </div>
+            {scenario.segments.length > 0 && (
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                <span className="font-medium">Case flow:</span>{' '}
+                {scenario.segments.map((s) => s.segment?.name).filter(Boolean).join(' → ')}
+              </p>
+            )}
+            <p className="mt-1 text-[11px] text-gray-400">
+              Grade each segment below. Full case narrative (lead-in, vitals, progression) appears here once imported.
+            </p>
+          </div>
           {scenario.segments.length === 0 && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-sm text-yellow-800 dark:text-yellow-300">
               This scenario has no segments assembled yet. Import or assemble segments before grading.
