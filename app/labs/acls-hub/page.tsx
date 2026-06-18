@@ -101,15 +101,27 @@ export default function AclsHubPage() {
 
   const visibleDates = activeDate === 'all' ? dates : dates.filter(d => d === activeDate);
 
+  // Hide the leftover MONOLITHIC section-1 day (the old one-lab-per-day fallback)
+  // from the hub WHEN that date has been split into real sections — it's a
+  // confusing duplicate. It stays in the DB as the grading fallback; we just
+  // don't render/count it here. A date with only section 1 (an unsectioned ACLS
+  // day) still shows.
+  const visibleLabDays = useMemo(() => {
+    const sectionedDates = new Set(
+      labDays.filter(d => (d.section_number ?? 1) > 1).map(d => d.date)
+    );
+    return labDays.filter(d => !((d.section_number ?? 1) === 1 && sectionedDates.has(d.date)));
+  }, [labDays]);
+
   // MEGACODE-ONLY scope for this view: ACLS passing is about megacode team-lead
   // experience, so the hub counts team-leads from the megacode sections only
   // (practice — now testing-graded — + final testing), NOT brady/tachy or
   // cardiac-arrest learning. (The semester/course overview tracks ALL TLs.)
   const megacodeLabDayIds = useMemo(() => new Set(
-    labDays
+    visibleLabDays
       .filter(d => d.is_adv_cert_testing || (d.section_label || '').toLowerCase().includes('megacode'))
       .map(d => d.id)
-  ), [labDays]);
+  ), [visibleLabDays]);
   const megAttempts = useMemo(
     () => attempts.filter(a => megacodeLabDayIds.has(a.lab_day_id)),
     [attempts, megacodeLabDayIds]
@@ -134,13 +146,13 @@ export default function AclsHubPage() {
     const notPassed = allStudents
       .filter(s => !passedTLIds.has(s.id))
       .map(s => ({ ...s, failed: failedTLIds.has(s.id) }));
-    const sections = labDays.filter(d => (d.section_number ?? 1) > 1).length;
+    const sections = visibleLabDays.filter(d => (d.section_number ?? 1) > 1).length;
     return {
       passed, failed, groupsTested, totalGroups: groups.length,
       passedTLIds, totalStudents: allStudents.length, passedTLCount, notPassed,
-      sections, labDaysCount: labDays.length, totalAttempts: megAttempts.length,
+      sections, labDaysCount: visibleLabDays.length, totalAttempts: megAttempts.length,
     };
-  }, [megAttempts, groups, labDays]);
+  }, [megAttempts, groups, visibleLabDays]);
 
   const attemptsByGroup = useMemo(() => {
     const m = new Map<string, Attempt[]>();
@@ -151,7 +163,7 @@ export default function AclsHubPage() {
   // By-instructor: every station assignment across all sections, grouped by name.
   const byInstructor = useMemo(() => {
     const m = new Map<string, { date: string; section: string; station: number; room: string | null; title: string }[]>();
-    for (const d of labDays) {
+    for (const d of visibleLabDays) {
       for (const st of d.stations) {
         const name = st.instructor_name?.trim();
         if (!name) continue;
@@ -167,7 +179,7 @@ export default function AclsHubPage() {
       }
     }
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [labDays]);
+  }, [visibleLabDays]);
 
   if (status === 'loading') return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
   if (!session) return null;
@@ -268,7 +280,7 @@ export default function AclsHubPage() {
             {/* Per day: schedule + sections */}
             {visibleDates.map((date) => {
               const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-              const daySections = labDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
+              const daySections = visibleLabDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
               return (
                 <section key={date} style={{ breakInside: 'avoid' }}>
                   <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
