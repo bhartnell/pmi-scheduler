@@ -230,10 +230,69 @@ export default function AclsHubPage() {
           )}
         </div>
 
-        {/* Print header */}
-        <div className="hidden print:block mb-3 border-b border-black pb-2 text-black">
-          <h1 className="text-xl font-bold">ACLS Event — {cohortLabel}</h1>
-          <p className="text-sm">{dates.map(prettyDate).join('  +  ')}</p>
+        {/* ── PRINT-ONLY SCHEDULE SHEET — clean instructor handout (the rest of
+            the hub dashboard is hidden on print). Shows BOTH days regardless of
+            the on-screen day toggle. ── */}
+        <div className="hidden print:block text-black acls-print">
+          <style>{`@media print {
+            @page { margin: 0.5in; size: letter portrait; }
+            html, body { background: #fff !important; }
+            .acls-print table { width: 100%; border-collapse: collapse; margin-bottom: 6px; }
+            .acls-print th, .acls-print td { border: 1px solid #000; padding: 3px 6px; text-align: left; vertical-align: top; font-size: 10pt; line-height: 1.25; }
+            .acls-print th { background: #e5e5e5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: 700; }
+          }`}</style>
+          {cohort && (
+            <>
+              <h1 className="text-xl font-bold">ACLS Course Schedule — {cohortLabel}</h1>
+              <p className="text-sm mb-2">{dates.map(prettyDate).join('   ·   ')}</p>
+              {dates.map((date, di) => {
+                const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
+                const daySections = visibleLabDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
+                return (
+                  <div key={date} style={{ breakBefore: di > 0 ? 'page' : 'auto' }}>
+                    <h2 className="text-base font-bold mt-3 mb-1">Day {di + 1} — {prettyDate(date)}</h2>
+                    <table>
+                      <thead><tr><th style={{ width: '110px' }}>Time</th><th>Lesson / Activity</th><th style={{ width: '150px' }}>Room / Instructor</th></tr></thead>
+                      <tbody>
+                        {dayEvents.length === 0
+                          ? <tr><td colSpan={3}>No schedule blocks.</td></tr>
+                          : dayEvents.map(e => (
+                            <tr key={e.id}>
+                              <td>{hhmm(e.start_time)}–{hhmm(e.end_time)}</td>
+                              <td>{e.title}</td>
+                              <td>{[e.room, (e.instructor_names || []).join(', ')].filter(Boolean).join(' · ')}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                    {daySections.length > 0 && (
+                      <div className="mt-1">
+                        <div className="font-bold mt-2 mb-1">Lab sections — station plan</div>
+                        {daySections.map(s => (
+                          <div key={s.id} style={{ breakInside: 'avoid' }}>
+                            <div className="font-semibold">{(s.section_label || s.title || 'Lab')} · {hhmm(s.start_time)}–{hhmm(s.end_time)}</div>
+                            <table>
+                              <thead><tr><th style={{ width: '32px' }}>#</th><th style={{ width: '120px' }}>Room</th><th>Case / Skill</th><th style={{ width: '150px' }}>Instructor</th></tr></thead>
+                              <tbody>
+                                {s.stations.map(st => (
+                                  <tr key={st.id}>
+                                    <td>{st.station_number}</td>
+                                    <td>{st.room || ''}</td>
+                                    <td>{st.scenario?.case_code || st.scenario?.title || st.custom_title || ''}</td>
+                                    <td>{st.instructor_name || ''}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
 
         {loading ? (
@@ -243,7 +302,7 @@ export default function AclsHubPage() {
             No ACLS event found. (Looks for lab days tagged <code>cert_course=acls</code>.)
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 print:hidden">
             {/* Megacode coordinator stats — practice + testing, both days */}
             <section>
               <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
