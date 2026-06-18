@@ -113,6 +113,25 @@ export default function ScenarioFullDisplay({
 
   return (
     <div className="space-y-6">
+      {/* 0. SCENARIO PRESENTATION (lead-in) + CASE NARRATIVE — free-text fields
+          (e.g. OCR'd ACLS cards). Guarded on presence → auto-collapse when empty. */}
+      {scenario?.patient_presentation && (
+        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <h4 className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+            <FileText className="w-4 h-4" /> Scenario
+          </h4>
+          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{scenario.patient_presentation}</p>
+        </div>
+      )}
+      {scenario?.history && (
+        <details className="bg-white dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700" open>
+          <summary className="font-semibold text-gray-900 dark:text-white cursor-pointer flex items-center gap-2">
+            <FileText className="w-4 h-4" /> Case Narrative / Progression
+          </summary>
+          <p className="mt-2 text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{scenario.history}</p>
+        </details>
+      )}
+
       {/* 1. INSTRUCTOR NOTES (TOP — READ FIRST!) */}
       {scenario?.instructor_notes && (
         <div className="bg-yellow-100 dark:bg-yellow-900/40 p-4 rounded-lg border-2 border-yellow-400 dark:border-yellow-600">

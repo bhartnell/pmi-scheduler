@@ -354,19 +354,6 @@ export default function AdvCertGradePage() {
               </p>
             )}
 
-            {/* Free-text lead-in + narrative (OCR) — the structured panel below
-                has no home for these, so they show here. */}
-            {scenario.patient_presentation && (
-              <p className="mt-2 text-sm text-gray-800 dark:text-gray-100">
-                <span className="font-semibold">Scenario:</span> {scenario.patient_presentation}
-              </p>
-            )}
-            {scenario.history && (
-              <details className="mt-1 text-xs text-gray-600 dark:text-gray-300">
-                <summary className="cursor-pointer font-medium text-gray-500 dark:text-gray-400">Case narrative / progression</summary>
-                <p className="mt-1 whitespace-pre-line">{scenario.history}</p>
-              </details>
-            )}
             <p className="mt-1 text-[11px] text-gray-400">
               Grade each segment below. Case content (OCR-derived — proofread as needed) shows in the panel.
             </p>
