@@ -690,6 +690,30 @@ export default function HomePage() {
         <ErrorBoundary>
         <nav aria-label="Main navigation">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-7xl mx-auto">
+          {/* ACLS Hub Card - instructor+ only. Direct shortcut to the full
+              ACLS/AHA event view (schedule, sections, megacode TL stats, print). */}
+          {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
+            <Link
+              href="/labs/acls-hub"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group ring-2 ring-red-500/60"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-red-200 dark:group-hover:bg-red-900/50 transition-colors">
+                  <GraduationCap className="w-8 h-8 text-red-600 dark:text-red-400" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">ACLS Hub</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
+                  Full ACLS/AHA event in one place — schedule, lab sections, megacode team-lead stats, print.
+                </p>
+                <div className="flex flex-wrap justify-center gap-2 text-xs">
+                  <span className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">Day 1 / Day 2</span>
+                  <span className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">Megacode TL</span>
+                  <span className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">Print</span>
+                </div>
+              </div>
+            </Link>
+          )}
+
           {/* Lab Management Card - instructor+ only */}
           {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
             <Link

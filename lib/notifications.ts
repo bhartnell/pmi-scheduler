@@ -6,6 +6,8 @@ import {
   sendShiftConfirmedEmail,
   sendLabAssignedEmail,
   sendLabReminderEmail,
+  isStudentEmailAddress,
+  isStudentEmailBlackoutToday,
 } from './email';
 
 // Email preferences interface
@@ -183,6 +185,12 @@ export async function createNotification({
   referenceId,
 }: CreateNotificationParams): Promise<{ success: boolean; error?: string }> {
   try {
+    // Student-notification blackout (ACLS/AHA days): suppress in-app
+    // notifications to student recipients on flagged dates. Returns success so
+    // callers (often best-effort fan-outs) don't treat it as an error.
+    if (isStudentEmailAddress(userEmail) && await isStudentEmailBlackoutToday()) {
+      return { success: true };
+    }
     const supabase = getSupabaseAdmin();
     // Use provided category or derive from type
     const notificationCategory = category || TYPE_TO_CATEGORY[type] || 'system';
@@ -214,7 +222,13 @@ export async function createBulkNotifications(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = getSupabaseAdmin();
-    const records = notifications.map(n => {
+    // Student-notification blackout: drop student recipients on flagged dates.
+    let list = notifications;
+    if (notifications.some(n => isStudentEmailAddress(n.userEmail)) && await isStudentEmailBlackoutToday()) {
+      list = notifications.filter(n => !isStudentEmailAddress(n.userEmail));
+      if (list.length === 0) return { success: true };
+    }
+    const records = list.map(n => {
       const notificationType = n.type || 'general';
       const notificationCategory = n.category || TYPE_TO_CATEGORY[notificationType] || 'system';
       return {

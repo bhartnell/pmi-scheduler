@@ -373,6 +373,54 @@ const STUDENT_EVAL_TEMPLATES: ReadonlySet<EmailTemplate> = new Set([
 let nremtLockCache: { value: boolean; fetchedAt: number } | null = null;
 const NREMT_LOCK_TTL_MS = 30_000;
 
+// Student-notification blackout (lab_days.suppress_student_emails) — same
+// cached-date pattern as the NREMT guard. Unlike NREMT this fails OPEN: a DB
+// hiccup must NOT silently suppress all student notifications forever; the safe
+// default is "not a blackout → send".
+let studentBlackoutCache: { value: boolean; fetchedAt: number } | null = null;
+const STUDENT_BLACKOUT_TTL_MS = 30_000;
+
+/** A student recipient (their accounts use the @my.pmi.edu domain). */
+export function isStudentEmailAddress(addr: string | null | undefined): boolean {
+  return !!addr && addr.trim().toLowerCase().endsWith('@my.pmi.edu');
+}
+
+/**
+ * True if today's (Arizona-local) date has any lab_day flagged
+ * suppress_student_emails. When true, ALL student-facing sends (email + in-app)
+ * are blocked for that date. Fails OPEN.
+ */
+export async function isStudentEmailBlackoutToday(): Promise<boolean> {
+  const now = Date.now();
+  if (studentBlackoutCache && now - studentBlackoutCache.fetchedAt < STUDENT_BLACKOUT_TTL_MS) {
+    return studentBlackoutCache.value;
+  }
+  try {
+    const supabase = getSupabaseAdmin();
+    const azDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/Phoenix', year: 'numeric', month: '2-digit', day: '2-digit',
+    }).format(new Date());
+    const { data, error } = await supabase
+      .from('lab_days')
+      .select('id')
+      .eq('suppress_student_emails', true)
+      .eq('date', azDate)
+      .limit(1);
+    if (error) {
+      console.error('[student blackout] lookup failed; failing OPEN (will send):', error);
+      studentBlackoutCache = { value: false, fetchedAt: now };
+      return false;
+    }
+    const active = !!(data && data.length > 0);
+    studentBlackoutCache = { value: active, fetchedAt: now };
+    return active;
+  } catch (err) {
+    console.error('[student blackout] exception; failing OPEN (will send):', err);
+    studentBlackoutCache = { value: false, fetchedAt: now };
+    return false;
+  }
+}
+
 /**
  * Public check for other routes that bypass the central sendEmail()
  * (i.e. they use their own Resend client for custom templates). These
@@ -463,6 +511,17 @@ async function _isNremtTestingActiveToday(): Promise<boolean> {
  * @returns Result object with success status, optional error message, and email ID
  */
 export async function sendEmail(emailData: EmailData): Promise<{ success: boolean; error?: string; id?: string }> {
+  // Student-notification blackout — suppress EVERY email to a student recipient
+  // on a date flagged lab_days.suppress_student_emails (e.g. ACLS/AHA days).
+  // Applies to all templates (not just eval) so students get nothing that day.
+  // Instructors/staff (@pmi.edu) are unaffected.
+  if (isStudentEmailAddress(emailData.to) && await isStudentEmailBlackoutToday()) {
+    const msg = 'Blocked: student-notification blackout is active today (suppress_student_emails). Student email not sent.';
+    console.warn(`[student blackout] ${msg} template=${emailData.template} to=${emailData.to}`);
+    await logEmailSend({ to: emailData.to, subject: `[BLACKOUT] ${emailData.template}`, template: emailData.template, status: 'failed', error: msg });
+    return { success: false, error: msg };
+  }
+
   // NREMT-day kill switch — runs BEFORE any Resend call, before client init.
   // Two precision tiers:
   //   1. If the caller passed labDayId, check ONLY that lab day's

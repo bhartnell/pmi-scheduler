@@ -1688,6 +1688,7 @@
 | cert_course | text | YES |  |  |
 | section_number | integer | NO | 1 | Multiple lab sections per (date, cohort); part of UNIQUE(date, cohort_id, section_number) |
 | section_label | text | YES |  | Optional display label for the section |
+| suppress_student_emails | boolean | NO | false | When true, suppress ALL student-facing notifications (email + in-app) on this date (AHA/ACLS days); checked date-wide in lib/email + lib/notifications |
 
 **Foreign Keys:**
 - `created_by` -> `lab_users.id` (`lab_days_created_by_fkey`)
