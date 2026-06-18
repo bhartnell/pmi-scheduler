@@ -71,7 +71,7 @@ async function main() {
   // an object/array (stringified + ::jsonb cast).
   const NARR_TEXT = ['chief_complaint', 'dispatch_time', 'dispatch_location', 'dispatch_notes', 'patient_name', 'patient_sex', 'patient_weight', 'general_impression', 'environment_notes', 'history', 'patient_presentation', 'instructor_notes', 'allergies', 'assessment_x', 'assessment_a', 'assessment_b', 'assessment_c', 'assessment_d', 'assessment_e', 'avpu', 'gcs', 'pupils'];
   const NARR_INT = ['patient_age'];
-  const NARR_ARR = ['medical_history', 'medications', 'learning_objectives', 'critical_actions', 'debrief_points', 'equipment_needed', 'expected_interventions'];
+  const NARR_ARR = ['medical_history', 'medications', 'learning_objectives', 'critical_actions', 'debrief_points', 'equipment_needed', 'expected_interventions', 'medications_to_administer'];
   const NARR_JSONB = ['initial_vitals', 'vitals', 'sample_history', 'opqrst', 'phases', 'secondary_survey', 'ekg_findings'];
   // Map the seed's `card` block (lead_in / vital_signs / narrative[] /
   // instructor_notes[] / setting) onto our scenario columns. vital_signs uses
@@ -92,6 +92,23 @@ async function main() {
   }
   async function applyNarrative(client, scenId, sc) {
     const flat = { ...sc, ...(sc.content && typeof sc.content === 'object' ? sc.content : {}) };
+    // Normalize the converter's shapes to what the DB/display expect:
+    //   - top-level `vitals` → `initial_vitals` (the display reads initial_vitals)
+    //   - phase {title, presentation_text, instructor_cues[]} → the canonical
+    //     ScenarioFullDisplay shape {name, presentation_notes, expected_actions[]}.
+    //     (phase.vitals keys bp/hr/rr/spo2/temp/etco2/ekg_rhythm already match.)
+    if (flat.vitals && !flat.initial_vitals) flat.initial_vitals = flat.vitals;
+    if (Array.isArray(flat.phases)) {
+      flat.phases = flat.phases.map((ph) => ({
+        name: ph.name ?? ph.title ?? null,
+        onset: ph.onset ?? null,
+        presentation_notes: ph.presentation_notes ?? ph.presentation_text ?? null,
+        vitals: ph.vitals ?? null,
+        expected_actions: Array.isArray(ph.expected_actions) ? ph.expected_actions
+          : (Array.isArray(ph.instructor_cues) ? ph.instructor_cues : undefined),
+        instructor_cues: typeof ph.instructor_cues === 'string' ? ph.instructor_cues : undefined,
+      }));
+    }
     const card = sc.card && typeof sc.card === 'object' ? sc.card : null;
     const sets = []; const vals = []; let p = 1;
     const setCols = new Set();
