@@ -64,6 +64,15 @@ export interface AdvCertScenario {
   cert_tier: CertTier | null;
   scenario_scope: string | null;
   grading_model: string | null;
+  // Narrative case content (Phase 2) — populated from the OCR'd seed; optional.
+  patient_presentation?: string | null;
+  chief_complaint?: string | null;
+  patient_age?: number | null;
+  patient_sex?: string | null;
+  initial_vitals?: Record<string, unknown> | null;
+  history?: string | null;
+  instructor_notes?: string | null;
+  environment_notes?: string | null;
   segments: AdvCertScenarioSegment[];
 }
 

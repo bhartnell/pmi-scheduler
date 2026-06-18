@@ -60,7 +60,7 @@ export async function getScenarioWithSegments(
   const supabase = getSupabaseAdmin();
   const { data: scenario, error: sErr } = await supabase
     .from('scenarios')
-    .select('id, name:title, case_code, cert_course, cert_tier, scenario_scope, grading_model')
+    .select('id, name:title, case_code, cert_course, cert_tier, scenario_scope, grading_model, patient_presentation, chief_complaint, patient_age, patient_sex, initial_vitals, history, instructor_notes, environment_notes')
     .eq('id', scenarioId)
     .single();
   if (sErr || !scenario) return null;

@@ -73,14 +73,47 @@ async function main() {
   const NARR_INT = ['patient_age'];
   const NARR_ARR = ['medical_history', 'medications', 'learning_objectives', 'critical_actions', 'debrief_points', 'equipment_needed', 'expected_interventions'];
   const NARR_JSONB = ['initial_vitals', 'vitals', 'sample_history', 'opqrst', 'phases', 'secondary_survey', 'ekg_findings'];
+  // Map the seed's `card` block (lead_in / vital_signs / narrative[] /
+  // instructor_notes[] / setting) onto our scenario columns. vital_signs uses
+  // human keys ("Heart rate", "Age", …) → normalize to the initial_vitals shape,
+  // and lift Age→patient_age, Weight→patient_weight.
+  function mapVitalSigns(vs) {
+    const out = {}; let age = null, weight = null;
+    const norm = (s) => String(s).toLowerCase().replace(/[^a-z0-9]/g, '');
+    const KEY = { heartrate: 'hr', hr: 'hr', pulse: 'hr', bloodpressure: 'bp', bp: 'bp', respiratoryrate: 'rr', rr: 'rr', spo2: 'spo2', temperature: 'temp', temp: 'temp' };
+    for (const [k, v] of Object.entries(vs || {})) {
+      if (v == null || v === '') continue;
+      const n = norm(k);
+      if (n === 'age') { const m = String(v).match(/\d+/); if (m) age = parseInt(m[0], 10); continue; }
+      if (n === 'weight') { weight = String(v); continue; }
+      out[KEY[n] || n] = String(v);
+    }
+    return { vitals: out, age, weight };
+  }
   async function applyNarrative(client, scenId, sc) {
-    const content = { ...sc, ...(sc.content && typeof sc.content === 'object' ? sc.content : {}) };
+    const flat = { ...sc, ...(sc.content && typeof sc.content === 'object' ? sc.content : {}) };
+    const card = sc.card && typeof sc.card === 'object' ? sc.card : null;
     const sets = []; const vals = []; let p = 1;
-    const add = (col, val, cast = '') => { sets.push(`${col}=$${p}${cast}`); vals.push(val); p++; };
-    for (const col of NARR_TEXT) if (content[col] != null && content[col] !== '') add(col, String(content[col]));
-    for (const col of NARR_INT) if (content[col] != null && content[col] !== '') add(col, parseInt(content[col], 10));
-    for (const col of NARR_ARR) if (Array.isArray(content[col]) && content[col].length) add(col, content[col]);
-    for (const col of NARR_JSONB) if (content[col] != null) add(col, JSON.stringify(content[col]), '::jsonb');
+    const setCols = new Set();
+    const add = (col, val, cast = '') => { if (setCols.has(col)) return; setCols.add(col); sets.push(`${col}=$${p}${cast}`); vals.push(val); p++; };
+    // 1) card structure (the OCR'd seed's format) takes priority.
+    if (card) {
+      if (card.lead_in) add('patient_presentation', String(card.lead_in));
+      if (Array.isArray(card.narrative) && card.narrative.length) add('history', card.narrative.join('\n'));
+      if (Array.isArray(card.instructor_notes) && card.instructor_notes.length) add('instructor_notes', card.instructor_notes.join('\n'));
+      if (card.setting) add('environment_notes', String(card.setting));
+      if (card.vital_signs && typeof card.vital_signs === 'object') {
+        const { vitals, age, weight } = mapVitalSigns(card.vital_signs);
+        if (Object.keys(vitals).length) add('initial_vitals', JSON.stringify(vitals), '::jsonb');
+        if (age != null) add('patient_age', age);
+        if (weight != null) add('patient_weight', weight);
+      }
+    }
+    // 2) flat fields (forward-compat) fill anything card didn't set.
+    for (const col of NARR_TEXT) if (flat[col] != null && flat[col] !== '') add(col, String(flat[col]));
+    for (const col of NARR_INT) if (flat[col] != null && flat[col] !== '') add(col, parseInt(flat[col], 10));
+    for (const col of NARR_ARR) if (Array.isArray(flat[col]) && flat[col].length) add(col, flat[col]);
+    for (const col of NARR_JSONB) if (flat[col] != null) add(col, JSON.stringify(flat[col]), '::jsonb');
     if (!sets.length) return false;
     vals.push(scenId);
     await client.query(`UPDATE scenarios SET ${sets.join(', ')} WHERE id=$${p}`, vals);

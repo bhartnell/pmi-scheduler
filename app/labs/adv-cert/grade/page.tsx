@@ -339,9 +339,52 @@ export default function AdvCertGradePage() {
                 {scenario.segments.map((s) => s.segment?.name).filter(Boolean).join(' → ')}
               </p>
             )}
-            <p className="mt-1 text-[11px] text-gray-400">
-              Grade each segment below. Full case narrative (lead-in, vitals, progression) appears here once imported.
-            </p>
+
+            {/* Phase 2 — narrative case content (familiar format). Shown when the
+                OCR'd content exists; otherwise just the case-identity header. */}
+            {(() => {
+              const vitals = scenario.initial_vitals && typeof scenario.initial_vitals === 'object'
+                ? Object.entries(scenario.initial_vitals as Record<string, unknown>).filter(([, v]) => v != null && v !== '')
+                : [];
+              const hasNarrative = !!(scenario.patient_presentation || scenario.history || scenario.instructor_notes || vitals.length || scenario.patient_age);
+              if (!hasNarrative) {
+                return <p className="mt-1 text-[11px] text-gray-400">Grade each segment below. (No case narrative on file for this scenario.)</p>;
+              }
+              return (
+                <div className="mt-3 space-y-2 border-t border-gray-100 dark:border-gray-700 pt-3">
+                  {scenario.patient_presentation && (
+                    <p className="text-sm text-gray-800 dark:text-gray-100"><span className="font-semibold">Scenario:</span> {scenario.patient_presentation}</p>
+                  )}
+                  {(scenario.patient_age != null || scenario.patient_sex) && (
+                    <p className="text-xs text-gray-600 dark:text-gray-300">
+                      {scenario.patient_age != null ? `Age ${scenario.patient_age}` : ''}{scenario.patient_age != null && scenario.patient_sex ? ' · ' : ''}{scenario.patient_sex || ''}
+                    </p>
+                  )}
+                  {vitals.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {vitals.map(([k, v]) => (
+                        <span key={k} className="text-[11px] px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+                          <span className="uppercase text-gray-400">{k}</span> {String(v)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {scenario.history && (
+                    <details className="text-xs text-gray-600 dark:text-gray-300">
+                      <summary className="cursor-pointer font-medium text-gray-500 dark:text-gray-400">Case narrative / progression</summary>
+                      <p className="mt-1 whitespace-pre-line">{scenario.history}</p>
+                    </details>
+                  )}
+                  {scenario.instructor_notes && (
+                    <details className="text-xs text-gray-600 dark:text-gray-300">
+                      <summary className="cursor-pointer font-medium text-gray-500 dark:text-gray-400">Instructor notes</summary>
+                      <p className="mt-1 whitespace-pre-line">{scenario.instructor_notes}</p>
+                    </details>
+                  )}
+                  <p className="text-[10px] text-gray-400">Content is OCR-derived from the case cards — proofread as needed.</p>
+                </div>
+              );
+            })()}
           </div>
           {scenario.segments.length === 0 && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-sm text-yellow-800 dark:text-yellow-300">
