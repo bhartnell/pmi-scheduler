@@ -1868,6 +1868,7 @@
 | cert_course | text | YES |  |  |
 | cert_tier | text | YES |  |  |
 | scenario_scope | text | YES |  |  |
+| legacy_code_2020 | text | YES |  | old 2020 case_code, retained for traceability after the 2025 renumber (e.g. CASE_67 legacy_code_2020=CASE_48) |
 
 **Foreign Keys:**
 - `created_by` -> `lab_users.id` (`scenarios_created_by_fkey`)
