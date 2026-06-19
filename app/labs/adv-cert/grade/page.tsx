@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -124,6 +124,12 @@ export default function AdvCertGradePage() {
     setGroupId(''); setStationId(''); setTeamLeadId(''); setMemberIds([]);
   }, [session, labDayId]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Tracks the scenario we last cleared the score sheet for, so a SPURIOUS
+  // refetch (e.g. next-auth refreshing `session` on window-focus when the grader
+  // flips to the timer tab) never wipes in-progress scores. resetGrading() must
+  // fire ONLY on a genuine scenario change — not on every re-run of this effect.
+  const lastResetScenarioRef = useRef<string>('');
+
   // full scenario (segments + criteria)
   useEffect(() => {
     if (!session || !scenarioId) { setScenario(null); return; }
@@ -131,7 +137,13 @@ export default function AdvCertGradePage() {
     fetch(`/api/adv-cert/scenarios/${scenarioId}`)
       .then((r) => r.json())
       .then((d) => {
-        if (d.success) { setScenario(d.scenario); resetGrading(); }
+        if (d.success) {
+          setScenario(d.scenario);
+          if (lastResetScenarioRef.current !== scenarioId) {
+            resetGrading();
+            lastResetScenarioRef.current = scenarioId;
+          }
+        }
         else toast.error(d.error || 'Failed to load scenario');
       })
       .catch(() => toast.error('Failed to load scenario'))
@@ -201,10 +213,12 @@ export default function AdvCertGradePage() {
       const data = await res.json();
       if (data.success) {
         toast.success(`Saved — ${String(overall).toUpperCase()}${data.teamLeadLogWritten ? ' (team-lead logged)' : ''}`);
-        // ready for the next group on the same day
+        // Ready for the NEXT student at the SAME station: clear only the score
+        // sheet + the per-student selection (team lead / members). KEEP the day,
+        // group, station, and scenario context so the grader isn't bounced back
+        // to a blank form needing to re-select the station + case every time.
         resetGrading();
-        setGroupId(''); setStationId(''); setTeamLeadId(''); setMemberIds([]);
-        setScenarioId(''); setScenario(null);
+        setTeamLeadId(''); setMemberIds([]);
       } else {
         toast.error(data.error || 'Failed to save');
       }
