@@ -11,7 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-06-23
 
-- `PENDING` | **CLAUDE.md: add "UI Layout Rule (HARD REQUIREMENT)" — desktop-first / wide, not mobile-first**. Codified the standing build convention (from `PMI_Project_Instructions.md`): PMI is used primarily on desktop/laptop/iPad-landscape (esp. labs), phone is occasional fallback. Pages must start from the wide multi-column layout and adapt DOWN — Tailwind base classes = wide, `max-sm:`/`max-md:` to stack — not mobile-first `grid-cols-1` scaling up. Management/admin interfaces (scheduling, grading, ACLS hub, results, schedule-building, lab management) are the primary use and must be wide. When touching any page, flag any still stuck vertical/mobile-first. Added a Conventions pointer too. Instructions/docs only — no code.
+- `dcd9cc26` | **CLAUDE.md: add "UI Layout Rule (HARD REQUIREMENT)" — desktop-first / wide, not mobile-first**. Codified the standing build convention (from `PMI_Project_Instructions.md`): PMI is used primarily on desktop/laptop/iPad-landscape (esp. labs), phone is occasional fallback. Pages must start from the wide multi-column layout and adapt DOWN — Tailwind base classes = wide, `max-sm:`/`max-md:` to stack — not mobile-first `grid-cols-1` scaling up. Management/admin interfaces (scheduling, grading, ACLS hub, results, schedule-building, lab management) are the primary use and must be wide. When touching any page, flag any still stuck vertical/mobile-first. Added a Conventions pointer too. Instructions/docs only — no code.
 
 ## 2026-06-19
 
