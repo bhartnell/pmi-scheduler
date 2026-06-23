@@ -135,10 +135,45 @@ After:  cohort:cohorts!students_cohort_id_fkey(id, cohort_number)
 - API routes: NextRequest/NextResponse, getServerSession for auth, createClient for Supabase
 - Roles: superadmin > admin > instructor > user > guest
 - Pages: client components with useEffect data fetching
-- Styling: Tailwind only, dark mode via next-themes
+- Styling: Tailwind only, dark mode via next-themes; **desktop-first / wide layouts** (see UI Layout Rule below)
 - Migrations: IF NOT EXISTS, always add RLS policies and indexes
 - Audit: log sensitive operations via lib/audit.ts
 - Supabase embeds: Use explicit FK hints (`!fk_name`) when tables have multiple FK paths (see PostgREST FK Ambiguity Check above)
+
+## UI Layout Rule (HARD REQUIREMENT)
+
+**Build desktop-first / wide, mobile-FRIENDLY — NOT mobile-first.**
+This is a school setting used primarily on **desktop, laptop, and
+iPad/tablet in landscape** (especially for labs). Phone access happens
+but is the occasional fallback, never the design baseline.
+
+1. **Start from the wide layout and adapt DOWN.** The base (unprefixed)
+   layout is the desktop/landscape view — multi-column, horizontal, uses
+   the screen width. Collapse to single-column only at small screens.
+   Do NOT start from a phone (vertical, single-column) and scale up.
+
+2. **Tailwind, concretely:** make the **base classes the WIDE layout**
+   and use `max-sm:` / `max-md:` variants to stack down
+   (e.g. `grid-cols-3 max-md:grid-cols-1`), rather than the mobile-first
+   default of `grid-cols-1` + `sm:`/`md:`/`lg:` scaling up. Wide is the
+   baseline; small screens are the exception.
+
+3. **Management/admin interfaces are the PRIMARY use** and must be wide
+   and multi-column: scheduling, grading, ACLS hub, results,
+   schedule-building, lab management.
+
+4. **Landscape/wide is the default working orientation** — design for
+   tablet-landscape, not portrait phone.
+
+5. **Touch targets** stay comfortably sized (min ~44px height) for
+   tablet/touch use. Bigger cards + mobile-friendly touches are welcome
+   — "mobile friendly," not "mobile first."
+
+**When building or touching any page:** ensure it follows
+desktop-first/wide, and **FLAG any page still stuck in a
+vertical/mobile-first layout** so it can be brought in line (some older
+/ newer builds came in vertical-heavy — fix or flag them when touched).
+(Source: `PMI_Project_Instructions.md`, desktop-first principle.)
 
 ## Navigation Entry-Point Rule (HARD REQUIREMENT)
 

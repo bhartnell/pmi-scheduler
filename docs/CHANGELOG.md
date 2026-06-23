@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-06-23
+
+- `PENDING` | **CLAUDE.md: add "UI Layout Rule (HARD REQUIREMENT)" — desktop-first / wide, not mobile-first**. Codified the standing build convention (from `PMI_Project_Instructions.md`): PMI is used primarily on desktop/laptop/iPad-landscape (esp. labs), phone is occasional fallback. Pages must start from the wide multi-column layout and adapt DOWN — Tailwind base classes = wide, `max-sm:`/`max-md:` to stack — not mobile-first `grid-cols-1` scaling up. Management/admin interfaces (scheduling, grading, ACLS hub, results, schedule-building, lab management) are the primary use and must be wide. When touching any page, flag any still stuck vertical/mobile-first. Added a Conventions pointer too. Instructions/docs only — no code.
+
 ## 2026-06-19
 
 - `ff72dd77` | **Fix 2 live Grade (ACLS) workflow bugs (`app/labs/adv-cert/grade/page.tsx`)**. **Bug 1 (data loss):** the scenario-load effect called `resetGrading()` and depended on `session`; next-auth refreshes the session object on window-focus (e.g. when the grader flips to the timer tab and back), which re-fired the effect and **wiped the in-progress score sheet**. Fixed with a `lastResetScenarioRef` guard so `resetGrading()` runs ONLY on a genuine scenario change, never on a spurious refetch/re-render. **Bug 2 (re-nav after save):** `handleSave` success cleared `stationId/scenarioId/scenario/groupId`, blanking the form and forcing re-selection every save; now it clears only the score sheet + per-student selection (team lead / members) and **keeps day/group/station/scenario** so the grader is ready for the next student at the same station. Neither fix touches the save payload or grading logic. tsc 0 + clean build green.
