@@ -72,6 +72,14 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
         color: 'text-red-600 dark:text-red-400',
         bgColor: 'bg-red-100 dark:bg-red-900/30',
       },
+      {
+        title: 'AHA Results Export',
+        description: 'Completed AHA form sets (Megacode, Airway, Adult BLS) per cohort — autofilled, document-formatted PDF for course submission.',
+        href: '/reports/aha',
+        icon: ClipboardSignature,
+        color: 'text-red-600 dark:text-red-400',
+        bgColor: 'bg-red-100 dark:bg-red-900/30',
+      },
     ],
   },
   {

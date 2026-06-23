@@ -81,8 +81,8 @@ Ran the best-attempt selection + variant mapping against G14 (23 active students
 2. ✅ **DONE — instructor profile** (migration `20260623_lab_users_aha_profile.sql`, dry-run→applied): `lab_users.aha_instructor_number / signature_data / signature_kind`. API `app/api/profile/aha` (self GET/PATCH). UI `app/settings/aha-credentials` (AHA#, signature draw via `components/SignaturePad.tsx` / upload / auto script-font fallback); nav link in UserMenu.
 3. ✅ **DONE — Megacode Testing Checklist** (`lib/reports/aha/megacodeForm.ts` + render endpoint `app/api/reports/aha`): all 6 official variants recreated from the PDF; autofilled from CP1 best-attempt data (checkboxes/PASS-NR/flags/excused); print-to-PDF HTML doc. Validated e2e vs G14 (23 forms). Tachycardia has 1 official item with no rubric counterpart → footnoted.
 4. **Skills templates** — ✅ **Airway + Adult BLS DONE** (`lib/reports/aha/skillsForms.ts`, auto-complete PASS, endpoint `template=airway|adult_bls`, validated vs G14). ⚠️ **Infant CPR deferred/FLAGGED** — per-cycle compression/breath sub-criteria didn't survive extraction; needs cleaner source or visual confirm.
-5. **Render endpoint + per-student / whole-cohort** output + **per-form instructor selection** + picker UI page (+ nav entry) + download + flags surfaced.
-6. Validate against G14, doc updates.
+5. ✅ **DONE — picker UI** (`app/reports/aha`) + options endpoint + per-form instructor selection (signer per export) + nav entry on the Reports hub. Per-cohort output via the render endpoint; open/print-to-PDF. Megacode + Airway + Adult BLS usable end-to-end.
+6. **Remaining:** Infant CPR form (flagged — extraction lost sub-items); **visual QA** of the rendered PDFs vs the official AHA layouts; optional per-student (single-student) export UI; optional "show all attempts" toggle in the UI.
 
 **Official AHA 2025 forms received** (all carry the "Instructor Initials / Instructor Number / Date" sign-off): Megacode Testing (6 variants), Airway, Adult BLS, Infant CPR. Learning Station Checklists (8, formative) intentionally OUT of scope for now.
 
