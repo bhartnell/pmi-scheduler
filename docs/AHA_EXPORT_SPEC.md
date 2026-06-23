@@ -59,6 +59,17 @@ Dropdown per form/section → instructors who have AHA info on file (name + AHA#
 - Download / open-in-tab; print + sign is a post-step.
 - FERPA drive: download-and-place only — NO drive integration.
 
+## 8a. ⚠️ CHECKPOINT-1 VALIDATION FINDING (G14, real data) — BLOCKS the renderer
+
+Ran the best-attempt selection + variant mapping against G14 (23 active students, 32 attempts):
+- **All 32 in-app scored attempts are megacode _practice_ (CASE_67–74). ZERO _testing_ (TEST_1–4) attempts exist in-app** — the Day-2 megacode TESTING block was not graded in the app.
+- Result of mapping each student's best pass to an AHA Megacode **Testing** variant:
+  - **13/23 map cleanly** (chains `brady>pvt>pea` → 1/3/8, `tachy>vf>pea` → 4/7/10).
+  - **9/23 PASSED but on a chain with NO official AHA variant** (`tachy>vf>asystole`, `tachy>pvt>pea`, `brady>pvt>asystole` — practice scenarios 67/69/72/74). These students led ONLY unmapped-chain practice scenarios → no AHA-mappable attempt exists for them.
+  - **1/23 no scorable attempt** (Figueras).
+- Root cause: practice scenarios 67–74 span 8 rhythm chains; only ~half match the 6 official AHA **testing** variants, and the actual testing megacodes weren't entered in-app.
+- **Decision needed before building the form renderer** (see chat) — determines the data source + how unmapped students are handled.
+
 ## 8. Flags (per "FLAG anything that doesn't map")
 - No criteria flagged `is_critical` → critical-actions tiebreak = total met-criteria (noted above).
 - Practice chains not matching an AHA variant (`tachy>vf>asystole`, `brady>pvt>asystole`, …) — flag students whose best attempt is one of these.
