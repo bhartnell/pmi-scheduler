@@ -4,6 +4,8 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import type { ReportScope } from '@/lib/reports/engine';
 import { fetchMegacodeReport } from '@/lib/reports/aha/megacode';
 import { renderMegacodeDocument, type SignoffInstructor } from '@/lib/reports/aha/megacodeForm';
+import { fetchScopeStudents } from '@/lib/reports/roster';
+import { SKILLS_FORMS, renderSkillsDocument } from '@/lib/reports/aha/skillsForms';
 
 /**
  * AHA Results Export — render endpoint (staff). Returns a self-contained styled
@@ -58,5 +60,15 @@ export async function GET(request: NextRequest) {
     return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 
-  return NextResponse.json({ success: false, error: `unknown or not-yet-built template "${template}"` }, { status: 400 });
+  // Skills checklists (auto-complete as PASS): airway, adult_bls
+  if (SKILLS_FORMS[template]) {
+    const students = await fetchScopeStudents(scope);
+    const html = renderSkillsDocument(SKILLS_FORMS[template], students, { autoPrint, instructor });
+    return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  }
+
+  return NextResponse.json(
+    { success: false, error: `unknown or not-yet-built template "${template}" (available: megacode, ${Object.keys(SKILLS_FORMS).join(', ')})` },
+    { status: 400 },
+  );
 }
