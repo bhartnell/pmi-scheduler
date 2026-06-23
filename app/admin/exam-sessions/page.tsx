@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   CalendarDays, CheckCircle2, Loader2, AlertTriangle, Plus, Trash2,
-  XCircle, Hourglass, Monitor, Laptop, ClipboardCheck, ExternalLink,
+  XCircle, Hourglass, Monitor, Laptop, ClipboardCheck, ExternalLink, Pencil, X,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 
@@ -85,6 +85,9 @@ export default function AdminExamSessionsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [busy, setBusy] = useState(false);
+  // Per-session details edit (date/time/seats/Pima/notes). null = no row in edit.
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ date: '', start_time: '', end_time: '', total_spots: 0, pima_computers: 0, notes: '' });
 
   const load = useCallback(async () => {
     try {
@@ -148,6 +151,71 @@ export default function AdminExamSessionsPage() {
       load();
     } catch (e) {
       setNotice(e instanceof Error ? e.message : 'Update failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(s: SessionRow) {
+    setEditingId(s.id);
+    setEditForm({
+      date: s.date, start_time: s.start_time.slice(0, 5), end_time: s.end_time.slice(0, 5),
+      total_spots: s.total_spots, pima_computers: s.pima_computers, notes: s.notes ?? '',
+    });
+  }
+
+  async function saveEdit(s: SessionRow) {
+    // Reducing capacity below current sign-ups never removes anyone (their seats
+    // are preserved) but leaves the session over-booked — warn before saving.
+    const newTotal = Number(editForm.total_spots), newPima = Number(editForm.pima_computers);
+    if (newTotal < s.total_used || newPima < s.pima_used) {
+      const ok = confirm(
+        `Heads-up: you're setting capacity (${newTotal} seats / ${newPima} Pima) BELOW what's already signed up `
+        + `(${s.total_used} seats / ${s.pima_used} Pima). No student will be removed — their seats are kept — but the `
+        + `session will show as over capacity until you move/remove someone. Save anyway?`,
+      );
+      if (!ok) return;
+    }
+    await patchSession(s.id, {
+      date: editForm.date, start_time: editForm.start_time, end_time: editForm.end_time,
+      total_spots: newTotal, pima_computers: newPima, notes: editForm.notes || null,
+    });
+    setEditingId(null);
+  }
+
+  async function moveSignup(signupId: string, targetSessionId: string) {
+    if (!targetSessionId) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/exam-scheduling/signups/admin/${signupId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_id: targetSessionId }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
+      setNotice('Student moved.');
+      load();
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Move failed');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeSignup(signupId: string, name: string) {
+    if (!confirm(`Remove ${name} from this session? Their seat is released (the student is not deleted).`)) return;
+    setBusy(true);
+    setNotice(null);
+    try {
+      const res = await fetch(`/api/exam-scheduling/signups/admin/${signupId}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
+      setNotice('Student removed from session.');
+      load();
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'Remove failed');
     } finally {
       setBusy(false);
     }
@@ -469,12 +537,56 @@ export default function AdminExamSessionsPage() {
                   className="px-3 py-1 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
                   {s.status === 'open' ? 'Close signups' : 'Reopen'}
                 </button>
+                <button type="button" disabled={busy}
+                  onClick={() => (editingId === s.id ? setEditingId(null) : startEdit(s))}
+                  className="inline-flex items-center gap-1 px-3 py-1 text-xs rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <Pencil className="w-3.5 h-3.5" /> {editingId === s.id ? 'Cancel' : 'Edit'}
+                </button>
                 <button type="button" disabled={busy} onClick={() => deleteSession(s.id)}
                   className="p-1.5 text-gray-400 hover:text-red-500" aria-label="Delete session">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
             </div>
+            {editingId === s.id && (
+              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 space-y-3">
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <label className="text-xs text-gray-600 dark:text-gray-300">Date
+                    <input type="date" value={editForm.date} onChange={e => setEditForm(f => ({ ...f, date: e.target.value }))}
+                      className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+                  </label>
+                  <label className="text-xs text-gray-600 dark:text-gray-300">Start
+                    <input type="time" value={editForm.start_time} onChange={e => setEditForm(f => ({ ...f, start_time: e.target.value }))}
+                      className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+                  </label>
+                  <label className="text-xs text-gray-600 dark:text-gray-300">End
+                    <input type="time" value={editForm.end_time} onChange={e => setEditForm(f => ({ ...f, end_time: e.target.value }))}
+                      className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+                  </label>
+                  <label className="text-xs text-gray-600 dark:text-gray-300">Total seats
+                    <input type="number" min={1} value={editForm.total_spots} onChange={e => setEditForm(f => ({ ...f, total_spots: Number(e.target.value) }))}
+                      className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+                  </label>
+                  <label className="text-xs text-gray-600 dark:text-gray-300">Pima Lockdown computers
+                    <input type="number" min={0} value={editForm.pima_computers} onChange={e => setEditForm(f => ({ ...f, pima_computers: Number(e.target.value) }))}
+                      className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+                  </label>
+                </div>
+                <label className="block text-xs text-gray-600 dark:text-gray-300">Notes / location
+                  <input type="text" value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                    placeholder="e.g. Room 214 / Reserved computer lab"
+                    className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+                </label>
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={() => setEditingId(null)}
+                    className="px-3 py-1.5 text-sm rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Cancel</button>
+                  <button type="button" onClick={() => saveEdit(s)} disabled={busy || !editForm.date}
+                    className="inline-flex items-center gap-2 px-4 py-1.5 text-sm rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-50">
+                    {busy && <Loader2 className="w-4 h-4 animate-spin" />} Save changes
+                  </button>
+                </div>
+              </div>
+            )}
             {s.signups.length > 0 ? (
               <div className="divide-y divide-gray-50 dark:divide-gray-700/50">
                 {s.signups.map(g => (
@@ -491,20 +603,37 @@ export default function AdminExamSessionsPage() {
                       </span>
                       {g.status === 'denied' && <span className="text-xs text-gray-400">(denied)</span>}
                     </div>
-                    {g.status === 'confirmed' && (
-                      <div className="flex gap-1">
-                        <button type="button" disabled={busy} onClick={() => recordResult(g.id, true)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded border border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
-                          title="Record written exam result: passed">
-                          <ClipboardCheck className="w-3 h-3" /> Passed
-                        </button>
-                        <button type="button" disabled={busy} onClick={() => recordResult(g.id, false)}
-                          className="px-2 py-0.5 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                          title="Record written exam result: not passed">
-                          Not passed
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {g.status === 'confirmed' && (
+                        <>
+                          <button type="button" disabled={busy} onClick={() => recordResult(g.id, true)}
+                            className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded border border-green-300 dark:border-green-700 text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                            title="Record written exam result: passed">
+                            <ClipboardCheck className="w-3 h-3" /> Passed
+                          </button>
+                          <button type="button" disabled={busy} onClick={() => recordResult(g.id, false)}
+                            className="px-2 py-0.5 text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                            title="Record written exam result: not passed">
+                            Not passed
+                          </button>
+                        </>
+                      )}
+                      {sessions.length > 1 && (
+                        <select disabled={busy} value="" onChange={e => moveSignup(g.id, e.target.value)}
+                          title="Move this student to another session"
+                          className="px-2 py-0.5 text-xs rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                          <option value="">Move to…</option>
+                          {sessions.filter(o => o.id !== s.id).map(o => (
+                            <option key={o.id} value={o.id}>{fmtDate(o.date)} · {fmtTime(o.start_time)}</option>
+                          ))}
+                        </select>
+                      )}
+                      <button type="button" disabled={busy}
+                        onClick={() => removeSignup(g.id, g.student ? `${g.student.first_name} ${g.student.last_name}` : g.student_email)}
+                        className="p-1 text-gray-400 hover:text-red-500" title="Remove from session">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

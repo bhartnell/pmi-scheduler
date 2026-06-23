@@ -6,6 +6,7 @@ import {
   removeSessionFromCalendar,
   updateSessionCalendarAttendee,
   notifyDirectorsOfProctor,
+  setWrittenExamScheduled,
 } from '@/lib/exam-scheduling';
 
 /**
@@ -58,7 +59,7 @@ export async function PATCH(
   const supabase = getSupabaseAdmin();
   const { data: before } = await supabase
     .from('exam_sessions')
-    .select('id, primary_instructor_id, google_event_id')
+    .select('id, date, primary_instructor_id, google_event_id')
     .eq('id', id)
     .single();
   if (!before) {
@@ -73,6 +74,20 @@ export async function PATCH(
     .single();
   if (error || !session) {
     return NextResponse.json({ success: false, error: error?.message ?? 'update failed' }, { status: 500 });
+  }
+
+  // Date changed → keep each CONFIRMED student's exam-date record in sync
+  // (mirrors the student-reschedule write-back). Signups are preserved; only
+  // their scheduled-date field is re-pointed. Best-effort, never blocks the edit.
+  if ('date' in patch && patch.date && patch.date !== before.date) {
+    const { data: confirmed } = await supabase
+      .from('exam_signups')
+      .select('student_id')
+      .eq('session_id', id)
+      .eq('status', 'confirmed');
+    for (const c of confirmed ?? []) {
+      if (c.student_id) await setWrittenExamScheduled(c.student_id, patch.date as string);
+    }
   }
 
   // Proctor changed → calendar attendee + heads-up follow.
