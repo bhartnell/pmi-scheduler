@@ -369,6 +369,7 @@ Case study system. 10 pages.
 | Path | Notes |
 |------|-------|
 | `/settings` | User settings hub |
+| `/settings/aha-credentials` | Instructor AHA number + signature (autofills AHA export forms) |
 | `/settings/calendar-setup` | Google Calendar OAuth setup |
 | `/settings/sessions` | Active sessions |
 | `/auth/signin`, `/auth/error` | NextAuth pages |

@@ -83,6 +83,9 @@
 | unavailable_weekdays | ARRAY | YES |  |  |
 | notify_lab_availability | boolean | NO | false |  |
 | lvfr_platoon | text | YES |  |  |
+| aha_instructor_number | text | YES |  | AHA instructor # for the AHA Results Export signature line |
+| signature_data | text | YES |  | PNG data URL of drawn/uploaded signature; NULL when signature_kind='auto' |
+| signature_kind | text | YES |  | 'drawn' \| 'uploaded' \| 'auto' (script-font name fallback) |
 
 **Foreign Keys:**
 - `department_id` -> `departments.id` (`lab_users_department_id_fkey`)

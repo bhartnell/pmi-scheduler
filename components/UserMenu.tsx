@@ -32,6 +32,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   ChevronDown,
+  Stamp,
 } from 'lucide-react';
 
 interface CalendarStatus {
@@ -175,6 +176,16 @@ export default function UserMenu() {
             >
               <SettingsIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
               Settings
+            </Link>
+
+            <Link
+              href="/settings/aha-credentials"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
+              role="menuitem"
+            >
+              <Stamp className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              AHA Credentials
             </Link>
 
             {connected && !needsReauth ? (
