@@ -76,8 +76,8 @@ Ran the best-attempt selection + variant mapping against G14 (23 active students
 - Students with NO scorable attempt → flagged, excluded (or rendered blank) in the cohort export.
 - Need the official AHA form templates (Ben).
 
-## 9. Proposed checkpoints (build order)
-1. **Engine skeleton** + AHA Megacode template (data + best-attempt selection + variant mapping) → HTML preview for G14 (validation cohort). *(no schema change yet)*
+## 9. Checkpoints (build order)
+1. ✅ **DONE — engine skeleton + Megacode data layer** (`lib/reports/engine.ts`, `lib/reports/aha/megacode.ts`): pluggable template registry; best-attempt selection (best score: pass>fail, most-met) + variant mapping + per-attempt segment/criteria assembly + flags. Logic validated against G14 (§8a). tsc 0 + clean build. *(no schema change; render endpoint/template pending official AHA PDFs.)*
 2. **Instructor profile schema** (dry-run → apply) + profile UI (AHA#, signature pad/upload, auto fallback).
 3. **Per-form instructor selection** + signature rendering on forms.
 4. **Skills sheets** (Airway / Adult BLS / Infant CPR) auto-complete templates.
