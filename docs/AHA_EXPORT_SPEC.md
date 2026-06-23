@@ -73,8 +73,8 @@ Ran the best-attempt selection + variant mapping against G14 (23 active students
 ## 8. Flags (per "FLAG anything that doesn't map")
 - No criteria flagged `is_critical` → critical-actions tiebreak = total met-criteria (noted above).
 - Practice chains not matching an AHA variant (`tachy>vf>asystole`, `brady>pvt>asystole`, …) — flag students whose best attempt is one of these.
-- Students with NO scorable attempt → flagged, excluded (or rendered blank) in the cohort export.
-- Need the official AHA form templates (Ben).
+- Students with NO scorable attempt → treat as **excused / certifying separately, NOT an error**: omit from the whole-cohort packet by default (with an optional "excused" annotation in the cohort summary), never generate a broken blank form. (Known G14 case: **Cian Figueras** — pre-planned excused absence, getting ACLS separately. Rare/legitimate.)
+- ~~Need the official AHA form templates (Ben).~~ ✅ received (4-form set).
 
 ## 9. Checkpoints (build order)
 1. ✅ **DONE — engine skeleton + Megacode data layer** (`lib/reports/engine.ts`, `lib/reports/aha/megacode.ts`): pluggable template registry; best-attempt selection (best score: pass>fail, most-met) + variant mapping + per-attempt segment/criteria assembly + flags. Logic validated against G14 (§8a). tsc 0 + clean build. *(no schema change; render endpoint/template pending official AHA PDFs.)*
