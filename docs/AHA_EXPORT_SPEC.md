@@ -79,9 +79,9 @@ Ran the best-attempt selection + variant mapping against G14 (23 active students
 ## 9. Checkpoints (build order)
 1. ✅ **DONE — engine skeleton + Megacode data layer** (`lib/reports/engine.ts`, `lib/reports/aha/megacode.ts`): pluggable template registry; best-attempt selection (best score: pass>fail, most-met) + variant mapping + per-attempt segment/criteria assembly + flags. Logic validated against G14 (§8a). tsc 0 + clean build. *(no schema change; render endpoint/template pending official AHA PDFs.)*
 2. ✅ **DONE — instructor profile** (migration `20260623_lab_users_aha_profile.sql`, dry-run→applied): `lab_users.aha_instructor_number / signature_data / signature_kind`. API `app/api/profile/aha` (self GET/PATCH). UI `app/settings/aha-credentials` (AHA#, signature draw via `components/SignaturePad.tsx` / upload / auto script-font fallback); nav link in UserMenu.
-3. **Per-form instructor selection** + signature rendering on forms. *(forms scope confirmed = the 4-form set; official PDFs received — layouts to recreate as HTML templates.)*
-4. **Megacode + skills templates** (Megacode Testing, Airway, Adult BLS, Infant CPR) — recreate AHA layout as HTML; skills sheets auto-complete as PASS.
-5. **Render endpoint + per-student / whole-cohort** output + download + flags surfaced in UI.
+3. ✅ **DONE — Megacode Testing Checklist** (`lib/reports/aha/megacodeForm.ts` + render endpoint `app/api/reports/aha`): all 6 official variants recreated from the PDF; autofilled from CP1 best-attempt data (checkboxes/PASS-NR/flags/excused); print-to-PDF HTML doc. Validated e2e vs G14 (23 forms). Tachycardia has 1 official item with no rubric counterpart → footnoted.
+4. **Skills templates** (Airway, Adult BLS, Infant CPR) — recreate AHA layout as HTML, auto-complete as PASS. ⚠️ pdftotext extraction is CLEAN for Airway but garbled (merged columns) for Adult BLS + Infant CPR → faithful item transcription for those two needs a cleaner pass / visual confirm.
+5. **Render endpoint + per-student / whole-cohort** output + **per-form instructor selection** + picker UI page (+ nav entry) + download + flags surfaced.
 6. Validate against G14, doc updates.
 
 **Official AHA 2025 forms received** (all carry the "Instructor Initials / Instructor Number / Date" sign-off): Megacode Testing (6 variants), Airway, Adult BLS, Infant CPR. Learning Station Checklists (8, formative) intentionally OUT of scope for now.
