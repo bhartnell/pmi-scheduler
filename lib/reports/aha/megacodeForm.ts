@@ -128,7 +128,7 @@ function orderedKeys(attempt: MegacodeAttempt): string[] {
   return ['team_leader', 'cpr_quality', ...rhythm, 'pcac'];
 }
 
-function renderStudentForm(row: MegacodeReportRow): string {
+export function renderMegacodeStudentForm(row: MegacodeReportRow & { instructor?: SignoffInstructor | null }): string {
   const a = row.best;
   const student = `${row.student.lastName}, ${row.student.firstName}`;
   if (!a) {
@@ -230,9 +230,12 @@ const STYLE = `
   @media print { .toolbar { display: none; } .form { margin: 0 auto; } tr.sec td { background: #e5e7eb !important; color: #000 !important; } }
 `;
 
+/** The megacode form CSS — exported so the per-student packet can merge it. */
+export const MEGACODE_CSS = STYLE;
+
 /** Full self-contained HTML document (one megacode form per student). */
 export function renderMegacodeDocument(report: MegacodeReport, opts: { autoPrint?: boolean; title?: string } = {}): string {
-  const forms = report.rows.map(renderStudentForm).join('\n');
+  const forms = report.rows.map((r) => renderMegacodeStudentForm(r)).join('\n');
   const printScript = opts.autoPrint ? '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),350));</script>' : '';
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(opts.title ?? 'AHA Megacode Testing Checklists')}</title><style>${STYLE}</style></head>
 <body>

@@ -126,7 +126,7 @@ function signoff(ins: SignoffInstructor | null): string {
   return `<p class="signoff">Instructor ${sig} &nbsp; Initials ${initials} &nbsp; Instructor Number ${num} &nbsp; Date <u>&nbsp;&nbsp;&nbsp;</u></p>`;
 }
 
-function renderStudentSheet(form: SkillsForm, student: RosterStudent, ins: SignoffInstructor | null): string {
+export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStudent, ins: SignoffInstructor | null): string {
   const name = `${student.lastName}, ${student.firstName}`;
   const sections = form.sections.map((sec) => {
     const steps = sec.steps.map((st) => {
@@ -176,8 +176,11 @@ const STYLE = `
   @media print { .toolbar { display:none; } }
 `;
 
+/** The skills form CSS — exported so the per-student packet can merge it. */
+export const SKILLS_CSS = STYLE;
+
 export function renderSkillsDocument(form: SkillsForm, students: RosterStudent[], opts: { autoPrint?: boolean; instructor?: SignoffInstructor | null } = {}): string {
-  const sheets = students.map((s) => renderStudentSheet(form, s, opts.instructor ?? null)).join('\n');
+  const sheets = students.map((s) => renderSkillsStudentSheet(form, s, opts.instructor ?? null)).join('\n');
   const printScript = opts.autoPrint ? '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),350));</script>' : '';
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(form.title)}</title><style>${STYLE}</style></head>
 <body><div class="toolbar"><button onclick="window.print()">🖨 Print / Save as PDF</button> &nbsp; ${form.title} · ${students.length} student(s)</div>

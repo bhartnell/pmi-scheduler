@@ -9,7 +9,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, FileText, ExternalLink, Loader2, Info } from 'lucide-react';
+import { ArrowLeft, FileText, ExternalLink, Loader2, Info, Download, FileArchive } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 
 interface CohortOpt { id: string; label: string }
@@ -30,6 +30,7 @@ export default function AhaExportPage() {
   const [cohortId, setCohortId] = useState('');
   const [template, setTemplate] = useState('megacode');
   const [instructorId, setInstructorId] = useState('');
+  const [grouping, setGrouping] = useState<'student' | 'section'>('student');
 
   useEffect(() => {
     fetch('/api/reports/aha/options')
@@ -50,6 +51,14 @@ export default function AhaExportPage() {
     const url = `/api/reports/aha?${p.toString()}`;
     const w = window.open(url, '_blank');
     if (!w) window.location.href = url;
+  }
+
+  function downloadZip() {
+    if (!cohortId) return toast.error('Pick a cohort');
+    const p = new URLSearchParams({ cohortId, grouping });
+    if (instructorId) p.set('instructorId', instructorId);
+    toast.success('Building ZIP… this can take ~30–60s for a full cohort.');
+    window.location.href = `/api/reports/aha/zip?${p.toString()}`;
   }
 
   const activeTpl = TEMPLATES.find((t) => t.id === template);
@@ -108,7 +117,8 @@ export default function AhaExportPage() {
           </p>
         )}
 
-        <div className="mt-5 flex flex-wrap gap-2">
+        <p className="mt-4 text-xs font-medium text-gray-500 dark:text-gray-400">View / print one form (single document):</p>
+        <div className="mt-2 flex flex-wrap gap-2">
           <button type="button" onClick={() => open(true)} disabled={!cohortId}
             className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-md text-sm font-medium">
             <ExternalLink className="w-4 h-4" /> Open &amp; Print
@@ -117,6 +127,39 @@ export default function AhaExportPage() {
             className="inline-flex items-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 px-5 py-2.5 rounded-md text-sm font-medium">
             <FileText className="w-4 h-4" /> Open (no auto-print)
           </button>
+        </div>
+      </div>
+
+      {/* ZIP of pre-separated PDFs — the student-files workflow */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5 mt-4">
+        <h2 className="font-semibold text-gray-900 dark:text-white mb-1 flex items-center gap-2">
+          <FileArchive className="w-5 h-5 text-green-600" /> Download all 4 forms as a ZIP
+        </h2>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+          Pre-separated PDFs — unzip and drag each into the student’s folder. No Adobe extraction. Uses the cohort + signing instructor selected above.
+        </p>
+        <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Grouping</label>
+            <select value={grouping} onChange={(e) => setGrouping(e.target.value as 'student' | 'section')}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+              <option value="student">By student — one combined PDF per student (recommended)</option>
+              <option value="section">By section — one PDF per form type (AHA records)</option>
+            </select>
+          </div>
+        </div>
+        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1.5">
+          <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+          {grouping === 'student'
+            ? 'Files: LastName_FirstName_ACLS_Results.pdf (megacode + airway + adult BLS + infant CPR combined). Excused/no-attempt students are omitted.'
+            : 'Files: one PDF per form type (all students).'}
+        </p>
+        <div className="mt-4">
+          <button type="button" onClick={downloadZip} disabled={!cohortId}
+            className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-md text-sm font-medium">
+            <Download className="w-4 h-4" /> Download ZIP
+          </button>
+          <span className="ml-3 text-xs text-gray-400">~30–60s for a full cohort (PDFs render server-side).</span>
         </div>
       </div>
 
