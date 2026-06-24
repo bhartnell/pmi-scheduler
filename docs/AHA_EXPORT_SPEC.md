@@ -73,7 +73,8 @@ Ran the best-attempt selection + variant mapping against G14 (23 active students
 ## Standing rules (Ben, 2026-06-23)
 - **If a criterion is on the official AHA rubric, it must be graded** — match the official form (no footnote workarounds). Applied: added "Recognizes symptoms due to tachycardia".
 - **Test/official criteria are authoritative** — when a section's practice criteria differ from its test criteria, the TEST version wins; align to it. (Active tachy already uses the authoritative `tachy_mgmt_unstable`; the divergent `tachy_mgmt_svt` is on inactive MEGACODE_TEST_9 only.)
-- **Retroactive criteria** added after students were graded render as **needs-marking** (▢†), never back-filled/fabricated, unless Ben requests a back-fill.
+- **Retroactive criteria** added after students were graded: default is **needs-marking** (▢†), never fabricated. **Exception — back-fill on instructor/IT/system-side errors:** where the gap is system-side (not a performance gap) and passing already ENTAILS the criterion, back-fill it as met for students who **passed that section** (benefit of the doubt). Applied to "Recognizes symptoms due to tachycardia": back-filled met for tachy-section passers (explicit pass OR null-section-result + overall pass); explicit section-fails excluded → remain needs-marking. (`scripts/backfill-tachy-passers.js`)
+- **Governing principle:** where an error is on the instructor/IT/system side, the student gets the benefit of the doubt.
 - **⚠ Seed sync:** any rubric criterion change made in the DB must also be made in the OneDrive `acls_scenario_seed.json`, or the next import deactivates it (importer deactivates criteria beyond the seed).
 
 ## 8. Flags (per "FLAG anything that doesn't map")
