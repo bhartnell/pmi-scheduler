@@ -1404,6 +1404,18 @@ function ProfilePanel() {
           Save Profile
         </button>
       </div>
+
+      <Link
+        href="/settings/aha-credentials"
+        className="mt-4 flex items-center justify-between gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+      >
+        <span className="flex items-center gap-2 text-sm text-gray-800 dark:text-gray-100">
+          <ScrollText className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+          AHA Instructor Credentials
+          <span className="text-xs text-gray-400">— AHA number &amp; signature for export forms</span>
+        </span>
+        <ChevronRight className="w-4 h-4 text-gray-400" />
+      </Link>
     </form>
   );
 }

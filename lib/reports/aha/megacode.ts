@@ -49,6 +49,7 @@ export interface MegacodeAttempt {
   chain: string[];
   metCount: number;
   segments: MegacodeSegment[];
+  stationDate: string | null; // lab_day date — used for Date of Test + sign date
 }
 export interface MegacodeReportRow {
   student: { id: string; firstName: string; lastName: string };
@@ -102,12 +103,20 @@ export async function fetchMegacodeReport(scope: ReportScope, opts: { course?: '
   // 2. attempts for those team leads
   const { data: attemptRows } = await supabase
     .from('adv_cert_test_attempts')
-    .select('id, team_lead_id, overall_result, scenario_id')
+    .select('id, team_lead_id, overall_result, scenario_id, lab_day_id')
     .eq('cert_course', course)
     .in('team_lead_id', studentIds);
   const attempts = attemptRows ?? [];
   const attemptIds = attempts.map((a) => a.id);
   const scenarioIds = [...new Set(attempts.map((a) => a.scenario_id).filter(Boolean))] as string[];
+
+  // lab_day date per attempt → Date of Test + instructor sign date
+  const labDayDate: Record<string, string> = {};
+  const labDayIds = [...new Set(attempts.map((a) => a.lab_day_id).filter(Boolean))] as string[];
+  if (labDayIds.length) {
+    const { data: lds } = await supabase.from('lab_days').select('id, date').in('id', labDayIds);
+    for (const d of lds ?? []) labDayDate[d.id] = d.date;
+  }
 
   // 3. scenario meta + assembled chain (scenario_segments -> segments)
   const scenMeta: Record<string, { caseCode: string | null; certTier: string | null }> = {};
@@ -176,7 +185,7 @@ export async function fetchMegacodeReport(scope: ReportScope, opts: { course?: '
   // definitions (ordered), each annotated with the attempt's recorded met-status
   // (or recorded=false if the attempt has no result, e.g. a criterion added after
   // grading → rendered "needs marking", never a false miss or a fabricated pass).
-  function buildAttempt(a: { id: string; overall_result: string; scenario_id: string | null }): MegacodeAttempt {
+  function buildAttempt(a: { id: string; overall_result: string; scenario_id: string | null; lab_day_id: string | null }): MegacodeAttempt {
     const meta = a.scenario_id ? scenMeta[a.scenario_id] : undefined;
     const sss = a.scenario_id ? (scenarioSegs[a.scenario_id] ?? []) : [];
     const segByScenarioSegId = new Map(sss.map((s) => [s.id, s]));
@@ -198,6 +207,7 @@ export async function fetchMegacodeReport(scope: ReportScope, opts: { course?: '
     return {
       id: a.id, caseCode: meta?.caseCode ?? null, certTier: meta?.certTier ?? null,
       result: a.overall_result, chain, metCount, segments: segs,
+      stationDate: a.lab_day_id ? (labDayDate[a.lab_day_id] ?? null) : null,
     };
   }
 

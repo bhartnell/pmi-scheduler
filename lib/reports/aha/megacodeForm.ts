@@ -15,7 +15,7 @@ import { chainToVariant } from '@/lib/reports/aha/megacode';
 
 export interface SignoffInstructor { name: string; ahaNumber: string | null; signatureData: string | null; signatureKind: string | null; }
 
-interface FormItem { text: string; dataIndex: number; }
+interface FormItem { text: string; dataIndex: number; fill?: string } // fill = numeric fill-in (default passing value), not a checkbox
 interface FormSection { key: string; heading: string; items: FormItem[]; isCprGrid?: boolean; }
 
 const idx = (n: number): number => n;
@@ -29,9 +29,9 @@ const SECTIONS: Record<string, FormSection> = {
   cpr_quality: { key: 'cpr_quality', heading: 'Ensures high-quality CPR at all times', isCprGrid: true, items: [
     { text: 'Compression rate 100-120/min', dataIndex: idx(0) },
     { text: 'Compression depth of 2 inches', dataIndex: idx(1) },
-    { text: 'Chest compression fraction >80%', dataIndex: idx(2) },
+    { text: 'Chest compression fraction', dataIndex: idx(2), fill: '>80%' }, // official: ___% fill-in
     { text: 'Chest recoil', dataIndex: idx(3) },
-    { text: 'Ventilation rate', dataIndex: idx(4) },
+    { text: 'Ventilation rate', dataIndex: idx(4), fill: '10/min' }, // official: ___ fill-in (passing default)
   ] },
   bradycardia: { key: 'bradycardia', heading: 'Bradycardia Management', items: [
     { text: 'Starts oxygen if needed, places monitor, starts IV', dataIndex: idx(0) },
@@ -84,6 +84,12 @@ const SECTIONS: Record<string, FormSection> = {
 
 const esc = (s: string): string => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const box = (checked: boolean): string => `<span class="bx">${checked ? '✓' : ''}</span>`;
+const blank = '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+function fmtDate(d: string | null): string {
+  if (!d) return '';
+  const [y, m, day] = d.split('-').map(Number);
+  return y ? `${m}/${day}/${y}` : d;
+}
 
 type CritStatus = 'met' | 'notmet' | 'needs';
 /** Status of a section's criterion by index. 'needs' = the attempt has no recorded
@@ -99,6 +105,11 @@ function statusAt(attempt: MegacodeAttempt, algorithmType: string, dataIndex: nu
 function renderSection(sec: FormSection, attempt: MegacodeAttempt): { html: string; needs: boolean } {
   let needs = false;
   const rows = sec.items.map((it) => {
+    // Numeric fill-in fields (official form has a write-in blank, not a checkbox):
+    // render the passing default as an editable value, never a checkbox.
+    if (it.fill !== undefined) {
+      return `<tr><td class="step">${esc(it.text)}</td><td class="chk"><span class="fillval">${esc(it.fill)}</span></td></tr>`;
+    }
     const st = statusAt(attempt, sec.key, it.dataIndex);
     if (st === 'needs') needs = true;
     const mark = st === 'met' ? box(true)
@@ -143,12 +154,13 @@ function renderStudentForm(row: MegacodeReportRow): string {
   const hasNa = rendered.some((r) => r.needs);
   const pass = a.result === 'pass';
   const flagNote = row.flags.length ? `<p class="flag">⚠ ${row.flags.map(esc).join(' · ')}</p>` : '';
+  const dateStr = fmtDate(a.stationDate); // test date = sign date = station date
 
   return `<section class="form">
     <h2>${esc(title)}</h2>
     <p class="sub">${esc(subtitle)}</p>
     ${sourceNote}
-    <p class="hdr">Student Name <u>${esc(student)}</u> &nbsp;&nbsp; Date of Test <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u></p>
+    <p class="hdr">Student Name <u>${esc(student)}</u> &nbsp;&nbsp; Date of Test <u>${dateStr ? esc(dateStr) : blank}</u></p>
     ${flagNote}
     <table class="ck">
       <thead><tr><th>Critical Performance Steps</th><th class="chk">Done<br>correctly</th></tr></thead>
@@ -160,20 +172,27 @@ function renderStudentForm(row: MegacodeReportRow): string {
       <span class="pn ${!pass ? 'on' : ''}">${box(!pass)} NR</span>
     </p>
     ${hasNa ? '<p class="na-foot">† Added to the checklist after this attempt was graded — verify and mark manually.</p>' : ''}
-    ${renderSignoff(row)}
+    ${renderSignoff(row, dateStr)}
+    <div class="lsc"><strong>Learning Station Competency</strong>
+      <span class="lscitem">${box(true)} Bradycardia</span>
+      <span class="lscitem">${box(true)} Tachycardia</span>
+      <span class="lscitem">${box(true)} Cardiac Arrest/Post–Cardiac Arrest Care</span>
+      <span class="lscitem">${box(true)} Megacode Practice</span>
+    </div>
   </section>`;
 }
 
-function renderSignoff(row: MegacodeReportRow & { instructor?: SignoffInstructor | null }): string {
+function renderSignoff(row: MegacodeReportRow & { instructor?: SignoffInstructor | null }, dateStr: string): string {
   const ins = row.instructor ?? null;
-  let sig = '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>';
+  let sig = `<u>${blank}</u>`;
   if (ins) {
     if (ins.signatureData) sig = `<img class="sig" src="${ins.signatureData}" alt="signature" />`;
     else sig = `<span class="sigscript">${esc(ins.name)}</span>`;
   }
   const initials = ins ? esc(ins.name) : '<u>&nbsp;&nbsp;&nbsp;</u>';
   const num = ins?.ahaNumber ? esc(ins.ahaNumber) : '<u>&nbsp;&nbsp;&nbsp;&nbsp;</u>';
-  return `<p class="signoff">Instructor ${sig} &nbsp; Initials ${initials} &nbsp; Instructor Number ${num} &nbsp; Date <u>&nbsp;&nbsp;&nbsp;&nbsp;</u></p>`;
+  const date = dateStr ? esc(dateStr) : '<u>&nbsp;&nbsp;&nbsp;&nbsp;</u>';
+  return `<p class="signoff">Instructor ${sig} &nbsp; Initials ${initials} &nbsp; Instructor Number ${num} &nbsp; Date ${date}</p>`;
 }
 
 const STYLE = `
@@ -190,7 +209,10 @@ const STYLE = `
   table.ck { width: 100%; border-collapse: collapse; font-size: 11px; }
   table.ck th, table.ck td { border: 1px solid #444; padding: 3px 6px; text-align: left; vertical-align: top; }
   table.ck th.chk, table.ck td.chk { width: 64px; text-align: center; }
-  tr.sec td { background: #e5e7eb; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  tr.sec td { background: #0b7a8c; color: #fff; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .fillval { display: inline-block; min-width: 40px; border-bottom: 1px solid #111; font-weight: bold; }
+  .lsc { margin-top: 10px; border-top: 1px solid #999; padding-top: 5px; font-size: 11px; }
+  .lsc .lscitem { margin-right: 12px; white-space: nowrap; }
   .bx { display: inline-block; min-width: 16px; font-weight: bold; }
   .bx.na { color: #888; }
   .na-note { color: #b45309; }
@@ -205,7 +227,7 @@ const STYLE = `
   .srcnote { font-size: 10px; color: #666; font-style: italic; margin: 0 0 4px; }
   .na-foot { font-size: 10px; color: #777; margin-top: 6px; }
   .excused { font-size: 12px; color: #555; font-style: italic; }
-  @media print { .toolbar { display: none; } .form { margin: 0 auto; } }
+  @media print { .toolbar { display: none; } .form { margin: 0 auto; } tr.sec td { background: #e5e7eb !important; color: #000 !important; } }
 `;
 
 /** Full self-contained HTML document (one megacode form per student). */

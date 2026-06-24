@@ -56,15 +56,13 @@ export default function AhaCredentialsPage() {
     reader.readAsDataURL(file);
   }
 
-  async function save() {
+  // Number and signature save INDEPENDENTLY — each PATCH carries only its own
+  // field(s), so updating one never wipes the other (the API only writes keys
+  // present in the body). This is why e.g. saving the number on desktop won't
+  // erase a signature drawn on a phone.
+  async function patch(payload: Record<string, unknown>, okMsg: string) {
     setSaving(true);
     try {
-      const payload = {
-        aha_instructor_number: ahaNumber.trim() || null,
-        signature_kind: kind,
-        // 'auto' stores no image — the form renders the name in a script font.
-        signature_data: kind === 'auto' ? null : sigData,
-      };
       const res = await fetch('/api/profile/aha', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -72,13 +70,18 @@ export default function AhaCredentialsPage() {
       });
       const d = await res.json();
       if (!res.ok || !d.success) throw new Error(d.error || `HTTP ${res.status}`);
-      toast.success('AHA credentials saved');
+      toast.success(okMsg);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Save failed');
     } finally {
       setSaving(false);
     }
   }
+  const saveNumber = () => patch({ aha_instructor_number: ahaNumber.trim() || null }, 'AHA number saved');
+  const saveSignature = () => patch(
+    { signature_kind: kind, signature_data: kind === 'auto' ? null : sigData },
+    'Signature saved',
+  );
 
   if (loading) return <div className="flex justify-center py-16"><Loader2 className="w-6 h-6 animate-spin text-gray-400" /></div>;
 
@@ -110,8 +113,15 @@ export default function AhaCredentialsPage() {
           </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">AHA Instructor Number</label>
-            <input value={ahaNumber} onChange={(e) => setAhaNumber(e.target.value)} placeholder="e.g. 12345678"
-              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm" />
+            <div className="flex gap-2">
+              <input value={ahaNumber} onChange={(e) => setAhaNumber(e.target.value)} placeholder="e.g. 12345678"
+                className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm" />
+              <button type="button" onClick={saveNumber} disabled={saving}
+                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-3 py-2 rounded-md text-sm font-medium whitespace-nowrap">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save number
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1">Saves independently — won’t affect your signature.</p>
           </div>
         </div>
 
@@ -140,13 +150,12 @@ export default function AhaCredentialsPage() {
               <p className="text-[11px] text-gray-400 mt-1">Fallback: your name rendered in a script font on the form.</p>
             </div>
           )}
-        </div>
-
-        <div className="flex justify-end">
-          <button type="button" onClick={save} disabled={saving}
-            className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-md text-sm font-medium">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save credentials
-          </button>
+          <div className="flex justify-end mt-3">
+            <button type="button" onClick={saveSignature} disabled={saving}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-md text-sm font-medium">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save signature
+            </button>
+          </div>
         </div>
       </div>
     </div>

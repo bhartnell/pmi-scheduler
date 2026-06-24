@@ -64,7 +64,14 @@ export default function SignaturePad({
   const clear = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
-    c.getContext('2d')!.clearRect(0, 0, c.width, c.height);
+    const ctx = c.getContext('2d')!;
+    // Reset any transform (the pad scales by devicePixelRatio) before clearing,
+    // and clear the FULL backing store — otherwise a scaled clearRect leaves
+    // part of the drawing behind.
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.restore();
     dirty.current = false;
     onChange(null);
   }, [onChange]);
