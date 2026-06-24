@@ -59,7 +59,7 @@ export interface MegacodeReportRow {
 }
 export interface MegacodeReport {
   rows: MegacodeReportRow[];
-  summary: { total: number; cleanMapped: number; flagged: number; noAttempt: number };
+  summary: { total: number; namedVariant: number; sectionMapped: number; noAttempt: number };
 }
 
 export function selectBest(attempts: MegacodeAttempt[]): { best: MegacodeAttempt | null; variant: AhaVariant | null; flags: string[] } {
@@ -70,7 +70,10 @@ export function selectBest(attempts: MegacodeAttempt[]): { best: MegacodeAttempt
   const best = [...pool].sort((a, b) => b.metCount - a.metCount)[0];
   const variant = chainToVariant(best.chain);
   if (passes.length === 0) flags.push('No pass — best fail used for documentation');
-  if (!variant) flags.push(`Chain "${best.chain.join('→')}" has no official AHA variant — select variant manually`);
+  // A non-named chain is NOT a problem: AHA permits practice scenarios as testing
+  // cases, and the rhythm SECTIONS (Brady/VF/pVT/PEA/Asystole/PCAC/Tachy) use the
+  // same shared criteria regardless of chain — so the form populates validly
+  // section-by-section. No flag for an unmatched chain.
   return { best, variant, flags };
 }
 
@@ -94,7 +97,7 @@ export async function fetchMegacodeReport(scope: ReportScope, opts: { course?: '
     students = data ?? [];
   }
   const studentIds = students.map((s) => s.id);
-  if (studentIds.length === 0) return { rows: [], summary: { total: 0, cleanMapped: 0, flagged: 0, noAttempt: 0 } };
+  if (studentIds.length === 0) return { rows: [], summary: { total: 0, namedVariant: 0, sectionMapped: 0, noAttempt: 0 } };
 
   // 2. attempts for those team leads
   const { data: attemptRows } = await supabase
@@ -188,8 +191,8 @@ export async function fetchMegacodeReport(scope: ReportScope, opts: { course?: '
 
   const summary = {
     total: rows.length,
-    cleanMapped: rows.filter((r) => r.best && r.variant && r.flags.length === 0).length,
-    flagged: rows.filter((r) => r.best && (!r.variant || r.flags.length > 0)).length,
+    namedVariant: rows.filter((r) => r.best && r.variant).length,
+    sectionMapped: rows.filter((r) => r.best && !r.variant).length, // practice-as-testing; valid by section
     noAttempt: rows.filter((r) => !r.best).length,
   };
   return { rows, summary };

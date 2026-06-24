@@ -72,7 +72,7 @@ Ran the best-attempt selection + variant mapping against G14 (23 active students
 
 ## 8. Flags (per "FLAG anything that doesn't map")
 - No criteria flagged `is_critical` → critical-actions tiebreak = total met-criteria (noted above).
-- Practice chains not matching an AHA variant (`tachy>vf>asystole`, `brady>pvt>asystole`, …) — flag students whose best attempt is one of these.
+- ~~Practice chains not matching an AHA variant — flag students.~~ ✅ RESOLVED: section-level mapping (AHA practice-as-testing). Rhythm sections are shared segments → identical criteria across practice/testing/official, so a non-named chain still populates the form validly section-by-section. Only criteria divergence is `tachycardia` (2 segments) and the divergent `tachy_mgmt_svt` is on the inactive MEGACODE_TEST_9 only → no active impact. Forms now show "practice case X used as testing scenario", no warning.
 - Students with NO scorable attempt → treat as **excused / certifying separately, NOT an error**: omit from the whole-cohort packet by default (with an optional "excused" annotation in the cohort summary), never generate a broken blank form. (Known G14 case: **Cian Figueras** — pre-planned excused absence, getting ACLS separately. Rare/legitimate.)
 - ~~Need the official AHA form templates (Ben).~~ ✅ received (4-form set).
 

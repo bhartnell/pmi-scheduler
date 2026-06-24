@@ -119,10 +119,17 @@ function renderStudentForm(row: MegacodeReportRow): string {
       <p class="excused">No scorable megacode attempt on file — student excused / certifying separately. No form generated.</p></section>`;
   }
   const variant = row.variant ?? chainToVariant(a.chain);
+  const RH: Record<string, string> = { bradycardia: 'Bradycardia', tachycardia: 'Tachycardia', pvt: 'pVT', vf: 'VF', pea: 'PEA', asystole: 'Asystole' };
+  const chainLabel = `${a.chain.map((r) => RH[r] ?? r).join(' → ')} → PCAC`;
   const title = variant
     ? `Megacode Testing Checklist: Scenarios ${variant.code}`
     : `Megacode Testing Checklist`;
-  const subtitle = variant ? variant.label : `${a.chain.join(' → ')} → PCAC (variant not an official named scenario — verify)`;
+  const subtitle = variant ? variant.label : chainLabel;
+  // Practice scenarios are AHA-permitted as testing cases; sections use the same
+  // shared criteria, so the form populates validly section-by-section.
+  const sourceNote = variant
+    ? ''
+    : `<p class="srcnote">Practice case ${esc(a.caseCode ?? '')} used as testing scenario (AHA-permitted) — scored by rhythm section.</p>`;
   const keys = orderedKeys(a);
   const hasNa = keys.some((k) => SECTIONS[k]?.items.some((it) => it.dataIndex === null));
   const sectionsHtml = keys.map((k) => SECTIONS[k] ? renderSection(SECTIONS[k], a) : '').join('');
@@ -132,6 +139,7 @@ function renderStudentForm(row: MegacodeReportRow): string {
   return `<section class="form">
     <h2>${esc(title)}</h2>
     <p class="sub">${esc(subtitle)}</p>
+    ${sourceNote}
     <p class="hdr">Student Name <u>${esc(student)}</u> &nbsp;&nbsp; Date of Test <u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u></p>
     ${flagNote}
     <table class="ck">
@@ -186,6 +194,7 @@ const STYLE = `
   .sig { height: 36px; vertical-align: middle; }
   .sigscript { font-family: 'Brush Script MT', 'Segoe Script', cursive; font-size: 22px; padding: 0 8px; }
   .flag { font-size: 11px; color: #b45309; margin: 2px 0; }
+  .srcnote { font-size: 10px; color: #666; font-style: italic; margin: 0 0 4px; }
   .na-foot { font-size: 10px; color: #777; margin-top: 6px; }
   .excused { font-size: 12px; color: #555; font-style: italic; }
   @media print { .toolbar { display: none; } .form { margin: 0 auto; } }
@@ -197,7 +206,7 @@ export function renderMegacodeDocument(report: MegacodeReport, opts: { autoPrint
   const printScript = opts.autoPrint ? '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),350));</script>' : '';
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(opts.title ?? 'AHA Megacode Testing Checklists')}</title><style>${STYLE}</style></head>
 <body>
-  <div class="toolbar"><button onclick="window.print()">🖨 Print / Save as PDF</button> &nbsp; ${report.summary.total} student(s) · ${report.summary.cleanMapped} auto-mapped · ${report.summary.flagged} flagged · ${report.summary.noAttempt} excused/no-attempt</div>
+  <div class="toolbar"><button onclick="window.print()">🖨 Print / Save as PDF</button> &nbsp; ${report.summary.total} student(s) · ${report.summary.namedVariant} named-variant · ${report.summary.sectionMapped} section-mapped (practice-as-testing) · ${report.summary.noAttempt} excused/no-attempt</div>
   <div class="doc">${forms || '<p>No students in scope.</p>'}</div>
   ${printScript}
 </body></html>`;

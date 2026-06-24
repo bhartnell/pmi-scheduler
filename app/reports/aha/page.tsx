@@ -121,7 +121,7 @@ export default function AhaExportPage() {
       </div>
 
       <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 space-y-1">
-        <p><strong>Megacode:</strong> students with a best attempt on a non-standard rhythm chain are flagged in the document for a manual variant pick; students with no attempt (e.g. excused) are omitted.</p>
+        <p><strong>Megacode:</strong> each student’s best scored attempt fills the form by rhythm section (Brady/VF/pVT/PEA/Asystole/Tachy/PCAC share the same criteria, so practice scenarios are valid testing cases per AHA). Named AHA variants show the scenario number; others are labeled by their rhythm chain. Students with no attempt (e.g. excused) are omitted.</p>
         <p><strong>Per-form instructor:</strong> pick the signing instructor per form export (re-select and re-open for a different signer) — keeps a recerting instructor’s signature off their own form.</p>
       </div>
     </div>
