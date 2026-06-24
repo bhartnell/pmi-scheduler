@@ -19,6 +19,7 @@ const TEMPLATES = [
   { id: 'megacode', label: 'Megacode Testing Checklist', note: 'Autofills from each student’s best scored megacode attempt → matching AHA variant.' },
   { id: 'airway', label: 'Airway Management Skills', note: 'Auto-completed as PASS (verified live; not scored in-app).' },
   { id: 'adult_bls', label: 'Adult High-Quality BLS Skills', note: 'Auto-completed as PASS (verified live; not scored in-app).' },
+  { id: 'infant_cpr', label: 'Infant CPR Skills', note: 'Auto-completed as PASS (verified live; not scored in-app).' },
 ];
 
 export default function AhaExportPage() {
@@ -122,7 +123,6 @@ export default function AhaExportPage() {
       <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 space-y-1">
         <p><strong>Megacode:</strong> students with a best attempt on a non-standard rhythm chain are flagged in the document for a manual variant pick; students with no attempt (e.g. excused) are omitted.</p>
         <p><strong>Per-form instructor:</strong> pick the signing instructor per form export (re-select and re-open for a different signer) — keeps a recerting instructor’s signature off their own form.</p>
-        <p>Infant CPR skills sheet is not yet available (pending exact item confirmation).</p>
       </div>
     </div>
   );

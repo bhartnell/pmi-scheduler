@@ -16,7 +16,7 @@ import type { RosterStudent } from '@/lib/reports/roster';
 import type { SignoffInstructor } from '@/lib/reports/aha/megacodeForm';
 
 interface Step { text: string; subs?: string[] }
-interface Section { heading: string; note?: string; steps: Step[] }
+interface Section { heading: string; note?: string; steps: Step[]; notes?: string[] }
 export interface SkillsForm { id: string; program: string; title: string; scenarios?: string[]; sections: Section[] }
 
 export const AIRWAY_FORM: SkillsForm = {
@@ -70,7 +70,51 @@ export const ADULT_BLS_FORM: SkillsForm = {
   ],
 };
 
-export const SKILLS_FORMS: Record<string, SkillsForm> = { airway: AIRWAY_FORM, adult_bls: ADULT_BLS_FORM };
+export const INFANT_CPR_FORM: SkillsForm = {
+  id: 'infant_cpr', program: 'Basic Life Support',
+  title: 'Infant CPR Skills Testing Checklist',
+  scenarios: [
+    'In-Hospital: A person runs in carrying an infant, shouting "Help me! My baby\'s not breathing." You ensure the scene is safe and approach. You have gloves and a pocket mask, and send a coworker to activate the emergency response system and get equipment. Demonstrate what you would do next.',
+    'Out-of-Hospital: You arrive on the scene for an infant who is not breathing; Hands-Only CPR is in progress. You ensure the scene is safe. Demonstrate what you would do next.',
+  ],
+  sections: [
+    { heading: 'Assessment and Activation', steps: [
+      { text: 'Checks responsiveness' },
+      { text: 'Shouts for help / activates emergency response system' },
+      { text: 'Checks breathing' },
+      { text: 'Checks pulse' },
+    ], notes: ['Once student shouts for help, instructor says, "Here\'s the barrier device."'] },
+    { heading: 'Cycle 1 of CPR (30:2)', note: '*CPR feedback devices are preferred for accuracy', steps: [
+      { text: 'Infant Compressions — performs high-quality compressions:', subs: [
+        'Placement of the heel of 1 hand in the center of the chest, just below the nipple line',
+        '30 compressions in no less than 15 and no more than 18 seconds',
+        'Compresses at least one third the AP diameter of the chest, approximately 1½ inches (4 cm)',
+        'Complete recoil after each compression',
+      ] },
+      { text: 'Infant Breaths — gives 2 breaths with a barrier device:', subs: [
+        'Each breath given over 1 second', 'Visible chest rise with each breath', 'Resumes compressions in less than 10 seconds',
+      ] },
+    ] },
+    { heading: 'Cycle 2 of CPR (repeats steps in Cycle 1)', note: 'Only check box if step is successfully performed', steps: [
+      { text: 'Compressions' }, { text: 'Breaths' }, { text: 'Resumes compressions in less than 10 seconds' },
+    ], notes: ['Rescuer 2 arrives with bag-mask device and begins ventilation while Rescuer 1 continues compressions with the 2 thumb-encircling hands technique.'] },
+    { heading: 'Cycle 3 of CPR', steps: [
+      { text: 'Rescuer 1: Infant Compressions — performs high-quality compressions:', subs: [
+        '15 compressions with the 2 thumb-encircling hands technique',
+        '15 compressions in no less than 7 and no more than 9 seconds',
+        'Compresses at least one third the AP diameter of the chest, approximately 1½ inches (4 cm)',
+        'Complete recoil after each compression',
+      ] },
+    ], notes: ['Rescuer 2: Infant Breaths — this rescuer is not evaluated.'] },
+    { heading: 'Cycle 4 of CPR', steps: [
+      { text: 'Rescuer 1: Infant Breaths — gives 2 breaths with a bag-mask device:', subs: [
+        'Each breath given over 1 second', 'Visible chest rise with each breath', 'Resumes compressions in less than 10 seconds',
+      ] },
+    ], notes: ['Rescuer 2: Infant Compressions — this rescuer is not evaluated.'] },
+  ],
+};
+
+export const SKILLS_FORMS: Record<string, SkillsForm> = { airway: AIRWAY_FORM, adult_bls: ADULT_BLS_FORM, infant_cpr: INFANT_CPR_FORM };
 
 const esc = (s: string): string => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 
@@ -89,7 +133,10 @@ function renderStudentSheet(form: SkillsForm, student: RosterStudent, ins: Signo
       const subs = st.subs?.length ? `<div class="subs">${st.subs.map((s) => `• ${esc(s)}`).join('<br>')}</div>` : '';
       return `<tr><td class="step">${esc(st.text)}${subs}</td><td class="chk"><span class="bx">✓</span></td></tr>`;
     }).join('');
-    return `<tr class="sec"><td colspan="2">${esc(sec.heading)}${sec.note ? ` <span class="note">— ${esc(sec.note)}</span>` : ''}</td></tr>${steps}`;
+    const notes = sec.notes?.length
+      ? sec.notes.map((n) => `<tr class="noterow"><td colspan="2">${esc(n)}</td></tr>`).join('')
+      : '';
+    return `<tr class="sec"><td colspan="2">${esc(sec.heading)}${sec.note ? ` <span class="note">— ${esc(sec.note)}</span>` : ''}</td></tr>${steps}${notes}`;
   }).join('');
   const scen = form.scenarios?.length ? `<div class="scen">${form.scenarios.map((s) => `<p>${esc(s)}</p>`).join('')}</div>` : '';
   return `<section class="form">
@@ -118,6 +165,7 @@ const STYLE = `
   table.ck th.chk, table.ck td.chk { width:64px; text-align:center; }
   tr.sec td { background:#e5e7eb; font-weight:bold; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .sec .note { font-weight:normal; font-size:10px; color:#555; } .subs { color:#555; font-size:10px; margin-top:2px; }
+  tr.noterow td { font-size:10px; font-style:italic; color:#666; background:#fafafa; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .bx { display:inline-block; min-width:16px; font-weight:bold; }
   .stop { text-align:center; font-weight:bold; letter-spacing:1px; margin:8px 0 4px; }
   .result { font-size:12px; font-weight:bold; } .pn { margin-right:14px; padding:1px 6px; border:1px solid #999; }
