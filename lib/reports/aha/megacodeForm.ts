@@ -209,7 +209,8 @@ const STYLE = `
   table.ck { width: 100%; border-collapse: collapse; font-size: 11px; }
   table.ck th, table.ck td { border: 1px solid #444; padding: 3px 6px; text-align: left; vertical-align: top; }
   table.ck th.chk, table.ck td.chk { width: 64px; text-align: center; }
-  tr.sec td { background: #0b7a8c; color: #fff; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  tr.sec td { background: #ca171e; color: #fff; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  table.ck td.step { background: #efe8d5; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .fillval { display: inline-block; min-width: 40px; border-bottom: 1px solid #111; font-weight: bold; }
   .lsc { margin-top: 10px; border-top: 1px solid #999; padding-top: 5px; font-size: 11px; }
   .lsc .lscitem { margin-right: 12px; white-space: nowrap; }
@@ -227,7 +228,7 @@ const STYLE = `
   .srcnote { font-size: 10px; color: #666; font-style: italic; margin: 0 0 4px; }
   .na-foot { font-size: 10px; color: #777; margin-top: 6px; }
   .excused { font-size: 12px; color: #555; font-style: italic; }
-  @media print { .toolbar { display: none; } .form { margin: 0 auto; } tr.sec td { background: #e5e7eb !important; color: #000 !important; } }
+  @media print { .toolbar { display: none; } .form { margin: 0 auto; } }
 `;
 
 /** The megacode form CSS — exported so the per-student packet can merge it. */

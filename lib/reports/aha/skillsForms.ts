@@ -163,8 +163,9 @@ const STYLE = `
   table.ck { width:100%; border-collapse:collapse; font-size:11px; }
   table.ck th, table.ck td { border:1px solid #444; padding:3px 6px; text-align:left; vertical-align:top; }
   table.ck th.chk, table.ck td.chk { width:64px; text-align:center; }
-  tr.sec td { background:#e5e7eb; font-weight:bold; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-  .sec .note { font-weight:normal; font-size:10px; color:#555; } .subs { color:#555; font-size:10px; margin-top:2px; }
+  tr.sec td { background:#ca171e; color:#fff; font-weight:bold; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  table.ck td.step { background:#efe8d5; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  .sec .note { font-weight:normal; font-size:10px; color:#ffe9c7; } .subs { color:#555; font-size:10px; margin-top:2px; }
   tr.noterow td { font-size:10px; font-style:italic; color:#666; background:#fafafa; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .bx { display:inline-block; min-width:16px; font-weight:bold; }
   .stop { text-align:center; font-weight:bold; letter-spacing:1px; margin:8px 0 4px; }
