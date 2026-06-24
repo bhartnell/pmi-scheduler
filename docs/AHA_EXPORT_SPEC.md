@@ -70,6 +70,12 @@ Ran the best-attempt selection + variant mapping against G14 (23 active students
 - Root cause: practice scenarios 67–74 span 8 rhythm chains; only ~half match the 6 official AHA **testing** variants, and the actual testing megacodes weren't entered in-app.
 - **Decision needed before building the form renderer** (see chat) — determines the data source + how unmapped students are handled.
 
+## Standing rules (Ben, 2026-06-23)
+- **If a criterion is on the official AHA rubric, it must be graded** — match the official form (no footnote workarounds). Applied: added "Recognizes symptoms due to tachycardia".
+- **Test/official criteria are authoritative** — when a section's practice criteria differ from its test criteria, the TEST version wins; align to it. (Active tachy already uses the authoritative `tachy_mgmt_unstable`; the divergent `tachy_mgmt_svt` is on inactive MEGACODE_TEST_9 only.)
+- **Retroactive criteria** added after students were graded render as **needs-marking** (▢†), never back-filled/fabricated, unless Ben requests a back-fill.
+- **⚠ Seed sync:** any rubric criterion change made in the DB must also be made in the OneDrive `acls_scenario_seed.json`, or the next import deactivates it (importer deactivates criteria beyond the seed).
+
 ## 8. Flags (per "FLAG anything that doesn't map")
 - No criteria flagged `is_critical` → critical-actions tiebreak = total met-criteria (noted above).
 - ~~Practice chains not matching an AHA variant — flag students.~~ ✅ RESOLVED: section-level mapping (AHA practice-as-testing). Rhythm sections are shared segments → identical criteria across practice/testing/official, so a non-named chain still populates the form validly section-by-section. Only criteria divergence is `tachycardia` (2 segments) and the divergent `tachy_mgmt_svt` is on the inactive MEGACODE_TEST_9 only → no active impact. Forms now show "practice case X used as testing scenario", no warning.

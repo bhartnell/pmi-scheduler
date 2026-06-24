@@ -39,7 +39,7 @@ export function chainToVariant(chain: string[]): AhaVariant | null {
   return AHA_MEGACODE_VARIANTS[chain.join('>')] ?? null;
 }
 
-export interface MegacodeCriterion { text: string; met: boolean; isCritical: boolean; }
+export interface MegacodeCriterion { text: string; met: boolean; isCritical: boolean; recorded: boolean; }
 export interface MegacodeSegment { name: string; algorithmType: string; order: number; result: string | null; criteria: MegacodeCriterion[]; }
 export interface MegacodeAttempt {
   id: string;
@@ -115,25 +115,43 @@ export async function fetchMegacodeReport(scope: ReportScope, opts: { course?: '
     const { data: scs } = await supabase.from('scenarios').select('id, case_code, cert_tier').in('id', scenarioIds);
     for (const s of scs ?? []) scenMeta[s.id] = { caseCode: s.case_code, certTier: s.cert_tier };
   }
-  // scenario_segments (for chain + segment names) keyed by scenario
-  const scenarioSegs: Record<string, Array<{ id: string; order: number; name: string; algorithmType: string }>> = {};
+  // scenario_segments (chain + segment names + segment id) keyed by scenario
+  const scenarioSegs: Record<string, Array<{ id: string; order: number; name: string; algorithmType: string; segmentId: string }>> = {};
+  const segmentIds = new Set<string>();
   if (scenarioIds.length) {
     const { data: sss } = await supabase
       .from('adv_cert_scenario_segments')
-      .select('id, scenario_id, sequence_order, adv_cert_segments(name, algorithm_type)')
+      .select('id, scenario_id, sequence_order, segment_id, adv_cert_segments(id, name, algorithm_type)')
       .in('scenario_id', scenarioIds);
     for (const r of sss ?? []) {
-      const seg = (r as unknown as { adv_cert_segments: { name: string; algorithm_type: string } | null }).adv_cert_segments;
+      const seg = (r as unknown as { adv_cert_segments: { id: string; name: string; algorithm_type: string } | null }).adv_cert_segments;
+      const segmentId = seg?.id ?? (r as { segment_id: string }).segment_id;
+      if (segmentId) segmentIds.add(segmentId);
       (scenarioSegs[r.scenario_id] ??= []).push({
-        id: r.id, order: r.sequence_order, name: seg?.name ?? '', algorithmType: seg?.algorithm_type ?? '',
+        id: r.id, order: r.sequence_order, name: seg?.name ?? '', algorithmType: seg?.algorithm_type ?? '', segmentId,
       });
     }
     for (const k of Object.keys(scenarioSegs)) scenarioSegs[k].sort((a, b) => a.order - b.order);
   }
 
+  // 3b. CURRENT criteria definitions per segment (ordered by display_order) — the
+  // source of truth for the checklist. Maps by criterion id so each attempt's
+  // recorded results attach by identity (robust to criteria added after grading).
+  const segCriteriaDefs: Record<string, Array<{ id: string; text: string; isCritical: boolean }>> = {};
+  if (segmentIds.size) {
+    const { data: defs } = await supabase
+      .from('adv_cert_segment_criteria')
+      .select('id, segment_id, text, display_order, is_critical')
+      .in('segment_id', [...segmentIds]).eq('active', true)
+      .order('display_order');
+    for (const d of defs ?? []) {
+      (segCriteriaDefs[d.segment_id] ??= []).push({ id: d.id, text: d.text, isCritical: !!d.is_critical });
+    }
+  }
+
   // 4. segment_results + criterion_results for the attempts
   const segResults: Array<{ id: string; attempt_id: string; scenario_segment_id: string; result: string | null }> = [];
-  const critBySegResult: Record<string, MegacodeCriterion[]> = {};
+  const metBySegResult: Record<string, Map<string, boolean>> = {}; // segResultId -> (criterionId -> met)
   if (attemptIds.length) {
     const { data: srs } = await supabase
       .from('adv_cert_segment_results')
@@ -144,30 +162,36 @@ export async function fetchMegacodeReport(scope: ReportScope, opts: { course?: '
     if (segResultIds.length) {
       const { data: crs } = await supabase
         .from('adv_cert_criterion_results')
-        .select('segment_result_id, met, adv_cert_segment_criteria(text, is_critical)')
+        .select('segment_result_id, criterion_id, met')
         .in('segment_result_id', segResultIds);
       for (const cr of crs ?? []) {
-        const crit = (cr as unknown as { adv_cert_segment_criteria: { text: string; is_critical: boolean } | null }).adv_cert_segment_criteria;
-        (critBySegResult[cr.segment_result_id] ??= []).push({
-          text: crit?.text ?? '', met: !!cr.met, isCritical: !!crit?.is_critical,
-        });
+        (metBySegResult[cr.segment_result_id] ??= new Map()).set(cr.criterion_id, !!cr.met);
       }
     }
   }
   const segResultsByAttempt: Record<string, typeof segResults> = {};
   for (const sr of segResults) (segResultsByAttempt[sr.attempt_id] ??= []).push(sr);
 
-  // assemble MegacodeAttempt objects
+  // assemble MegacodeAttempt objects — criteria come from the segment's CURRENT
+  // definitions (ordered), each annotated with the attempt's recorded met-status
+  // (or recorded=false if the attempt has no result, e.g. a criterion added after
+  // grading → rendered "needs marking", never a false miss or a fabricated pass).
   function buildAttempt(a: { id: string; overall_result: string; scenario_id: string | null }): MegacodeAttempt {
     const meta = a.scenario_id ? scenMeta[a.scenario_id] : undefined;
     const sss = a.scenario_id ? (scenarioSegs[a.scenario_id] ?? []) : [];
-    const segMetaById = new Map(sss.map((s) => [s.id, s]));
+    const segByScenarioSegId = new Map(sss.map((s) => [s.id, s]));
     const chain = sss.filter((s) => !WRAP.has(s.algorithmType)).map((s) => s.algorithmType);
     const segs = (segResultsByAttempt[a.id] ?? []).map((sr) => {
-      const m = segMetaById.get(sr.scenario_segment_id);
+      const m = segByScenarioSegId.get(sr.scenario_segment_id);
+      const defs = m ? (segCriteriaDefs[m.segmentId] ?? []) : [];
+      const resultMap = metBySegResult[sr.id] ?? new Map<string, boolean>();
+      const criteria: MegacodeCriterion[] = defs.map((d) => ({
+        text: d.text, isCritical: d.isCritical,
+        recorded: resultMap.has(d.id), met: resultMap.get(d.id) ?? false,
+      }));
       return {
         name: m?.name ?? '', algorithmType: m?.algorithmType ?? '', order: m?.order ?? 999,
-        result: sr.result, criteria: critBySegResult[sr.id] ?? [],
+        result: sr.result, criteria,
       } as MegacodeSegment;
     }).sort((x, y) => x.order - y.order);
     const metCount = segs.reduce((n, s) => n + s.criteria.filter((c) => c.met).length, 0);

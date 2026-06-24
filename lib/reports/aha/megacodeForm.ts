@@ -15,10 +15,10 @@ import { chainToVariant } from '@/lib/reports/aha/megacode';
 
 export interface SignoffInstructor { name: string; ahaNumber: string | null; signatureData: string | null; signatureKind: string | null; }
 
-interface FormItem { text: string; dataIndex: number | null; }
+interface FormItem { text: string; dataIndex: number; }
 interface FormSection { key: string; heading: string; items: FormItem[]; isCprGrid?: boolean; }
 
-const idx = (n: number): FormItem['dataIndex'] => n;
+const idx = (n: number): number => n;
 
 /** Official item library keyed by our segment algorithm_type. */
 const SECTIONS: Record<string, FormSection> = {
@@ -44,8 +44,8 @@ const SECTIONS: Record<string, FormSection> = {
     { text: 'Starts oxygen if needed, places monitor, starts IV', dataIndex: idx(0) },
     { text: 'Places monitor leads in proper position', dataIndex: idx(1) },
     { text: 'Recognizes unstable tachycardia', dataIndex: idx(2) },
-    { text: 'Recognizes symptoms due to tachycardia', dataIndex: null }, // no recorded counterpart
-    { text: 'Performs immediate synchronized cardioversion', dataIndex: idx(3) },
+    { text: 'Recognizes symptoms due to tachycardia', dataIndex: idx(3) },
+    { text: 'Performs immediate synchronized cardioversion', dataIndex: idx(4) },
   ] },
   pvt: { key: 'pvt', heading: 'Pulseless VT Management', items: [
     { text: 'Recognizes pVT', dataIndex: idx(0) },
@@ -85,21 +85,28 @@ const SECTIONS: Record<string, FormSection> = {
 const esc = (s: string): string => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
 const box = (checked: boolean): string => `<span class="bx">${checked ? '✓' : ''}</span>`;
 
-/** met-status of a segment's criterion by index (null index = not auto-scored). */
-function metAt(attempt: MegacodeAttempt, algorithmType: string, dataIndex: number | null): boolean | null {
-  if (dataIndex === null) return null;
+type CritStatus = 'met' | 'notmet' | 'needs';
+/** Status of a section's criterion by index. 'needs' = the attempt has no recorded
+ *  result for it (e.g. a criterion added to the rubric after this attempt was
+ *  graded) → mark manually; never shown as a false miss or a fabricated pass. */
+function statusAt(attempt: MegacodeAttempt, algorithmType: string, dataIndex: number): CritStatus {
   const seg = attempt.segments.find((s) => s.algorithmType === algorithmType);
   const crit = seg?.criteria[dataIndex];
-  return crit ? crit.met : false;
+  if (!crit || !crit.recorded) return 'needs';
+  return crit.met ? 'met' : 'notmet';
 }
 
-function renderSection(sec: FormSection, attempt: MegacodeAttempt): string {
+function renderSection(sec: FormSection, attempt: MegacodeAttempt): { html: string; needs: boolean } {
+  let needs = false;
   const rows = sec.items.map((it) => {
-    const m = metAt(attempt, sec.key, it.dataIndex);
-    const mark = m === null ? '<span class="bx na" title="not auto-scored">—</span>' : box(m);
-    return `<tr><td class="step">${esc(it.text)}${it.dataIndex === null ? '<sup class="na-note">†</sup>' : ''}</td><td class="chk">${mark}</td></tr>`;
+    const st = statusAt(attempt, sec.key, it.dataIndex);
+    if (st === 'needs') needs = true;
+    const mark = st === 'met' ? box(true)
+      : st === 'notmet' ? box(false)
+      : '<span class="bx na" title="added after this attempt was graded — mark manually">▢</span>';
+    return `<tr><td class="step">${esc(it.text)}${st === 'needs' ? '<sup class="na-note">†</sup>' : ''}</td><td class="chk">${mark}</td></tr>`;
   }).join('');
-  return `<tr class="sec"><td colspan="2">${esc(sec.heading)}</td></tr>${rows}`;
+  return { html: `<tr class="sec"><td colspan="2">${esc(sec.heading)}</td></tr>${rows}`, needs };
 }
 
 /** Ordered section keys for an attempt: team_leader, cpr, [rhythm segments in order], pcac. */
@@ -131,8 +138,9 @@ function renderStudentForm(row: MegacodeReportRow): string {
     ? ''
     : `<p class="srcnote">Practice case ${esc(a.caseCode ?? '')} used as testing scenario (AHA-permitted) — scored by rhythm section.</p>`;
   const keys = orderedKeys(a);
-  const hasNa = keys.some((k) => SECTIONS[k]?.items.some((it) => it.dataIndex === null));
-  const sectionsHtml = keys.map((k) => SECTIONS[k] ? renderSection(SECTIONS[k], a) : '').join('');
+  const rendered = keys.map((k) => SECTIONS[k] ? renderSection(SECTIONS[k], a) : { html: '', needs: false });
+  const sectionsHtml = rendered.map((r) => r.html).join('');
+  const hasNa = rendered.some((r) => r.needs);
   const pass = a.result === 'pass';
   const flagNote = row.flags.length ? `<p class="flag">⚠ ${row.flags.map(esc).join(' · ')}</p>` : '';
 
@@ -151,7 +159,7 @@ function renderStudentForm(row: MegacodeReportRow): string {
       <span class="pn ${pass ? 'on' : ''}">${box(pass)} PASS</span>
       <span class="pn ${!pass ? 'on' : ''}">${box(!pass)} NR</span>
     </p>
-    ${hasNa ? '<p class="na-foot">† Not separately scored by the program rubric — verify and hand-check if performed.</p>' : ''}
+    ${hasNa ? '<p class="na-foot">† Added to the checklist after this attempt was graded — verify and mark manually.</p>' : ''}
     ${renderSignoff(row)}
   </section>`;
 }
