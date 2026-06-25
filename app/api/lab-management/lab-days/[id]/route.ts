@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole, isSuperadmin } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
+import { createDeletionRequestIfAbsent } from '@/lib/deletion-requests';
 
 export async function GET(
   request: NextRequest,
@@ -299,6 +300,11 @@ export async function DELETE(
     }
 
     if (!callerUser || !isSuperadmin(callerUser.role)) {
+      const { data: ld } = await supabase.from('lab_days').select('title, date').eq('id', id).maybeSingle();
+      await createDeletionRequestIfAbsent(supabase, {
+        itemType: 'lab_day', itemId: id,
+        itemName: ld?.title || ld?.date || id, requestedBy: user.id,
+      });
       return NextResponse.json({ error: 'Lab day deletion requires superadmin approval via deletion requests' }, { status: 403 });
     }
 

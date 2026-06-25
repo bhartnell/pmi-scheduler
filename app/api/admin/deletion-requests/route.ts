@@ -126,7 +126,8 @@ export async function PATCH(request: NextRequest) {
         'station': 'lab_stations',
         'lab_day': 'lab_days',
         'certification': 'certifications',
-        'ce_record': 'ce_records'
+        'ce_record': 'ce_records',
+        'internship': 'student_internships'
       };
 
       const tableName = tableMap[deletionRequest.item_type];

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole, isSuperadmin } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
+import { createDeletionRequestIfAbsent } from '@/lib/deletion-requests';
 
 async function getCallerRole(email: string): Promise<string | null> {
   const supabase = getSupabaseAdmin();
@@ -329,6 +330,17 @@ export async function DELETE(
 
     const callerRole = await getCallerRole(session.user.email);
     if (!callerRole || !isSuperadmin(callerRole)) {
+      const { id } = await params;
+      const { data: intern } = await supabase
+        .from('student_internships')
+        .select('agency_name, student:students(first_name, last_name)')
+        .eq('id', id).maybeSingle();
+      const stu = (intern as { student?: { first_name?: string; last_name?: string } } | null)?.student;
+      const who = stu ? `${stu.first_name ?? ''} ${stu.last_name ?? ''}`.trim() : '';
+      const name = [who, intern?.agency_name].filter(Boolean).join(' — ') || id;
+      await createDeletionRequestIfAbsent(supabase, {
+        itemType: 'internship', itemId: id, itemName: name, requestedBy: user.id,
+      });
       return NextResponse.json({ success: false, error: 'Internship deletion requires superadmin approval via deletion requests' }, { status: 403 });
     }
 

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole, isSuperadmin } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
+import { createDeletionRequestIfAbsent } from '@/lib/deletion-requests';
 
 async function getCallerRole(email: string): Promise<string | null> {
   const supabase = getSupabaseAdmin();
@@ -155,6 +156,15 @@ export async function DELETE(
 
   const callerRole = await getCallerRole(session.user.email);
   if (!callerRole || !isSuperadmin(callerRole)) {
+    // Non-superadmin: queue a deletion request so it reaches the admin approval
+    // queue (instead of silently 403-ing with nothing recorded).
+    const { id } = await params;
+    const supabase = getSupabaseAdmin();
+    const { data: s } = await supabase.from('students').select('first_name, last_name').eq('id', id).maybeSingle();
+    await createDeletionRequestIfAbsent(supabase, {
+      itemType: 'student', itemId: id,
+      itemName: s ? `${s.first_name} ${s.last_name}`.trim() : id, requestedBy: user.id,
+    });
     return NextResponse.json({ error: 'Student deletion requires superadmin approval via deletion requests' }, { status: 403 });
   }
 

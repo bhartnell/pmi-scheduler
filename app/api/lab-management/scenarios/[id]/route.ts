@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isSuperadmin } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
+import { createDeletionRequestIfAbsent } from '@/lib/deletion-requests';
 
 // Use service role key for server-side operations to bypass RLS
 export async function GET(
@@ -167,6 +168,10 @@ export async function DELETE(
     const { user } = auth;
 
     if (!isSuperadmin(user.role)) {
+      const { data: sc } = await supabase.from('scenarios').select('title').eq('id', id).maybeSingle();
+      await createDeletionRequestIfAbsent(supabase, {
+        itemType: 'scenario', itemId: id, itemName: sc?.title || id, requestedBy: user.id,
+      });
       return NextResponse.json({ success: false, error: 'Scenario deletion requires superadmin approval via deletion requests' }, { status: 403 });
     }
 

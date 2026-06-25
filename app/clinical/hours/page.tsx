@@ -43,7 +43,13 @@ interface CohortOption {
   program: { abbreviation: string };
   start_date?: string | null;
   expected_end_date?: string | null;
+  current_semester?: number | null;
 }
+
+// Clinical hours don't begin until the clinical phase (semester 3). Before that,
+// pace/"behind" flags are meaningless — a Sem 1/2 cohort with 0 hours is on track,
+// not behind. Mirrors the cron gate in /api/cron/clinical-hours-reminder.
+const CLINICAL_PHASE_MIN_SEMESTER = 3;
 
 // Wide table structure - one row per student with all hours/shifts
 interface StudentHours {
@@ -433,6 +439,10 @@ export default function ClinicalHoursTrackerPage() {
   // Determine pace status for an individual student
   const getStudentPace = (studentId: string): 'ahead' | 'on-track' | 'behind' | 'unknown' => {
     const cohortData = allCohorts.find(c => c.id === selectedCohort);
+
+    // Not in clinical phase yet (Sem 1/2) → no pace/"behind" flag.
+    if ((cohortData?.current_semester ?? 0) < CLINICAL_PHASE_MIN_SEMESTER) return 'unknown';
+
     const startDate = cohortData?.start_date ? new Date(cohortData.start_date) : null;
     const endDate = cohortData?.expected_end_date ? new Date(cohortData.expected_end_date) : null;
 

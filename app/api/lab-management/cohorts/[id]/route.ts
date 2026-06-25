@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { isSuperadmin } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
+import { createDeletionRequestIfAbsent } from '@/lib/deletion-requests';
 
 async function getCallerRole(email: string): Promise<string | null> {
   const supabase = getSupabaseAdmin();
@@ -110,6 +111,13 @@ export async function DELETE(
 
   const callerRole = await getCallerRole(session.user.email);
   if (!callerRole || !isSuperadmin(callerRole)) {
+    const { id } = await params;
+    const supabase = getSupabaseAdmin();
+    const { data: ch } = await supabase.from('cohorts').select('cohort_number').eq('id', id).maybeSingle();
+    await createDeletionRequestIfAbsent(supabase, {
+      itemType: 'cohort', itemId: id,
+      itemName: ch?.cohort_number != null ? `Cohort ${ch.cohort_number}` : id, requestedBy: user.id,
+    });
     return NextResponse.json({ error: 'Cohort deletion requires superadmin approval via deletion requests' }, { status: 403 });
   }
 

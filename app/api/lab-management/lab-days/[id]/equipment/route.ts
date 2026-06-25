@@ -65,6 +65,16 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       return NextResponse.json({ error: 'name is required' }, { status: 400 });
     }
 
+    // Guard the station_id FK: a stale/invalid station id (e.g. from a station
+    // that was removed) would violate the FK and surface as a raw 500. Verify it
+    // exists for this lab day; otherwise attach the item at the lab-day level.
+    let validStationId: string | null = null;
+    if (station_id) {
+      const { data: st } = await supabase
+        .from('lab_stations').select('id').eq('id', station_id).eq('lab_day_id', labDayId).maybeSingle();
+      validStationId = st ? station_id : null;
+    }
+
     const { data, error } = await supabase
       .from('lab_day_equipment')
       .insert({
@@ -72,7 +82,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
         name: name.trim(),
         quantity: Math.max(1, parseInt(quantity, 10) || 1),
         status: 'checked_out',
-        station_id: station_id || null,
+        station_id: validStationId,
         notes: notes?.trim() || null,
         checked_out_by: user.id,
       })
