@@ -4,7 +4,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import type { ReportScope } from '@/lib/reports/engine';
 import { fetchMegacodeReport } from '@/lib/reports/aha/megacode';
 import { renderMegacodeDocument, type SignoffInstructor } from '@/lib/reports/aha/megacodeForm';
-import { fetchScopeStudents } from '@/lib/reports/roster';
+import { fetchScopeStudents, fetchCourseDate } from '@/lib/reports/roster';
 import { SKILLS_FORMS, renderSkillsDocument } from '@/lib/reports/aha/skillsForms';
 
 /**
@@ -63,7 +63,8 @@ export async function GET(request: NextRequest) {
   // Skills checklists (auto-complete as PASS): airway, adult_bls
   if (SKILLS_FORMS[template]) {
     const students = await fetchScopeStudents(scope);
-    const html = renderSkillsDocument(SKILLS_FORMS[template], students, { autoPrint, instructor });
+    const courseDate = await fetchCourseDate(scope, course);
+    const html = renderSkillsDocument(SKILLS_FORMS[template], students, { autoPrint, instructor, courseDate });
     return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 

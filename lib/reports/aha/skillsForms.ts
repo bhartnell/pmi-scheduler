@@ -117,17 +117,24 @@ export const INFANT_CPR_FORM: SkillsForm = {
 export const SKILLS_FORMS: Record<string, SkillsForm> = { airway: AIRWAY_FORM, adult_bls: ADULT_BLS_FORM, infant_cpr: INFANT_CPR_FORM };
 
 const esc = (s: string): string => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]!));
+function fmtDate(d: string | null | undefined): string {
+  if (!d) return '';
+  const [y, m, day] = d.split('-').map(Number);
+  return y ? `${m}/${day}/${y}` : d;
+}
 
-function signoff(ins: SignoffInstructor | null): string {
+function signoff(ins: SignoffInstructor | null, dateStr: string): string {
   let sig = '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>';
   if (ins) sig = ins.signatureData ? `<img class="sig" src="${ins.signatureData}" alt="signature" />` : `<span class="sigscript">${esc(ins.name)}</span>`;
   const initials = ins ? esc(ins.name) : '<u>&nbsp;&nbsp;</u>';
   const num = ins?.ahaNumber ? esc(ins.ahaNumber) : '<u>&nbsp;&nbsp;&nbsp;</u>';
-  return `<p class="signoff">Instructor ${sig} &nbsp; Initials ${initials} &nbsp; Instructor Number ${num} &nbsp; Date <u>&nbsp;&nbsp;&nbsp;</u></p>`;
+  const date = dateStr ? esc(dateStr) : '<u>&nbsp;&nbsp;&nbsp;</u>';
+  return `<p class="signoff">Instructor ${sig} &nbsp; Initials ${initials} &nbsp; Instructor Number ${num} &nbsp; Date ${date}</p>`;
 }
 
-export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStudent, ins: SignoffInstructor | null): string {
+export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStudent, ins: SignoffInstructor | null, courseDate?: string | null): string {
   const name = `${student.lastName}, ${student.firstName}`;
+  const dateStr = fmtDate(courseDate); // skills sheets stamp the cohort's course date
   const sections = form.sections.map((sec) => {
     const steps = sec.steps.map((st) => {
       const subs = st.subs?.length ? `<div class="subs">${st.subs.map((s) => `• ${esc(s)}`).join('<br>')}</div>` : '';
@@ -142,13 +149,13 @@ export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStuden
   return `<section class="form">
     <p class="prog">${esc(form.program)}</p>
     <h2>${esc(form.title)}</h2>
-    <p class="hdr">Student Name <u>${esc(name)}</u> &nbsp;&nbsp; Date of Test <u>&nbsp;&nbsp;&nbsp;&nbsp;</u></p>
+    <p class="hdr">Student Name <u>${esc(name)}</u> &nbsp;&nbsp; Date of Test <u>${dateStr ? esc(dateStr) : '&nbsp;&nbsp;&nbsp;&nbsp;'}</u></p>
     ${scen}
     <table class="ck"><thead><tr><th>Critical Performance Steps</th><th class="chk">Done<br>correctly</th></tr></thead><tbody>${sections}</tbody></table>
     <p class="stop">STOP TEST</p>
     <p class="result"><span class="pn on"><span class="bx">✓</span> PASS</span><span class="pn"><span class="bx"></span> NR</span></p>
     <p class="autocap">Auto-completed as PASS — documenting competency verified live during the course (these skills are not scored in-app; failures are handled live).</p>
-    ${signoff(ins)}
+    ${signoff(ins, dateStr)}
   </section>`;
 }
 
@@ -180,8 +187,8 @@ const STYLE = `
 /** The skills form CSS — exported so the per-student packet can merge it. */
 export const SKILLS_CSS = STYLE;
 
-export function renderSkillsDocument(form: SkillsForm, students: RosterStudent[], opts: { autoPrint?: boolean; instructor?: SignoffInstructor | null } = {}): string {
-  const sheets = students.map((s) => renderSkillsStudentSheet(form, s, opts.instructor ?? null)).join('\n');
+export function renderSkillsDocument(form: SkillsForm, students: RosterStudent[], opts: { autoPrint?: boolean; instructor?: SignoffInstructor | null; courseDate?: string | null } = {}): string {
+  const sheets = students.map((s) => renderSkillsStudentSheet(form, s, opts.instructor ?? null, opts.courseDate)).join('\n');
   const printScript = opts.autoPrint ? '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),350));</script>' : '';
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(form.title)}</title><style>${STYLE}</style></head>
 <body><div class="toolbar"><button onclick="window.print()">🖨 Print / Save as PDF</button> &nbsp; ${form.title} · ${students.length} student(s)</div>

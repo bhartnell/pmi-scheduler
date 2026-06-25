@@ -15,12 +15,12 @@ export function packetFilename(lastName: string, firstName: string): string {
 }
 
 /** Combined HTML doc for one student (megacode + the 3 skills sheets). */
-export function composeStudentPacketHTML(row: MegacodeReportRow, instructor: SignoffInstructor | null): string {
+export function composeStudentPacketHTML(row: MegacodeReportRow, instructor: SignoffInstructor | null, courseDate?: string | null): string {
   const student = { id: row.student.id, firstName: row.student.firstName, lastName: row.student.lastName };
   const megacode = renderMegacodeStudentForm({ ...row, instructor });
-  const airway = renderSkillsStudentSheet(AIRWAY_FORM, student, instructor);
-  const adultBls = renderSkillsStudentSheet(ADULT_BLS_FORM, student, instructor);
-  const infant = renderSkillsStudentSheet(INFANT_CPR_FORM, student, instructor);
+  const airway = renderSkillsStudentSheet(AIRWAY_FORM, student, instructor, courseDate);
+  const adultBls = renderSkillsStudentSheet(ADULT_BLS_FORM, student, instructor, courseDate);
+  const infant = renderSkillsStudentSheet(INFANT_CPR_FORM, student, instructor, courseDate);
   // Merge both stylesheets; last .form shouldn't force a trailing blank page.
   const css = `${MEGACODE_CSS}\n${SKILLS_CSS}\n.form:last-child{page-break-after:auto;}`;
   return `<!doctype html><html><head><meta charset="utf-8"><title>${packetFilename(row.student.lastName, row.student.firstName)}</title><style>${css}</style></head>

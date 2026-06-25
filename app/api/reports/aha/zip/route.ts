@@ -6,7 +6,7 @@ import { fetchMegacodeReport } from '@/lib/reports/aha/megacode';
 import { renderMegacodeDocument, type SignoffInstructor } from '@/lib/reports/aha/megacodeForm';
 import { renderSkillsDocument, SKILLS_FORMS } from '@/lib/reports/aha/skillsForms';
 import { composeStudentPacketHTML, packetFilename } from '@/lib/reports/aha/packet';
-import type { RosterStudent } from '@/lib/reports/roster';
+import { fetchCourseDate, type RosterStudent } from '@/lib/reports/roster';
 import JSZip from 'jszip';
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
@@ -58,6 +58,7 @@ export async function GET(request: NextRequest) {
 
     const report = await fetchMegacodeReport({ kind: 'cohort', cohortId }, { course });
     if (report.rows.length === 0) return NextResponse.json({ success: false, error: 'no students in cohort' }, { status: 404 });
+    const courseDate = await fetchCourseDate({ kind: 'cohort', cohortId }, course); // skills-sheet date stamp
 
     // Build the list of (filename, html) docs to render.
     const docs: Array<{ filename: string; html: string }> = [];
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
         if (!row.best) continue; // skip excused / no scorable attempt — no student file
         docs.push({
           filename: packetFilename(row.student.lastName, row.student.firstName),
-          html: composeStudentPacketHTML(row, instructor),
+          html: composeStudentPacketHTML(row, instructor, courseDate),
         });
       }
     } else {
@@ -74,9 +75,9 @@ export async function GET(request: NextRequest) {
       const students: RosterStudent[] = report.rows.map((r) => r.student);
       if (instructor) for (const r of report.rows) (r as { instructor?: SignoffInstructor }).instructor = instructor;
       docs.push({ filename: 'Megacode_Testing_AllStudents.pdf', html: renderMegacodeDocument(report) });
-      docs.push({ filename: 'Airway_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.airway, students, { instructor }) });
-      docs.push({ filename: 'Adult_BLS_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.adult_bls, students, { instructor }) });
-      docs.push({ filename: 'Infant_CPR_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.infant_cpr, students, { instructor }) });
+      docs.push({ filename: 'Airway_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.airway, students, { instructor, courseDate }) });
+      docs.push({ filename: 'Adult_BLS_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.adult_bls, students, { instructor, courseDate }) });
+      docs.push({ filename: 'Infant_CPR_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.infant_cpr, students, { instructor, courseDate }) });
     }
     if (docs.length === 0) return NextResponse.json({ success: false, error: 'nothing to export (no eligible students)' }, { status: 404 });
 
