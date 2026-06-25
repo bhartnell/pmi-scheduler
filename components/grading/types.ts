@@ -116,6 +116,7 @@ export interface ScenarioPhase {
   presentation_notes?: string;
   expected_interventions?: string[];
   expected_actions?: string;
+  instructor_cues?: string[] | string;
 }
 
 export interface AssignedSkill {

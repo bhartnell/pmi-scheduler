@@ -525,16 +525,24 @@ export default function ScenarioFullDisplay({
                         </ul>
                       </div>
                     )}
-                    {phase.instructor_cues && (
-                      <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border border-yellow-200 dark:border-yellow-800">
-                        <h5 className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">
-                          Instructor Cues
-                        </h5>
-                        <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                          {phase.instructor_cues}
-                        </p>
-                      </div>
-                    )}
+                    {(() => {
+                      // instructor_cues is a string[] (first-class phase field). Tolerate a
+                      // legacy single string too. Filter blanks; hide if empty.
+                      const cues: string[] = Array.isArray(phase.instructor_cues)
+                        ? phase.instructor_cues.filter((c: unknown): c is string => typeof c === 'string' && c.trim() !== '')
+                        : (typeof phase.instructor_cues === 'string' && phase.instructor_cues.trim() !== '' ? [phase.instructor_cues] : []);
+                      if (cues.length === 0) return null;
+                      return (
+                        <div className="bg-yellow-50 dark:bg-yellow-900/20 p-2 rounded border border-yellow-200 dark:border-yellow-800">
+                          <h5 className="text-sm font-medium text-yellow-800 dark:text-yellow-300 mb-1">
+                            Instructor Cues
+                          </h5>
+                          <ul className="text-sm text-yellow-700 dark:text-yellow-400 list-disc list-inside space-y-0.5">
+                            {cues.map((cue, cIdx) => <li key={cIdx}>{cue}</li>)}
+                          </ul>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

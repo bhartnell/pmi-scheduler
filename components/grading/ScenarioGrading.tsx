@@ -334,6 +334,24 @@ function CollapsiblePhase({
                 <p className="text-xs text-gray-700 dark:text-gray-300 pl-2">{expectedActions}</p>
               </div>
             )}
+
+            {/* Instructor Cues (instructor-facing coaching, distinct from expected actions) */}
+            {(() => {
+              const cues: string[] = Array.isArray(phase.instructor_cues)
+                ? phase.instructor_cues.filter((c: unknown): c is string => typeof c === 'string' && c.trim() !== '')
+                : (typeof phase.instructor_cues === 'string' && phase.instructor_cues.trim() !== '' ? [phase.instructor_cues] : []);
+              if (cues.length === 0) return null;
+              return (
+                <div className="space-y-1.5">
+                  <div className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider border-b border-amber-200 dark:border-amber-800 pb-1">
+                    Instructor Cues
+                  </div>
+                  <ul className="text-xs text-gray-700 dark:text-gray-300 pl-4 list-disc space-y-0.5">
+                    {cues.map((cue, cIdx) => <li key={cIdx}>{cue}</li>)}
+                  </ul>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>

@@ -109,10 +109,9 @@ export function normalizeScenarioPhases<T>(phases: T): T {
       else if (typeof out.presentation === 'string') out.presentation_notes = out.presentation;
     }
 
-    // expected_actions ← instructor_cues (array) when none present
-    if (out.expected_actions == null && Array.isArray(out.instructor_cues) && out.instructor_cues.length > 0) {
-      out.expected_actions = out.instructor_cues;
-    }
+    // instructor_cues is now a FIRST-CLASS phase field (distinct from
+    // expected_actions) — it passes through unchanged via the spread above; we no
+    // longer fold it into expected_actions. Keep them separate.
 
     return out;
   }) as T;

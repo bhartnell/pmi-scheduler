@@ -92,6 +92,7 @@ interface Phase {
   vitals: VitalSigns;
   presentation_notes: string;
   expected_actions: string;
+  instructor_cues: string[];   // instructor-facing coaching, distinct from expected_actions
   display_order: number;
   // OPQRST (for phases where symptom assessment changes)
   onset: string;               // O
@@ -256,6 +257,7 @@ const createEmptyPhase = (order: number): Phase => ({
   vitals: createEmptyVitals(),
   presentation_notes: '',
   expected_actions: '',
+  instructor_cues: [],
   display_order: order,
   // OPQRST
   onset: '',
@@ -298,14 +300,16 @@ const normalizeLoadedVitals = (raw: unknown): VitalSigns => {
 const normalizeLoadedPhase = (raw: unknown, i: number): Phase => {
   const p = (raw && typeof raw === 'object') ? (raw as Record<string, unknown>) : {};
   const str = (k: string): string => (typeof p[k] === 'string' ? (p[k] as string) : '');
+  // instructor_cues is its own first-class field now (instructor-facing coaching).
+  // Keep it as a string[]; no longer fold it into expected_actions.
   const cues = Array.isArray(p.instructor_cues)
-    ? (p.instructor_cues as unknown[]).filter((x) => typeof x === 'string').join('\n')
-    : '';
+    ? (p.instructor_cues as unknown[]).filter((x) => typeof x === 'string') as string[]
+    : [];
   const expected = typeof p.expected_actions === 'string'
     ? p.expected_actions
     : Array.isArray(p.expected_actions)
       ? (p.expected_actions as unknown[]).filter((x) => typeof x === 'string').join('\n')
-      : cues;
+      : '';
   return {
     id: typeof p.id === 'string' ? p.id : `phase-${Date.now()}-${i}`,
     name: str('name') || str('title') || (i === 0 ? 'Initial Presentation' : `Phase ${i + 1}`),
@@ -313,6 +317,7 @@ const normalizeLoadedPhase = (raw: unknown, i: number): Phase => {
     vitals: normalizeLoadedVitals(p.vitals),
     presentation_notes: str('presentation_notes') || str('presentation_text'),
     expected_actions: expected,
+    instructor_cues: cues,
     display_order: i,
     onset: str('onset'), provocation: str('provocation'), quality: str('quality'),
     radiation: str('radiation'), severity: str('severity'), time_onset: str('time_onset'),
@@ -1097,6 +1102,8 @@ export default function ScenarioEditorPage() {
         }
         if (phase.presentation_notes) html += `<p style="font-size: 12px; margin-top: 4px;"><strong>Presentation:</strong> ${escapeHtml(phase.presentation_notes)}</p>`;
         if (phase.expected_actions) html += `<p style="font-size: 12px;"><strong>Expected Actions:</strong> ${escapeHtml(phase.expected_actions)}</p>`;
+        const printCues = Array.isArray(phase.instructor_cues) ? phase.instructor_cues.filter(Boolean) : [];
+        if (printCues.length > 0) html += `<p style="font-size: 12px;"><strong>Instructor Cues:</strong></p><ul style="font-size: 12px; margin: 2px 0;">${printCues.map(c => `<li>${escapeHtml(c)}</li>`).join('')}</ul>`;
         html += '</div>';
       });
     }
@@ -1450,7 +1457,11 @@ export default function ScenarioEditorPage() {
         sample_history: scenario.sample_history,
         // OPQRST
         opqrst: scenario.opqrst,
-        phases: scenario.phases,
+        // Drop blank instructor-cue lines (the textarea keeps them while editing).
+        phases: scenario.phases.map(p => ({
+          ...p,
+          instructor_cues: Array.isArray(p.instructor_cues) ? p.instructor_cues.map(c => c.trim()).filter(Boolean) : [],
+        })),
         critical_actions: scenario.critical_actions.map(a => a.description),
         debrief_points: scenario.debrief_points
       };
@@ -2428,6 +2439,16 @@ export default function ScenarioEditorPage() {
                       <p className="mt-1 whitespace-pre-wrap">{phase.expected_actions}</p>
                     </div>
                   )}
+                  {Array.isArray(phase.instructor_cues) && phase.instructor_cues.filter(Boolean).length > 0 && (
+                    <div className="text-sm mt-2">
+                      <strong>Instructor Cues:</strong>
+                      <ul className="mt-1 list-disc list-inside space-y-0.5">
+                        {phase.instructor_cues.filter(Boolean).map((cue, ci) => (
+                          <li key={ci}>{cue}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -3146,6 +3167,18 @@ export default function ScenarioEditorPage() {
                       placeholder="What should the student do at this point?"
                       className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Instructor Cues</label>
+                    <textarea
+                      value={(phase.instructor_cues || []).join('\n')}
+                      onChange={(e) => updatePhase(index, { instructor_cues: e.target.value.split('\n') })}
+                      rows={3}
+                      placeholder="One cue per line — instructor-facing coaching (anticipate errors, redirect language). Distinct from Expected Actions."
+                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                    />
+                    <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Instructor-facing prompts for running the scenario (one per line).</p>
                   </div>
                 </div>
               </div>

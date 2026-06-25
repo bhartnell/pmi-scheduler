@@ -6,10 +6,13 @@ import { requireAuth } from '@/lib/api-auth';
 // ---------------------------------------------------------------------------
 interface ImportedPhase {
   name?: string;
+  title?: string;              // builder alias for name
   trigger?: string;
   duration_minutes?: number;
   presentation_notes?: string;
+  presentation_text?: string;  // builder alias for presentation_notes
   expected_actions?: string | string[];
+  instructor_cues?: string[];  // first-class phase field (distinct from expected_actions)
   general_impression?: string;
   vitals?: Record<string, string | string[]>;
   onset?: string;
@@ -209,12 +212,15 @@ function parseCSVLine(line: string): string[] {
 function buildPhases(imported: ImportedScenario): Record<string, unknown>[] {
   return (Array.isArray(imported.phases) ? imported.phases : []).map((phase, index) => ({
     id: `phase-import-${Date.now()}-${index}`,
-    name: phase.name || (index === 0 ? 'Initial Presentation' : `Phase ${index + 1}`),
+    name: phase.name || phase.title || (index === 0 ? 'Initial Presentation' : `Phase ${index + 1}`),
     trigger: phase.trigger || (index === 0 ? 'On arrival' : ''),
-    presentation_notes: phase.presentation_notes || '',
+    presentation_notes: phase.presentation_notes || phase.presentation_text || '',
     expected_actions: Array.isArray(phase.expected_actions)
       ? phase.expected_actions.join('\n')
       : (phase.expected_actions || ''),
+    // instructor_cues is a first-class phase field (instructor-facing coaching,
+    // distinct from expected_actions). Carry it through; do NOT fold it.
+    instructor_cues: Array.isArray(phase.instructor_cues) ? phase.instructor_cues : [],
     general_impression: phase.general_impression || '',
     display_order: index,
     vitals: {
@@ -223,7 +229,7 @@ function buildPhases(imported: ImportedScenario): Record<string, unknown>[] {
       rr: phase.vitals?.rr || '',
       spo2: phase.vitals?.spo2 || '',
       temp: phase.vitals?.temp || '',
-      gcs_total: phase.vitals?.gcs_total || '',
+      gcs_total: phase.vitals?.gcs_total || phase.vitals?.gcs || '',
       gcs_e: phase.vitals?.gcs_e || '',
       gcs_v: phase.vitals?.gcs_v || '',
       gcs_m: phase.vitals?.gcs_m || '',
@@ -235,7 +241,7 @@ function buildPhases(imported: ImportedScenario): Record<string, unknown>[] {
       lung_sounds: phase.vitals?.lung_sounds || '',
       lung_notes: phase.vitals?.lung_notes || '',
       skin: phase.vitals?.skin || '',
-      blood_glucose: phase.vitals?.blood_glucose || '',
+      blood_glucose: phase.vitals?.blood_glucose || phase.vitals?.glucose || '',
       twelve_lead_notes: phase.vitals?.twelve_lead_notes || '',
       hemorrhage_control: phase.vitals?.hemorrhage_control || '',
       airway_status: phase.vitals?.airway_status || '',
