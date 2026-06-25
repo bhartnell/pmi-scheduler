@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-06-25
+
+- `PENDING` | **Fix: scenario JSON round-trip upload crash + import shape validation.** A scenario re-uploaded after an external/LLM edit crashed the client with "Cannot read properties of undefined (reading 'length')". Root cause: the upload path (scenario edit page → PATCH `/api/lab-management/scenarios/[id]`) stored `body.phases` **as-is with no shape validation** — an enrichment that reshaped phases (e.g. renamed `name→title`, `presentation_notes→presentation_text`, `expected_actions→instructor_cues`) persisted, and render code read the now-missing fields. Fixes: (1) new `lib/scenario-validate.ts` — `validateScenarioShape` (readable errors: "field X expected an array, got Y"; checks array fields, object fields, phases) + `normalizeScenarioPhases` (maps well-known phase-field aliases back to the rendered schema, non-destructive, alias-only so normal scenarios aren't rewritten). (2) Wired validate→reject(400)→normalize into the PATCH save and POST create routes; guarded the `body.phases.length` access with `Array.isArray`. (3) `scripts/fix-scenario-phase-aliases.js` — idempotent repair for any already-saved aliased rows (found 0 live; the one affected record was corrected before this ran). The render components (`ScenarioFullDisplay`, `ScenarioGrading`) were already null-safe (`Array.isArray`/`||`/optional chaining); the gap was the import path, now closed. Protects Ben's regular export→enrich→re-upload workflow. tsc 0 + clean build.
+
 ## 2026-06-24
 
 - `4290baaa` | **Background batch fixes (5 items).**

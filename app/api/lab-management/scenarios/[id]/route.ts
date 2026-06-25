@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { isSuperadmin } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
 import { createDeletionRequestIfAbsent } from '@/lib/deletion-requests';
+import { validateScenarioShape, normalizeScenarioPhases } from '@/lib/scenario-validate';
 
 // Use service role key for server-side operations to bypass RLS
 export async function GET(
@@ -45,7 +46,23 @@ export async function PATCH(
 
     const supabase = getSupabaseAdmin();
     const body = await request.json();
-    
+
+    // Guard the round-trip-edit workflow: a re-uploaded JSON whose fields
+    // changed shape (array→object/string, renamed/dropped phase fields) must
+    // be rejected with a readable error here rather than persisting data that
+    // crashes the client render with ".length of undefined".
+    const shapeErrors = validateScenarioShape(body);
+    if (shapeErrors.length > 0) {
+      return NextResponse.json(
+        { success: false, error: `Scenario JSON shape problem — ${shapeErrors.map(e => e.message).join('; ')}` },
+        { status: 400 },
+      );
+    }
+    // Map well-known phase-field aliases (e.g. an LLM that renamed
+    // name→title / presentation_notes→presentation_text) back to the schema
+    // the app renders, so an enriched export still displays correctly.
+    if (Array.isArray(body.phases)) body.phases = normalizeScenarioPhases(body.phases);
+
     // Build update object with only provided fields
     const updateData: any = {
       updated_at: new Date().toISOString()
@@ -107,7 +124,7 @@ export async function PATCH(
     if (body.phases !== undefined) {
       updateData.phases = body.phases;
       // Also update legacy initial_vitals for compatibility
-      if (body.phases.length > 0) {
+      if (Array.isArray(body.phases) && body.phases.length > 0) {
         updateData.initial_vitals = body.phases[0].vitals || null;
         updateData.general_impression = body.phases[0].presentation_notes || null;
         // Only sync ekg_findings from phase vitals if not explicitly provided

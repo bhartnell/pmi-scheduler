@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { validateScenarioShape, normalizeScenarioPhases } from '@/lib/scenario-validate';
 
 // Use service role key for server-side operations to bypass RLS
 export async function GET(request: NextRequest) {
@@ -95,6 +96,17 @@ export async function POST(request: NextRequest) {
     if (!body.title?.trim()) {
       return NextResponse.json({ success: false, error: 'Title is required' }, { status: 400 });
     }
+
+    // Reject shape-mismatched payloads (round-trip edits that changed a field's
+    // type) with a readable error; normalize known phase aliases otherwise.
+    const shapeErrors = validateScenarioShape(body);
+    if (shapeErrors.length > 0) {
+      return NextResponse.json(
+        { success: false, error: `Scenario JSON shape problem — ${shapeErrors.map(e => e.message).join('; ')}` },
+        { status: 400 },
+      );
+    }
+    if (Array.isArray(body.phases)) body.phases = normalizeScenarioPhases(body.phases);
 
     const insertData = {
       title: body.title.trim(),
