@@ -268,6 +268,58 @@ const createEmptyPhase = (order: number): Phase => ({
   general_impression: ''
 });
 
+// Normalize a phase's vitals (from any import/builder/DB shape) into the full
+// editor VitalSigns shape. Mirrors the bulk importer's buildPhases handling so
+// the scenario-screen edit path is as tolerant as the (working) bulk import:
+//   - GUARANTEES other_findings is an array (the unguarded `.length` on this
+//     field was the round-trip-edit crash)
+//   - maps builder aliases (glucose→blood_glucose, gcs→gcs_total) so nothing
+//     is dropped or shown blank
+const normalizeLoadedVitals = (raw: unknown): VitalSigns => {
+  const v = (raw && typeof raw === 'object' && !Array.isArray(raw)) ? (raw as Record<string, unknown>) : {};
+  const s = (k: string): string => (typeof v[k] === 'string' ? (v[k] as string) : v[k] != null ? String(v[k]) : '');
+  return {
+    hemorrhage_control: s('hemorrhage_control'), airway_status: s('airway_status'), expose_findings: s('expose_findings'),
+    bp: s('bp'), hr: s('hr'), rr: s('rr'), spo2: s('spo2'), temp: s('temp'),
+    gcs_total: s('gcs_total') || s('gcs'), gcs_e: s('gcs_e'), gcs_v: s('gcs_v'), gcs_m: s('gcs_m'),
+    pupils: s('pupils'), loc: s('loc'), pain: s('pain'),
+    ekg_rhythm: s('ekg_rhythm'), etco2: s('etco2'), twelve_lead_notes: s('twelve_lead_notes'),
+    lung_sounds: s('lung_sounds'), lung_notes: s('lung_notes'),
+    skin: s('skin'), jvd: s('jvd'), edema: s('edema'), capillary_refill: s('capillary_refill'), pulse_quality: s('pulse_quality'),
+    blood_glucose: s('blood_glucose') || s('glucose'),
+    other_findings: Array.isArray(v.other_findings) ? (v.other_findings as { key: string; value: string }[]) : [],
+  };
+};
+
+// Normalize a loaded phase (DB / bulk-import / scenario-builder shape) into the
+// editor Phase shape. Maps builder aliases name←title,
+// presentation_notes←presentation_text, expected_actions←instructor_cues so an
+// externally-enriched export edits correctly instead of showing blank/crashing.
+const normalizeLoadedPhase = (raw: unknown, i: number): Phase => {
+  const p = (raw && typeof raw === 'object') ? (raw as Record<string, unknown>) : {};
+  const str = (k: string): string => (typeof p[k] === 'string' ? (p[k] as string) : '');
+  const cues = Array.isArray(p.instructor_cues)
+    ? (p.instructor_cues as unknown[]).filter((x) => typeof x === 'string').join('\n')
+    : '';
+  const expected = typeof p.expected_actions === 'string'
+    ? p.expected_actions
+    : Array.isArray(p.expected_actions)
+      ? (p.expected_actions as unknown[]).filter((x) => typeof x === 'string').join('\n')
+      : cues;
+  return {
+    id: typeof p.id === 'string' ? p.id : `phase-${Date.now()}-${i}`,
+    name: str('name') || str('title') || (i === 0 ? 'Initial Presentation' : `Phase ${i + 1}`),
+    trigger: str('trigger'),
+    vitals: normalizeLoadedVitals(p.vitals),
+    presentation_notes: str('presentation_notes') || str('presentation_text'),
+    expected_actions: expected,
+    display_order: i,
+    onset: str('onset'), provocation: str('provocation'), quality: str('quality'),
+    radiation: str('radiation'), severity: str('severity'), time_onset: str('time_onset'),
+    general_impression: str('general_impression'),
+  };
+};
+
 // Collapsible Section Component
 function Section({
   title,
@@ -312,15 +364,20 @@ function VitalsEditor({
     onChange({ ...vitals, [key]: value });
   };
 
+  // Defensive: a phase loaded from an import/builder shape may not carry an
+  // other_findings array. Default to [] everywhere so the editor can never
+  // crash on `.length`/`.map` (the round-trip-edit crash was here).
+  const otherFindings = Array.isArray(vitals.other_findings) ? vitals.other_findings : [];
+
   const addOtherFinding = () => {
     onChange({
       ...vitals,
-      other_findings: [...vitals.other_findings, { key: '', value: '' }]
+      other_findings: [...otherFindings, { key: '', value: '' }]
     });
   };
 
   const updateOtherFinding = (index: number, field: 'key' | 'value', value: string) => {
-    const updated = [...vitals.other_findings];
+    const updated = [...otherFindings];
     updated[index][field] = value;
     onChange({ ...vitals, other_findings: updated });
   };
@@ -328,7 +385,7 @@ function VitalsEditor({
   const removeOtherFinding = (index: number) => {
     onChange({
       ...vitals,
-      other_findings: vitals.other_findings.filter((_, i) => i !== index)
+      other_findings: otherFindings.filter((_, i) => i !== index)
     });
   };
 
@@ -710,11 +767,11 @@ function VitalsEditor({
             <Plus className="w-3 h-3" /> Add Finding
           </button>
         </h4>
-        {vitals.other_findings.length === 0 ? (
+        {otherFindings.length === 0 ? (
           <p className="text-sm text-gray-400">No additional findings</p>
         ) : (
           <div className="space-y-2">
-            {vitals.other_findings.map((finding, index) => (
+            {otherFindings.map((finding, index) => (
               <div key={index} className="flex gap-2 items-center">
                 <input
                   type="text"
@@ -895,7 +952,9 @@ export default function ScenarioEditorPage() {
             severity: '',
             time_onset: ''
           },
-          phases: s.phases?.length > 0 ? s.phases : [createEmptyPhase(0)],
+          phases: Array.isArray(s.phases) && s.phases.length > 0
+            ? s.phases.map((p: unknown, i: number) => normalizeLoadedPhase(p, i))
+            : [createEmptyPhase(0)],
           // Defensive unwrap — see lab-management sibling for the
           // full story; in short, the OLD transform path could
           // store JSON-stringified objects in the text[] column,
