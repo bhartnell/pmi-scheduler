@@ -11,7 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-06-24
 
-- `PENDING` | **Background batch fixes (5 items).**
+- `4290baaa` | **Background batch fixes (5 items).**
   - **#5 deletion-request queue (root cause + fix):** the DELETE endpoints for students, scenarios, cohorts, lab days, and internships rejected non-superadmins with a 403 ("requires approval via deletion requests") but **never inserted a row into `deletion_requests`**, so the admin queue was always empty. Added `lib/deletion-requests.ts` (`createDeletionRequestIfAbsent`, deduped + best-effort) and wired it into all 5 endpoints' non-superadmin branch (creates the pending request, then returns the same 403 so UI messaging is unchanged). Added `internship → student_internships` to the approval handler's tableMap so approved internship deletions actually delete.
   - **#2 false clinical-hours "behind" flags:** `app/clinical/hours/page.tsx` `getStudentPace()` flagged Sem 1/2 cohorts as "behind" (0 hours vs expected). Added a clinical-phase gate (`current_semester >= 3`) mirroring the existing cron gate; pre-clinical cohorts now show "unknown" pace, not "behind".
   - **#3 group display order (1,4,2,3):** root cause was **corrupted `display_order` data** (G15 "Group 4" at order 2 with a tie; G4 also drifted), not code. Normalized `display_order` to match the group-name number via `scripts/normalize-group-display-order.js` (idempotent; fixed 5 rows). Now sorts 1,2,3,4 for every consumer regardless of sort key.
