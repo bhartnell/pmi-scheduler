@@ -99,6 +99,28 @@ export async function POST(request: NextRequest) {
           general_impression: scenario.general_impression || null,
           ekg_findings: scenario.ekg_findings || null,
           is_active: scenario.is_active !== false,
+          // ── Parity fields — previously dropped by bulk import (2026-06-25).
+          // DB has columns for all of these; the scenario-screen edit path
+          // already persists them. Guarded with `=== undefined` so omitting a
+          // field leaves the existing value untouched on UPDATE.
+          ...(scenario.patient_presentation !== undefined ? { patient_presentation: scenario.patient_presentation || null } : {}),
+          ...(scenario.history !== undefined ? { history: scenario.history || null } : {}),
+          ...(scenario.vitals !== undefined ? { vitals: scenario.vitals || null } : {}),
+          ...(scenario.gcs !== undefined ? { gcs: scenario.gcs || null } : {}),
+          ...(scenario.pupils !== undefined ? { pupils: scenario.pupils || null } : {}),
+          ...(scenario.assessment_x !== undefined ? { assessment_x: scenario.assessment_x || null } : {}),
+          ...(scenario.assessment_a !== undefined ? { assessment_a: scenario.assessment_a || null } : {}),
+          ...(scenario.assessment_b !== undefined ? { assessment_b: scenario.assessment_b || null } : {}),
+          ...(scenario.assessment_c !== undefined ? { assessment_c: scenario.assessment_c || null } : {}),
+          ...(scenario.assessment_d !== undefined ? { assessment_d: scenario.assessment_d || null } : {}),
+          ...(scenario.assessment_e !== undefined ? { assessment_e: scenario.assessment_e || null } : {}),
+          ...(scenario.secondary_survey !== undefined ? { secondary_survey: scenario.secondary_survey || null } : {}),
+          ...(scenario.expected_interventions !== undefined ? { expected_interventions: scenario.expected_interventions || [] } : {}),
+          ...(scenario.equipment_needed !== undefined ? { equipment_needed: scenario.equipment_needed || [] } : {}),
+          ...(scenario.medications_to_administer !== undefined ? { medications_to_administer: scenario.medications_to_administer || [] } : {}),
+          ...(scenario.opqrst !== undefined ? { opqrst: scenario.opqrst || null } : {}),
+          ...(scenario.preferred_manikin !== undefined ? { preferred_manikin: scenario.preferred_manikin || null } : {}),
+          ...(scenario.content_review_status !== undefined ? { content_review_status: scenario.content_review_status || null } : {}),
         };
 
         // ── Dedup lookup ────────────────────────────────────────

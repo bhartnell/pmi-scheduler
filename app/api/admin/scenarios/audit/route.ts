@@ -172,7 +172,7 @@ export async function GET() {
         }
 
         // Collect sample structure (first phase of first few unique structures)
-        if (phases[0] && samplePhasesCollected.size < 5) {
+        if (phases[0] && typeof phases[0] === 'object' && samplePhasesCollected.size < 5) {
           const keys = Object.keys(phases[0]).sort().join(',');
           if (!samplePhasesCollected.has(keys)) {
             samplePhasesCollected.add(keys);
@@ -263,7 +263,7 @@ export async function GET() {
       if (vitalsAnalysis.sample_structures.length < 3) {
         vitalsAnalysis.sample_structures.push({
           scenario_title: s.title,
-          keys: typeof v === 'object' ? Object.keys(v) : typeof v,
+          keys: (v && typeof v === 'object') ? Object.keys(v) : typeof v,
           preview: truncateObj(v, 200),
         });
       }

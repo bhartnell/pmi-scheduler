@@ -97,7 +97,7 @@ type CritStatus = 'met' | 'notmet' | 'needs';
  *  graded) → mark manually; never shown as a false miss or a fabricated pass. */
 function statusAt(attempt: MegacodeAttempt, algorithmType: string, dataIndex: number): CritStatus {
   const seg = attempt.segments.find((s) => s.algorithmType === algorithmType);
-  const crit = seg?.criteria[dataIndex];
+  const crit = Array.isArray(seg?.criteria) ? seg.criteria[dataIndex] : undefined;
   if (!crit || !crit.recorded) return 'needs';
   return crit.met ? 'met' : 'notmet';
 }

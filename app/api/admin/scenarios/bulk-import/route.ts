@@ -43,7 +43,7 @@ interface ImportedScenario {
   patient_weight?: string;
   medical_history?: string | string[];
   medications?: string | string[];
-  allergies?: string;
+  allergies?: string | string[];
   signs_symptoms?: string;
   last_oral_intake?: string;
   events_leading?: string;
@@ -52,6 +52,29 @@ interface ImportedScenario {
   phases?: ImportedPhase[];
   critical_actions?: string | string[];
   debrief_points?: string | string[];
+  // Parity fields — DB has columns for these and the scenario-screen edit path
+  // persists them; bulk import used to silently drop them. (2026-06-25)
+  patient_presentation?: string;
+  history?: string;
+  vitals?: Record<string, unknown>;
+  gcs?: string;
+  pupils?: string;
+  general_impression?: string;
+  assessment_x?: string;
+  assessment_a?: string;
+  assessment_b?: string;
+  assessment_c?: string;
+  assessment_d?: string;
+  assessment_e?: string;
+  secondary_survey?: Record<string, unknown>;
+  expected_interventions?: string | string[];
+  equipment_needed?: string | string[];
+  medications_to_administer?: string | string[];
+  ekg_findings?: Record<string, unknown>;
+  opqrst?: Record<string, unknown>;
+  preferred_manikin?: string;
+  content_review_status?: string;
+  is_active?: boolean;
   // SAMPLE history as nested object (alternative format)
   sample_history?: {
     signs_symptoms?: string;
@@ -91,8 +114,27 @@ interface ParsedScenario {
   debrief_points: string[];
   initial_vitals: Record<string, string> | null;
   general_impression: string | null;
-  ekg_findings: { rhythm: string | null; twelve_lead: string | null } | null;
+  ekg_findings: Record<string, unknown> | null;
   is_active: boolean;
+  // Parity fields (see ImportedScenario) — persisted to the matching DB columns.
+  patient_presentation: string | null;
+  history: string | null;
+  vitals: Record<string, unknown> | null;
+  gcs: string | null;
+  pupils: string | null;
+  assessment_x: string | null;
+  assessment_a: string | null;
+  assessment_b: string | null;
+  assessment_c: string | null;
+  assessment_d: string | null;
+  assessment_e: string | null;
+  secondary_survey: Record<string, unknown> | null;
+  expected_interventions: string[];
+  equipment_needed: string[];
+  medications_to_administer: string[];
+  opqrst: Record<string, unknown> | null;
+  preferred_manikin: string | null;
+  content_review_status: string | null;
 }
 
 export interface PreviewScenario {
@@ -165,7 +207,7 @@ function parseCSVLine(line: string): string[] {
 }
 
 function buildPhases(imported: ImportedScenario): Record<string, unknown>[] {
-  return (imported.phases || []).map((phase, index) => ({
+  return (Array.isArray(imported.phases) ? imported.phases : []).map((phase, index) => ({
     id: `phase-import-${Date.now()}-${index}`,
     name: phase.name || (index === 0 ? 'Initial Presentation' : `Phase ${index + 1}`),
     trigger: phase.trigger || (index === 0 ? 'On arrival' : ''),
@@ -233,7 +275,7 @@ function parseScenario(imported: ImportedScenario, index: number): PreviewScenar
   if (!imported.chief_complaint && !imported.dispatch && !imported.dispatch_notes) {
     warnings.push('Missing chief complaint or dispatch info');
   }
-  if (!imported.phases || imported.phases.length === 0) {
+  if (!Array.isArray(imported.phases) || imported.phases.length === 0) {
     warnings.push('No phases defined - scenario will have no vitals or actions');
   }
   if (!imported.critical_actions || (Array.isArray(imported.critical_actions) && imported.critical_actions.length === 0)) {
@@ -258,8 +300,11 @@ function parseScenario(imported: ImportedScenario, index: number): PreviewScenar
     sampleHistory.events_leading = imported.events_leading || '';
   }
 
-  // Merge allergies from sample_history if present
-  const allergies = imported.allergies || imported.sample_history?.allergies || null;
+  // Merge allergies from sample_history if present. allergies is a TEXT column,
+  // but the builder emits an array (["NKDA"]) — join arrays to a string so the
+  // import doesn't store an array in a text column.
+  const allergiesRaw = imported.allergies ?? imported.sample_history?.allergies ?? null;
+  const allergies = Array.isArray(allergiesRaw) ? allergiesRaw.join('; ') : (allergiesRaw || null);
   const medications = toArray(imported.medications || imported.sample_history?.medications);
   const medicalHistory = toArray(imported.medical_history || imported.sample_history?.past_history);
 
@@ -292,17 +337,42 @@ function parseScenario(imported: ImportedScenario, index: number): PreviewScenar
     critical_actions: criticalActions,
     debrief_points: toArray(imported.debrief_points),
     initial_vitals: phaseVitals || null,
-    general_impression: (phases[0] as Record<string, unknown>)?.presentation_notes as string || null,
-    ekg_findings: (() => {
-      if (phaseVitals && (phaseVitals.ekg_rhythm || phaseVitals.twelve_lead_notes)) {
-        return {
-          rhythm: phaseVitals.ekg_rhythm || null,
-          twelve_lead: phaseVitals.twelve_lead_notes || null,
-        };
-      }
-      return null;
-    })(),
-    is_active: true,
+    // Prefer the scenario's own top-level general_impression; fall back to the
+    // first phase's presentation_notes for older files that lacked it.
+    general_impression: imported.general_impression || ((phases[0] as Record<string, unknown>)?.presentation_notes as string) || null,
+    // Prefer a top-level ekg_findings object (builder shape); else derive from
+    // the first phase's vitals for older files.
+    ekg_findings: (imported.ekg_findings && typeof imported.ekg_findings === 'object')
+      ? imported.ekg_findings
+      : (() => {
+          if (phaseVitals && (phaseVitals.ekg_rhythm || phaseVitals.twelve_lead_notes)) {
+            return {
+              rhythm: phaseVitals.ekg_rhythm || null,
+              twelve_lead: phaseVitals.twelve_lead_notes || null,
+            };
+          }
+          return null;
+        })(),
+    is_active: imported.is_active !== false,
+    // ── Parity fields — previously dropped by bulk import (2026-06-25) ──
+    patient_presentation: imported.patient_presentation || null,
+    history: imported.history || null,
+    vitals: (imported.vitals && typeof imported.vitals === 'object') ? imported.vitals : null,
+    gcs: imported.gcs || null,
+    pupils: imported.pupils || null,
+    assessment_x: imported.assessment_x || null,
+    assessment_a: imported.assessment_a || null,
+    assessment_b: imported.assessment_b || null,
+    assessment_c: imported.assessment_c || null,
+    assessment_d: imported.assessment_d || null,
+    assessment_e: imported.assessment_e || null,
+    secondary_survey: (imported.secondary_survey && typeof imported.secondary_survey === 'object') ? imported.secondary_survey : null,
+    expected_interventions: toArray(imported.expected_interventions),
+    equipment_needed: toArray(imported.equipment_needed),
+    medications_to_administer: toArray(imported.medications_to_administer),
+    opqrst: (imported.opqrst && typeof imported.opqrst === 'object') ? imported.opqrst : null,
+    preferred_manikin: imported.preferred_manikin || null,
+    content_review_status: imported.content_review_status || null,
   };
 
   return {
