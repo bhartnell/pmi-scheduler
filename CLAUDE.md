@@ -111,9 +111,32 @@ node scripts/run-migration.js supabase/migrations/<filename>.sql
 
 - Connection is configured via `SUPABASE_DB_URL` in `.env.local`
 - Uses the `pg` npm package with the Supabase session pooler (us-west-2)
-- Add `--dry-run` to preview SQL without executing
+- Add `--dry-run` to preview SQL without executing; apply only after a clean dry-run
 - Always run migrations after committing code that creates new tables
 - Migration files use `IF NOT EXISTS` for idempotency
+
+### Migration Reversibility (HARD REQUIREMENT)
+
+The autonomy model rests on **"we can always revert."** Every migration must be
+reversible or explicitly flagged as not:
+
+1. **`-- ROLLBACK:` block.** Every migration file includes a trailing
+   `-- ROLLBACK:` comment block containing the reverse SQL (the down-migration),
+   or a one-line note explaining why it is irreversible (e.g. "data backfill,
+   irreversible — relies on PITR"). This is the documented rollback path.
+2. **Snapshot before destructive ops.** For genuinely destructive changes
+   (`DROP`, `DELETE`, `UPDATE`-many, type changes that lose data), take a
+   restore point FIRST:
+   ```bash
+   node scripts/run-migration.js supabase/migrations/<file>.sql --backup=table1,table2
+   ```
+   This creates `_backup_<table>_<timestamp>` restore-point tables before
+   applying, and prints the restore + cleanup SQL. No destructive op without a
+   restore point.
+3. **Destructive DB ops are escalate-to-Ben** while the reversibility gate is
+   not fully green (Supabase PITR unconfirmed). Additive/idempotent migrations
+   (`IF NOT EXISTS`, FK fixes on empty tables, new columns/indexes) are safe to
+   run autonomously after a clean dry-run.
 
 ### PostgREST FK Ambiguity Check
 
@@ -139,6 +162,12 @@ After:  cohort:cohorts!students_cohort_id_fkey(id, cohort_number)
 - Migrations: IF NOT EXISTS, always add RLS policies and indexes
 - Audit: log sensitive operations via lib/audit.ts
 - Supabase embeds: Use explicit FK hints (`!fk_name`) when tables have multiple FK paths (see PostgREST FK Ambiguity Check above)
+- **Archive-don't-delete (no autonomous hard-delete):** never autonomously
+  hard-delete data. Soft-delete / archive instead (`is_active` / `is_archived`),
+  or route deletions through the `deletion_requests` superadmin-approval queue
+  (`lib/deletion-requests.ts`). Hard `DELETE` / `DROP` / destructive `UPDATE`s
+  are **escalate-to-Ben** and must snapshot first (`--backup`, see Migration
+  Reversibility). This is the companion to the reversibility gate.
 
 ## UI Layout Rule (HARD REQUIREMENT)
 

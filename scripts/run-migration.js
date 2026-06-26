@@ -4,6 +4,14 @@
 // Usage:
 //   node scripts/run-migration.js supabase/migrations/<filename>.sql
 //   node scripts/run-migration.js supabase/migrations/<filename>.sql --dry-run
+//   node scripts/run-migration.js supabase/migrations/<filename>.sql --backup=students,cohorts
+//
+// --backup=t1,t2  Before applying, snapshot the listed tables into timestamped
+//                 in-DB restore-point tables (_backup_<table>_<YYYYMMDDHHMMSS>).
+//                 Use for genuinely DESTRUCTIVE ops (DROP/DELETE/UPDATE-many).
+//                 No destructive op without a restore point. Restore + cleanup
+//                 SQL is printed for each snapshot. Additive/idempotent
+//                 migrations don't need it.
 //
 // Connection:
 //   Uses DATABASE_URL env var, or falls back to .env.local SUPABASE_DB_URL,
@@ -57,6 +65,18 @@ async function run() {
   const dryRun = args.includes('--dry-run');
   const sqlFile = args.find(a => !a.startsWith('--'));
 
+  // --backup=t1,t2 — tables to snapshot into restore-point tables before applying.
+  const backupArg = args.find(a => a.startsWith('--backup='));
+  const backupTables = backupArg
+    ? backupArg.slice('--backup='.length).split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+  // Validate identifiers — these are interpolated into snapshot DDL.
+  const badTable = backupTables.find(t => !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(t));
+  if (badTable) {
+    console.error(`❌ Invalid --backup table name: "${badTable}" (expected a plain identifier)`);
+    process.exit(1);
+  }
+
   if (!sqlFile) {
     console.error('Usage: node scripts/run-migration.js <file.sql> [--dry-run]');
     process.exit(1);
@@ -84,6 +104,9 @@ async function run() {
     console.log('─'.repeat(60));
     console.log(sql);
     console.log('─'.repeat(60));
+    if (backupTables.length) {
+      console.log(`\n💾 --backup: would snapshot ${backupTables.length} table(s) before applying: ${backupTables.join(', ')}`);
+    }
     console.log('\n✓ Dry run complete. Remove --dry-run to execute.');
     return;
   }
@@ -101,6 +124,20 @@ async function run() {
   try {
     await client.connect();
     console.log('   Status: Connected ✓\n');
+
+    // Pre-migration snapshot (restore point) for destructive ops.
+    if (backupTables.length) {
+      const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14); // YYYYMMDDHHMMSS
+      console.log(`💾 Pre-migration snapshot of ${backupTables.length} table(s)...`);
+      for (const t of backupTables) {
+        const snap = `_backup_${t}_${ts}`;
+        await client.query(`CREATE TABLE "${snap}" AS TABLE "${t}"`);
+        const { rows } = await client.query(`SELECT COUNT(*)::int AS n FROM "${snap}"`);
+        console.log(`   ✓ ${t} → ${snap} (${rows[0].n} rows)`);
+        console.log(`     restore: INSERT INTO "${t}" SELECT * FROM "${snap}";   cleanup: DROP TABLE "${snap}";`);
+      }
+      console.log('');
+    }
 
     console.log('⏳ Executing migration...');
     await client.query(sql);

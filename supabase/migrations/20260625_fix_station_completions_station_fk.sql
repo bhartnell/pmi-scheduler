@@ -16,3 +16,12 @@ ALTER TABLE station_completions
 ALTER TABLE station_completions
   ADD CONSTRAINT station_completions_station_id_fkey
   FOREIGN KEY (station_id) REFERENCES station_pool(id) ON DELETE SET NULL;
+
+-- ROLLBACK:
+-- Restore the previous (incorrect) FK target. Only needed if the station_pool
+-- re-point proves wrong; station_completions referencing station_pool is the
+-- intended design, so this is a safety-net down-migration, not an expected path.
+-- ALTER TABLE station_completions DROP CONSTRAINT IF EXISTS station_completions_station_id_fkey;
+-- ALTER TABLE station_completions
+--   ADD CONSTRAINT station_completions_station_id_fkey
+--   FOREIGN KEY (station_id) REFERENCES lab_stations(id) ON DELETE SET NULL;
