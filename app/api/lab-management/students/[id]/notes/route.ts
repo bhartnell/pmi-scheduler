@@ -98,6 +98,9 @@ export async function POST(
         student_id: id,
         author_id: callerUser.id,
         author_email: callerUser.email,
+        // created_by is a legacy text column that is NOT NULL — populate it
+        // (was being omitted, causing 23502). Mirror author_email.
+        created_by: callerUser.email,
         content: body.content.trim(),
         category,
         is_flagged: isFlagged,

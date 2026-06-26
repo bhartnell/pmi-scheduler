@@ -238,8 +238,9 @@ export async function POST(request: NextRequest) {
           type: 'general',
           category: 'scheduling',
           linkUrl: '/scheduling/availability',
-          referenceType: 'availability_reminder',
-          referenceId: weekStartStr,
+          // Week encoded in reference_type — reference_id is uuid-typed and a
+          // date string there throws 22P02.
+          referenceType: `availability_reminder:${weekStartStr}`,
         });
 
         // Send email

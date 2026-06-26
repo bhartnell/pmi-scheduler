@@ -89,7 +89,6 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         scenario_id,
-        scenario_name,
         role,
         date,
         notes,

@@ -121,14 +121,15 @@ async function wasReminderAlreadySent(
   instructorEmail: string,
   weekStart: string
 ): Promise<{ sent: boolean; sentAt: string | null }> {
-  // We store reminders as notifications with reference_type='availability_reminder'
-  // and reference_id = the week start date string (YYYY-MM-DD).
+  // We store reminders as notifications keyed by week IN reference_type
+  // (`availability_reminder:YYYY-MM-DD`). reference_id is a uuid column, so the
+  // week date can't live there — putting it there caused 22P02 "invalid input
+  // syntax for type uuid" in production.
   const { data } = await supabase
     .from('user_notifications')
     .select('created_at')
     .eq('user_email', instructorEmail)
-    .eq('reference_type', 'availability_reminder')
-    .eq('reference_id', weekStart)
+    .eq('reference_type', `availability_reminder:${weekStart}`)
     .order('created_at', { ascending: false })
     .limit(1)
     .single();
@@ -173,8 +174,8 @@ async function processInstructorWeek(
     type: 'general',
     category: 'scheduling',
     linkUrl: '/scheduling/availability',
-    referenceType: 'availability_reminder',
-    referenceId: weekStartStr,
+    // Week is encoded in reference_type (reference_id is uuid-typed).
+    referenceType: `availability_reminder:${weekStartStr}`,
   });
 
   // NREMT kill switch — bypass-path guard added 2026-04-19.

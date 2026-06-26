@@ -127,11 +127,31 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
+    // cohort_id is NOT NULL on team_lead_log (FK -> cohorts). Use the value from
+    // the body if provided, else derive it from the student's cohort. Missing it
+    // was causing 23502 not-null violations in production.
+    let cohortId: string | null = body.cohort_id ?? null;
+    if (!cohortId && body.student_id) {
+      const { data: stu } = await supabase
+        .from('students')
+        .select('cohort_id')
+        .eq('id', body.student_id)
+        .single();
+      cohortId = stu?.cohort_id ?? null;
+    }
+    if (!cohortId) {
+      return NextResponse.json(
+        { success: false, error: 'cohort_id is required (student has no cohort assigned)' },
+        { status: 400 },
+      );
+    }
+
     const { data, error } = await supabase
       .from('team_lead_log')
       .insert({
         student_id: body.student_id,
+        cohort_id: cohortId,
         lab_day_id: body.lab_day_id,
         lab_station_id: body.lab_station_id || null,
         scenario_id: body.scenario_id || null,

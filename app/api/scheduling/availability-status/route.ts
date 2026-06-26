@@ -24,7 +24,6 @@ interface AvailabilityRecord {
 interface ReminderRecord {
   user_email: string;
   created_at: string;
-  reference_id: string; // The week start date used as dedup key
 }
 
 interface InstructorStatus {
@@ -124,18 +123,18 @@ export async function GET(request: NextRequest) {
       throw availError;
     }
 
-    // Fetch reminder notifications sent for this week
-    // We identify them by reference_type='availability_reminder' and reference_id = weekStartStr
+    // Fetch reminder notifications sent for this week. The week is encoded in
+    // reference_type (`availability_reminder:YYYY-MM-DD`) because reference_id is
+    // uuid-typed — a date string there throws 22P02.
     const instructorEmails = (instructors as InstructorUser[]).map((i) => i.email);
     let reminders: ReminderRecord[] = [];
 
     if (instructorEmails.length > 0) {
       const { data: reminderData } = await supabase
         .from('user_notifications')
-        .select('user_email, created_at, reference_id')
+        .select('user_email, created_at')
         .in('user_email', instructorEmails)
-        .eq('reference_type', 'availability_reminder')
-        .eq('reference_id', weekStartStr)
+        .eq('reference_type', `availability_reminder:${weekStartStr}`)
         .order('created_at', { ascending: false });
 
       reminders = (reminderData || []) as ReminderRecord[];
