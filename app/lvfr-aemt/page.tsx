@@ -110,6 +110,7 @@ export default function LVFRDashboardPage() {
         { href: `/lvfr-aemt/day/${today}`, icon: ListChecks, label: "Today's Runsheet", description: 'Day checklist — morning + afternoon sessions, live checkoff', color: 'bg-rose-600' },
         { href: '/lvfr-aemt/calendar', icon: Calendar, label: 'Course Calendar', description: 'View and manage the 30-day course schedule', color: 'bg-blue-600' },
         ...(isInstructor ? [
+          { href: '/lvfr-aemt/progress', icon: TrendingUp, label: 'Coverage Roll-up', description: 'Course-wide Tier-1 tracked coverage — done, outstanding, gaps', color: 'bg-rose-700' },
           { href: '/lvfr-aemt/scheduling', icon: Users, label: 'Coverage Grid', description: 'Instructor scheduling and coverage analysis', color: 'bg-amber-600' },
           { href: '/lvfr-aemt/planner', icon: LayoutGrid, label: 'Course Planner', description: 'Plan content blocks across 30 instruction days', color: 'bg-emerald-600' },
         ] : []),
