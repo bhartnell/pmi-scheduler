@@ -36,6 +36,27 @@ function guessItemType(title: string | null): string {
   return 'other';
 }
 
+// H2 — checkbox fatigue. Only MAJOR academic tasks get a checkbox
+// (requirement 'required'); breaks/lunch and generic transition blocks are
+// info-only (no checkbox). PROPOSED CUT (flag for Ben): 'other' is treated as
+// info — flip it to 'required' if generic blocks should be tracked.
+function requirementForType(itemType: string): 'required' | 'info' {
+  if (itemType === 'break' || itemType === 'other') return 'info';
+  return 'required';
+}
+
+// H4 — schedule. Block times → "HHMM-HHMM" label the runsheet renders as
+// "7:30–8:48", giving each item its slot so the day reads as a timeline.
+function timeLabelFor(start: string, end: string): string | null {
+  const p = (s: string) => {
+    const m = /^(\d{1,2}):(\d{2})/.exec(s);
+    return m ? `${m[1].padStart(2, '0')}${m[2]}` : null;
+  };
+  const a = p(start);
+  const b = p(end);
+  return a && b ? `${a}-${b}` : null;
+}
+
 function minutesBetween(start: string, end: string): number | null {
   // start/end come from a Postgres `time` column → 'HH:MM:SS'
   const parse = (s: string) => {
@@ -170,11 +191,30 @@ export async function POST(
     : { data: [] as Array<{ source_block_id: string | null }> };
   const seededBlockIds = new Set((existing ?? []).map(e => e.source_block_id).filter(Boolean) as string[]);
 
+  // Backfill: items seeded BEFORE the H2 change defaulted to requirement
+  // 'required' (the column default) — so breaks/lunch and generic transition
+  // blocks wrongly showed a checkbox. Downgrade those SEEDED block items
+  // (source_block_id set) to info-only so "Re-seed from calendar" also
+  // de-clutters already-seeded days. Manual ad-hoc adds (source_block_id null)
+  // are left alone — an instructor added those on purpose and wants the
+  // checkbox. Academic items (chapter/quiz/exam/lab/skills) are untouched.
+  if (sessionIds.length) {
+    await supabase
+      .from('lvfr_schedule_items')
+      .update({ requirement: 'info' })
+      .in('day_schedule_id', sessionIds)
+      .in('item_type', ['break', 'other'])
+      .not('source_block_id', 'is', null)
+      .neq('requirement', 'info');
+  }
+
   // Step 5: build the new rows and insert.
   const rows: Array<{
     day_schedule_id: string;
     title: string;
     item_type: string;
+    requirement: 'required' | 'info';
+    time_label: string | null;
     estimated_minutes: number | null;
     sort_order: number;
     source_block_id: string;
@@ -190,10 +230,13 @@ export async function POST(
       const m = /^(\d{1,2}):(\d{2})/.exec(b.start_time);
       return m ? parseInt(m[1], 10) * 60 + parseInt(m[2], 10) : 0;
     })();
+    const itemType = guessItemType(b.title || b.course_name);
     rows.push({
       day_schedule_id: dayScheduleId,
       title: b.title?.trim() || b.course_name?.trim() || 'Untitled block',
-      item_type: guessItemType(b.title || b.course_name),
+      item_type: itemType,
+      requirement: requirementForType(itemType),
+      time_label: timeLabelFor(b.start_time, b.end_time),
       estimated_minutes: minutesBetween(b.start_time, b.end_time),
       sort_order: startMin,
       source_block_id: b.id,

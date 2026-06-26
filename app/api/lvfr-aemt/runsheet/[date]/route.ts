@@ -170,17 +170,25 @@ export async function PATCH(
     );
   }
 
-  let body: { notes?: string };
+  let body: { notes?: string; brief?: string; debrief?: string };
   try {
     body = await request.json();
   } catch {
     return NextResponse.json({ success: false, error: 'invalid body' }, { status: 400 });
   }
 
+  // Only write the fields actually present in the body so updating one (e.g.
+  // the brief) never clobbers another (notes/debrief). brief lives on the
+  // morning row, debrief on the afternoon row, notes on either.
+  const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if ('notes' in body) updates.notes = body.notes ?? null;
+  if ('brief' in body) updates.brief = body.brief ?? null;
+  if ('debrief' in body) updates.debrief = body.debrief ?? null;
+
   const supabase = getSupabaseAdmin();
   const { error } = await supabase
     .from('lvfr_day_schedule')
-    .update({ notes: body.notes ?? null, updated_at: new Date().toISOString() })
+    .update(updates)
     .eq('date', date)
     .eq('session', session);
 

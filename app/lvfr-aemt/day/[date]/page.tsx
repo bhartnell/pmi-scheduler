@@ -37,6 +37,9 @@ import {
   Sparkles,
   AlertTriangle,
   Coffee,
+  ExternalLink,
+  FolderOpen,
+  type LucideIcon,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { getSupabase } from '@/lib/supabase';
@@ -107,6 +110,19 @@ function formatTimeLabel(label: string | null): string | null {
   const fmt = (h: string, mm: string) => `${parseInt(h, 10)}:${mm}`;
   return `${fmt(m[1], m[2])}–${fmt(m[3], m[4])}`;
 }
+
+// Google Drive content for the active LVFR cohort (Group 2 — July 2026 start).
+// The detailed daily lesson plans + PowerPoints live in Drive; the runsheet
+// LINKS to them (it does not rebuild them). Per-day folders (Day 1–30) live
+// inside the "Daily folder" — instructors click into the day. (Per-day
+// deep-links aren't wired yet because the Drive folders are keyed by program
+// day number, not calendar date; folder link is the agreed fallback.)
+// Update these IDs when the active cohort's Drive folder changes.
+const LVFR_DRIVE = {
+  dailyFolder: 'https://drive.google.com/drive/folders/1KBbxnsSKXj8bbdVZqiK3WBZ1SJut1o-U',
+  lessonPlans: 'https://docs.google.com/document/d/1itZLvtWA76DdNFYpEGlPTz29S-1GVzaL5foFTaxqIG4/edit',
+  scheduleCadre: 'https://docs.google.com/document/d/1eaPanP1yi8DK-TdEKRyxNYza69UoQQD9p0KF-NFXY54/edit',
+};
 
 const ITEM_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'chapter', label: 'Chapter' },
@@ -292,6 +308,27 @@ export default function LVFRDayRunsheetPage() {
     });
   }
 
+  // Brief lives on the morning row, debrief on the afternoon row. Save the
+  // single field so it never clobbers notes/the other field, then refresh.
+  async function saveSessionField(
+    sessionKey: 'morning' | 'afternoon',
+    field: 'brief' | 'debrief',
+    value: string,
+  ) {
+    await fetch(`/api/lvfr-aemt/runsheet/${dateParam}?session=${sessionKey}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: value.trim() || null }),
+    });
+    // Keep local state in sync so the field persists across realtime refetches.
+    setData(d => d && {
+      ...d,
+      sessions: d.sessions.map(s =>
+        s.session === sessionKey ? { ...s, [field]: value.trim() || null } : s,
+      ),
+    });
+  }
+
   // ── Render ─────────────────────────────────────────────────────
   const prevDate = useMemo(() => shiftDate(dateParam, -1), [dateParam]);
   const nextDate = useMemo(() => shiftDate(dateParam, +1), [dateParam]);
@@ -368,23 +405,44 @@ export default function LVFRDayRunsheetPage() {
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Standard day: <strong>7:30 – 11:30 AM</strong> · Lunch · <strong>12:30 – 3:30 PM</strong>
               </p>
-              <button
-                type="button"
-                onClick={() => handleSeed(false)}
-                disabled={seeding}
-                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
-                title="Re-pull items from the master schedule for this date"
-              >
-                {seeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                Re-seed from calendar
-              </button>
+              <div className="flex items-center gap-2 flex-wrap">
+                <a
+                  href={LVFR_DRIVE.dailyFolder}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium"
+                  title="Open the Google Drive Daily folder — per-day lesson plans & PowerPoints (Day 1–30)"
+                >
+                  <FolderOpen className="w-3.5 h-3.5" />
+                  Lesson plans &amp; slides
+                  <ExternalLink className="w-3 h-3 opacity-80" />
+                </a>
+                <a
+                  href={LVFR_DRIVE.lessonPlans}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
+                  title="LVFR AEMT Daily Lesson Plans (Google Doc)"
+                >
+                  Lesson plan doc
+                  <ExternalLink className="w-3 h-3 opacity-70" />
+                </a>
+                <button
+                  type="button"
+                  onClick={() => handleSeed(false)}
+                  disabled={seeding}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
+                  title="Re-pull items from the master schedule for this date"
+                >
+                  {seeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                  Re-seed from calendar
+                </button>
+              </div>
             </div>
 
             {(() => {
               const morning = data.sessions.find(s => s.session === 'morning');
               const afternoon = data.sessions.find(s => s.session === 'afternoon');
-              const brief = morning?.brief?.trim();
-              const debrief = afternoon?.debrief?.trim();
               const card = (s: DaySession) => (
                 <SessionCard
                   key={s.id}
@@ -403,12 +461,18 @@ export default function LVFRDayRunsheetPage() {
               );
               return (
                 <>
-                  {/* Day brief — above the morning block */}
-                  {brief && (
-                    <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 flex items-start gap-2 text-sm text-red-900 dark:text-red-200">
-                      <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <span><strong className="font-semibold">Today:</strong> {brief}</span>
-                    </div>
+                  {/* Day brief — editable, above the morning block. Lives on the
+                      morning session row. */}
+                  {morning && (
+                    <DayTextField
+                      label="Today's brief"
+                      sublabel="Short synopsis of what today covers"
+                      value={morning.brief}
+                      placeholder="What are we covering today? (1–2 lines for the team)"
+                      accent="brief"
+                      icon={Sparkles}
+                      onSave={(v) => saveSessionField('morning', 'brief', v)}
+                    />
                   )}
 
                   {/* Morning first — fixes the PM-above-AM ordering bug */}
@@ -422,12 +486,18 @@ export default function LVFRDayRunsheetPage() {
 
                   {afternoon && card(afternoon)}
 
-                  {/* Day debrief — below the afternoon block */}
-                  {debrief && (
-                    <div className="rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20 px-4 py-3 flex items-start gap-2 text-sm text-indigo-900 dark:text-indigo-200">
-                      <Moon className="w-4 h-4 flex-shrink-0 mt-0.5" />
-                      <span><strong className="font-semibold">Debrief:</strong> {debrief}</span>
-                    </div>
+                  {/* Day debrief — editable, below the afternoon block. Lives on
+                      the afternoon session row. The "keep each other apprised" piece. */}
+                  {afternoon && (
+                    <DayTextField
+                      label="Debrief"
+                      sublabel="How the day went — anything the next instructor/day should know"
+                      value={afternoon.debrief}
+                      placeholder="How did today go? What carried over, what to watch tomorrow?"
+                      accent="debrief"
+                      icon={Moon}
+                      onSave={(v) => saveSessionField('afternoon', 'debrief', v)}
+                    />
                   )}
                 </>
               );
@@ -435,6 +505,54 @@ export default function LVFRDayRunsheetPage() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+// ── DayTextField (brief / debrief) ───────────────────────────────
+// Editable day-level synopsis. Controlled local state, saves on blur only
+// when changed (mirrors the per-session Notes pattern).
+function DayTextField({
+  label,
+  sublabel,
+  value,
+  placeholder,
+  accent,
+  icon: Icon,
+  onSave,
+}: {
+  label: string;
+  sublabel: string;
+  value: string | null;
+  placeholder: string;
+  accent: 'brief' | 'debrief';
+  icon: LucideIcon;
+  onSave: (value: string) => void;
+}) {
+  const [v, setV] = useState(value ?? '');
+  useEffect(() => { setV(value ?? ''); }, [value]);
+
+  const styles = accent === 'brief'
+    ? { box: 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20', text: 'text-red-900 dark:text-red-200' }
+    : { box: 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/20', text: 'text-indigo-900 dark:text-indigo-200' };
+
+  return (
+    <div className={`rounded-lg border ${styles.box} px-4 py-3`}>
+      <div className={`flex items-baseline justify-between gap-2 mb-1.5 ${styles.text}`}>
+        <span className="text-sm font-semibold flex items-center gap-1.5">
+          <Icon className="w-4 h-4" />
+          {label}
+        </span>
+        <span className="text-xs opacity-70">{sublabel}</span>
+      </div>
+      <textarea
+        value={v}
+        onChange={(e) => setV(e.target.value)}
+        onBlur={() => { if ((value ?? '') !== v) onSave(v); }}
+        rows={2}
+        placeholder={placeholder}
+        className="w-full px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white/80 dark:bg-gray-800/80 text-gray-900 dark:text-gray-100 placeholder:text-gray-400"
+      />
     </div>
   );
 }

@@ -48,6 +48,9 @@ export async function POST(request: NextRequest) {
   const estMin = typeof body.estimated_minutes === 'number' && body.estimated_minutes >= 0
     ? Math.round(body.estimated_minutes)
     : null;
+  // H2 — a manually-added item is intentional, so it gets a checkbox (counts
+  // toward "required") UNLESS it's a break, which stays info-only.
+  const requirement: 'required' | 'info' = itemType === 'break' ? 'info' : 'required';
 
   const supabase = getSupabaseAdmin();
 
@@ -68,6 +71,7 @@ export async function POST(request: NextRequest) {
       day_schedule_id: body.day_schedule_id,
       title,
       item_type: itemType,
+      requirement,
       estimated_minutes: estMin,
       notes: body.notes?.trim() || null,
       sort_order: nextSort,
