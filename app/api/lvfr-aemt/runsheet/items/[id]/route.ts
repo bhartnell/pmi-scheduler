@@ -20,7 +20,8 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  * runsheet", not "ban this block").
  */
 
-const ITEM_TYPES = new Set(['chapter', 'quiz', 'skills', 'lab', 'break', 'exam', 'other']);
+const ITEM_TYPES = new Set(['chapter', 'quiz', 'skills', 'lab', 'break', 'exam', 'other', 'activity']);
+const REQUIREMENTS = new Set(['required', 'optional', 'info']);
 
 export async function PATCH(
   request: NextRequest,
@@ -39,6 +40,7 @@ export async function PATCH(
     is_completed?: boolean;
     title?: string;
     item_type?: string;
+    requirement?: string;
     estimated_minutes?: number | null;
     notes?: string | null;
     sort_order?: number;
@@ -73,6 +75,12 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: `invalid item_type "${body.item_type}"` }, { status: 400 });
     }
     update.item_type = body.item_type;
+  }
+  if (typeof body.requirement === 'string') {
+    if (!REQUIREMENTS.has(body.requirement)) {
+      return NextResponse.json({ success: false, error: `invalid requirement "${body.requirement}"` }, { status: 400 });
+    }
+    update.requirement = body.requirement;
   }
   if (body.estimated_minutes === null || typeof body.estimated_minutes === 'number') {
     update.estimated_minutes = body.estimated_minutes;
