@@ -12,13 +12,13 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  * Body: {
  *   day_schedule_id: uuid,
  *   title: string,
- *   item_type?: 'chapter' | 'quiz' | 'skills' | 'lab' | 'break' | 'exam' | 'other',
+ *   item_type?: 'chapter' | 'quiz' | 'skills' | 'lab' | 'break' | 'exam' | 'other' | 'activity',
  *   estimated_minutes?: number,
  *   notes?: string,
  * }
  */
 
-const ITEM_TYPES = new Set(['chapter', 'quiz', 'skills', 'lab', 'break', 'exam', 'other']);
+const ITEM_TYPES = new Set(['chapter', 'quiz', 'skills', 'lab', 'break', 'exam', 'other', 'activity']);
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();

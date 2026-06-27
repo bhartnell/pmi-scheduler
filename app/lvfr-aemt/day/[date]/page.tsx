@@ -130,6 +130,7 @@ const ITEM_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'skills', label: 'Skills' },
   { value: 'lab', label: 'Lab' },
   { value: 'exam', label: 'Exam' },
+  { value: 'activity', label: 'Activity' },
   { value: 'break', label: 'Break' },
   { value: 'other', label: 'Other' },
 ];

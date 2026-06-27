@@ -20,7 +20,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  * runsheet", not "ban this block").
  */
 
-const ITEM_TYPES = new Set(['chapter', 'quiz', 'skills', 'lab', 'break', 'exam', 'other']);
+const ITEM_TYPES = new Set(['chapter', 'quiz', 'skills', 'lab', 'break', 'exam', 'other', 'activity']);
 
 export async function PATCH(
   request: NextRequest,
