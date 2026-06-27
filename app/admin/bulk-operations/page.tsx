@@ -552,7 +552,7 @@ export default function BulkOperationsPage() {
           <div>
             <p className="font-semibold text-amber-900 dark:text-amber-100 text-sm">Use with caution</p>
             <p className="text-sm text-amber-800 dark:text-amber-200">
-              Bulk operations affect many records at once. Always use "Dry Run Preview" before executing. Delete operations cannot be undone.
+              Bulk operations affect many records at once. Always use &ldquo;Dry Run Preview&rdquo; before executing. Delete operations cannot be undone.
             </p>
           </div>
         </div>

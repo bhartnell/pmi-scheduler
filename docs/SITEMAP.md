@@ -1,6 +1,6 @@
 # PMI EMS Scheduler — Site Map
-> Refreshed 2026-06-09 (Exam Self-Scheduling pages added).
-> Previously refreshed 2026-06-08 (LVFR-AEMT runsheet section expanded).
+> Refreshed 2026-06-27 (LVFR progress page added; see `aefd339d`).
+> Previously refreshed 2026-06-09 (Exam Self-Scheduling pages added).
 
 ## Exam Self-Scheduling (final written exam)
 
@@ -19,6 +19,7 @@ Two doors — labeled to keep directors out of the student dead-end:
 > - `/labs/skill-drills/[id]` (commit 69aefc48)
 > - `/labs/grade/station/[id]` skill_drill branch (commit fb740ab3)
 > - `/settings/calendar-setup` FreeBusy reauth banner (commit f9cb2c54)
+> - `/lvfr-aemt/progress` Tier-1 coverage roll-up, instructor-only (commit aefd339d)
 
 **271 page routes across 39 top-level hubs** (count from
 `find app -name 'page.tsx'`).
@@ -113,7 +114,7 @@ Two doors — labeled to keep directors out of the student dead-end:
 7. [Scheduling](#scheduling) (15 pages)
 8. [Student](#student) (11 pages)
 9. [Instructor](#instructor) (8 pages)
-10. [LVFR-AEMT](#lvfr-aemt) (10 pages)
+10. [LVFR-AEMT](#lvfr-aemt) (11 pages)
 11. [Cases](#cases) (10 pages)
 12. [OSCE](#osce) (8 pages across 4 hubs)
 13. [Settings, Auth, Misc](#settings-auth-misc)
@@ -340,6 +341,7 @@ planner, grading, files, pharm tracking.
 | `/lvfr-aemt/pharm` | Pharmacology checkpoints |
 | `/lvfr-aemt/grades`, `/lvfr-aemt/grades/import` | Gradebook + CSV import |
 | `/lvfr-aemt/files` | Files |
+| `/lvfr-aemt/progress` | **Tier-1 coverage roll-up** — course-wide %, outstanding count, by-type + per-day breakdown with gaps, each day linking to its runsheet. Instructor-only. Added `aefd339d` 2026-06-26. |
 
 ## Cases
 

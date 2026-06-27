@@ -578,7 +578,7 @@ export default function PlanningCalendarPage() {
           <div className="p-4 border-b dark:border-gray-600">
             <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
               <MapPin className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-              This Month's Site Assignments
+              This Month&apos;s Site Assignments
             </h3>
           </div>
           {schedules.length === 0 ? (
