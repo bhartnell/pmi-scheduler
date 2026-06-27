@@ -1831,7 +1831,7 @@ export default function CohortHubPage() {
                   {genResultsCheck?.has_results && (
                     <details className="text-[11px] text-gray-600 dark:text-gray-400 mt-1.5">
                       <summary className="cursor-pointer font-semibold">
-                        What's blocking this ({genResultsCheck.lab_day_count} lab day{genResultsCheck.lab_day_count === 1 ? '' : 's'} have data) →
+                        What&apos;s blocking this ({genResultsCheck.lab_day_count} lab day{genResultsCheck.lab_day_count === 1 ? '' : 's'} have data) →
                       </summary>
                       <ul className="mt-1 ml-4 list-disc space-y-0.5">
                         {Object.entries(genResultsCheck.counts).map(([table, count]) => (
