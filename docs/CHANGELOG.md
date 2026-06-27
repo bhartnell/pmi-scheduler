@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-06-27
+
+- `PENDING` | **Fix: team_lead_log lab_day_id NOT-NULL (23502) — new production crash.** After the cohort_id fix (85d0b1e3), Vercel logs showed team_lead_log still 23502-ing, now on `lab_day_id` (null). Root cause: the station grading page (`app/labs/grade/station/[id]/page.tsx`) POSTed `student_id`/`lab_station_id`/`date` but **not `lab_day_id`** (and sent `scenario_type`, which the API ignores). Fixes: (1) client now sends `lab_day_id: station.lab_day.id` + `scenario_id: station.scenario.id`; (2) the team-leads POST validates `student_id`/`lab_day_id`/`date` up front → readable 400 instead of a DB 23502; (3) persists the `notes` the client was already sending (previously dropped). Bounded + reversible, no schema change. tsc 0 + clean build. (Triaged with the rest of the 3-day Vercel error report: ekg-scenarios `scenario_name` + completions PGRST200 are resolved by 85d0b1e3 — last seen pre-deploy; calendar 403 = Google reconnect (not code); `url.parse` DEP0169 = benign next-auth-internal deprecation warning.)
+
 ## 2026-06-26
 
 - `aefd339d` | **LVFR runsheet H2 — Tier-1 coverage roll-up (v1) + 3-tier confirmation.** New read-only aggregation `app/api/lvfr-aemt/runsheet/progress/route.ts` + page `app/lvfr-aemt/progress/page.tsx` (linked from the LVFR hub, instructor-only): course-wide view of TRACKED Tier-1 items (chapters/quizzes/labs/exams/skills) — overall %, outstanding count, by-type breakdown, and per-day completion with the specific outstanding items (gaps), each day linking to its runsheet. Desktop-first. Tier-1 (tracked checkboxes) and Tier-3 (breaks/lunch → schedule markers, untracked) were already live from the H2 work; this adds the roll-up. **Flagged v1 for Ben's design review**; **Tier-2** (planned activities/group-tests = trackable + coverage text vs. unplanned = free text) is **proposed, not built** — its UX is the design-laden piece, held for Ben. (Task was board-assigned to Claude AI as an escalation; executed by Code per Ben's direct go.) tsc 0 + clean build.

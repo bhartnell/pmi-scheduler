@@ -791,10 +791,10 @@ export default function GradeStationPage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               student_id: teamLeaderId,
+              lab_day_id: station?.lab_day?.id,
               lab_station_id: stationId,
-              scenario_type: station?.scenario?.category || 'General',
+              scenario_id: station?.scenario?.id,
               date: station?.lab_day?.date,
-              performance_score: satisfactoryCount,
               notes: `Rotation ${rotationNumber}: ${satisfactoryCount}/8 S ratings`
             })
           });

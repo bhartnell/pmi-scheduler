@@ -128,6 +128,20 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    // student_id, lab_day_id, and date are NOT NULL on team_lead_log. Validate
+    // up front and return a readable 400 instead of letting a missing value hit
+    // the DB as a 23502 crash (production saw lab_day_id-null from a caller that
+    // omitted it).
+    if (!body.student_id) {
+      return NextResponse.json({ success: false, error: 'student_id is required' }, { status: 400 });
+    }
+    if (!body.lab_day_id) {
+      return NextResponse.json({ success: false, error: 'lab_day_id is required' }, { status: 400 });
+    }
+    if (!body.date) {
+      return NextResponse.json({ success: false, error: 'date is required' }, { status: 400 });
+    }
+
     // cohort_id is NOT NULL on team_lead_log (FK -> cohorts). Use the value from
     // the body if provided, else derive it from the student's cohort. Missing it
     // was causing 23502 not-null violations in production.
@@ -156,6 +170,7 @@ export async function POST(request: NextRequest) {
         lab_station_id: body.lab_station_id || null,
         scenario_id: body.scenario_id || null,
         date: body.date,
+        notes: body.notes || null,
       })
       .select()
       .single();
