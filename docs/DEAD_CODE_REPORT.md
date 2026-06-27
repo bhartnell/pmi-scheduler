@@ -3,6 +3,12 @@
 
 ## What's Been Resolved Since March 2026
 
+### 2026-06-27 — Dead scheduler pages deleted + unused imports / orphaned components removed
+
+- `app/scheduler/page.tsx` (288 lines) and `app/scheduler/create/page.tsx` (127 lines) deleted — both were unreachable via permanent HTTP 308 redirects in `next.config.ts` (`/scheduler → /scheduling/polls`).
+- All 53 unused import entries from the 2026-06-05 report have been removed (25+ `createClient`, `useRef` ×3, various permission helpers, icon imports) — verified grep-clean as of 2026-06-27.
+- All 13 orphaned components/hooks/lib files listed in the 2026-06-05 report have been deleted — verified all gone as of 2026-06-27.
+
 ### 2026-06-05 — 150,773 build artifacts removed (commit 5a7ddc90)
 
 The repo had `.next-old`, `.next-old4`..`.next-old11` directories
@@ -112,19 +118,15 @@ became unreferenced).
 
 ---
 
-## Identified 2026-06-08 — Poll-based exam scheduler (pending retirement)
+## Identified 2026-06-08 — Poll-based exam scheduler (partially resolved)
 
-Surfaced during exam-self-scheduling discovery. NOT yet removed — dead-code
-removal follows redirects per the standing rule. Recorded here so retirement
-is scoped:
-- **Stale duplicate pages** `app/scheduler/page.tsx` + `app/scheduler/create/page.tsx`
-  — shadowed by permanent redirects in `next.config.ts` (`/scheduler` →
-  `/scheduling/polls`); unreachable in prod, never deleted.
-- **Dead "Send Email" button** in `components/scheduler/SchedulerAdmin.tsx`
-  — POSTs to `/api/notifications/send-email`, which **does not exist**.
+Surfaced during exam-self-scheduling discovery:
+- ~~**Stale duplicate pages** `app/scheduler/page.tsx` + `app/scheduler/create/page.tsx`~~ → **DELETED 2026-06-27** (dead pages shadowed by permanent redirects; 415 lines removed).
+- ~~**Dead "Send Email" button** in `components/scheduler/SchedulerAdmin.tsx`~~ → **FIXED 2026-06-27** (commit `9a8d4fcb`): `POST /api/notifications/send-email` route created; button now works.
 - **Defunct report block** in `app/api/reports/instructor-workload/route.ts`
   — queries tables `scheduling_polls` / `poll_submissions` that **do not
   exist** in any migration; try/catch silently zeroes the metric.
+  **Remaining** — needs Ben to decide: remove the block or create the tables.
 - **Caveat:** the `polls`/`submissions` system itself is NOT fully dead — it
   was used through late May 2026 for internship *meeting* coordination
   (18 polls, 57 submissions, all `mode='individual'`, meeting_type
