@@ -11,6 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-06-27
 
+- `(pending)` | **LVFR runsheet Tier-2 — add `activity` item_type.** Completes the 3-tier LVFR runsheet model. Adds `'activity'` as a tracked (checkbox, `requirement='required'`) item_type for planned instructor activities with optional coverage notes. DB constraint was pre-applied (migration `20260627074621`); this commit wires the code: `ITEM_TYPES` set in both items API routes, `ITEM_TYPE_OPTIONS` in the day runsheet UI, migration file + schema doc updated.
 - `6a38e308` | **Fix: team_lead_log lab_day_id NOT-NULL (23502) — new production crash.** After the cohort_id fix (85d0b1e3), Vercel logs showed team_lead_log still 23502-ing, now on `lab_day_id` (null). Root cause: the station grading page (`app/labs/grade/station/[id]/page.tsx`) POSTed `student_id`/`lab_station_id`/`date` but **not `lab_day_id`** (and sent `scenario_type`, which the API ignores). Fixes: (1) client now sends `lab_day_id: station.lab_day.id` + `scenario_id: station.scenario.id`; (2) the team-leads POST validates `student_id`/`lab_day_id`/`date` up front → readable 400 instead of a DB 23502; (3) persists the `notes` the client was already sending (previously dropped). Bounded + reversible, no schema change. tsc 0 + clean build. (Triaged with the rest of the 3-day Vercel error report: ekg-scenarios `scenario_name` + completions PGRST200 are resolved by 85d0b1e3 — last seen pre-deploy; calendar 403 = Google reconnect (not code); `url.parse` DEP0169 = benign next-auth-internal deprecation warning.)
 
 ## 2026-06-26
