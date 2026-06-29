@@ -960,8 +960,13 @@
 | hospital_orientation_date | date | YES |  |  |
 | background_check_complete | boolean | YES | false |  |
 | background_check_date | date | YES |  |  |
+| background_check_status | text | YES |  | 3-state: ordered \| in_progress \| complete |
 | drug_test_complete | boolean | YES | false |  |
 | drug_test_date | date | YES |  |  |
+| drug_test_status | text | YES |  | 3-state: ordered \| in_progress \| complete |
+| chh_receipt_complete | boolean | YES | false |  |
+| chh_approval_complete | boolean | YES | false |  |
+| complio_notes | text | YES |  | Per-student notes for Complio tab |
 | attestation_complete | boolean | YES | false |  |
 | attestation_date | date | YES |  |  |
 | exhibit_complete | boolean | YES | false |  |
@@ -1414,6 +1419,10 @@
 | all_complete | boolean | YES | false |  |
 | completion_date | date | YES |  |  |
 | notes | text | YES |  |  |
+| bg_check_status | text | YES |  | 3-state: ordered \| in_progress \| complete |
+| drug_test_status | text | YES |  | 3-state: ordered \| in_progress \| complete |
+| mce_notes | text | YES |  | Per-student notes for mCE tab |
+| nsp | boolean | YES | false |  |
 | created_at | timestamptz | YES | now() |  |
 | updated_at | timestamptz | YES | now() |  |
 
