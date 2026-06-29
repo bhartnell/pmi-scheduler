@@ -20,7 +20,7 @@
  */
 
 import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   Sun,
@@ -139,6 +139,7 @@ const ITEM_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
 export default function LVFRDayRunsheetPage() {
   const params = useParams<{ date: string }>();
   const dateParam = (params?.date as string) || todayIso();
+  const router = useRouter();
 
   const [data, setData] = useState<DayData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -241,6 +242,12 @@ export default function LVFRDayRunsheetPage() {
     try {
       const res = await fetch(`/api/lvfr-aemt/runsheet/${dateParam}/seed`, { method: 'POST' });
       const json = await res.json();
+      // 412 = pre-program date or no calendar blocks — expected empty state,
+      // not an error. Suppress silently on auto-seed; show a gentle note on manual.
+      if (res.status === 412) {
+        if (!silent) setSeedResult('No program scheduled for this date.');
+        return;
+      }
       if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
       if (!silent) {
         setSeedResult(`Seeded ${json.inserted} item${json.inserted === 1 ? '' : 's'} from master calendar.`);
@@ -352,7 +359,7 @@ export default function LVFRDayRunsheetPage() {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Link
                 href={`/lvfr-aemt/day/${prevDate}`}
                 className="inline-flex items-center gap-1 px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium"
@@ -373,6 +380,13 @@ export default function LVFRDayRunsheetPage() {
                 Next
                 <ChevronRight className="w-4 h-4" />
               </Link>
+              <input
+                type="date"
+                value={dateParam}
+                onChange={e => { if (e.target.value) router.push(`/lvfr-aemt/day/${e.target.value}`); }}
+                className="px-2 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium text-white [color-scheme:dark] border-0 outline-none cursor-pointer"
+                title="Jump to a specific date"
+              />
             </div>
           </div>
         </div>
@@ -428,16 +442,6 @@ export default function LVFRDayRunsheetPage() {
                   Lesson plan doc
                   <ExternalLink className="w-3 h-3 opacity-70" />
                 </a>
-                <button
-                  type="button"
-                  onClick={() => handleSeed(false)}
-                  disabled={seeding}
-                  className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
-                  title="Re-pull items from the master schedule for this date"
-                >
-                  {seeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                  Re-seed from calendar
-                </button>
               </div>
             </div>
 

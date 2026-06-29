@@ -247,6 +247,14 @@ export default function ClinicalDashboardPage() {
                 accent="cyan"
                 metric="Log visit"
               />
+              <PrimaryCard
+                href="/clinical/clinical-tracker"
+                icon={ClipboardCheck}
+                title="Clinical Tracker"
+                description="Complio & mCE module documentation checklist"
+                accent="orange"
+                metric="Track compliance"
+              />
             </div>
           </div>
         )}
@@ -308,12 +316,6 @@ export default function ClinicalDashboardPage() {
                   icon={Shield}
                   title="Compliance Tracker"
                   description="Per-student status overview"
-                />
-                <SecondaryCard
-                  href="/clinical/clinical-tracker"
-                  icon={FileCheck}
-                  title="Clinical Tracker"
-                  description="Complio &amp; mCE module checklist"
                 />
                 <SecondaryCard
                   href="/clinical/emt-tracking"
@@ -396,7 +398,7 @@ export default function ClinicalDashboardPage() {
 
 type CardIcon = ComponentType<{ className?: string }>;
 
-type Accent = 'teal' | 'purple' | 'blue' | 'cyan';
+type Accent = 'teal' | 'purple' | 'blue' | 'cyan' | 'orange';
 
 const ACCENT_CLASSES: Record<
   Accent,
@@ -425,6 +427,12 @@ const ACCENT_CLASSES: Record<
     iconBgHover: 'group-hover:bg-cyan-200 dark:group-hover:bg-cyan-900/50',
     iconColor: 'text-cyan-600 dark:text-cyan-400',
     text: 'text-cyan-600 dark:text-cyan-400',
+  },
+  orange: {
+    iconBg: 'bg-orange-100 dark:bg-orange-900/30',
+    iconBgHover: 'group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50',
+    iconColor: 'text-orange-600 dark:text-orange-400',
+    text: 'text-orange-600 dark:text-orange-400',
   },
 };
 

@@ -1,5 +1,5 @@
 # PMI EMS Scheduler — Site Map
-> Refreshed 2026-06-27 (LVFR progress page added; see `aefd339d`).
+> Refreshed 2026-06-29 (LVFR day index redirect added; Clinical Tracker promoted to primary card).
 > Previously refreshed 2026-06-09 (Exam Self-Scheduling pages added).
 
 ## Exam Self-Scheduling (final written exam)
@@ -20,8 +20,9 @@ Two doors — labeled to keep directors out of the student dead-end:
 > - `/labs/grade/station/[id]` skill_drill branch (commit fb740ab3)
 > - `/settings/calendar-setup` FreeBusy reauth banner (commit f9cb2c54)
 > - `/lvfr-aemt/progress` Tier-1 coverage roll-up, instructor-only (commit aefd339d)
+ - `/lvfr-aemt/day` Redirect-to-today index (fixes RSC prefetch 404; Breadcrumbs link target)
 
-**271 page routes across 39 top-level hubs** (count from
+**272 page routes across 39 top-level hubs** (count from
 `find app -name 'page.tsx'`).
 
 ## Role Hierarchy

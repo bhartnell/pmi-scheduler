@@ -3,14 +3,14 @@
 import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
-import { canEditLVFR } from '@/lib/permissions';
+import { canEditLVFR, isLVFRStudent as _isLVFRStudent, hasMinRole } from '@/lib/permissions';
 import Link from 'next/link';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   Calendar, Users, BarChart3, Award, BookOpen,
   AlertTriangle, CheckCircle2, TrendingUp,
   ChevronRight, Shield, ClipboardCheck, FolderOpen, LayoutGrid,
-  ListChecks,
+  ListChecks, Sparkles, Loader2,
 } from 'lucide-react';
 
 // Today as YYYY-MM-DD — built at render time so the "Today's Runsheet"
@@ -95,6 +95,31 @@ export default function LVFRDashboardPage() {
   const isInstructor = canEditLVFR(effectiveRole || '');
   const isObserver = effectiveRole === 'agency_observer' || effectiveRole === 'agency_liaison';
   const isStudent = effectiveRole === 'student';
+  const isAdmin = hasMinRole(effectiveRole || '', 'admin');
+
+  const [reseedConfirm, setReseedConfirm] = useState(false);
+  const [reseeding, setReseeding] = useState(false);
+  const [reseedMessage, setReseedMessage] = useState<string | null>(null);
+
+  async function handleReseed() {
+    setReseeding(true);
+    setReseedMessage(null);
+    try {
+      const res = await fetch(`/api/lvfr-aemt/runsheet/${today}/seed`, { method: 'POST' });
+      const json = await res.json();
+      if (res.status === 412) {
+        setReseedMessage('No program scheduled for today.');
+        return;
+      }
+      if (!res.ok || !json.success) throw new Error(json.error || `HTTP ${res.status}`);
+      setReseedMessage(`Seeded ${json.inserted} item${json.inserted === 1 ? '' : 's'} from master calendar.`);
+    } catch (err) {
+      setReseedMessage(`Seed failed: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setReseeding(false);
+      setReseedConfirm(false);
+    }
+  }
 
   // Nav links based on role
   const today = todayIso();
@@ -316,6 +341,48 @@ export default function LVFRDashboardPage() {
             </Link>
           ))}
         </div>
+
+        {/* Admin Tools */}
+        {isAdmin && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2 mb-3">
+              <Shield className="w-4 h-4 text-gray-500" />
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Admin Tools</h3>
+            </div>
+            <div className="flex flex-wrap gap-3 items-center">
+              {!reseedConfirm ? (
+                <button
+                  onClick={() => { setReseedConfirm(true); setReseedMessage(null); }}
+                  className="px-3 py-1.5 text-sm bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors font-medium flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Re-seed Today&apos;s Runsheet
+                </button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-amber-700 dark:text-amber-300 font-medium">Overwrite today&apos;s runsheet from calendar?</span>
+                  <button
+                    onClick={handleReseed}
+                    disabled={reseeding}
+                    className="px-3 py-1.5 text-sm bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg font-medium flex items-center gap-1.5 transition-colors"
+                  >
+                    {reseeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                    Confirm
+                  </button>
+                  <button
+                    onClick={() => { setReseedConfirm(false); setReseedMessage(null); }}
+                    className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+              {reseedMessage && (
+                <span className="text-sm text-gray-600 dark:text-gray-400">{reseedMessage}</span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Recent Activity / Upcoming for instructors and observers */}
         {data && !isStudent && (

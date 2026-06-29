@@ -9,7 +9,7 @@ import {
   Shield, CheckCircle2, AlertTriangle, XCircle,
   ChevronDown, ChevronRight, Loader2, Search,
   ClipboardCheck, Activity, Users, BarChart3,
-  Grid3X3, User, Plus,
+  Grid3X3, User, Plus, Download,
 } from 'lucide-react';
 
 // ---------------------------------------------------------------------------
@@ -661,6 +661,25 @@ function SkillCard({ skill, expanded, onToggle, onLogAttempt }: {
 // ---------------------------------------------------------------------------
 // MatrixView
 // ---------------------------------------------------------------------------
+function exportMatrixCSV(data: MatrixData) {
+  const header = ['Student', ...data.skills.map(s => `${s.name}${s.nremt_tested ? ' (NREMT)' : ''}`)];
+  const rows = data.students.map(st => [
+    `${st.last_name}, ${st.first_name}`,
+    ...data.skills.map(sk => {
+      const cell = data.matrix[st.id]?.[sk.id];
+      return cell ? STATUS_CONFIG[cell.status]?.label || cell.status : 'Not Started';
+    }),
+  ]);
+  const csv = [header, ...rows].map(r => r.map(v => `"${v.replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `lvfr-skills-matrix-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function MatrixView({ data, loading, category, setCategory, nremtOnly, setNremtOnly, onCellClick }: {
   data: MatrixData | null;
   loading: boolean;
@@ -695,6 +714,16 @@ function MatrixView({ data, loading, category, setCategory, nremtOnly, setNremtO
           <input type="checkbox" checked={nremtOnly} onChange={e => setNremtOnly(e.target.checked)} className="rounded border-gray-300 text-red-600" />
           NREMT Only
         </label>
+        <div className="ml-auto">
+          <button
+            onClick={() => data && exportMatrixCSV(data)}
+            disabled={!data}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 text-gray-700 dark:text-gray-300 rounded-lg transition-colors font-medium"
+          >
+            <Download className="w-3.5 h-3.5" />
+            Export CSV
+          </button>
+        </div>
       </div>
 
       {/* Matrix table */}
