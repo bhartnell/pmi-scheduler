@@ -251,6 +251,7 @@ Canonical home for lab day operations. 38 pages.
 | `/clinical/affiliations`, `/clinical/agencies` | Partner mgmt |
 | `/clinical/capacity` | Site capacity |
 | `/clinical/compliance`, `/clinical/compliance-tracker` | Compliance |
+| `/clinical/clinical-tracker` | Complio + mCE two-tab checklist with 3-state BG/DT, aggregation, print view |
 | `/clinical/hours` | Hours log |
 | `/clinical/internships` + subpages | Internship pipeline |
 | `/clinical/mce` | MCE evals |

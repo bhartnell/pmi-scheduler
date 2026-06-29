@@ -31,9 +31,10 @@ export async function GET(request: NextRequest) {
     // Get all active students in the cohort (exclude withdrawn/dropped students)
     const { data: students } = await supabase
       .from('students')
-      .select('id')
+      .select('id, first_name, last_name')
       .eq('cohort_id', cohortId)
-      .eq('status', 'active');
+      .eq('status', 'active')
+      .order('last_name', { ascending: true });
 
     const studentIds = students?.map(s => s.id) || [];
 
@@ -55,7 +56,16 @@ export async function GET(request: NextRequest) {
       }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, docs: docs || [] });
+    // Merge student name fields into each doc row; create placeholder rows for
+    // students who don't yet have a compliance_docs record.
+    const docMap = new Map((docs || []).map(d => [d.student_id, d]));
+    const merged = students!.map(s => ({
+      first_name: s.first_name,
+      last_name: s.last_name,
+      ...(docMap.get(s.id) || { student_id: s.id }),
+    }));
+
+    return NextResponse.json({ success: true, docs: merged });
   } catch (error) {
     console.error('Error fetching compliance docs:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch compliance docs' }, { status: 500 });

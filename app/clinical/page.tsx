@@ -310,6 +310,12 @@ export default function ClinicalDashboardPage() {
                   description="Per-student status overview"
                 />
                 <SecondaryCard
+                  href="/clinical/clinical-tracker"
+                  icon={FileCheck}
+                  title="Clinical Tracker"
+                  description="Complio &amp; mCE module checklist"
+                />
+                <SecondaryCard
                   href="/clinical/emt-tracking"
                   icon={ClipboardList}
                   title="EMT Tracking"
