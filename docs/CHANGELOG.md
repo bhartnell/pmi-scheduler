@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-06-29
+
+- `PENDING` | **Consolidate the 4 weekend draft PRs into main (overlap-aware).** Merged PR #2 (`/api/notifications/send-email` route — fixes the broken Send Email button; previously had no changelog entry), PR #3 (delete config-redirected dead scheduler pages + DEAD_CODE_REPORT), and PR #1 (canonical LVFR Tier-2 `activity` + 22-file lint pass + SITEMAP). **PR #4 was dropped, not merged** — its Tier-2 was a strict subset of PR #1's (PR #1 adds the `requirement` field, `defaultRequirement()`, the coverage-notes UI, and the activity badge that #4 lacked); merging both would have double-applied / conflicted. Verified before merge: the two Tier-2 migrations are functionally identical (took #1's); the live DB `item_type` CHECK already includes `activity` (pre-applied); the deleted `/scheduler` pages are genuinely dead (next.config 308 redirects shadow them). Only conflict was CHANGELOG (resolved, kept all entries). tsc 0 + clean build. Branch cleanup: merged branches #1–#3 deleted; PR #4 left for Ben to close as superseded.
+
 ## 2026-06-27
 
 - `267747a` | **Feat: LVFR Tier-2 activities — H2 3-tier model complete.** Adds `'activity'` item_type to `lvfr_schedule_items` (migration `20260627_lvfr_activity_item_type.sql`). API: POST/PATCH now accept `requirement` explicitly; `defaultRequirement()` maps activity → optional, break → info, else → required. UI: "Activity (Tier-2)" added to item type dropdown; AddItemRow shows Coverage notes field + Tier-2 hint when type is activity; ItemRow shows purple "activity" badge (not double-badging with "optional"). 3-tier model fully live: Tier-1 (required/metered), Tier-2 (optional/trackable, not metered), Tier-3 (info/no checkbox). DATABASE_SCHEMA.md updated. tsc 0 + clean build. Per [WEEKEND] directive + LVFR H2 GO. (Consolidated from PR #1; PR #4's simpler Tier-2 stub was subsumed and dropped.)
