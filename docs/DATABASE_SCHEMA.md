@@ -9457,6 +9457,36 @@ Key foreign key relationships across the schema:
 **RLS Policies:**
 - `service_role_lvfr_skill_status` (ALL, PERMISSIVE, roles: {service_role})
 
+#### `lvfr_aemt_skill_class_completion`
+
+Side 1 of skills tracking: CLASS-level (roster-based) completion. Marking a
+skill "covered" (per cohort) treats it complete for the whole roster — NOT
+per-student scored. Rare individual failures are documented by hand off the
+blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_completion.sql`)
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| cohort_id | uuid | NO |  | FK -> cohorts.id (ON DELETE CASCADE) |
+| skill_id | text | NO |  | FK -> lvfr_aemt_skills.id (ON DELETE CASCADE) |
+| completed | boolean | NO | false |  |
+| completed_date | date | YES |  | set to current date when marked covered |
+| completed_by | text | YES |  | email of instructor who marked it |
+| notes | text | YES |  |  |
+| updated_at | timestamptz | YES | now() |  |
+
+**Foreign Keys:**
+- `cohort_id` -> `cohorts.id` (`lvfr_skill_class_completion_cohort_fk`)
+- `skill_id` -> `lvfr_aemt_skills.id` (`lvfr_skill_class_completion_skill_fk`)
+
+**Indexes:**
+- `lvfr_aemt_skill_class_completion_pkey`
+- `lvfr_skill_class_completion_cohort_skill_key` (UNIQUE on cohort_id, skill_id)
+- `idx_lvfr_skill_class_completion_cohort`
+
+**RLS Policies:**
+- RLS enabled, no public policy (API uses the service-role client).
+
 #### `lvfr_aemt_skills`
 
 | Column | Type | Nullable | Default | Notes |

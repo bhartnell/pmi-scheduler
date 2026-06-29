@@ -91,7 +91,7 @@ export default function SkillsPage() {
   const [expandedSkill, setExpandedSkill] = useState<string | null>(null);
 
   // Instructor state
-  const [view, setView] = useState<'individual' | 'matrix'>('individual');
+  const [view, setView] = useState<'class' | 'individual' | 'matrix'>('individual');
   const [students, setStudents] = useState<Array<{ id: string; first_name: string; last_name: string }>>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [matrixData, setMatrixData] = useState<MatrixData | null>(null);
@@ -144,6 +144,12 @@ export default function SkillsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [effectiveRole]);
+
+  // Instructors land on the class-completion tracker (Side 1) by default.
+  useEffect(() => {
+    if (isInstructor) setView('class');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInstructor]);
 
   const loadStudentSkills = async () => {
     setLoading(true);
@@ -332,6 +338,12 @@ export default function SkillsPage() {
             {isInstructor && (
               <div className="flex items-center gap-2">
                 <button
+                  onClick={() => setView('class')}
+                  className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${view === 'class' ? 'bg-white/20' : 'hover:bg-white/10'}`}
+                >
+                  <Users className="w-4 h-4 inline mr-1" />Class
+                </button>
+                <button
                   onClick={() => setView('individual')}
                   className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${view === 'individual' ? 'bg-white/20' : 'hover:bg-white/10'}`}
                 >
@@ -372,6 +384,11 @@ export default function SkillsPage() {
               </select>
             </div>
           </div>
+        )}
+
+        {/* Instructor: Class Completion (Side 1 — roster-based, not per-student) */}
+        {isInstructor && view === 'class' && (
+          <ClassCompletionView />
         )}
 
         {/* Instructor: Matrix View */}
@@ -780,6 +797,208 @@ function MatrixView({ data, loading, category, setCategory, nremtOnly, setNremtO
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// ClassCompletionView (Side 1) — class-level, roster-based skill completion.
+// Mark a skill "covered for the class"; it counts complete for the whole
+// roster. Not per-student scored. Rare failures are a manual exception.
+// ---------------------------------------------------------------------------
+interface CCSkill {
+  id: string;
+  category: string;
+  name: string;
+  description: string | null;
+  nremt_tested: boolean;
+  introduced_day: number | null;
+  practice_days: number[] | null;
+  evaluation_day: number | null;
+}
+interface CCRow {
+  completed: boolean;
+  completed_date: string | null;
+  completed_by: string | null;
+  notes: string | null;
+}
+
+function whenLabel(s: CCSkill): string {
+  const parts: string[] = [];
+  if (s.introduced_day != null) parts.push(`Intro D${s.introduced_day}`);
+  if (s.practice_days && s.practice_days.length > 0) parts.push(`Practice D${s.practice_days.join(', D')}`);
+  if (s.evaluation_day != null) parts.push(`Eval D${s.evaluation_day}`);
+  return parts.join(' · ');
+}
+
+function ClassCompletionView() {
+  const [cohorts, setCohorts] = useState<Array<{ id: string; cohort_number: string }>>([]);
+  const [cohortId, setCohortId] = useState<string>('');
+  const [skills, setSkills] = useState<CCSkill[]>([]);
+  const [completion, setCompletion] = useState<Record<string, CCRow>>({});
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+
+  const load = useCallback(async (cid?: string) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (cid) params.set('cohort_id', cid);
+      const res = await fetch(`/api/lvfr-aemt/skills/class-completion?${params}`);
+      const data = await res.json();
+      setCohorts(data.cohorts || []);
+      setCohortId(data.selected_cohort_id || '');
+      setSkills(data.skills || []);
+      setCompletion(data.completion || {});
+    } catch { /* ignore */ }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const toggle = async (skillId: string, next: boolean) => {
+    if (!cohortId) return;
+    setSavingId(skillId);
+    const prevRow = completion[skillId];
+    setCompletion(prev => ({
+      ...prev,
+      [skillId]: { completed: next, completed_date: prev[skillId]?.completed_date ?? null, completed_by: prev[skillId]?.completed_by ?? null, notes: prev[skillId]?.notes ?? null },
+    }));
+    try {
+      const res = await fetch('/api/lvfr-aemt/skills/class-completion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cohort_id: cohortId, skill_id: skillId, completed: next }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setCompletion(prev => ({
+          ...prev,
+          [skillId]: { completed: d.record.completed, completed_date: d.record.completed_date, completed_by: d.record.completed_by, notes: d.record.notes },
+        }));
+      } else {
+        setCompletion(prev => ({ ...prev, [skillId]: prevRow ?? { completed: !next, completed_date: null, completed_by: null, notes: null } }));
+      }
+    } catch {
+      setCompletion(prev => ({ ...prev, [skillId]: prevRow ?? { completed: !next, completed_date: null, completed_by: null, notes: null } }));
+    }
+    setSavingId(null);
+  };
+
+  const completedCount = skills.filter(s => completion[s.id]?.completed).length;
+  const pct = skills.length > 0 ? Math.round((completedCount / skills.length) * 100) : 0;
+  const grouped = skills.reduce((acc, s) => { (acc[s.category] = acc[s.category] || []).push(s); return acc; }, {} as Record<string, CCSkill[]>);
+
+  const toggleCat = (cat: string) => setCollapsed(prev => {
+    const next = new Set(prev);
+    if (next.has(cat)) next.delete(cat); else next.add(cat);
+    return next;
+  });
+
+  if (loading) {
+    return <div className="flex items-center justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-gray-400" /></div>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Cohort selector + roll-up */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 whitespace-nowrap">Class:</label>
+            <select
+              value={cohortId}
+              onChange={e => { setCohortId(e.target.value); load(e.target.value); }}
+              className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm min-w-[180px]"
+            >
+              {cohorts.length === 0 && <option value="">No LVFR/AEMT cohort</option>}
+              {cohorts.map(c => <option key={c.id} value={c.id}>{c.cohort_number}</option>)}
+            </select>
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">Class skill coverage</span>
+              <span className="text-sm font-medium text-gray-900 dark:text-white">{completedCount} of {skills.length} covered</span>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3">
+              <div className="h-3 rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
+            </div>
+          </div>
+        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+          Check a skill once it&apos;s been covered with the class — it counts complete for the whole roster.
+          Rare individual failures are documented by hand off the blank reference sheet, not here.
+        </p>
+      </div>
+
+      {!cohortId && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-8 text-center text-gray-500 dark:text-gray-400">
+          No LVFR/AEMT cohort found to track.
+        </div>
+      )}
+
+      {/* Skills by category */}
+      {cohortId && Object.entries(grouped).map(([cat, catSkills]) => {
+        const catDone = catSkills.filter(s => completion[s.id]?.completed).length;
+        const isCollapsed = collapsed.has(cat);
+        return (
+          <div key={cat} className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+            <button
+              onClick={() => toggleCat(cat)}
+              className="w-full px-4 py-3 flex items-center justify-between border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                {isCollapsed ? <ChevronRight className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                <h3 className="font-semibold text-gray-900 dark:text-white">{cat}</h3>
+                <span className="text-xs text-gray-500 dark:text-gray-400">({catDone}/{catSkills.length})</span>
+              </div>
+            </button>
+            {!isCollapsed && (
+              <div className="divide-y divide-gray-100 dark:divide-gray-700">
+                {catSkills.map(skill => {
+                  const row = completion[skill.id];
+                  const done = !!row?.completed;
+                  const saving = savingId === skill.id;
+                  return (
+                    <label
+                      key={skill.id}
+                      className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={done}
+                        disabled={saving}
+                        onChange={e => toggle(skill.id, e.target.checked)}
+                        className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500 flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-medium ${done ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>{skill.name}</span>
+                          {skill.nremt_tested && (
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 rounded">NREMT</span>
+                          )}
+                        </div>
+                        {whenLabel(skill) && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{whenLabel(skill)}</p>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-shrink-0 text-right">
+                        {saving && <Loader2 className="w-4 h-4 animate-spin text-gray-400" />}
+                        {done && row?.completed_date && (
+                          <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" />{row.completed_date}
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
