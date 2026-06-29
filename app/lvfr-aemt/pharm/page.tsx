@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -11,7 +12,11 @@ import {
   Trophy,
   RotateCcw,
   Play,
+  Link as LinkIcon,
+  Users,
 } from 'lucide-react';
+import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { hasMinRole } from '@/lib/permissions';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -62,14 +67,33 @@ interface ScoringResult {
 }
 
 // ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+interface PracticeSession {
+  id: string;
+  student_name: string;
+  student_identifier: string;
+  difficulty_level: number;
+  score_percent: number;
+  passed: boolean;
+  submitted_at: string;
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 type PageState = 'menu' | 'taking' | 'results';
 
 export default function LVFRPharmPage() {
+  const { data: session } = useSession();
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const effectiveRole = useEffectiveRole(userRole);
+  const isInstructor = hasMinRole(effectiveRole || '', 'instructor');
+
   const [medications, setMedications] = useState<Medication[]>([]);
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([]);
+  const [practiceSessions, setPracticeSessions] = useState<PracticeSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [pageState, setPageState] = useState<PageState>('menu');
   const [difficulty, setDifficulty] = useState(1);
@@ -77,6 +101,15 @@ export default function LVFRPharmPage() {
   const [answers, setAnswers] = useState<Record<string, Record<string, string>>>({});
   const [results, setResults] = useState<ScoringResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [practiceLinkCopied, setPracticeLinkCopied] = useState(false);
+
+  useEffect(() => {
+    if (!session?.user?.email) return;
+    fetch('/api/instructor/me')
+      .then(r => r.json())
+      .then(d => { if (d.success) setUserRole(d.user.role); })
+      .catch(() => {});
+  }, [session?.user?.email]);
 
   const fetchData = useCallback(async () => {
     try {
@@ -98,6 +131,14 @@ export default function LVFRPharmPage() {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    if (!isInstructor) return;
+    fetch('/api/lvfr-aemt/pharm/practice/sessions')
+      .then(r => r.json())
+      .then(d => { if (d.sessions) setPracticeSessions(d.sessions); })
+      .catch(() => {});
+  }, [isInstructor]);
 
   useEffect(() => {
     fetchData();
@@ -180,6 +221,77 @@ export default function LVFRPharmPage() {
       </div>
 
       <div className="mx-auto max-w-4xl px-4 py-6">
+        {/* Instructor: practice link + sessions */}
+        {isInstructor && pageState === 'menu' && (
+          <div className="mb-6 space-y-4">
+            {/* Share link */}
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-900/20 p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-0.5">
+                  <LinkIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">Student Practice Link (no login required)</span>
+                </div>
+                <code className="text-xs text-emerald-700 dark:text-emerald-400 break-all">
+                  {typeof window !== 'undefined' ? window.location.origin : ''}/lvfr-aemt/pharm/practice
+                </code>
+              </div>
+              <button
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    navigator.clipboard.writeText(`${window.location.origin}/lvfr-aemt/pharm/practice`);
+                    setPracticeLinkCopied(true);
+                    setTimeout(() => setPracticeLinkCopied(false), 2000);
+                  }
+                }}
+                className="px-3 py-1.5 text-sm bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-medium flex-shrink-0 transition-colors"
+              >
+                {practiceLinkCopied ? 'Copied!' : 'Copy Link'}
+              </button>
+            </div>
+
+            {/* Practice sessions */}
+            {practiceSessions.length > 0 && (
+              <div className="rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
+                <div className="border-b border-gray-200 dark:border-gray-700 px-4 py-3 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-gray-500" />
+                  <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Student Practice Sessions</h3>
+                  <span className="ml-auto text-xs text-gray-400">{practiceSessions.length} recent</span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="bg-gray-50 dark:bg-gray-700/50">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Name</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">ID</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Level</th>
+                        <th className="px-4 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400">Score</th>
+                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Submitted</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                      {practiceSessions.slice(0, 20).map(s => (
+                        <tr key={s.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
+                          <td className="px-4 py-2 font-medium text-gray-900 dark:text-white">{s.student_name}</td>
+                          <td className="px-4 py-2 text-gray-500 dark:text-gray-400 font-mono text-xs">{s.student_identifier}</td>
+                          <td className="px-4 py-2 text-center text-gray-500">{s.difficulty_level}</td>
+                          <td className="px-4 py-2 text-center">
+                            <span className={`font-semibold ${s.passed ? 'text-green-600' : 'text-red-600'}`}>
+                              {s.score_percent}%
+                            </span>
+                          </td>
+                          <td className="px-4 py-2 text-xs text-gray-500">
+                            {new Date(s.submitted_at).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {pageState === 'menu' && (
           <MenuView
             checkpoints={checkpoints}

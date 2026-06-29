@@ -86,6 +86,7 @@ const ROUTE_LABELS: Record<string, string> = {
   'lvfr-aemt/calendar': 'Course Calendar',
   'lvfr-aemt/scheduling': 'Coverage Grid',
   'lvfr-aemt/pharm': 'Pharmacology',
+  'lvfr-aemt/pharm/practice': 'Practice (No Login)',
   'lvfr-aemt/grades': 'Gradebook',
   'lvfr-aemt/grades/import': 'CSV Import',
   'lvfr-aemt/skills': 'Skills Tracking',

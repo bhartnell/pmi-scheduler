@@ -21,8 +21,9 @@ Two doors — labeled to keep directors out of the student dead-end:
 > - `/settings/calendar-setup` FreeBusy reauth banner (commit f9cb2c54)
 > - `/lvfr-aemt/progress` Tier-1 coverage roll-up, instructor-only (commit aefd339d)
  - `/lvfr-aemt/day` Redirect-to-today index (fixes RSC prefetch 404; Breadcrumbs link target)
+ - `/lvfr-aemt/pharm/practice` **Public** (no login) — unauthenticated pharm fill-in-the-blank practice; results recorded to DB
 
-**272 page routes across 39 top-level hubs** (count from
+**273 page routes across 39 top-level hubs** (count from
 `find app -name 'page.tsx'`).
 
 ## Role Hierarchy
