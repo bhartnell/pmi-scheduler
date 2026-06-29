@@ -332,7 +332,7 @@ export default function InstructorTimeClockPage() {
                 </p>
                 {activeEntry?.lab_day_id && (
                   <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
-                    Associated with today's lab day
+                    Associated with today&apos;s lab day
                   </p>
                 )}
               </div>

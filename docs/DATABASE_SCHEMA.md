@@ -9579,7 +9579,7 @@ Key foreign key relationships across the schema:
 - `source_block_id` -> `pmi_schedule_blocks.id` (lvfr_schedule_items_source_block_id_fkey)
 
 **Check Constraints:**
-- `lvfr_schedule_items_item_type_check`: `(((item_type IS NULL) OR (item_type = ANY (ARRAY['chapter'::text, 'quiz'::text, 'skills'::text, 'break'::text, 'lab'::text, 'exam'::text, 'other'::text]))))`
+- `lvfr_schedule_items_item_type_check`: `(((item_type IS NULL) OR (item_type = ANY (ARRAY['chapter'::text, 'quiz'::text, 'skills'::text, 'break'::text, 'lab'::text, 'exam'::text, 'other'::text, 'activity'::text]))))` — 'activity' added 20260627 for Tier-2 items
 - `lvfr_schedule_items_requirement_check`: `((requirement = ANY (ARRAY['required'::text, 'optional'::text, 'info'::text])))`
 
 **Indexes:**

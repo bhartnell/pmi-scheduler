@@ -650,7 +650,7 @@ function DeleteModal({ resource, onConfirm, onClose }: DeleteModalProps) {
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
           Are you sure you want to delete{' '}
-          <span className="font-medium text-gray-900 dark:text-white">"{resource.title}"</span>?
+          <span className="font-medium text-gray-900 dark:text-white">&ldquo;{resource.title}&rdquo;</span>?
           This will hide it from all users but preserve the record.
         </p>
         <div className="flex gap-3 justify-end">

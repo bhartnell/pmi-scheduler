@@ -281,7 +281,7 @@ export default function GenerateLabShiftsModal({
           </div>
           <p className="text-[11px] text-gray-500 dark:text-gray-400">
             If a lab day declares <code>coverage_needed</code>, that count is used as the floor for
-            this shift's min (capped at your chosen max).
+            this shift&apos;s min (capped at your chosen max).
           </p>
 
           {/* Preview */}

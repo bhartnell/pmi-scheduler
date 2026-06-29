@@ -703,7 +703,7 @@ function StudentProgressReportContent() {
             <User className="w-16 h-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No Report Generated</h3>
             <p className="text-gray-600 dark:text-gray-400">
-              Select a cohort and student, then click "Generate Report" to view progress data.
+              Select a cohort and student, then click &ldquo;Generate Report&rdquo; to view progress data.
             </p>
           </div>
         )}

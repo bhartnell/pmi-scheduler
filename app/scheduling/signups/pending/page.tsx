@@ -376,7 +376,7 @@ export default function PendingSignupsPage() {
               Decline Signup
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-4">
-              You are declining <strong>{declineModal.signup.instructor?.name}</strong>'s signup for{' '}
+              You are declining <strong>{declineModal.signup.instructor?.name}</strong>&apos;s signup for{' '}
               <strong>{declineModal.signup.shift?.title}</strong>.
             </p>
             <div className="mb-4">

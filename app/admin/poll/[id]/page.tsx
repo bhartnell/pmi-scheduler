@@ -56,7 +56,7 @@ export default function AdminPollPage() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-8 text-center max-w-md">
           <h1 className="text-2xl font-bold text-red-600 dark:text-red-400 mb-2">Poll Not Found</h1>
-          <p className="text-gray-700 dark:text-gray-300">This poll doesn't exist or has been deleted.</p>
+          <p className="text-gray-700 dark:text-gray-300">This poll doesn&apos;t exist or has been deleted.</p>
           <Link
             href="/scheduling/polls"
             className="inline-flex items-center gap-2 mt-4 text-blue-600 dark:text-blue-400 hover:underline"

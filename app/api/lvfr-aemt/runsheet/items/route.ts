@@ -18,7 +18,14 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  * }
  */
 
-const ITEM_TYPES = new Set(['chapter', 'quiz', 'skills', 'lab', 'break', 'exam', 'other']);
+const ITEM_TYPES = new Set(['chapter', 'quiz', 'skills', 'lab', 'break', 'exam', 'other', 'activity']);
+const REQUIREMENTS = new Set(['required', 'optional', 'info']);
+
+function defaultRequirement(itemType: string): 'required' | 'optional' | 'info' {
+  if (itemType === 'break') return 'info';
+  if (itemType === 'activity') return 'optional';
+  return 'required';
+}
 
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
@@ -28,6 +35,7 @@ export async function POST(request: NextRequest) {
     day_schedule_id?: string;
     title?: string;
     item_type?: string;
+    requirement?: string;
     estimated_minutes?: number;
     notes?: string;
   };
@@ -48,9 +56,12 @@ export async function POST(request: NextRequest) {
   const estMin = typeof body.estimated_minutes === 'number' && body.estimated_minutes >= 0
     ? Math.round(body.estimated_minutes)
     : null;
-  // H2 — a manually-added item is intentional, so it gets a checkbox (counts
-  // toward "required") UNLESS it's a break, which stays info-only.
-  const requirement: 'required' | 'info' = itemType === 'break' ? 'info' : 'required';
+  // Caller may supply requirement explicitly; otherwise derive from item type.
+  // Tier-1 = 'required' (counts toward progress), Tier-2 = 'optional' (trackable
+  // but not metered), Tier-3 = 'info' (no checkbox — breaks/lunch/transitions).
+  const requirement = (body.requirement && REQUIREMENTS.has(body.requirement))
+    ? body.requirement as 'required' | 'optional' | 'info'
+    : defaultRequirement(itemType);
 
   const supabase = getSupabaseAdmin();
 

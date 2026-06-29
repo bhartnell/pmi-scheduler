@@ -506,7 +506,7 @@ export default function SchedulingPage() {
               <div className="flex-1">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">My Availability</h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Set when you're available to work
+                  Set when you&apos;re available to work
                 </p>
               </div>
               <ChevronRight className="w-5 h-5 text-gray-400 group-hover:text-gray-600 dark:group-hover:text-gray-300" />

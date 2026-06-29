@@ -130,6 +130,7 @@ const ITEM_TYPE_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'skills', label: 'Skills' },
   { value: 'lab', label: 'Lab' },
   { value: 'exam', label: 'Exam' },
+  { value: 'activity', label: 'Activity (Tier-2)' },
   { value: 'break', label: 'Break' },
   { value: 'other', label: 'Other' },
 ];
@@ -730,15 +731,23 @@ function ItemRow({
           <span className={`text-sm font-medium ${item.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-gray-100'}`}>
             {item.title}
           </span>
-          {isOptional && (
-            <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
-              optional
+          {item.item_type === 'activity' ? (
+            <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300">
+              activity
             </span>
-          )}
-          {item.item_type && item.item_type !== 'other' && (
-            <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-              {item.item_type}
-            </span>
+          ) : (
+            <>
+              {isOptional && (
+                <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300">
+                  optional
+                </span>
+              )}
+              {item.item_type && item.item_type !== 'other' && (
+                <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                  {item.item_type}
+                </span>
+              )}
+            </>
           )}
         </div>
         {item.description && (
@@ -783,8 +792,11 @@ function AddItemRow({
   const [title, setTitle] = useState('');
   const [itemType, setItemType] = useState('other');
   const [minutes, setMinutes] = useState<string>('');
+  const [coverageNotes, setCoverageNotes] = useState('');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const isActivity = itemType === 'activity';
 
   async function save() {
     if (!title.trim()) {
@@ -802,6 +814,7 @@ function AddItemRow({
           title: title.trim(),
           item_type: itemType,
           estimated_minutes: minutes ? parseInt(minutes, 10) : undefined,
+          notes: coverageNotes.trim() || undefined,
         }),
       });
       const json = await res.json();
@@ -871,6 +884,23 @@ function AddItemRow({
           </button>
         </div>
       </div>
+      {isActivity && (
+        <div className="mt-2">
+          <label className="block text-xs text-gray-600 dark:text-gray-300 mb-0.5">
+            Coverage notes <span className="text-gray-400">(optional — what was covered / outcome)</span>
+          </label>
+          <input
+            type="text"
+            value={coverageNotes}
+            onChange={(e) => setCoverageNotes(e.target.value)}
+            placeholder="e.g. Group reviewed 12-lead interpretation, all students participated"
+            className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+          />
+          <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-0.5">
+            Tier-2 activity — trackable checkbox, not counted in required coverage.
+          </p>
+        </div>
+      )}
       {err && <p className="text-xs text-red-600 dark:text-red-400 mt-1">{err}</p>}
     </div>
   );

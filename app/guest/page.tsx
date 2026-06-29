@@ -253,7 +253,7 @@ export default function GuestPage() {
               <Calendar className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
               <h2 className="text-lg font-semibold text-gray-900 dark:text-white">No Lab Day Assigned</h2>
               <p className="text-gray-600 dark:text-gray-400 mt-1">
-                You don't have a lab day assigned yet. Please contact an administrator.
+                You don&apos;t have a lab day assigned yet. Please contact an administrator.
               </p>
             </div>
           )}

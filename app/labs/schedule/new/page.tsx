@@ -1603,7 +1603,7 @@ function NewLabDayPageContent() {
                 ) : (
                   <div className="space-y-3">
                     <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Labs from previous cohorts at the same point in the program. Click "Use This Configuration" to pre-fill your stations.
+                      Labs from previous cohorts at the same point in the program. Click &ldquo;Use This Configuration&rdquo; to pre-fill your stations.
                     </p>
                     {suggestions.map((suggestion) => {
                       const cohortLabel = suggestion.cohort

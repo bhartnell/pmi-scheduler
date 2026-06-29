@@ -73,7 +73,7 @@ export default function LVFRProgressPage() {
             <div className="p-2 bg-white/10 rounded-lg"><TrendingUp className="w-6 h-6" /></div>
             <div>
               <h1 className="text-2xl font-bold">Coverage Roll-up</h1>
-              <p className="text-red-200 text-sm mt-0.5">Tier-1 tracked items across the course — what's done, what's outstanding</p>
+              <p className="text-red-200 text-sm mt-0.5">Tier-1 tracked items across the course &mdash; what&apos;s done, what&apos;s outstanding</p>
             </div>
           </div>
         </div>
@@ -135,7 +135,7 @@ export default function LVFRProgressPage() {
                 <h2 className="font-semibold text-gray-900 dark:text-white">By day</h2>
               </div>
               {data && data.days.length === 0 ? (
-                <p className="px-4 py-8 text-sm text-gray-500 dark:text-gray-400 text-center">No tracked items seeded yet. Open a day's runsheet and re-seed from the calendar.</p>
+                <p className="px-4 py-8 text-sm text-gray-500 dark:text-gray-400 text-center">No tracked items seeded yet. Open a day&apos;s runsheet and re-seed from the calendar.</p>
               ) : (
                 <div className="divide-y divide-gray-100 dark:divide-gray-700">
                   {data?.days.map(d => (

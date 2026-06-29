@@ -811,7 +811,7 @@ export default function MyAvailabilityPage() {
                     onChange={(e) => setFormData({ ...formData, repeat_weeks: parseInt(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                   >
-                    <option value={0}>Don't repeat</option>
+                    <option value={0}>Don&apos;t repeat</option>
                     <option value={4}>4 weeks</option>
                     <option value={8}>8 weeks</option>
                     <option value={12}>12 weeks</option>

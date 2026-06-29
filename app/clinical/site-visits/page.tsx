@@ -716,7 +716,7 @@ export default function SiteVisitsPage() {
 
                       {visit.comments && (
                         <div className="mt-2 text-sm text-gray-600 dark:text-gray-400 italic">
-                          "{visit.comments}"
+                          &ldquo;{visit.comments}&rdquo;
                         </div>
                       )}
                     </div>

@@ -773,7 +773,7 @@ function DeleteModal({ med, onConfirm, onClose }: DeleteModalProps) {
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
           Are you sure you want to remove{' '}
-          <span className="font-medium text-gray-900 dark:text-white">"{med.name}"</span>{' '}
+          <span className="font-medium text-gray-900 dark:text-white">&ldquo;{med.name}&rdquo;</span>{' '}
           from the reference database?
         </p>
         <div className="flex gap-3 justify-end">
