@@ -434,6 +434,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-indigo-600',
         },
         {
+          href: '/admin/instructor-workload',
+          icon: Users,
+          title: 'Instructor Workload',
+          description: 'Semester workload by instructor — class, lab, LVFR, and shift hours',
+          color: 'bg-blue-600',
+        },
+        {
           href: '/reports/closeout-surveys',
           icon: ClipboardCheck,
           title: 'Closeout Surveys',

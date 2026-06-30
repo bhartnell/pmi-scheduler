@@ -123,10 +123,7 @@ became unreferenced).
 Surfaced during exam-self-scheduling discovery:
 - ~~**Stale duplicate pages** `app/scheduler/page.tsx` + `app/scheduler/create/page.tsx`~~ → **DELETED 2026-06-27** (dead pages shadowed by permanent redirects; 415 lines removed).
 - ~~**Dead "Send Email" button** in `components/scheduler/SchedulerAdmin.tsx`~~ → **FIXED 2026-06-27** (commit `9a8d4fcb`): `POST /api/notifications/send-email` route created; button now works.
-- **Defunct report block** in `app/api/reports/instructor-workload/route.ts`
-  — queries tables `scheduling_polls` / `poll_submissions` that **do not
-  exist** in any migration; try/catch silently zeroes the metric.
-  **Remaining** — needs Ben to decide: remove the block or create the tables.
+- ~~**Defunct report block** in `app/api/reports/instructor-workload/route.ts`~~ → **RESOLVED** (commit in branch `claude/compassionate-cray-91njvb`): Block removed; replaced with a live query of `lvfr_aemt_instructor_assignments` so LVFR days count toward each instructor's total. `availabilityRate` and `pollTotals` removed from API response and page.
 - **Caveat:** the `polls`/`submissions` system itself is NOT fully dead — it
   was used through late May 2026 for internship *meeting* coordination
   (18 polls, 57 submissions, all `mode='individual'`, meeting_type
