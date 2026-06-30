@@ -34,16 +34,15 @@ interface InstructorWorkload {
   email: string;
   role: string;
   labDaysCount: number;
+  lvfrDaysCount: number;
   totalHours: number;
   stationTypes: Record<string, number>;
-  availabilityRate: number | null;
   lastLabDate: string | null;
 }
 
 interface WorkloadReport {
   instructors: InstructorWorkload[];
   dateRange: { start: string; end: string };
-  pollTotals: number;
 }
 
 type SortField = 'name' | 'role' | 'labDaysCount' | 'totalHours' | 'lastLabDate';
@@ -163,7 +162,7 @@ export default function InstructorWorkloadPage() {
 
   const handleExportCSV = () => {
     if (!report) return;
-    const headers = ['Name', 'Email', 'Role', 'Lab Days', 'Est. Hours', 'Workload', 'Last Lab Date', 'Availability Rate'];
+    const headers = ['Name', 'Email', 'Role', 'Lab Days', 'LVFR Days', 'Est. Hours', 'Workload', 'Last Lab Date'];
     const rows = sortedInstructors.map((d) => {
       const badge = getWorkloadBadge(d.labDaysCount);
       return [
@@ -171,10 +170,10 @@ export default function InstructorWorkloadPage() {
         d.email,
         ROLE_LABELS[d.role as Role] || d.role,
         d.labDaysCount,
+        d.lvfrDaysCount,
         d.totalHours,
         badge.label,
         d.lastLabDate ? new Date(d.lastLabDate + 'T00:00:00').toLocaleDateString() : 'None',
-        d.availabilityRate !== null ? `${d.availabilityRate}%` : 'N/A',
       ];
     });
     const csv = [headers, ...rows].map((r) => r.map((v) => `"${v}"`).join(',')).join('\n');
@@ -491,7 +490,7 @@ export default function InstructorWorkloadPage() {
                         </th>
                         <th className="px-4 py-3 text-center">Workload</th>
                         <th className="px-4 py-3 text-center hidden md:table-cell">Station Types</th>
-                        <th className="px-4 py-3 text-center hidden lg:table-cell">Availability</th>
+                        <th className="px-4 py-3 text-center hidden lg:table-cell">LVFR Days</th>
                         <th className="px-4 py-3 text-center">
                           <SortButton field="lastLabDate">Last Lab</SortButton>
                         </th>
@@ -552,18 +551,12 @@ export default function InstructorWorkloadPage() {
                                 )}
                               </td>
                               <td className="px-4 py-3 text-center hidden lg:table-cell">
-                                {instructor.availabilityRate !== null ? (
-                                  <span className={`text-sm font-medium ${
-                                    instructor.availabilityRate >= 80
-                                      ? 'text-green-600 dark:text-green-400'
-                                      : instructor.availabilityRate >= 50
-                                      ? 'text-amber-600 dark:text-amber-400'
-                                      : 'text-red-600 dark:text-red-400'
-                                  }`}>
-                                    {instructor.availabilityRate}%
+                                {instructor.lvfrDaysCount > 0 ? (
+                                  <span className="text-sm font-medium text-orange-600 dark:text-orange-400">
+                                    {instructor.lvfrDaysCount}
                                   </span>
                                 ) : (
-                                  <span className="text-gray-400 text-xs">N/A</span>
+                                  <span className="text-gray-300 dark:text-gray-600">—</span>
                                 )}
                               </td>
                               <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400 text-xs">
@@ -630,8 +623,18 @@ export default function InstructorWorkloadPage() {
                                           <dd className="font-medium text-gray-900 dark:text-white">{instructor.labDaysCount}</dd>
                                         </div>
                                         <div className="flex justify-between">
-                                          <dt className="text-gray-500 dark:text-gray-400">Estimated Hours</dt>
-                                          <dd className="font-medium text-gray-900 dark:text-white">{instructor.totalHours}h</dd>
+                                          <dt className="text-gray-500 dark:text-gray-400">Lab hours (est.)</dt>
+                                          <dd className="font-medium text-gray-900 dark:text-white">{(instructor.labDaysCount * 4).toFixed(1)}h</dd>
+                                        </div>
+                                        {instructor.lvfrDaysCount > 0 && (
+                                          <div className="flex justify-between">
+                                            <dt className="text-gray-500 dark:text-gray-400">LVFR days</dt>
+                                            <dd className="font-medium text-orange-600 dark:text-orange-400">{instructor.lvfrDaysCount} ({(instructor.lvfrDaysCount * 3.5).toFixed(1)}h)</dd>
+                                          </div>
+                                        )}
+                                        <div className="flex justify-between border-t border-gray-200 dark:border-gray-600 pt-1 mt-1">
+                                          <dt className="text-gray-700 dark:text-gray-300 font-medium">Total (est.)</dt>
+                                          <dd className="font-semibold text-gray-900 dark:text-white">{instructor.totalHours}h</dd>
                                         </div>
                                         <div className="flex justify-between">
                                           <dt className="text-gray-500 dark:text-gray-400">Last Lab Date</dt>
@@ -645,14 +648,6 @@ export default function InstructorWorkloadPage() {
                                               : 'None in period'}
                                           </dd>
                                         </div>
-                                        {instructor.availabilityRate !== null && (
-                                          <div className="flex justify-between">
-                                            <dt className="text-gray-500 dark:text-gray-400">Availability Rate</dt>
-                                            <dd className="font-medium text-gray-900 dark:text-white">
-                                              {instructor.availabilityRate}%
-                                            </dd>
-                                          </div>
-                                        )}
                                       </dl>
                                     </div>
                                   </div>

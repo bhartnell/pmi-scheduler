@@ -996,3 +996,108 @@ export async function removeSiteVisit(params: {
     console.error('[gcal] Error removing site visit:', err);
   }
 }
+
+// ─── LVFR AEMT Instructor Assignments ────────────────────────────────────────
+
+const COLOR_LVFR = '3'; // Grape (purple)
+
+interface LvfrAssignmentParams {
+  userEmail: string;
+  assignmentId: string;  // lvfr_aemt_instructor_assignments.id (UUID)
+  role: 'primary' | 'secondary' | 'additional';
+  dayNumber: number;
+  date: string;          // YYYY-MM-DD
+  startTime?: string;
+  endTime?: string;
+  customTitle?: string;
+}
+
+/**
+ * Create or update a Google Calendar event for an LVFR AEMT instructor assignment.
+ * source_id uses a composite "<assignment_id>:<role>" so primary and secondary
+ * instructors for the same day each get their own distinct mapping row.
+ */
+export async function syncLvfrAssignment(params: LvfrAssignmentParams): Promise<void> {
+  try {
+    const accessToken = await getAccessTokenForUser(params.userEmail);
+    if (!accessToken) return;
+
+    const { startDateTime, endDateTime } = buildDateTimes(
+      params.date,
+      params.startTime,
+      params.endTime,
+      'AEMT',
+    );
+
+    const roleLabel = params.role === 'primary' ? 'Primary'
+      : params.role === 'secondary' ? 'Secondary' : 'Additional';
+    const baseTitle = params.customTitle || `LVFR — Day ${params.dayNumber}`;
+    const summary = `${baseTitle} · ${roleLabel} Instructor`;
+    const description = [
+      `LVFR AEMT Course — Day ${params.dayNumber}`,
+      `Role: ${roleLabel} Instructor`,
+      '',
+      'Created by PMI EMS Scheduler',
+    ].join('\n');
+
+    // Composite ID so primary vs secondary for the same row are distinct mappings
+    const compositeId = `${params.assignmentId}:${params.role}`;
+    const existing = await getEventMapping(params.userEmail, 'lvfr_assignment', compositeId);
+
+    if (existing) {
+      await updateGoogleEvent(accessToken, existing.google_event_id, {
+        summary,
+        description,
+        startDateTime,
+        endDateTime,
+      });
+      const supabase = getSupabaseAdmin();
+      await supabase
+        .from('google_calendar_events')
+        .update({ event_summary: summary, updated_at: new Date().toISOString() })
+        .eq('id', existing.id);
+    } else {
+      const eventId = await createGoogleEvent(accessToken, {
+        summary,
+        description,
+        startDateTime,
+        endDateTime,
+        colorId: COLOR_LVFR,
+      });
+      if (eventId) {
+        await storeEventMapping({
+          user_email: params.userEmail,
+          google_event_id: eventId,
+          source_type: 'lvfr_assignment',
+          source_id: compositeId,
+          event_summary: summary,
+        });
+      }
+    }
+  } catch (err) {
+    console.error('[gcal] Error syncing LVFR assignment:', err);
+  }
+}
+
+/**
+ * Remove a Google Calendar event for an LVFR AEMT instructor assignment.
+ */
+export async function removeLvfrAssignment(params: {
+  userEmail: string;
+  assignmentId: string;
+  role: 'primary' | 'secondary' | 'additional';
+}): Promise<void> {
+  try {
+    const compositeId = `${params.assignmentId}:${params.role}`;
+    const mapping = await getEventMapping(params.userEmail, 'lvfr_assignment', compositeId);
+    if (!mapping) return;
+
+    const accessToken = await getAccessTokenForUser(params.userEmail);
+    if (accessToken) {
+      await deleteGoogleEvent(accessToken, mapping.google_event_id);
+    }
+    await deleteEventMapping(params.userEmail, 'lvfr_assignment', compositeId);
+  } catch (err) {
+    console.error('[gcal] Error removing LVFR assignment:', err);
+  }
+}

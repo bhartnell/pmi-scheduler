@@ -14,6 +14,8 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
     const today = new Date().toISOString().split('T')[0];
+    // Extend lookback 180 days to catch lab assignments that failed to sync at the time
+    const lookback = new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
     let synced = 0;
     let failed = 0;
@@ -62,6 +64,7 @@ export async function POST(request: NextRequest) {
       syncLabStationAssignment,
       syncLabDayRole,
       syncShiftSignup,
+      syncLvfrAssignment,
     } = await import('@/lib/google-calendar');
 
     // 1. Sync station assignments for future lab days
@@ -75,7 +78,7 @@ export async function POST(request: NextRequest) {
           lab_day:lab_day_id(id, title, date, start_time, end_time)
         )
       `)
-      .gte('station.lab_day.date', today);
+      .gte('station.lab_day.date', lookback);
 
     if (futureStations) {
       for (const si of futureStations) {
@@ -140,7 +143,7 @@ export async function POST(request: NextRequest) {
           )
         )
       `)
-      .gte('lab_day.date', today);
+      .gte('lab_day.date', lookback);
 
     if (futureRoles) {
       const roleNames: Record<string, string> = {
@@ -355,6 +358,100 @@ export async function POST(request: NextRequest) {
       console.error('Series sync block failed:', err);
     }
 
+    // 5. Sync LVFR AEMT instructor assignments (all 30 course days, no date filter)
+    let lvfrSynced = 0;
+    let lvfrFailed = 0;
+    let lvfrSkipped = 0;
+
+    const { data: lvfrAssignments } = await supabase
+      .from('lvfr_aemt_instructor_assignments')
+      .select('id, day_number, date, primary_instructor_id, secondary_instructor_id');
+
+    if (lvfrAssignments && lvfrAssignments.length > 0) {
+      // Collect all unique instructor IDs
+      const allLvfrInstructorIds = new Set<string>();
+      for (const a of lvfrAssignments) {
+        if (a.primary_instructor_id) allLvfrInstructorIds.add(a.primary_instructor_id);
+        if (a.secondary_instructor_id) allLvfrInstructorIds.add(a.secondary_instructor_id);
+      }
+
+      if (allLvfrInstructorIds.size > 0) {
+        const { data: lvfrUsers } = await supabase
+          .from('lab_users')
+          .select('id, email')
+          .in('id', Array.from(allLvfrInstructorIds));
+
+        const lvfrIdToEmail = new Map<string, string>();
+        for (const u of lvfrUsers ?? []) lvfrIdToEmail.set(u.id, u.email);
+
+        // Fetch per-instructor custom times from plan_placements
+        const { data: placements } = await supabase
+          .from('lvfr_aemt_plan_placements')
+          .select('instructor_id, date, start_time, end_time, custom_title');
+
+        const placementMap = new Map<string, { start_time: string; end_time: string; custom_title?: string }>();
+        for (const p of placements ?? []) {
+          placementMap.set(`${p.instructor_id}:${p.date}`, {
+            start_time: p.start_time,
+            end_time: p.end_time,
+            custom_title: p.custom_title ?? undefined,
+          });
+        }
+
+        for (const a of lvfrAssignments) {
+          const rolePairs: Array<{ instrId: string | null; role: 'primary' | 'secondary' }> = [
+            { instrId: a.primary_instructor_id, role: 'primary' },
+            { instrId: a.secondary_instructor_id, role: 'secondary' },
+          ];
+          for (const { instrId, role } of rolePairs) {
+            if (!instrId) continue;
+            const email = lvfrIdToEmail.get(instrId);
+            if (!email || !connectedEmails.has(email.toLowerCase())) {
+              lvfrSkipped++;
+              continue;
+            }
+            if (targetEmail && email.toLowerCase() !== targetEmail.toLowerCase()) {
+              lvfrSkipped++;
+              continue;
+            }
+
+            const compositeId = `${a.id}:${role}`;
+            const { data: existingLvfrMapping } = await supabase
+              .from('google_calendar_events')
+              .select('id')
+              .ilike('user_email', email)
+              .eq('source_type', 'lvfr_assignment')
+              .eq('source_id', compositeId)
+              .single();
+
+            if (existingLvfrMapping) {
+              lvfrSkipped++;
+              continue;
+            }
+
+            const placement = placementMap.get(`${instrId}:${a.date}`);
+            try {
+              await syncLvfrAssignment({
+                userEmail: email,
+                assignmentId: a.id,
+                role,
+                dayNumber: a.day_number,
+                date: a.date,
+                startTime: placement?.start_time || undefined,
+                endTime: placement?.end_time || undefined,
+                customTitle: placement?.custom_title || undefined,
+              });
+              lvfrSynced++;
+            } catch {
+              lvfrFailed++;
+            }
+
+            await new Promise((r) => setTimeout(r, 200));
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       synced,
@@ -363,11 +460,14 @@ export async function POST(request: NextRequest) {
       series_synced: seriesSynced,
       series_updated: seriesUpdated,
       series_failed: seriesFailed,
+      lvfr_synced: lvfrSynced,
+      lvfr_failed: lvfrFailed,
+      lvfr_skipped: lvfrSkipped,
       users_touched: usersTouched.size,
       message:
         `Bulk sync complete: ${synced} events created, ${seriesSynced} class series ` +
-        `created, ${seriesUpdated} series updated, ${failed + seriesFailed} failed, ` +
-        `${skipped} skipped`,
+        `created, ${seriesUpdated} series updated, ${lvfrSynced} LVFR events created, ` +
+        `${failed + seriesFailed + lvfrFailed} failed, ${skipped + lvfrSkipped} skipped`,
     });
   } catch (error) {
     console.error('Error in bulk calendar sync:', error);

@@ -195,6 +195,54 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // Fire-and-forget calendar sync for newly assigned instructors
+  void (async () => {
+    try {
+      const { syncLvfrAssignment } = await import('@/lib/google-calendar');
+      const supabase2 = getSupabaseAdmin();
+
+      // Fetch the upserted row to get its UUID (needed for the composite source_id)
+      const { data: assignment } = await supabase2
+        .from('lvfr_aemt_instructor_assignments')
+        .select('id, primary_instructor_id, secondary_instructor_id')
+        .eq('day_number', day_number)
+        .single();
+
+      if (!assignment) return;
+
+      const rolePairs: Array<{ instrId: string | null; role: 'primary' | 'secondary' }> = [
+        { instrId: assignment.primary_instructor_id, role: 'primary' },
+        { instrId: assignment.secondary_instructor_id, role: 'secondary' },
+      ];
+
+      const instrIds = rolePairs.map(r => r.instrId).filter(Boolean) as string[];
+      if (instrIds.length === 0) return;
+
+      const { data: users } = await supabase2
+        .from('lab_users')
+        .select('id, email')
+        .in('id', instrIds);
+
+      const idToEmail = new Map<string, string>();
+      for (const u of users ?? []) idToEmail.set(u.id as string, u.email as string);
+
+      for (const { instrId, role } of rolePairs) {
+        if (!instrId) continue;
+        const email = idToEmail.get(instrId);
+        if (!email) continue;
+        await syncLvfrAssignment({
+          userEmail: email,
+          assignmentId: assignment.id,
+          role,
+          dayNumber: day_number,
+          date: dayData.date,
+        });
+      }
+    } catch (err) {
+      console.error('[gcal] LVFR fire-and-forget failed:', err);
+    }
+  })();
+
   return NextResponse.json({ success: true });
 }
 
