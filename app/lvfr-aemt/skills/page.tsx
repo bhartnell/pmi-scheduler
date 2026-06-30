@@ -925,6 +925,23 @@ function ClassCompletionView() {
               <div className="h-3 rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
             </div>
           </div>
+          <div className="flex flex-wrap gap-2 self-start">
+            <button
+              onClick={() => { if (cohortId) window.location.href = `/api/lvfr-aemt/skills/completion-export?cohort_id=${cohortId}`; }}
+              disabled={!cohortId}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-red-600 hover:bg-red-700 disabled:opacity-40 text-white rounded-lg font-medium whitespace-nowrap"
+              title="Download one PMI completion sheet per student (.zip). May take ~30s for a full roster."
+            >
+              <Download className="w-4 h-4" /> Completion sheets (.zip)
+            </button>
+            <button
+              onClick={() => { window.location.href = `/api/lvfr-aemt/skills/reference-export`; }}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium whitespace-nowrap"
+              title="Download blank reference sheets, one page per skill (.pdf) — for teaching and hand-documenting a rare failure."
+            >
+              <Download className="w-4 h-4" /> Reference sheets (.pdf)
+            </button>
+          </div>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
           Check a skill once it&apos;s been covered with the class — it counts complete for the whole roster.
