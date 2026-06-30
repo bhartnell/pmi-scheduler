@@ -189,23 +189,32 @@ export default function LabGroupsPage() {
   const handleDropToGroup = (targetGroupId: string) => {
     if (!draggedStudent) return;
 
-    // Remove from source
     if (dragSource === 'unassigned') {
+      // Remove from unassigned, then add to target — two separate state slices, no conflict
       setUnassignedStudents(unassignedStudents.filter(s => s.id !== draggedStudent.id));
-    } else if (dragSource) {
-      setGroups(groups.map(g =>
-        g.id === dragSource
-          ? { ...g, members: g.members.filter(m => m.id !== draggedStudent.id) }
+      setGroups(prev => prev.map(g =>
+        g.id === targetGroupId
+          ? { ...g, members: [...g.members.filter(m => m.id !== draggedStudent.id), draggedStudent] }
           : g
       ));
+    } else if (dragSource) {
+      // Combine remove-from-source and add-to-target in ONE functional update.
+      // Two sequential setGroups(groups.map(...)) calls both closed over the same
+      // stale snapshot, so the second overwrote the first — student appeared in both
+      // groups until a hard refresh (duplicate-on-move bug).
+      setGroups(prev => {
+        const withoutSource = prev.map(g =>
+          g.id === dragSource
+            ? { ...g, members: g.members.filter(m => m.id !== draggedStudent.id) }
+            : g
+        );
+        return withoutSource.map(g =>
+          g.id === targetGroupId
+            ? { ...g, members: [...g.members.filter(m => m.id !== draggedStudent.id), draggedStudent] }
+            : g
+        );
+      });
     }
-
-    // Add to target group
-    setGroups(groups.map(g =>
-      g.id === targetGroupId
-        ? { ...g, members: [...g.members.filter(m => m.id !== draggedStudent.id), draggedStudent] }
-        : g
-    ));
 
     setHasChanges(true);
     setDraggedStudent(null);

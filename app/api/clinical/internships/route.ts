@@ -100,7 +100,24 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    return NextResponse.json({ success: true, internships: data });
+    // Deduplicate by student_id when querying a specific cohort. A student
+    // should appear once per cohort even if they have multiple
+    // student_internships rows (e.g. legacy dual-tracking records from
+    // Group 12 that predate the webapp). Keep the most recent row (query is
+    // already ordered created_at DESC). Cross-cohort queries are not
+    // deduplicated — a student may legitimately appear in multiple cohorts.
+    let internships = data || [];
+    if (cohortId) {
+      const seen = new Set<string>();
+      internships = internships.filter(i => {
+        const sid: string | undefined = (i.students as { id?: string } | null)?.id ?? i.student_id;
+        if (!sid || seen.has(sid)) return false;
+        seen.add(sid);
+        return true;
+      });
+    }
+
+    return NextResponse.json({ success: true, internships });
   } catch (error) {
     console.error('Error fetching internships:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch internships' }, { status: 500 });

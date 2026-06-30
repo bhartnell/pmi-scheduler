@@ -101,6 +101,49 @@ need the long-form history.
 - Preview branches cause deployment confusion and delays
 - Single developer workflow doesn't need PR review gates
 
+## Agent Autonomy Scope (HARD REQUIREMENT)
+
+**Act in scope; escalate only when warranted — not timid over-escalation.**
+
+### Bucket 1 — Act and push promptly (no confirmation needed)
+
+Additive or NEW work that satisfies ALL of these:
+- New page, export, endpoint, doc update — no existing feature touched
+- `npm run type-check` clean, `npm run build` green
+- No data or schema changes
+
+Action: commit + push to `main` (or merge the PR promptly if the session harness
+forces a branch). Log it. **Do not post-and-wait for a Ben prompt or Cowork relay.**
+
+### Bucket 2 — Flag Ben, wait for go
+
+- Touches an **existing feature** or changes user-facing behavior
+- Changes **data or schema** (migrations, `UPDATE`-many, `DELETE`, `DROP`)
+- Requires **design, program, or cost judgment**
+
+Action: send Ben a concise go/no-go request with:
+1. What changes and why
+2. Risk if it goes wrong
+3. Rollback path
+4. Go / no-go?
+
+Do not send raw SQL or implementation details — send the decision, not the relay.
+Do not proceed until confirmed.
+
+### Empty-scan logging
+
+Scheduled runs that find nothing actionable (queue empty, no errors, no change from
+last run) should **not** send a notification. Silence = all clear. Only notify when
+there is something Ben needs to act on.
+
+### Reversibility gate status — GREEN (2026-06-30)
+
+Daily Supabase backups + `--backup` snapshot script + `main` branch protection +
+`git revert` + Vercel rollback all in place. Additive code pushes and
+`IF NOT EXISTS` migrations are fully autonomous. Destructive DB ops (`DROP`,
+`DELETE`-many, `UPDATE`-many) remain escalate-to-Ben until Supabase PITR is
+confirmed.
+
 ## Database Migrations
 
 Run migrations against Supabase production using the migration runner script:
@@ -308,6 +351,15 @@ YYYY-MM-DD | commit-hash | brief description
 - Reverse chronological order (newest first).
 - Keep the description short — readers go to `git show <hash>`
   for the full diff.
+
+### Timestamp discipline
+
+Every maintained doc file should carry a **"Last updated: YYYY-MM-DD (commit HASH)"**
+line at the top or bottom. This makes staleness visible at a glance — a doc without
+a date could be a week or a year old. Add the stamp when creating a doc and update
+it with each substantial edit. (Motivation: project-knowledge copies showed ambiguous
+placeholder dates, making it impossible to tell at a glance whether content was
+current.)
 
 ### Format guidance
 
