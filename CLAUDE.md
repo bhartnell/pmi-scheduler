@@ -155,6 +155,31 @@ net** for when Ben isn't actively engaged — not a rate limit on responsiveness
 - The timer/cadence exists so work still happens when Ben is busy or
   unavailable to prompt directly — it is the backup path, not the primary one.
 
+### Claim-first discipline (HARD REQUIREMENT)
+
+Multiple Code sessions (interactive + scheduled routine) can be active on the
+Notion board at once. On 2026-07-01, parallel sessions raced the same board
+items — the same dropdown bug fixed two different ways, the same signature-
+clear bug fixed identically twice, producing avoidable merge conflicts. This
+rule fixes that.
+
+1. **Pull first.** Before claiming a Queued item, `git pull` / check recent
+   merges — another session may have already fixed it. If so, mark the item
+   Done/resolved with a note instead of re-fixing it.
+2. **Claim before working, not after.** The moment you pick a Queued item,
+   set its Status to `In Progress` immediately — before investigating or
+   writing code. That write *is* the claim; it's what lets a parallel session
+   scanning the board skip the item instead of racing it.
+3. **Verify the claim landed** (re-read the page) before starting real work,
+   to catch a race where two sessions claimed within the same window.
+4. **Mark Done + log when complete**, same as always.
+
+This is the companion to "Prompt precedence" above: that rule says don't wait
+idle when there's work to do; this rule says claim loudly and early so two
+sessions doing that at once don't collide on the *same* work. Independent
+parallel work on *different* items is still good — this only prevents two
+sessions grabbing the same one.
+
 ### Reversibility gate status — GREEN (2026-06-30)
 
 Daily Supabase backups + `--backup` snapshot script + `main` branch protection +
