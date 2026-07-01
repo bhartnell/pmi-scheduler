@@ -498,56 +498,11 @@ export default function ClinicalOverviewPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Summary Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Users className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{students.length}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Total Students</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
-                <Ambulance className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{emtStudents.length}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">EMT</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg">
-                <Stethoscope className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{aemtStudents.length}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">AEMT</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <GraduationCap className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{pmStudents.length}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Paramedic</div>
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* Program-type summary (Total/EMT/AEMT/Paramedic) removed 2026-07-01 —
+            it duplicated the phase-segmented sections below with less useful
+            grouping (by program instead of by cohorts.current_semester) and
+            was reading a broken field (see overview-all route fix). The
+            per-program/per-phase sections below are the source of truth. */}
 
         {/* EMT Section */}
         {emtStudents.length > 0 && (

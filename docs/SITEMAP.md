@@ -249,15 +249,15 @@ Canonical home for lab day operations. 38 pages.
 
 | Path | Notes |
 |------|-------|
-| `/clinical` | Hub |
+| `/clinical` | Hub — now leads with a phase-segmented readiness section (cohorts.current_semester S1-S4, Clinical Tracker ready/total for S1/S2 via `/api/clinical/tracker-readiness`, cohort+student counts for S3/S4) above the existing workflow/tool cards, added 2026-07-01 |
 | `/clinical/aemt-tracking`, `/clinical/emt-tracking` | Pre-clinical tracking |
 | `/clinical/affiliations`, `/clinical/agencies` | Partner mgmt |
 | `/clinical/capacity` | Site capacity |
-| `/clinical/clinical-tracker` | Complio + mCE two-tab checklist with 3-state BG/DT, aggregation, print view — the single Compliance system (redirects: `/clinical/compliance`, `/clinical/compliance-tracker` → here, removed 2026-07-01) |
+| `/clinical/clinical-tracker` | Complio + mCE two-tab checklist with 3-state BG/DT, aggregation, print view — the single Compliance system (redirects: `/clinical/compliance`, `/clinical/compliance-tracker` → here, removed 2026-07-01). Cohort selector depends on `GET /api/cohorts` (added 2026-07-01 — was previously missing, dropdown was empty) |
 | `/clinical/hours` | Hours log |
 | `/clinical/internships` + subpages | Internship pipeline |
 | `/clinical/mce` | MCE evals |
-| `/clinical/overview` | Overview dashboard |
+| `/clinical/overview` | Overview dashboard — the program-type (EMT/AEMT/Paramedic) summary header was removed 2026-07-01 (duplicated the phase-segmented sections below with a broken `current_semester` field); phase-segmented per-program sections are the source of truth |
 | `/clinical/planning-calendar` | Planning calendar |
 | `/clinical/preceptors` | Preceptor directory |
 | `/clinical/ride-alongs` + `/availability` + `/shifts` | Ride-along scheduling |
