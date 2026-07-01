@@ -20,7 +20,15 @@ export default function SignaturePad({
   const drawing = useRef(false);
   const dirty = useRef(false);
 
-  useEffect(() => {
+  // Sizes the backing store for the current devicePixelRatio and (re)applies
+  // stroke style. Setting canvas.width/height — even to its own value —
+  // discards the backing store and resets all context state (transform,
+  // strokeStyle, etc.), which is why this needs to re-apply style after every
+  // resize AND is reused as the "nuclear" clear below: some WebKit builds
+  // have had transform/DPR-scaling quirks with setTransform+clearRect alone
+  // (matches a leftover-partial-signature repro on iPad), so resizing the
+  // backing store is a more robust full-reset than clearRect.
+  const configureCanvas = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
     const dpr = window.devicePixelRatio || 1;
@@ -35,6 +43,10 @@ export default function SignaturePad({
       ctx.strokeStyle = '#111827';
     }
   }, [width, height]);
+
+  useEffect(() => {
+    configureCanvas();
+  }, [configureCanvas]);
 
   const point = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const r = canvasRef.current!.getBoundingClientRect();
@@ -62,19 +74,16 @@ export default function SignaturePad({
     if (dirty.current) onChange(canvasRef.current!.toDataURL('image/png'));
   };
   const clear = useCallback(() => {
-    const c = canvasRef.current;
-    if (!c) return;
-    const ctx = c.getContext('2d')!;
-    // Reset any transform (the pad scales by devicePixelRatio) before clearing,
-    // and clear the FULL backing store — otherwise a scaled clearRect leaves
-    // part of the drawing behind.
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, c.width, c.height);
-    ctx.restore();
+    if (!canvasRef.current) return;
+    // Re-run the same resize path used on mount rather than
+    // setTransform+clearRect — reassigning canvas.width discards and
+    // recreates the backing store outright, which reliably wipes 100% of
+    // it (see configureCanvas comment above for why clearRect alone wasn't
+    // trusted here).
+    configureCanvas();
     dirty.current = false;
     onChange(null);
-  }, [onChange]);
+  }, [configureCanvas, onChange]);
 
   return (
     <div className="inline-block">
