@@ -107,6 +107,8 @@ export async function PATCH(
     if (body.status !== undefined) allowedFields.status = body.status;
     if (body.notes !== undefined) allowedFields.notes = body.notes;
     if (body.photo_url !== undefined) allowedFields.photo_url = body.photo_url;
+    if (body.scrub_top_size !== undefined) allowedFields.scrub_top_size = body.scrub_top_size;
+    if (body.scrub_bottom_size !== undefined) allowedFields.scrub_bottom_size = body.scrub_bottom_size;
     // Day-1 intake fields — coordinator captures these at first
     // introduction. Stored on the canonical student row so they
     // persist through cohort moves and graduation. See

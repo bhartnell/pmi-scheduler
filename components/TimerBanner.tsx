@@ -347,6 +347,7 @@ export default function TimerBanner({
 
   useEffect(() => {
     debriefAlertShownRef.current = false;
+    setShowRotateAlert(false);
   }, [timerState?.rotation_number]);
 
   // Calculate progress percentage
