@@ -37,6 +37,40 @@ interface DashboardStats {
   totalInternships: number;
 }
 
+interface PhaseCohort {
+  cohort_id: string;
+  cohort_number: number;
+  current_semester: number | null;
+  studentCount: number;
+  ready: number | null;
+  total: number | null;
+}
+
+interface TrackerReadinessCohort {
+  cohort_id: string;
+  cohort_number: number;
+  current_semester: number | null;
+  total: number;
+  ready: number;
+}
+
+interface CohortApiRow {
+  id: string;
+  cohort_number: number;
+  current_semester: number | null;
+  student_count: number;
+  program?: { abbreviation: string | null } | null;
+}
+
+// Phase labels for the readiness rollup. S1/S2 = clinical-prep (Complio/mCE
+// tracker readiness), S3 = hospital clinicals, S4 = field internship.
+const PHASE_LABELS: Record<number, { label: string; trackerLink: string }> = {
+  1: { label: 'S1 · Didactic', trackerLink: '/clinical/clinical-tracker' },
+  2: { label: 'S2 · Compliance', trackerLink: '/clinical/clinical-tracker' },
+  3: { label: 'S3 · Clinicals', trackerLink: '/clinical/hours' },
+  4: { label: 'S4 · Internship', trackerLink: '/clinical/internships' },
+};
+
 export default function ClinicalDashboardPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -53,6 +87,8 @@ export default function ClinicalDashboardPage() {
     atRisk: 0,
     totalInternships: 0,
   });
+  const [phaseCohorts, setPhaseCohorts] = useState<PhaseCohort[]>([]);
+  const [phaseLoading, setPhaseLoading] = useState(true);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -120,7 +156,62 @@ export default function ClinicalDashboardPage() {
       console.error('Error fetching data:', error);
     }
     setLoading(false);
+    fetchPhaseData();
   };
+
+  // Phase-segmented readiness rollup — organized by cohorts.current_semester
+  // (S1-S4), not program type. S1/S2 show Clinical Tracker Complio/mCE
+  // readiness (ready/total); S3/S4 (no per-student readiness signal yet)
+  // show cohort + active-student counts, linking into the deeper page for
+  // detail. Replaces the old raw preceptor/site counts as the at-a-glance
+  // "what's actionable" view Ben lands on.
+  const fetchPhaseData = async () => {
+    setPhaseLoading(true);
+    try {
+      const [cohortsRes, readinessRes] = await Promise.all([
+        fetch('/api/cohorts'),
+        fetch('/api/clinical/tracker-readiness'),
+      ]);
+      const cohortsData = await cohortsRes.json();
+      const readinessData = await readinessRes.json();
+
+      const readinessByCohort = new Map<string, { ready: number; total: number }>();
+      if (readinessData.success) {
+        (readinessData.cohorts || []).forEach((r: TrackerReadinessCohort) => {
+          readinessByCohort.set(r.cohort_id, { ready: r.ready, total: r.total });
+        });
+      }
+
+      if (cohortsData.success) {
+        const pmCohorts = (cohortsData.cohorts as CohortApiRow[] || []).filter(
+          (c) => c.program?.abbreviation === 'PM' || c.program?.abbreviation === 'PMD'
+        );
+        setPhaseCohorts(
+          pmCohorts.map((c) => {
+            const readiness = readinessByCohort.get(c.id);
+            return {
+              cohort_id: c.id,
+              cohort_number: c.cohort_number,
+              current_semester: c.current_semester ?? null,
+              studentCount: c.student_count || 0,
+              ready: readiness?.ready ?? null,
+              total: readiness?.total ?? null,
+            };
+          })
+        );
+      }
+    } catch (error) {
+      console.error('Error fetching phase readiness data:', error);
+    }
+    setPhaseLoading(false);
+  };
+
+  const phasesBySemester = phaseCohorts.reduce((acc, c) => {
+    const key = c.current_semester ?? 0;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(c);
+    return acc;
+  }, {} as Record<number, PhaseCohort[]>);
 
   if (status === 'loading' || loading) {
     return (
@@ -202,6 +293,52 @@ export default function ClinicalDashboardPage() {
             </div>
           </div>
         </div>
+        )}
+
+        {/* Phase-segmented readiness — organized by cohorts.current_semester
+            (S1-S4), not program type. This is the "what's actionable now"
+            view Ben lands on; the old raw preceptor/site counts stayed in
+            Quick Stats above. */}
+        {effectiveRole && canAccessClinical(effectiveRole) && !phaseLoading && Object.keys(phasesBySemester).length > 0 && (
+          <div className="mb-10">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">
+              Clinical readiness by phase
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[1, 2, 3, 4].filter((sem) => phasesBySemester[sem]?.length).map((sem) => {
+                const cohorts = phasesBySemester[sem];
+                const phase = PHASE_LABELS[sem];
+                return (
+                  <div key={sem} className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{phase.label}</h3>
+                      <Link href={phase.trackerLink} className="text-xs text-teal-600 dark:text-teal-400 hover:underline flex items-center gap-0.5">
+                        Open <ChevronRight className="w-3 h-3" />
+                      </Link>
+                    </div>
+                    <div className="space-y-1.5">
+                      {cohorts.map((c) => (
+                        <Link
+                          key={c.cohort_id}
+                          href={`${phase.trackerLink}?cohortId=${c.cohort_id}`}
+                          className="flex items-center justify-between text-sm px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                        >
+                          <span className="text-gray-700 dark:text-gray-300">Cohort {c.cohort_number}</span>
+                          {c.total != null ? (
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c.ready === c.total ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                              {c.ready}/{c.total} ready
+                            </span>
+                          ) : (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">{c.studentCount} students</span>
+                          )}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         )}
 
         {/*
