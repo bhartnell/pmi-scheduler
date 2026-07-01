@@ -108,6 +108,12 @@ export default function AdvCertGradePage() {
       .catch(() => toast.error('Failed to load scenarios'));
   }, [session, course]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Track the last labDayId we reset selectors for, so spurious session
+  // refreshes (NextAuth refetches session object on window-focus) do not
+  // wipe in-progress group/station/team-lead selections (Bug: timer erases
+  // content / tab-switch loses scoring — same root cause).
+  const prevLabDayIdRef = useRef<string>('');
+
   // context for the chosen day
   useEffect(() => {
     if (!session || !labDayId) { setGroups([]); setStations([]); return; }
@@ -121,7 +127,13 @@ export default function AdvCertGradePage() {
         }
       })
       .catch(() => toast.error('Failed to load day context'));
-    setGroupId(''); setStationId(''); setTeamLeadId(''); setMemberIds([]);
+    // Only reset context selectors when the day actually changes, not on
+    // every spurious session re-render (NextAuth refreshes session identity
+    // on window-focus, which would otherwise wipe entered selections).
+    if (prevLabDayIdRef.current !== labDayId) {
+      setGroupId(''); setStationId(''); setTeamLeadId(''); setMemberIds([]);
+      prevLabDayIdRef.current = labDayId;
+    }
   }, [session, labDayId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Tracks the scenario we last cleared the score sheet for, so a SPURIOUS

@@ -9252,6 +9252,29 @@ Key foreign key relationships across the schema:
 **RLS Policies:**
 - `service_role_lvfr_pharm_ck` (ALL, PERMISSIVE, roles: {service_role})
 
+#### `lvfr_pharm_practice_sessions`
+
+Public (no-login) pharm quiz submissions from `/lvfr-aemt/pharm/practice`. Added 2026-06-29 (commit `5a25d458`).
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| student_name | text | NO |  |  |
+| student_identifier | text | NO |  | Name + last-4 or similar |
+| difficulty_level | integer | NO | 1 | 1, 2, or 3 |
+| score_percent | numeric | YES |  |  |
+| passed | boolean | YES |  |  |
+| responses | jsonb | YES |  | Per-question answers + scoring |
+| ip_address | text | YES |  |  |
+| submitted_at | timestamptz | YES | now() |  |
+
+**Indexes:**
+- `idx_lvfr_pharm_practice_identifier`
+- `idx_lvfr_pharm_practice_submitted_at`
+
+**RLS Policies:**
+- RLS enabled, no client-facing policies (service key bypasses)
+
 #### `lvfr_aemt_plan_instances`
 
 | Column | Type | Nullable | Default | Notes |

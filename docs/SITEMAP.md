@@ -273,7 +273,7 @@ on 2026-05-23 (now linked from the hub's new "Cohort Progress" section).
 | Section | Pages |
 |---------|-------|
 | **Analytics Dashboards** | program-overview, instructor-analytics, student-dashboard, clinical-placements, aha (AHA Results Export — autofilled AHA form sets per cohort) |
-| **Existing Reports** | attendance, scenario-analytics, instructor-workload, skill-trends, gradebook, cohort-comparison, program-outcomes |
+| **Existing Reports** | attendance (`/reports/attendance`), scenario-analytics, instructor-workload (`/reports/instructor-workload` — added bc8a6b13), skill-trends, gradebook, cohort-comparison, program-outcomes |
 | **Operational** | availability-patterns, lab-costs, scenario-usage, scenario-usage-overview, closeout-surveys, builder |
 | **Cohort Progress** (NEW) | lab-progress, student-progress, clinical-hours, internship-status, onboarding-status, team-leads |
 
