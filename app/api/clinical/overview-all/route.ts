@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
           id,
           cohort_number,
           semester,
+          current_semester,
           start_date,
           programs (
             id,
