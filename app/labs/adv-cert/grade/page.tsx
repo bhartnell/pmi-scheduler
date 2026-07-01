@@ -145,16 +145,22 @@ export default function AdvCertGradePage() {
   // full scenario (segments + criteria)
   useEffect(() => {
     if (!session || !scenarioId) { setScenario(null); return; }
+    // Spurious re-render guard: NextAuth refetches `session` on every window
+    // focus (e.g. right after Save, when the grader tabs away and back),
+    // which re-fires this effect even though scenarioId hasn't changed.
+    // Without this guard, every such refresh re-fetched the same scenario
+    // and flipped loadingScenario true -> false, which blanks the whole
+    // grading form for the duration of the pointless refetch (the "post-save
+    // blanks the station" bug) — same root cause as the labDayId guard above.
+    if (lastResetScenarioRef.current === scenarioId) return;
     setLoadingScenario(true);
     fetch(`/api/adv-cert/scenarios/${scenarioId}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.success) {
           setScenario(d.scenario);
-          if (lastResetScenarioRef.current !== scenarioId) {
-            resetGrading();
-            lastResetScenarioRef.current = scenarioId;
-          }
+          resetGrading();
+          lastResetScenarioRef.current = scenarioId;
         }
         else toast.error(d.error || 'Failed to load scenario');
       })

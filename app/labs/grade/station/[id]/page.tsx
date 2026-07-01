@@ -200,6 +200,11 @@ export default function GradeStationPage() {
   const unsatisfactoryCount = criteriaRatings.filter(r => r.rating === 'U').length;
   const allRated = criteriaRatings.length > 0 && criteriaRatings.every(r => r.rating !== null);
   const totalCriteria = criteriaRatings.length;
+  // NREMT psychomotor testing (E204 sheet) stays STRICT — completeness +
+  // justification are required there. Everything else is the generic/formative
+  // sheet, which must be NON-BLOCKING: an instructor can mark a concern (incl.
+  // affective/behavioral, kept via the flag) and still submit and move on.
+  const strictNremt = nremtSheetCode === 'E204';
 
   // Pass calculation - different for skills vs scenario
   const skillsPass = satisfactoryCount === 4;
@@ -228,8 +233,17 @@ export default function GradeStationPage() {
     }
   }, [status, router]);
 
+  // Guards against NextAuth refetching the `session` object on every window
+  // focus (tab switch, alt-tab). Without this, that spurious re-render was
+  // re-triggering fetchStation() -> a brand-new `station` object reference ->
+  // buildInitialCriteriaRatings() re-running -> setCriteriaRatings() wiping
+  // the examiner's in-progress S/NI/U selections mid-grade (looked like the
+  // rating buttons had stopped responding). Only re-fetch when the station
+  // actually changes.
+  const prevStationIdRef = useRef<string>('');
   useEffect(() => {
-    if (session && stationId) {
+    if (session && stationId && prevStationIdRef.current !== stationId) {
+      prevStationIdRef.current = stationId;
       fetchStation();
     }
   }, [session, stationId]);
@@ -700,12 +714,6 @@ export default function GradeStationPage() {
 
   const handleSave = async (emailPref: string = 'queued', saveAsStatus: string = 'complete') => {
     const isInProgress = saveAsStatus === 'in_progress';
-    // NREMT psychomotor testing (E204 sheet) stays STRICT — completeness +
-    // justification are required there. Everything else is the generic/formative
-    // sheet, which must be NON-BLOCKING: an instructor can mark a concern (incl.
-    // affective/behavioral, kept via the flag) and still submit and move on.
-    // (Per the ACLS-day flow: new instructors must flag-and-go, not get stuck.)
-    const strictNremt = nremtSheetCode === 'E204';
 
     // Validation - different for skills vs scenario stations
     if (isSkillsStation) {
@@ -1537,7 +1545,7 @@ export default function GradeStationPage() {
             {/* Primary save: Send Later */}
             <button
               onClick={() => handleSave('queued')}
-              disabled={saving || !allRated || !selectedGroupId || !teamLeaderId}
+              disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
               className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg font-medium"
             >
               {saving ? (
@@ -1552,21 +1560,21 @@ export default function GradeStationPage() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => handleSave('sent')}
-                disabled={saving || !allRated || !selectedGroupId || !teamLeaderId}
+                disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
                 className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow"
               >
                 Save — Send Now
               </button>
               <button
                 onClick={() => handleSave('do_not_send')}
-                disabled={saving || !allRated || !selectedGroupId || !teamLeaderId}
+                disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
                 className="flex items-center justify-center gap-1.5 px-3 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow bg-white dark:bg-gray-800"
               >
                 Do Not Send
               </button>
             </div>
 
-            {(!selectedGroupId || !teamLeaderId || !allRated) && (
+            {(!selectedGroupId || !teamLeaderId || (strictNremt && !allRated)) && (
               <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                 {!selectedGroupId ? 'Select a lab group' :
                  !teamLeaderId ? 'Select a team leader' :
