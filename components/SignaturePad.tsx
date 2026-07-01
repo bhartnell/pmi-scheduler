@@ -20,14 +20,15 @@ export default function SignaturePad({
   const drawing = useRef(false);
   const dirty = useRef(false);
 
-  // Sizes the backing store to width/height * devicePixelRatio (so strokes
-  // stay crisp on retina/high-dpr displays) and (re)applies the line style.
-  // Setting canvas.width/height — even to a value equal to itself — resets
-  // the ENTIRE bitmap and 2D context state (transform, styles, everything)
-  // per the HTML canvas spec. That's used deliberately in clear() below: it's
-  // the only way to guarantee a full wipe regardless of the current transform,
-  // rather than relying on clearRect() dimensions matching the backing store.
-  const setupCanvas = useCallback(() => {
+  // Sizes the backing store for the current devicePixelRatio and (re)applies
+  // stroke style. Setting canvas.width/height — even to its own value —
+  // discards the backing store and resets all context state (transform,
+  // strokeStyle, etc.), which is why this needs to re-apply style after every
+  // resize AND is reused as the "nuclear" clear below: some WebKit builds
+  // have had transform/DPR-scaling quirks with setTransform+clearRect alone
+  // (matches a leftover-partial-signature repro on iPad), so resizing the
+  // backing store is a more robust full-reset than clearRect.
+  const configureCanvas = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
     const dpr = window.devicePixelRatio || 1;
@@ -44,8 +45,8 @@ export default function SignaturePad({
   }, [width, height]);
 
   useEffect(() => {
-    setupCanvas();
-  }, [setupCanvas]);
+    configureCanvas();
+  }, [configureCanvas]);
 
   const point = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const r = canvasRef.current!.getBoundingClientRect();
@@ -74,18 +75,15 @@ export default function SignaturePad({
   };
   const clear = useCallback(() => {
     if (!canvasRef.current) return;
-    // setupCanvas() reassigns canvas.width, which per the HTML canvas spec
-    // wipes the ENTIRE backing-store bitmap and resets the 2D context's
-    // transform to identity — unconditionally correct, unlike the previous
-    // clearRect()-based approach, which only cleared whatever region its
-    // coordinates covered and left part of the signature behind whenever
-    // the transform and backing-store size were out of sync (hi-dpr
-    // displays). It also re-applies the dpr scale + line style in the same
-    // pass, since the reset wipes those too.
-    setupCanvas();
+    // Re-run the same resize path used on mount rather than
+    // setTransform+clearRect — reassigning canvas.width discards and
+    // recreates the backing store outright, which reliably wipes 100% of
+    // it (see configureCanvas comment above for why clearRect alone wasn't
+    // trusted here).
+    configureCanvas();
     dirty.current = false;
     onChange(null);
-  }, [onChange, setupCanvas]);
+  }, [configureCanvas, onChange]);
 
   return (
     <div className="inline-block">
