@@ -20,7 +20,14 @@ export default function SignaturePad({
   const drawing = useRef(false);
   const dirty = useRef(false);
 
-  useEffect(() => {
+  // Sizes the backing store to width/height * devicePixelRatio (so strokes
+  // stay crisp on retina/high-dpr displays) and (re)applies the line style.
+  // Setting canvas.width/height — even to a value equal to itself — resets
+  // the ENTIRE bitmap and 2D context state (transform, styles, everything)
+  // per the HTML canvas spec. That's used deliberately in clear() below: it's
+  // the only way to guarantee a full wipe regardless of the current transform,
+  // rather than relying on clearRect() dimensions matching the backing store.
+  const setupCanvas = useCallback(() => {
     const c = canvasRef.current;
     if (!c) return;
     const dpr = window.devicePixelRatio || 1;
@@ -35,6 +42,10 @@ export default function SignaturePad({
       ctx.strokeStyle = '#111827';
     }
   }, [width, height]);
+
+  useEffect(() => {
+    setupCanvas();
+  }, [setupCanvas]);
 
   const point = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const r = canvasRef.current!.getBoundingClientRect();
@@ -62,19 +73,19 @@ export default function SignaturePad({
     if (dirty.current) onChange(canvasRef.current!.toDataURL('image/png'));
   };
   const clear = useCallback(() => {
-    const c = canvasRef.current;
-    if (!c) return;
-    const ctx = c.getContext('2d')!;
-    // Reset any transform (the pad scales by devicePixelRatio) before clearing,
-    // and clear the FULL backing store — otherwise a scaled clearRect leaves
-    // part of the drawing behind.
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.clearRect(0, 0, c.width, c.height);
-    ctx.restore();
+    if (!canvasRef.current) return;
+    // setupCanvas() reassigns canvas.width, which per the HTML canvas spec
+    // wipes the ENTIRE backing-store bitmap and resets the 2D context's
+    // transform to identity — unconditionally correct, unlike the previous
+    // clearRect()-based approach, which only cleared whatever region its
+    // coordinates covered and left part of the signature behind whenever
+    // the transform and backing-store size were out of sync (hi-dpr
+    // displays). It also re-applies the dpr scale + line style in the same
+    // pass, since the reset wipes those too.
+    setupCanvas();
     dirty.current = false;
     onChange(null);
-  }, [onChange]);
+  }, [onChange, setupCanvas]);
 
   return (
     <div className="inline-block">

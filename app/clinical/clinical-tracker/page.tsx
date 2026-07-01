@@ -23,6 +23,7 @@ interface Cohort {
   id: string;
   cohort_number: number;
   name: string;
+  student_count?: number;
 }
 
 interface ComplioRow {
@@ -426,15 +427,21 @@ export default function ClinicalTrackerPage() {
     if (status === 'unauthenticated') router.push('/auth/signin');
   }, [status, router]);
 
-  // Load cohorts
+  // Load cohorts — matches the endpoint every other cohort-selector page in
+  // the app uses (/api/cohorts was never a real route; it silently 404'd,
+  // leaving the dropdown permanently empty).
   useEffect(() => {
-    fetch('/api/cohorts')
+    fetch('/api/lab-management/cohorts?activeOnly=true')
       .then(r => r.json())
       .then(d => {
         if (d.success && d.cohorts) {
           const sorted = [...d.cohorts].sort((a: Cohort, b: Cohort) => b.cohort_number - a.cohort_number);
           setCohorts(sorted);
-          const initial = searchParams.get('cohortId') || sorted[0]?.id || '';
+          // Default to the first cohort that actually has students, not just
+          // the first in sort order — an empty-cohort default would still
+          // look broken (0/0) even once the dropdown itself is populated.
+          const populated = sorted.find(c => (c.student_count ?? 0) > 0);
+          const initial = searchParams.get('cohortId') || populated?.id || sorted[0]?.id || '';
           setCohortId(initial);
         }
       })
