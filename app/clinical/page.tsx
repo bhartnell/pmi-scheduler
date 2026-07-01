@@ -13,14 +13,12 @@ import {
   ClipboardList,
   TrendingUp,
   Clock,
-  FileCheck,
   LayoutDashboard,
   GraduationCap,
   Hospital,
   Ambulance,
   CalendarDays,
   BarChart3,
-  Shield,
   BookOpen,
   Shuffle,
   ClipboardCheck,
@@ -305,18 +303,6 @@ export default function ClinicalDashboardPage() {
                     description="Written exam sessions, approvals, results"
                   />
                 )}
-                <SecondaryCard
-                  href="/clinical/compliance"
-                  icon={FileCheck}
-                  title="Compliance Docs"
-                  description="Immunizations, clearances"
-                />
-                <SecondaryCard
-                  href="/clinical/compliance-tracker"
-                  icon={Shield}
-                  title="Compliance Tracker"
-                  description="Per-student status overview"
-                />
                 <SecondaryCard
                   href="/clinical/emt-tracking"
                   icon={ClipboardList}

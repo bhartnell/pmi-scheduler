@@ -52,11 +52,19 @@ interface Alert {
   program?: string;
 }
 
+interface CohortReadiness {
+  cohort_id: string;
+  cohort_number: number;
+  current_semester: number | null;
+  total: number;
+  ready: number;
+}
+
 // PM Semester definitions (keyed by integer 1-4)
 const PM_SEMESTER_CONFIG: Record<number, { label: string; description: string; color: string; bgColor: string; trackerLink: string }> = {
   4: { label: 'S4 - Internship', description: 'Field internship phase', color: 'text-purple-700 dark:text-purple-400', bgColor: 'bg-purple-100 dark:bg-purple-900/30', trackerLink: '/clinical/internships' },
   3: { label: 'S3 - Clinicals', description: 'Hospital clinical rotations', color: 'text-blue-700 dark:text-blue-400', bgColor: 'bg-blue-100 dark:bg-blue-900/30', trackerLink: '/clinical/hours' },
-  2: { label: 'S2 - Compliance', description: 'Pre-clinical compliance docs', color: 'text-green-700 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30', trackerLink: '/clinical/compliance' },
+  2: { label: 'S2 - Compliance', description: 'Pre-clinical compliance docs', color: 'text-green-700 dark:text-green-400', bgColor: 'bg-green-100 dark:bg-green-900/30', trackerLink: '/clinical/clinical-tracker' },
   1: { label: 'S1 - Didactic', description: 'Classroom phase', color: 'text-gray-700 dark:text-gray-400', bgColor: 'bg-gray-100 dark:bg-gray-700', trackerLink: '/labs' },
 };
 
@@ -73,6 +81,7 @@ export default function ClinicalOverviewPage() {
     warning: [],
     info: [],
   });
+  const [trackerReadiness, setTrackerReadiness] = useState<CohortReadiness[]>([]);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -109,11 +118,18 @@ export default function ClinicalOverviewPage() {
   const fetchOverviewData = async (showRefreshing = false) => {
     if (showRefreshing) setRefreshing(true);
     try {
-      const res = await fetch('/api/clinical/overview-all');
-      const result = await res.json();
+      const [overviewRes, readinessRes] = await Promise.all([
+        fetch('/api/clinical/overview-all'),
+        fetch('/api/clinical/tracker-readiness'),
+      ]);
+      const result = await overviewRes.json();
       if (result.success) {
         setStudents(result.students || []);
         setAlerts(result.alerts || { critical: [], warning: [], info: [] });
+      }
+      const readinessResult = await readinessRes.json();
+      if (readinessResult.success) {
+        setTrackerReadiness(readinessResult.cohorts || []);
       }
     } catch (error) {
       console.error('Error fetching overview data:', error);
@@ -366,6 +382,32 @@ export default function ClinicalOverviewPage() {
               <div className="text-xs text-gray-500 dark:text-gray-400">Complete</div>
             </div>
           </div>
+
+          {/* Clinical Tracker readiness by cohort — S2 only (pre-clinical compliance phase) */}
+          {semester === '2' && trackerReadiness.length > 0 && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-3 mt-3">
+              <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">
+                Clinical Tracker readiness (Complio + mCE)
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {trackerReadiness
+                  .filter(c => String(c.current_semester ?? '') === semester)
+                  .map(c => (
+                    <Link
+                      key={c.cohort_id}
+                      href={`/clinical/clinical-tracker?cohortId=${c.cohort_id}`}
+                      className={`text-sm px-2.5 py-1 rounded-lg font-medium hover:underline ${
+                        c.ready === c.total
+                          ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400'
+                          : 'bg-gray-50 dark:bg-gray-700/50 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      G{c.cohort_number}: {c.ready}/{c.total} ready
+                    </Link>
+                  ))}
+              </div>
+            </div>
+          )}
 
           {/* Alerts */}
           {(semesterAlerts.critical.length > 0 || semesterAlerts.warning.length > 0) && (

@@ -58,7 +58,6 @@ export async function GET(
       { data: summativeScores },
       { data: attendanceRecords },
       { data: complianceDoc },
-      { data: complianceRecords },
       { data: clinicalHours },
       { data: teamLeadEntries },
     ] = await Promise.all([
@@ -163,19 +162,6 @@ export async function GET(
         .select('*')
         .eq('student_id', studentId)
         .single(),
-
-      // Normalized compliance records
-      supabase
-        .from('student_compliance_records')
-        .select(`
-          id,
-          status,
-          expiration_date,
-          verified_at,
-          doc_type:compliance_document_types!doc_type_id(name, is_required, expiration_months)
-        `)
-        .eq('student_id', studentId)
-        .order('doc_type_id'),
 
       // Clinical hours by department
       supabase
@@ -293,21 +279,12 @@ export async function GET(
     };
 
     // --- Process compliance ---
-    // First try normalized records, fall back to wide-table
+    // student_compliance_docs wide-table only (the normalized
+    // student_compliance_records/compliance_document_types expiry system was
+    // retired 2026-07-01 — Ben doesn't track document expirations).
     let complianceItems: { name: string; status: string; expiration_date: string | null; is_required: boolean }[] = [];
 
-    if (complianceRecords && complianceRecords.length > 0) {
-      complianceItems = complianceRecords.map(r => {
-        const docType = r.doc_type as unknown as { name: string; is_required: boolean; expiration_months: number | null } | null;
-        return {
-          name: docType?.name || 'Unknown Document',
-          status: r.status,
-          expiration_date: r.expiration_date,
-          is_required: docType?.is_required ?? true,
-        };
-      });
-    } else if (complianceDoc) {
-      // Fall back to wide-table format
+    if (complianceDoc) {
       complianceItems = DOC_COLUMNS.map(col => ({
         name: col.label,
         status: complianceDoc[col.key] === true ? 'complete' : 'missing',

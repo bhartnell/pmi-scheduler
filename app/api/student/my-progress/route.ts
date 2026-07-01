@@ -295,60 +295,13 @@ export async function GET(request: NextRequest) {
 
     // -----------------------------------------------
     // 7. Compliance documents
-    //    student_compliance_records + compliance_document_types (normalized)
-    //    Falls back to student_compliance_docs wide-table if records absent
+    //    Removed 2026-07-01: the expiry-tracking Compliance Tracker
+    //    (student_compliance_records + compliance_document_types) was
+    //    retired — Ben doesn't track document expirations. Kept as an
+    //    empty array so the response shape (and any frontend consumer
+    //    expecting compliance[]) stays stable.
     // -----------------------------------------------
-    let compliance: any[] = [];
-
-    try {
-      const { data: docTypes } = await supabase
-        .from('compliance_document_types')
-        .select('id, name, description, is_required, expiration_months, sort_order')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
-
-      const { data: complianceRecords } = await supabase
-        .from('student_compliance_records')
-        .select('id, doc_type_id, status, expiration_date, notes, verified_at')
-        .eq('student_id', studentId);
-
-      if (docTypes && docTypes.length > 0) {
-        const recordMap = new Map<string, any>();
-        (complianceRecords || []).forEach((r) => {
-          recordMap.set(r.doc_type_id, r);
-        });
-
-        compliance = docTypes.map((dt) => {
-          const record = recordMap.get(dt.id);
-          const now = new Date();
-          let status = record?.status || 'missing';
-
-          // Auto-derive expiring/expired from expiration_date if not set
-          if (record?.expiration_date) {
-            const exp = new Date(record.expiration_date);
-            const thirtyDaysOut = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-            if (exp < now) {
-              status = 'expired';
-            } else if (exp < thirtyDaysOut) {
-              status = 'expiring';
-            }
-          }
-
-          return {
-            id: dt.id,
-            name: dt.name,
-            description: dt.description || null,
-            isRequired: dt.is_required,
-            status,
-            expirationDate: record?.expiration_date || null,
-            notes: record?.notes || null,
-            verifiedAt: record?.verified_at || null,
-          };
-        });
-      }
-    } catch {
-      // Tables may not exist yet
-    }
+    const compliance: any[] = [];
 
     // -----------------------------------------------
     // 8. Upcoming labs

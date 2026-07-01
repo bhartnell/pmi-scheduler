@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
@@ -33,7 +33,6 @@ import {
   Flag,
   MessageSquare,
   Plus,
-  Shield,
   CheckCircle,
   AlertTriangle,
   XCircle,
@@ -178,37 +177,6 @@ interface SkillEvalGroup {
   evaluations: SkillEvaluation[];
 }
 
-interface ComplianceDocType {
-  id: string;
-  name: string;
-  description: string | null;
-  is_required: boolean;
-  expiration_months: number | null;
-  sort_order: number;
-  is_active: boolean;
-}
-
-interface ComplianceRecord {
-  id: string;
-  student_id: string;
-  doc_type_id: string;
-  status: 'complete' | 'missing' | 'expiring' | 'expired';
-  expiration_date: string | null;
-  file_path: string | null;
-  file_name: string | null;
-  notes: string | null;
-  verified_by: string | null;
-  verified_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-interface ComplianceItem {
-  doc_type: ComplianceDocType;
-  record: ComplianceRecord | null;
-  effective_status: 'complete' | 'missing' | 'expiring' | 'expired';
-}
-
 const REQUIRED_DOCS = ['mmr', 'vzv', 'hepb', 'tdap', 'covid', 'tb', 'physical', 'insurance', 'bls', 'flu', 'hospital_orient', 'background', 'drug_test'];
 const MCE_MODULES = ['airway', 'respiratory', 'cardiovascular', 'trauma', 'medical', 'obstetrics', 'pediatrics', 'geriatrics', 'behavioral', 'toxicology', 'neurology', 'endocrine', 'immunology', 'infectious', 'operations'];
 
@@ -296,7 +264,7 @@ export default function StudentDetailPage() {
   // Notes state
   const [studentNotes, setStudentNotes] = useState<StudentNote[]>([]);
   const [notesLoading, setNotesLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'compliance' | 'lab-ratings' | 'skills' | 'communications'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'notes' | 'lab-ratings' | 'skills' | 'communications'>('overview');
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   // New note form
   const [newNoteContent, setNewNoteContent] = useState('');
@@ -310,15 +278,6 @@ export default function StudentDetailPage() {
   const [editNoteFlagLevel, setEditNoteFlagLevel] = useState<'yellow' | 'red' | null>(null);
   const [savingEditNote, setSavingEditNote] = useState(false);
 
-  // Compliance state
-  const [complianceItems, setComplianceItems] = useState<ComplianceItem[]>([]);
-  const [complianceLoading, setComplianceLoading] = useState(false);
-  const [complianceSaving, setComplianceSaving] = useState<string | null>(null);
-  const [complianceEditId, setComplianceEditId] = useState<string | null>(null);
-  const [complianceEditExpDate, setComplianceEditExpDate] = useState('');
-  const [complianceEditNotes, setComplianceEditNotes] = useState('');
-  const [complianceEditStatus, setComplianceEditStatus] = useState<'complete' | 'missing' | 'expiring' | 'expired'>('complete');
-  const [complianceVerifying, setComplianceVerifying] = useState<string | null>(null);
 
   // Lab ratings state
   const [labRatings, setLabRatings] = useState<any[]>([]);
@@ -358,7 +317,6 @@ export default function StudentDetailPage() {
       fetchCurrentUser();
       fetchLearningStyle();
       fetchNotes();
-      fetchCompliance();
       fetchLabRatings();
       fetchSkillSignoffs();
       fetchAllSkills();
@@ -510,20 +468,6 @@ export default function StudentDetailPage() {
     }
   };
 
-  const fetchCompliance = async () => {
-    setComplianceLoading(true);
-    try {
-      const res = await fetch(`/api/compliance?student_id=${studentId}`);
-      const data = await res.json();
-      if (data.success) {
-        setComplianceItems(data.items || []);
-      }
-    } catch (error) {
-      console.error('Error fetching compliance:', error);
-    }
-    setComplianceLoading(false);
-  };
-
   const fetchLabRatings = async () => {
     setLabRatingsLoading(true);
     try {
@@ -578,62 +522,6 @@ export default function StudentDetailPage() {
       console.error('Error fetching skill evaluations:', error);
     }
     setSkillEvalsLoading(false);
-  };
-
-  const handleSaveCompliance = async (docTypeId: string) => {
-    setComplianceSaving(docTypeId);
-    try {
-      const res = await fetch('/api/compliance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          student_id: studentId,
-          doc_type_id: docTypeId,
-          status: complianceEditStatus,
-          expiration_date: complianceEditExpDate || null,
-          notes: complianceEditNotes || null,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        await fetchCompliance();
-        setComplianceEditId(null);
-      } else {
-        alert('Failed to save: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Error saving compliance:', error);
-      alert('Failed to save compliance document');
-    }
-    setComplianceSaving(null);
-  };
-
-  const handleVerifyCompliance = async (recordId: string) => {
-    setComplianceVerifying(recordId);
-    try {
-      const res = await fetch('/api/compliance', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: recordId }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        await fetchCompliance();
-      } else {
-        alert('Failed to verify: ' + data.error);
-      }
-    } catch (error) {
-      console.error('Error verifying compliance:', error);
-      alert('Failed to verify document');
-    }
-    setComplianceVerifying(null);
-  };
-
-  const openComplianceEdit = (item: ComplianceItem) => {
-    setComplianceEditId(item.doc_type.id);
-    setComplianceEditStatus(item.record?.status || 'complete');
-    setComplianceEditExpDate(item.record?.expiration_date || '');
-    setComplianceEditNotes(item.record?.notes || '');
   };
 
   const handleSaveLearningStyle = async () => {
@@ -960,8 +848,8 @@ export default function StudentDetailPage() {
 
         {/* On lg+ the profile card + stats move to a sticky right rail while
             the detailed sections (communications, notes, barcode, learning
-            style, skill evaluations…) fill the main column. On mobile
-            everything stacks in DOM order — no regression. */}
+            style, skill evaluationsâ€¦) fill the main column. On mobile
+            everything stacks in DOM order â€” no regression. */}
         <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6 lg:space-y-0 space-y-6">
         <aside className="lg:col-start-2 lg:row-start-1 space-y-6 lg:sticky lg:top-4">
 
@@ -969,7 +857,7 @@ export default function StudentDetailPage() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
           {/* Layout: photo + info side-by-side on sm/md (single-column page),
               but stack vertically on lg+ where this card lives in the 340px
-              right rail — otherwise the info column collapses to ~188px and
+              right rail â€” otherwise the info column collapses to ~188px and
               the action buttons get crushed. */}
           <div className="flex flex-col sm:flex-row lg:flex-col gap-6">
             {/* Photo */}
@@ -1190,7 +1078,7 @@ export default function StudentDetailPage() {
                         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{student.first_name} {student.last_name}</h1>
                         {highestFlagLevel === 'red' && (
                           <span
-                            title="Red flag — see Notes tab"
+                            title="Red flag â€” see Notes tab"
                             className="inline-flex items-center gap-1 px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs font-medium rounded-full"
                           >
                             <Flag className="w-3 h-3" />
@@ -1199,7 +1087,7 @@ export default function StudentDetailPage() {
                         )}
                         {highestFlagLevel === 'yellow' && (
                           <span
-                            title="Yellow flag — see Notes tab"
+                            title="Yellow flag â€” see Notes tab"
                             className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 text-xs font-medium rounded-full"
                           >
                             <Flag className="w-3 h-3" />
@@ -1229,18 +1117,18 @@ export default function StudentDetailPage() {
                       <button onClick={() => setEditing(true)} className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">
                         <Edit2 className="w-5 h-5" />
                       </button>
-                      {/* Lifecycle actions — visible to lead_instructor+.
+                      {/* Lifecycle actions â€” visible to lead_instructor+.
                           Which buttons render depends on the student's
                           current status / program:
-                            • Active student  → Transfer, Mark Graduated
-                            • Withdrawn       → Re-enroll
-                            • Graduated       → Advance to <next-program>
+                            â€¢ Active student  â†’ Transfer, Mark Graduated
+                            â€¢ Withdrawn       â†’ Re-enroll
+                            â€¢ Graduated       â†’ Advance to <next-program>
                                                 (if not already in PM)
                           All three flows write to student_cohort_history.
                       */}
                       {userRole && canManageStudentRoster(userRole) && (() => {
                         const programAbbr = student.cohort?.program?.abbreviation?.toUpperCase();
-                        // Map current program → next program in the EMS
+                        // Map current program â†’ next program in the EMS
                         // ladder. Paramedic is terminal; null means
                         // "no further advancement".
                         const nextProgram =
@@ -1252,7 +1140,7 @@ export default function StudentDetailPage() {
                         const isActive = student.status === 'active';
                         return (
                           <>
-                            {/* Re-enroll — withdrawn only */}
+                            {/* Re-enroll â€” withdrawn only */}
                             {isWithdrawn && (
                               <button
                                 onClick={() => setShowTransferModal({
@@ -1267,7 +1155,7 @@ export default function StudentDetailPage() {
                               </button>
                             )}
 
-                            {/* Advance to next program — only meaningful
+                            {/* Advance to next program â€” only meaningful
                                 for graduated EMT/AEMT students. */}
                             {isGraduated && nextProgram && (
                               <button
@@ -1284,7 +1172,7 @@ export default function StudentDetailPage() {
                               </button>
                             )}
 
-                            {/* Transfer — always available */}
+                            {/* Transfer â€” always available */}
                             <button
                               onClick={() => setShowTransferModal({ mode: 'transfer' })}
                               className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-lg font-medium"
@@ -1294,7 +1182,7 @@ export default function StudentDetailPage() {
                               Transfer
                             </button>
 
-                            {/* Mark as Graduated — active students only */}
+                            {/* Mark as Graduated â€” active students only */}
                             {isActive && (
                               <button
                                 onClick={() => setShowGraduationModal(true)}
@@ -1347,7 +1235,7 @@ export default function StudentDetailPage() {
           </div>
         </div>
 
-        {/* Stats — 4 cols across when full-width on sm/md, 2x2 inside the
+        {/* Stats â€” 4 cols across when full-width on sm/md, 2x2 inside the
             lg+ right rail so each cell keeps a comfortable width. */}
         <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-4">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
@@ -1366,7 +1254,7 @@ export default function StudentDetailPage() {
             <div className="text-lg font-bold text-gray-900 dark:text-white">
               {student.last_team_lead_date
                 ? new Date(student.last_team_lead_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-                : '—'}
+                : 'â€”'}
             </div>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
@@ -1389,7 +1277,7 @@ export default function StudentDetailPage() {
         </div>
 
         </aside>
-        {/* Main column — detailed sections (tabs / notes / evaluations / etc.) */}
+        {/* Main column â€” detailed sections (tabs / notes / evaluations / etc.) */}
         <div className="lg:col-start-1 lg:row-start-1 space-y-6">
 
         {/* Tab Navigation */}
@@ -1429,24 +1317,6 @@ export default function StudentDetailPage() {
               )}
             </button>
             <button
-              onClick={() => setActiveTab('compliance')}
-              className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
-                activeTab === 'compliance'
-                  ? 'border-blue-600 text-blue-600 dark:text-blue-400 dark:border-blue-400'
-                  : 'border-transparent text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-              }`}
-            >
-              <Shield className="w-4 h-4" />
-              Compliance
-              {complianceItems.length > 0 && (() => {
-                const missing = complianceItems.filter(i => i.effective_status === 'missing' || i.effective_status === 'expired').length;
-                const expiring = complianceItems.filter(i => i.effective_status === 'expiring').length;
-                if (missing > 0) return <span className="w-2 h-2 rounded-full bg-red-500 ml-0.5" />;
-                if (expiring > 0) return <span className="w-2 h-2 rounded-full bg-yellow-400 ml-0.5" />;
-                return null;
-              })()}
-            </button>
-            <button
               onClick={() => setActiveTab('skills')}
               className={`flex items-center gap-2 px-5 py-3 text-sm font-medium border-b-2 transition-colors ${
                 activeTab === 'skills'
@@ -1479,204 +1349,6 @@ export default function StudentDetailPage() {
           {activeTab === 'overview' && (
             <div className="p-0">
               {/* placeholder - overview content is rendered below outside this card */}
-            </div>
-          )}
-
-          {/* Compliance Tab Content */}
-          {activeTab === 'compliance' && (
-            <div className="p-5 space-y-4">
-              {complianceLoading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto" />
-                </div>
-              ) : complianceItems.length === 0 ? (
-                <div className="text-center py-10">
-                  <Shield className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">No compliance document types configured.</p>
-                </div>
-              ) : (
-                <>
-                  {/* Overall progress bar */}
-                  {(() => {
-                    const complete = complianceItems.filter(i => i.effective_status === 'complete').length;
-                    const total = complianceItems.length;
-                    const pct = total > 0 ? Math.round((complete / total) * 100) : 0;
-                    return (
-                      <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
-                        <div className="flex justify-between text-sm mb-2">
-                          <span className="font-medium text-gray-700 dark:text-gray-300">
-                            Overall Compliance
-                          </span>
-                          <span className="font-semibold text-gray-900 dark:text-white">
-                            {complete}/{total} documents — {pct}%
-                          </span>
-                        </div>
-                        <div className="h-3 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
-                          <div
-                            className={`h-full transition-all rounded-full ${
-                              pct === 100 ? 'bg-green-500' : pct >= 75 ? 'bg-yellow-500' : 'bg-red-500'
-                            }`}
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Document list */}
-                  <div className="divide-y dark:divide-gray-700 border dark:border-gray-700 rounded-lg overflow-hidden">
-                    {complianceItems.map((item) => {
-                      const isEditing = complianceEditId === item.doc_type.id;
-                      const isSaving = complianceSaving === item.doc_type.id;
-                      const isVerifying = complianceVerifying === item.record?.id;
-                      const status = item.effective_status;
-
-                      return (
-                        <div
-                          key={item.doc_type.id}
-                          className={`p-4 ${
-                            status === 'complete'
-                              ? 'bg-white dark:bg-gray-800'
-                              : status === 'expiring'
-                              ? 'bg-amber-50 dark:bg-amber-900/10'
-                              : 'bg-red-50 dark:bg-red-900/10'
-                          }`}
-                        >
-                          {isEditing ? (
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-2 mb-1">
-                                <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                                <span className="font-medium text-gray-900 dark:text-white">{item.doc_type.name}</span>
-                              </div>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                <div>
-                                  <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Status</label>
-                                  <select
-                                    value={complianceEditStatus}
-                                    onChange={e => setComplianceEditStatus(e.target.value as 'complete' | 'missing' | 'expiring' | 'expired')}
-                                    className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                                  >
-                                    <option value="complete">Complete</option>
-                                    <option value="missing">Missing</option>
-                                    <option value="expiring">Expiring Soon</option>
-                                    <option value="expired">Expired</option>
-                                  </select>
-                                </div>
-                                {item.doc_type.expiration_months && (
-                                  <div>
-                                    <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Expiration Date</label>
-                                    <input
-                                      type="date"
-                                      value={complianceEditExpDate}
-                                      onChange={e => setComplianceEditExpDate(e.target.value)}
-                                      className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                              <div>
-                                <label className="block text-xs text-gray-500 dark:text-gray-400 mb-1">Notes</label>
-                                <input
-                                  type="text"
-                                  value={complianceEditNotes}
-                                  onChange={e => setComplianceEditNotes(e.target.value)}
-                                  placeholder="Optional notes..."
-                                  className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-                                />
-                              </div>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => setComplianceEditId(null)}
-                                  className="px-3 py-1.5 border dark:border-gray-600 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  onClick={() => handleSaveCompliance(item.doc_type.id)}
-                                  disabled={isSaving}
-                                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
-                                >
-                                  {isSaving ? 'Saving...' : 'Save'}
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex items-start justify-between gap-3">
-                              <div className="flex items-start gap-3 flex-1 min-w-0">
-                                {/* Status icon */}
-                                <div className="mt-0.5 shrink-0">
-                                  {status === 'complete' ? (
-                                    <CheckCircle className="w-5 h-5 text-green-500 dark:text-green-400" />
-                                  ) : status === 'expiring' ? (
-                                    <AlertTriangle className="w-5 h-5 text-amber-500 dark:text-amber-400" />
-                                  ) : (
-                                    <XCircle className="w-5 h-5 text-red-500 dark:text-red-400" />
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span className="font-medium text-gray-900 dark:text-white text-sm">
-                                      {item.doc_type.name}
-                                    </span>
-                                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                                      status === 'complete'
-                                        ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                        : status === 'expiring'
-                                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
-                                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-                                    }`}>
-                                      {status === 'complete' ? 'Complete' : status === 'expiring' ? 'Expiring Soon' : status === 'expired' ? 'Expired' : 'Missing'}
-                                    </span>
-                                  </div>
-                                  {item.doc_type.description && (
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{item.doc_type.description}</p>
-                                  )}
-                                  {item.record?.expiration_date && (
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                                      Expires: {new Date(item.record.expiration_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                                    </p>
-                                  )}
-                                  {item.record?.notes && (
-                                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 italic">{item.record.notes}</p>
-                                  )}
-                                  {item.record?.verified_by && (
-                                    <p className="text-xs text-green-600 dark:text-green-400 mt-1">
-                                      Verified by {item.record.verified_by}
-                                      {item.record.verified_at && ` on ${new Date(item.record.verified_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-                              {/* Action buttons */}
-                              <div className="flex gap-1.5 shrink-0">
-                                {item.record && !item.record.verified_by && userRole && hasMinRole(userRole, 'admin') && (
-                                  <button
-                                    onClick={() => handleVerifyCompliance(item.record!.id)}
-                                    disabled={isVerifying}
-                                    className="flex items-center gap-1 px-2 py-1 text-xs bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40 rounded-lg border border-green-200 dark:border-green-800"
-                                    title="Mark as verified"
-                                  >
-                                    <Check className="w-3 h-3" />
-                                    {isVerifying ? '...' : 'Verify'}
-                                  </button>
-                                )}
-                                <button
-                                  onClick={() => openComplianceEdit(item)}
-                                  className="flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg border border-blue-200 dark:border-blue-800"
-                                  title={item.record ? 'Update document' : 'Add document'}
-                                >
-                                  <Upload className="w-3 h-3" />
-                                  {item.record ? 'Update' : 'Add'}
-                                </button>
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
             </div>
           )}
 
@@ -1851,13 +1523,13 @@ export default function StudentDetailPage() {
                             <p className="text-sm text-gray-900 dark:text-white whitespace-pre-wrap">{note.content}</p>
                             <div className="mt-2 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                               <span>{note.author?.name || note.author_email || 'Unknown'}</span>
-                              <span>·</span>
+                              <span>Â·</span>
                               <span title={new Date(note.created_at).toLocaleString()}>
                                 {formatRelativeTime(note.created_at)}
                               </span>
                               {note.updated_at !== note.created_at && (
                                 <>
-                                  <span>·</span>
+                                  <span>Â·</span>
                                   <span className="italic">edited</span>
                                 </>
                               )}
@@ -2068,20 +1740,20 @@ export default function StudentDetailPage() {
         {(student.scrub_top_size || student.scrub_bottom_size) && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
             <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-              <span className="text-lg">👕</span>
+              <span className="text-lg">ðŸ‘•</span>
               Scrub Sizes
             </h2>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Top Size</div>
                 <div className="text-gray-900 dark:text-white font-medium">
-                  {student.scrub_top_size || '—'}
+                  {student.scrub_top_size || 'â€”'}
                 </div>
               </div>
               <div>
                 <div className="text-sm text-gray-500 dark:text-gray-400 mb-1">Bottom Size</div>
                 <div className="text-gray-900 dark:text-white font-medium">
-                  {student.scrub_bottom_size || '—'}
+                  {student.scrub_bottom_size || 'â€”'}
                 </div>
               </div>
             </div>
@@ -2358,10 +2030,10 @@ export default function StudentDetailPage() {
                     </div>
                     <div className="flex gap-2 text-xs">
                       <span className={clinicalTasks.internship.phase1Completed ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}>
-                        {clinicalTasks.internship.phase1Completed ? '✓' : '○'} P1
+                        {clinicalTasks.internship.phase1Completed ? 'âœ“' : 'â—‹'} P1
                       </span>
                       <span className={clinicalTasks.internship.phase2Completed ? 'text-green-600 dark:text-green-400' : 'text-gray-400 dark:text-gray-500'}>
-                        {clinicalTasks.internship.phase2Completed ? '✓' : '○'} P2
+                        {clinicalTasks.internship.phase2Completed ? 'âœ“' : 'â—‹'} P2
                       </span>
                     </div>
                   </>
@@ -2399,7 +2071,7 @@ export default function StudentDetailPage() {
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-400">
                       {new Date(entry.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                      {entry.lab_day.week_number && ` • Week ${entry.lab_day.week_number}, Day ${entry.lab_day.day_number}`}
+                      {entry.lab_day.week_number && ` â€¢ Week ${entry.lab_day.week_number}, Day ${entry.lab_day.day_number}`}
                     </div>
                   </div>
                   {entry.scenario?.category && (
@@ -2437,7 +2109,7 @@ export default function StudentDetailPage() {
                   {group.canonical_skill && (
                     <div className="px-4 py-2 bg-gray-50 dark:bg-gray-750 border-b dark:border-gray-700">
                       <span className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                        {group.canonical_skill.skill_category} — {group.canonical_skill.canonical_name}
+                        {group.canonical_skill.skill_category} â€” {group.canonical_skill.canonical_name}
                       </span>
                     </div>
                   )}
@@ -2475,14 +2147,14 @@ export default function StudentDetailPage() {
                           </span>
                           {ev.team_info && (
                             <span className="px-1.5 py-0.5 rounded text-xs bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
-                              Team — {ev.team_info.team_role === 'leader' ? 'Leader' : `Assistant${ev.team_info.leader_name ? ` (Leader: ${ev.team_info.leader_name})` : ''}`}
+                              Team â€” {ev.team_info.team_role === 'leader' ? 'Leader' : `Assistant${ev.team_info.leader_name ? ` (Leader: ${ev.team_info.leader_name})` : ''}`}
                             </span>
                           )}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                           {new Date(ev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          {ev.evaluator?.name && ` — ${ev.evaluator.name}`}
-                          {ev.skill_sheet?.source && ` — ${ev.skill_sheet.source}`}
+                          {ev.evaluator?.name && ` â€” ${ev.evaluator.name}`}
+                          {ev.skill_sheet?.source && ` â€” ${ev.skill_sheet.source}`}
                         </div>
                         {ev.notes && (
                           <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 line-clamp-2">{ev.notes}</p>
@@ -2567,7 +2239,7 @@ export default function StudentDetailPage() {
         </div>
         {/* /end profile sidebar layout */}
 
-        {/* Cohort transfer history — only renders when there's history */}
+        {/* Cohort transfer history â€” only renders when there's history */}
         <CohortHistorySection ref={cohortHistoryRef} studentId={studentId} />
 
       </main>

@@ -1,5 +1,6 @@
 # PMI EMS Scheduler — Site Map
-> Refreshed 2026-06-29 (LVFR day index redirect added; Clinical Tracker promoted to primary card).
+> Refreshed 2026-07-01 (Compliance Docs + expiry Compliance Tracker removed, consolidated into Clinical Tracker).
+> Previously refreshed 2026-06-29 (LVFR day index redirect added; Clinical Tracker promoted to primary card).
 > Previously refreshed 2026-06-09 (Exam Self-Scheduling pages added).
 
 ## Exam Self-Scheduling (final written exam)
@@ -252,8 +253,7 @@ Canonical home for lab day operations. 38 pages.
 | `/clinical/aemt-tracking`, `/clinical/emt-tracking` | Pre-clinical tracking |
 | `/clinical/affiliations`, `/clinical/agencies` | Partner mgmt |
 | `/clinical/capacity` | Site capacity |
-| `/clinical/compliance`, `/clinical/compliance-tracker` | Compliance |
-| `/clinical/clinical-tracker` | Complio + mCE two-tab checklist with 3-state BG/DT, aggregation, print view |
+| `/clinical/clinical-tracker` | Complio + mCE two-tab checklist with 3-state BG/DT, aggregation, print view — the single Compliance system (redirects: `/clinical/compliance`, `/clinical/compliance-tracker` → here, removed 2026-07-01) |
 | `/clinical/hours` | Hours log |
 | `/clinical/internships` + subpages | Internship pipeline |
 | `/clinical/mce` | MCE evals |

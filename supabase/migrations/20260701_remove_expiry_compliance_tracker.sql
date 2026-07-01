@@ -1,0 +1,47 @@
+-- Migration: remove_expiry_compliance_tracker
+-- Removes the "expiry Compliance Tracker" system — built on a wrong premise
+-- (Ben does not track document expiration dates; this was never populated
+-- from his actual spreadsheet). Verified empty before removal:
+--   student_compliance_records: 0 rows (never populated)
+--   compliance_document_types:  9 rows (type definitions only, no student PII)
+-- The KEPT system (Clinical Tracker, /clinical/clinical-tracker) lives in
+-- student_compliance_docs + student_mce_modules and is untouched by this
+-- migration — those tables/columns are NOT modified here.
+--
+-- Run with --backup=student_compliance_records,compliance_document_types
+-- per CLAUDE.md Migration Reversibility (destructive op needs a restore point
+-- even though both tables are effectively empty of real student data).
+
+DROP TABLE IF EXISTS student_compliance_records;
+DROP TABLE IF EXISTS compliance_document_types;
+
+-- ROLLBACK:
+-- CREATE TABLE compliance_document_types (
+--   id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+--   name               text NOT NULL,
+--   description        text,
+--   is_required        boolean DEFAULT true,
+--   expiration_months  integer,
+--   sort_order         integer DEFAULT 0,
+--   is_active          boolean DEFAULT true,
+--   created_at         timestamptz DEFAULT now()
+-- );
+-- CREATE TABLE student_compliance_records (
+--   id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+--   student_id       uuid NOT NULL,
+--   doc_type_id      uuid NOT NULL,
+--   status           text NOT NULL DEFAULT 'missing',
+--   expiration_date  date,
+--   file_path        text,
+--   file_name        text,
+--   notes            text,
+--   verified_by      text,
+--   verified_at      timestamptz,
+--   created_at       timestamptz DEFAULT now(),
+--   updated_at       timestamptz DEFAULT now()
+-- );
+-- To fully restore DATA (not just schema), instead recover from the
+-- _backup_student_compliance_records_<timestamp> /
+-- _backup_compliance_document_types_<timestamp> restore-point tables
+-- created by --backup at migration time (both were empty/type-defs-only
+-- anyway, so schema-only recreation above is equivalent for this migration).

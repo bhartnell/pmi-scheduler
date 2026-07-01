@@ -410,6 +410,20 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
 
+      // --- Clinical consolidation 2026-07-01: expiry Compliance Tracker
+      // (wrong premise — Ben doesn't track expirations) + superseded
+      // Compliance Docs page removed; both folded into Clinical Tracker. ---
+      {
+        source: '/clinical/compliance-tracker',
+        destination: '/clinical/clinical-tracker',
+        permanent: true,
+      },
+      {
+        source: '/clinical/compliance',
+        destination: '/clinical/clinical-tracker',
+        permanent: true,
+      },
+
       // --- Skill sheets → /academics ---
       {
         source: '/skill-sheets',

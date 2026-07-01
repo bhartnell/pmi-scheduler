@@ -47,7 +47,6 @@ const ROUTE_LABELS: Record<string, string> = {
   'clinical/internships/cohort': 'Cohort',
   'clinical/hours': 'Clinical Hours',
   'clinical/preceptors': 'Preceptors',
-  'clinical/compliance': 'Compliance',
   'clinical/site-visits': 'Site Visits',
   'clinical/summative-evaluations': 'Summative Evaluations',
   'clinical/affiliations': 'Affiliations',
@@ -134,7 +133,6 @@ const ROUTE_LABELS: Record<string, string> = {
   // Clinical sub-pages
   'clinical/aemt-tracking': 'AEMT Tracking',
   'clinical/capacity': 'Capacity',
-  'clinical/compliance-tracker': 'Compliance Tracker',
   'clinical/emt-tracking': 'EMT Tracking',
   'clinical/mce': 'MCE',
   'clinical/overview': 'Overview',

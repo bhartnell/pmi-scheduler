@@ -923,6 +923,16 @@
 
 #### `student_compliance_docs`
 
+Backs the Clinical Tracker (`/clinical/clinical-tracker`, Complio tab) — the
+KEPT system. `complio_complete` / `mce_complete` are Rae's manual per-student
+master checkboxes (not auto-computed) and are the completion source for the
+`/api/clinical/tracker-readiness` rollup used on `/clinical/overview`.
+`background_check_complete` / `drug_test_complete` (booleans, below) are
+**RETIRED 2026-07-01** — superseded by the 3-state `background_check_status`
+/ `drug_test_status` fields; left in the DB per archive-don't-delete (their
+only writer, the removed Compliance Docs page, is gone; portfolio/
+clinical-tasks routes still read them as a frozen historical snapshot).
+
 | Column | Type | Nullable | Default | Notes |
 |--------|------|----------|---------|-------|
 | id | uuid | NO | gen_random_uuid() | PK |
@@ -998,43 +1008,19 @@
 - `Allow authenticated users to update compliance docs` (UPDATE, permissive, roles: {authenticated})
 - `Allow authenticated users to view compliance docs` (SELECT, permissive, roles: {authenticated})
 
-#### `student_compliance_records`
-
-| Column | Type | Nullable | Default | Notes |
-|--------|------|----------|---------|-------|
-| id | uuid | NO | gen_random_uuid() | PK |
-| student_id | uuid | NO |  |  |
-| doc_type_id | uuid | NO |  |  |
-| status | text | NO | 'missing'::text |  |
-| expiration_date | date | YES |  |  |
-| file_path | text | YES |  |  |
-| file_name | text | YES |  |  |
-| notes | text | YES |  |  |
-| verified_by | text | YES |  |  |
-| verified_at | timestamptz | YES |  |  |
-| created_at | timestamptz | YES | now() |  |
-| updated_at | timestamptz | YES | now() |  |
-
-**Foreign Keys:**
-- `student_id` -> `students.id` (`student_compliance_records_student_id_fkey`)
-- `doc_type_id` -> `compliance_document_types.id` (`student_compliance_records_doc_type_id_fkey`)
-
-**Unique Constraints:**
-- `student_compliance_records_student_id_doc_type_id_key`: (student_id, doc_type_id)
-
-**Check Constraints:**
-- `student_compliance_records_status_check`: `((status = ANY (ARRAY['complete'::text, 'missing'::text, 'expiring'::text, 'expired'::text])))`
-
-**Indexes:**
-- `idx_compliance_records_expiration`: `CREATE INDEX idx_compliance_records_expiration ON public.student_compliance_records USING btree (expiration_date)`
-- `idx_compliance_records_status`: `CREATE INDEX idx_compliance_records_status ON public.student_compliance_records USING btree (status)`
-- `idx_compliance_records_student`: `CREATE INDEX idx_compliance_records_student ON public.student_compliance_records USING btree (student_id)`
-- `student_compliance_records_student_id_doc_type_id_key`: `CREATE UNIQUE INDEX student_compliance_records_student_id_doc_type_id_key ON public.student_compliance_records USING btree (student_id, doc_type_id)`
-
-**RLS Policies:**
-- `Allow authenticated insert of compliance records` (INSERT, permissive, roles: {authenticated})
-- `Allow authenticated read of compliance records` (SELECT, permissive, roles: {authenticated})
-- `Allow authenticated update of compliance records` (UPDATE, permissive, roles: {authenticated})
+> **REMOVED 2026-07-01** — `student_compliance_records` was dropped
+> (migration `20260701_remove_expiry_compliance_tracker.sql`) along with the
+> expiry-tracking "Compliance Tracker" (`/clinical/compliance-tracker`) and
+> the superseded "Compliance Docs" page (`/clinical/compliance`) — built on
+> a wrong premise; Ben doesn't track document expirations. Table was empty
+> (0 rows, never populated); backed up to
+> `_backup_student_compliance_records_20260701050645` before drop anyway,
+> per Migration Reversibility. The kept Clinical Tracker
+> (`/clinical/clinical-tracker`) lives in `student_compliance_docs` /
+> `student_mce_modules`, unaffected — see those tables' entries. New API
+> `GET /api/clinical/tracker-readiness` rolls up per-cohort Clinical Tracker
+> completion (`complio_complete && mce_complete`) for the phase-segmented
+> overview (`/clinical/overview`, S2 section).
 
 #### `student_field_rides`
 
@@ -6902,21 +6888,14 @@
 
 ### Compliance & Certifications
 
-#### `compliance_document_types`
-
-| Column | Type | Nullable | Default | Notes |
-|--------|------|----------|---------|-------|
-| id | uuid | NO | gen_random_uuid() | PK |
-| name | text | NO |  |  |
-| description | text | YES |  |  |
-| is_required | boolean | YES | true |  |
-| expiration_months | integer | YES |  |  |
-| sort_order | integer | YES | 0 |  |
-| is_active | boolean | YES | true |  |
-| created_at | timestamptz | YES | now() |  |
-
-**RLS Policies:**
-- `Allow authenticated read of doc types` (SELECT, permissive, roles: {authenticated})
+> **REMOVED 2026-07-01** — `compliance_document_types` was dropped
+> (migration `20260701_remove_expiry_compliance_tracker.sql`) along with the
+> expiry-tracking "Compliance Tracker" (`/clinical/compliance-tracker`) —
+> built on a wrong premise; Ben doesn't track document expirations. 9 rows
+> (type definitions only, no student PII) backed up to
+> `_backup_compliance_document_types_20260701050645` before drop. The kept
+> Clinical Tracker (`/clinical/clinical-tracker`) lives in
+> `student_compliance_docs` / `student_mce_modules`, unaffected.
 
 #### `ce_records`
 
