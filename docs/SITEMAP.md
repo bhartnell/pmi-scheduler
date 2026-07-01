@@ -180,7 +180,7 @@ Canonical home for cohort + student + planner workflows. 22 pages.
 
 | Path | Notes |
 |------|-------|
-| `/academics/cohorts` | Cohort list |
+| `/academics/cohorts` | Cohort list — each row has a Graduate toggle (`cohorts.status`, added 2026-07-01) alongside the existing Active/Archive toggles |
 | `/academics/cohorts/[id]` | Cohort hub with **Generate Lab Days** (Fill gaps mode + Force Regenerate gate), Update from Template, etc. |
 | `/academics/cohorts/[id]/calendar` | Cohort calendar view |
 | `/academics/cohorts/[id]/completion` | Completion tracking |
@@ -249,7 +249,7 @@ Canonical home for lab day operations. 38 pages.
 
 | Path | Notes |
 |------|-------|
-| `/clinical` | Hub — now leads with a phase-segmented readiness section (cohorts.current_semester S1-S4, Clinical Tracker ready/total for S1/S2 via `/api/clinical/tracker-readiness`, cohort+student counts for S3/S4) above the existing workflow/tool cards, added 2026-07-01 |
+| `/clinical` | Hub — redesigned 2026-07-01: fast mobile-friendly "Log a Hospital Visit" quick-access banner at top (field exception to desktop-first) → phase-segmented landing (cohorts.current_semester S1-S4, always renders all 4 tiles with placeholders when empty; S1/S2 show Clinical Tracker ready/total via `/api/clinical/tracker-readiness`; S4 shows a read-only internship phase-1/phase-2/at-risk rollup grouped from `/api/clinical/internships`) → collapsed Graduated section (cohorts with `cohorts.status='graduated'`, still clickable) → existing workflow/tool cards |
 | `/clinical/aemt-tracking`, `/clinical/emt-tracking` | Pre-clinical tracking |
 | `/clinical/affiliations`, `/clinical/agencies` | Partner mgmt |
 | `/clinical/capacity` | Site capacity |

@@ -23,6 +23,7 @@ import {
   Activity,
   Briefcase,
   Home,
+  GraduationCap,
 } from 'lucide-react';
 import { canManageCohorts, type Role } from '@/lib/permissions';
 
@@ -39,6 +40,7 @@ interface Cohort {
   expected_end_date: string | null;
   is_active: boolean;
   is_archived: boolean;
+  status: 'active' | 'graduated';
   student_count: number;
   program: Program;
   current_semester: number | null;
@@ -296,6 +298,38 @@ export default function CohortManagementPage() {
       }
     } catch (error) {
       console.error('Error toggling active:', error);
+    }
+  };
+
+  // Cohort-level "graduated" status — pulls the whole cohort out of the
+  // active S1-S4 phase view on the clinical overview hub into a separate
+  // Graduated section, still reachable. Distinct from per-student
+  // graduation (students.status) — a cohort can have individually-graduated
+  // students well before the cohort itself is marked graduated. Not the
+  // same as archiving (is_archived), which stays the separate final
+  // "put away" step.
+  const handleToggleGraduated = async (cohort: Cohort) => {
+    const graduating = cohort.status !== 'graduated';
+    const action = graduating ? 'mark as graduated' : 'un-graduate (return to active)';
+    if (!confirm(`Are you sure you want to ${action} ${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)}?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/lab-management/cohorts/${cohort.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: graduating ? 'graduated' : 'active' }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setCohorts(cohorts.map(c => c.id === cohort.id ? { ...c, status: graduating ? 'graduated' : 'active' } : c));
+      } else {
+        alert('Failed to update: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error toggling graduated status:', error);
     }
   };
 
@@ -730,6 +764,12 @@ export default function CohortManagementPage() {
                                   Archived
                                 </span>
                               )}
+                              {cohort.status === 'graduated' && (
+                                <span className="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 text-xs rounded flex items-center gap-1">
+                                  <GraduationCap className="w-3 h-3" />
+                                  Graduated
+                                </span>
+                              )}
                             </div>
                             <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-3 flex-wrap">
                               <span className="flex items-center gap-1">
@@ -768,6 +808,13 @@ export default function CohortManagementPage() {
                                 title="Edit dates"
                               >
                                 <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleToggleGraduated(cohort)}
+                                className={`p-2 rounded ${cohort.status === 'graduated' ? 'text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30' : 'text-gray-500 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400'}`}
+                                title={cohort.status === 'graduated' ? 'Un-graduate (return to active)' : 'Mark as graduated'}
+                              >
+                                <GraduationCap className="w-4 h-4" />
                               </button>
                               <button
                                 onClick={() => handleToggleActive(cohort)}

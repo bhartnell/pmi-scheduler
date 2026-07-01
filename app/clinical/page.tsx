@@ -6,12 +6,12 @@ import { useEffect, useState, type ComponentType } from 'react';
 import Link from 'next/link';
 import {
   ChevronRight,
+  ChevronDown,
   Home,
   Briefcase,
   Users,
   Building2,
   ClipboardList,
-  TrendingUp,
   Clock,
   LayoutDashboard,
   GraduationCap,
@@ -44,6 +44,11 @@ interface PhaseCohort {
   studentCount: number;
   ready: number | null;
   total: number | null;
+  // S4 only — read-only rollup from /api/clinical/internships, grouped
+  // client-side by cohort_id. Feeds the internship tracker; never writes.
+  internPhase1: number | null;
+  internPhase2: number | null;
+  internAtRisk: number | null;
 }
 
 interface TrackerReadinessCohort {
@@ -59,16 +64,23 @@ interface CohortApiRow {
   cohort_number: number;
   current_semester: number | null;
   student_count: number;
+  status?: 'active' | 'graduated';
   program?: { abbreviation: string | null } | null;
+}
+
+interface InternshipRow {
+  cohort_id: string | null;
+  current_phase: string | null;
+  status: string | null;
 }
 
 // Phase labels for the readiness rollup. S1/S2 = clinical-prep (Complio/mCE
 // tracker readiness), S3 = hospital clinicals, S4 = field internship.
-const PHASE_LABELS: Record<number, { label: string; trackerLink: string }> = {
-  1: { label: 'S1 · Didactic', trackerLink: '/clinical/clinical-tracker' },
-  2: { label: 'S2 · Compliance', trackerLink: '/clinical/clinical-tracker' },
-  3: { label: 'S3 · Clinicals', trackerLink: '/clinical/hours' },
-  4: { label: 'S4 · Internship', trackerLink: '/clinical/internships' },
+const PHASE_LABELS: Record<number, { label: string; trackerLink: string; placeholder: string }> = {
+  1: { label: 'S1 · Didactic', trackerLink: '/clinical/clinical-tracker', placeholder: 'No cohorts in the didactic phase' },
+  2: { label: 'S2 · Compliance', trackerLink: '/clinical/clinical-tracker', placeholder: 'No cohorts in the compliance-prep phase' },
+  3: { label: 'S3 · Clinicals', trackerLink: '/clinical/hours', placeholder: 'No cohorts in the clinical phase — hospital visits, hours, and rotation stats will show here' },
+  4: { label: 'S4 · Internship', trackerLink: '/clinical/internships', placeholder: 'No cohorts in the internship phase' },
 };
 
 export default function ClinicalDashboardPage() {
@@ -88,7 +100,9 @@ export default function ClinicalDashboardPage() {
     totalInternships: 0,
   });
   const [phaseCohorts, setPhaseCohorts] = useState<PhaseCohort[]>([]);
+  const [graduatedCohorts, setGraduatedCohorts] = useState<PhaseCohort[]>([]);
   const [phaseLoading, setPhaseLoading] = useState(true);
+  const [showGraduated, setShowGraduated] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -152,20 +166,39 @@ export default function ClinicalDashboardPage() {
         atRisk,
         totalInternships: internships.length,
       });
+
+      // Read-only per-cohort internship rollup for the S4 phase card — the
+      // internship page itself stays the write surface; this just groups
+      // the same data client-side by cohort_id.
+      const internshipsByCohort = new Map<string, { phase1: number; phase2: number; atRisk: number }>();
+      (internships as InternshipRow[]).forEach((i) => {
+        if (!i.cohort_id) return;
+        const entry = internshipsByCohort.get(i.cohort_id) || { phase1: 0, phase2: 0, atRisk: 0 };
+        if (i.current_phase === 'phase_1_mentorship') entry.phase1++;
+        if (i.current_phase === 'phase_2_evaluation') entry.phase2++;
+        if (i.status === 'at_risk') entry.atRisk++;
+        internshipsByCohort.set(i.cohort_id, entry);
+      });
+
+      await fetchPhaseData(internshipsByCohort);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
     setLoading(false);
-    fetchPhaseData();
   };
 
   // Phase-segmented readiness rollup — organized by cohorts.current_semester
   // (S1-S4), not program type. S1/S2 show Clinical Tracker Complio/mCE
-  // readiness (ready/total); S3/S4 (no per-student readiness signal yet)
-  // show cohort + active-student counts, linking into the deeper page for
-  // detail. Replaces the old raw preceptor/site counts as the at-a-glance
+  // readiness (ready/total); S3 shows cohort + student counts (clinical
+  // markers land here once cohorts exist); S4 shows a read-only internship
+  // rollup (phase1/phase2/at-risk) grouped from /api/clinical/internships.
+  // Cohorts with status='graduated' are pulled out of the active phase view
+  // entirely and surfaced separately in the collapsed Graduated section.
+  // Replaces the old raw preceptor/site counts as the at-a-glance
   // "what's actionable" view Ben lands on.
-  const fetchPhaseData = async () => {
+  const fetchPhaseData = async (
+    internshipsByCohort: Map<string, { phase1: number; phase2: number; atRisk: number }>
+  ) => {
     setPhaseLoading(true);
     try {
       const [cohortsRes, readinessRes] = await Promise.all([
@@ -186,19 +219,23 @@ export default function ClinicalDashboardPage() {
         const pmCohorts = (cohortsData.cohorts as CohortApiRow[] || []).filter(
           (c) => c.program?.abbreviation === 'PM' || c.program?.abbreviation === 'PMD'
         );
-        setPhaseCohorts(
-          pmCohorts.map((c) => {
-            const readiness = readinessByCohort.get(c.id);
-            return {
-              cohort_id: c.id,
-              cohort_number: c.cohort_number,
-              current_semester: c.current_semester ?? null,
-              studentCount: c.student_count || 0,
-              ready: readiness?.ready ?? null,
-              total: readiness?.total ?? null,
-            };
-          })
-        );
+        const toPhaseCohort = (c: CohortApiRow): PhaseCohort => {
+          const readiness = readinessByCohort.get(c.id);
+          const intern = internshipsByCohort.get(c.id);
+          return {
+            cohort_id: c.id,
+            cohort_number: c.cohort_number,
+            current_semester: c.current_semester ?? null,
+            studentCount: c.student_count || 0,
+            ready: readiness?.ready ?? null,
+            total: readiness?.total ?? null,
+            internPhase1: intern?.phase1 ?? null,
+            internPhase2: intern?.phase2 ?? null,
+            internAtRisk: intern?.atRisk ?? null,
+          };
+        };
+        setPhaseCohorts(pmCohorts.filter((c) => c.status !== 'graduated').map(toPhaseCohort));
+        setGraduatedCohorts(pmCohorts.filter((c) => c.status === 'graduated').map(toPhaseCohort));
       }
     } catch (error) {
       console.error('Error fetching phase readiness data:', error);
@@ -242,72 +279,45 @@ export default function ClinicalDashboardPage() {
       </div>
 
       <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Quick Stats — lead_instructor+ only */}
+        {/* Hospital Visit Log — fast, mobile-friendly quick access. Field
+            exception to desktop-first (CLAUDE.md UI Layout Rule): this is
+            the one action instructors realistically do FROM a phone while
+            standing at a clinical site, so it gets a prominent, thumb-sized
+            entry point right at the top rather than living inside "More
+            clinical tools" like everything else. The full Site Visits page
+            (filters/export/management) stays desktop-first as-is below. */}
         {effectiveRole && canAccessClinical(effectiveRole) && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+          <Link
+            href="/clinical/site-visits"
+            className="flex items-center justify-between gap-3 bg-teal-600 hover:bg-teal-700 text-white rounded-xl shadow-lg px-5 py-4 mb-6 transition-colors min-h-[44px]"
+          >
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
-                <Users className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-              </div>
+              <Hospital className="w-6 h-6 flex-shrink-0" />
               <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.activePreceptors}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Preceptors</div>
+                <div className="font-semibold">Log a Hospital Visit</div>
+                <div className="text-teal-100 text-xs">Fast entry — works well on your phone in the field</div>
               </div>
             </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                <Hospital className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalClinicalSites}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Clinical Sites</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-lg">
-                <Ambulance className="w-5 h-5 text-orange-600 dark:text-orange-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.totalInternshipAgencies}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">Field Agencies</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900 dark:text-white">{stats.inPhase1 + stats.inPhase2}</div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">In Internship</div>
-              </div>
-            </div>
-          </div>
-        </div>
+            <ChevronRight className="w-5 h-5 flex-shrink-0" />
+          </Link>
         )}
 
-        {/* Phase-segmented readiness — organized by cohorts.current_semester
+        {/* Phase-segmented landing — organized by cohorts.current_semester
             (S1-S4), not program type. This is the "what's actionable now"
-            view Ben lands on; the old raw preceptor/site counts stayed in
-            Quick Stats above. */}
-        {effectiveRole && canAccessClinical(effectiveRole) && !phaseLoading && Object.keys(phasesBySemester).length > 0 && (
+            view Ben lands on, replacing the old raw preceptor/site/internship
+            counts. Every phase tile always renders (even with 0 cohorts) so
+            the page reads as "here's the whole pipeline," not just whatever
+            happens to be populated today. */}
+        {effectiveRole && canAccessClinical(effectiveRole) && !phaseLoading && (
           <div className="mb-10">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4">
               Clinical readiness by phase
             </h2>
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[1, 2, 3, 4].filter((sem) => phasesBySemester[sem]?.length).map((sem) => {
-                const cohorts = phasesBySemester[sem];
+              {[1, 2, 3, 4].map((sem) => {
+                const cohorts = phasesBySemester[sem] || [];
                 const phase = PHASE_LABELS[sem];
+                const isS4 = sem === 4;
                 return (
                   <div key={sem} className="bg-white dark:bg-gray-800 rounded-xl shadow p-4">
                     <div className="flex items-center justify-between mb-3">
@@ -316,28 +326,81 @@ export default function ClinicalDashboardPage() {
                         Open <ChevronRight className="w-3 h-3" />
                       </Link>
                     </div>
-                    <div className="space-y-1.5">
-                      {cohorts.map((c) => (
-                        <Link
-                          key={c.cohort_id}
-                          href={`${phase.trackerLink}?cohortId=${c.cohort_id}`}
-                          className="flex items-center justify-between text-sm px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                        >
-                          <span className="text-gray-700 dark:text-gray-300">Cohort {c.cohort_number}</span>
-                          {c.total != null ? (
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c.ready === c.total ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                              {c.ready}/{c.total} ready
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-500 dark:text-gray-400">{c.studentCount} students</span>
-                          )}
-                        </Link>
-                      ))}
-                    </div>
+                    {cohorts.length === 0 ? (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 italic py-2">{phase.placeholder}</p>
+                    ) : (
+                      <div className="space-y-1.5">
+                        {cohorts.map((c) => (
+                          <Link
+                            key={c.cohort_id}
+                            href={isS4 ? `/clinical/internships/cohort/${c.cohort_id}` : `${phase.trackerLink}?cohortId=${c.cohort_id}`}
+                            className="flex items-center justify-between text-sm px-2 py-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50"
+                          >
+                            <span className="text-gray-700 dark:text-gray-300">Cohort {c.cohort_number}</span>
+                            {isS4 && c.internPhase1 != null ? (
+                              <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                                {c.internAtRisk ? (
+                                  <span className="px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 font-medium">
+                                    {c.internAtRisk} at risk
+                                  </span>
+                                ) : null}
+                                <span>P1 {c.internPhase1} · P2 {c.internPhase2}</span>
+                              </span>
+                            ) : c.total != null ? (
+                              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c.ready === c.total ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                                {c.ready}/{c.total} ready
+                              </span>
+                            ) : (
+                              <span className="text-xs text-gray-500 dark:text-gray-400">{c.studentCount} students</span>
+                            )}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Graduated cohorts — collapsed by default. Pulled out of the
+            active S1-S4 phase view above (status='graduated' on cohorts,
+            set via the "Graduate" toggle on the Cohort Manager), but still
+            fully clickable/accessible here. Distinct from archiving
+            (is_archived) — archive stays the separate final "put away"
+            step; graduating just moves a finished cohort out of the active
+            pipeline view. */}
+        {effectiveRole && canAccessClinical(effectiveRole) && !phaseLoading && graduatedCohorts.length > 0 && (
+          <div className="mb-10">
+            <button
+              type="button"
+              onClick={() => setShowGraduated((v) => !v)}
+              className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-4 hover:text-gray-700 dark:hover:text-gray-200"
+            >
+              {showGraduated ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+              <GraduationCap className="w-4 h-4" />
+              Graduated ({graduatedCohorts.length})
+            </button>
+            {showGraduated && (
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {graduatedCohorts.map((c) => (
+                  <div key={c.cohort_id} className="bg-white dark:bg-gray-800 rounded-xl shadow p-4 opacity-90">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Cohort {c.cohort_number}</h3>
+                      <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400">
+                        Graduated
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-3 text-xs">
+                      <Link href={`/clinical/clinical-tracker?cohortId=${c.cohort_id}`} className="text-teal-600 dark:text-teal-400 hover:underline">Clinical Tracker</Link>
+                      <Link href={`/clinical/internships/cohort/${c.cohort_id}`} className="text-teal-600 dark:text-teal-400 hover:underline">Internships</Link>
+                      <Link href={`/clinical/hours?cohortId=${c.cohort_id}`} className="text-teal-600 dark:text-teal-400 hover:underline">Hours</Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

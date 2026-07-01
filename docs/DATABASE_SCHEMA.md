@@ -407,9 +407,13 @@
 | archive_summary | jsonb | YES |  | Summary stats at archive time |
 | track_clinical_hours | boolean | YES | false |  |
 | is_external_program | boolean | NO | false |  |
+| status | text | NO | 'active' | `'active' \| 'graduated'` (CHECK). Cohort-level — pulls a whole cohort out of the active S1-S4 phase view on `/clinical` into the collapsed Graduated section, still reachable. Distinct from per-student graduation (`students.status`) and from `is_archived` (the separate final "put away" step). Migration `20260701_cohorts_status_graduated.sql`. |
 
 **Foreign Keys:**
 - `program_id` -> `programs.id` (`cohorts_program_id_fkey`)
+
+**Check Constraints:**
+- `cohorts_status_check`: `((status = ANY (ARRAY['active'::text, 'graduated'::text])))`
 
 **Unique Constraints:**
 - `cohorts_program_id_cohort_number_key`: (cohort_number, program_id)
