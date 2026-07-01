@@ -5,6 +5,7 @@ import { Clock, Wifi, WifiOff, Volume2, VolumeX, AlertTriangle, CheckCircle, Cir
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
 import { formatTime } from '@/lib/utils';
+import { getSupabase } from '@/lib/supabase';
 
 interface TimerBannerProps {
   labDayId: string;
@@ -216,6 +217,30 @@ export default function TimerBanner({
   }, [fetchTimerState, fetchReadyStatus]);
 
   useVisibilityPolling(pollCombined, getPollInterval());
+
+  // Realtime discovery: instant "timer started" for this lab day instead of
+  // waiting on the 30s discovery poll above (see the 2026-05-28 comment on
+  // getPollInterval — this is the exact gap PR #9's GlobalTimerBanner
+  // realtime fix didn't close, since GlobalTimerBanner is deliberately
+  // disabled on /labs/grade/* pages and TimerBanner does its own discovery).
+  // Additive alongside the existing poll, which stays as the fallback.
+  useEffect(() => {
+    if (!labDayId) return;
+
+    const supabase = getSupabase();
+    const channel = supabase
+      .channel(`timer-banner-${labDayId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'lab_timer_state', filter: `lab_day_id=eq.${labDayId}` },
+        () => { fetchTimerState(); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [labDayId, fetchTimerState]);
 
   // Calculate display time from timer state
   useEffect(() => {
