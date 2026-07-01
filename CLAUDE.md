@@ -136,6 +136,25 @@ Scheduled runs that find nothing actionable (queue empty, no errors, no change f
 last run) should **not** send a notification. Silence = all clear. Only notify when
 there is something Ben needs to act on.
 
+### Prompt precedence over scheduled cadence
+
+The hourly Code routine (and Cowork's scan interval) is a **fallback safety
+net** for when Ben isn't actively engaged — not a rate limit on responsiveness.
+
+- **A live prompt from Ben always takes precedence** over waiting for the
+  next scheduled/timer-triggered run. Act on it immediately; don't defer to
+  "the routine will pick it up next cycle."
+- **After finishing a task with idle capacity**, self-feed into the next
+  independent, in-scope board item rather than going idle until the timer
+  pops (see Bucket 1 above — same principle, applied to pacing, not just
+  scope).
+- The webhook forwarder (`app/api/triggers/notion-webhook/route.ts`) exists
+  precisely so board changes fire sooner than the hourly baseline — it's an
+  on-demand layer on top of the timer, not a replacement for prompt
+  precedence.
+- The timer/cadence exists so work still happens when Ben is busy or
+  unavailable to prompt directly — it is the backup path, not the primary one.
+
 ### Reversibility gate status — GREEN (2026-06-30)
 
 Daily Supabase backups + `--backup` snapshot script + `main` branch protection +
