@@ -2612,6 +2612,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 - `Users can delete timer state` (DELETE, permissive, roles: {authenticated})
 - `Users can update timer state` (UPDATE, permissive, roles: {authenticated})
 - `Users can view timer state` (SELECT, permissive, roles: {authenticated})
+- `realtime anon can read timer state` (SELECT, permissive, roles: {anon}) — added 2026-07-01 so the Supabase Realtime websocket (which authenticates as anon since NextAuth doesn't flow a JWT into the Supabase client) can broadcast row changes to GlobalTimerBanner. Table also added to the `supabase_realtime` publication.
 
 #### `lab_week_templates`
 

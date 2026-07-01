@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Clock, ChevronRight, Pause, Play } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { formatTime } from '@/lib/utils';
+import { getSupabase } from '@/lib/supabase';
 
 interface TimerState {
   id: string;
@@ -132,6 +133,30 @@ export default function GlobalTimerBanner() {
   };
   const pollInterval = getPollInterval();
   useVisibilityPolling(fetchActiveTimer, pollInterval);
+
+  // Realtime discovery: instant "timer started elsewhere" updates instead of
+  // waiting on the 60s discovery poll above. Deliberately additive, not a
+  // replacement — the poll above is UNCHANGED (still the 2026-05-26 fix) and
+  // stays as a safety net if the websocket drops or reconnects slowly. Any
+  // INSERT/UPDATE on lab_timer_state just re-runs the existing fetch so we
+  // reuse its parsing/version-tracking logic rather than duplicating it.
+  useEffect(() => {
+    if (!isTimerRelevantPage || hasOwnTimerComponent || sessionExpired) return;
+
+    const supabase = getSupabase();
+    const channel = supabase
+      .channel('global-timer-banner')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'lab_timer_state' },
+        () => { fetchActiveTimer(); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isTimerRelevantPage, hasOwnTimerComponent, sessionExpired, fetchActiveTimer]);
 
   // Add/remove body class and padding when banner is visible
   const isActive = timer && labDay && !isDismissed && timer.status !== 'stopped';
