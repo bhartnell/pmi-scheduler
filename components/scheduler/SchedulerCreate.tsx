@@ -107,7 +107,7 @@ export default function SchedulerCreate({ pollData, onComplete }: SchedulerCreat
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <button
-            onClick={() => { setSchedulingMode('individual'); setView('setup'); }}
+            onClick={() => { setSchedulingMode('individual'); setCreatorSelectedSlots([]); setView('setup'); }}
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 md:p-8 hover:shadow-xl transition-all active:scale-98 text-left"
           >
             <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
@@ -121,7 +121,7 @@ export default function SchedulerCreate({ pollData, onComplete }: SchedulerCreat
             </ul>
           </button>
           <button
-            onClick={() => { setSchedulingMode('group'); setPollConfig(p => ({ ...p, numWeeks: 3 })); setView('setup'); }}
+            onClick={() => { setSchedulingMode('group'); setPollConfig(p => ({ ...p, numWeeks: 3 })); setCreatorSelectedSlots([]); setView('setup'); }}
             className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 md:p-8 hover:shadow-xl transition-all active:scale-98 text-left"
           >
             <div className="flex items-center gap-3 md:gap-4 mb-3 md:mb-4">
@@ -233,7 +233,7 @@ export default function SchedulerCreate({ pollData, onComplete }: SchedulerCreat
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
-          <button onClick={() => setView('mode-select')} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm md:text-base">
+          <button onClick={() => { setCreatorSelectedSlots([]); setView('mode-select'); }} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white text-sm md:text-base">
             <ArrowLeft className="w-4 h-4 inline mr-2" />Back
           </button>
           <button

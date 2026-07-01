@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ClipboardCheck,
   Plus,
@@ -74,8 +74,11 @@ export default function ChecklistAttendance({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cohortId]);
 
+  const fetchedChecklistIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    if (selectedChecklist) {
+    if (selectedChecklist && fetchedChecklistIdRef.current !== selectedChecklist.id) {
+      fetchedChecklistIdRef.current = selectedChecklist.id;
       fetchAttendance(selectedChecklist.id);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

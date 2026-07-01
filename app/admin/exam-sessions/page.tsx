@@ -87,7 +87,7 @@ export default function AdminExamSessionsPage() {
   const [busy, setBusy] = useState(false);
   // Per-session details edit (date/time/seats/Pima/notes). null = no row in edit.
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ date: '', start_time: '', end_time: '', total_spots: 0, pima_computers: 0, notes: '' });
+  const [editForm, setEditForm] = useState({ date: '', start_time: '', end_time: '', total_spots: 0, pima_computers: 0, notes: '', primary_instructor_id: '' });
 
   const load = useCallback(async () => {
     try {
@@ -161,6 +161,7 @@ export default function AdminExamSessionsPage() {
     setEditForm({
       date: s.date, start_time: s.start_time.slice(0, 5), end_time: s.end_time.slice(0, 5),
       total_spots: s.total_spots, pima_computers: s.pima_computers, notes: s.notes ?? '',
+      primary_instructor_id: s.primary_instructor_id ?? '',
     });
   }
 
@@ -179,6 +180,7 @@ export default function AdminExamSessionsPage() {
     await patchSession(s.id, {
       date: editForm.date, start_time: editForm.start_time, end_time: editForm.end_time,
       total_spots: newTotal, pima_computers: newPima, notes: editForm.notes || null,
+      primary_instructor_id: editForm.primary_instructor_id || null,
     });
     setEditingId(null);
   }
@@ -570,6 +572,13 @@ export default function AdminExamSessionsPage() {
                   <label className="text-xs text-gray-600 dark:text-gray-300">Pima Lockdown computers
                     <input type="number" min={0} value={editForm.pima_computers} onChange={e => setEditForm(f => ({ ...f, pima_computers: Number(e.target.value) }))}
                       className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
+                  </label>
+                  <label className="text-xs text-gray-600 dark:text-gray-300">Proctor
+                    <select value={editForm.primary_instructor_id} onChange={e => setEditForm(f => ({ ...f, primary_instructor_id: e.target.value }))}
+                      className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
+                      <option value="">proctor…</option>
+                      {candidates.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
                   </label>
                 </div>
                 <label className="block text-xs text-gray-600 dark:text-gray-300">Notes / location
