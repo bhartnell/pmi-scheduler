@@ -39,6 +39,13 @@ export default function GradingHeader({
   nremtCode,
 }: GradingHeaderProps) {
   const labDay = station.lab_day;
+  // NREMT psychomotor testing (E204 sheet) stays STRICT — full ratings
+  // required before saving. All other sheets are non-blocking (matches the
+  // save-gating logic in app/labs/grade/station/[id]/page.tsx) — this header
+  // Save button previously ignored that distinction and always required
+  // allRated, silently disabling the button on generic sheets even when the
+  // main-page Save buttons allowed the save.
+  const strictNremt = nremtCode === 'E204';
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
@@ -98,7 +105,7 @@ export default function GradingHeader({
 
             <button
               onClick={onSave}
-              disabled={saving || (isSkillsStation ? !selectedStudentId : (!allRated || !selectedGroupId || !teamLeaderId))}
+              disabled={saving || (isSkillsStation ? !selectedStudentId : ((strictNremt && !allRated) || !selectedGroupId || !teamLeaderId))}
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
               {saving ? (
