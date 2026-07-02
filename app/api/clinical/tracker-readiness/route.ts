@@ -13,8 +13,19 @@ import { requireAuth } from '@/lib/api-auth';
 // checkboxes Rae sets in the tracker itself; this endpoint only rolls them
 // up per-cohort, it introduces no new completion criteria.
 //
-// Scope: any cohort that has at least one student_compliance_docs row
-// (i.e. is actually using the Clinical Tracker), not hardcoded by program.
+// Scope: PARAMEDIC (PM/PMD) cohorts only. Complio + mCE "readiness" is a
+// Paramedic S2-compliance-phase concept (see PM_SEMESTER_CONFIG in
+// /clinical/overview/page.tsx — this rollup is labeled "S2 - Compliance").
+// EMT/AEMT cohorts are excluded here even if they happen to have
+// student_compliance_docs rows: they have their own dedicated tracking
+// pages/tables (emt_student_tracking / aemt_student_tracking via
+// /clinical/emt-tracking, /clinical/aemt-tracking), Complio does not apply
+// to them, and Ben does not want automatic "behind" flags for those
+// programs off this rollup (2026-07-02). This matches the pmCohorts filter
+// already applied client-side in /clinical/page.tsx for the same data —
+// applying it here too means every consumer (including
+// /clinical/overview/page.tsx, which was NOT filtering by program) gets it
+// for free.
 // ---------------------------------------------------------------------------
 export async function GET(request: NextRequest) {
   try {
@@ -44,15 +55,27 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: true, cohorts: [] });
     }
 
-    const { data: cohorts } = await supabase
+    const { data: cohortsRaw } = await supabase
       .from('cohorts')
-      .select('id, cohort_number, current_semester')
+      .select('id, cohort_number, current_semester, program:programs(abbreviation)')
       .in('id', trackedCohortIds);
+
+    // Paramedic-only — see file header comment. Excludes EMT/AEMT from the
+    // readiness rollup (and therefore from any "behind" indicator built on
+    // top of it) rather than merely relabeling them.
+    const cohorts = (cohortsRaw || []).filter((c) => {
+      const abbr = (c as unknown as { program: { abbreviation: string } | null }).program?.abbreviation;
+      return abbr === 'PM' || abbr === 'PMD';
+    });
+    const pmCohortIds = cohorts.map((c) => c.id);
+    if (pmCohortIds.length === 0) {
+      return NextResponse.json({ success: true, cohorts: [] });
+    }
 
     const { data: students } = await supabase
       .from('students')
       .select('id, cohort_id')
-      .in('cohort_id', trackedCohortIds)
+      .in('cohort_id', pmCohortIds)
       .eq('status', 'active');
 
     const readyByStudent = new Map<string, boolean>();

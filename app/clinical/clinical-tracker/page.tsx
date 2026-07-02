@@ -24,6 +24,18 @@ interface Cohort {
   cohort_number: number;
   name: string;
   student_count?: number;
+  program?: { id: string; name: string; abbreviation: string } | null;
+}
+
+// Full program label used across ~15 other cohort selectors in the app
+// (e.g. app/api/clinical/site-visits/route.ts, request-coverage,
+// lab-day-roles): "<ABBREVIATION> G<cohort_number>" (e.g. "PM G14",
+// "AEMT G2"). Falls back to the bare name/number if the embedded program
+// row is missing on some row so a data gap here never crashes the page.
+function cohortLabel(c: Cohort): string {
+  const abbr = c.program?.abbreviation;
+  if (abbr) return `${abbr} G${c.cohort_number}`;
+  return c.name || `Cohort ${c.cohort_number}`;
 }
 
 interface ComplioRow {
@@ -545,6 +557,19 @@ export default function ClinicalTrackerPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // AEMT students use mCE only — Complio is not applicable to them (Ben,
+  // 2026-07-02). If the selected cohort is AEMT and the Complio tab is
+  // active, bounce to mCE. Doesn't fire for Paramedic (both tabs apply) or
+  // EMT (tab applicability there is unresolved — see clinical-tracker page
+  // notes / CHANGELOG entry for this date; left as-is, both tabs shown).
+  useEffect(() => {
+    const cohort = cohorts.find(c => c.id === cohortId);
+    if (cohort?.program?.abbreviation === 'AEMT' && tab === 'complio') {
+      setTab('mce');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cohortId, cohorts]);
+
   // ── Save helpers ────────────────────────────────────────────────────────────
 
   const saveComplio = async (studentId: string, field: string, value: unknown) => {
@@ -653,6 +678,8 @@ export default function ClinicalTrackerPage() {
   if (!session) return null;
 
   const currentCohort = cohorts.find(c => c.id === cohortId);
+  // Complio is a Paramedic-only requirement; AEMT students only need mCE.
+  const isAemtCohort = currentCohort?.program?.abbreviation === 'AEMT';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
@@ -682,7 +709,7 @@ export default function ClinicalTrackerPage() {
           >
             {cohorts.map(c => (
               <option key={c.id} value={c.id}>
-                {c.name || `Cohort ${c.cohort_number}`}
+                {cohortLabel(c)}
               </option>
             ))}
           </select>
@@ -690,14 +717,18 @@ export default function ClinicalTrackerPage() {
           {/* Tabs */}
           <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <button
-              onClick={() => setTab('complio')}
+              onClick={() => { if (!isAemtCohort) setTab('complio'); }}
+              disabled={isAemtCohort}
+              title={isAemtCohort ? 'Complio is not applicable for AEMT — mCE only' : undefined}
               className={`px-4 py-2 text-sm font-medium transition-colors ${
-                tab === 'complio'
+                isAemtCohort
+                  ? 'bg-gray-100 dark:bg-gray-700/50 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                  : tab === 'complio'
                   ? 'bg-teal-600 text-white'
                   : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
-              Complio
+              Complio{isAemtCohort ? ' (N/A)' : ''}
             </button>
             <button
               onClick={() => setTab('mce')}
@@ -723,7 +754,7 @@ export default function ClinicalTrackerPage() {
             onClick={() => setShowAgg(v => !v)}
             className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
-            <span>Completion Overview — {currentCohort?.name || 'Selected Cohort'} ({tab === 'complio' ? 'Complio' : 'mCE'})</span>
+            <span>Completion Overview — {currentCohort ? cohortLabel(currentCohort) : 'Selected Cohort'} ({tab === 'complio' ? 'Complio' : 'mCE'})</span>
             {showAgg ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
 
