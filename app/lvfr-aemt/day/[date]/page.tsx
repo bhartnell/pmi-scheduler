@@ -592,7 +592,9 @@ function SessionCard({
 
   // "Day complete" depends only on required items — optional checkoffs and
   // info lines (breaks/lunch/roll call) are excluded from the progress meter.
-  const requiredItems = session.items.filter(i => i.requirement === 'required');
+  // Quiz reviews are always mandatory (feedback ca8caf18) regardless of the
+  // stored requirement value — some legacy rows still say 'optional'.
+  const requiredItems = session.items.filter(i => i.requirement === 'required' || i.item_type === 'quiz');
   const completed = requiredItems.filter(i => i.is_completed).length;
   const total = requiredItems.length;
   const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -689,7 +691,9 @@ function ItemRow({
   onDelete: () => void;
 }) {
   const isInfo = item.requirement === 'info';
-  const isOptional = item.requirement === 'optional';
+  // Quiz reviews are always mandatory (feedback ca8caf18) — some legacy rows
+  // still have requirement='optional' stored; never show the tag for them.
+  const isOptional = item.requirement === 'optional' && item.item_type !== 'quiz';
   const time = formatTimeLabel(item.time_label);
 
   // ── INFO line: no checkbox (breaks, lunch, roll call, transitions) ──

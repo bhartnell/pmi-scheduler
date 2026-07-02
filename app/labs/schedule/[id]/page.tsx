@@ -75,6 +75,7 @@ import DuplicateModals from '@/components/lab-day/DuplicateModals';
 import LabDayPrintView from '@/components/lab-day/LabDayPrintView';
 import LabDayVolunteers from '@/components/lab-day/LabDayVolunteers';
 import LabDayChat from '@/components/lab-day/LabDayChat';
+import SkillCoveragePanel from '@/components/lab-day/SkillCoveragePanel';
 
 export default function LabDayPage() {
   const { data: session, status } = useSession();
@@ -995,7 +996,29 @@ export default function LabDayPage() {
           <Link href={`/academics/students?cohortId=${labDay.cohort.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"><Users className="w-4 h-4" /> View Students</Link>
           <Link href={`/reports/team-leads?cohortId=${labDay.cohort.id}`} className="inline-flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"><ClipboardCheck className="w-4 h-4" /> Team Lead Report</Link>
         </div>
+
+        {/* Skill Coverage — inline on small/medium screens (feedback 16312df5: moved here from the edit page, where it wasn't discoverable). */}
+        <div className="xl:hidden mt-6">
+          <SkillCoveragePanel
+            cohortId={labDay?.cohort?.id || null}
+            defaultExpanded={false}
+            inline
+          />
+        </div>
       </main>
+
+      {/* Skill Coverage — floating right-side reference on xl+ screens. */}
+      {labDay?.cohort?.id && (
+        <aside
+          className="hidden xl:block fixed right-4 top-24 w-80 z-20"
+          aria-label="Skill coverage reference"
+        >
+          <SkillCoveragePanel
+            cohortId={labDay.cohort.id}
+            defaultExpanded={true}
+          />
+        </aside>
+      )}
 
       {editingStation && (<EditStationModal station={editingStation} labDay={labDay} instructors={instructors} locations={locations} calendarAvailability={calendarAvailability} session={session} onClose={() => setEditingStation(null)} onSaved={() => { setEditingStation(null); fetchLabDay({ silent: true }); }} />)}
       {showTimer && <LabTimer labDayId={labDayId} numRotations={labDay.num_rotations} rotationMinutes={labDay.rotation_duration} onClose={() => setShowTimer(false)} isController={true} />}

@@ -180,6 +180,32 @@ sessions doing that at once don't collide on the *same* work. Independent
 parallel work on *different* items is still good — this only prevents two
 sessions grabbing the same one.
 
+### Feedback-status flip discipline (HARD REQUIREMENT)
+
+Bugs are objective — when Code fixes one, it should close the loop itself
+instead of leaving the board to under-report what's actually done. On
+2026-07-02, 20 `feedback_reports` rows showed `status='new'` even though
+~11 had already been fixed in PRs #8–14 — the fixes shipped but the report
+rows were never flipped, so the board looked far more broken than the app
+actually was.
+
+1. **When a code fix corresponds to a `feedback_reports` row**, update that
+   row's `status` to `'resolved'` and set `resolution_notes` (pointing at
+   the fix — file/PR/commit) **as part of the fix**, not a separate
+   follow-up step. `resolved_at` / `resolved_by` should be set too.
+2. **If investigation shows the report isn't actually a code bug** (e.g. an
+   informational banner, a third-party config note), use `status='archived'`
+   with a `resolution_notes` explanation instead of `'resolved'` — don't
+   claim a fix that didn't happen.
+3. **Only surface to Ben the two cases that need him:** a bug needing
+   **clarification** (repro unclear) or **conflicting reports** (two reports
+   want opposite things). Everything else — fix it, flip it, no check-in.
+4. **This is a status UPDATE, not a bulk data UPDATE** — it's scoped to a
+   single row by primary key as part of a fix already in scope. It does not
+   trigger the Migration Reversibility / destructive-ops escalation rules
+   below, which are about broad-predicate `UPDATE`-many / `DELETE` on
+   business data, not narrow status bookkeeping on the report itself.
+
 ### Reversibility gate status — GREEN (2026-06-30)
 
 Daily Supabase backups + `--backup` snapshot script + `main` branch protection +

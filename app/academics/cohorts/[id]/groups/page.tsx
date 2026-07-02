@@ -131,10 +131,12 @@ export default function LabGroupsPage() {
       // Fetch groups with members included in a single request
       const groupsRes = await fetch(`/api/lab-management/groups?cohortId=${cohortId}&include=members`);
       const groupsData = await groupsRes.json();
-      const groupsWithMembers: Group[] = (groupsData.groups || []).map((group: any) => ({
-        ...group,
-        members: group.members || [],
-      }));
+      const groupsWithMembers: Group[] = (groupsData.groups || [])
+        .map((group: any) => ({
+          ...group,
+          members: group.members || [],
+        }))
+        .sort((a: Group, b: Group) => a.group_number - b.group_number);
 
       setGroups(groupsWithMembers);
 

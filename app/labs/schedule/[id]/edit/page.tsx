@@ -23,7 +23,6 @@ import {
   Square,
   UserPlus
 } from 'lucide-react';
-import SkillCoveragePanel from '@/components/lab-day/SkillCoveragePanel';
 
 interface Station {
   id: string;
@@ -1356,28 +1355,7 @@ export default function EditLabDayPage() {
           </div>
         )}
 
-        {/* Skill Coverage — inline on small/medium screens. */}
-        <div className="xl:hidden mt-6">
-          <SkillCoveragePanel
-            cohortId={labDay?.cohort?.id || null}
-            defaultExpanded={false}
-            inline
-          />
-        </div>
       </main>
-
-      {/* Skill Coverage — floating right-side reference on xl+ screens. */}
-      {labDay?.cohort?.id && (
-        <aside
-          className="hidden xl:block fixed right-4 top-24 w-80 z-20"
-          aria-label="Skill coverage reference"
-        >
-          <SkillCoveragePanel
-            cohortId={labDay.cohort.id}
-            defaultExpanded={true}
-          />
-        </aside>
-      )}
 
       {/* Conflict Confirmation Modal */}
       {showConflictModal && (

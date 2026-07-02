@@ -7664,7 +7664,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | page_url | text | YES |  |  |
 | user_email | text | YES |  |  |
 | user_agent | text | YES |  |  |
-| status | text | YES | 'new'::text |  |
+| status | text | YES | 'new'::text | Code flips this to `'resolved'` (with `resolution_notes`) as part of the fix, not a separate step — see CLAUDE.md's Feedback-status flip discipline. `'archived'` is used when a report turns out not to be an actionable code bug. |
 | resolution_notes | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
 | resolved_at | timestamptz | YES |  |  |
