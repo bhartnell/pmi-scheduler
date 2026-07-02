@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Plus,
   Users,
@@ -13,7 +13,8 @@ import {
 import CalendarAvailabilityDot from '@/components/CalendarAvailabilityDot';
 import { canAccessAdmin } from '@/lib/permissions';
 import { useToast } from '@/components/Toast';
-import type { LabDayRole, Instructor } from './types';
+import type { LabDayRole, Instructor, InstructorAvailabilityEntry } from './types';
+import { buildAvailabilityMap, getAvailInfo, availabilitySuffix, isDefaultVisibleGroup } from './instructorAvailability';
 
 interface LabDayRolesSectionProps {
   labDayId: string;
@@ -21,6 +22,11 @@ interface LabDayRolesSectionProps {
   instructors: Instructor[];
   userRole: string | null;
   calendarAvailability: Map<string, { status: 'free' | 'busy' | 'partial' | 'disconnected'; events: any[] }>;
+  // From /api/lab-management/instructor-availability, fetched once at the
+  // lab-day level (page.tsx). Distinct from calendarAvailability (Google
+  // Calendar free/busy) above — this is the explicit instructor_availability
+  // submission + conflict/volunteer classification.
+  instructorAvailability: InstructorAvailabilityEntry[];
   onRolesChange: (roles: LabDayRole[]) => void;
 }
 
@@ -30,6 +36,7 @@ export default function LabDayRolesSection({
   instructors,
   userRole,
   calendarAvailability,
+  instructorAvailability,
   onRolesChange,
 }: LabDayRolesSectionProps) {
   const toast = useToast();
@@ -38,6 +45,10 @@ export default function LabDayRolesSection({
   const [roleAssignInstructorId, setRoleAssignInstructorId] = useState('');
   const [addingRole, setAddingRole] = useState(false);
   const [removingRoleId, setRemovingRoleId] = useState<string | null>(null);
+  // Default the role-assignment picker to available + volunteer
+  // instructors; coordinators can opt into the full roster.
+  const [showAllInstructors, setShowAllInstructors] = useState(false);
+  const availabilityMap = useMemo(() => buildAvailabilityMap(instructorAvailability), [instructorAvailability]);
 
   const handleAddLabDayRole = async () => {
     if (!roleAssignInstructorId || !roleAssignRole) return;
@@ -174,28 +185,51 @@ export default function LabDayRolesSection({
               </select>
             </div>
             <div className="flex-[2] min-w-[200px]">
-              <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Instructor</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Instructor</label>
+                {instructorAvailability.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllInstructors(v => !v)}
+                    className="text-[10px] text-blue-600 dark:text-blue-400 hover:underline"
+                    title="By default only instructors classified Available or Volunteer for this date are shown."
+                  >
+                    {showAllInstructors ? 'Available + volunteer only' : 'Show all instructors'}
+                  </button>
+                )}
+              </div>
               <select
                 value={roleAssignInstructorId}
                 onChange={(e) => setRoleAssignInstructorId(e.target.value)}
                 className="w-full px-2.5 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select instructor...</option>
-                {instructors
-                  .filter(inst => !labDayRoles.some(r => r.instructor_id === inst.id && r.role === roleAssignRole))
-                  .map(inst => {
-                    const avail = inst.email ? calendarAvailability.get(inst.email.toLowerCase()) : undefined;
-                    const dot = avail
-                      ? avail.status === 'free' ? '\u{1F7E2} '
-                      : avail.status === 'partial' ? '\u{1F7E1} '
-                      : avail.status === 'busy' ? '\u{1F534} '
+                {(() => {
+                  const notYetAssigned = instructors.filter(inst => !labDayRoles.some(r => r.instructor_id === inst.id && r.role === roleAssignRole));
+                  const availabilityLoaded = instructorAvailability.length > 0;
+                  const candidates = (availabilityLoaded && !showAllInstructors)
+                    ? notYetAssigned.filter(inst => {
+                        const avail = getAvailInfo(availabilityMap, inst);
+                        return !avail || isDefaultVisibleGroup(avail.group);
+                      })
+                    : notYetAssigned;
+                  if (candidates.length === 0 && availabilityLoaded && !showAllInstructors) {
+                    return <option value="" disabled>No available/volunteer instructors \u2014 click &quot;Show all instructors&quot; above</option>;
+                  }
+                  return candidates.map(inst => {
+                    const calAvail = inst.email ? calendarAvailability.get(inst.email.toLowerCase()) : undefined;
+                    const dot = calAvail
+                      ? calAvail.status === 'free' ? '\u{1F7E2} '
+                      : calAvail.status === 'partial' ? '\u{1F7E1} '
+                      : calAvail.status === 'busy' ? '\u{1F534} '
                       : '\u26AA '
                       : '';
+                    const avail = getAvailInfo(availabilityMap, inst);
                     return (
-                      <option key={inst.id} value={inst.id}>{dot}{inst.name}</option>
+                      <option key={inst.id} value={inst.id}>{dot}{inst.name}{availabilitySuffix(avail)}</option>
                     );
-                  })
-                }
+                  });
+                })()}
               </select>
             </div>
             <button

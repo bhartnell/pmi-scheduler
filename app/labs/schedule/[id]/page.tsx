@@ -44,6 +44,7 @@ import type {
   LabDayRole,
   Student,
   ScenarioParticipation,
+  InstructorAvailabilityEntry,
 } from '@/components/lab-day/types';
 import {
   formatDate,
@@ -69,6 +70,7 @@ import LabDayCoverageSection from '@/components/lab-day/LabDayCoverageSection';
 import LabDaySkillSignoffs from '@/components/lab-day/LabDaySkillSignoffs';
 import LabDayCheckInSection from '@/components/lab-day/LabDayCheckInSection';
 import EditStationModal from '@/components/lab-day/EditStationModal';
+import AvailableInstructorsSection from '@/components/lab-day/AvailableInstructorsSection';
 import ScenarioRoleModal from '@/components/lab-day/ScenarioRoleModal';
 import ScenarioPickerModal from '@/components/lab-day/ScenarioPickerModal';
 import DuplicateModals from '@/components/lab-day/DuplicateModals';
@@ -180,6 +182,25 @@ export default function LabDayPage() {
     labDay?.date || null, allInstructorEmails,
     labDay?.start_time?.substring(0, 5) || '08:00', labDay?.end_time?.substring(0, 5) || '17:00'
   );
+
+  // Instructor-availability-aware planning (instructor_availability table +
+  // classification endpoint — distinct from the Google-Calendar-derived
+  // calendarAvailability above). Fetched once at the lab-day level with a
+  // full working-day window (matches the convention already established in
+  // stations/new/page.tsx) and shared by the "Available Today" panel below
+  // plus the instructor pickers in EditStationModal / LabDayRolesSection —
+  // none of them refetch per station.
+  const [instructorAvailability, setInstructorAvailability] = useState<InstructorAvailabilityEntry[]>([]);
+  const [instructorAvailabilityLoading, setInstructorAvailabilityLoading] = useState(false);
+  useEffect(() => {
+    if (!labDay?.date || !labDay?.id) return;
+    setInstructorAvailabilityLoading(true);
+    fetch(`/api/lab-management/instructor-availability?date=${labDay.date}&start_time=08:00&end_time=17:00&lab_day_id=${labDay.id}`)
+      .then(res => res.json())
+      .then(data => { if (data.success) setInstructorAvailability(data.instructors || []); })
+      .catch(() => {})
+      .finally(() => setInstructorAvailabilityLoading(false));
+  }, [labDay?.date, labDay?.id]);
 
   // ---- Fetch functions ----
   // `silent: true` skips the loading-spinner flash. Use it for post-
@@ -689,7 +710,9 @@ export default function LabDayPage() {
           </div>
         )}
 
-        <LabDayRolesSection labDayId={labDayId} labDayRoles={labDayRoles} instructors={instructors} userRole={userRole} calendarAvailability={calendarAvailability} onRolesChange={setLabDayRoles} />
+        <LabDayRolesSection labDayId={labDayId} labDayRoles={labDayRoles} instructors={instructors} userRole={userRole} calendarAvailability={calendarAvailability} instructorAvailability={instructorAvailability} onRolesChange={setLabDayRoles} />
+
+        <AvailableInstructorsSection instructorAvailability={instructorAvailability} loading={instructorAvailabilityLoading} />
 
         {calendarSummary.total > 0 && !calendarLoading && (<div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3 print:hidden"><Calendar className="w-4 h-4" /><span>{calendarSummary.free} of {calendarSummary.total} instructor{calendarSummary.total !== 1 ? 's' : ''} {calendarSummary.free === 1 ? 'has a' : 'have'} free calendar{calendarSummary.free !== 1 ? 's' : ''} for this date</span>{calendarSummary.free < calendarSummary.total && <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">({calendarSummary.total - calendarSummary.free} busy or disconnected)</span>}</div>)}
         {calendarLoading && (<div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 mb-3 print:hidden"><Loader2 className="w-4 h-4 animate-spin" /><span>Checking calendar availability...</span></div>)}
@@ -997,7 +1020,7 @@ export default function LabDayPage() {
         </div>
       </main>
 
-      {editingStation && (<EditStationModal station={editingStation} labDay={labDay} instructors={instructors} locations={locations} calendarAvailability={calendarAvailability} session={session} onClose={() => setEditingStation(null)} onSaved={() => { setEditingStation(null); fetchLabDay({ silent: true }); }} />)}
+      {editingStation && (<EditStationModal station={editingStation} labDay={labDay} instructors={instructors} locations={locations} calendarAvailability={calendarAvailability} instructorAvailability={instructorAvailability} session={session} onClose={() => setEditingStation(null)} onSaved={() => { setEditingStation(null); fetchLabDay({ silent: true }); }} />)}
       {showTimer && <LabTimer labDayId={labDayId} numRotations={labDay.num_rotations} rotationMinutes={labDay.rotation_duration} onClose={() => setShowTimer(false)} isController={true} />}
       {roleModalStation?.scenario && (<ScenarioRoleModal station={roleModalStation} labDayId={labDayId} labDayDate={labDay.date} cohortStudents={cohortStudents} scenarioParticipation={scenarioParticipation} onClose={() => setRoleModalStation(null)} onSaved={async () => { await fetchScenarioParticipation(); setRoleModalStation(null); }} />)}
       {scenarioPickerState && (

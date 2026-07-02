@@ -116,6 +116,24 @@ export interface Instructor {
   role: string;
 }
 
+// Shape returned by GET /api/lab-management/instructor-availability —
+// see that route for the full classification rules. Added 2026-07-02
+// for the availability-aware instructor pickers in EditStationModal /
+// LabDayRolesSection and the lab-day "Available Today" panel.
+export interface InstructorAvailabilityEntry {
+  id: string;
+  name: string;
+  email: string;
+  is_part_time: boolean;
+  available: boolean;
+  group: 'available' | 'volunteer' | 'conflict' | 'no_availability';
+  has_explicit_availability: boolean;
+  is_volunteer: boolean;
+  conflicts: { source: string; title: string; start_time: string; end_time: string }[];
+  same_day_hours: number;
+  same_day_stations: { station_number: number; station_type: string }[];
+}
+
 export interface LabDayRole {
   id: string;
   lab_day_id: string;
