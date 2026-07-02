@@ -7678,7 +7678,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | archived_at | timestamptz | YES |  |  |
 | updated_at | timestamptz | YES | now() |  |
 | screenshot_url | text | YES |  |  |
-| digest_sent_at | timestamptz | YES |  | Set when the resolved-feedback weekly digest email (`app/api/cron/feedback-digest`) has emailed the reporter; pending migration `20260701_feedback_reports_digest_sent_at.sql` — not yet applied to production as of this doc update (see migration note below) |
+| digest_sent_at | timestamptz | YES |  | Set when the resolved-feedback weekly digest email (`app/api/cron/feedback-digest`, wired weekly Sun 7am UTC) has emailed the reporter; migration `20260701_feedback_reports_digest_sent_at.sql` applied to production |
 
 **Check Constraints:**
 - `feedback_reports_status_check`: `((status = ANY (ARRAY['new'::text, 'read'::text, 'in_progress'::text, 'needs_investigation'::text, 'resolved'::text, 'archived'::text])))`
@@ -7689,7 +7689,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 - `idx_feedback_reports_type`: `CREATE INDEX idx_feedback_reports_type ON public.feedback_reports USING btree (report_type)`
 - `idx_feedback_reports_updated_at`: `CREATE INDEX idx_feedback_reports_updated_at ON public.feedback_reports USING btree (updated_at)`
 - `idx_feedback_reports_user`: `CREATE INDEX idx_feedback_reports_user ON public.feedback_reports USING btree (user_email)`
-- `idx_feedback_reports_resolved_digest` (pending): `CREATE INDEX idx_feedback_reports_resolved_digest ON public.feedback_reports USING btree (status, digest_sent_at) WHERE status = 'resolved'`
+- `idx_feedback_reports_resolved_digest`: `CREATE INDEX idx_feedback_reports_resolved_digest ON public.feedback_reports USING btree (status, digest_sent_at) WHERE status = 'resolved'`
 
 **RLS Policies:**
 - `Anyone can create feedback` (INSERT, permissive, roles: {anon,authenticated})

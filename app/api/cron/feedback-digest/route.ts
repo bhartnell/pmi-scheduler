@@ -75,9 +75,11 @@ function buildDigestHtml(reports: ResolvedReport[]): string {
 /**
  * GET /api/cron/feedback-digest
  *
- * Weekly per-reporter digest of resolved feedback_reports. NOT yet wired into
- * vercel.json crons — trigger manually (with CRON_SECRET) until Ben confirms
- * cadence + per-reporter-vs-team-wide scope (see Notion Task Handoff Queue).
+ * Weekly (Sunday 7am UTC) per-reporter digest of resolved feedback_reports.
+ * Groups by user_email and sends each reporter only their own resolved
+ * items since their last digest — reporters with zero newly-resolved items
+ * are skipped entirely (no empty-digest emails), per Ben's 2026-06-30
+ * go-live decision.
  * Supports ?dryRun=1 to preview without sending or marking digest_sent_at.
  *
  * Auth: Bearer token via CRON_SECRET env var (standard Vercel cron pattern).
