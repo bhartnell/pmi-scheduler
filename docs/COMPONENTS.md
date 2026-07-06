@@ -50,7 +50,33 @@ independent of realtime — they go through direct API calls.
 
 **`components/lab-day/EditStationModal.tsx`** — Widened from `max-w-lg`
 to `max-w-2xl` on 2026-05-21; scenario picker now shows chief_complaint
-+ category/difficulty/duration badges per row.
++ category/difficulty/duration badges per row. Updated 2026-07-02: new
+required prop `instructorAvailability: InstructorAvailabilityEntry[]`
+(fetched once at the lab-day level, see `page.tsx`). The "Add instructor"
+picker now defaults to instructors classified `available`/`volunteer` by
+`GET /api/lab-management/instructor-availability`, with a "Show all
+instructors" toggle to reveal `conflict`/`no_availability` instructors.
+Distinct from the pre-existing `calendarAvailability` prop (Google
+Calendar free/busy) — both dots/suffixes render side by side.
+
+**`components/lab-day/LabDayRolesSection.tsx`** — Updated 2026-07-02: new
+required prop `instructorAvailability: InstructorAvailabilityEntry[]`.
+The role-assignment instructor picker defaults to available/volunteer
+instructors with the same "Show all instructors" toggle pattern as
+`EditStationModal.tsx`.
+
+**`components/lab-day/AvailableInstructorsSection.tsx`** (new,
+2026-07-02) — Read-only "Available Today" panel on the lab day detail
+page. Consumes the single lab-day-level `instructorAvailability` fetch
+(no per-station refetch) and lists instructors grouped
+Available (green) / Volunteering (blue) in a two-column, desktop-first
+layout (`grid-cols-2 max-md:grid-cols-1`).
+
+**`components/lab-day/instructorAvailability.ts`** (new, 2026-07-02) —
+Shared helpers (`buildAvailabilityMap`, `getAvailInfo`, `isDefaultVisibleGroup`,
+`availabilitySuffix`, `AVAILABILITY_GROUP_META`) for consuming
+`GET /api/lab-management/instructor-availability` responses, used by
+`EditStationModal`, `LabDayRolesSection`, and `AvailableInstructorsSection`.
 
 ### Library / utilities
 
