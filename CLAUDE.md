@@ -206,6 +206,37 @@ actually was.
    below, which are about broad-predicate `UPDATE`-many / `DELETE` on
    business data, not narrow status bookkeeping on the report itself.
 
+### Data Safety (standing order) (HARD REQUIREMENT)
+
+Data safety is a top priority for this project. Standing order from Ben
+(2026-07-06):
+
+1. **Fix data-safety issues ON SIGHT.** If you identify a vulnerability
+   or data-safety issue while working — and it can be fixed safely and
+   in-scope — fix it immediately rather than only noting it for later.
+   This includes: silent-failure paths that could destroy or clear data,
+   missing guards on destructive operations, error handling that
+   swallows failures while still mutating/clearing data, and any code
+   path where a config/credential error could cascade into data loss.
+   (Motivating incident, 2026-07-06: bad APP credentials were treated as
+   user-revoked-access and wiped 7 instructors' stored calendar
+   connections — a config error cascading into data deletion.)
+2. **The failure mode to prevent is silent or irreversible DATA/CONTENT
+   DELETION.** Recoverable inconveniences (relogs, reconnects, re-syncs)
+   are tolerable. Irreversible data/content deletion is not. When in
+   doubt, favor the design where a failure is recoverable (log + abort)
+   over one where it destroys data.
+3. **Canary before bulk.** Prefer a canary/pre-check before any bulk
+   operation that touches production data (e.g. the backfill script's
+   single-token-refresh canary that hard-aborts on a credential error
+   before touching any user).
+4. **Existing guards stay:** `--backup` before destructive DB ops, no
+   autonomous hard-delete (archive or escalate), reversible paths.
+5. **Scope note:** a deep security/data audit is deliberately NOT part
+   of this order (may happen later) — the order is to fix issues on
+   sight as we go. Ben handles any instructor-facing messaging about
+   such issues himself.
+
 ### Reversibility gate status — GREEN (2026-06-30)
 
 Daily Supabase backups + `--backup` snapshot script + `main` branch protection +
