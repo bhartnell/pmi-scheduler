@@ -9,7 +9,7 @@
  */
 
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { refreshAccessToken } from '@/lib/calendar-availability';
+import { refreshAccessTokenWithReason } from '@/lib/calendar-availability';
 
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 const TIMEZONE = 'America/Phoenix';
@@ -46,18 +46,32 @@ export async function getAccessTokenForUser(email: string): Promise<string | nul
       return null;
     }
 
-    const accessToken = await refreshAccessToken(user.google_refresh_token);
+    const { token: accessToken, failure } = await refreshAccessTokenWithReason(
+      user.google_refresh_token
+    );
 
     if (!accessToken) {
-      // Token refresh failed — likely revoked. Clear connection.
-      await supabase
-        .from('lab_users')
-        .update({
-          google_calendar_connected: false,
-          google_refresh_token: null,
-          google_calendar_scope: 'freebusy',
-        })
-        .ilike('email', email);
+      // Only clear the stored connection when Google says the TOKEN is
+      // dead (invalid_grant = user revoked / token expired). A
+      // client_error means OUR client_id/secret was rejected — e.g. an
+      // environment running a stale rotated secret — and clearing here
+      // destroys every user's valid refresh token over a config problem
+      // (which is exactly what happened on 2026-07-06: a local backfill
+      // run with an outdated secret wiped all 8 instructor connections).
+      if (failure === 'revoked') {
+        await supabase
+          .from('lab_users')
+          .update({
+            google_calendar_connected: false,
+            google_refresh_token: null,
+            google_calendar_scope: 'freebusy',
+          })
+          .ilike('email', email);
+      } else {
+        console.error(
+          `[gcal] Token refresh failed for ${email} (${failure}) — connection NOT cleared; check GOOGLE_CLIENT_SECRET if this is client_error`
+        );
+      }
       return null;
     }
 

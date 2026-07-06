@@ -10,9 +10,18 @@ function getCacheKey(email: string, date: string, startTime: string, endTime: st
 }
 
 /**
- * Refresh a Google access token using a stored refresh token.
+ * Refresh a Google access token using a stored refresh token, reporting
+ * WHY a refresh failed. Callers that clear stored connections must only
+ * do so on 'revoked' (Google's invalid_grant = the user's token really
+ * is dead). 'client_error' means OUR client_id/client_secret was
+ * rejected (e.g. a rotated secret in one environment) — on 2026-07-06 a
+ * backfill run with a stale local secret got invalid_client for every
+ * user, and the caller wiped all 8 instructors' calendar connections
+ * because it treated every failure as a revoked token.
  */
-export async function refreshAccessToken(refreshToken: string): Promise<string | null> {
+export async function refreshAccessTokenWithReason(
+  refreshToken: string
+): Promise<{ token: string | null; failure?: 'revoked' | 'client_error' | 'other' }> {
   try {
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -26,16 +35,33 @@ export async function refreshAccessToken(refreshToken: string): Promise<string |
     });
 
     if (!response.ok) {
-      console.error('Failed to refresh access token:', await response.text());
-      return null;
+      const bodyText = await response.text();
+      console.error('Failed to refresh access token:', bodyText);
+      let errorCode = '';
+      try {
+        errorCode = JSON.parse(bodyText)?.error ?? '';
+      } catch {
+        // Non-JSON error body — treat as 'other'
+      }
+      if (errorCode === 'invalid_grant') return { token: null, failure: 'revoked' };
+      if (errorCode === 'invalid_client') return { token: null, failure: 'client_error' };
+      return { token: null, failure: 'other' };
     }
 
     const data = await response.json();
-    return data.access_token || null;
+    return { token: data.access_token || null };
   } catch (err) {
     console.error('Error refreshing access token:', err);
-    return null;
+    return { token: null, failure: 'other' };
   }
+}
+
+/**
+ * Refresh a Google access token using a stored refresh token.
+ */
+export async function refreshAccessToken(refreshToken: string): Promise<string | null> {
+  const { token } = await refreshAccessTokenWithReason(refreshToken);
+  return token;
 }
 
 /**
