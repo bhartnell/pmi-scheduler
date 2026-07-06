@@ -116,7 +116,31 @@ export default function SkillCoveragePanel({
   const [data, setData] = useState<CoverageResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState(defaultExpanded);
+  // Expanded state persists in localStorage so a parent remount (every
+  // save on the lab-day page refetches and re-renders) doesn't snap the
+  // panel back to defaultExpanded — Stacie had to re-collapse it after
+  // every save (feedback aa519cdf).
+  const expandedStorageKey = `skill-coverage-expanded:${inline ? 'inline' : 'aside'}`;
+  const [expanded, setExpandedState] = useState<boolean>(() => {
+    try {
+      const saved = window.localStorage.getItem(expandedStorageKey);
+      if (saved !== null) return saved === '1';
+    } catch {
+      // SSR or storage unavailable — fall through to the prop default
+    }
+    return defaultExpanded;
+  });
+  const setExpanded = (updater: boolean | ((v: boolean) => boolean)) => {
+    setExpandedState((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      try {
+        window.localStorage.setItem(expandedStorageKey, next ? '1' : '0');
+      } catch {
+        // Storage unavailable — state still works for this mount
+      }
+      return next;
+    });
+  };
   const [filter, setFilter] = useState<Filter>('all');
   const [search, setSearch] = useState('');
   // Sort state. Default 'name asc' matches the API's default ordering

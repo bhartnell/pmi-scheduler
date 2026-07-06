@@ -346,10 +346,10 @@ function ComplioStudentPrintView({ s }: { s: ComplioRow }) {
       <PrintRow label="Exhibit" value={s.exhibit_complete} />
       <PrintRow label="Background Check" value={s.background_check_status} />
       <PrintRow label="Drug Test" value={s.drug_test_status} />
-      <PrintRow label="Attestation" value={s.attestation_complete} />
-      <PrintRow label="Docs Shared w/ Sites" value={s.docs_shared_with_sites} />
-      <PrintRow label="CHH Receipt" value={s.chh_receipt_complete} />
-      <PrintRow label="CHH Approval" value={s.chh_approval_complete} />
+      {/* Attestation / Docs Shared / CHH Receipt / CHH Approval are
+          intentionally omitted from the STUDENT print-out (Rae, feedback
+          8ac4ace6) — they're internal tracking fields and stay visible
+          in the admin table above. */}
       {s.complio_notes && (
         <div className="mt-3 p-2 bg-gray-50 rounded">
           <p className="text-xs font-semibold text-gray-500 mb-1">Notes</p>

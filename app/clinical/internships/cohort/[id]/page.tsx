@@ -17,6 +17,10 @@ import {
   AlertTriangle,
   ExternalLink,
   ClipboardCheck,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+  Search,
 } from 'lucide-react';
 import { formatCohortNumber } from '@/lib/format-cohort';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -39,6 +43,9 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 // ─── Types ──────────────────────────────────────────────────────────────────
 
 type Phase = 'pre_internship' | 'phase_1_mentorship' | 'phase_2_evaluation' | 'extended' | 'completed';
+
+// Sortable columns on the phase-overview student table.
+type SortKey = 'name' | 'phase' | 'phase_started' | 'fto' | 'agency' | 'nremt';
 
 interface Internship {
   id: string;
@@ -300,6 +307,49 @@ function computeNextStep(i: Internship, cohortId: string): NextStep {
   return { label: 'Ready to start Phase 1', tone: 'ready' };
 }
 
+// Clickable column header with sort-direction indicator (feedback 93592567).
+function SortableTH({
+  label,
+  sortId,
+  activeKey,
+  dir,
+  onSort,
+  className = '',
+  center = false,
+  title,
+}: {
+  label: string;
+  sortId: SortKey;
+  activeKey: SortKey;
+  dir: 'asc' | 'desc';
+  onSort: (key: SortKey) => void;
+  className?: string;
+  center?: boolean;
+  title?: string;
+}) {
+  const active = activeKey === sortId;
+  return (
+    <th
+      className={`px-3 py-2 font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase ${center ? 'text-center' : 'text-left'} ${className}`}
+      title={title}
+      aria-sort={active ? (dir === 'asc' ? 'ascending' : 'descending') : 'none'}
+    >
+      <button
+        type="button"
+        onClick={() => onSort(sortId)}
+        className={`inline-flex items-center gap-1 uppercase hover:text-gray-900 dark:hover:text-gray-100 ${active ? 'text-gray-900 dark:text-gray-100' : ''}`}
+      >
+        {label}
+        {active ? (
+          dir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+        ) : (
+          <ChevronsUpDown className="w-3 h-3 opacity-40" />
+        )}
+      </button>
+    </th>
+  );
+}
+
 function phaseStartDate(i: Internship): string | null {
   switch (i.current_phase) {
     case 'pre_internship':
@@ -335,6 +385,11 @@ export default function PmInternshipCohortHub() {
   // user can still see (and click into) a withdrawn student's
   // internship record when they need to.
   const [showWithdrawn, setShowWithdrawn] = useState(false);
+  // Column sorting + text filter (feedback 93592567). Pure presentation
+  // layer over the already-fetched list — no query or data changes.
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     if (sessionStatus === 'unauthenticated') router.push('/auth/signin');
@@ -384,9 +439,70 @@ export default function PmInternshipCohortHub() {
   }, [internships]);
 
   const filteredInternships = useMemo(() => {
-    if (selectedPhase === 'all') return internships;
-    return internships.filter((i) => i.current_phase === selectedPhase);
-  }, [internships, selectedPhase]);
+    let list = selectedPhase === 'all'
+      ? internships
+      : internships.filter((i) => i.current_phase === selectedPhase);
+
+    // Text filter across student name, FTO, and agency.
+    const q = search.trim().toLowerCase();
+    if (q) {
+      list = list.filter((i) => {
+        const name = i.students
+          ? `${i.students.first_name} ${i.students.last_name}`.toLowerCase()
+          : '';
+        const fto = i.field_preceptors
+          ? `${i.field_preceptors.first_name} ${i.field_preceptors.last_name}`.toLowerCase()
+          : '';
+        const agency = (
+          i.agencies?.abbreviation || i.agencies?.name || i.agency_name || ''
+        ).toLowerCase();
+        return name.includes(q) || fto.includes(q) || agency.includes(q);
+      });
+    }
+
+    // Column sort — presentation only, applied to a copy.
+    const dir = sortDir === 'asc' ? 1 : -1;
+    const sortVal = (i: Internship): string | number => {
+      switch (sortKey) {
+        case 'name':
+          return i.students
+            ? `${i.students.last_name}, ${i.students.first_name}`.toLowerCase()
+            : '￿'; // unknown students sort last ascending
+        case 'phase':
+          return PHASE_ORDER.indexOf((i.current_phase as Phase)) === -1
+            ? PHASE_ORDER.length
+            : PHASE_ORDER.indexOf(i.current_phase as Phase);
+        case 'phase_started':
+          return phaseStartDate(i) || '';
+        case 'fto':
+          return i.field_preceptors
+            ? `${i.field_preceptors.last_name}, ${i.field_preceptors.first_name}`.toLowerCase()
+            : '￿';
+        case 'agency':
+          return (
+            i.agencies?.abbreviation || i.agencies?.name || i.agency_name || '￿'
+          ).toLowerCase();
+        case 'nremt':
+          return i.nremt_passed ? 0 : 1;
+      }
+    };
+    return [...list].sort((a, b) => {
+      const av = sortVal(a);
+      const bv = sortVal(b);
+      if (av < bv) return -1 * dir;
+      if (av > bv) return 1 * dir;
+      return 0;
+    });
+  }, [internships, selectedPhase, search, sortKey, sortDir]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+  };
 
   const isSemester4 = cohort?.current_semester === 4;
 
@@ -604,43 +720,50 @@ export default function PmInternshipCohortHub() {
             })}
           </div>
 
+          {/* Search filter — matches student, FTO, or agency (feedback 93592567) */}
+          <div className="relative mb-3 max-w-xs">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filter by student, FTO, or agency…"
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400"
+            />
+          </div>
+
           {/* Student list under the selected phase */}
           {filteredInternships.length === 0 ? (
             <div className="text-center text-sm text-gray-500 dark:text-gray-400 py-6">
-              No students in this phase.
+              {search.trim() ? 'No students match the filter.' : 'No students in this phase.'}
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 dark:bg-gray-700/50">
                   <tr>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase">
-                      Student
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase">
-                      Phase
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase hidden sm:table-cell">
-                      Phase started
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase hidden md:table-cell">
-                      FTO
-                    </th>
-                    <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase hidden md:table-cell">
-                      Agency
-                    </th>
+                    <SortableTH label="Student" sortId="name" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                    <SortableTH label="Phase" sortId="phase" activeKey={sortKey} dir={sortDir} onSort={handleSort} />
+                    <SortableTH label="Phase started" sortId="phase_started" activeKey={sortKey} dir={sortDir} onSort={handleSort} className="hidden sm:table-cell" />
+                    <SortableTH label="FTO" sortId="fto" activeKey={sortKey} dir={sortDir} onSort={handleSort} className="hidden md:table-cell" />
+                    <SortableTH label="Agency" sortId="agency" activeKey={sortKey} dir={sortDir} onSort={handleSort} className="hidden md:table-cell" />
+                    {/* Next step is a computed multi-state cell — not meaningfully sortable */}
                     <th className="px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase hidden md:table-cell">
                       Next step
                     </th>
                     {/* NREMT-passed indicator. Stays a single emoji
                         column — no count, no date — per the spec's
                         "simple records confirmation" requirement. */}
-                    <th
-                      className="px-3 py-2 text-center font-semibold text-gray-600 dark:text-gray-300 text-xs uppercase hidden sm:table-cell"
+                    <SortableTH
+                      label="NREMT"
+                      sortId="nremt"
+                      activeKey={sortKey}
+                      dir={sortDir}
+                      onSort={handleSort}
+                      className="hidden sm:table-cell"
+                      center
                       title="Student passed NREMT and certificate is on file"
-                    >
-                      NREMT
-                    </th>
+                    />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
