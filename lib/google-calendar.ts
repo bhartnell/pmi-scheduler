@@ -406,6 +406,18 @@ export async function syncLabStationAssignment(params: StationAssignmentParams):
   try {
     if (!(await shouldSyncForUser(params.userEmail, 'sync_lab_assignments'))) return;
 
+    // Idempotency: this can be reached from two call sites for the same
+    // assignment (stations/[id] PATCH and station-instructors POST) — an
+    // existing mapping means the event is already on the calendar. Without
+    // this check a second call created a second Google event and the
+    // mapping upsert silently orphaned the first one.
+    const existing = await getEventMapping(
+      params.userEmail,
+      'station_assignment',
+      params.stationId
+    );
+    if (existing) return;
+
     const accessToken = await getAccessTokenForUser(params.userEmail);
     if (!accessToken) return;
 
@@ -430,7 +442,7 @@ export async function syncLabStationAssignment(params: StationAssignmentParams):
     });
 
     if (eventId) {
-      await storeEventMapping({
+      const stored = await storeEventMapping({
         user_email: params.userEmail,
         google_event_id: eventId,
         source_type: 'station_assignment',
@@ -438,6 +450,15 @@ export async function syncLabStationAssignment(params: StationAssignmentParams):
         lab_day_id: params.labDayId,
         event_summary: summary,
       });
+      if (!stored) {
+        // Same guarantee as syncLvfrAssignment: never leave an event on
+        // the calendar without a mapping row, or the idempotency lookup
+        // misses it and the next sync duplicates it.
+        await deleteGoogleEvent(accessToken, eventId);
+        console.error(
+          `[gcal] Station-assignment mapping store failed for ${params.stationId}; rolled back the Google event to prevent duplicates`
+        );
+      }
     }
   } catch (err) {
     console.error('[gcal] Error syncing station assignment:', err);
@@ -1065,13 +1086,24 @@ export async function syncLvfrAssignment(params: LvfrAssignmentParams): Promise<
         colorId: COLOR_LVFR,
       });
       if (eventId) {
-        await storeEventMapping({
+        const stored = await storeEventMapping({
           user_email: params.userEmail,
           google_event_id: eventId,
           source_type: 'lvfr_assignment',
           source_id: compositeId,
           event_summary: summary,
         });
+        if (!stored) {
+          // Mapping save failed (e.g. a CHECK-constraint drift like the
+          // 2026-05-06 and 2026-06-30 incidents). Delete the event we just
+          // created so the calendar and mapping table can never diverge —
+          // an unmapped event is invisible to the idempotency lookup and
+          // becomes a duplicate on the next sync run.
+          await deleteGoogleEvent(accessToken, eventId);
+          console.error(
+            `[gcal] LVFR mapping store failed for ${compositeId}; rolled back the Google event to prevent duplicates`
+          );
+        }
       }
     }
   } catch (err) {

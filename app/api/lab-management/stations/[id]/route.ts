@@ -205,6 +205,9 @@ export async function PATCH(
         lab_day:lab_days(
           id,
           date,
+          title,
+          start_time,
+          end_time,
           cohort:cohorts(
             cohort_number,
             program:programs(abbreviation)
@@ -263,6 +266,33 @@ export async function PATCH(
       } catch (siError) {
         // Don't fail if station_instructors table doesn't exist or has issues
         console.error('Failed to update station_instructors:', siError);
+      }
+
+      // Sync the assignment to the instructor's Google Calendar. This route
+      // never called the sync at all (2026-07-06 launch-blocker finding) —
+      // it was only wired into the station-instructors POST, so assignments
+      // made through this PATCH produced no calendar event. AWAITED so the
+      // serverless function doesn't freeze before the sync completes;
+      // syncLabStationAssignment is idempotent (checks the mapping first),
+      // so the EditStationModal flow that hits both routes can't duplicate.
+      try {
+        const { syncLabStationAssignment } = await import('@/lib/google-calendar');
+        if (data.lab_day) {
+          await syncLabStationAssignment({
+            userEmail: body.instructor_email,
+            stationId: id,
+            stationNumber: data.station_number,
+            labDayId: data.lab_day.id,
+            labDayTitle: data.lab_day.title || 'Lab Day',
+            labDayDate: data.lab_day.date,
+            startTime: data.lab_day.start_time || undefined,
+            endTime: data.lab_day.end_time || undefined,
+            scenarioTitle: data.scenario?.title || undefined,
+          });
+        }
+      } catch (syncError) {
+        // Calendar sync is best-effort — never fail the assignment
+        console.error('Failed to sync station assignment to calendar:', syncError);
       }
     }
 

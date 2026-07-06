@@ -195,8 +195,13 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Fire-and-forget calendar sync for newly assigned instructors
-  void (async () => {
+  // Calendar sync for newly assigned instructors. AWAITED, not
+  // fire-and-forget: Vercel freezes the function once the response
+  // returns, so a detached IIFE here rarely ran to completion (same
+  // failure mode that left station assignments with zero calendar
+  // events ever — 2026-07-06 launch-blocker investigation). Errors are
+  // still swallowed so a Google hiccup never fails the assignment save.
+  await (async () => {
     try {
       const { syncLvfrAssignment } = await import('@/lib/google-calendar');
       const supabase2 = getSupabaseAdmin();
@@ -239,7 +244,7 @@ export async function PUT(request: NextRequest) {
         });
       }
     } catch (err) {
-      console.error('[gcal] LVFR fire-and-forget failed:', err);
+      console.error('[gcal] LVFR assignment calendar sync failed:', err);
     }
   })();
 

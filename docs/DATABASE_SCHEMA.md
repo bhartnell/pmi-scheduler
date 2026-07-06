@@ -4689,7 +4689,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 - `google_calendar_events_user_email_source_type_source_id_key`: (source_id, user_email, source_type)
 
 **Check Constraints:**
-- `google_calendar_events_source_type_check`: `((source_type = ANY (ARRAY['station_assignment'::text, 'lab_day_role'::text, 'shift_signup'::text, 'site_visit'::text, 'osce_block'::text, 'osce_instructor'::text, 'schedule_block'::text, 'schedule_block_series'::text, 'poll_meeting'::text])))`
+- `google_calendar_events_source_type_check`: `((source_type = ANY (ARRAY['station_assignment'::text, 'lab_day_role'::text, 'shift_signup'::text, 'site_visit'::text, 'osce_block'::text, 'osce_instructor'::text, 'schedule_block'::text, 'schedule_block_series'::text, 'poll_meeting'::text, 'lvfr_assignment'::text])))` — `lvfr_assignment` added by migration `20260706_widen_gcal_source_type_lvfr.sql` (the value `syncLvfrAssignment` had been writing since 2026-06-30 while the constraint silently rejected its mapping rows — same failure mode as the 2026-05-06 duplicate-events incident). **Rule: any new `source_type` value in code MUST ship with a constraint-widening migration in the same commit.**
 
 **Indexes:**
 - `google_calendar_events_user_email_source_type_source_id_key`: `CREATE UNIQUE INDEX google_calendar_events_user_email_source_type_source_id_key ON public.google_calendar_events USING btree (user_email, source_type, source_id)`

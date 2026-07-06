@@ -159,7 +159,12 @@ export async function POST(request: NextRequest) {
         .eq('id', stationId);
     }
 
-    // Fire-and-forget: sync Google Calendar event
+    // Sync Google Calendar event. AWAITED, not fire-and-forget: Vercel
+    // freezes the serverless function as soon as the response returns, so
+    // an unawaited promise here almost never ran to completion — this call
+    // site produced zero station_assignment calendar events ever (2026-07-06
+    // launch-blocker investigation). Sync errors are still swallowed so a
+    // Google hiccup never fails the assignment itself.
     try {
       const { syncLabStationAssignment } = await import('@/lib/google-calendar');
       // Look up station → lab_day to get calendar event details
@@ -177,7 +182,7 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (labDay) {
-          syncLabStationAssignment({
+          await syncLabStationAssignment({
             userEmail,
             stationId,
             stationNumber: station.station_number,
@@ -187,7 +192,7 @@ export async function POST(request: NextRequest) {
             startTime: labDay.start_time || undefined,
             endTime: labDay.end_time || undefined,
             scenarioTitle: (station.scenario as any)?.title || undefined,
-          }).catch(() => {}); // Fire-and-forget
+          });
         }
       }
     } catch {
