@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { createLabDayDeduper } from '@/lib/calendar-dedup';
+import { createLabDedupTracker, trackScheduleBlockForLabDedup, isLabDayDeduped } from '@/lib/calendar-lab-dedup';
 
 /**
  * GET /api/calendar/feed.ics?token=X
@@ -240,12 +240,19 @@ export async function GET(request: NextRequest) {
     if (labsErr) throw labsErr;
     const labs = (labsData as unknown as LabDayRow[]) || [];
 
-    // ── Dedup: skip lab_days already covered by a schedule block —
-    //    shared logic with /api/calendar/unified via lib/calendar-dedup.ts
-    //    so the two readers can't drift. ──
-    const labDayDedup = createLabDayDeduper();
+    // ── Dedup: skip lab_days that are already covered by a
+    //         lab-typed schedule block on the same (date, cohort) ──
+    // Shared with the unified calendar API — see lib/calendar-lab-dedup.ts.
+    const labDedup = createLabDedupTracker();
     for (const b of blocks) {
-      labDayDedup.trackBlock(b, b.program_schedule?.cohort?.id);
+      trackScheduleBlockForLabDedup(labDedup, {
+        linked_lab_day_id: b.linked_lab_day_id,
+        linked_section_number: b.linked_section_number,
+        block_type: b.block_type,
+        title: b.title,
+        date: b.date,
+        cohortId: b.program_schedule?.cohort?.id,
+      });
     }
 
     // ── Build ICS ───────────────────────────────────────────────
@@ -295,7 +302,7 @@ export async function GET(request: NextRequest) {
     let labsEmitted = 0;
     for (const ld of labs) {
       if (!ld.date) continue;
-      if (labDayDedup.shouldSuppressLabDay(ld, ld.cohort?.id)) continue;
+      if (isLabDayDeduped(labDedup, ld.id, ld.date, ld.cohort?.id, ld.section_number ?? 1)) continue;
       const cl = cohortLabel(ld.cohort);
       const sectionSuffix = (ld.section_number ?? 1) > 1 ? ` · ${ld.section_label || `Section ${ld.section_number}`}` : '';
       const base = (ld.title?.trim() || 'Lab Day') + sectionSuffix;

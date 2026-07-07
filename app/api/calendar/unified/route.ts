@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { createLabDayDeduper } from '@/lib/calendar-dedup';
+import { createLabDedupTracker, trackScheduleBlockForLabDedup, isLabDayDeduped } from '@/lib/calendar-lab-dedup';
 
 export interface CalendarEvent {
   id: string;
@@ -75,10 +75,10 @@ export async function GET(request: NextRequest) {
 
     const events: CalendarEvent[] = [];
 
-    // Schedule-block ↔ lab-day dedup — shared with the ICS feed via
-    // lib/calendar-dedup.ts so the two readers can't drift (see the
-    // module docs for the FK + section-aware fallback rules).
-    const labDayDedup = createLabDayDeduper();
+    // Track linked lab day IDs from schedule blocks to avoid duplicate events.
+    // See lib/calendar-lab-dedup.ts for the two dedup signals (explicit FK +
+    // date/cohort/section fallback) shared with the ICS feed reader.
+    const labDedup = createLabDedupTracker();
 
     // 1. Schedule blocks (classes/exams) from pmi_schedule_blocks
     if (include.has('classes')) {
@@ -146,8 +146,16 @@ export async function GET(request: NextRequest) {
             const roomData = block.room as any;
             const blockStatus = (block.status as CalendarEvent['status']) || 'draft';
 
-            // Record this block's dedup signals (FK + lab-typed fallback)
-            labDayDedup.trackBlock(block, cohort?.id);
+            // Track this block for lab-day dedup (explicit FK + fallback
+            // date/cohort/section key — see lib/calendar-lab-dedup.ts).
+            trackScheduleBlockForLabDedup(labDedup, {
+              linked_lab_day_id: block.linked_lab_day_id as string | null,
+              linked_section_number: block.linked_section_number as number | null,
+              block_type: blockType,
+              title: block.title,
+              date: block.date,
+              cohortId: cohort?.id,
+            });
 
             events.push({
               id: `planner-${block.id}`,
@@ -217,10 +225,14 @@ export async function GET(request: NextRequest) {
             if (((ld as any).section_number ?? 1) === 1 && sectionedDates.has(ld.date)) continue;
 
             // Skip lab days already represented on the calendar by a
-            // matching schedule block (FK-linked or fallback-covered —
-            // shared logic in lib/calendar-dedup.ts).
+            // matching schedule block (either FK-linked or covered by
+            // the fallback date+cohort match built during the planner
+            // pass above).
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            if (labDayDedup.shouldSuppressLabDay(ld as any, (ld.cohort as any)?.id)) continue;
+            const ldCohortId = (ld.cohort as any)?.id;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const ldSection = ((ld as any).section_number as number | null) ?? 1;
+            if (isLabDayDeduped(labDedup, ld.id, ld.date, ldCohortId, ldSection)) continue;
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cohort = ld.cohort as any;
