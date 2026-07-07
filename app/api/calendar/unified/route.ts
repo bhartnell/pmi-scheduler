@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { createLabDayDeduper } from '@/lib/calendar-dedup';
 
 export interface CalendarEvent {
   id: string;
@@ -74,26 +75,10 @@ export async function GET(request: NextRequest) {
 
     const events: CalendarEvent[] = [];
 
-    // Track linked lab day IDs from schedule blocks to avoid duplicate events.
-    // Two dedup signals:
-    //   1. Explicit FK: pmi_schedule_blocks.linked_lab_day_id
-    //   2. Fallback (date, cohort_id) when a lab-typed schedule block
-    //      exists for the same date + cohort but isn't FK-linked. This
-    //      catches the user-reported "two blue blocks per lab day"
-    //      issue where the planner created a 'lab' block without
-    //      stamping the FK back onto the lab_day. The schedule block
-    //      already carries the visible title ("Day 1 S2 Lab") so the
-    //      lab_day event would just be a redundant tile.
-    const linkedLabDayIds = new Set<string>();
-    const labBlockDateCohortKeys = new Set<string>();
-    // Section-aware dedup key: a lab block only suppresses the lab_day SECTION
-    // it represents (block target section = COALESCE(linked_section_number, 1)),
-    // so additional sections on the same (date, cohort) stay visible.
-    const dateCohortSectionKey = (
-      date: string,
-      cohortId: string | null | undefined,
-      section: number | null | undefined,
-    ) => `${date}|${cohortId ?? ''}|${section ?? 1}`;
+    // Schedule-block ↔ lab-day dedup — shared with the ICS feed via
+    // lib/calendar-dedup.ts so the two readers can't drift (see the
+    // module docs for the FK + section-aware fallback rules).
+    const labDayDedup = createLabDayDeduper();
 
     // 1. Schedule blocks (classes/exams) from pmi_schedule_blocks
     if (include.has('classes')) {
@@ -161,24 +146,8 @@ export async function GET(request: NextRequest) {
             const roomData = block.room as any;
             const blockStatus = (block.status as CalendarEvent['status']) || 'draft';
 
-            // Track linked lab day IDs so we don't duplicate them
-            if (block.linked_lab_day_id) {
-              linkedLabDayIds.add(block.linked_lab_day_id as string);
-            }
-            // Fallback dedup: any 'lab' block (or block with "lab" in
-            // its title) on a given date+cohort suppresses the matching
-            // lab_day event. Catches lab schedule blocks that weren't
-            // explicitly FK-linked.
-            const titleLower = (block.title || '').toLowerCase();
-            if (
-              blockType === 'lab' ||
-              titleLower.includes('lab')
-            ) {
-              // Only suppresses the matching SECTION (block linked_section_number,
-              // NULL = section 1) so extra sections that day remain visible.
-              const blockSection = (block.linked_section_number as number | null) ?? 1;
-              labBlockDateCohortKeys.add(dateCohortSectionKey(block.date, cohort?.id, blockSection));
-            }
+            // Record this block's dedup signals (FK + lab-typed fallback)
+            labDayDedup.trackBlock(block, cohort?.id);
 
             events.push({
               id: `planner-${block.id}`,
@@ -248,15 +217,10 @@ export async function GET(request: NextRequest) {
             if (((ld as any).section_number ?? 1) === 1 && sectionedDates.has(ld.date)) continue;
 
             // Skip lab days already represented on the calendar by a
-            // matching schedule block (either FK-linked or covered by
-            // the fallback date+cohort match built during the planner
-            // pass above).
-            if (linkedLabDayIds.has(ld.id)) continue;
+            // matching schedule block (FK-linked or fallback-covered —
+            // shared logic in lib/calendar-dedup.ts).
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const ldCohortId = (ld.cohort as any)?.id;
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const ldSection = ((ld as any).section_number as number | null) ?? 1;
-            if (labBlockDateCohortKeys.has(dateCohortSectionKey(ld.date, ldCohortId, ldSection))) continue;
+            if (labDayDedup.shouldSuppressLabDay(ld as any, (ld.cohort as any)?.id)) continue;
 
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const cohort = ld.cohort as any;
