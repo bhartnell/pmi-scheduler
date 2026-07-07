@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { createLabDedupTracker, trackScheduleBlockForLabDedup, isLabDayDeduped } from '@/lib/calendar-lab-dedup';
 
 /**
  * GET /api/calendar/feed.ics?token=X
@@ -241,18 +242,17 @@ export async function GET(request: NextRequest) {
 
     // ── Dedup: skip lab_days that are already covered by a
     //         lab-typed schedule block on the same (date, cohort) ──
-    const linkedLabDayIds = new Set<string>();
-    const labBlockKeys = new Set<string>();
-    // Section-aware: a lab block only suppresses its own section (block section
-    // = COALESCE(linked_section_number, 1)); extra sections stay in the feed.
-    const key = (date: string, cohortId: string | null | undefined, section: number | null | undefined) =>
-      `${date}|${cohortId ?? ''}|${section ?? 1}`;
+    // Shared with the unified calendar API — see lib/calendar-lab-dedup.ts.
+    const labDedup = createLabDedupTracker();
     for (const b of blocks) {
-      if (b.linked_lab_day_id) linkedLabDayIds.add(b.linked_lab_day_id);
-      const titleLower = (b.title || '').toLowerCase();
-      if (b.block_type === 'lab' || titleLower.includes('lab')) {
-        labBlockKeys.add(key(b.date, b.program_schedule?.cohort?.id, b.linked_section_number ?? 1));
-      }
+      trackScheduleBlockForLabDedup(labDedup, {
+        linked_lab_day_id: b.linked_lab_day_id,
+        linked_section_number: b.linked_section_number,
+        block_type: b.block_type,
+        title: b.title,
+        date: b.date,
+        cohortId: b.program_schedule?.cohort?.id,
+      });
     }
 
     // ── Build ICS ───────────────────────────────────────────────
@@ -302,8 +302,7 @@ export async function GET(request: NextRequest) {
     let labsEmitted = 0;
     for (const ld of labs) {
       if (!ld.date) continue;
-      if (linkedLabDayIds.has(ld.id)) continue;
-      if (labBlockKeys.has(key(ld.date, ld.cohort?.id, ld.section_number ?? 1))) continue;
+      if (isLabDayDeduped(labDedup, ld.id, ld.date, ld.cohort?.id, ld.section_number ?? 1)) continue;
       const cl = cohortLabel(ld.cohort);
       const sectionSuffix = (ld.section_number ?? 1) > 1 ? ` · ${ld.section_label || `Section ${ld.section_number}`}` : '';
       const base = (ld.title?.trim() || 'Lab Day') + sectionSuffix;
