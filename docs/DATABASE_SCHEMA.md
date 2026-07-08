@@ -69,6 +69,7 @@
 | totp_backup_codes | text[] | YES |  |  |
 | totp_verified_at | timestamptz | YES |  |  |
 | is_part_time | boolean | YES | false |  |
+| primary_program | text | YES |  | Program tag (primary discipline): `'paramedic' \| 'aemt' \| 'emt'` (CHECK `lab_users_primary_program_check`, NULL = untagged). Combined with `is_part_time` identifies "full-time paramedic instructor" for the general-lab-default calendar rule. Set in the admin user editor. Migration `20260708_lab_users_primary_program.sql`. |
 | google_refresh_token | text | YES |  |  |
 | google_token_expires_at | timestamptz | YES |  |  |
 | google_calendar_connected | boolean | YES | false |  |

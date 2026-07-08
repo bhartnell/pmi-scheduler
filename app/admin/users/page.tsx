@@ -171,6 +171,29 @@ export default function UserManagementPage() {
     }
   };
 
+  // Program tag (primary discipline). Combined with the full/part-time flag it
+  // identifies "full-time paramedic instructor" for the general-lab-default
+  // calendar rule. Empty string clears the tag.
+  const handleSetProgram = async (userId: string, program: string) => {
+    try {
+      const res = await fetch('/api/admin/users', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, primary_program: program || null })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUsers(users.map(u => u.id === userId ? data.user : u));
+        showToast(program ? `Program tag set to ${program}` : 'Program tag cleared', 'success');
+      } else {
+        showToast(data.error || 'Failed to update program tag', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating program tag:', error);
+      showToast('Failed to update program tag', 'error');
+    }
+  };
+
   const fetchCohorts = async () => {
     try {
       const res = await fetch('/api/academics/cohorts');
@@ -524,6 +547,17 @@ export default function UserManagementPage() {
                               >
                                 {user.is_part_time ? 'Full-Time' : 'Part-Time'}
                               </button>
+                              <select
+                                value={user.primary_program || ''}
+                                onChange={(e) => handleSetProgram(user.id, e.target.value)}
+                                className="text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+                                title="Program tag (primary discipline) — drives the general-lab-default calendar rule"
+                              >
+                                <option value="">No program tag</option>
+                                <option value="paramedic">Paramedic</option>
+                                <option value="aemt">AEMT</option>
+                                <option value="emt">EMT</option>
+                              </select>
                             </>
                           )}
                         </div>

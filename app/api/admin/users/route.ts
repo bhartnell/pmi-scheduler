@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
     let query = supabase
       .from('lab_users')
-      .select('id, name, email, role, created_at, last_login, is_active, is_part_time, primary_cohort_id', { count: 'exact' })
+      .select('id, name, email, role, created_at, last_login, is_active, is_part_time, primary_cohort_id, primary_program', { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -104,7 +104,7 @@ export async function PATCH(request: NextRequest) {
     const { user } = auth;
 
     const body = await request.json();
-    const { userId, role, is_active, is_part_time, primary_cohort_id } = body;
+    const { userId, role, is_active, is_part_time, primary_cohort_id, primary_program } = body;
 
     if (!userId) {
       return NextResponse.json({ success: false, error: 'User ID is required' }, { status: 400 });
@@ -166,6 +166,14 @@ export async function PATCH(request: NextRequest) {
 
     if (primary_cohort_id !== undefined) {
       updates.primary_cohort_id = primary_cohort_id || null; // allow clearing with empty string
+    }
+
+    // Program tag (primary discipline): paramedic | aemt | emt | null.
+    // Combined with is_part_time it identifies "full-time paramedic
+    // instructor" for the general-lab-default calendar rule.
+    if (primary_program !== undefined) {
+      const allowed = ['paramedic', 'aemt', 'emt'];
+      updates.primary_program = allowed.includes(primary_program) ? primary_program : null;
     }
 
     const { data, error } = await supabase

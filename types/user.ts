@@ -21,6 +21,7 @@ export interface User {
   role: Role;
   is_active: boolean;
   is_part_time: boolean;
+  primary_program: 'paramedic' | 'aemt' | 'emt' | null;
   primary_cohort_id: string | null;
   approved_at: string | null;
   approved_by: string | null;
