@@ -1,9 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { Play, RotateCcw, SkipForward, Clock } from 'lucide-react';
+import { findInstructionEntry, isMultiPart } from '@/lib/nremt-instructions';
 
-// Time limits in minutes per station
+// Time limits in minutes per station. This is a FALLBACK only, used when a
+// station name doesn't resolve to an entry in lib/nremt-instructions.ts
+// (the canonical, officially-sourced NREMT skill data — see getTimeLimit
+// and getPhaseConfig below, which both check that first).
 const NREMT_TIME_LIMITS: Record<string, number> = {
   'Cardiac Arrest Management / AED': 15,
   'Patient Assessment - Medical': 15,
@@ -15,17 +19,15 @@ const NREMT_TIME_LIMITS: Record<string, number> = {
 };
 const DEFAULT_TIME_LIMIT = 15;
 
-// Dual station phases (seconds). Station titled "O2 Administration by NRB"
-// (Schafer 2026-04-15) was falling through to a 15-min single timer
-// because the name didn't literally include 'oxygen' or 'bvm'. The
-// isDualStation matcher below now covers nrb/o2/bag-valve-mask synonyms.
-export const DUAL_PHASES = [
-  { name: 'O2 Prep', seconds: 2 * 60 },
-  { name: 'O2 Evaluation', seconds: 5 * 60 },
-  { name: 'BVM Prep', seconds: 2 * 60 },
-  { name: 'BVM Evaluation', seconds: 5 * 60 },
-];
-
+// isDualStation is kept for the grading page's UNRELATED "2+ skill sheets
+// available at one station" detection (app/labs/grade/station/[id]/page.tsx
+// — isDualSkillStation). Do not repurpose this broad name-keyword matcher
+// as the timer's own phase logic (see getPhaseConfig below) — that was the
+// bug: any station merely mentioning bvm/oxygen/nrb/o2 in its name got
+// force-routed into the SAME hardcoded 4-phase O2+BVM combo timer, even
+// when it tests only ONE of those skills (feedback 33bc4965: a
+// standalone "O2 Administration by NRB" station showed the wrong overall
+// duration and no correct prep phase because of this).
 export function isDualStation(name: string): boolean {
   if (!name) return false;
   const lower = name.toLowerCase();
@@ -39,8 +41,15 @@ export function isDualStation(name: string): boolean {
   );
 }
 
+// Authoritative time limit: prefer lib/nremt-instructions.ts (the sourced
+// NREMT skill data, also used for the candidate/proctor instruction panel —
+// NremtCandidateInstructions.tsx) so this widget can never drift out of
+// sync with the text the examiner is reading from. Falls back to the local
+// NREMT_TIME_LIMITS map for any name that doesn't resolve there.
 function getTimeLimit(name: string): number {
   if (!name) return DEFAULT_TIME_LIMIT;
+  const entry = findInstructionEntry(name);
+  if (entry) return entry.timeLimitMinutes;
   const lower = name.toLowerCase();
   for (const [key, mins] of Object.entries(NREMT_TIME_LIMITS)) {
     if (key.toLowerCase() === lower) return mins;
@@ -54,6 +63,36 @@ function getTimeLimit(name: string): number {
     if (matchCount >= 2) return mins;
   }
   return DEFAULT_TIME_LIMIT;
+}
+
+export interface TimerPhase {
+  name: string;
+  seconds: number;
+}
+
+// Per-skill prep + evaluation phase config, sourced from
+// lib/nremt-instructions.ts's MultiPartInstruction ('prep_timer' entries
+// only — e.g. Oxygen Administration by Non-Rebreather Mask and BVM
+// Ventilation each have their OWN 2-minute prep + 5-minute evaluation,
+// tested as SEPARATE stations, never combined). Returns null for anything
+// else (single-phase skill, or no matching entry at all), in which case
+// the component falls back to the plain single-timer render using
+// getTimeLimit() above — this is the fix for feedback 33bc4965 ("Timer
+// should be 5 minutes... missing proctor instruction, and 2 minute prep
+// timer"): the old DUAL_PHASES array hardcoded BOTH O2 and BVM's phases
+// together and forced any single-skill station through all 4 of them.
+function getPhaseConfig(name: string): TimerPhase[] | null {
+  if (!name) return null;
+  const entry = findInstructionEntry(name);
+  if (!entry) return null;
+  const instr = entry.candidateInstruction;
+  if (isMultiPart(instr) && instr.waitType === 'prep_timer' && instr.prepDurationSeconds) {
+    return [
+      { name: 'Prep', seconds: instr.prepDurationSeconds },
+      { name: 'Evaluation', seconds: entry.timeLimitMinutes * 60 },
+    ];
+  }
+  return null;
 }
 
 function formatMmSs(totalSeconds: number): string {
@@ -105,16 +144,20 @@ interface NremtTimerProps {
 }
 
 const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtTimer({ stationName, instructionsRead, stickyBottom = false, onPhaseChange }: NremtTimerProps, ref) {
-  const dual = isDualStation(stationName);
+  // Per-skill prep+eval phases from lib/nremt-instructions.ts (see
+  // getPhaseConfig above) — null means "no prep phase for this skill",
+  // in which case the standard single-timer branch below is used instead.
+  const phases = useMemo(() => getPhaseConfig(stationName), [stationName]);
+  const dual = phases !== null;
 
   // Standard timer state
   const [status, setStatus] = useState<TimerStatus>('ready');
   const [remaining, setRemaining] = useState(() => getTimeLimit(stationName) * 60);
   const totalSeconds = getTimeLimit(stationName) * 60;
 
-  // Dual timer state
+  // Dual (prep + eval) timer state
   const [phaseIndex, setPhaseIndex] = useState(0);
-  const [phaseRemaining, setPhaseRemaining] = useState(DUAL_PHASES[0].seconds);
+  const [phaseRemaining, setPhaseRemaining] = useState(phases?.[0]?.seconds ?? 0);
   const [dualStatus, setDualStatus] = useState<TimerStatus>('ready');
 
   // Refs for intervals and alert tracking
@@ -173,10 +216,11 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
     expiredAlertFired.current = false;
   }, [clearTimer, stationName]);
 
-  // ─── Dual Timer Logic ───
+  // ─── Dual (prep + eval) Timer Logic ───
   const advancePhase = useCallback((currentPhase: number) => {
+    if (!phases) return;
     const nextPhase = currentPhase + 1;
-    if (nextPhase >= DUAL_PHASES.length) {
+    if (nextPhase >= phases.length) {
       // All phases done
       clearTimer();
       setDualStatus('expired');
@@ -184,21 +228,21 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
       return;
     }
     setPhaseIndex(nextPhase);
-    setPhaseRemaining(DUAL_PHASES[nextPhase].seconds);
+    setPhaseRemaining(phases[nextPhase].seconds);
     phaseAlertFired.current = false;
     playBeep(880, 200, 2);
-  }, [clearTimer]);
+  }, [clearTimer, phases]);
 
   // Ref to keep latest onPhaseChange callback accessible inside intervals
   const onPhaseChangeRef = useRef(onPhaseChange);
   useEffect(() => { onPhaseChangeRef.current = onPhaseChange; }, [onPhaseChange]);
 
   const startDual = useCallback(() => {
-    if (dualStatus !== 'ready') return;
+    if (dualStatus !== 'ready' || !phases) return;
     setDualStatus('running');
     phaseAlertFired.current = false;
     // Notify phase 0 started
-    onPhaseChangeRef.current?.(0, DUAL_PHASES[0].name);
+    onPhaseChangeRef.current?.(0, phases[0].name);
 
     intervalRef.current = setInterval(() => {
       setPhaseRemaining(prev => {
@@ -212,7 +256,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
           // Use functional approach: read phaseIndex via a ref-like pattern
           setPhaseIndex(currentPhase => {
             const nextPhase = currentPhase + 1;
-            if (nextPhase >= DUAL_PHASES.length) {
+            if (!phases || nextPhase >= phases.length) {
               clearTimer();
               setDualStatus('expired');
               playBeep(440, 500, 3);
@@ -220,9 +264,9 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
             }
             phaseAlertFired.current = false;
             playBeep(880, 200, 2);
-            setPhaseRemaining(DUAL_PHASES[nextPhase].seconds);
+            setPhaseRemaining(phases[nextPhase].seconds);
             // Notify parent of phase change
-            onPhaseChangeRef.current?.(nextPhase, DUAL_PHASES[nextPhase].name);
+            onPhaseChangeRef.current?.(nextPhase, phases[nextPhase].name);
             return nextPhase;
           });
           return 0;
@@ -230,15 +274,15 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
         return next;
       });
     }, 1000);
-  }, [dualStatus, clearTimer]);
+  }, [dualStatus, clearTimer, phases]);
 
   const resetDual = useCallback(() => {
     clearTimer();
     setDualStatus('ready');
     setPhaseIndex(0);
-    setPhaseRemaining(DUAL_PHASES[0].seconds);
+    setPhaseRemaining(phases?.[0]?.seconds ?? 0);
     phaseAlertFired.current = false;
-  }, [clearTimer]);
+  }, [clearTimer, phases]);
 
   // Expose imperative handle for parent components
   useImperativeHandle(ref, () => ({
@@ -256,21 +300,21 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
   }), [dual, startDual, startStandard, dualStatus, status, stationName]);
 
   const manualAdvance = useCallback(() => {
-    if (dualStatus !== 'running') return;
+    if (dualStatus !== 'running' || !phases) return;
     // Stop current interval, advance, then restart
     clearTimer();
     const nextIdx = phaseIndex + 1;
-    if (nextIdx >= DUAL_PHASES.length) {
+    if (nextIdx >= phases.length) {
       setDualStatus('expired');
       playBeep(440, 500, 3);
       return;
     }
     setPhaseIndex(nextIdx);
-    setPhaseRemaining(DUAL_PHASES[nextIdx].seconds);
+    setPhaseRemaining(phases[nextIdx].seconds);
     phaseAlertFired.current = false;
     playBeep(880, 200, 1);
     // Notify parent of manual phase advance
-    onPhaseChangeRef.current?.(nextIdx, DUAL_PHASES[nextIdx].name);
+    onPhaseChangeRef.current?.(nextIdx, phases[nextIdx].name);
 
     // Restart interval
     intervalRef.current = setInterval(() => {
@@ -283,7 +327,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
         if (next <= 0) {
           setPhaseIndex(currentPhase => {
             const np = currentPhase + 1;
-            if (np >= DUAL_PHASES.length) {
+            if (!phases || np >= phases.length) {
               clearTimer();
               setDualStatus('expired');
               playBeep(440, 500, 3);
@@ -291,9 +335,9 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
             }
             phaseAlertFired.current = false;
             playBeep(880, 200, 2);
-            setPhaseRemaining(DUAL_PHASES[np].seconds);
+            setPhaseRemaining(phases[np].seconds);
             // Notify parent of phase change
-            onPhaseChangeRef.current?.(np, DUAL_PHASES[np].name);
+            onPhaseChangeRef.current?.(np, phases[np].name);
             return np;
           });
           return 0;
@@ -301,7 +345,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
         return next;
       });
     }, 1000);
-  }, [dualStatus, phaseIndex, clearTimer]);
+  }, [dualStatus, phaseIndex, clearTimer, phases]);
 
   // ─── Color helpers ───
   function getBarColor(secondsLeft: number, total: number, isRunning: boolean): string {
@@ -318,11 +362,13 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
     return 'text-green-600 dark:text-green-400';
   }
 
-  // ─── Render Dual Timer ───
-  if (dual) {
+  // ─── Render Dual (prep + eval) Timer ───
+  // Guard on `phases` directly (not the `dual` boolean) so TypeScript
+  // narrows it to non-null for the rest of this branch.
+  if (phases) {
     const isRunning = dualStatus === 'running';
     const isExpired = dualStatus === 'expired';
-    const currentPhase = DUAL_PHASES[phaseIndex];
+    const currentPhase = phases[phaseIndex];
     const phaseTotalSeconds = currentPhase?.seconds ?? 0;
     const progress = phaseTotalSeconds > 0 ? ((phaseTotalSeconds - phaseRemaining) / phaseTotalSeconds) * 100 : 100;
 
@@ -346,7 +392,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
                   <span className="font-semibold text-sm truncate">{stationName}</span>
                   {isRunning && (
                     <span className="ml-2 text-xs opacity-70">
-                      {currentPhase?.name} ({phaseIndex + 1}/{DUAL_PHASES.length})
+                      {currentPhase?.name} ({phaseIndex + 1}/{phases.length})
                     </span>
                   )}
                 </div>
@@ -401,10 +447,10 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Clock className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">NREMT Dual Station Timer</span>
+              <span className="text-sm font-medium text-gray-600 dark:text-gray-300">NREMT Station Timer</span>
             </div>
             <div className="flex items-center gap-1.5">
-              {DUAL_PHASES.map((phase, i) => (
+              {phases.map((phase, i) => (
                 <div
                   key={i}
                   className={`w-3 h-3 rounded-full ${
@@ -427,7 +473,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
               </span>
               {!isExpired && isRunning && (
                 <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-                  Phase {phaseIndex + 1} of {DUAL_PHASES.length}
+                  Phase {phaseIndex + 1} of {phases.length}
                 </span>
               )}
             </div>

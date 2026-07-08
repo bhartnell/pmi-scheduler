@@ -6,6 +6,7 @@ import { Maximize2, Minimize2, Volume2, VolumeX, Smartphone } from 'lucide-react
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
 import { formatTime } from '@/lib/utils';
+import { getSupabase } from '@/lib/supabase';
 
 interface TimerState {
   id: string;
@@ -301,6 +302,36 @@ export default function TimerDisplayPage() {
     return 5000;                                            // running
   };
   useVisibilityPolling(fetchTimerStatus, getPollInterval());
+
+  // Realtime discovery (feedback ef5f2975: "timers start at xx:49 not
+  // xx:59"). This is a shared classroom/TV display screen — before this
+  // fix it only learned "the timer just started" on its next poll tick,
+  // and the !labDay tier above polls as slowly as every 30s. A candidate
+  // watching the screen at the moment the controller hits Start could see
+  // up to ~15-30s of already-elapsed time on the FIRST frame it renders,
+  // which reads as "the timer started already behind." Same fix already
+  // proven for GlobalTimerBanner / TimerBanner / LabTimer — additive
+  // alongside the existing poll (kept as the fallback). Public token
+  // display has no NextAuth session, so this authenticates as `anon`,
+  // same as the other realtime subscriptions on this table.
+  useEffect(() => {
+    const labDayId = labDay?.id;
+    if (!labDayId) return;
+
+    const supabase = getSupabase();
+    const channel = supabase
+      .channel(`timer-display-${labDayId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'lab_timer_state', filter: `lab_day_id=eq.${labDayId}` },
+        () => { fetchTimerStatus(); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [labDay?.id, fetchTimerStatus]);
 
   // ─── Timer Display Calculation ───────────────────────────────────────────────
   useEffect(() => {

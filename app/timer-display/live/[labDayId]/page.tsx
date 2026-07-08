@@ -7,6 +7,7 @@ import { Maximize2, Minimize2, Volume2, VolumeX, Smartphone, LogOut, CheckCircle
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
 import { formatTime } from '@/lib/utils';
+import { getSupabase } from '@/lib/supabase';
 
 interface TimerState {
   id: string;
@@ -371,6 +372,30 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
   // Bumped 5s → 10s.
   const readyPollInterval = sessionExpired ? null : (timer?.status === 'running' ? 10000 : null);
   useVisibilityPolling(fetchReadyStatuses, readyPollInterval);
+
+  // Realtime discovery (feedback ef5f2975: "timers start at xx:49 not
+  // xx:59"). This is the shared classroom/TV live display — before this
+  // fix it only learned "the timer just started" on its next poll tick
+  // (up to 15s away in the !timer tier). Same fix already proven for
+  // GlobalTimerBanner / TimerBanner / LabTimer — additive alongside the
+  // existing poll, which stays as the fallback.
+  useEffect(() => {
+    if (!labDayId || sessionExpired) return;
+
+    const supabase = getSupabase();
+    const channel = supabase
+      .channel(`timer-display-live-${labDayId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'lab_timer_state', filter: `lab_day_id=eq.${labDayId}` },
+        () => { fetchTimerStatus(); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [labDayId, sessionExpired, fetchTimerStatus]);
 
   // --- Timer Display Calculation ---
   useEffect(() => {

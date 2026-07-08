@@ -210,10 +210,11 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 
 | Component | File | Props | Description |
 |-----------|------|-------|-------------|
-| `GlobalTimerBanner` | `components/GlobalTimerBanner.tsx` | _(none)_ | Persistent global timer banner shown across all pages during active lab rotations. |
+| `GlobalTimerBanner` | `components/GlobalTimerBanner.tsx` | _(none)_ | Persistent global timer banner shown across all pages during active lab rotations. Realtime-subscribed to `lab_timer_state` (anon RLS) for near-instant "timer started elsewhere" discovery, on top of an adaptive poll. |
 | `InlineTimerWidget` | `components/InlineTimerWidget.tsx` | `InlineTimerWidgetProps { labDayId, onOpenFullTimer, paused? }` | Compact inline timer widget embedded in lab day pages. |
-| `LabTimer` | `components/LabTimer.tsx` | `LabTimerProps { labDayId, stations?, rotationMinutes?, onComplete? }` | Full-featured lab rotation timer with station tracking and audio alerts. |
-| `TimerBanner` | `components/TimerBanner.tsx` | `TimerBannerProps { labDayId, remainingSeconds, stationName?, onExpand? }` | Slim persistent banner showing timer countdown. |
+| `LabTimer` | `components/LabTimer.tsx` | `LabTimerProps { labDayId, numRotations, rotationMinutes, onClose, isController? }` | Full-screen lab rotation timer (controller + station-ready view). Server-authoritative (`lab_timer_state`: `started_at` + `duration_seconds`, client interpolates locally); realtime-subscribed (2026-07) in addition to polling, and its progress bar/footer read the live `duration_seconds` rather than the static `rotationMinutes` prop so a mid-session duration change displays correctly. |
+| `TimerBanner` | `components/TimerBanner.tsx` | `TimerBannerProps { labDayId, stationId?, userEmail?, userName?, numRotations? }` | Slim persistent bottom banner showing timer countdown on `/labs/grade/station/[id]`; own realtime subscription + discovery poll (GlobalTimerBanner is deliberately hidden on this route). |
+| `NremtTimer` | `components/NremtTimer.tsx` | `NremtTimerProps { stationName, instructionsRead, stickyBottom?, onPhaseChange? }` | NREMT psychomotor-skill countdown (forwardRef, exposes `start()`/`isRunning`/`timeLimitMinutes`). Duration and prep/eval phases are sourced from `lib/nremt-instructions.ts` (`findInstructionEntry`) — the single source of truth also used by `NremtCandidateInstructions` — falling back to a local time-limit map only for names that don't resolve there. `isDualStation()` is still exported but is unrelated to this component's own phase logic; it's used by the grading page for a separate "2+ skill sheets at one station" check. |
 
 ### Dashboard
 

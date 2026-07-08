@@ -8,9 +8,12 @@ import { requireAuth } from '@/lib/api-auth';
  * Per the Availability-Aware Lab Planning spec, returns every
  * active instructor classified into one of four display groups:
  *
- *   "available"        — green dot. Has explicit availability
- *                        covering the slot AND no scheduling
- *                        conflicts.
+ *   "available"        — green dot. Full-time instructors are
+ *                        available BY DEFAULT for the lab window
+ *                        (0830-1700) and need no explicit submission;
+ *                        part-time instructors need explicit
+ *                        availability covering the slot. Either way,
+ *                        no scheduling conflicts.
  *   "volunteer"        — blue dot. Signed up for THIS lab_day via
  *                        station_instructors or volunteer_events
  *                        (independent of explicit availability).
@@ -18,8 +21,9 @@ import { requireAuth } from '@/lib/api-auth';
  *                        availability, but has a class block,
  *                        manual hour log, LVFR, shift, or other-
  *                        lab-day overlap during the slot.
- *   "no_availability"  — gray dot. Active but no availability
- *                        record submitted for the slot.
+ *   "no_availability"  — gray dot. Part-time instructor, active, but
+ *                        no availability record submitted for the
+ *                        slot.
  *
  * Sources checked, in order:
  *   1. instructor_availability (explicit submissions, must cover
@@ -378,13 +382,23 @@ export async function GET(request: NextRequest) {
     // collected. Conflict trumps everything (operator must see the
     // warning); volunteer signal trumps explicit availability so a
     // volunteer who DIDN'T submit availability still gets the blue
-    // dot. Falls through to "no_availability" when nothing else
-    // applies.
+    // dot. Full-time instructors are available BY DEFAULT for the
+    // 0830-1700 lab window — they don't submit explicit availability
+    // rows, so requiring has_explicit_availability for them
+    // incorrectly demoted every conflict-free full-timer to
+    // "no_availability" and hid them from the picker (bug: full-time
+    // instructor with zero conflicts was excluded from the dropdown).
+    // Only an actual conflict (handled above) should exclude a
+    // full-timer now. Part-time instructors still must have
+    // submitted explicit availability to count as "available". Falls
+    // through to "no_availability" when nothing else applies.
     instructorMap.forEach(v => {
       if (v.conflicts.length > 0) {
         v.group = 'conflict';
       } else if (v.is_volunteer) {
         v.group = 'volunteer';
+      } else if (!v.is_part_time) {
+        v.group = 'available';
       } else if (v.has_explicit_availability) {
         v.group = 'available';
       } else {

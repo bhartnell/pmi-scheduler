@@ -4,6 +4,7 @@
 > Reconciled to live database -- June 8, 2026 (see "Schema Reconciliation Additions")
 > Check constraints re-verified against live -- June 10, 2026 (all 146 documented CHECK definitions normalized to exact pg_get_constraintdef output; 4 had real value-list drift)
 > Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
+> Last updated: 2026-07-08 -- added `cohorts.display_name` (migration `20260708_cohorts_display_name.sql`); corrected `cohorts.cohort_number` type (integer -> numeric) to match live
 
 ## Summary
 
@@ -392,7 +393,7 @@
 |--------|------|----------|---------|-------|
 | id | uuid | NO | uuid_generate_v4() | PK |
 | program_id | uuid | NO |  |  |
-| cohort_number | integer | NO |  |  |
+| cohort_number | numeric | NO |  | Doc said `integer` prior to 2026-07-08; corrected to match live (`numeric`) per Schema-First Rule. |
 | start_date | date | YES |  |  |
 | expected_end_date | date | YES |  |  |
 | is_active | boolean | YES | true |  |
@@ -409,6 +410,7 @@
 | track_clinical_hours | boolean | YES | false |  |
 | is_external_program | boolean | NO | false |  |
 | status | text | NO | 'active' | `'active' \| 'graduated'` (CHECK). Cohort-level — pulls a whole cohort out of the active S1-S4 phase view on `/clinical` into the collapsed Graduated section, still reachable. Distinct from per-student graduation (`students.status`) and from `is_archived` (the separate final "put away" step). Migration `20260701_cohorts_status_graduated.sql`. |
+| display_name | text | YES |  | Optional human-readable override for cohort display (e.g. "LVFR AEMT Group 2"). NULL for every cohort except the imported LVFR AEMT cohort; callers fall back to `Cohort {cohort_number}` when NULL. Migration `20260708_cohorts_display_name.sql`. |
 
 **Foreign Keys:**
 - `program_id` -> `programs.id` (`cohorts_program_id_fkey`)
