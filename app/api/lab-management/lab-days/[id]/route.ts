@@ -262,6 +262,70 @@ export async function PATCH(
       }
     }
 
+    // Bug fix (feedback 1a31456e / d3639b05): editing rotation_duration here
+    // (the Lab Day edit page) previously had ZERO effect on an
+    // ALREADY-EXISTING lab_timer_state row — that row is only ever seeded
+    // from lab_days.rotation_duration once, at first Start
+    // (LabTimer.initializeTimer). Every edit after that point was silently
+    // dropped: the timer kept counting the OLD length even after a hard
+    // refresh, because GET /api/lab-management/timer just re-reads the same
+    // stale duration_seconds column. Mirror the new length into the timer
+    // row here, same as /api/lab-management/timer/adjust's set_duration
+    // action already does in the other direction.
+    //
+    // Guard: only touch the timer row when status === 'stopped'. A
+    // running/paused timer is left untouched — this is the same
+    // anti-thrash rule documented in LabTimer.tsx (2026-05-20): the
+    // in-timer "Rotation Length" control is the only supported way to
+    // change an ACTIVE session's length; this mirror only prevents the
+    // NEXT start from reverting to a stale value.
+    if (allowedFields.rotation_duration !== undefined) {
+      const newMinutes = Number(allowedFields.rotation_duration);
+      if (Number.isFinite(newMinutes) && newMinutes > 0) {
+        try {
+          const { data: existingTimer } = await supabase
+            .from('lab_timer_state')
+            .select('id, status, version')
+            .eq('lab_day_id', id)
+            .maybeSingle();
+
+          if (existingTimer && existingTimer.status === 'stopped') {
+            const { error: timerMirrorError } = await supabase
+              .from('lab_timer_state')
+              .update({
+                duration_seconds: newMinutes * 60,
+                version: (existingTimer.version ?? 0) + 1,
+              })
+              .eq('lab_day_id', id);
+            if (timerMirrorError) {
+              console.warn(
+                `[lab-days PATCH] failed to mirror rotation_duration=${newMinutes} to ` +
+                `lab_timer_state for lab_day_id=${id}: ${timerMirrorError.message}`,
+              );
+            }
+          }
+
+          // Keep per-station rotation_minutes aligned too (other surfaces —
+          // station picker, edit modal — read this column directly).
+          const { error: stationMirrorError } = await supabase
+            .from('lab_stations')
+            .update({ rotation_minutes: newMinutes })
+            .eq('lab_day_id', id);
+          if (stationMirrorError) {
+            console.warn(
+              `[lab-days PATCH] failed to mirror rotation_duration=${newMinutes} to ` +
+              `lab_stations.rotation_minutes for lab_day_id=${id}: ${stationMirrorError.message}`,
+            );
+          }
+        } catch (mirrorErr) {
+          // Best-effort — the lab_days write above already succeeded and is
+          // the source of truth; a failed mirror just means the operator may
+          // need to retest before relying on it (never a data-loss path).
+          console.warn('[lab-days PATCH] rotation_duration mirror failed:', mirrorErr);
+        }
+      }
+    }
+
     return NextResponse.json({ success: true, labDay: data });
   } catch (error) {
     console.error('Error updating lab day:', error);

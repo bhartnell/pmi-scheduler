@@ -31,6 +31,7 @@ import {
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
 import { formatTime } from '@/lib/utils';
+import { getSupabase } from '@/lib/supabase';
 
 interface LabTimerProps {
   labDayId: string;
@@ -122,6 +123,21 @@ export default function LabTimer({
 
   // Default to 15 minutes if rotationMinutes is not set
   const totalSeconds = (rotationMinutes || 15) * 60;
+
+  // Bug fix (feedback 1a31456e: "adjusting the timer... only adjusting the
+  // current rotation timer"). `totalSeconds` above is derived from the
+  // static `rotationMinutes` PROP — it's only correct at mount and never
+  // updates again, even though the server-authoritative
+  // `timerState.duration_seconds` changes whenever Rotation Length is
+  // adjusted (or the Lab Day edit page mirror lands — see
+  // app/api/lab-management/lab-days/[id]/route.ts). Progress bar / footer
+  // text below were still keyed off the stale prop, so after any duration
+  // change they kept showing the ORIGINAL length — reading as "it only
+  // changed the current countdown, not the actual rotation length."
+  // `liveDurationSeconds` is the display-time equivalent of `totalSeconds`:
+  // authoritative once a timer row exists, falling back to the prop only
+  // pre-init.
+  const liveDurationSeconds = timerState?.duration_seconds || totalSeconds;
 
   // Load audio settings from localStorage
   const [audioSettings, setAudioSettings] = useState<Partial<TimerAudioSettings>>(() =>
@@ -485,6 +501,36 @@ export default function LabTimer({
   // Poll for updates with visibility awareness - ready statuses
   useVisibilityPolling(fetchReadyStatuses, getReadyPollInterval(), { immediate: false });
 
+  // Realtime discovery (feedback ef5f2975: "timers start at xx:49 not
+  // xx:59"). Root cause: this component only ever learned about a
+  // just-started timer on its NEXT poll tick — up to 5s late while
+  // running, but up to 15s late for the controller's own "no timer yet /
+  // stopped" tier (getTimerPollInterval returns null there, so really it
+  // waits for the mount fetch or a manual action). Any OTHER instructor
+  // watching this same lab day's LabTimer as a non-controller (isController
+  // = false) inherits that same lag, so the very first frame they see
+  // already shows several seconds of elapsed time — reads as "started
+  // 10 seconds behind." Same fix already proven for GlobalTimerBanner
+  // (20260701_lab_timer_state_realtime_rls.sql) and TimerBanner — additive
+  // alongside the existing poll, which stays as the fallback.
+  useEffect(() => {
+    if (!labDayId) return;
+
+    const supabase = getSupabase();
+    const channel = supabase
+      .channel(`lab-timer-${labDayId}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'lab_timer_state', filter: `lab_day_id=eq.${labDayId}` },
+        () => { fetchTimerState(); }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [labDayId, fetchTimerState]);
+
   // Removed 2026-05-20: a previous "sync local prop → server" effect
   // here pushed `totalSeconds` (derived from the lab_day.rotation_minutes
   // prop) back to the server every time the polled timer state diverged.
@@ -643,10 +689,12 @@ export default function LabTimer({
     }
   }, [showRotateAlert, rotateAlertStartTime, acknowledgeRotation]);
 
-  // Progress percentage
+  // Progress percentage — uses liveDurationSeconds (see above), not the
+  // static totalSeconds prop, so the bar reflects the CURRENT rotation
+  // length after a duration adjustment instead of visually contradicting it.
   const progress = timerState?.mode === 'countdown'
-    ? ((totalSeconds - displaySeconds) / totalSeconds) * 100
-    : (displaySeconds / totalSeconds) * 100;
+    ? ((liveDurationSeconds - displaySeconds) / liveDurationSeconds) * 100
+    : (displaySeconds / liveDurationSeconds) * 100;
 
   // Ready status variables
   const readyCount = readyStatuses.filter(s => s.is_ready).length;
@@ -1125,7 +1173,7 @@ export default function LabTimer({
           </div>
           <div className="flex justify-between mt-2 text-sm opacity-60">
             <span>0:00</span>
-            <span>{formatTime(totalSeconds)}</span>
+            <span>{formatTime(liveDurationSeconds)}</span>
           </div>
         </div>
 
@@ -1278,7 +1326,7 @@ export default function LabTimer({
                     <input
                       type="number"
                       min="0"
-                      max={totalSeconds - 60}
+                      max={liveDurationSeconds - 60}
                       value={timerState?.debrief_seconds || 300}
                       onChange={(e) => updateSettings({ debrief_seconds: parseInt(e.target.value) || 0 })}
                       className="w-24 px-3 py-2 bg-gray-700 rounded-lg text-white"
@@ -1482,9 +1530,12 @@ export default function LabTimer({
         </div>
       )}
 
-      {/* Footer Info */}
+      {/* Footer Info — Math.floor(liveDurationSeconds / 60) instead of the
+          static rotationMinutes prop, so this stays correct after a
+          duration adjustment instead of forever showing the length the
+          rotation STARTED at. */}
       <div className="p-4 border-t border-gray-700 text-center text-sm opacity-60">
-        {rotationMinutes} minute rotations | {numRotations} total rotations
+        {Math.floor(liveDurationSeconds / 60)} minute rotations | {numRotations} total rotations
         {timerState?.debrief_seconds ? ` | Debrief alert at ${Math.floor(timerState.debrief_seconds / 60)} min remaining` : ''}
       </div>
 
