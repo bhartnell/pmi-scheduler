@@ -83,11 +83,18 @@ instructors with the same "Show all instructors" toggle pattern as
 `EditStationModal.tsx`.
 
 **`components/lab-day/AvailableInstructorsSection.tsx`** (new,
-2026-07-02) — Read-only "Available Today" panel on the lab day detail
-page. Consumes the single lab-day-level `instructorAvailability` fetch
-(no per-station refetch) and lists instructors grouped
-Available (green) / Volunteering (blue) in a two-column, desktop-first
-layout (`grid-cols-2 max-md:grid-cols-1`).
+2026-07-02; updated 2026-07-08) — Read-only "Available Today" panel on
+the lab day detail page. Consumes the single lab-day-level
+`instructorAvailability` fetch (no per-station refetch) and lists
+instructors grouped Available (green) / Volunteering (blue) in a
+two-column, desktop-first layout (`grid-cols-2 max-md:grid-cols-1`),
+plus Conflict (amber, labeled with the conflicting event) and No
+availability submitted (gray) rows below — every instructor gets a
+clearly-labeled state, none are silently dropped into a bare
+"unavailable" bucket. Rendered twice on `app/labs/schedule/[id]/page.tsx`:
+inline below the `xl` breakpoint, and in the floating right-side aside
+(paired with `SkillCoveragePanel`) at `xl`+, mirroring the existing
+skill-coverage responsive pattern.
 
 **`components/lab-day/instructorAvailability.ts`** (new, 2026-07-02) —
 Shared helpers (`buildAvailabilityMap`, `getAvailInfo`, `isDefaultVisibleGroup`,
