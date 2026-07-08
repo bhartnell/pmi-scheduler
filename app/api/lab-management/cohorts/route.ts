@@ -10,6 +10,10 @@ export async function GET(request: NextRequest) {
   const programId = searchParams.get('programId');
   const activeOnly = searchParams.get('activeOnly') !== 'false';
   const includeArchived = searchParams.get('include_archived') === 'true';
+  // External-program cohorts (e.g. LVFR) are excluded from PMI-facing cohort
+  // pickers by default so they don't clutter PMI dropdowns; the cohort
+  // manager passes include_external=true to still manage them.
+  const includeExternal = searchParams.get('include_external') === 'true';
 
   try {
     const supabase = getSupabaseAdmin();
@@ -33,6 +37,10 @@ export async function GET(request: NextRequest) {
     // By default, exclude archived cohorts unless explicitly requested
     if (!includeArchived) {
       query = query.eq('is_archived', false);
+    }
+
+    if (!includeExternal) {
+      query = query.eq('is_external_program', false);
     }
 
     const { data, error } = await query;

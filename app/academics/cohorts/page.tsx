@@ -141,9 +141,11 @@ export default function CohortManagementPage() {
         }
       }
 
-      // Fetch cohorts - include archived if toggled (archived cohorts are always inactive)
+      // Fetch cohorts - include archived if toggled (archived cohorts are always inactive).
+      // include_external=true so external-program cohorts (e.g. LVFR) remain
+      // manageable here even though they're hidden from PMI-facing pickers.
       const cohortsRes = await fetch(
-        `/api/lab-management/cohorts?activeOnly=${!showInactive && !showArchived}&include_archived=${showArchived}`
+        `/api/lab-management/cohorts?activeOnly=${!showInactive && !showArchived}&include_archived=${showArchived}&include_external=true`
       );
       const cohortsData = await cohortsRes.json();
       if (cohortsData.success) {

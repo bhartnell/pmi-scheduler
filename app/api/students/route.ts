@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
         phone,
         cohort_id,
         status,
-        cohort:cohorts!students_cohort_id_fkey(id, cohort_number, program:programs(abbreviation))
+        cohort:cohorts!students_cohort_id_fkey(id, cohort_number, is_external_program, program:programs(abbreviation))
       `)
       .order('last_name', { ascending: true })
       .order('first_name', { ascending: true });
@@ -49,16 +49,24 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
+    // Exclude students in external-program cohorts (e.g. LVFR) from the
+    // PMI-facing roster so they don't clutter PMI lists/pickers. Students
+    // with no cohort (cohort is null) are kept. LVFR students are managed
+    // through the LVFR skills tools, which use their own cohort selectors.
+    const students = (data || []).filter(
+      (s) => !(s.cohort as { is_external_program?: boolean } | null)?.is_external_program
+    );
+
     // FERPA audit: log student list access
     logAuditEvent({
       user: { email: session.user.email },
       action: 'student_record_viewed',
       resourceType: 'student_list',
-      resourceDescription: `Viewed student list${cohortId ? ` for cohort ${cohortId}` : ''} (${(data || []).length} students)`,
-      metadata: { cohortId, search: search || null, activeOnly, resultCount: (data || []).length },
+      resourceDescription: `Viewed student list${cohortId ? ` for cohort ${cohortId}` : ''} (${students.length} students)`,
+      metadata: { cohortId, search: search || null, activeOnly, resultCount: students.length },
     }).catch(console.error);
 
-    return NextResponse.json({ success: true, students: data || [] });
+    return NextResponse.json({ success: true, students });
   } catch (error) {
     console.error('Error fetching students:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch students' }, { status: 500 });
