@@ -121,7 +121,13 @@ export async function POST(request: NextRequest) {
       instructor: Array.isArray(newRole.instructor) ? newRole.instructor[0] : newRole.instructor
     };
 
-    // Fire-and-forget: sync Google Calendar event for role assignment
+    // Sync Google Calendar event for role assignment. AWAITED, not
+    // fire-and-forget: Vercel freezes the serverless function as soon as
+    // the response returns, so an unawaited promise here can be silently
+    // killed mid-flight before the calendar write completes (same class
+    // of bug fixed in stations/[id]/route.ts and station-instructors/
+    // route.ts, commit 0a98e539). Sync errors are still swallowed below
+    // so a Google hiccup never fails the role assignment itself.
     try {
       const instructorData = processedRole.instructor;
       if (instructorData?.email) {
@@ -155,7 +161,7 @@ export async function POST(request: NextRequest) {
             ? `${program.abbreviation} G${cohort.cohort_number}`
             : undefined;
 
-          syncLabDayRole({
+          await syncLabDayRole({
             userEmail: instructorData.email,
             roleId: processedRole.id,
             roleName: roleNames[role] || role,
@@ -166,11 +172,12 @@ export async function POST(request: NextRequest) {
             endTime: labDay.end_time || undefined,
             cohortLabel,
             program: program?.abbreviation || undefined,
-          }).catch(() => {}); // Fire-and-forget
+          });
         }
       }
-    } catch {
-      // Calendar sync is best-effort
+    } catch (syncError) {
+      // Calendar sync is best-effort — never fail the role assignment
+      console.error('Failed to sync lab day role to calendar:', syncError);
     }
 
     return NextResponse.json({ success: true, role: processedRole });
