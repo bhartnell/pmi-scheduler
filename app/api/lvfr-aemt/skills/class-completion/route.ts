@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canEditLVFR } from '@/lib/permissions';
+import { getLvfrCohorts } from '@/lib/lvfr-cohorts';
 
 // ---------------------------------------------------------------------------
 // /api/lvfr-aemt/skills/class-completion
@@ -14,15 +15,8 @@ import { canEditLVFR } from '@/lib/permissions';
 // Auth: instructor+ (non-agency) for both read and write — instructor tool.
 // ---------------------------------------------------------------------------
 
-// Return the LVFR/AEMT cohorts (the "classes" whose skill coverage we track).
-async function getLvfrCohorts(supabase: ReturnType<typeof getSupabaseAdmin>) {
-  const { data } = await supabase
-    .from('cohorts')
-    .select('id, cohort_number')
-    .or('cohort_number.ilike.%LVFR%,cohort_number.ilike.%AEMT%')
-    .order('cohort_number');
-  return data || [];
-}
+// LVFR cohort selection lives in lib/lvfr-cohorts.ts (shared with the
+// matrix + summary readers so they can't drift).
 
 // GET /api/lvfr-aemt/skills/class-completion?cohort_id=...
 export async function GET(request: NextRequest) {

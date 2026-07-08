@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { logRecordAccess, checkFerpaRelease } from '@/lib/ferpa';
+import { getLvfrCohortIds } from '@/lib/lvfr-cohorts';
 
 // ---------------------------------------------------------------------------
 // GET /api/lvfr-aemt/skills/matrix
@@ -43,13 +44,8 @@ export async function GET(request: NextRequest) {
 
   const { data: skills } = await skillsQuery;
 
-  // Fetch LVFR students
-  const { data: lvfrCohorts } = await supabase
-    .from('cohorts')
-    .select('id')
-    .or('cohort_number.ilike.%LVFR%,cohort_number.ilike.%AEMT%');
-
-  const cohortIds = (lvfrCohorts || []).map(c => c.id);
+  // Fetch LVFR students (LVFR cohort selection shared via lib/lvfr-cohorts.ts)
+  const cohortIds = await getLvfrCohortIds(supabase);
   const { data: students } = await supabase
     .from('students')
     .select('id, first_name, last_name, email, ferpa_agency_release, ferpa_release_agency')
