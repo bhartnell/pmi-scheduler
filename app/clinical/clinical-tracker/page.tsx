@@ -559,9 +559,9 @@ export default function ClinicalTrackerPage() {
 
   // AEMT students use mCE only — Complio is not applicable to them (Ben,
   // 2026-07-02). If the selected cohort is AEMT and the Complio tab is
-  // active, bounce to mCE. Doesn't fire for Paramedic (both tabs apply) or
-  // EMT (tab applicability there is unresolved — see clinical-tracker page
-  // notes / CHANGELOG entry for this date; left as-is, both tabs shown).
+  // active, bounce to mCE. Doesn't fire for Paramedic (both tabs apply).
+  // EMT uses neither tab (Ben, 2026-07-07) — tab selection there is moot
+  // since both are disabled and the body renders the EMT N/A state instead.
   useEffect(() => {
     const cohort = cohorts.find(c => c.id === cohortId);
     if (cohort?.program?.abbreviation === 'AEMT' && tab === 'complio') {
@@ -680,6 +680,11 @@ export default function ClinicalTrackerPage() {
   const currentCohort = cohorts.find(c => c.id === cohortId);
   // Complio is a Paramedic-only requirement; AEMT students only need mCE.
   const isAemtCohort = currentCohort?.program?.abbreviation === 'AEMT';
+  // EMT uses NEITHER Complio nor mCE — those are hospital-compliance systems.
+  // EMT students do agency ride-alongs (usually AMR) instead, tracked at
+  // /clinical/emt-tracking (Ben, 2026-07-02/07). Mirrors the AEMT N/A
+  // pattern above but for both tabs.
+  const isEmtCohort = currentCohort?.program?.abbreviation === 'EMT';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
@@ -717,28 +722,38 @@ export default function ClinicalTrackerPage() {
           {/* Tabs */}
           <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
             <button
-              onClick={() => { if (!isAemtCohort) setTab('complio'); }}
-              disabled={isAemtCohort}
-              title={isAemtCohort ? 'Complio is not applicable for AEMT — mCE only' : undefined}
+              onClick={() => { if (!isAemtCohort && !isEmtCohort) setTab('complio'); }}
+              disabled={isAemtCohort || isEmtCohort}
+              title={
+                isEmtCohort
+                  ? 'Complio is not applicable for EMT — EMT uses agency ride-alongs'
+                  : isAemtCohort
+                  ? 'Complio is not applicable for AEMT — mCE only'
+                  : undefined
+              }
               className={`px-4 py-2 text-sm font-medium transition-colors ${
-                isAemtCohort
+                isAemtCohort || isEmtCohort
                   ? 'bg-gray-100 dark:bg-gray-700/50 text-gray-400 dark:text-gray-500 cursor-not-allowed'
                   : tab === 'complio'
                   ? 'bg-teal-600 text-white'
                   : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
-              Complio{isAemtCohort ? ' (N/A)' : ''}
+              Complio{isAemtCohort || isEmtCohort ? ' (N/A)' : ''}
             </button>
             <button
-              onClick={() => setTab('mce')}
+              onClick={() => { if (!isEmtCohort) setTab('mce'); }}
+              disabled={isEmtCohort}
+              title={isEmtCohort ? 'mCE is not applicable for EMT — EMT uses agency ride-alongs' : undefined}
               className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200 dark:border-gray-700 ${
-                tab === 'mce'
+                isEmtCohort
+                  ? 'bg-gray-100 dark:bg-gray-700/50 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+                  : tab === 'mce'
                   ? 'bg-teal-600 text-white'
                   : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
-              mCE Modules
+              mCE Modules{isEmtCohort ? ' (N/A)' : ''}
             </button>
           </div>
 
@@ -748,6 +763,25 @@ export default function ClinicalTrackerPage() {
           </div>
         </div>
 
+        {/* EMT: neither Complio nor mCE applies — show a clear N/A state
+            instead of an empty/misleading tracker (Ben, 2026-07-02/07). */}
+        {isEmtCohort ? (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow p-10 text-center">
+            <p className="text-gray-700 dark:text-gray-300 font-medium mb-2">
+              Complio and mCE do not apply to EMT students
+            </p>
+            <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xl mx-auto">
+              Complio and mCE are hospital-compliance systems used by Paramedic and AEMT
+              students. EMT students complete agency ride-alongs (usually with AMR) instead —
+              tracked on the{' '}
+              <Link href="/clinical/emt-tracking" className="text-teal-600 dark:text-teal-400 hover:underline">
+                EMT Tracking
+              </Link>{' '}
+              page.
+            </p>
+          </div>
+        ) : (
+        <>
         {/* Aggregation panel */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow mb-4 overflow-hidden">
           <button
@@ -838,6 +872,8 @@ export default function ClinicalTrackerPage() {
             </div>
           )}
         </div>
+        </>
+        )}
       </main>
 
       {/* Print modal */}
