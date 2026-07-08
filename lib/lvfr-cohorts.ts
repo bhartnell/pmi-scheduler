@@ -20,15 +20,16 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  */
 export async function getLvfrCohorts(
   supabase: ReturnType<typeof getSupabaseAdmin>,
-): Promise<Array<{ id: string; cohort_number: number }>> {
+): Promise<Array<{ id: string; cohort_number: number; display_name: string | null }>> {
   const { data } = await supabase
     .from('cohorts')
-    .select('id, cohort_number, program:programs!inner(abbreviation)')
+    .select('id, cohort_number, display_name, program:programs!inner(abbreviation)')
     .eq('program.abbreviation', 'LVFR')
     .order('cohort_number');
   return (data || []).map((c) => ({
     id: c.id as string,
     cohort_number: c.cohort_number as number,
+    display_name: (c.display_name as string | null) ?? null,
   }));
 }
 
