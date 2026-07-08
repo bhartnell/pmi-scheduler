@@ -832,7 +832,7 @@ function whenLabel(s: CCSkill): string {
 }
 
 function ClassCompletionView() {
-  const [cohorts, setCohorts] = useState<Array<{ id: string; cohort_number: string }>>([]);
+  const [cohorts, setCohorts] = useState<Array<{ id: string; cohort_number: string; display_name?: string | null }>>([]);
   const [cohortId, setCohortId] = useState<string>('');
   const [skills, setSkills] = useState<CCSkill[]>([]);
   const [completion, setCompletion] = useState<Record<string, CCRow>>({});
@@ -913,7 +913,7 @@ function ClassCompletionView() {
               className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm min-w-[180px]"
             >
               {cohorts.length === 0 && <option value="">No LVFR/AEMT cohort</option>}
-              {cohorts.map(c => <option key={c.id} value={c.id}>{c.cohort_number}</option>)}
+              {cohorts.map(c => <option key={c.id} value={c.id}>{c.display_name || `Cohort ${c.cohort_number}`}</option>)}
             </select>
           </div>
           <div className="flex-1">

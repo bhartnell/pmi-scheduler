@@ -97,7 +97,17 @@ export default function LVFRDashboardPage() {
   const isStudent = effectiveRole === 'student';
   const isAdmin = hasMinRole(effectiveRole || '', 'admin');
 
-  const [reseedConfirm, setReseedConfirm] = useState(false);
+  // Reseed is a genuinely destructive action (it overwrites today's live
+  // runsheet from the master calendar, discarding any manual edits made
+  // today). It previously used an inline button-swap confirm at the same
+  // screen position as the trigger — an admin who reflexively double-clicks
+  // (or clicks fast without reading) could land the second click on
+  // "Confirm" by muscle memory. Feedback (b704db91) flagged this as still
+  // an accidental-click hazard even after being admin-gated + moved into
+  // "Admin Tools" (commit c800adc). Hardened here with a real modal
+  // (different position/overlay, not inline) that requires typing a
+  // confirmation word — see ReseedConfirmModal below.
+  const [reseedModalOpen, setReseedModalOpen] = useState(false);
   const [reseeding, setReseeding] = useState(false);
   const [reseedMessage, setReseedMessage] = useState<string | null>(null);
 
@@ -117,7 +127,7 @@ export default function LVFRDashboardPage() {
       setReseedMessage(`Seed failed: ${err instanceof Error ? err.message : String(err)}`);
     } finally {
       setReseeding(false);
-      setReseedConfirm(false);
+      setReseedModalOpen(false);
     }
   }
 
@@ -349,39 +359,42 @@ export default function LVFRDashboardPage() {
               <Shield className="w-4 h-4 text-gray-500" />
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Admin Tools</h3>
             </div>
-            <div className="flex flex-wrap gap-3 items-center">
-              {!reseedConfirm ? (
+
+            {/* Danger Zone — visually separated from routine admin actions so a
+                destructive control never sits at the same click position as
+                everyday buttons. Muted (not eye-catching amber/red-filled) on
+                purpose: this should read as "handle carefully," not "click me." */}
+            <div className="rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/40 dark:bg-red-950/10 p-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <AlertTriangle className="w-3.5 h-3.5 text-red-500 dark:text-red-400" />
+                <span className="text-xs font-semibold uppercase tracking-wide text-red-600 dark:text-red-400">Danger Zone</span>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
                 <button
-                  onClick={() => { setReseedConfirm(true); setReseedMessage(null); }}
-                  className="px-3 py-1.5 text-sm bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors font-medium flex items-center gap-1.5"
+                  onClick={() => setReseedModalOpen(true)}
+                  className="px-3 py-1.5 text-sm bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:border-red-400 dark:hover:border-red-700 hover:text-red-700 dark:hover:text-red-400 transition-colors font-medium flex items-center gap-1.5"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  Re-seed Today&apos;s Runsheet
+                  Re-seed Today&apos;s Runsheet&hellip;
                 </button>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-amber-700 dark:text-amber-300 font-medium">Overwrite today&apos;s runsheet from calendar?</span>
-                  <button
-                    onClick={handleReseed}
-                    disabled={reseeding}
-                    className="px-3 py-1.5 text-sm bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg font-medium flex items-center gap-1.5 transition-colors"
-                  >
-                    {reseeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                    Confirm
-                  </button>
-                  <button
-                    onClick={() => { setReseedConfirm(false); setReseedMessage(null); }}
-                    className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              )}
-              {reseedMessage && (
-                <span className="text-sm text-gray-600 dark:text-gray-400">{reseedMessage}</span>
-              )}
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  Overwrites today&apos;s runsheet from the master calendar. Rarely needed.
+                </span>
+                {reseedMessage && (
+                  <span className="text-sm text-gray-600 dark:text-gray-400">{reseedMessage}</span>
+                )}
+              </div>
             </div>
           </div>
+        )}
+
+        {reseedModalOpen && (
+          <ReseedConfirmModal
+            date={today}
+            reseeding={reseeding}
+            onConfirm={handleReseed}
+            onCancel={() => setReseedModalOpen(false)}
+          />
         )}
 
         {/* Recent Activity / Upcoming for instructors and observers */}
@@ -472,6 +485,89 @@ function StatCard({ icon: Icon, label, value, sublabel, color, bgColor }: {
       </div>
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
       <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{sublabel}</p>
+    </div>
+  );
+}
+
+// ─── Reseed confirmation modal ──────────────────────────────────────────────
+// A real overlay modal (not window.confirm(), not an inline button-swap) for
+// a genuinely destructive action: it deletes and rebuilds today's runsheet
+// from the master calendar, discarding any manual edits made today. Requires
+// typing the confirmation word to enable the destructive button, so a stray
+// or reflexive click can't complete the action — the Confirm button starts
+// disabled and only a deliberate typed action arms it.
+const RESEED_CONFIRM_WORD = 'RESEED';
+
+function ReseedConfirmModal({ date, reseeding, onConfirm, onCancel }: {
+  date: string;
+  reseeding: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const [typed, setTyped] = useState('');
+  const armed = typed.trim() === RESEED_CONFIRM_WORD;
+
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="reseed-modal-title"
+    >
+      <div className="w-full max-w-md rounded-xl bg-white dark:bg-gray-900 shadow-2xl border border-red-200 dark:border-red-900/50">
+        <div className="flex items-center gap-3 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+          <div className="rounded-lg bg-red-100 dark:bg-red-900/30 p-2 flex-shrink-0">
+            <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
+          </div>
+          <div>
+            <h2 id="reseed-modal-title" className="text-lg font-semibold text-gray-900 dark:text-white">
+              Overwrite today&apos;s runsheet?
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">{date}</p>
+          </div>
+        </div>
+
+        <div className="px-6 py-4 space-y-3">
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            This will overwrite today&apos;s runsheet — re-seeding every item for {date} from the master
+            calendar. Any manual edits made today (times, notes, added/removed items) will be lost.
+          </p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            To confirm, type <span className="font-mono font-semibold text-red-600 dark:text-red-400">{RESEED_CONFIRM_WORD}</span> below.
+          </p>
+          <input
+            type="text"
+            value={typed}
+            onChange={e => setTyped(e.target.value)}
+            placeholder={RESEED_CONFIRM_WORD}
+            autoFocus
+            disabled={reseeding}
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm font-mono tracking-wide focus:outline-none focus:ring-2 focus:ring-red-500"
+          />
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-gray-200 dark:border-gray-700 px-6 py-4">
+          <button
+            onClick={onCancel}
+            disabled={reseeding}
+            className="px-4 py-2 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={!armed || reseeding}
+            className={`px-4 py-2 text-sm rounded-lg font-medium flex items-center gap-1.5 transition-colors ${
+              armed && !reseeding
+                ? 'bg-red-600 hover:bg-red-700 text-white'
+                : 'bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
+            }`}
+          >
+            {reseeding ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+            Overwrite Runsheet
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

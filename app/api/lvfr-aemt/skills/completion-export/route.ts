@@ -40,8 +40,8 @@ export async function GET(request: NextRequest) {
     const supabase = getSupabaseAdmin();
 
     const { data: cohort } = await supabase
-      .from('cohorts').select('cohort_number').eq('id', cohortId).single();
-    const cohortLabel = cohort?.cohort_number ? `Cohort ${cohort.cohort_number}` : 'LVFR AEMT';
+      .from('cohorts').select('cohort_number, display_name').eq('id', cohortId).single();
+    const cohortLabel = cohort?.display_name || (cohort?.cohort_number ? `Cohort ${cohort.cohort_number}` : 'LVFR AEMT');
 
     // Roster: active students in the cohort.
     const { data: students } = await supabase
