@@ -17,18 +17,32 @@ import { syncSeriesForUser } from '@/lib/calendar-auto-sync';
  * Body: { userEmail: string }
  *
  * Steps:
- *   1. Look up the user's google_calendar_events rows.
- *   2. For each row, call Google Calendar API DELETE on the
+ *   1. Look up the user's google_calendar_events rows, SCOPED to
+ *      source_type in ('schedule_block', 'schedule_block_series') —
+ *      i.e. only the rows step 4 is actually able to recreate.
+ *   2. For each of those rows, call Google Calendar API DELETE on the
  *      stored google_event_id. Best-effort — 404/410 (already gone)
  *      counts as success.
- *   3. DELETE the rows from google_calendar_events.
+ *   3. DELETE those rows from google_calendar_events (same source_type
+ *      scope as step 1).
  *   4. Re-run syncSeriesForUser() for each of the user's
  *      pmi_block_instructors → recurring_group_id pairs, recreating
  *      events fresh with proper RRULE.
  *
+ * NOTE (2026-07-08 data-safety fix): this route used to delete ALL of
+ * the user's google_calendar_events rows regardless of source_type,
+ * including 'station_assignment' (station_instructors) and
+ * 'lab_day_role' (lab_day_roles) rows — but the recreate step only
+ * ever re-derives schedule-block events, so lab-sourced mappings/events
+ * were being permanently destroyed with no recreate path. The delete
+ * and recreate steps are now scoped to the same source_types so this
+ * tool never deletes something it can't restore. Recreating lab-sourced
+ * events is a separate feature (not implemented here).
+ *
  * The DELETE+RECREATE path is destructive on Google's side (the user
- * will see their PMI events briefly disappear and reappear). That's
- * the trade-off vs PATCH — only run this on demand, not in batch.
+ * will see their PMI schedule-block events briefly disappear and
+ * reappear). That's the trade-off vs PATCH — only run this on demand,
+ * not in batch.
  *
  * Permission: admin+ (same as the bulk /api/admin/calendar-sync route).
  */
@@ -77,10 +91,24 @@ export async function POST(request: NextRequest) {
 
   // 2. Fetch existing mapping rows. We need them BOTH for the DELETE
   //    calls and to log how many we cleared.
+  //
+  //    IMPORTANT: scoped to source_type in ('schedule_block',
+  //    'schedule_block_series') ONLY. The recreate step below (step 6)
+  //    only ever re-derives events from pmi_block_instructors /
+  //    pmi_schedule_blocks via syncSeriesForUser, which writes exactly
+  //    those two source_types (see sourceTypeFromKey in
+  //    lib/calendar-auto-sync.ts). Rows sourced from station_instructors
+  //    ('station_assignment') or lab_day_roles ('lab_day_role') are NOT
+  //    recreated by anything in this route — deleting them here would
+  //    permanently destroy lab-sourced calendar mappings/events with no
+  //    recreate path (2026-07-08 data-safety fix). Do not widen this
+  //    filter without also adding a recreate path for those source_types.
+  const RESYNCABLE_SOURCE_TYPES = ['schedule_block', 'schedule_block_series'] as const;
   const { data: existing, error: fetchErr } = await supabase
     .from('google_calendar_events')
     .select('id, google_event_id, source_type, source_id')
-    .ilike('user_email', userEmail);
+    .ilike('user_email', userEmail)
+    .in('source_type', RESYNCABLE_SOURCE_TYPES);
   if (fetchErr) {
     return NextResponse.json({ success: false, error: fetchErr.message }, { status: 500 });
   }
@@ -122,14 +150,18 @@ export async function POST(request: NextRequest) {
     await new Promise(r => setTimeout(r, 200));
   }
 
-  // 5. Drop the mapping rows. After this point the user has zero
-  //    google_calendar_events on the PMI side, so the recreate loop
-  //    will hit the POST branch in syncSeriesForUser and write fresh
-  //    rows + Google events.
+  // 5. Drop the mapping rows — scoped to the same RESYNCABLE_SOURCE_TYPES
+  //    as step 2/4 above. After this point the user has zero
+  //    schedule_block(_series) google_calendar_events rows, so the
+  //    recreate loop will hit the POST branch in syncSeriesForUser and
+  //    write fresh rows + Google events. Lab-sourced rows
+  //    (station_assignment, lab_day_role) are intentionally left alone —
+  //    see the comment on the step-2 query above.
   const { error: delErr, count: deletedRowCount } = await supabase
     .from('google_calendar_events')
     .delete({ count: 'exact' })
-    .ilike('user_email', userEmail);
+    .ilike('user_email', userEmail)
+    .in('source_type', RESYNCABLE_SOURCE_TYPES);
   if (delErr) {
     return NextResponse.json({ success: false, error: delErr.message }, { status: 500 });
   }
