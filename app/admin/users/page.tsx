@@ -547,6 +547,14 @@ export default function UserManagementPage() {
                               >
                                 {user.is_part_time ? 'Full-Time' : 'Part-Time'}
                               </button>
+                            </>
+                          )}
+                          {/* Program tag: the PATCH API already lets a protected superadmin
+                              edit their own row (isProtectedSuperadmin only blocks OTHER users
+                              from modifying it) — mirror that here instead of hiding the
+                              control outright, so Ben/Josh can self-tag primary_program. */}
+                          {canModify &&
+                            (!isProtected || currentUser.email.toLowerCase() === user.email.toLowerCase()) && (
                               <select
                                 value={user.primary_program || ''}
                                 onChange={(e) => handleSetProgram(user.id, e.target.value)}
@@ -558,8 +566,7 @@ export default function UserManagementPage() {
                                 <option value="aemt">AEMT</option>
                                 <option value="emt">EMT</option>
                               </select>
-                            </>
-                          )}
+                            )}
                         </div>
                       </td>
                     </tr>
