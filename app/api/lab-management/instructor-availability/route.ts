@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { isRtOnlyInstructor } from '@/lib/rt-only-instructors';
 
 /**
  * GET /api/lab-management/instructor-availability
@@ -59,13 +60,16 @@ export async function GET(request: NextRequest) {
     // Get day of week from date (0=Sun, 6=Sat)
     const dayOfWeek = new Date(date + 'T00:00:00').getDay();
 
-    // 1. Get all active instructors
-    const { data: allInstructors } = await supabase
+    // 1. Get all active instructors, excluding RT/ACLS-help-only staff — they
+    // hold instructor rows for ACLS duty but aren't paramedic-program
+    // instructors and shouldn't appear on this list (records kept for ACLS).
+    const { data: rawInstructors } = await supabase
       .from('lab_users')
       .select('id, name, email, is_part_time')
       .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin'])
       .eq('is_active', true)
       .order('name');
+    const allInstructors = rawInstructors?.filter((i) => !isRtOnlyInstructor(i.email));
 
     if (!allInstructors || allInstructors.length === 0) {
       return NextResponse.json({ success: true, instructors: [] });
