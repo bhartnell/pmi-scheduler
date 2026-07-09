@@ -17,6 +17,7 @@ const TIMEZONE = 'America/Phoenix';
 // Google Calendar color IDs
 const COLOR_LAB_STATION = '9';   // Blueberry
 const COLOR_LAB_ROLE = '7';      // Peacock
+const COLOR_GENERAL_LAB = '2';   // Sage (general-lab-default, distinct from station/role)
 const COLOR_SHIFT = '1';         // Lavender
 const COLOR_SITE_VISIT = '10';   // Basil (green)
 const COLOR_COVERAGE = '11';     // Tomato (red)
@@ -476,6 +477,103 @@ export async function syncLabStationAssignment(params: StationAssignmentParams):
     }
   } catch (err) {
     console.error('[gcal] Error syncing station assignment:', err);
+  }
+}
+
+// --- General Lab Default ---
+
+interface GeneralLabParams {
+  userEmail: string;
+  labDayId: string;
+  labDayTitle: string;
+  labDayDate: string;
+  startTime?: string;
+  endTime?: string;
+  cohortLabel?: string;
+  program?: string;
+}
+
+/**
+ * Create the GENERAL-LAB-DEFAULT event for a full-time paramedic instructor
+ * on a lab day they attend but hold no station/role for. source_id is the
+ * lab_day_id (one general-lab event per instructor per lab day). Idempotent
+ * (check-before-create) and rolls the Google event back if the mapping store
+ * fails — same guarantees as the other lab syncs. See
+ * lib/general-lab-sync.ts for the precedence pass that decides WHEN to call
+ * this vs. removeGeneralLabDefault (class overrides > station/role replaces).
+ */
+export async function syncGeneralLabDefault(params: GeneralLabParams): Promise<void> {
+  try {
+    if (!(await shouldSyncForUser(params.userEmail, 'sync_lab_assignments'))) return;
+
+    const existing = await getEventMapping(params.userEmail, 'general_lab', params.labDayId);
+    if (existing) return;
+
+    const accessToken = await getAccessTokenForUser(params.userEmail);
+    if (!accessToken) return;
+
+    const { startDateTime, endDateTime } = buildDateTimes(
+      params.labDayDate,
+      params.startTime,
+      params.endTime,
+      params.program
+    );
+
+    const base = params.cohortLabel
+      ? `Lab — ${params.cohortLabel} · ${params.labDayTitle}`
+      : `PMI Lab: ${params.labDayTitle}`;
+    const summary = base;
+
+    const eventId = await createGoogleEvent(accessToken, {
+      summary,
+      description: 'General lab (default) — Created by PMI EMS Scheduler',
+      startDateTime,
+      endDateTime,
+      colorId: COLOR_GENERAL_LAB,
+    });
+
+    if (eventId) {
+      const stored = await storeEventMapping({
+        user_email: params.userEmail,
+        google_event_id: eventId,
+        source_type: 'general_lab',
+        source_id: params.labDayId,
+        lab_day_id: params.labDayId,
+        event_summary: summary,
+      });
+      if (!stored) {
+        await deleteGoogleEvent(accessToken, eventId);
+        console.error(
+          `[gcal] General-lab mapping store failed for lab_day ${params.labDayId}; rolled back the Google event to prevent duplicates`
+        );
+      }
+    }
+  } catch (err) {
+    console.error('[gcal] Error syncing general-lab default:', err);
+  }
+}
+
+/**
+ * Remove the general-lab-default event for an instructor on a lab day —
+ * used by the precedence pass when the instructor gains a more-specific
+ * assignment (class/station/role) so the general-lab event doesn't double
+ * up. Safe no-op if no mapping exists.
+ */
+export async function removeGeneralLabDefault(params: {
+  userEmail: string;
+  labDayId: string;
+}): Promise<void> {
+  try {
+    const mapping = await getEventMapping(params.userEmail, 'general_lab', params.labDayId);
+    if (!mapping) return;
+
+    const accessToken = await getAccessTokenForUser(params.userEmail);
+    if (accessToken) {
+      await deleteGoogleEvent(accessToken, mapping.google_event_id);
+    }
+    await deleteEventMapping(params.userEmail, 'general_lab', params.labDayId);
+  } catch (err) {
+    console.error('[gcal] Error removing general-lab default:', err);
   }
 }
 

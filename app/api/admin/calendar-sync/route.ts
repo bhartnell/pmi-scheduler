@@ -452,6 +452,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 6. General-lab-default (Option B + precedence): full-time paramedic-tagged
+    //    instructors get a general-lab event on every upcoming paramedic lab day
+    //    they don't already have a class/station/role for. Idempotent.
+    let generalLab = { created: 0, removed: 0, skipped: 0, instructors: 0, labDays: 0 };
+    try {
+      const { syncGeneralLabDefaults } = await import('@/lib/general-lab-sync');
+      generalLab = await syncGeneralLabDefaults(supabase, targetEmail ? { targetEmail } : {});
+    } catch (err) {
+      console.error('General-lab-default sync block failed:', err);
+    }
+
     return NextResponse.json({
       success: true,
       synced,
@@ -463,10 +474,13 @@ export async function POST(request: NextRequest) {
       lvfr_synced: lvfrSynced,
       lvfr_failed: lvfrFailed,
       lvfr_skipped: lvfrSkipped,
+      general_lab_created: generalLab.created,
+      general_lab_skipped: generalLab.skipped,
       users_touched: usersTouched.size,
       message:
         `Bulk sync complete: ${synced} events created, ${seriesSynced} class series ` +
         `created, ${seriesUpdated} series updated, ${lvfrSynced} LVFR events created, ` +
+        `${generalLab.created} general-lab events created, ` +
         `${failed + seriesFailed + lvfrFailed} failed, ${skipped + lvfrSkipped} skipped`,
     });
   } catch (error) {

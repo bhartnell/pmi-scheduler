@@ -220,16 +220,18 @@ export async function DELETE(request: NextRequest) {
 
       if (error) throw error;
 
-      // Fire-and-forget: remove Google Calendar event
+      // Remove Google Calendar event. AWAITED (not fire-and-forget): Vercel
+      // freezes the serverless function on response, so a detached promise can
+      // skip the delete — same bug class fixed in 0a98e539.
       if (roleRecord) {
         try {
           const { removeLabDayRole } = await import('@/lib/google-calendar');
           const instructor = Array.isArray(roleRecord.instructor) ? roleRecord.instructor[0] : roleRecord.instructor;
           if (instructor?.email) {
-            removeLabDayRole({ userEmail: instructor.email, roleId }).catch(() => {});
+            await removeLabDayRole({ userEmail: instructor.email, roleId });
           }
-        } catch {
-          // Calendar sync is best-effort
+        } catch (err) {
+          console.error('[lab-day-roles] role event removal failed:', err);
         }
       }
     } else if (labDayId) {
@@ -247,18 +249,18 @@ export async function DELETE(request: NextRequest) {
 
       if (error) throw error;
 
-      // Fire-and-forget: remove Google Calendar events for each role
+      // Remove Google Calendar events for each role — AWAITED (see above).
       if (roles && roles.length > 0) {
         try {
           const { removeLabDayRole } = await import('@/lib/google-calendar');
           for (const r of roles) {
             const instructor = Array.isArray(r.instructor) ? r.instructor[0] : r.instructor;
             if (instructor?.email) {
-              removeLabDayRole({ userEmail: instructor.email, roleId: r.id }).catch(() => {});
+              await removeLabDayRole({ userEmail: instructor.email, roleId: r.id });
             }
           }
-        } catch {
-          // Calendar sync is best-effort
+        } catch (err) {
+          console.error('[lab-day-roles] role events removal failed:', err);
         }
       }
     } else {
