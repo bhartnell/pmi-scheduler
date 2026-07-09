@@ -365,7 +365,7 @@ export async function POST(request: NextRequest) {
 
     const { data: lvfrAssignments } = await supabase
       .from('lvfr_aemt_instructor_assignments')
-      .select('id, day_number, date, primary_instructor_id, secondary_instructor_id');
+      .select('id, day_number, date, primary_instructor_id, secondary_instructor_id, additional_instructors');
 
     if (lvfrAssignments && lvfrAssignments.length > 0) {
       // Collect all unique instructor IDs
@@ -373,6 +373,7 @@ export async function POST(request: NextRequest) {
       for (const a of lvfrAssignments) {
         if (a.primary_instructor_id) allLvfrInstructorIds.add(a.primary_instructor_id);
         if (a.secondary_instructor_id) allLvfrInstructorIds.add(a.secondary_instructor_id);
+        for (const id of a.additional_instructors ?? []) allLvfrInstructorIds.add(id);
       }
 
       if (allLvfrInstructorIds.size > 0) {
@@ -399,9 +400,10 @@ export async function POST(request: NextRequest) {
         }
 
         for (const a of lvfrAssignments) {
-          const rolePairs: Array<{ instrId: string | null; role: 'primary' | 'secondary' }> = [
+          const rolePairs: Array<{ instrId: string | null; role: 'primary' | 'secondary' | 'additional' }> = [
             { instrId: a.primary_instructor_id, role: 'primary' },
             { instrId: a.secondary_instructor_id, role: 'secondary' },
+            ...(a.additional_instructors ?? []).map((instrId: string) => ({ instrId, role: 'additional' as const })),
           ];
           for (const { instrId, role } of rolePairs) {
             if (!instrId) continue;
@@ -452,9 +454,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 6. General-lab-default (Option B + precedence): full-time paramedic-tagged
-    //    instructors get a general-lab event on every upcoming paramedic lab day
-    //    they don't already have a class/station/role for. Idempotent.
+    // 6. General-lab-default (Option B + precedence): every active paramedic-tagged
+    //    instructor gets a general-lab event on every upcoming paramedic lab day
+    //    they don't already have a station/role for. Idempotent.
     let generalLab = { created: 0, removed: 0, skipped: 0, instructors: 0, labDays: 0 };
     try {
       const { syncGeneralLabDefaults } = await import('@/lib/general-lab-sync');
