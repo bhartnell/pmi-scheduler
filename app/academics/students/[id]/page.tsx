@@ -6,6 +6,7 @@ import { useEffect, useState, useRef } from 'react';
 import TransferCohortModal, { type TransferMode } from '@/components/students/TransferCohortModal';
 import CohortHistorySection, { type CohortHistoryHandle } from '@/components/students/CohortHistorySection';
 import GraduationModal from '@/components/students/GraduationModal';
+import WithdrawModal from '@/components/students/WithdrawModal';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -19,6 +20,7 @@ import {
   Building,
   User,
   Trash2,
+  UserMinus,
   Upload,
   FileCheck,
   Clock,
@@ -236,6 +238,7 @@ export default function StudentDetailPage() {
     defaultNewStatus?: 'active' | 'on_hold' | 'withdrawn' | 'graduated' | '';
   } | null>(null);
   const [showGraduationModal, setShowGraduationModal] = useState(false);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const cohortHistoryRef = useRef<CohortHistoryHandle>(null);
 
   // Edit form state
@@ -1191,6 +1194,21 @@ export default function StudentDetailPage() {
                               >
                                 <FileCheck className="w-4 h-4" />
                                 Mark Graduated
+                              </button>
+                            )}
+
+                            {/* Withdraw â€” preserve-only, separate from
+                                Delete. Available whenever the student
+                                isn't already withdrawn/graduated (active
+                                or on_hold). Reversible via Re-enroll. */}
+                            {!isWithdrawn && !isGraduated && (
+                              <button
+                                onClick={() => setShowWithdrawModal(true)}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/40 rounded-lg font-medium"
+                                title="Withdraw this student (preserves their file, reversible via Re-enroll)"
+                              >
+                                <UserMinus className="w-4 h-4" />
+                                Withdraw
                               </button>
                             )}
                           </>
@@ -2274,6 +2292,24 @@ export default function StudentDetailPage() {
           onClose={() => setShowGraduationModal(false)}
           onGraduated={() => {
             setShowGraduationModal(false);
+            fetchStudent();
+            cohortHistoryRef.current?.refresh();
+          }}
+        />
+      )}
+
+      {showWithdrawModal && student && (
+        <WithdrawModal
+          studentId={studentId}
+          studentName={`${student.first_name} ${student.last_name}`}
+          cohortLabel={
+            student.cohort
+              ? `${student.cohort.program?.abbreviation ?? ''} Group ${student.cohort.cohort_number}`.trim()
+              : undefined
+          }
+          onClose={() => setShowWithdrawModal(false)}
+          onWithdrawn={() => {
+            setShowWithdrawModal(false);
             fetchStudent();
             cohortHistoryRef.current?.refresh();
           }}

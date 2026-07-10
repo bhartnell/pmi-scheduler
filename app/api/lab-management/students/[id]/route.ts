@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { hasMinRole, isSuperadmin } from '@/lib/permissions';
+import { hasMinRole, isSuperadmin, canManageStudentRoster } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
 import { createDeletionRequestIfAbsent } from '@/lib/deletion-requests';
 
@@ -104,7 +104,27 @@ export async function PATCH(
     if (body.email !== undefined) allowedFields.email = body.email;
     if (body.phone !== undefined) allowedFields.phone = body.phone;
     if (body.cohort_id !== undefined) allowedFields.cohort_id = body.cohort_id;
-    if (body.status !== undefined) allowedFields.status = body.status;
+    if (body.status !== undefined) {
+      // Lifecycle status (active/withdrawn/graduated/on_hold) is
+      // FERPA-adjacent — restrict actually CHANGING it to lead_instructor+,
+      // same as the dedicated /withdraw, /graduate, /transfer, /re-enroll
+      // routes. The generic edit form always round-trips the current
+      // status even when the caller only touched an unrelated field
+      // (notes, phone, scrub size…), so only gate on a real change —
+      // otherwise every save from a plain instructor would 403.
+      const { data: current } = await supabase
+        .from('students')
+        .select('status')
+        .eq('id', id)
+        .single();
+      if (current && current.status !== body.status && !canManageStudentRoster(callerRole)) {
+        return NextResponse.json(
+          { error: 'Forbidden — lead instructor or above required to change student status' },
+          { status: 403 }
+        );
+      }
+      allowedFields.status = body.status;
+    }
     if (body.notes !== undefined) allowedFields.notes = body.notes;
     if (body.photo_url !== undefined) allowedFields.photo_url = body.photo_url;
     if (body.scrub_top_size !== undefined) allowedFields.scrub_top_size = body.scrub_top_size;
