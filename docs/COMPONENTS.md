@@ -19,6 +19,23 @@
 
 ### Major additions
 
+**`components/students/WithdrawModal.tsx`** (2026-07-10) — Confirm-and-reason
+modal for withdrawing a student (`students.status = 'withdrawn'`), preserve-only
+and reversible via the existing Re-enroll flow. Mirrors `GraduationModal.tsx`'s
+shape (optional reason textarea, submit/cancel footer). Posts to the new
+`POST /api/students/[id]/withdraw` route, which is lead_instructor+ gated
+(`canManageStudentRoster`), leaves `cohort_id` untouched, closes the student's
+active `student_program_enrollments` row, and writes a `student_cohort_history`
+row (`event_type='withdrawal'`) so it shows up alongside transfer/graduation
+events. Rendered as a dedicated "Withdraw" button on
+`app/academics/students/[id]/page.tsx` next to Transfer/Mark Graduated —
+deliberately a separate control from the superadmin-only Delete (trash icon),
+per the self-service withdraw-vs-delete task. The generic student PATCH
+endpoint (`app/api/lab-management/students/[id]/route.ts`) now also rejects
+`status` changes from non-lead-instructors (previously any instructor role
+could flip status via the plain Edit form, bypassing the intended permission
+model).
+
 **`components/scenario/ScenarioFullDisplay.tsx`** — Read-only renderer for
 the full scenario card (dispatch, patient, SAMPLE, phases, vitals, critical
 actions, debrief points). Used on the scenario edit page's preview pane
