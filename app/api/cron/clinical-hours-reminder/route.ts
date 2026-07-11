@@ -55,10 +55,18 @@ function totalWeeks(startDate: Date, endDate: Date | null): number {
 // GET /api/cron/clinical-hours-reminder
 //
 // Runs weekly (Monday 9am UTC = 2am MST). Checks every active cohort's
-// students against program clinical-hour requirements. Students who are
-// more than 20% behind expected pace receive an in-app notification, and
-// their lead instructors (admin/superadmin users) are also notified.
+// students against program clinical-hour requirements to identify students
+// who are more than 20% behind expected pace.
+//
+// Push notifications disabled per Ben's decision (2026-07-01): /clinical/hours
+// is a manual/convenience Platinum-export tracker, not the primary system of
+// record, so "behind on clinical hours" push notifications from it are
+// unwanted noise. The /clinical/hours overview still shows pace/"Behind"
+// badges directly (see getStudentPace in app/clinical/hours/page.tsx) — only
+// the push-notification path below is disabled. Flip back to true to re-enable.
 // ---------------------------------------------------------------------------
+
+const NOTIFICATIONS_ENABLED = false;
 
 export async function GET(request: NextRequest) {
   // Verify cron secret
@@ -213,6 +221,7 @@ export async function GET(request: NextRequest) {
 
         // Only send if not recently notified and student has an email
         if (!student.email || alreadyNotifiedEmails.has(student.email)) continue;
+        if (!NOTIFICATIONS_ENABLED) continue;
 
         const percentComplete = Math.round((actualHours / requiredHours) * 100);
         const expectedPct = Math.round(progressFraction * 100);
@@ -236,7 +245,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Notify lead instructors if there are behind students
-    if (behindStudents.length > 0 && adminEmails.length > 0) {
+    if (NOTIFICATIONS_ENABLED && behindStudents.length > 0 && adminEmails.length > 0) {
       const sevenDaysAgoForAdmin = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
       const { data: recentAdminNotifications } = await supabase
         .from('user_notifications')
