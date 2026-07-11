@@ -2,22 +2,27 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { syncGeneralLabDefault, removeGeneralLabDefault } from '@/lib/google-calendar';
 
 /**
- * General-lab-default generation pass (Option B + precedence).
+ * General-lab-default generation pass (Option B + precedence, corrected scope
+ * 2026-07-09).
  *
- * For every full-time, paramedic-tagged, calendar-connected instructor, ensure
- * a general-lab calendar event exists on each upcoming PARAMEDIC-cohort lab day
- * they attend — EXCEPT where a more-specific assignment already represents them
- * that day (precedence: a didactic CLASS that date OVERRIDES; a STATION or ROLE
- * assignment REPLACES). Idempotent and safe to re-run: it creates the missing
- * general-lab events and removes any that a now-more-specific assignment has
- * superseded, so `POST /api/admin/calendar-sync` ("Sync All") converges the
- * calendar each run.
+ * For every ACTIVE, paramedic-tagged, calendar-connected instructor, ensure a
+ * general-lab calendar event exists on each upcoming PARAMEDIC-cohort lab day
+ * they attend — EXCEPT where a STATION or ROLE assignment already represents
+ * them that day (precedence: station/role REPLACES the generic lab). Idempotent
+ * and safe to re-run: it creates the missing general-lab events and removes any
+ * that a now-more-specific assignment has superseded, so
+ * `POST /api/admin/calendar-sync` ("Sync All") converges the calendar each run.
  *
- * Scope note (Ben, 2026-07-08): B = all paramedic-tagged instructors get all
- * paramedic labs (fails safe toward showing every lab). Stacie is EMT-tagged
- * and therefore never generated here — her calendar feeds admissions and must
- * not be over-blocked. Only instructors Ben has tagged primary_program =
- * 'paramedic' AND left full-time (is_part_time = false) are included.
+ * Scope note (Ben, 2026-07-09 correction): the original build also treated a
+ * didactic CLASS date (pmi_block_instructors "teach-link") as overriding —
+ * that wrongly suppressed the general-lab default for anyone broadly linked to
+ * schedule blocks (e.g. Ben, linked to nearly every block as program
+ * director), leaving him with 1 event instead of ~12+. The teach-link filter
+ * is removed; only an actual station/role assignment on the SAME lab day
+ * suppresses the generic lab now. Scope broadened from "full-time" to "active"
+ * (is_active = true, dropping the is_part_time requirement) per Ben's
+ * confirmed requirement. Stacie is EMT-tagged and therefore never generated
+ * here — her calendar feeds admissions and must not be over-blocked.
  */
 export async function syncGeneralLabDefaults(
   supabase: ReturnType<typeof getSupabaseAdmin>,
@@ -26,12 +31,12 @@ export async function syncGeneralLabDefaults(
   const counts = { created: 0, removed: 0, skipped: 0, instructors: 0, labDays: 0 };
   const today = new Date().toISOString().split('T')[0];
 
-  // 1. Full-time paramedic-tagged, calendar-connected instructors.
+  // 1. Active paramedic-tagged, calendar-connected instructors.
   let instrQuery = supabase
     .from('lab_users')
     .select('id, email')
     .eq('primary_program', 'paramedic')
-    .eq('is_part_time', false)
+    .eq('is_active', true)
     .eq('google_calendar_connected', true)
     .eq('google_calendar_scope', 'events');
   if (opts.targetEmail) instrQuery = instrQuery.ilike('email', opts.targetEmail);
@@ -60,20 +65,7 @@ export async function syncGeneralLabDefaults(
     const userId = instr.id as string;
 
     // Precedence inputs, gathered once per instructor:
-    // (a) CLASS dates — non-cancelled schedule blocks this instructor teaches.
-    const { data: blockRows } = await supabase
-      .from('pmi_block_instructors')
-      .select('schedule_block_id, pmi_schedule_blocks!inner(date, status)')
-      .eq('instructor_id', userId);
-    const classDates = new Set<string>();
-    for (const r of blockRows ?? []) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const b = (r as any).pmi_schedule_blocks;
-      const blk = Array.isArray(b) ? b[0] : b;
-      if (blk?.date && blk.status !== 'cancelled') classDates.add(blk.date);
-    }
-
-    // (b) STATION lab_day_ids — stations this instructor is assigned to.
+    // (a) STATION lab_day_ids — stations this instructor is assigned to.
     const { data: stationRows } = await supabase
       .from('station_instructors')
       .select('lab_stations!inner(lab_day_id)')
@@ -86,7 +78,7 @@ export async function syncGeneralLabDefaults(
       if (s?.lab_day_id) stationLabDayIds.add(s.lab_day_id);
     }
 
-    // (c) ROLE lab_day_ids — lab-day roles this instructor holds.
+    // (b) ROLE lab_day_ids — lab-day roles this instructor holds.
     const { data: roleRows } = await supabase
       .from('lab_day_roles')
       .select('lab_day_id')
@@ -103,12 +95,11 @@ export async function syncGeneralLabDefaults(
         : undefined;
 
       const hasMoreSpecific =
-        classDates.has(ld.date as string) ||
         stationLabDayIds.has(ld.id as string) ||
         roleLabDayIds.has(ld.id as string);
 
       if (hasMoreSpecific) {
-        // A class/station/role represents this instructor that day — ensure no
+        // A station/role represents this instructor that day — ensure no
         // duplicate general-lab event lingers.
         await removeGeneralLabDefault({ userEmail: email, labDayId: ld.id as string });
         counts.skipped++;
