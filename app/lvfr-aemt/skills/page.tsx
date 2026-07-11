@@ -941,6 +941,13 @@ function ClassCompletionView() {
             >
               <Download className="w-4 h-4" /> Reference sheets (.pdf)
             </button>
+            <button
+              onClick={() => { window.location.href = `/api/lvfr-aemt/skills/blank-checklist-export`; }}
+              className="flex items-center gap-1.5 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium whitespace-nowrap"
+              title="Download the blank class checklist — all skills by category, checkboxes to mark off as covered (.pdf). For printing/handing out."
+            >
+              <Download className="w-4 h-4" /> Blank checklist (.pdf)
+            </button>
           </div>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
