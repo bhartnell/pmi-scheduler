@@ -355,7 +355,10 @@ export async function getEventMappingsByShift(shiftId: string): Promise<EventMap
 const PROGRAM_TIME_DEFAULTS: Record<string, { start: string; end: string }> = {
   PM: { start: '15:00', end: '17:30' },
   EMT: { start: '09:00', end: '12:00' },
-  AEMT: { start: '18:00', end: '21:30' },
+  // LVFR AEMT course days run 07:30-15:30 (day class), not evening — a null
+  // time_blocks row falling back to this default must land on the actual
+  // class time, not a stale evening slot from an earlier cohort schedule.
+  AEMT: { start: '07:30', end: '15:30' },
 };
 
 /**
