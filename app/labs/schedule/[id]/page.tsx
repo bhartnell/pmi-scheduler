@@ -713,7 +713,12 @@ export default function LabDayPage() {
 
         <LabDayRolesSection labDayId={labDayId} labDayRoles={labDayRoles} instructors={instructors} userRole={userRole} calendarAvailability={calendarAvailability} instructorAvailability={instructorAvailability} onRolesChange={setLabDayRoles} />
 
-        <AvailableInstructorsSection instructorAvailability={instructorAvailability} loading={instructorAvailabilityLoading} />
+        {/* Below xl, shown inline here (no spare screen space to pair it
+            with the skill-coverage panel yet). At xl+ it moves into the
+            floating aside alongside SkillCoveragePanel — see below. */}
+        <div className="xl:hidden">
+          <AvailableInstructorsSection instructorAvailability={instructorAvailability} loading={instructorAvailabilityLoading} />
+        </div>
 
         {calendarSummary.total > 0 && !calendarLoading && (<div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3 print:hidden"><Calendar className="w-4 h-4" /><span>{calendarSummary.free} of {calendarSummary.total} instructor{calendarSummary.total !== 1 ? 's' : ''} {calendarSummary.free === 1 ? 'has a' : 'have'} free calendar{calendarSummary.free !== 1 ? 's' : ''} for this date</span>{calendarSummary.free < calendarSummary.total && <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">({calendarSummary.total - calendarSummary.free} busy or disconnected)</span>}</div>)}
         {calendarLoading && (<div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 mb-3 print:hidden"><Loader2 className="w-4 h-4 animate-spin" /><span>Checking calendar availability...</span></div>)}
@@ -1030,18 +1035,22 @@ export default function LabDayPage() {
         </div>
       </main>
 
-      {/* Skill Coverage — floating right-side reference on xl+ screens. */}
-      {labDay?.cohort?.id && (
-        <aside
-          className="hidden xl:block fixed right-4 top-24 w-80 z-20"
-          aria-label="Skill coverage reference"
-        >
+      {/* Staffing + Skill Coverage — floating right-side reference on xl+
+          screens, using the spare screen space next to the vertical lab
+          day layout. Available Instructors sits above Skill Coverage
+          (staffing is the more time-critical planning question). */}
+      <aside
+        className="hidden xl:block fixed right-4 top-24 w-80 z-20 space-y-4 max-h-[calc(100vh-6rem)] overflow-y-auto"
+        aria-label="Lab day staffing and skill coverage reference"
+      >
+        <AvailableInstructorsSection instructorAvailability={instructorAvailability} loading={instructorAvailabilityLoading} />
+        {labDay?.cohort?.id && (
           <SkillCoveragePanel
             cohortId={labDay.cohort.id}
             defaultExpanded={true}
           />
-        </aside>
-      )}
+        )}
+      </aside>
 
       {editingStation && (<EditStationModal station={editingStation} labDay={labDay} instructors={instructors} locations={locations} calendarAvailability={calendarAvailability} instructorAvailability={instructorAvailability} session={session} onClose={() => setEditingStation(null)} onSaved={() => { setEditingStation(null); fetchLabDay({ silent: true }); }} />)}
       {showTimer && <LabTimer labDayId={labDayId} numRotations={labDay.num_rotations} rotationMinutes={labDay.rotation_duration} onClose={() => setShowTimer(false)} isController={true} />}

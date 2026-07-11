@@ -35,6 +35,8 @@ export default function AvailableInstructorsSection({
 
   const available = instructorAvailability.filter(i => i.group === 'available');
   const volunteers = instructorAvailability.filter(i => i.group === 'volunteer');
+  const conflicts = instructorAvailability.filter(i => i.group === 'conflict');
+  const noData = instructorAvailability.filter(i => i.group === 'no_availability');
   const totalCount = available.length + volunteers.length;
 
   return (
@@ -102,6 +104,51 @@ export default function AvailableInstructorsSection({
               <p className="text-sm text-gray-400 dark:text-gray-500 italic">No volunteer signups yet.</p>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Conflict and no-data instructors are shown separately, clearly
+          labeled with the reason — never lumped into a bare "unavailable"
+          bucket (the earlier confusion: everyone showed unavailable
+          because of Pima Tuesday-class conflicts + sparse seeded data). */}
+      {conflicts.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0" />
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              Has a conflict ({conflicts.length})
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {conflicts.map(i => {
+              const reason = i.conflicts[0]?.title;
+              const extra = i.conflicts.length > 1 ? ` +${i.conflicts.length - 1} more` : '';
+              return (
+                <span
+                  key={i.id}
+                  className="px-3 py-1.5 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 rounded-full text-sm font-medium"
+                  title={reason ? `${reason}${extra}` : undefined}
+                >
+                  {i.name}
+                  {reason && <span className="font-normal opacity-75"> — {reason}{extra}</span>}
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {noData.length > 0 && (
+        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <div className="flex items-center gap-1.5 mb-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600 flex-shrink-0" />
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+              No availability submitted ({noData.length})
+            </span>
+          </div>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            {noData.map(i => i.name).join(', ')}
+          </p>
         </div>
       )}
     </div>
