@@ -16,7 +16,7 @@ import { isRtOnlyInstructor } from '@/lib/rt-only-instructors';
  *                        availability covering the slot. Either way,
  *                        no scheduling conflicts.
  *   "volunteer"        — blue dot. Signed up for THIS lab_day via
- *                        station_instructors or volunteer_events
+ *                        volunteer_events / volunteer_event_signups
  *                        (independent of explicit availability).
  *   "conflict"         — amber dot. May or may not have submitted
  *                        availability, but has a class block,
@@ -35,7 +35,7 @@ import { isRtOnlyInstructor } from '@/lib/rt-only-instructors';
  *   4. lvfr_aemt_instructor_assignments (LVFR Academy)
  *   5. shift_signups (open shifts)
  *   6. manual_hour_logs (Gannon EMS 121, LVFR AEMT manual hours)
- *   7. station_instructors / volunteer_events (volunteer flag)
+ *   7. volunteer_events / volunteer_event_signups (volunteer flag)
  *
  * Tolerates absent tables — wraps optional sources in try/catch
  * so deployments that haven't applied a particular migration
@@ -325,36 +325,26 @@ export async function GET(request: NextRequest) {
       // manual_hour_logs absent — skip silently.
     }
 
-    // 7. Volunteer signups. Two signals to honour:
-    //    a) station_instructors row keyed to a station belonging
-    //       to THIS lab_day (caller passed lab_day_id).
-    //    b) volunteer_events.linked_lab_day_id matching this lab_day
-    //       with the user listed in volunteer_event_signups.
-    //    Either signal flags the instructor as a volunteer for the
-    //    blue-dot group. Volunteer doesn't override conflicts —
-    //    conflict still wins so the operator sees the warning.
+    // 7. Volunteer signups: volunteer_events.linked_lab_day_id matching
+    //    this lab_day, with the user listed in volunteer_event_signups.
+    //    Flags the instructor as a volunteer for the blue-dot group.
+    //    Volunteer doesn't override conflicts — conflict still wins so
+    //    the operator sees the warning.
+    //
+    //    NOTE: this used to also treat any station_instructors row on
+    //    THIS lab_day as a volunteer signal, but station_instructors is
+    //    the generic "assigned to teach this station" table (written by
+    //    the normal EditStationModal assignment flow via PATCH
+    //    /api/lab-management/stations/[id] and POST
+    //    /api/lab-management/station-instructors) — it has no column
+    //    distinguishing a volunteer sign-up from a regular teaching
+    //    assignment. Treating every row as "volunteer" mislabeled any
+    //    instructor normally assigned to a station on their own lab day
+    //    (blue "Volunteering" dot instead of green "Available"), even
+    //    though no volunteer_events/volunteer_event_signups row existed
+    //    for them. Removed 2026-07-10; volunteer_events is the one real
+    //    source for this signal.
     if (labDayId) {
-      try {
-        const { data: thisLabStations } = await supabase
-          .from('lab_stations')
-          .select('id, station_instructors:station_instructors(user_id, user_email)')
-          .eq('lab_day_id', labDayId);
-        for (const s of thisLabStations ?? []) {
-          for (const si of (s as { station_instructors?: Array<{ user_id?: string; user_email?: string }> }).station_instructors ?? []) {
-            let entry = si.user_id ? instructorMap.get(si.user_id) : undefined;
-            if (!entry && si.user_email) {
-              const lower = si.user_email.toLowerCase();
-              instructorMap.forEach(v => {
-                if (!entry && v.email.toLowerCase() === lower) entry = v;
-              });
-            }
-            if (entry) entry.is_volunteer = true;
-          }
-        }
-      } catch {
-        // table missing — skip
-      }
-
       try {
         const { data: vEvents } = await supabase
           .from('volunteer_events')
