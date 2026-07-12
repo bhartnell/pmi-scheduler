@@ -489,13 +489,37 @@ const SCHEDULE: Record<number, RawBlock[]> = {
 };
 
 // ─── POST /api/lvfr-aemt/planner/reseed ────────────────────────────────────
-export async function POST() {
+//
+// DATA-SAFETY GUARD (2026-07-12): this route deletes and reinserts ALL
+// plan_placements for the current instance from the hardcoded SCHEDULE
+// above — a placement-wipe hazard if triggered by accident (e.g. a stray
+// curl, a re-run of the seed script against the wrong env). It now:
+//   1. Refuses to run unless the caller passes { confirm: true } in the
+//      JSON body — otherwise it returns a dry-run preview (how many
+//      placements exist today, what would be deleted) and does nothing.
+//   2. Snapshots every existing placement row into
+//      lvfr_aemt_plan_placements_backups BEFORE the delete, so a bad
+//      reseed is always recoverable (see the restore query in the
+//      response `backup` field).
+// This does not change the hardcoded-data source — that's the separate
+// post-launch planner consolidation.
+export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
   const { user } = auth;
 
   if (!hasMinRole(user.role, 'admin')) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
+  }
+
+  let confirm = false;
+  try {
+    const body = await request.json();
+    if (body && typeof body === 'object' && body.confirm === true) {
+      confirm = true;
+    }
+  } catch {
+    // No body / not JSON — fall through with confirm=false.
   }
 
   const supabase = getSupabaseAdmin();
@@ -628,7 +652,56 @@ export async function POST() {
     }
   }
 
-  // 3. Delete all existing placements for this instance
+  // 3. Snapshot + delete all existing placements for this instance.
+  // Fetch what's there BEFORE touching anything, regardless of confirm —
+  // this is what lets an unconfirmed call return an accurate preview.
+  const { data: existingPlacements, error: fetchExistingError } = await supabase
+    .from('lvfr_aemt_plan_placements')
+    .select('*')
+    .eq('instance_id', instance.id);
+
+  if (fetchExistingError) {
+    return NextResponse.json({ error: 'Failed to read existing placements: ' + fetchExistingError.message }, { status: 500 });
+  }
+
+  const existingCount = existingPlacements?.length ?? 0;
+
+  if (!confirm) {
+    return NextResponse.json({
+      confirmed: false,
+      warning:
+        `This will DELETE ${existingCount} existing plan_placement row(s) for instance ` +
+        `${instance.id} and reinsert ${Object.values(SCHEDULE).reduce((n, b) => n + b.length, 0)} ` +
+        `hardcoded row(s). Re-run with { "confirm": true } in the request body to proceed. ` +
+        `A backup snapshot will be taken automatically before the delete.`,
+      instance_id: instance.id,
+      existing_placement_count: existingCount,
+    }, { status: 409 });
+  }
+
+  let backupId: string | null = null;
+  if (existingCount > 0) {
+    const { data: backupRow, error: backupError } = await supabase
+      .from('lvfr_aemt_plan_placements_backups')
+      .insert({
+        instance_id: instance.id,
+        row_count: existingCount,
+        placements: existingPlacements,
+        created_by: user.email ?? user.id,
+      })
+      .select('id')
+      .single();
+
+    if (backupError || !backupRow) {
+      // Hard-abort: no backup, no delete. A failed snapshot must never
+      // silently allow the wipe to proceed.
+      return NextResponse.json({
+        error: 'Failed to create backup snapshot; aborting before delete: ' + (backupError?.message || 'unknown'),
+      }, { status: 500 });
+    }
+    backupId = backupRow.id;
+  }
+
   const { error: deleteError } = await supabase
     .from('lvfr_aemt_plan_placements')
     .delete()
@@ -783,6 +856,7 @@ export async function POST() {
   // 8. Summary
   return NextResponse.json({
     success: errors.length === 0,
+    confirmed: true,
     instance_id: instance.id,
     start_date: instance.start_date,
     total_days: Object.keys(SCHEDULE).length,
@@ -797,5 +871,14 @@ export async function POST() {
       first: dayNumberToDate(1),
       last: dayNumberToDate(30),
     },
+    backup: backupId
+      ? {
+          id: backupId,
+          replaced_row_count: existingCount,
+          restore_hint:
+            `Restore with: select placements from lvfr_aemt_plan_placements_backups where id = '${backupId}', ` +
+            `then re-insert each row into lvfr_aemt_plan_placements (after deleting the reseeded rows for this instance).`,
+        }
+      : { id: null, replaced_row_count: 0, restore_hint: 'No prior placements existed — nothing was backed up or overwritten.' },
   });
 }
