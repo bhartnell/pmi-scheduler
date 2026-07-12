@@ -4,6 +4,44 @@
 
 PMI EMS Scheduler is a comprehensive scheduling and management system for the Pima Medical Institute Paramedic Program. It handles lab management, clinical tracking, student onboarding, scheduling polls, reporting, and more.
 
+## Site Scope + Scope-Check (HARD REQUIREMENT)
+
+**What the site IS (Ben, updatable reference):** a specialized
+**tracker / scheduler for cohort-based EMS education**. Its **primary
+job is aggregating content from multiple areas into ONE view** — it
+organizes classes + labs with a clinical/internship overlay.
+
+**DOES (in scope):**
+- **Class organization** — seating charts, basic directory-type info.
+- **Scheduling & planning** via an updatable **TEMPLATE system** (easy to
+  add new cohorts — repeatable; see the Repeatability Rule below).
+- **General cohort-level LAB-USE tracking** (NOT individual student skill
+  progress) + team-lead tracking (outside AHA).
+- **AHA (ACLS/PALS) individual scenario/day progress tracking.**
+- A **VIEW of aggregated Platinum Planner clinical results** (pulled in
+  via CSV) for Rae/Ben to glance at readiness/progress.
+- **Internship-related meeting scheduling.**
+- **Lab results** = the one semi-FERPA/grade item (follows the tracking
+  mechanism).
+
+**DOESN'T (Platinum Planner's job, NOT this site):**
+- Individual student **SKILL-PROFICIENCY / skill-progress tracking**
+  (Platinum owns this).
+- **Clinical/internship SCHEDULING itself** (Platinum) — the site only
+  pulls Platinum's aggregated results over to VIEW.
+
+**EXCEPTIONS (in scope despite seeming to cross a "doesn't do" line — add
+new ones here as they arise):**
+- **AHA individual scenario/day progress tracking** — tracked here because
+  Platinum tracks skills performed, not the AHA day/scenario itself.
+
+**SCOPE-CHECK BEHAVIOR (checks-and-balances, NOT a hard prohibition):** if
+a build seems to go OUTSIDE this scope (e.g. tracking individual skill
+progress that is Platinum's job), **ASK Ben about expanding scope / making
+an exception — do NOT just build it, and do NOT just refuse it.** Flag it
+as a scope question. Approved exceptions get noted in the EXCEPTIONS list
+above. **Scope is UPDATABLE** as the site evolves.
+
 ## Tech Stack
 
 - **Framework:** Next.js 16 (App Router), React 19, TypeScript 5
