@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         .from('lab_days')
         .select('cohort_id, date')
         .eq('cert_course', 'acls')
+        .eq('is_archived', false)
         .gte('date', today)
         .order('date', { ascending: true })
         .limit(1);
@@ -48,6 +49,7 @@ export async function GET(request: NextRequest) {
           .from('lab_days')
           .select('cohort_id, date')
           .eq('cert_course', 'acls')
+          .eq('is_archived', false)
           .order('date', { ascending: false })
           .limit(1);
         cohortId = recent?.[0]?.cohort_id ?? null;
@@ -68,6 +70,7 @@ export async function GET(request: NextRequest) {
       `)
       .eq('cert_course', 'acls')
       .eq('cohort_id', cohortId)
+      .eq('is_archived', false)
       .order('date', { ascending: true })
       .order('section_number', { ascending: true });
     if (start) ldQuery = ldQuery.gte('date', start);

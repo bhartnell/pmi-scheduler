@@ -4,13 +4,13 @@
 > Reconciled to live database -- June 8, 2026 (see "Schema Reconciliation Additions")
 > Check constraints re-verified against live -- June 10, 2026 (all 146 documented CHECK definitions normalized to exact pg_get_constraintdef output; 4 had real value-list drift)
 > Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
-> Last updated: 2026-07-12 -- added `lvfr_aemt_plan_placements_backups` (migration `20260712_lvfr_plan_placements_backups.sql`, data-safety guard snapshot table for the planner reseed route)
+> Last updated: 2026-07-12 -- added `lab_days.is_archived` (migration `20260712_lab_days_is_archived.sql`, archive-not-delete flag excluding rows from the general lab schedule + ACLS hub list views)
 
 ## Summary
 
 - **Total tables:** 346
 - **Foreign key relationships:** 483
-- **Indexes:** 933
+- **Indexes:** 934
 - **RLS policies:** 474
 - **Check constraints:** 1008
 - **Custom enum types:** 12
@@ -1694,6 +1694,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | section_number | integer | NO | 1 | Multiple lab sections per (date, cohort); part of UNIQUE(date, cohort_id, section_number) |
 | section_label | text | YES |  | Optional display label for the section |
 | suppress_student_emails | boolean | NO | false | When true, suppress ALL student-facing notifications (email + in-app) on this date (AHA/ACLS days); checked date-wide in lib/email + lib/notifications |
+| is_archived | boolean | NO | false | Archive-not-delete flag (migration `20260712_lab_days_is_archived.sql`); excluded from the general lab schedule (`/api/lab-management/lab-days`) and ACLS hub (`/api/adv-cert/acls-hub`) list queries |
 
 **Foreign Keys:**
 - `created_by` -> `lab_users.id` (`lab_days_created_by_fkey`)
@@ -1711,6 +1712,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 - `lab_days_cert_course_check`: `(((cert_course IS NULL) OR (cert_course = ANY (ARRAY['acls'::text, 'pals'::text]))))`
 
 **Indexes:**
+- `idx_lab_days_archived`: `CREATE INDEX idx_lab_days_archived ON public.lab_days USING btree (is_archived) WHERE (is_archived = true)`
 - `idx_lab_days_assigned_timer`: `CREATE INDEX idx_lab_days_assigned_timer ON public.lab_days USING btree (assigned_timer_id)`
 - `idx_lab_days_checkin_token`: `CREATE UNIQUE INDEX idx_lab_days_checkin_token ON public.lab_days USING btree (checkin_token) WHERE (checkin_token IS NOT NULL)`
 - `idx_lab_days_cohort`: `CREATE INDEX idx_lab_days_cohort ON public.lab_days USING btree (cohort_id)`

@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
         ),
         stations:lab_stations(${stationSelect})
       `, { count: 'exact' })
+      .eq('is_archived', false)
       .order('date', { ascending: true })
       .range(offset, offset + limit - 1);
 
