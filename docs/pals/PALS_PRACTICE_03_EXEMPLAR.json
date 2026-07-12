@@ -1,0 +1,67 @@
+{
+  "_exemplar_note": "ONE fully-built practice scenario to approve the card format before mass-extraction. Content OCR'd verbatim from AHA PALS 2025 Module 5, Appendix B, PDF pp.33-36. Prehospital lead-in used as default per OOH focus.",
+  "case_code": "PALS_PRACTICE_03",
+  "legacy_code_2020": "PALS_PRACTICE_3",
+  "name": "PALS Practice Case Scenario 3 — Lower Airway Obstruction (Child; Severely Ill)",
+  "category": "Respiratory",
+  "subtype": "Lower Airway Obstruction",
+  "scenario_type": "scenario_practice",
+  "grading_model": "scenario_assessment_0_4",
+  "cert_course": "pals",
+  "cert_tier": "megacode_practice",
+  "scenario_scope": "full",
+  "content_version": "AHA 2025",
+  "source_ref": "AHA PALS 2025 Instructor Manual, Module 5 Appendix B, pp.33-36 (PDF)",
+  "patient": { "age": "10 years", "sex": "female", "weight_kg": 35 },
+
+  "card": {
+    "default_setting": "prehospital",
+    "lead_in": {
+      "prehospital": "You are responding to a 911 call for a 10-year-old with breathing difficulty.",
+      "ed": "A 10-year-old girl is brought in by first responders from her home after her mother called 911 saying that her daughter had difficulty breathing.",
+      "inpatient": "You are called to the room of a 10-year-old girl who is being admitted from the emergency department for respiratory distress.",
+      "picu": "You are called to the room of a 10-year-old girl who is being admitted from the emergency department for respiratory distress."
+    },
+    "initial_vitals": {
+      "heart_rate": "140/min",
+      "blood_pressure": "106/68 mmHg",
+      "respiratory_rate": "40/min",
+      "spo2": "86% on room air",
+      "temperature": "98.4 °F / 36.9 °C",
+      "weight": "35 kg",
+      "age": "10 years"
+    },
+    "vitals_instructor_adjustable": true,
+    "overview": "Emphasis is on rapid identification and management of respiratory distress / potential respiratory failure caused by lower airway obstruction (asthma). The provider must quickly recognize signs of distress (severe tachypnea and hypoxemia on room air) and provide initial therapy: 100% oxygen, nebulized albuterol, ipratropium, and oral corticosteroids. Continuous nebulized albuterol may be needed. Early expert consultation is indicated because this child has a history of status asthmaticus requiring multiple ICU admissions. The child improves, so acceleration of care is not required.",
+    "objectives": [
+      "Recognizes signs and symptoms of respiratory distress caused by lower airway obstruction: increased respiratory rate and effort, prolonged expiratory time, and wheezing.",
+      "Performs correct initial interventions: oxygen, nebulized albuterol, ipratropium bromide, and corticosteroids.",
+      "Discusses importance of obtaining expert consultation if a child with asthma has a history of ICU admissions and/or fails to respond to initial interventions."
+    ],
+    "flow": {
+      "evaluate_initial_pat": {
+        "appearance": "Anxious; moderate distress; sitting upright.",
+        "breathing": "Increased work of breathing; retractions.",
+        "circulation": "Pale skin."
+      },
+      "identify": "Immediate intervention needed — respiratory distress due to lower airway obstruction.",
+      "intervene": [
+        "Activate the emergency response system / request additional assistance if needed.",
+        "Administer 100% oxygen by nonrebreathing face mask.",
+        "Apply cardiac monitor.",
+        "Apply blood pressure cuff.",
+        "Apply pulse oximeter."
+      ],
+      "evaluate_primary_abcde": {
+        "airway": "Unobstructed.",
+        "breathing": "Moderate suprasternal and intercostal retractions; prolonged expiratory time; expiratory wheezes in the lower lobes; respiratory rate 40/min; SpO2 86% on room air (just before 100% oxygen).",
+        "circulation": "Heart rate 140/min; pale skin; strong radial pulse; capillary refill 2 seconds; blood pressure 106/68 mmHg.",
+        "disability": "Awake; speaks in 2- to 3-word sentences.",
+        "exposure": "Afebrile; no rashes; weight 35 kg."
+      }
+    },
+    "instructor_note": "Child improves with initial therapy; acceleration of care is NOT required. History of status asthmaticus with multiple prior ICU admissions — drives the expert-consultation objective.",
+    "debrief_focus": "Indications for positive-pressure ventilation; value of early expert consultation for asthma with prior ICU admissions.",
+    "ooh_grounding": "Prehospital lead-in is the default. 'Expert consultation / ICU history' is grounded for OOH as medical-direction / receiving-facility consult; no ER-specific reframe needed since the card ships a native prehospital scene."
+  }
+}
