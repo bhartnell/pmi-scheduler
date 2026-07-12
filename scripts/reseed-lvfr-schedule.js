@@ -3,11 +3,16 @@
  * Reseed LVFR AEMT schedule — calls the reseed API endpoint.
  *
  * Usage:
- *   node scripts/reseed-lvfr-schedule.js
- *   node scripts/reseed-lvfr-schedule.js --direct   (bypass API, hit DB directly)
+ *   node scripts/reseed-lvfr-schedule.js --confirm
+ *   node scripts/reseed-lvfr-schedule.js --direct --confirm   (bypass API, hit DB directly)
  *
  * The API approach requires the dev server to be running.
  * The --direct approach connects to Supabase directly using .env.local credentials.
+ *
+ * Both paths DELETE all existing plan_placements for the instance and
+ * reinsert from the hardcoded SCHEDULE below. Omit --confirm to see a
+ * dry-run preview (row counts, no changes). A backup snapshot is taken
+ * automatically before any delete (table: lvfr_aemt_plan_placements_backups).
  */
 
 const fs = require('fs');
@@ -33,6 +38,7 @@ try {
 }
 
 const isDirect = process.argv.includes('--direct');
+const isConfirmed = process.argv.includes('--confirm');
 
 // ─── Date helpers ───────────────────────────────────────────────────────────
 function dayNumberToDate(dayNum) {
@@ -622,7 +628,49 @@ async function runDirect() {
 
   console.log('Instructor IDs:', instructorIds);
 
-  // 3. Delete all existing placements
+  // 3. Snapshot + delete all existing placements.
+  // DATA-SAFETY GUARD (2026-07-12): this is the same DELETE+reinsert-from-
+  // hardcoded-SCHEDULE hazard as the /api/lvfr-aemt/planner/reseed route,
+  // just via a direct DB connection instead of the API. Same guard applies:
+  // read what's there, refuse without --confirm, and snapshot before delete.
+  const { data: existingPlacements, error: fetchExistingError } = await supabase
+    .from('lvfr_aemt_plan_placements')
+    .select('*')
+    .eq('instance_id', instance.id);
+
+  if (fetchExistingError) {
+    console.error('Failed to read existing placements:', fetchExistingError.message);
+    process.exit(1);
+  }
+
+  const existingCount = existingPlacements?.length ?? 0;
+
+  if (!isConfirmed) {
+    console.log(`\nThis would DELETE ${existingCount} existing plan_placement row(s) for instance ${instance.id}`);
+    console.log(`and reinsert ${Object.values(SCHEDULE).reduce((n, blocks) => n + blocks.length, 0)} hardcoded row(s).`);
+    console.log('Re-run with --confirm to proceed. A backup snapshot will be taken automatically first.');
+    process.exit(0);
+  }
+
+  if (existingCount > 0) {
+    const { data: backupRow, error: backupError } = await supabase
+      .from('lvfr_aemt_plan_placements_backups')
+      .insert({
+        instance_id: instance.id,
+        row_count: existingCount,
+        placements: existingPlacements,
+        created_by: 'reseed-lvfr-schedule.js --direct',
+      })
+      .select('id')
+      .single();
+
+    if (backupError || !backupRow) {
+      console.error('Failed to create backup snapshot; aborting before delete:', backupError?.message || 'unknown');
+      process.exit(1);
+    }
+    console.log(`Backed up ${existingCount} existing placement(s) to lvfr_aemt_plan_placements_backups (id: ${backupRow.id})`);
+  }
+
   console.log('Deleting existing placements...');
   const { error: deleteError, count } = await supabase
     .from('lvfr_aemt_plan_placements')
@@ -747,10 +795,15 @@ async function runViaApi() {
   console.log('NOTE: Dev server must be running and you must be logged in as admin.');
   console.log('Use --direct flag to bypass API and connect to Supabase directly.\n');
 
+  if (!isConfirmed) {
+    console.log('Dry-run (no --confirm passed) — the API will return a preview and make no changes.\n');
+  }
+
   try {
     const res = await fetch(`${baseUrl}/api/lvfr-aemt/planner/reseed`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: isConfirmed }),
     });
     const data = await res.json();
     console.log(JSON.stringify(data, null, 2));

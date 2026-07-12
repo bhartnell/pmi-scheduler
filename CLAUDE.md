@@ -201,9 +201,15 @@ items — the same dropdown bug fixed two different ways, the same signature-
 clear bug fixed identically twice, producing avoidable merge conflicts. This
 rule fixes that.
 
-1. **Pull first.** Before claiming a Queued item, `git pull` / check recent
-   merges — another session may have already fixed it. If so, mark the item
-   Done/resolved with a note instead of re-fixing it.
+1. **Pull first — code AND open PRs.** Before claiming a Queued item,
+   `git pull` / check recent merges, AND check for an existing open PR
+   touching the same area/files (`gh pr list` or the GitHub MCP tools) —
+   another session may have already fixed it or have it in flight. If a
+   merge already covers it, mark the item Done/resolved with a note
+   instead of re-fixing it. If an open PR already covers it, don't open
+   a second competing PR for the same fix — this is exactly what caused
+   the PR #23 collision (two near-simultaneous clones fixing the same
+   dropdown bug and the same signature-clear bug two different ways).
 2. **Claim before working, not after.** The moment you pick a Queued item,
    set its Status to `In Progress` immediately — before investigating or
    writing code. That write *is* the claim; it's what lets a parallel session
@@ -274,6 +280,64 @@ Data safety is a top priority for this project. Standing order from Ben
    of this order (may happen later) — the order is to fix issues on
    sight as we go. Ben handles any instructor-facing messaging about
    such issues himself.
+
+### Data Integrity Operating Rules (HARD REQUIREMENT)
+
+Ben's #1 concern, formalized into the project instructions 2026-07-11
+and synced here so every cloned Code session (not just the manual chat
+that reads project instructions) follows the same rules. This governs
+how data is read, diagnosed, and written — the companion to Data Safety
+above, which is specifically about protecting existing data from
+deletion.
+
+1. **Never write inferred, fabricated, or pattern-guessed data.** If a
+   value isn't known from a real, verifiable source, don't invent a
+   plausible-looking one to fill a gap or unblock yourself.
+2. **Investigate the existing DB structure first.** The real data
+   usually already exists somewhere in the structure Ben built — don't
+   assume a field is empty or missing without checking whether the
+   actual data lives in a different table or shape. (Example: the LVFR
+   schedule's real time data lives in `lvfr_day_schedule` two-a-day
+   blocks, not the empty `time_blocks` field that looks like the
+   obvious place to look.)
+3. **Direct DB writes only from an authoritative source or a verified
+   existing structure** — with a backup taken first, and recognizable,
+   traceable details (who / what / why) on the write itself.
+4. **Diagnose code behavior from real data, not guesses.** When
+   figuring out why something behaves a certain way, pull the actual
+   rows/values involved rather than reasoning from what they
+   "probably" contain.
+5. **Reversibility is not a license to guess.** The fact that a change
+   can be reverted does not justify writing unverified data in the
+   meantime — broken-but-clean beats working-but-fabricated. A visibly
+   broken state is easier to catch and fix than a plausible fabrication
+   that looks correct.
+
+### Crunch / Overnight Autonomy (HARD REQUIREMENT)
+
+Added 2026-07-11 so unattended overnight / low-availability clones stay
+productive without drifting from the safety rules above.
+
+1. **Blocked ≠ idle.** When the top-priority item is BLOCKED or
+   AWAITING-BEN, don't sit idle waiting on it — move to the next READY,
+   independent, in-scope item (separate commits are fine). Never sit
+   idle while independent ready work exists (see "Prompt precedence"
+   above — same principle, applied to blocked items specifically).
+2. **Don't lower the safety bar to avoid waiting.** A warranted hold
+   stays held — work other things in the meantime rather than talking
+   yourself out of the hold. Never write fabricated/inferred data (see
+   Data Integrity Operating Rules above) just to unblock yourself.
+   Branch-only work pending a design/deploy decision (e.g. the LVFR
+   planner/calendar-source consolidation) stays branch-only until Ben
+   gives the go — don't merge it early just because Ben is unavailable
+   to ask.
+3. **Merge/deploy to prod only bounded, verified, in-scope fixes**
+   while Ben is away — `type-check`/`build` clean, no data or schema
+   surprises. Escalate and move past anything bigger rather than
+   pushing it through solo.
+4. **Flag each blocked item with exactly what's needed from Ben**, then
+   continue to the next item — don't leave a blocked item silently
+   sitting with no note on what would unblock it.
 
 ### Reversibility gate status — GREEN (2026-06-30)
 

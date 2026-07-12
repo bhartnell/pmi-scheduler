@@ -4,14 +4,14 @@
 > Reconciled to live database -- June 8, 2026 (see "Schema Reconciliation Additions")
 > Check constraints re-verified against live -- June 10, 2026 (all 146 documented CHECK definitions normalized to exact pg_get_constraintdef output; 4 had real value-list drift)
 > Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
-> Last updated: 2026-07-08 -- added `cohorts.display_name` (migration `20260708_cohorts_display_name.sql`); corrected `cohorts.cohort_number` type (integer -> numeric) to match live
+> Last updated: 2026-07-12 -- added `lvfr_aemt_plan_placements_backups` (migration `20260712_lvfr_plan_placements_backups.sql`, data-safety guard snapshot table for the planner reseed route)
 
 ## Summary
 
-- **Total tables:** 345
+- **Total tables:** 346
 - **Foreign key relationships:** 483
-- **Indexes:** 931
-- **RLS policies:** 473
+- **Indexes:** 933
+- **RLS policies:** 474
 - **Check constraints:** 1008
 - **Custom enum types:** 12
 
@@ -8928,7 +8928,7 @@ Key foreign key relationships across the schema:
 > 2026-03-08 auto-generation. Generated directly from live introspection
 > (columns, PK/FK, indexes, RLS). Source of truth = live DB.
 
-### LVFR AEMT (23 tables)
+### LVFR AEMT (24 tables)
 
 #### `lvfr_aemt_assessments`
 
@@ -9332,6 +9332,28 @@ Public (no-login) pharm quiz submissions from `/lvfr-aemt/pharm/practice`. Added
 
 **RLS Policies:**
 - `plan_placements_service` (ALL, PERMISSIVE, roles: {service_role})
+
+#### `lvfr_aemt_plan_placements_backups`
+
+Added 2026-07-12 as the data-safety guard for `POST /api/lvfr-aemt/planner/reseed` (and `scripts/reseed-lvfr-schedule.js --direct`): both paths snapshot every existing `lvfr_aemt_plan_placements` row for the instance into this table (as JSON) before deleting and reinserting from the hardcoded schedule, and refuse to run at all without an explicit confirm flag.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| instance_id | uuid | NO |  | not FK-constrained (backup survives instance deletion) |
+| row_count | integer | NO |  |  |
+| placements | jsonb | NO |  | full row snapshot of the replaced `lvfr_aemt_plan_placements` rows |
+| created_by | text | YES |  | email or script identifier that triggered the reseed |
+| created_at | timestamptz | YES | now() |  |
+
+**Indexes:**
+- `lvfr_aemt_plan_placements_backups_pkey`
+- `idx_plan_placements_backups_instance`
+
+**RLS Policies:**
+- `plan_placements_backups_service` (ALL, PERMISSIVE, roles: {service_role})
+
+**Restore path:** `select placements from lvfr_aemt_plan_placements_backups where id = '<id>'`, then re-insert each row into `lvfr_aemt_plan_placements` after removing the reseeded rows for that instance.
 
 #### `lvfr_aemt_plan_templates`
 
