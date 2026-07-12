@@ -313,6 +313,38 @@ After:  cohort:cohorts!students_cohort_id_fkey(id, cohort_number)
   are **escalate-to-Ben** and must snapshot first (`--backup`, see Migration
   Reversibility). This is the companion to the reversibility gate.
 
+## Repeatability / Build-Modular Rule (HARD REQUIREMENT)
+
+**Before building any webapp feature, run a REPEATABILITY CHECK:**
+ask *"is this a repeatable item, or could it be?"*
+
+1. **If a thing recurs across cohorts / courses / sessions, build it to
+   work SEPARATELY for every cohort** — repeatable, cohort-scoped, and
+   data-driven (keyed on `cohort_id` / course / session), **not a
+   hardcoded one-off** tied to a single cohort or date. Prefer reusable,
+   editable, self-service (UI-editable) implementations over one-time
+   products. Build the capability, not the one-time artifact.
+
+2. **This applies ESPECIALLY to schedule / scheduling features**
+   (day plans, testing days, rotations, station/round assignments,
+   availability). Schedule things almost always recur — default them to
+   cohort-scoped + UI-editable.
+
+3. **Exceptions:** things not heavily schedule-related, or genuinely
+   single-instance. Those may be built directly.
+
+4. **When unsure whether something should be repeatable, FLAG it to Ben
+   rather than defaulting to a one-off.** A silent one-off is the failure
+   mode to avoid.
+
+**Why this matters:** hardcoded seeds / one-offs are the root cause of the
+recurring stale-data cleanup this project keeps paying for (e.g. the
+embedded `data/paramedic_s2_labs.json` seed-overwrite bug). A
+cohort-scoped/repeatable build survives the next cohort without a rebuild;
+a one-off must be hand-redone — or silently rots — every term. This is the
+companion to the Archive-don't-delete and Data Safety rules: the same
+"durable, not disposable" throughline applied to how features are built.
+
 ## UI Layout Rule (HARD REQUIREMENT)
 
 **Build desktop-first / wide, mobile-FRIENDLY — NOT mobile-first.**
