@@ -59,6 +59,18 @@ export async function PUT(request: NextRequest) {
     }
   }
 
+  // Resolve instructor_name server-side from the id so the cached name column
+  // can't go stale relative to lab_users, regardless of what the client sends.
+  let instructorName: string | null = null;
+  if (instructor_id) {
+    const { data: instructor } = await supabase
+      .from('lab_users')
+      .select('name')
+      .eq('id', instructor_id)
+      .single();
+    instructorName = instructor?.name || null;
+  }
+
   // Check if this block is already placed in this instance (on any day)
   const { data: existing } = await supabase
     .from('lvfr_aemt_plan_placements')
@@ -79,6 +91,7 @@ export async function PUT(request: NextRequest) {
         end_time: actualEndTime,
         duration_min: actualDuration,
         instructor_id: instructor_id || null,
+        instructor_name: instructorName,
         sort_order: sort_order ?? 0,
         updated_at: new Date().toISOString(),
       })
@@ -100,6 +113,7 @@ export async function PUT(request: NextRequest) {
         end_time: actualEndTime,
         duration_min: actualDuration,
         instructor_id: instructor_id || null,
+        instructor_name: instructorName,
         sort_order: sort_order ?? 0,
       })
       .select()

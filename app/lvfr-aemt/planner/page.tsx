@@ -67,12 +67,10 @@ interface Violation {
   message: string;
 }
 
-interface InstructorAvailability {
-  date: string;
-  instructor_id: string;
-  instructor_name: string;
-  instructor_email: string;
-  block_type: string;
+interface PlannerInstructor {
+  id: string;
+  name: string;
+  email: string;
 }
 
 interface TemplateInfo {
@@ -1156,7 +1154,7 @@ export default function CoursePlannerPage() {
   const [placements, setPlacements] = useState<Placement[]>([]);
   const [allBlocks, setAllBlocks] = useState<ContentBlock[]>([]);
   const [prerequisites, setPrerequisites] = useState<Prerequisite[]>([]);
-  const [availability, setAvailability] = useState<InstructorAvailability[]>([]);
+  const [instructors, setInstructors] = useState<PlannerInstructor[]>([]);
   const [allInstances, setAllInstances] = useState<PlanInstance[]>([]);
   const [templates, setTemplates] = useState<TemplateInfo[]>([]);
 
@@ -1189,10 +1187,10 @@ export default function CoursePlannerPage() {
         ? `/api/lvfr-aemt/planner?instance_id=${instanceId}`
         : '/api/lvfr-aemt/planner';
 
-      const [planRes, blocksRes, availRes, instancesRes, templatesRes] = await Promise.all([
+      const [planRes, blocksRes, instructorsRes, instancesRes, templatesRes] = await Promise.all([
         fetch(url),
         fetch('/api/lvfr-aemt/planner/blocks'),
-        fetch('/api/lvfr-aemt/planner/availability'),
+        fetch('/api/lvfr-aemt/planner/instructors'),
         fetch('/api/lvfr-aemt/planner/instances'),
         fetch('/api/lvfr-aemt/planner/templates'),
       ]);
@@ -1201,7 +1199,7 @@ export default function CoursePlannerPage() {
 
       const planData = await planRes.json();
       const blocksData = await blocksRes.json();
-      const availData = await availRes.json();
+      const instructorsData = instructorsRes.ok ? await instructorsRes.json() : { instructors: [] };
       const instancesData = instancesRes.ok ? await instancesRes.json() : { instances: [] };
       const templatesData = templatesRes.ok ? await templatesRes.json() : { templates: [] };
 
@@ -1209,7 +1207,7 @@ export default function CoursePlannerPage() {
       setPlacements(Array.isArray(planData.placements) ? planData.placements : []);
       setAllBlocks(Array.isArray(blocksData.blocks) ? blocksData.blocks : []);
       setPrerequisites(Array.isArray(blocksData.prerequisites) ? blocksData.prerequisites : []);
-      setAvailability(Array.isArray(availData.availability) ? availData.availability : []);
+      setInstructors(Array.isArray(instructorsData.instructors) ? instructorsData.instructors : []);
       setAllInstances(Array.isArray(instancesData.instances) ? instancesData.instances : []);
       setTemplates(Array.isArray(templatesData.templates) ? templatesData.templates : []);
       setViolations([]);
@@ -1240,13 +1238,6 @@ export default function CoursePlannerPage() {
     if (!placementsByDay.has(day)) placementsByDay.set(day, []);
     placementsByDay.get(day)!.push(p);
   }
-
-  // Get unique instructors from availability data
-  const uniqueInstructors = Array.from(
-    new Map(
-      availability.map(a => [a.instructor_id, { id: a.instructor_id, name: a.instructor_name, email: a.instructor_email }])
-    ).values()
-  );
 
   // ─── Actions ───────────────────────────────────────────────────────────────
 
@@ -1810,7 +1801,7 @@ export default function CoursePlannerPage() {
                 onDrop={makeHandleDrop(dayNumber)}
                 onRemovePlacement={handleRemovePlacement}
                 onAssignInstructor={handleAssignInstructor}
-                availableInstructors={uniqueInstructors}
+                availableInstructors={instructors}
                 onBlockDragOver={makeBlockDragOver(dayNumber)}
                 onBlockDrop={makeBlockDrop(dayNumber)}
               />
