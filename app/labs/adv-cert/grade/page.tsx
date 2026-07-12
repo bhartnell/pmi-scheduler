@@ -102,7 +102,7 @@ export default function AdvCertGradePage() {
   // scenario pool for the chosen course
   useEffect(() => {
     if (!session) return;
-    fetch(`/api/adv-cert/scenarios?course=${course}&tier=megacode_practice,megacode_testing`)
+    fetch(`/api/adv-cert/scenarios?course=${course}&tier=scenario_practice,scenario_testing`)
       .then((r) => r.json())
       .then((d) => { if (d.success) setScenarioOpts(d.scenarios || []); })
       .catch(() => toast.error('Failed to load scenarios'));
@@ -309,7 +309,7 @@ export default function AdvCertGradePage() {
             {scenarioOpts.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.case_code ? `[${s.case_code}] ` : ''}{s.name}
-                {s.cert_tier === 'megacode_testing' ? ' • TEST' : ' • practice'}
+                {s.cert_tier === 'scenario_testing' ? ' • TEST' : ' • practice'}
                 {s.segment_count === 0 ? ' — no segments yet' : ` (${s.segment_count} segments)`}
               </option>
             ))}
@@ -371,12 +371,12 @@ export default function AdvCertGradePage() {
                 {scenario.case_code ? `[${scenario.case_code}] ` : ''}{scenario.name}
               </span>
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
-                scenario.cert_tier === 'megacode_testing'
+                scenario.cert_tier === 'scenario_testing'
                   ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
                   : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
               }`}>
-                {scenario.cert_tier === 'megacode_testing' ? 'TESTING (scored)'
-                  : scenario.cert_tier === 'megacode_practice' ? 'Practice' : scenario.cert_tier}
+                {scenario.cert_tier === 'scenario_testing' ? 'TESTING (scored)'
+                  : scenario.cert_tier === 'scenario_practice' ? 'Practice' : scenario.cert_tier}
               </span>
             </div>
             {scenario.segments.length > 0 && (

@@ -8,7 +8,7 @@
   "scenario_type": "scenario_practice",
   "grading_model": "scenario_assessment_0_4",
   "cert_course": "pals",
-  "cert_tier": "megacode_practice",
+  "cert_tier": "scenario_practice",
   "scenario_scope": "full",
   "content_version": "AHA 2025",
   "source_ref": "AHA PALS 2025 Instructor Manual, Module 5 Appendix B, pp.33-36 (PDF)",

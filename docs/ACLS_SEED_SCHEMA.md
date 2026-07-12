@@ -21,7 +21,7 @@ shows in our familiar scenario layout (grader Phase 2 + scenario library).
   "case_code": "CASE_48",            // natural key — DO NOT change
   "name": "Case 48 — SVT → VF → Asystole → ROSC",
   "cert_course": "acls",
-  "cert_tier": "megacode_practice",  // or megacode_testing / learning_station
+  "cert_tier": "scenario_practice",  // or scenario_testing / learning_station
   "grading_model": "adv_cert_checklist",
   "scenario_scope": "full",
   "segments": [ /* rubric — leave as-is */ ]

@@ -31,7 +31,7 @@ Tagging/grading columns added to EXISTING tables:
 - `lab_days`: `is_adv_cert_testing` (parallel to `is_nremt_testing`, NOT overloaded), `cert_course`
 
 CHECK constraints on the closed enums (`cert_course` ∈ acls|pals; `cert_tier` ∈
-skill|learning_station|megacode_practice|megacode_testing; `grading_model` ∈
+skill|learning_station|scenario_practice|scenario_testing; `grading_model` ∈
 scenario_assessment_0_4|adv_cert_checklist; `scenario_scope` ∈ full|skill_focused_mini).
 `algorithm_type` deliberately left free text (so PALS pediatric rhythms drop in).
 RLS enabled (authenticated read; writes via service-role API routes).
@@ -90,12 +90,12 @@ Implication: the first real use of the new engine is **Day-2 morning practice**
 ## 4. THE OPEN DECISION — megacode grading pool scope
 
 The new grader's scenario picker currently filters to `cert_tier =
-'megacode_testing'`. Because the 4 test cards are empty, that view would show 4
+'scenario_testing'`. Because the 4 test cards are empty, that view would show 4
 ungradeable scenarios. Options:
 
 ### Option A — Show BOTH practice + testing tiers  ✅ recommended
 - **Change:** `listScenarios` + the `/scenarios` route accept both tiers; the UI
-  requests `megacode_practice,megacode_testing` and labels it "Megacode scenarios."
+  requests `scenario_practice,scenario_testing` and labels it "Megacode scenarios."
 - **Effect:** Day-2 practice (8 full cases) is gradeable in the new engine
   immediately. The 4 test cards still appear, marked "no segments yet" until
   assembled.

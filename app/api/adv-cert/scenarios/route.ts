@@ -3,7 +3,7 @@ import { requireAuth } from '@/lib/api-auth';
 import { listScenarios } from '@/lib/adv-cert';
 import type { CertCourse, CertTier } from '@/types/adv-cert';
 
-// GET /api/adv-cert/scenarios?course=acls&tier=megacode_practice,megacode_testing
+// GET /api/adv-cert/scenarios?course=acls&tier=scenario_practice,scenario_testing
 // Returns the megacode scenario pool (derived from cert tags) for a picker.
 // `tier` may be comma-separated; defaults to both megacode tiers so Day-2
 // practice cases are gradeable alongside the (assemble-later) test cards.
@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
   const tierParam = request.nextUrl.searchParams.get('tier');
   const tiers = (tierParam
     ? tierParam.split(',').map((t) => t.trim()).filter(Boolean)
-    : ['megacode_practice', 'megacode_testing']) as CertTier[];
+    : ['scenario_practice', 'scenario_testing']) as CertTier[];
 
   try {
     const scenarios = await listScenarios(course, tiers);

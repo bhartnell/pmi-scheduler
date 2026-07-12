@@ -18,7 +18,7 @@ import type {
  */
 export async function listScenarios(
   course: CertCourse,
-  tier: CertTier | CertTier[] = ['megacode_practice', 'megacode_testing']
+  tier: CertTier | CertTier[] = ['scenario_practice', 'scenario_testing']
 ): Promise<
   Array<{
     id: string;

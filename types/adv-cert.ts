@@ -6,8 +6,8 @@ export type CertCourse = 'acls' | 'pals';
 export type CertTier =
   | 'skill'
   | 'learning_station'
-  | 'megacode_practice'
-  | 'megacode_testing';
+  | 'scenario_practice'
+  | 'scenario_testing';
 export type AdvCertResult = 'pass' | 'fail';
 
 /**

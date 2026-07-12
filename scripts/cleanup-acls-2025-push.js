@@ -48,7 +48,7 @@ async function main() {
       `delete from adv_cert_scenario_segments sss
        using scenarios s
        where sss.scenario_id = s.id and s.cert_course='acls'
-         and s.cert_tier in ('megacode_practice','megacode_testing')
+         and s.cert_tier in ('scenario_practice','scenario_testing')
          and sss.sequence_order = 0`
     );
     console.log(`A) deduped ${dd.rowCount} stray sequence_order=0 assembly row(s)`);

@@ -1883,7 +1883,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 - `scenarios_difficulty_check`: `((difficulty = ANY (ARRAY['beginner'::text, 'intermediate'::text, 'advanced'::text])))`
 - `scenarios_preferred_manikin_check`: `(((preferred_manikin IS NULL) OR (preferred_manikin = ANY (ARRAY['simmom'::text, 'simnewb'::text, 'standard_manikin'::text, 'task_trainer'::text, 'none_specified'::text]))))`
 - `scenarios_cert_course_check`: `(((cert_course IS NULL) OR (cert_course = ANY (ARRAY['acls'::text, 'pals'::text]))))`
-- `scenarios_cert_tier_check`: `(((cert_tier IS NULL) OR (cert_tier = ANY (ARRAY['skill'::text, 'learning_station'::text, 'megacode_practice'::text, 'megacode_testing'::text]))))`
+- `scenarios_cert_tier_check`: `(((cert_tier IS NULL) OR (cert_tier = ANY (ARRAY['skill'::text, 'learning_station'::text, 'scenario_practice'::text, 'scenario_testing'::text]))))`
 - `scenarios_grading_model_check`: `(((grading_model IS NULL) OR (grading_model = ANY (ARRAY['scenario_assessment_0_4'::text, 'adv_cert_checklist'::text]))))`
 - `scenarios_scenario_scope_check`: `(((scenario_scope IS NULL) OR (scenario_scope = ANY (ARRAY['full'::text, 'skill_focused_mini'::text]))))`
 
@@ -3092,7 +3092,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 **Check Constraints:**
 - `skill_drills_program_check`: `(((program IS NULL) OR (program = ANY (ARRAY['emt'::text, 'aemt'::text, 'paramedic'::text, 'all'::text]))))`
 - `skill_drills_cert_course_check`: `(((cert_course IS NULL) OR (cert_course = ANY (ARRAY['acls'::text, 'pals'::text]))))`
-- `skill_drills_cert_tier_check`: `(((cert_tier IS NULL) OR (cert_tier = ANY (ARRAY['skill'::text, 'learning_station'::text, 'megacode_practice'::text, 'megacode_testing'::text]))))`
+- `skill_drills_cert_tier_check`: `(((cert_tier IS NULL) OR (cert_tier = ANY (ARRAY['skill'::text, 'learning_station'::text, 'scenario_practice'::text, 'scenario_testing'::text]))))`
 
 **Indexes:**
 - `idx_skill_drills_active`: `CREATE INDEX idx_skill_drills_active ON public.skill_drills USING btree (is_active) WHERE (is_active = true)`
@@ -3249,7 +3249,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 
 **Check Constraints:**
 - `skills_cert_course_check`: `(((cert_course IS NULL) OR (cert_course = ANY (ARRAY['acls'::text, 'pals'::text]))))`
-- `skills_cert_tier_check`: `(((cert_tier IS NULL) OR (cert_tier = ANY (ARRAY['skill'::text, 'learning_station'::text, 'megacode_practice'::text, 'megacode_testing'::text]))))`
+- `skills_cert_tier_check`: `(((cert_tier IS NULL) OR (cert_tier = ANY (ARRAY['skill'::text, 'learning_station'::text, 'scenario_practice'::text, 'scenario_testing'::text]))))`
 
 **Indexes:**
 - `idx_skills_category`: `CREATE INDEX idx_skills_category ON public.skills USING btree (category)`
@@ -11531,3 +11531,71 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 **RLS Policies:**
 - `Authenticated can read adv_cert_criterion_results` (SELECT, PERMISSIVE, roles: {authenticated})
 
+
+---
+
+## PALS Grading Module (added 2026-07-12)
+
+_Last updated: 2026-07-12 — migration `20260712_pals_module.sql` +
+`20260712_cert_tier_scenario_rename.sql`. PALS grading is its OWN model (flat
+checklist per pathophysiology, PASS/NR, three-state per-criterion), NOT a load
+into `adv_cert_*`. See `docs/pals/PALS_Grading_Model_Spec.md`._
+
+### cert_tier vocabulary rename (ACLS + PALS shared)
+`scenarios.cert_tier` / `skills.cert_tier` / `skill_drills.cert_tier` value set
+changed `megacode_practice|megacode_testing` → **`scenario_practice|scenario_testing`**
+(`skill` and `learning_station` unchanged). 14 existing ACLS `scenarios` rows
+migrated (8 practice + 6 testing); the 3 `*_cert_tier_check` constraints now read
+`('skill','learning_station','scenario_practice','scenario_testing')`. Code refs
+(`types/adv-cert.ts`, `lib/adv-cert.ts`, `app/api/adv-cert/scenarios/route.ts`,
+`app/labs/adv-cert/grade/page.tsx`) updated in the same change.
+
+### New columns on existing tables
+- `scenarios.narrative_status` text — `complete | pending_extraction | not_indexed`
+  (CHECK). **Gates card display**: only `complete` scenarios are ever presented.
+- `scenarios.pals_checklist_id` uuid → `pals_checklists(id)` (FK
+  `scenarios_pals_checklist_id_fkey`, ON DELETE SET NULL). A PALS scenario → its
+  one pathophysiology checklist. NULL for TBD/not-yet-indexed testing cases.
+- `scenarios.pals_case_meta` jsonb — verbatim PALS seed record (qualitative age
+  e.g. "6 mo", `weight_kg`, `manikin_fit`, AHA-conflict/program notes). Preserved,
+  not coerced into `patient_age`.
+- `students.discipline` text — `paramedic|rn|md|rt|other` (CHECK). Pre-suggests
+  N/A on out-of-scope criteria; instructor-overridable.
+
+### New tables (all uuid PKs, RLS: authenticated SELECT)
+- **`pals_checklists`** — 12 AHA PALS 2025 checklists, ONE per pathophysiology,
+  SHARED across scenarios. `checklist_key` UNIQUE (importer upsert key),
+  `category`, `subtype`, `source_ref`, `cert_course` (default 'pals'),
+  `content_version` ('AHA 2025'), `pass_rule` ('all_in_scope_checked'), `active`.
+- **`pals_checklist_criteria`** — flat Critical Performance Steps. `checklist_id`
+  FK (CASCADE), `display_order`, `text` (verbatim), `instructor_prompt` (verbatim,
+  nullable), `prompt_kind` (`question|statement`), `scope_conditional`,
+  `is_critical`, `active`. UNIQUE `(checklist_id, display_order)`.
+- **`pals_test_attempts`** — one graded run of the selected Team Leader (per
+  student). `checklist_id` FK, `scenario_id` FK, `student_id` FK (the TL),
+  `instructor_id`/`lab_day_id`/`lab_station_id`/`lab_group_id` FKs, `discipline`
+  (scope snapshot), `result` (`PASS|NR` CHECK), `remediation_notes`,
+  `instructor_initials`/`instructor_number`, `retest_of` self-FK,
+  `remediation_due_at` (30-day clock), `client_uuid` UNIQUE (offline dedup),
+  `synced_at`.
+- **`pals_attempt_students`** — team roster on the attempt. PK
+  `(attempt_id, student_id)`, `team_role`.
+- **`pals_criterion_results`** — three-state per-criterion result: `state`
+  (`checked | not_checked | na` CHECK). UNIQUE `(attempt_id, criterion_id)`.
+  N/A (out-of-scope) is NOT a blank and NOT a failure.
+- **`pals_skill_completions`** — skills competency attestation (NOT tap-through
+  graded). `student_id` FK, `skill_key`, `cert_course`, `status`
+  (`pass|fail|remediated`), `verified_by`, `verified_at`,
+  `instructor_initials`/`instructor_number`, `signature`, `remediation_notes`,
+  `client_uuid` UNIQUE. UNIQUE `(student_id, skill_key, cert_course)`.
+
+**Content loaded (importer `scripts/import-pals-seed.js` from
+`docs/pals/pals_scenario_seed.json`):** 12 checklists · 150 criteria · 32
+scenarios (16 `scenario_practice` + 16 `scenario_testing`); 28 linked to a
+checklist, 4 TBD testing cases intentionally unlinked; narrative_status 1
+complete / 29 pending_extraction / 2 not_indexed.
+
+**Design deviation from spec:** the spec sketched `pals_checklists.scenario_id`
+(1:1). Checklists are SHARED by pathophysiology across 32 scenarios, so a 1:1 link
+would duplicate criteria 32×. Modeled as `checklist_key`-keyed checklists +
+`scenarios.pals_checklist_id` instead.

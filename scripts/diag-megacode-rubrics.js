@@ -6,7 +6,7 @@ const FUTURE={CASE_48:'CASE_67',CASE_49:'CASE_68',CASE_50:'CASE_69',CASE_51:'CAS
   const c=new Client({connectionString:process.env.SUPABASE_DB_URL,ssl:{rejectUnauthorized:false}});
   await c.connect();
   const scen=(await c.query(
-    "select id,case_code,title,cert_tier from scenarios where cert_course='acls' and cert_tier in ('megacode_testing','megacode_practice') order by cert_tier desc, case_code"
+    "select id,case_code,title,cert_tier from scenarios where cert_course='acls' and cert_tier in ('scenario_testing','scenario_practice') order by cert_tier desc, case_code"
   )).rows;
   // assembly fingerprint to detect shared/identical rubrics
   const fp={};
@@ -29,9 +29,9 @@ const FUTURE={CASE_48:'CASE_67',CASE_49:'CASE_68',CASE_50:'CASE_69',CASE_51:'CAS
     return key;
   };
   console.log('================ MEGACODE TESTING (priority — scored tomorrow) ================');
-  for(const s of scen.filter(x=>x.cert_tier==='megacode_testing'))await report(s);
+  for(const s of scen.filter(x=>x.cert_tier==='scenario_testing'))await report(s);
   console.log('\n\n================ MEGACODE PRACTICE (currently 48-55; → 67-74 after renumber) ================');
-  for(const s of scen.filter(x=>x.cert_tier==='megacode_practice'))await report(s);
+  for(const s of scen.filter(x=>x.cert_tier==='scenario_practice'))await report(s);
   console.log('\n\n================ SHARED-RUBRIC CHECK (identical segment sequences) ================');
   let anyShared=false;
   for(const[k,codes] of Object.entries(fp)){
