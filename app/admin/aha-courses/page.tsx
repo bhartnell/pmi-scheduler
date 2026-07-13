@@ -40,6 +40,19 @@ interface GenerateResult {
   error?: string;
 }
 
+interface TemplateOpt { id: string; name: string; day_number: number; section_number: number | null; section_label: string | null }
+interface LabDayOpt { id: string; date: string; section_number: number | null; section_label: string | null; cert_course: string | null; is_adv_cert_testing: boolean; source_template_id: string | null }
+interface ConfigureFieldChange { field: string; from: unknown; to: unknown; action: string }
+interface ConfigureStationChange { station_number: number; action: string; detail: string }
+interface ConfigureResult {
+  success: boolean;
+  dry_run: boolean;
+  field_changes: ConfigureFieldChange[];
+  station_changes: ConfigureStationChange[];
+  errors: string[];
+  error?: string;
+}
+
 // ---------------------------------------------------------------------------
 // AHA-generic course generator UI (Checkpoint A).
 //
@@ -65,6 +78,18 @@ export default function AhaCoursesPage() {
   const [dryRun, setDryRun] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<GenerateResult | null>(null);
+
+  // "Configure existing day" mode (Checkpoint B) — attaches a template onto a
+  // lab_days row that already exists, instead of creating a new one.
+  const [configCohortId, setConfigCohortId] = useState('');
+  const [configCourse, setConfigCourse] = useState<'acls' | 'pals'>('pals');
+  const [configTemplates, setConfigTemplates] = useState<TemplateOpt[]>([]);
+  const [configLabDays, setConfigLabDays] = useState<LabDayOpt[]>([]);
+  const [configTemplateId, setConfigTemplateId] = useState('');
+  const [configLabDayId, setConfigLabDayId] = useState('');
+  const [configDryRun, setConfigDryRun] = useState(true);
+  const [configuring, setConfiguring] = useState(false);
+  const [configResult, setConfigResult] = useState<ConfigureResult | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/');
@@ -153,6 +178,46 @@ export default function AhaCoursesPage() {
       toast.error('Request failed');
     }
     setGenerating(false);
+  };
+
+  useEffect(() => {
+    fetch(`/api/admin/aha-courses/configure-day?cert_course=${configCourse}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setConfigTemplates(d.templates || []); })
+      .catch(() => {});
+    setConfigTemplateId('');
+  }, [configCourse]);
+
+  useEffect(() => {
+    if (!configCohortId) { setConfigLabDays([]); setConfigLabDayId(''); return; }
+    fetch(`/api/admin/aha-courses/configure-day?cohort_id=${configCohortId}`)
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setConfigLabDays(d.lab_days || []); })
+      .catch(() => {});
+    setConfigLabDayId('');
+  }, [configCohortId]);
+
+  const handleConfigureDay = async () => {
+    if (!configLabDayId || !configTemplateId) {
+      toast.error('Select both a lab day and a template');
+      return;
+    }
+    setConfiguring(true);
+    setConfigResult(null);
+    try {
+      const res = await fetch('/api/admin/aha-courses/configure-day', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lab_day_id: configLabDayId, template_id: configTemplateId, dry_run: configDryRun }),
+      });
+      const data = await res.json();
+      setConfigResult(data);
+      if (!res.ok) toast.error(data.error || 'Configure failed');
+      else toast.success(configDryRun ? 'Dry-run plan generated' : 'Day configured');
+    } catch {
+      toast.error('Request failed');
+    }
+    setConfiguring(false);
   };
 
   if (status === 'loading' || loading) return <PageLoader />;
@@ -312,6 +377,108 @@ export default function AhaCoursesPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-2">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Configure an existing day (Checkpoint B)</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+            For a lab day that already exists (created by hand, or a placeholder) — attaches a template&apos;s
+            cert_course/testing-flag/stations onto it. Gap-fill only: a field or station that already has a
+            real value is never overwritten, and is reported as a conflict instead.
+          </p>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5 space-y-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course</label>
+              <select value={configCourse} onChange={(e) => setConfigCourse(e.target.value as 'acls' | 'pals')}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                <option value="acls">ACLS</option>
+                <option value="pals">PALS</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cohort</label>
+              <select value={configCohortId} onChange={(e) => setConfigCohortId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                <option value="">Select a cohort…</option>
+                {cohorts.map((c) => (
+                  <option key={c.id} value={c.id}>{c.program?.abbreviation || c.program?.name || ''} {c.cohort_number}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Existing lab day</label>
+              <select value={configLabDayId} onChange={(e) => setConfigLabDayId(e.target.value)} disabled={!configCohortId}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:opacity-50">
+                <option value="">Select a day…</option>
+                {configLabDays.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.date}{d.section_label ? ` — ${d.section_label}` : d.section_number ? ` — sec ${d.section_number}` : ''}
+                    {d.cert_course ? ` [${d.cert_course}]` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Template to apply</label>
+            <select value={configTemplateId} onChange={(e) => setConfigTemplateId(e.target.value)}
+              className="w-full md:w-1/2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+              <option value="">Select a template…</option>
+              {configTemplates.map((t) => (
+                <option key={t.id} value={t.id}>Day {t.day_number}{t.section_label ? ` — ${t.section_label}` : ''}: {t.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+            <input type="checkbox" checked={configDryRun} onChange={(e) => setConfigDryRun(e.target.checked)} />
+            Dry run (show the plan, write nothing)
+          </label>
+
+          <button onClick={handleConfigureDay} disabled={configuring || !configLabDayId || !configTemplateId}
+            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white rounded-lg font-medium">
+            {configuring ? <Loader2 className="w-4 h-4 animate-spin" /> : <PlayCircle className="w-4 h-4" />}
+            {configDryRun ? 'Preview plan' : 'Configure day'}
+          </button>
+        </div>
+
+        {configResult && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5 space-y-3">
+            <h2 className="font-semibold text-gray-900 dark:text-white">
+              {configResult.dry_run ? 'Dry-run plan' : 'Configure result'}
+            </h2>
+            {configResult.error && <p className="text-sm text-red-600 dark:text-red-400">{configResult.error}</p>}
+            {configResult.errors?.length > 0 && (
+              <ul className="text-sm text-red-600 dark:text-red-400 list-disc pl-5">
+                {configResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+              </ul>
+            )}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Day-level fields</h3>
+              <ul className="text-sm space-y-0.5">
+                {configResult.field_changes?.length === 0 && <li className="text-gray-400">No changes.</li>}
+                {configResult.field_changes?.map((c, i) => (
+                  <li key={i} className={c.action === 'conflict_skipped' ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}>
+                    {c.field}: {JSON.stringify(c.from)} → {JSON.stringify(c.to)} ({c.action === 'conflict_skipped' ? 'CONFLICT — left alone' : 'fill gap'})
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">Stations</h3>
+              <ul className="text-sm space-y-0.5">
+                {configResult.station_changes?.map((c, i) => (
+                  <li key={i} className={c.action === 'conflict_skipped' ? 'text-amber-600 dark:text-amber-400' : c.action === 'no_change_needed' ? 'text-gray-400' : 'text-green-600 dark:text-green-400'}>
+                    #{c.station_number}: {c.detail} ({c.action})
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         )}

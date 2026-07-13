@@ -70,6 +70,182 @@ export interface GenerateAhaCourseInput {
   dryRun: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// "Configure existing day" mode (Task Handoff Queue Checkpoint B).
+//
+// generateAhaCourseForCohort is deliberately INSERT-only (see the guardrail
+// comment above) — it has no path to attach a template's structure onto a
+// lab_days row that already exists (e.g. a day created by hand before the
+// generator existed, or a placeholder day awaiting its real content). This
+// fills that gap WITHOUT relaxing the create-path guardrail: it never
+// UPDATEs a field or a station that already carries a real (non-null) value
+// — every write is a genuine gap-fill (was null, now set) or a genuine
+// addition (a template station with no counterpart on the day). Anything
+// that would require overwriting existing content is reported as a
+// conflict and left completely alone; resolving a conflict is a deliberate
+// separate action, never automatic.
+//
+// Repeatable by construction: works against ANY existing lab_days row +ANY
+// template, not a G14 special case.
+// ---------------------------------------------------------------------------
+
+export interface ConfigureExistingDayInput {
+  labDayId: string;
+  templateId: string;
+  dryRun: boolean;
+}
+
+export interface ConfigureFieldChange {
+  field: 'cert_course' | 'is_adv_cert_testing' | 'lab_mode' | 'section_label';
+  from: unknown;
+  to: unknown;
+  action: 'fill_gap' | 'conflict_skipped';
+}
+
+export interface ConfigureStationChange {
+  station_number: number;
+  action: 'create' | 'fill_scenario_gap' | 'fill_title_gap' | 'no_change_needed' | 'conflict_skipped';
+  detail: string;
+}
+
+export interface ConfigureExistingDayResult {
+  lab_day_id: string;
+  template_id: string;
+  dry_run: boolean;
+  field_changes: ConfigureFieldChange[];
+  station_changes: ConfigureStationChange[];
+  errors: string[];
+}
+
+export async function configureExistingCohortDay(
+  input: ConfigureExistingDayInput
+): Promise<ConfigureExistingDayResult> {
+  const { labDayId, templateId, dryRun } = input;
+  const supabase = getSupabaseAdmin();
+  const errors: string[] = [];
+
+  const { data: day, error: dayError } = await supabase
+    .from('lab_days')
+    .select('id, cohort_id, date, cert_course, is_adv_cert_testing, lab_mode, section_label')
+    .eq('id', labDayId)
+    .maybeSingle();
+  if (dayError) throw new Error(dayError.message);
+  if (!day) throw new Error(`Lab day not found: ${labDayId}`);
+
+  const { data: template, error: templateError } = await supabase
+    .from('lab_day_templates')
+    .select(
+      `id, name, cert_course, is_adv_cert_testing, lab_mode, section_label,
+       stations:lab_template_stations(id, sort_order, station_type, station_name, scenario_id, scenario_title, notes, metadata)`
+    )
+    .eq('id', templateId)
+    .maybeSingle();
+  if (templateError) throw new Error(templateError.message);
+  if (!template) throw new Error(`Template not found: ${templateId}`);
+
+  // ── Day-level fields: fill only what is currently null/false-default. ──
+  const fieldChanges: ConfigureFieldChange[] = [];
+  const fieldPlan: Array<{ field: ConfigureFieldChange['field']; existing: unknown; templateValue: unknown }> = [
+    { field: 'cert_course', existing: day.cert_course, templateValue: template.cert_course },
+    { field: 'is_adv_cert_testing', existing: day.is_adv_cert_testing, templateValue: template.is_adv_cert_testing },
+    { field: 'lab_mode', existing: day.lab_mode, templateValue: template.lab_mode },
+    { field: 'section_label', existing: day.section_label, templateValue: template.section_label },
+  ];
+  for (const f of fieldPlan) {
+    if (f.templateValue === null || f.templateValue === undefined) continue; // template has nothing to offer
+    const existingIsUnset = f.existing === null || f.existing === undefined || f.existing === false;
+    if (existingIsUnset && f.templateValue) {
+      fieldChanges.push({ field: f.field, from: f.existing, to: f.templateValue, action: 'fill_gap' });
+    } else if (JSON.stringify(f.existing) !== JSON.stringify(f.templateValue)) {
+      fieldChanges.push({ field: f.field, from: f.existing, to: f.templateValue, action: 'conflict_skipped' });
+    }
+  }
+
+  // ── Stations: match by station_number <-> sort_order. ──
+  const { data: existingStations, error: stationsError } = await supabase
+    .from('lab_stations')
+    .select('id, station_number, custom_title, scenario_id')
+    .eq('lab_day_id', labDayId);
+  if (stationsError) throw new Error(stationsError.message);
+
+  const existingByNumber = new Map((existingStations || []).map((s) => [s.station_number, s]));
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const templateStations = ((template as Record<string, unknown>).stations as Array<any>) || [];
+  const stationChanges: ConfigureStationChange[] = [];
+  const stationsToCreate: AhaTemplateStationPlan[] = [];
+  const stationsToFill: Array<{ id: string; scenario_id?: string | null; custom_title?: string | null }> = [];
+
+  for (const ts of templateStations.sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))) {
+    const stationNumber = ts.sort_order ?? 1;
+    const existingStation = existingByNumber.get(stationNumber);
+    if (!existingStation) {
+      stationChanges.push({ station_number: stationNumber, action: 'create', detail: `Add "${ts.station_name || ts.scenario_title || 'station'}"` });
+      stationsToCreate.push({
+        station_number: stationNumber,
+        station_type: ts.station_type || 'scenario',
+        custom_title: ts.station_name || null,
+        scenario_id: ts.scenario_id || null,
+        scenario_title: ts.scenario_title || null,
+        notes: ts.notes || null,
+        metadata: ts.metadata || null,
+      });
+      continue;
+    }
+    const fill: { id: string; scenario_id?: string | null; custom_title?: string | null } = { id: existingStation.id };
+    let changed = false;
+    if (!existingStation.scenario_id && ts.scenario_id) {
+      fill.scenario_id = ts.scenario_id;
+      stationChanges.push({ station_number: stationNumber, action: 'fill_scenario_gap', detail: `Link scenario (was unlinked)` });
+      changed = true;
+    } else if (existingStation.scenario_id && ts.scenario_id && existingStation.scenario_id !== ts.scenario_id) {
+      stationChanges.push({ station_number: stationNumber, action: 'conflict_skipped', detail: `Station already links a different scenario — left alone` });
+    }
+    if (!existingStation.custom_title && ts.station_name) {
+      fill.custom_title = ts.station_name;
+      stationChanges.push({ station_number: stationNumber, action: 'fill_title_gap', detail: `Set title "${ts.station_name}" (was blank)` });
+      changed = true;
+    }
+    if (changed) stationsToFill.push(fill);
+    else if (!stationChanges.some((c) => c.station_number === stationNumber)) {
+      stationChanges.push({ station_number: stationNumber, action: 'no_change_needed', detail: 'Already fully configured' });
+    }
+  }
+
+  if (dryRun) {
+    return { lab_day_id: labDayId, template_id: templateId, dry_run: true, field_changes: fieldChanges, station_changes: stationChanges, errors };
+  }
+
+  const dayUpdate: Record<string, unknown> = {};
+  for (const c of fieldChanges) if (c.action === 'fill_gap') dayUpdate[c.field] = c.to;
+  if (Object.keys(dayUpdate).length > 0) {
+    const { error } = await supabase.from('lab_days').update(dayUpdate).eq('id', labDayId);
+    if (error) errors.push(`Day update: ${error.message}`);
+  }
+
+  for (const f of stationsToFill) {
+    const { id, ...patch } = f;
+    const { error } = await supabase.from('lab_stations').update(patch).eq('id', id);
+    if (error) errors.push(`Station ${id} fill: ${error.message}`);
+  }
+
+  if (stationsToCreate.length > 0) {
+    const { error } = await supabase.from('lab_stations').insert(
+      stationsToCreate.map((s) => ({
+        lab_day_id: labDayId,
+        station_number: s.station_number,
+        station_type: s.station_type,
+        scenario_id: s.scenario_id,
+        custom_title: s.custom_title,
+        station_notes: s.notes,
+        metadata: s.metadata || {},
+      }))
+    );
+    if (error) errors.push(`Station create: ${error.message}`);
+  }
+
+  return { lab_day_id: labDayId, template_id: templateId, dry_run: false, field_changes: fieldChanges, station_changes: stationChanges, errors };
+}
+
 export async function listAhaCourseTemplateDayNumbers(certCourse: CertCourse): Promise<number[]> {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
