@@ -11569,7 +11569,10 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 
 ## PALS Grading Module (added 2026-07-12)
 
-_Last updated: 2026-07-12 — migration `20260712_pals_module.sql` +
+_Last updated: 2026-07-13 — Checkpoint C: `app/labs/pals/grade/page.tsx` +
+`lib/pals.ts` + `app/api/pals/*` is now the first consumer of this module
+(`narrative_status` gating, `pals_*` tables) — schema unchanged, no migration.
+Originally: 2026-07-12 — migration `20260712_pals_module.sql` +
 `20260712_cert_tier_scenario_rename.sql`. PALS grading is its OWN model (flat
 checklist per pathophysiology, PASS/NR, three-state per-criterion), NOT a load
 into `adv_cert_*`. See `docs/pals/PALS_Grading_Model_Spec.md`._
@@ -11633,8 +11636,12 @@ migrated (8 practice + 6 testing); the 3 `*_cert_tier_check` constraints now rea
 **Content loaded (importer `scripts/import-pals-seed.js` from
 `docs/pals/pals_scenario_seed.json`):** 12 checklists · 150 criteria · 32
 scenarios (16 `scenario_practice` + 16 `scenario_testing`); 28 linked to a
-checklist, 4 TBD testing cases intentionally unlinked; narrative_status 1
-complete / 29 pending_extraction / 2 not_indexed.
+checklist, 4 TBD testing cases intentionally unlinked; narrative_status at
+import time: 1 complete / 29 pending_extraction / 2 not_indexed. **Current
+(verified live, 2026-07-13):** 16 `complete` (10 practice + 6 testing, all 16
+linked to a checklist), 12 `pending_extraction`, 2 `not_indexed`, 2
+`INCOMPLETE_SCAN_GAP` — narrative content loading is ongoing; only `complete`
+scenarios are selectable in `/labs/pals/grade`.
 
 **Design deviation from spec:** the spec sketched `pals_checklists.scenario_id`
 (1:1). Checklists are SHARED by pathophysiology across 32 scenarios, so a 1:1 link

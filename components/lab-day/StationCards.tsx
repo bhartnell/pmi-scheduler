@@ -30,9 +30,14 @@ interface StationCardsProps {
   stationScenarioTitles?: Record<string, string>;
   canSelectScenario?: boolean;
   /** When true, this lab day is an ACLS/PALS MEGACODE section — the Grade button
-   *  routes to the adv-cert grader (ACLS rubric) instead of the standard 0-4
-   *  grader. Non-megacode stations keep the standard/generic grader. */
+   *  routes to the adv-cert grader (ACLS rubric) or the PALS checklist grader
+   *  (see certCourse) instead of the standard 0-4 grader. Non-megacode stations
+   *  keep the standard/generic grader. */
   isAdvCertMegacode?: boolean;
+  /** cert_course of the lab day ('acls' | 'pals' | null) — picks which megacode
+   *  grader isAdvCertMegacode routes to. Defaults to the ACLS grader when unset
+   *  (matches the pre-PALS-grader behavior). */
+  certCourse?: string | null;
   calendarAvailability: Map<string, { status: 'free' | 'partial' | 'busy' | 'disconnected'; events: { title: string; start: string; end: string }[] }>;
   labDayId: string;
   getStationTitle: (station: Station) => string;
@@ -50,6 +55,7 @@ export default function StationCards({
   stationScenarioTitles,
   canSelectScenario,
   isAdvCertMegacode,
+  certCourse,
   calendarAvailability,
   labDayId,
   getStationTitle,
@@ -316,12 +322,14 @@ export default function StationCards({
               )}
               <Link
                 href={isAdvCertMegacode
-                  ? `/labs/adv-cert/grade?labDayId=${labDayId}&stationId=${station.id}`
+                  ? certCourse === 'pals'
+                    ? `/labs/pals/grade?labDayId=${labDayId}&stationId=${station.id}`
+                    : `/labs/adv-cert/grade?labDayId=${labDayId}&stationId=${station.id}`
                   : `/labs/grade/station/${station.id}`}
                 className={`flex-1 min-w-[100px] inline-flex items-center justify-center gap-2 px-3 py-2 text-sm text-white rounded-lg ${isAdvCertMegacode ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
               >
                 <ClipboardCheck className="w-4 h-4" />
-                {isAdvCertMegacode ? 'Grade (ACLS)' : 'Grade'}
+                {isAdvCertMegacode ? (certCourse === 'pals' ? 'Grade (PALS)' : 'Grade (ACLS)') : 'Grade'}
               </Link>
             </div>
           </div>

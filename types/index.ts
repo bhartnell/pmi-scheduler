@@ -239,3 +239,20 @@ export {
   type AdvCertTestAttempt,
   ADV_CERT_SCALE,
 } from './adv-cert';
+
+// ============================================
+// PALS Testing Grading Module
+// ============================================
+export {
+  type PalsResult,
+  type PalsCriterionState,
+  type PalsPromptKind,
+  type Discipline,
+  type PalsChecklistCriterion,
+  type PalsChecklist,
+  type PalsChecklistWithCriteria,
+  type PalsScenarioWithChecklist,
+  type PalsCriterionResultInput,
+  type SavePalsAttemptInput,
+  type PalsTestAttempt,
+} from './pals';
