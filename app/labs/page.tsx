@@ -20,6 +20,7 @@ import {
   Layers,
   Monitor,
   HeartPulse,
+  GraduationCap,
 } from 'lucide-react';
 import { PageLoader } from '@/components/ui';
 import { hasMinRole, canManageContent } from '@/lib/permissions';
@@ -114,6 +115,14 @@ export default function LabsPage() {
       href: '/labs/skill-drills',
       icon: Zap,
       color: 'orange',
+      show: isInstructor,
+    },
+    {
+      title: 'AHA Hub',
+      description: 'ACLS and PALS courses across every cohort',
+      href: '/labs/aha-hub',
+      icon: GraduationCap,
+      color: 'red',
       show: isInstructor,
     },
     {
