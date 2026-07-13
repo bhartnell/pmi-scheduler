@@ -143,7 +143,7 @@ Two doors — labeled to keep directors out of the student dead-end:
 ## Admin
 
 The `/admin/*` hub is the canonical home for system-level administration.
-65 pages cover: users + roles, certifications, scenarios (audit/bulk-import/
+66 pages cover: users + roles, certifications, scenarios (audit/bulk-import/
 cleanup/transform), lab-templates (incl. import), data-exports, OSCE tooling,
 poll viewing, ferpa-compliance, alerts, system-health, audit-log, deep-links,
 broadcast, time-clock, calendar-sync, equipment + maintenance, deletion-requests,
@@ -151,9 +151,17 @@ incidents, qa-checklist, semesters, system-alerts, user-activity, webhooks,
 guests, alumni, external-access, dashboard-defaults, scheduled-exports,
 seed-availability, lab-templates, attendance-appeals, announcements,
 access-requests, compliance, rubrics, settings, config, database-tools,
-program-requirements, volunteer-events, open-labs, roles, instructor-workload.
+program-requirements, volunteer-events, open-labs, roles, instructor-workload,
+aha-courses.
 
 Highlights with sub-pages:
+- `/admin/aha-courses` — AHA-generic course generator (Task Handoff Queue
+  Checkpoint A, 2026-07-13): expands a `lab_day_templates` row tagged
+  `category='certification'` + `cert_course` into a cohort's own
+  ACLS/PALS `lab_days`/`lab_stations` via `POST
+  /api/admin/aha-courses/generate`. Additive only — never updates an
+  existing lab day. Full wizard (auto-swap didactic/lab days, instructor
+  holds, per-instructor assignment, part-timer self-request) deferred.
 - `/admin/calendar-sync` — Per-user calendar sync controls (incl. **Force
   Re-sync** added 2026-05-20).
 - `/admin/certifications/{compliance,verification}` — compliance dashboards.

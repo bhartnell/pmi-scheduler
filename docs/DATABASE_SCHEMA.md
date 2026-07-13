@@ -2307,18 +2307,27 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | requires_review | boolean | YES | false |  |
 | review_notes | text | YES |  |  |
 | updated_by | text | YES |  |  |
+| cert_course | text | YES |  | AHA-generic course template tag (`acls`\|`pals`); set only on templates meant for the AHA course generator (migration `20260713_aha_generic_course_templates.sql`) |
+| section_number | integer | YES |  | One template row per (day_number, section_number) for multi-section AHA course days; NULL treated as section 1 by the generator (mirrors `lab_days.section_number` NOT NULL DEFAULT 1) |
+| section_label | text | YES |  | Optional display label for the section, copied onto the generated `lab_days.section_label` |
+| is_adv_cert_testing | boolean | NO | false | Copied onto the generated `lab_days.is_adv_cert_testing` |
+| lab_mode | text | YES |  | Copied onto the generated `lab_days.lab_mode` (e.g. `group_rotations`\|`individual_testing`) |
 
 **Check Constraints:**
 - `lab_day_templates_category_check`: `((category = ANY (ARRAY['orientation'::text, 'skills_lab'::text, 'scenario_lab'::text, 'assessment'::text, 'capstone'::text, 'certification'::text, 'mixed'::text, 'field_trip'::text, 'other'::text])))`
+- `lab_day_templates_cert_course_check`: `(cert_course IS NULL OR cert_course IN ('acls', 'pals'))`
 
 **Indexes:**
 - `idx_lab_day_templates_anchor`: `CREATE INDEX idx_lab_day_templates_anchor ON public.lab_day_templates USING btree (is_anchor) WHERE (is_anchor = true)`
 - `idx_lab_day_templates_category`: `CREATE INDEX idx_lab_day_templates_category ON public.lab_day_templates USING btree (category)`
+- `idx_lab_day_templates_cert_course`: `CREATE INDEX idx_lab_day_templates_cert_course ON public.lab_day_templates USING btree (cert_course) WHERE (cert_course IS NOT NULL)`
 - `idx_lab_day_templates_created_by`: `CREATE INDEX idx_lab_day_templates_created_by ON public.lab_day_templates USING btree (created_by)`
 - `idx_lab_day_templates_day`: `CREATE INDEX idx_lab_day_templates_day ON public.lab_day_templates USING btree (day_number)`
 - `idx_lab_day_templates_review`: `CREATE INDEX idx_lab_day_templates_review ON public.lab_day_templates USING btree (requires_review) WHERE (requires_review = true)`
 - `idx_lab_day_templates_shared`: `CREATE INDEX idx_lab_day_templates_shared ON public.lab_day_templates USING btree (is_shared) WHERE (is_shared = true)`
 - `idx_lab_day_templates_updated_at`: `CREATE INDEX idx_lab_day_templates_updated_at ON public.lab_day_templates USING btree (updated_at DESC)`
+
+**AHA course generator (Checkpoint A):** `lib/aha-course-generator.ts` + `POST /api/admin/aha-courses/generate` expand a cohort's ACLS/PALS course from `lab_day_templates` rows tagged `category='certification'` + `cert_course` into that cohort's own `lab_days`/`lab_stations` (setting `source_template_id`). Additive only — an existing `lab_days` row at the same `(cohort_id, date, section_number)` is reported as skipped and never updated. UI at `/admin/aha-courses`.
 
 **RLS Policies:**
 - `templates_delete` (DELETE, permissive, roles: {public})
