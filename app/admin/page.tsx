@@ -212,6 +212,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'Configure which widgets appear by default on the dashboard for each role',
           color: 'bg-indigo-500',
         },
+        {
+          href: '/admin/aha-courses',
+          icon: GraduationCap,
+          title: 'AHA Course Generator',
+          description: 'Create a cohort’s ACLS or PALS course days from the generic AHA template (dry-run supported)',
+          color: 'bg-red-600',
+        },
       ],
     },
     {
