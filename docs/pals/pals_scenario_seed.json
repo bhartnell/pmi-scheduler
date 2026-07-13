@@ -5,21 +5,29 @@
   "cert_course": "pals",
   "content_version": "AHA 2025",
   "source": "AHA PALS 2025 Instructor Manual — Module 4 (Testing) + Module 5 Appendix A (12 Case Scenario Testing Checklists, OCR'd VERBATIM) + Module 5 Appendix B (16 Practice Case Scenarios) + Module 5 Testing Case Scenario section (16 testing case narratives) + Module 6 (Lesson Plans).",
-
   "_supersedes": "v1.0 seed, which was reverse-engineered from the Group-13 (2020) Google form. v1.0 criteria were 2020, incomplete (missing the septic-shock antibiotics step entirely), had no obstructive-shock checklist, no instructor prompts, no scope-conditional flags, and used 2020 case_codes (PALS_TEST_7/9/13). ALL REPLACED.",
-
   "model_summary": "PALS grading is NOT the ACLS megacode segment chain. A PALS testing scenario = ONE FLAT CHECKLIST of Critical Performance Steps for that pathophysiology. Steps 1-2 (team-leader preamble) are the first two steps of every checklist. Graded PER STUDENT (the selected Team Leader). Outcome = PASS / NR (Needs Remediation). See PALS_Grading_Model_Spec.md.",
-
   "grading_model": {
     "testing": {
       "type": "pals_checklist",
       "pass_rule": "all_in_scope_steps_checked",
       "pass_rule_detail": "AHA: 'If the student does not complete all steps successfully (as indicated by at least 1 blank check box), the student must receive remediation.' MODIFIED FOR SCOPE: a step outside the tester's scope of practice is marked N/A and is NOT a blank box. Pass = every IN-SCOPE step checked.",
-      "result_vocabulary": ["PASS", "NR"],
-      "criterion_states": ["checked", "not_checked", "na"],
+      "result_vocabulary": [
+        "PASS",
+        "NR"
+      ],
+      "criterion_states": [
+        "checked",
+        "not_checked",
+        "na"
+      ],
       "graded_unit": "the selected Team Leader (per student); all other participants recorded as team members on the attempt",
       "remediation_notes": "free text, required by AHA when NR",
-      "signoff": ["instructor_initials", "instructor_number", "date"]
+      "signoff": [
+        "instructor_initials",
+        "instructor_number",
+        "date"
+      ]
     },
     "practice": {
       "type": "formative_checklist_plus_0_4",
@@ -31,14 +39,17 @@
         "1": "Needs improvement",
         "0": "Critical Fail"
       },
-      "dimensions": ["assessment", "treatment", "communication"]
+      "dimensions": [
+        "assessment",
+        "treatment",
+        "communication"
+      ]
     },
     "skills": {
       "type": "attestation_only",
       "detail": "NOT graded in the app UI. Instructor verifies in class; app stores attestation + emits a printable completed AHA competency sheet into the student's export file. Exception path: fail -> remediation documentation. Printable form must closely mimic the AHA skill/scenario testing form."
     }
   },
-
   "scope_of_practice": {
     "principle": "Class is mixed-discipline (paramedic, RN, MD, RT). A step outside the tester's scope is N/A — not graded, not a failure.",
     "examples": [
@@ -48,7 +59,6 @@
     ],
     "student_field": "discipline (paramedic | rn | md | rt | other) — pre-suggests N/A, instructor-overridable"
   },
-
   "course_completion": {
     "scenario_testing": "3 case scenarios run (Shock, Respiratory, Cardiac); must PASS 2. AHA minimum = 2 case scenario tests, satisfiable as Team Leader OR a team member. ⚠ Per-student pass must NOT require 2 TL runs.",
     "team_leader_practice_requirement": "⚠ MANDATORY (AHA Module 6, Lesson 12): 'Every student must act as Team Leader at least TWICE in the full PALS Course.' This is a PRACTICE requirement. With 6-student groups x 12 practice cases = exactly 12 TL turns = 2 each, ZERO slack. Groups >6 break the requirement.",
@@ -57,14 +67,12 @@
     "bls_skills": "Child CPR & AED Skills Test + Infant CPR Skills Test (AHA PALS 2025 Lesson 5 — NEW). Program covers child/infant BLS in its ACLS BLS block (class split adult vs infant/peds); records carried into the PALS student file via the skills export. Contingency: 30 min if re-test required.",
     "retest": "May immediately retest once if time permits; otherwise end-of-course remediation lesson. Retest the ENTIRE scenario. Remediation + retesting must complete within 30 days."
   },
-
   "selection_policy": {
     "mode": "targeted_instructor_selection",
     "note": "AHA 2025 prescribes RANDOM DRAW from card pools (Test 1 = 4 cardiac cards; Test 2 = 8 respiratory/shock cards). The program deliberately uses TARGETED SELECTION instead.",
     "documented_rationale": "Cases are selected to (a) match available manikin fidelity (inventory: neonate high-fidelity, infant, toddler — NO school-age or adolescent manikin), (b) target documented local performance gaps identified by the accrediting body and partner agencies, and (c) calibrate challenge level for a paramedic-scope, prehospital audience.",
     "age_adjustment": "Instructors may down-age a case (e.g. 7 yr -> 3-4 yr) to match manikin fidelity, adjusting vitals to remain age-appropriate. App must support age_adjustable + surface age-banded vital ranges so the adjustment stays clinically coherent."
   },
-
   "instructor_controls": {
     "vitals_instructor_adjustable": true,
     "age_adjustable": true,
@@ -72,7 +80,6 @@
     "scripted_prompts": "Display instructor_prompt text VERBATIM. AHA forbids ANY other hint or coaching ('without any assistance, hints, or prompting'). The printed prompt is the ONLY sanctioned prompt.",
     "critical_actions_briefed_up_front": "AHA requires students be told which actions force a no-pass (e.g. failure to confirm airway placement, shocking a perfusing rhythm)."
   },
-
   "checklists": [
     {
       "key": "resp_upper_airway_obstruction",
@@ -80,18 +87,90 @@
       "subtype": "Upper Airway Obstruction",
       "source_ref": "Module 5 Appendix A, PDF p.11",
       "criteria": [
-        { "order": 1, "text": "Assigns team member roles", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 2, "text": "Uses effective communication throughout", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 3, "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 4, "text": "Directs administration of 100% oxygen or supplemental oxygen as needed to support oxygenation", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 5, "text": "Directs application of cardiac monitor and pulse oximetry", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 6, "text": "Identifies signs and symptoms of upper airway obstruction", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 7, "text": "Categorizes as respiratory distress or failure", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 8, "text": "Directs administration of nebulized epinephrine and corticosteroid (for croup), or IM epinephrine and IV corticosteroid (for anaphylaxis)", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 9, "text": "States indications for bag-mask ventilation and/or other airway or ventilation support", "instructor_prompt": "What are the indications for bag-mask ventilation and/or other airway or ventilation support?", "prompt_kind": "question", "scope_conditional": false },
-        { "order": 10, "text": "Directs establishment of IV or IO access, if indicated", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 11, "text": "Directs reassessment of patient in response to treatment", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 12, "text": "Describes how to estimate correct endotracheal tube size for this patient", "instructor_prompt": "How would you estimate the endotracheal tube size for this infant with upper airway obstruction?", "prompt_kind": "question", "scope_conditional": true }
+        {
+          "order": 1,
+          "text": "Assigns team member roles",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 2,
+          "text": "Uses effective communication throughout",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 3,
+          "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 4,
+          "text": "Directs administration of 100% oxygen or supplemental oxygen as needed to support oxygenation",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 5,
+          "text": "Directs application of cardiac monitor and pulse oximetry",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 6,
+          "text": "Identifies signs and symptoms of upper airway obstruction",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 7,
+          "text": "Categorizes as respiratory distress or failure",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 8,
+          "text": "Directs administration of nebulized epinephrine and corticosteroid (for croup), or IM epinephrine and IV corticosteroid (for anaphylaxis)",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 9,
+          "text": "States indications for bag-mask ventilation and/or other airway or ventilation support",
+          "instructor_prompt": "What are the indications for bag-mask ventilation and/or other airway or ventilation support?",
+          "prompt_kind": "question",
+          "scope_conditional": false
+        },
+        {
+          "order": 10,
+          "text": "Directs establishment of IV or IO access, if indicated",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 11,
+          "text": "Directs reassessment of patient in response to treatment",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 12,
+          "text": "Describes how to estimate correct endotracheal tube size for this patient",
+          "instructor_prompt": "How would you estimate the endotracheal tube size for this infant with upper airway obstruction?",
+          "prompt_kind": "question",
+          "scope_conditional": true
+        }
       ]
     },
     {
@@ -100,18 +179,90 @@
       "subtype": "Lower Airway Obstruction",
       "source_ref": "Module 5 Appendix A, PDF p.12",
       "criteria": [
-        { "order": 1, "text": "Assigns team member roles", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 2, "text": "Uses effective communication throughout", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 3, "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 4, "text": "Directs administration of 100% oxygen or supplemental oxygen as needed to support oxygenation", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 5, "text": "Directs application of cardiac monitor and pulse oximetry", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 6, "text": "Identifies signs and symptoms of lower airway obstruction", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 7, "text": "Categorizes as respiratory distress or failure", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 8, "text": "Directs administration of albuterol and corticosteroids (for asthma) or suctioning or possible additional laboratory studies (for bronchiolitis)", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 9, "text": "States indications for bag-mask ventilation and/or other airway or ventilation support", "instructor_prompt": "What are the indications for bag-mask ventilation and/or other airway or ventilation support?", "prompt_kind": "question", "scope_conditional": false },
-        { "order": 10, "text": "Directs establishment of IV or IO access, if appropriate", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 11, "text": "Directs reassessment of patient in response to treatment", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 12, "text": "States indications for advanced airway management", "instructor_prompt": "What are the indications for endotracheal intubation?", "prompt_kind": "question", "scope_conditional": true }
+        {
+          "order": 1,
+          "text": "Assigns team member roles",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 2,
+          "text": "Uses effective communication throughout",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 3,
+          "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 4,
+          "text": "Directs administration of 100% oxygen or supplemental oxygen as needed to support oxygenation",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 5,
+          "text": "Directs application of cardiac monitor and pulse oximetry",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 6,
+          "text": "Identifies signs and symptoms of lower airway obstruction",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 7,
+          "text": "Categorizes as respiratory distress or failure",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 8,
+          "text": "Directs administration of albuterol and corticosteroids (for asthma) or suctioning or possible additional laboratory studies (for bronchiolitis)",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 9,
+          "text": "States indications for bag-mask ventilation and/or other airway or ventilation support",
+          "instructor_prompt": "What are the indications for bag-mask ventilation and/or other airway or ventilation support?",
+          "prompt_kind": "question",
+          "scope_conditional": false
+        },
+        {
+          "order": 10,
+          "text": "Directs establishment of IV or IO access, if appropriate",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 11,
+          "text": "Directs reassessment of patient in response to treatment",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 12,
+          "text": "States indications for advanced airway management",
+          "instructor_prompt": "What are the indications for endotracheal intubation?",
+          "prompt_kind": "question",
+          "scope_conditional": true
+        }
       ]
     },
     {
@@ -120,19 +271,97 @@
       "subtype": "Lung Tissue Disease",
       "source_ref": "Module 5 Appendix A, PDF p.13",
       "criteria": [
-        { "order": 1, "text": "Assigns team member roles", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 2, "text": "Uses effective communication throughout", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 3, "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 4, "text": "Directs administration of 100% oxygen (or supplemental oxygen as needed to support oxygenation) and evaluates response", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 5, "text": "Identifies indications for bag-mask ventilation and/or additional airway or ventilation support", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 6, "text": "Describes methods to verify that bag-mask ventilation is effective", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 7, "text": "Directs application of cardiac monitor and pulse oximetry", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 8, "text": "Identifies signs and symptoms of lung tissue disease", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 9, "text": "Categorizes as respiratory distress or failure", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 10, "text": "Directs establishment of IV or IO access", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 11, "text": "Directs reassessment of patient in response to treatment", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 12, "text": "Identifies need for involvement of advanced provider with expertise in pediatric intubation and mechanical ventilation", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 13, "text": "States indications for advanced airway management", "instructor_prompt": "What are the indications for advanced airway management?", "prompt_kind": "question", "scope_conditional": true }
+        {
+          "order": 1,
+          "text": "Assigns team member roles",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 2,
+          "text": "Uses effective communication throughout",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 3,
+          "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 4,
+          "text": "Directs administration of 100% oxygen (or supplemental oxygen as needed to support oxygenation) and evaluates response",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 5,
+          "text": "Identifies indications for bag-mask ventilation and/or additional airway or ventilation support",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 6,
+          "text": "Describes methods to verify that bag-mask ventilation is effective",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 7,
+          "text": "Directs application of cardiac monitor and pulse oximetry",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 8,
+          "text": "Identifies signs and symptoms of lung tissue disease",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 9,
+          "text": "Categorizes as respiratory distress or failure",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 10,
+          "text": "Directs establishment of IV or IO access",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 11,
+          "text": "Directs reassessment of patient in response to treatment",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 12,
+          "text": "Identifies need for involvement of advanced provider with expertise in pediatric intubation and mechanical ventilation",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 13,
+          "text": "States indications for advanced airway management",
+          "instructor_prompt": "What are the indications for advanced airway management?",
+          "prompt_kind": "question",
+          "scope_conditional": true
+        }
       ]
     },
     {
@@ -141,19 +370,97 @@
       "subtype": "Disordered Control of Breathing",
       "source_ref": "Module 5 Appendix A, PDF p.14",
       "criteria": [
-        { "order": 1, "text": "Assigns team member roles", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 2, "text": "Uses effective communication throughout", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 3, "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 4, "text": "Directs administration of 100% oxygen (or supplemental oxygen as needed to support oxygenation) and evaluates response", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 5, "text": "Identifies indications for bag-mask ventilation and/or additional airway or ventilation support", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 6, "text": "Describes methods to verify that bag-mask ventilation is effective", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 7, "text": "Directs application of cardiac monitor and pulse oximetry", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 8, "text": "Identifies signs of disordered control of breathing", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 9, "text": "Categorizes as respiratory distress or failure", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 10, "text": "Directs establishment of IV or IO access", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 11, "text": "Directs reassessment of patient in response to treatment", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 12, "text": "Identifies need for involvement of advanced provider with expertise in pediatric intubation and mechanical ventilation", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 13, "text": "States indications for advanced airway management", "instructor_prompt": "What are the indications for advanced airway management?", "prompt_kind": "question", "scope_conditional": true }
+        {
+          "order": 1,
+          "text": "Assigns team member roles",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 2,
+          "text": "Uses effective communication throughout",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 3,
+          "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 4,
+          "text": "Directs administration of 100% oxygen (or supplemental oxygen as needed to support oxygenation) and evaluates response",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 5,
+          "text": "Identifies indications for bag-mask ventilation and/or additional airway or ventilation support",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 6,
+          "text": "Describes methods to verify that bag-mask ventilation is effective",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 7,
+          "text": "Directs application of cardiac monitor and pulse oximetry",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 8,
+          "text": "Identifies signs of disordered control of breathing",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 9,
+          "text": "Categorizes as respiratory distress or failure",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 10,
+          "text": "Directs establishment of IV or IO access",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 11,
+          "text": "Directs reassessment of patient in response to treatment",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 12,
+          "text": "Identifies need for involvement of advanced provider with expertise in pediatric intubation and mechanical ventilation",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 13,
+          "text": "States indications for advanced airway management",
+          "instructor_prompt": "What are the indications for advanced airway management?",
+          "prompt_kind": "question",
+          "scope_conditional": true
+        }
       ]
     },
     {
@@ -162,18 +469,90 @@
       "subtype": "Hypovolemic Shock",
       "source_ref": "Module 5 Appendix A, PDF p.15",
       "criteria": [
-        { "order": 1, "text": "Assigns team member roles", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 2, "text": "Uses effective communication throughout", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 3, "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 4, "text": "Directs administration of 100% oxygen", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 5, "text": "Directs application of cardiac monitor and pulse oximetry", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 6, "text": "Identifies signs and symptoms of hypovolemic shock", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 7, "text": "Categorizes as compensated or hypotensive shock", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 8, "text": "Directs establishment of IV or IO access", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 9, "text": "Directs rapid administration of a 20 mL/kg fluid bolus of isotonic crystalloid over 10 minutes if hypotensive and over 20 minutes if compensated; repeats as needed to treat signs of shock", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 10, "text": "Reassesses patient during and after each fluid bolus; stops fluid bolus if signs of heart failure develop (ie, if vital signs fail to improve, respiratory distress worsens, hepatomegaly or rales/crackles develop)", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 11, "text": "Directs reassessment of patient in response to each treatment", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 12, "text": "States therapeutic end points during shock management", "instructor_prompt": "What are the therapeutic end points during shock management?", "prompt_kind": "question", "scope_conditional": false }
+        {
+          "order": 1,
+          "text": "Assigns team member roles",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 2,
+          "text": "Uses effective communication throughout",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 3,
+          "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 4,
+          "text": "Directs administration of 100% oxygen",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 5,
+          "text": "Directs application of cardiac monitor and pulse oximetry",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 6,
+          "text": "Identifies signs and symptoms of hypovolemic shock",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 7,
+          "text": "Categorizes as compensated or hypotensive shock",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 8,
+          "text": "Directs establishment of IV or IO access",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 9,
+          "text": "Directs rapid administration of a 20 mL/kg fluid bolus of isotonic crystalloid over 10 minutes if hypotensive and over 20 minutes if compensated; repeats as needed to treat signs of shock",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 10,
+          "text": "Reassesses patient during and after each fluid bolus; stops fluid bolus if signs of heart failure develop (ie, if vital signs fail to improve, respiratory distress worsens, hepatomegaly or rales/crackles develop)",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 11,
+          "text": "Directs reassessment of patient in response to each treatment",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 12,
+          "text": "States therapeutic end points during shock management",
+          "instructor_prompt": "What are the therapeutic end points during shock management?",
+          "prompt_kind": "question",
+          "scope_conditional": false
+        }
       ]
     },
     {
@@ -183,19 +562,97 @@
       "source_ref": "Module 5 Appendix A, PDF p.16",
       "_program_note": "This is the tension-pneumothorax teaching case (barotrauma from over-aggressive PPV in a small chest). For paramedics: needle decompression IS in scope and IS graded. Pericardiocentesis / chest tube / chest x-ray = N/A.",
       "criteria": [
-        { "order": 1, "text": "Assigns team member roles", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 2, "text": "Uses effective communication throughout", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 3, "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 4, "text": "Directs application of cardiac monitor and pulse oximetry", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 5, "text": "Verbalizes DOPE mnemonic for intubated patient who deteriorates", "instructor_prompt": "What mnemonic is helpful to recall when the intubated patient deteriorates? What does this mnemonic mean?", "prompt_kind": "question", "scope_conditional": false },
-        { "order": 6, "text": "Identifies signs and symptoms of obstructive shock", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 7, "text": "States at least 2 causes of obstructive shock", "instructor_prompt": "Tell me at least 2 causes of obstructive shock.", "prompt_kind": "statement", "scope_conditional": false },
-        { "order": 8, "text": "Categorizes as compensated or hypotensive shock", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 9, "text": "Directs establishment of IV or IO access, if needed", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 10, "text": "Directs rapid administration of a fluid bolus of 5-20 mL/kg over 10-20 minutes of isotonic crystalloid, if needed (ie, for cardiac tamponade, massive pulmonary embolus)", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 11, "text": "Directs appropriate treatment for obstructive shock (needle decompression for tension pneumothorax; fluid bolus, and pericardiocentesis for cardiac tamponade; oxygen, ventilatory support, fluid bolus, and expert consultation for massive pulmonary embolus; prostaglandin infusion and expert consultation for neonate with ductal-dependent congenital heart disease and constriction/closure of the ductus arteriosus)", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 12, "text": "Directs reassessment of patient in response to treatment", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 13, "text": "States therapeutic end points during shock management", "instructor_prompt": "What are the therapeutic end points during shock management?", "prompt_kind": "question", "scope_conditional": false }
+        {
+          "order": 1,
+          "text": "Assigns team member roles",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 2,
+          "text": "Uses effective communication throughout",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 3,
+          "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 4,
+          "text": "Directs application of cardiac monitor and pulse oximetry",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 5,
+          "text": "Verbalizes DOPE mnemonic for intubated patient who deteriorates",
+          "instructor_prompt": "What mnemonic is helpful to recall when the intubated patient deteriorates? What does this mnemonic mean?",
+          "prompt_kind": "question",
+          "scope_conditional": false
+        },
+        {
+          "order": 6,
+          "text": "Identifies signs and symptoms of obstructive shock",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 7,
+          "text": "States at least 2 causes of obstructive shock",
+          "instructor_prompt": "Tell me at least 2 causes of obstructive shock.",
+          "prompt_kind": "statement",
+          "scope_conditional": false
+        },
+        {
+          "order": 8,
+          "text": "Categorizes as compensated or hypotensive shock",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 9,
+          "text": "Directs establishment of IV or IO access, if needed",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 10,
+          "text": "Directs rapid administration of a fluid bolus of 5-20 mL/kg over 10-20 minutes of isotonic crystalloid, if needed (ie, for cardiac tamponade, massive pulmonary embolus)",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 11,
+          "text": "Directs appropriate treatment for obstructive shock (needle decompression for tension pneumothorax; fluid bolus, and pericardiocentesis for cardiac tamponade; oxygen, ventilatory support, fluid bolus, and expert consultation for massive pulmonary embolus; prostaglandin infusion and expert consultation for neonate with ductal-dependent congenital heart disease and constriction/closure of the ductus arteriosus)",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 12,
+          "text": "Directs reassessment of patient in response to treatment",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 13,
+          "text": "States therapeutic end points during shock management",
+          "instructor_prompt": "What are the therapeutic end points during shock management?",
+          "prompt_kind": "question",
+          "scope_conditional": false
+        }
       ]
     },
     {
@@ -205,20 +662,104 @@
       "source_ref": "Module 5 Appendix A, PDF p.17",
       "_program_note": "⚠ Step 13 (antibiotics within first hour) was ENTIRELY MISSING from the 2020-derived v1.0 seed. For paramedics, antibiotics are typically out of scope -> mark N/A. The step must EXIST so it can be N/A'd rather than silently absent.",
       "criteria": [
-        { "order": 1, "text": "Assigns team member roles", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 2, "text": "Uses effective communication throughout", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 3, "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 4, "text": "Directs administration of 100% oxygen", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 5, "text": "Directs application of cardiac monitor and pulse oximetry", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 6, "text": "Identifies signs and symptoms of distributive (septic) shock", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 7, "text": "Categorizes as compensated or hypotensive shock", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 8, "text": "Directs establishment of IV or IO access", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 9, "text": "Directs rapid administration of a 10-20 mL/kg fluid bolus of isotonic crystalloid for septic shock and 20 mL/kg fluid bolus of isotonic crystalloid over 5-20 minutes for anaphylactic shock; repeats as needed (with careful reassessment) to treat shock", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 10, "text": "Reassesses patient during and after each fluid bolus; stops fluid bolus if signs of heart failure develop (ie, if vital signs fail to improve, respiratory distress worsens, hepatomegaly or rales/crackles develop)", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 11, "text": "Directs initiation of vasoactive drug therapy within first hour of care for fluid-refractory shock", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 12, "text": "Directs reassessment of patient in response to treatment", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 13, "text": "Directs early administration of antibiotics (within first hour after shock is identified)", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 14, "text": "States therapeutic end points during shock management", "instructor_prompt": "What are the therapeutic end points during shock management?", "prompt_kind": "question", "scope_conditional": false }
+        {
+          "order": 1,
+          "text": "Assigns team member roles",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 2,
+          "text": "Uses effective communication throughout",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 3,
+          "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 4,
+          "text": "Directs administration of 100% oxygen",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 5,
+          "text": "Directs application of cardiac monitor and pulse oximetry",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 6,
+          "text": "Identifies signs and symptoms of distributive (septic) shock",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 7,
+          "text": "Categorizes as compensated or hypotensive shock",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 8,
+          "text": "Directs establishment of IV or IO access",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 9,
+          "text": "Directs rapid administration of a 10-20 mL/kg fluid bolus of isotonic crystalloid for septic shock and 20 mL/kg fluid bolus of isotonic crystalloid over 5-20 minutes for anaphylactic shock; repeats as needed (with careful reassessment) to treat shock",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 10,
+          "text": "Reassesses patient during and after each fluid bolus; stops fluid bolus if signs of heart failure develop (ie, if vital signs fail to improve, respiratory distress worsens, hepatomegaly or rales/crackles develop)",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 11,
+          "text": "Directs initiation of vasoactive drug therapy within first hour of care for fluid-refractory shock",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 12,
+          "text": "Directs reassessment of patient in response to treatment",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 13,
+          "text": "Directs early administration of antibiotics (within first hour after shock is identified)",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 14,
+          "text": "States therapeutic end points during shock management",
+          "instructor_prompt": "What are the therapeutic end points during shock management?",
+          "prompt_kind": "question",
+          "scope_conditional": false
+        }
       ]
     },
     {
@@ -227,19 +768,97 @@
       "subtype": "Cardiogenic Shock",
       "source_ref": "Module 5 Appendix A, PDF p.18",
       "criteria": [
-        { "order": 1, "text": "Assigns team member roles", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 2, "text": "Uses effective communication throughout", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 3, "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 4, "text": "Directs administration of 100% oxygen", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 5, "text": "Directs application of cardiac monitor and pulse oximetry", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 6, "text": "Identifies signs and symptoms of cardiogenic shock", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 7, "text": "Categorizes as compensated or hypotensive shock", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 8, "text": "Directs establishment of IV or IO access", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 9, "text": "Directs slow administration of a 5 to 10 mL/kg fluid bolus of isotonic crystalloid over 10 to 20 minutes and reassesses patient during and after fluid bolus; stops fluid bolus if signs of heart failure worsen (ie, if vital signs fail to improve, respiratory distress worsens, hepatomegaly or rales/crackles develop)", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 10, "text": "Directs reassessment of patient in response to treatment", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 11, "text": "Recognizes the need to obtain expert consultation from pediatric cardiologist", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 12, "text": "Identifies need for inotropic/vasoactive drugs during treatment of cardiogenic shock", "instructor_prompt": "What are the indications for inotropic/vasoactive drugs during cardiogenic shock?", "prompt_kind": "question", "scope_conditional": false },
-        { "order": 13, "text": "States therapeutic end points during shock management", "instructor_prompt": "What are the therapeutic end points during shock management?", "prompt_kind": "question", "scope_conditional": false }
+        {
+          "order": 1,
+          "text": "Assigns team member roles",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 2,
+          "text": "Uses effective communication throughout",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 3,
+          "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 4,
+          "text": "Directs administration of 100% oxygen",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 5,
+          "text": "Directs application of cardiac monitor and pulse oximetry",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 6,
+          "text": "Identifies signs and symptoms of cardiogenic shock",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 7,
+          "text": "Categorizes as compensated or hypotensive shock",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 8,
+          "text": "Directs establishment of IV or IO access",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 9,
+          "text": "Directs slow administration of a 5 to 10 mL/kg fluid bolus of isotonic crystalloid over 10 to 20 minutes and reassesses patient during and after fluid bolus; stops fluid bolus if signs of heart failure worsen (ie, if vital signs fail to improve, respiratory distress worsens, hepatomegaly or rales/crackles develop)",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 10,
+          "text": "Directs reassessment of patient in response to treatment",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 11,
+          "text": "Recognizes the need to obtain expert consultation from pediatric cardiologist",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 12,
+          "text": "Identifies need for inotropic/vasoactive drugs during treatment of cardiogenic shock",
+          "instructor_prompt": "What are the indications for inotropic/vasoactive drugs during cardiogenic shock?",
+          "prompt_kind": "question",
+          "scope_conditional": false
+        },
+        {
+          "order": 13,
+          "text": "States therapeutic end points during shock management",
+          "instructor_prompt": "What are the therapeutic end points during shock management?",
+          "prompt_kind": "question",
+          "scope_conditional": false
+        }
       ]
     },
     {
@@ -248,19 +867,97 @@
       "subtype": "Supraventricular Tachycardia",
       "source_ref": "Module 5 Appendix A, PDF p.19",
       "criteria": [
-        { "order": 1, "text": "Assigns team member roles", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 2, "text": "Uses effective communication throughout", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 3, "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 4, "text": "Directs application of cardiac monitor and pulse oximetry", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 5, "text": "Directs administration of supplemental oxygen", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 6, "text": "Identifies narrow-complex tachycardia (ie, SVT with adequate perfusion) and verbalizes how to distinguish between ST and SVT", "instructor_prompt": "How do you distinguish between ST and SVT?", "prompt_kind": "question", "scope_conditional": false },
-        { "order": 7, "text": "Directs performance of appropriate vagal maneuvers", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 8, "text": "Directs establishment of IV or IO access", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 9, "text": "Directs preparation and administration of appropriate doses (first and, if needed, second) of adenosine", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 10, "text": "States the rationale for the strong recommendation for expert consultation before providing synchronized cardioversion if the stable child with SVT fails to respond to vagal maneuvers and adenosine", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 11, "text": "Directs or describes appropriate indications for and safe delivery of attempted cardioversion at 0.5-1 J/kg (subsequent doses increased by 0.5-1 J/kg, not to exceed 2 J/kg)", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 12, "text": "Performs reassessment of patient in response to treatment", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 13, "text": "Discusses indications and appropriate energy doses for synchronized cardioversion", "instructor_prompt": "What are the indications and appropriate energy doses for synchronized cardioversion?", "prompt_kind": "question", "scope_conditional": false }
+        {
+          "order": 1,
+          "text": "Assigns team member roles",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 2,
+          "text": "Uses effective communication throughout",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 3,
+          "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 4,
+          "text": "Directs application of cardiac monitor and pulse oximetry",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 5,
+          "text": "Directs administration of supplemental oxygen",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 6,
+          "text": "Identifies narrow-complex tachycardia (ie, SVT with adequate perfusion) and verbalizes how to distinguish between ST and SVT",
+          "instructor_prompt": "How do you distinguish between ST and SVT?",
+          "prompt_kind": "question",
+          "scope_conditional": false
+        },
+        {
+          "order": 7,
+          "text": "Directs performance of appropriate vagal maneuvers",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 8,
+          "text": "Directs establishment of IV or IO access",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 9,
+          "text": "Directs preparation and administration of appropriate doses (first and, if needed, second) of adenosine",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 10,
+          "text": "States the rationale for the strong recommendation for expert consultation before providing synchronized cardioversion if the stable child with SVT fails to respond to vagal maneuvers and adenosine",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 11,
+          "text": "Directs or describes appropriate indications for and safe delivery of attempted cardioversion at 0.5-1 J/kg (subsequent doses increased by 0.5-1 J/kg, not to exceed 2 J/kg)",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 12,
+          "text": "Performs reassessment of patient in response to treatment",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 13,
+          "text": "Discusses indications and appropriate energy doses for synchronized cardioversion",
+          "instructor_prompt": "What are the indications and appropriate energy doses for synchronized cardioversion?",
+          "prompt_kind": "question",
+          "scope_conditional": false
+        }
       ]
     },
     {
@@ -269,18 +966,90 @@
       "subtype": "Bradycardia",
       "source_ref": "Module 5 Appendix A, PDF p.20",
       "criteria": [
-        { "order": 1, "text": "Assigns team member roles", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 2, "text": "Uses effective communication throughout", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 3, "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 4, "text": "Identifies bradycardia associated with cardiopulmonary compromise/failure", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 5, "text": "Directs initiation of bag-mask ventilation with 100% oxygen", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 6, "text": "Directs application of cardiac monitor and pulse oximetry", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 7, "text": "Reassesses heart rate and systemic perfusion after initiation of bag-mask ventilation", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 8, "text": "Recognizes indications for high-quality CPR (chest compressions plus ventilation) in a bradycardic patient", "instructor_prompt": "What are the indications for high-quality CPR in a bradycardic patient?", "prompt_kind": "question", "scope_conditional": false },
-        { "order": 9, "text": "Directs establishment of IV or IO access", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 10, "text": "Directs or discusses preparation for and appropriate administration and dose (0.01 mg/kg IV/IO [0.1 mg/kg concentration]) of epinephrine", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 11, "text": "Performs reassessment of patient in response to treatment", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 12, "text": "Verbalizes consideration of 3 potential causes of bradycardia in infants and children", "instructor_prompt": "Tell me 3 potential causes of bradycardia in infants and children.", "prompt_kind": "statement", "scope_conditional": false }
+        {
+          "order": 1,
+          "text": "Assigns team member roles",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 2,
+          "text": "Uses effective communication throughout",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 3,
+          "text": "Directs assessment of airway, breathing, circulation, disability, and exposure, including vital signs",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 4,
+          "text": "Identifies bradycardia associated with cardiopulmonary compromise/failure",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 5,
+          "text": "Directs initiation of bag-mask ventilation with 100% oxygen",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 6,
+          "text": "Directs application of cardiac monitor and pulse oximetry",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 7,
+          "text": "Reassesses heart rate and systemic perfusion after initiation of bag-mask ventilation",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 8,
+          "text": "Recognizes indications for high-quality CPR (chest compressions plus ventilation) in a bradycardic patient",
+          "instructor_prompt": "What are the indications for high-quality CPR in a bradycardic patient?",
+          "prompt_kind": "question",
+          "scope_conditional": false
+        },
+        {
+          "order": 9,
+          "text": "Directs establishment of IV or IO access",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 10,
+          "text": "Directs or discusses preparation for and appropriate administration and dose (0.01 mg/kg IV/IO [0.1 mg/kg concentration]) of epinephrine",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 11,
+          "text": "Performs reassessment of patient in response to treatment",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 12,
+          "text": "Verbalizes consideration of 3 potential causes of bradycardia in infants and children",
+          "instructor_prompt": "Tell me 3 potential causes of bradycardia in infants and children.",
+          "prompt_kind": "statement",
+          "scope_conditional": false
+        }
       ]
     },
     {
@@ -289,16 +1058,76 @@
       "subtype": "Asystole/PEA",
       "source_ref": "Module 5 Appendix A, PDF p.21",
       "criteria": [
-        { "order": 1, "text": "Assigns team member roles", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 2, "text": "Uses effective communication throughout", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 3, "text": "Identifies cardiac arrest", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 4, "text": "Directs immediate initiation of high-quality CPR, and ensures performance of high-quality CPR at all times", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 5, "text": "Directs placement of pads/leads and activation of monitor/defibrillator", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 6, "text": "Identifies asystole or PEA", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 7, "text": "Directs establishment of IO or IV access", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 8, "text": "Directs preparation and administration of appropriate dose of epinephrine at appropriate intervals", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 9, "text": "Directs checking rhythm approximately every 2 minutes while minimizing interruptions in chest compressions", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 10, "text": "Verbalizes at least 3 reversible causes of PEA or asystole", "instructor_prompt": "Tell me at least 3 reversible causes of PEA or asystole.", "prompt_kind": "statement", "scope_conditional": false }
+        {
+          "order": 1,
+          "text": "Assigns team member roles",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 2,
+          "text": "Uses effective communication throughout",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 3,
+          "text": "Identifies cardiac arrest",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 4,
+          "text": "Directs immediate initiation of high-quality CPR, and ensures performance of high-quality CPR at all times",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 5,
+          "text": "Directs placement of pads/leads and activation of monitor/defibrillator",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 6,
+          "text": "Identifies asystole or PEA",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 7,
+          "text": "Directs establishment of IO or IV access",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 8,
+          "text": "Directs preparation and administration of appropriate dose of epinephrine at appropriate intervals",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 9,
+          "text": "Directs checking rhythm approximately every 2 minutes while minimizing interruptions in chest compressions",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 10,
+          "text": "Verbalizes at least 3 reversible causes of PEA or asystole",
+          "instructor_prompt": "Tell me at least 3 reversible causes of PEA or asystole.",
+          "prompt_kind": "statement",
+          "scope_conditional": false
+        }
       ]
     },
     {
@@ -307,80 +1136,454 @@
       "subtype": "VF/Pulseless VT",
       "source_ref": "Module 5 Appendix A, PDF p.22",
       "criteria": [
-        { "order": 1, "text": "Assigns team member roles", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 2, "text": "Uses effective communication throughout", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 3, "text": "Identifies cardiac arrest", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 4, "text": "Directs immediate initiation of high-quality CPR, and ensures performance of high-quality CPR at all times", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 5, "text": "Directs placement of pads/leads and activation of monitor/defibrillator", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 6, "text": "Identifies VF or pulseless VT cardiopulmonary arrest", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 7, "text": "Directs safe performance of attempted defibrillation at 2 J/kg", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 8, "text": "After delivery of every shock, directs immediate resumption of CPR, beginning with chest compressions", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 9, "text": "Directs establishment of IO or IV access", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 10, "text": "Directs preparation and administration of appropriate dose of epinephrine at appropriate intervals", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 11, "text": "Directs safe delivery of second shock at 4 J/kg (subsequent doses 4-10 J/kg, not to exceed 10 J/kg or standard adult dose for that defibrillator)", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 12, "text": "Directs preparation and administration of appropriate dose of antiarrhythmic (amiodarone or lidocaine) at appropriate time", "instructor_prompt": null, "prompt_kind": null, "scope_conditional": false },
-        { "order": 13, "text": "Verbalizes possible need for additional doses of epinephrine and antiarrhythmic (amiodarone or lidocaine), and consideration of reversible causes of arrest (H's and T's)", "instructor_prompt": "If VF persists despite the therapies provided, what else should you administer or consider?", "prompt_kind": "question", "scope_conditional": false }
+        {
+          "order": 1,
+          "text": "Assigns team member roles",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 2,
+          "text": "Uses effective communication throughout",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 3,
+          "text": "Identifies cardiac arrest",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 4,
+          "text": "Directs immediate initiation of high-quality CPR, and ensures performance of high-quality CPR at all times",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 5,
+          "text": "Directs placement of pads/leads and activation of monitor/defibrillator",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 6,
+          "text": "Identifies VF or pulseless VT cardiopulmonary arrest",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 7,
+          "text": "Directs safe performance of attempted defibrillation at 2 J/kg",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 8,
+          "text": "After delivery of every shock, directs immediate resumption of CPR, beginning with chest compressions",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 9,
+          "text": "Directs establishment of IO or IV access",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 10,
+          "text": "Directs preparation and administration of appropriate dose of epinephrine at appropriate intervals",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 11,
+          "text": "Directs safe delivery of second shock at 4 J/kg (subsequent doses 4-10 J/kg, not to exceed 10 J/kg or standard adult dose for that defibrillator)",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 12,
+          "text": "Directs preparation and administration of appropriate dose of antiarrhythmic (amiodarone or lidocaine) at appropriate time",
+          "instructor_prompt": null,
+          "prompt_kind": null,
+          "scope_conditional": false
+        },
+        {
+          "order": 13,
+          "text": "Verbalizes possible need for additional doses of epinephrine and antiarrhythmic (amiodarone or lidocaine), and consideration of reversible causes of arrest (H's and T's)",
+          "instructor_prompt": "If VF persists despite the therapies provided, what else should you administer or consider?",
+          "prompt_kind": "question",
+          "scope_conditional": false
+        }
       ]
     }
   ],
-
   "_scenarios_note": "⚠ NARRATIVE STATUS IS EXPLICIT PER SCENARIO. 'narrative_status: complete' = lead-in/vitals/flow loaded verbatim from 2025. 'pending_extraction' = identity + age/vitals verified, but full card narrative NOT yet loaded. NOTHING is silently empty — see PALS_PRACTICE_03_EXEMPLAR.json for the target card format.",
-
   "practice_scenarios": [
-    { "case_code": "PALS_PRACTICE_01", "name": "Hypovolemic Shock (Child; Uncompensated)", "category": "Shock", "checklist_key": "shock_hypovolemic", "age": "child", "manikin_fit": "review", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_PRACTICE_02", "name": "Hypovolemic Shock (Infant; Nonaccidental Trauma)", "category": "Shock", "checklist_key": "shock_hypovolemic", "age": "6 mo", "weight_kg": 8.6, "manikin_fit": "infant", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_PRACTICE_03", "name": "Lower Airway Obstruction (Child; Severely Ill)", "category": "Respiratory", "checklist_key": "resp_lower_airway_obstruction", "age": "10 yr", "weight_kg": 35, "manikin_fit": "school_age_NOT_AVAILABLE", "narrative_status": "complete", "narrative_ref": "PALS_PRACTICE_03_EXEMPLAR.json" },
-    { "case_code": "PALS_PRACTICE_04", "name": "Upper Airway Obstruction (Child; Moderate to Severe)", "category": "Respiratory", "checklist_key": "resp_upper_airway_obstruction", "age": "1 yr", "weight_kg": 10, "manikin_fit": "toddler", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_PRACTICE_05", "name": "Asystole (Infant; Arrest)", "category": "Cardiac arrest", "checklist_key": "cardiac_asystole_pea", "age": "6 mo", "weight_kg": 7, "manikin_fit": "infant", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_PRACTICE_06", "name": "PEA (Child; Arrest)", "category": "Cardiac arrest", "checklist_key": "cardiac_asystole_pea", "age": "child", "manikin_fit": "review", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_PRACTICE_07", "name": "Lung Tissue (Parenchymal) Disease (Infant)", "category": "Respiratory", "checklist_key": "resp_lung_tissue_disease", "age": "6 mo", "weight_kg": 6, "manikin_fit": "infant", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_PRACTICE_08", "name": "Distributive Shock (Adolescent; Septic Shock)", "category": "Shock", "checklist_key": "shock_distributive", "age": "12 yr", "weight_kg": 41, "manikin_fit": "adolescent_NOT_AVAILABLE", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_PRACTICE_09", "name": "SVT (Adolescent; Unstable)", "category": "Cardiac (arrhythmia)", "checklist_key": "cardiac_svt", "age": "12 yr", "weight_kg": 50, "manikin_fit": "adolescent_NOT_AVAILABLE", "narrative_status": "pending_extraction", "_aha_conflict": "Vitals box says BP 70/40; primary assessment says 75/55. AHA's own inconsistency — choose deliberately." },
-    { "case_code": "PALS_PRACTICE_10", "name": "Wide-Complex Tachycardia, Possible VT (Infant; Stable)", "category": "Cardiac (arrhythmia)", "checklist_key": "cardiac_svt", "age": "infant", "manikin_fit": "infant", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_PRACTICE_11", "name": "Wide-Complex Tachycardia (Possible VT); pulse + poor perfusion", "category": "Cardiac (arrhythmia)", "checklist_key": "cardiac_svt", "age": "10 yr", "weight_kg": 30, "manikin_fit": "school_age_NOT_AVAILABLE", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_PRACTICE_12", "name": "Pulseless VT (Infant; Arrest)", "category": "Cardiac arrest", "checklist_key": "cardiac_vf_pvt", "age": "6 mo", "weight_kg": 8, "manikin_fit": "infant", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_PRACTICE_13", "name": "Obstructive Shock (Child; Hypotensive; Tension Pneumothorax)", "category": "Shock", "checklist_key": "shock_obstructive", "age": "8 yr", "weight_kg": 20, "manikin_fit": "school_age_NOT_AVAILABLE", "narrative_status": "pending_extraction", "_program_note": "KEEP despite manikin gap — barotrauma->pneumo->tension teaching case; no infant-age equivalent exists in either bank. Run on toddler/adult with explicit age brief. Premise (already intubated) is the CLINICAL MECHANISM, not hospital framing — AHA's own prehospital lead-in has the crew on scene with an intubated patient." },
-    { "case_code": "PALS_PRACTICE_14", "name": "Cardiogenic Shock (Infant; Cardiomyopathy)", "category": "Shock", "checklist_key": "shock_cardiogenic", "age": "4 mo", "weight_kg": 7, "manikin_fit": "infant", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_PRACTICE_15", "name": "Disordered Control of Breathing (Infant)", "category": "Respiratory", "checklist_key": "resp_disordered_control_breathing", "age": "6 mo", "weight_kg": 7, "manikin_fit": "infant", "narrative_status": "pending_extraction", "_drift_flag": "2020 debrief asked 'indications for endotracheal intubation'. 2025 P3 changed to 'positive-pressure ventilation'. VERIFY P15's 2025 debrief wording before porting." },
-    { "case_code": "PALS_PRACTICE_16", "name": "Bradycardia (Child; Seizure)", "category": "Cardiac (arrhythmia)", "checklist_key": "cardiac_bradycardia", "age": "8 yr", "weight_kg": 27, "manikin_fit": "school_age_NOT_AVAILABLE", "narrative_status": "pending_extraction", "_swap_suggestion": "PALS_TEST_CASE_14 is a 9-month-old bradycardia — age-friendly swap, same algorithm." }
+    {
+      "case_code": "PALS_PRACTICE_01",
+      "name": "Hypovolemic Shock (Child; Uncompensated)",
+      "category": "Shock",
+      "checklist_key": "shock_hypovolemic",
+      "age": "child",
+      "manikin_fit": "review",
+      "narrative_status": "complete",
+      "narrative_file": "pals_card_narratives_PRACTICE.json"
+    },
+    {
+      "case_code": "PALS_PRACTICE_02",
+      "name": "Hypovolemic Shock (Infant; Nonaccidental Trauma)",
+      "category": "Shock",
+      "checklist_key": "shock_hypovolemic",
+      "age": "6 mo",
+      "weight_kg": 8.6,
+      "manikin_fit": "infant",
+      "narrative_status": "complete",
+      "narrative_file": "pals_card_narratives_PRACTICE.json"
+    },
+    {
+      "case_code": "PALS_PRACTICE_03",
+      "name": "Lower Airway Obstruction (Child; Severely Ill)",
+      "category": "Respiratory",
+      "checklist_key": "resp_lower_airway_obstruction",
+      "age": "10 yr",
+      "weight_kg": 35,
+      "manikin_fit": "school_age_NOT_AVAILABLE",
+      "narrative_status": "complete",
+      "narrative_ref": "PALS_PRACTICE_03_EXEMPLAR.json"
+    },
+    {
+      "case_code": "PALS_PRACTICE_04",
+      "name": "Upper Airway Obstruction (Child; Moderate to Severe)",
+      "category": "Respiratory",
+      "checklist_key": "resp_upper_airway_obstruction",
+      "age": "1 yr",
+      "weight_kg": 10,
+      "manikin_fit": "toddler",
+      "narrative_status": "complete",
+      "narrative_file": "pals_card_narratives_PRACTICE.json"
+    },
+    {
+      "case_code": "PALS_PRACTICE_05",
+      "name": "Asystole (Infant; Arrest)",
+      "category": "Cardiac arrest",
+      "checklist_key": "cardiac_asystole_pea",
+      "age": "6 mo",
+      "weight_kg": 7,
+      "manikin_fit": "infant",
+      "narrative_status": "complete",
+      "narrative_file": "pals_card_narratives_PRACTICE.json"
+    },
+    {
+      "case_code": "PALS_PRACTICE_06",
+      "name": "PEA (Child; Arrest)",
+      "category": "Cardiac arrest",
+      "checklist_key": "cardiac_asystole_pea",
+      "age": "child",
+      "manikin_fit": "review",
+      "narrative_status": "pending_extraction"
+    },
+    {
+      "case_code": "PALS_PRACTICE_07",
+      "name": "Lung Tissue (Parenchymal) Disease (Infant)",
+      "category": "Respiratory",
+      "checklist_key": "resp_lung_tissue_disease",
+      "age": "6 mo",
+      "weight_kg": 6,
+      "manikin_fit": "infant",
+      "narrative_status": "INCOMPLETE_SCAN_GAP",
+      "narrative_file": "pals_card_narratives_PRACTICE.json"
+    },
+    {
+      "case_code": "PALS_PRACTICE_08",
+      "name": "Distributive Shock (Adolescent; Septic Shock)",
+      "category": "Shock",
+      "checklist_key": "shock_distributive",
+      "age": "12 yr",
+      "weight_kg": 41,
+      "manikin_fit": "adolescent_NOT_AVAILABLE",
+      "narrative_status": "pending_extraction"
+    },
+    {
+      "case_code": "PALS_PRACTICE_09",
+      "name": "SVT (Adolescent; Unstable)",
+      "category": "Cardiac (arrhythmia)",
+      "checklist_key": "cardiac_svt",
+      "age": "12 yr",
+      "weight_kg": 50,
+      "manikin_fit": "adolescent_NOT_AVAILABLE",
+      "narrative_status": "pending_extraction",
+      "_bp_resolution": "Carry BOTH: presenting 70/40 -> primary assessment 75/55 (same convention as TEST_CASE_07)."
+    },
+    {
+      "case_code": "PALS_PRACTICE_10",
+      "name": "Wide-Complex Tachycardia, Possible VT (Infant; Stable)",
+      "category": "Cardiac (arrhythmia)",
+      "checklist_key": "cardiac_svt",
+      "age": "infant",
+      "manikin_fit": "infant",
+      "narrative_status": "complete",
+      "narrative_file": "pals_card_narratives_PRACTICE.json"
+    },
+    {
+      "case_code": "PALS_PRACTICE_11",
+      "name": "Wide-Complex Tachycardia (Possible VT); pulse + poor perfusion",
+      "category": "Cardiac (arrhythmia)",
+      "checklist_key": "cardiac_svt",
+      "age": "10 yr",
+      "weight_kg": 30,
+      "manikin_fit": "school_age_NOT_AVAILABLE",
+      "narrative_status": "pending_extraction"
+    },
+    {
+      "case_code": "PALS_PRACTICE_12",
+      "name": "Pulseless VT (Infant; Arrest)",
+      "category": "Cardiac arrest",
+      "checklist_key": "cardiac_vf_pvt",
+      "age": "6 mo",
+      "weight_kg": 8,
+      "manikin_fit": "infant",
+      "narrative_status": "complete",
+      "narrative_file": "pals_card_narratives_PRACTICE.json"
+    },
+    {
+      "case_code": "PALS_PRACTICE_13",
+      "name": "Obstructive Shock (Child; Hypotensive; Tension Pneumothorax)",
+      "category": "Shock",
+      "checklist_key": "shock_obstructive",
+      "age": "8 yr",
+      "weight_kg": 20,
+      "manikin_fit": "school_age_NOT_AVAILABLE",
+      "narrative_status": "complete",
+      "_program_note": "KEEP despite manikin gap — barotrauma->pneumo->tension teaching case; no infant-age equivalent exists in either bank. Run on toddler/adult with explicit age brief. Premise (already intubated) is the CLINICAL MECHANISM, not hospital framing — AHA's own prehospital lead-in has the crew on scene with an intubated patient.",
+      "narrative_file": "pals_card_narratives_PRACTICE.json"
+    },
+    {
+      "case_code": "PALS_PRACTICE_14",
+      "name": "Cardiogenic Shock (Infant; Cardiomyopathy)",
+      "category": "Shock",
+      "checklist_key": "shock_cardiogenic",
+      "age": "4 mo",
+      "weight_kg": 7,
+      "manikin_fit": "infant",
+      "narrative_status": "complete",
+      "narrative_file": "pals_card_narratives_PRACTICE.json"
+    },
+    {
+      "case_code": "PALS_PRACTICE_15",
+      "name": "Disordered Control of Breathing (Infant)",
+      "category": "Respiratory",
+      "checklist_key": "resp_disordered_control_breathing",
+      "age": "6 mo",
+      "weight_kg": 7,
+      "manikin_fit": "infant",
+      "narrative_status": "INCOMPLETE_SCAN_GAP",
+      "_drift_flag": "2020 debrief asked 'indications for endotracheal intubation'. 2025 P3 changed to 'positive-pressure ventilation'. VERIFY P15's 2025 debrief wording before porting.",
+      "narrative_file": "pals_card_narratives_PRACTICE.json"
+    },
+    {
+      "case_code": "PALS_PRACTICE_16",
+      "name": "Bradycardia (Child; Seizure)",
+      "category": "Cardiac (arrhythmia)",
+      "checklist_key": "cardiac_bradycardia",
+      "age": "8 yr",
+      "weight_kg": 27,
+      "manikin_fit": "school_age_NOT_AVAILABLE",
+      "narrative_status": "complete",
+      "_swap_suggestion": "PALS_TEST_CASE_14 is a 9-month-old bradycardia — age-friendly swap, same algorithm.",
+      "narrative_file": "pals_card_narratives_PRACTICE.json"
+    }
   ],
-
   "testing_case_scenarios": [
-    { "case_code": "PALS_TEST_CASE_01", "name": "Hypovolemic Shock (Child)", "category": "Shock", "checklist_key": "shock_hypovolemic", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_TEST_CASE_02", "name": "Lower Airway Obstruction", "category": "Respiratory", "checklist_key": "resp_lower_airway_obstruction", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_TEST_CASE_03", "name": "Upper Airway Obstruction (Infant)", "category": "Respiratory", "checklist_key": "resp_upper_airway_obstruction", "manikin_fit": "infant", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_TEST_CASE_04", "name": "Drowning (6-year-old pulled from pool)", "category": "Cardiac arrest", "checklist_key": "cardiac_asystole_pea", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_TEST_CASE_05", "name": "Infant, 9 months (2-day history)", "category": "TBD", "checklist_key": "TBD", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_TEST_CASE_06", "name": "Lung Tissue (Parenchymal) Disease (Child)", "category": "Respiratory", "checklist_key": "resp_lung_tissue_disease", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_TEST_CASE_07", "name": "Distributive Shock (Infant; Septic)", "category": "Shock", "checklist_key": "shock_distributive", "age": "4 mo", "weight_kg": 5.1, "manikin_fit": "infant", "narrative_status": "pending_extraction", "program_selection": "TESTING ROUND — SHOCK", "_aha_conflict": "Vitals box BP 76/30 vs primary assessment 74/50. Choose deliberately." },
-    { "case_code": "PALS_TEST_CASE_08", "name": "Adolescent; Stable (12-year-old)", "category": "TBD", "checklist_key": "TBD", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_TEST_CASE_09", "name": "Supraventricular Tachycardia (Infant, 3 mo)", "category": "Cardiac", "checklist_key": "cardiac_svt", "age": "3 mo", "weight_kg": 5, "manikin_fit": "infant", "narrative_status": "pending_extraction", "program_selection": "TESTING ROUND — CARDIAC" },
-    { "case_code": "PALS_TEST_CASE_10", "name": "Cardiac arrest (7-year-old collapsed in gym; bystander CPR)", "category": "Cardiac arrest", "checklist_key": "cardiac_vf_pvt", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_TEST_CASE_11", "name": "Obstructive Shock (Child; Hypotensive; Tension Pneumothorax)", "category": "Shock", "checklist_key": "shock_obstructive", "age": "8 yr", "narrative_status": "pending_extraction", "_note": "2025 PREHOSPITAL lead-in verbatim: 'You are on scene with an 8-year-old boy. He was intubated with an oral[tracheal tube]...' — AHA itself frames this prehospital with the patient already intubated." },
-    { "case_code": "PALS_TEST_CASE_12", "name": "Cardiogenic Shock", "category": "Shock", "checklist_key": "shock_cardiogenic", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_TEST_CASE_13", "name": "Disordered Control of Breathing (Child)", "category": "Respiratory", "checklist_key": "resp_disordered_control_breathing", "age": "4 yr", "weight_kg": 17, "manikin_fit": "toddler", "narrative_status": "pending_extraction", "program_selection": "TESTING ROUND — RESPIRATORY", "_drift_flag": "2020 debrief asked 'indications for endotracheal intubation' — verify 2025 wording." },
-    { "case_code": "PALS_TEST_CASE_14", "name": "Bradycardia (Infant, 9 mo)", "category": "Cardiac", "checklist_key": "cardiac_bradycardia", "age": "9 mo", "manikin_fit": "infant", "narrative_status": "pending_extraction" },
-    { "case_code": "PALS_TEST_CASE_15", "name": "(not yet indexed)", "category": "TBD", "checklist_key": "TBD", "narrative_status": "not_indexed" },
-    { "case_code": "PALS_TEST_CASE_16", "name": "(not yet indexed)", "category": "TBD", "checklist_key": "TBD", "narrative_status": "not_indexed" }
+    {
+      "case_code": "PALS_TEST_CASE_01",
+      "name": "Hypovolemic Shock (Child)",
+      "category": "Shock",
+      "checklist_key": "shock_hypovolemic",
+      "narrative_status": "pending_extraction"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_02",
+      "name": "Lower Airway Obstruction",
+      "category": "Respiratory",
+      "checklist_key": "resp_lower_airway_obstruction",
+      "narrative_status": "pending_extraction"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_03",
+      "name": "Upper Airway Obstruction (Infant)",
+      "category": "Respiratory",
+      "checklist_key": "resp_upper_airway_obstruction",
+      "manikin_fit": "infant",
+      "narrative_status": "complete",
+      "narrative_file": "pals_card_narratives_TESTING.json"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_04",
+      "name": "Drowning (6-year-old pulled from pool)",
+      "category": "Cardiac arrest",
+      "checklist_key": "cardiac_asystole_pea",
+      "narrative_status": "pending_extraction"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_05",
+      "name": "Infant, 9 months (2-day history)",
+      "category": "TBD",
+      "checklist_key": "TBD",
+      "narrative_status": "pending_extraction"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_06",
+      "name": "Lung Tissue (Parenchymal) Disease (Child, 3 yr)",
+      "category": "Respiratory",
+      "checklist_key": "resp_lung_tissue_disease",
+      "narrative_status": "complete",
+      "age": "3 yr",
+      "weight_kg": 12,
+      "manikin_fit": "toddler",
+      "narrative_file": "pals_card_narratives_TESTING.json",
+      "program_role": "RESPIRATORY PRACTICE — substitute for PALS_PRACTICE_07 (scan gap)"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_07",
+      "name": "Distributive Shock (Infant; Septic)",
+      "category": "Shock",
+      "checklist_key": "shock_distributive",
+      "age": "4 mo",
+      "weight_kg": 5.1,
+      "manikin_fit": "infant",
+      "narrative_status": "complete",
+      "program_selection": "TESTING ROUND — SHOCK",
+      "narrative_file": "pals_card_narratives_TESTING.json",
+      "_bp_resolution": "Carry BOTH: presenting 76/30 -> primary assessment 74/50 -> after fluids 76/52."
+    },
+    {
+      "case_code": "PALS_TEST_CASE_08",
+      "name": "Adolescent; Stable (12-year-old)",
+      "category": "TBD",
+      "checklist_key": "TBD",
+      "narrative_status": "pending_extraction"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_09",
+      "name": "Supraventricular Tachycardia (Infant, 3 mo)",
+      "category": "Cardiac",
+      "checklist_key": "cardiac_svt",
+      "age": "3 mo",
+      "weight_kg": 5,
+      "manikin_fit": "infant",
+      "narrative_status": "complete",
+      "program_selection": "TESTING ROUND — CARDIAC",
+      "narrative_file": "pals_card_narratives_TESTING.json"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_10",
+      "name": "Cardiac arrest (7-year-old collapsed in gym; bystander CPR)",
+      "category": "Cardiac arrest",
+      "checklist_key": "cardiac_vf_pvt",
+      "narrative_status": "pending_extraction"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_11",
+      "name": "Obstructive Shock (Child; Hypotensive; Tension Pneumothorax)",
+      "category": "Shock",
+      "checklist_key": "shock_obstructive",
+      "age": "8 yr",
+      "narrative_status": "pending_extraction",
+      "_note": "2025 PREHOSPITAL lead-in verbatim: 'You are on scene with an 8-year-old boy. He was intubated with an oral[tracheal tube]...' — AHA itself frames this prehospital with the patient already intubated."
+    },
+    {
+      "case_code": "PALS_TEST_CASE_12",
+      "name": "Cardiogenic Shock",
+      "category": "Shock",
+      "checklist_key": "shock_cardiogenic",
+      "narrative_status": "pending_extraction"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_13",
+      "name": "Disordered Control of Breathing (Child)",
+      "category": "Respiratory",
+      "checklist_key": "resp_disordered_control_breathing",
+      "age": "4 yr",
+      "weight_kg": 17,
+      "manikin_fit": "toddler",
+      "narrative_status": "complete",
+      "program_selection": "TESTING ROUND — RESPIRATORY",
+      "_drift_flag": "2020 debrief asked 'indications for endotracheal intubation' — verify 2025 wording.",
+      "narrative_file": "pals_card_narratives_TESTING.json"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_14",
+      "name": "Bradycardia (Infant, 9 mo)",
+      "category": "Cardiac",
+      "checklist_key": "cardiac_bradycardia",
+      "age": "9 mo",
+      "manikin_fit": "infant",
+      "narrative_status": "complete",
+      "narrative_file": "pals_card_narratives_TESTING.json"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_15",
+      "name": "(not yet indexed)",
+      "category": "TBD",
+      "checklist_key": "TBD",
+      "narrative_status": "not_indexed"
+    },
+    {
+      "case_code": "PALS_TEST_CASE_16",
+      "name": "(not yet indexed)",
+      "category": "TBD",
+      "checklist_key": "TBD",
+      "narrative_status": "not_indexed"
+    }
   ],
-
   "program_testing_selection": {
     "model": "4 stations x 3 synchronized rounds, 25 min per round. All 4 stations run the SAME case in a round; students rotate between rounds. One graded Team Leader per station per round; all others recorded as team members.",
     "rounds": [
-      { "round": 1, "category": "Shock", "case_code": "PALS_TEST_CASE_07", "checklist_key": "shock_distributive" },
-      { "round": 2, "category": "Cardiac", "case_code": "PALS_TEST_CASE_09", "checklist_key": "cardiac_svt" },
-      { "round": 3, "category": "Respiratory", "case_code": "PALS_TEST_CASE_13", "checklist_key": "resp_disordered_control_breathing" }
+      {
+        "round": 1,
+        "category": "Shock",
+        "case_code": "PALS_TEST_CASE_07",
+        "checklist_key": "shock_distributive"
+      },
+      {
+        "round": 2,
+        "category": "Cardiac",
+        "case_code": "PALS_TEST_CASE_09",
+        "checklist_key": "cardiac_svt"
+      },
+      {
+        "round": 3,
+        "category": "Respiratory",
+        "case_code": "PALS_TEST_CASE_13",
+        "checklist_key": "resp_disordered_control_breathing"
+      }
     ],
     "pass_rule": "PASS 2 of 3.",
     "note": "These are the program's carried-forward 2020 picks (T7/T9/T13), verified to be the SAME cases in 2025. All infant/toddler — manikin-optimal."
   },
-
   "open_items": [
-    "⚠ Practice + testing case NARRATIVES (lead-in/vitals/flow) still to be extracted for all except PALS_PRACTICE_03. Marked narrative_status per scenario — nothing silently empty.",
-    "⚠ VERIFY 2025 debrief wording for PALS_PRACTICE_15 and PALS_TEST_CASE_13 (2020 said 'endotracheal intubation'; 2025 P3 changed to 'positive-pressure ventilation').",
-    "⚠ Testing Case Scenarios 15 and 16 not yet indexed.",
-    "⚠ cert_tier enum: still megacode_practice / megacode_testing from ACLS. Recommend renaming to scenario_practice / scenario_testing (shared across both certs). Code decision — would migrate ACLS rows too.",
-    "⚠ AHA internal conflicts: PALS_PRACTICE_09 and PALS_TEST_CASE_07 have contradictory BPs between the vitals box and the primary assessment. Program must choose deliberately.",
-    "Schedule seed must be rebuilt against Module 6 2025 timings — see PALS_2025_Module6_Schedule_Breaks.md."
-  ]
+    "✅ LAUNCH SET COMPLETE + VERIFIED: testing 07/09/13 (program's 3 rounds) with full verbatim 2025 narratives.",
+    "✅ BP conflicts RESOLVED by convention: carry both values as presenting -> on-assessment progression (TEST_CASE_07, PRACTICE_09).",
+    "✅ RESPIRATORY GAP CLOSED: PALS_TEST_CASE_06 (Lung Tissue, 3-yr-old, toddler-feasible) substitutes for PALS_PRACTICE_07, whose pages are missing from the scan.",
+    "⚠ SCAN GAP (deferred by Ben — no book access this week): PALS_PRACTICE_07 (book pp.142-143) and PALS_PRACTICE_15 (pp.174-176 incl. entire debriefing tool) are INCOMPLETE. PALS_PRACTICE_11 (pp.158-159) also missing. Do NOT display these cards — gate on narrative_status.",
+    "⚠ Disordered-Control-of-Breathing practice slot: use PALS_TEST_CASE_13 (4-yr, toddler) since PALS_PRACTICE_15 has a scan gap.",
+    "⚠ DRIFT IS NOT GLOBAL — do NOT normalize intubation->PPV. 2025 KEEPS 'endotracheal intubation' in TEST_CASE_06, TEST_CASE_13, PRACTICE_07, PRACTICE_15. Only PRACTICE_03 changed to PPV; PRACTICE_04 / TEST_CASE_03 use bag-mask wording.",
+    "⚠ PALS_PRACTICE_01 is 12-yr/46kg — NOT manikin-feasible. Drop from practice set.",
+    "⚠ cert_tier enum: still megacode_* — Code decision.",
+    "Schedule seed still to be rebuilt against Module 6 2025 timings."
+  ],
+  "vitals_convention": "Where AHA prints two different values for the same vital (vitals box vs primary assessment), BOTH are carried as a PROGRESSION, not a contradiction: the box = PRESENTING value; the primary assessment = what the team finds on their own assessment moments later. Applies to PALS_TEST_CASE_07 and PALS_PRACTICE_09."
 }

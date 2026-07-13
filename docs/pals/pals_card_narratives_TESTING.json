@@ -1,0 +1,537 @@
+{
+  "_note": "LAUNCH-CRITICAL. AHA PALS 2025 Testing Case Scenario narratives, OCR'd VERBATIM from Module 5. Cards 07/09/13 are the program's 3 testing rounds for 7/16-17. Cards 03/14 are manikin-friendly swap candidates.",
+  "content_version": "AHA 2025",
+  "cards": [
+    {
+      "case_code": "PALS_TEST_CASE_07",
+      "name": "Distributive Shock (Infant; Septic Shock)",
+      "category": "Shock",
+      "subtype": "Distributive Shock",
+      "checklist_key": "shock_distributive",
+      "program_role": "TESTING ROUND 1 — SHOCK",
+      "source_ref": "AHA PALS 2025 Module 5, Testing Case Scenario section, PDF pp.105-108",
+      "patient": {
+        "age": "4 months",
+        "sex": "female",
+        "weight_kg": 5.1
+      },
+      "manikin_fit": "infant",
+      "aha_internal_conflict": null,
+      "card": {
+        "default_setting": "prehospital",
+        "lead_in": {
+          "prehospital": "You have been dispatched to transport a 4 month old with a 24-hour history of high fever and lethargy. She has not been feeding well.",
+          "ed": "You are asked to assess and manage a 4 month old with a 24-hour history of high fever and lethargy. She has not been feeding well.",
+          "inpatient": "You are called to assess a 4 month old who has just been admitted to the ward with a 24-hour history of high fever and lethargy. She has not been feeding well. The intravenous access placed at the time of admission is no longer functioning.",
+          "picu": "You are called to the bedside of a 4 month old who has just been admitted to the intensive care unit with a 24-hour history of high fever and lethargy. She has not been feeding well. The intravenous access placed at the time of admission is no longer functioning."
+        },
+        "initial_vitals": {
+          "heart_rate": "192/min",
+          "blood_pressure": "76/30 mm Hg (presenting)",
+          "respiratory_rate": "55/min",
+          "spo2": "93% on room air",
+          "temperature": "39.0 °C (102.2 °F)",
+          "weight": "5.1 kg",
+          "age": "4 months",
+          "blood_pressure_on_primary_assessment": "74/50 mm Hg (on your assessment, moments later)",
+          "blood_pressure_after_fluids": "76/52 mm Hg"
+        },
+        "vitals_instructor_adjustable": true,
+        "age_adjustable": true,
+        "overview": "Emphasis should be on identification of compensated distributive/septic shock. Priorities include immediate establishment of intravenous (IV)/intraosseous (IO) access and administration of fluid bolus(es) of isotonic crystalloid with careful reassessment of cardiorespiratory function during and after each fluid bolus. The health care professional should recognize the signs of heart failure and stop bolus fluid administration. Within the first hour of identification of signs of septic shock, health care professionals must also administer antibiotics and initiate vasoactive drug therapy if shock persists despite bolus fluid administration. The infant is lethargic, so early point-of-care (POC) glucose check is indicated.",
+        "objectives": [
+          "Recognizes compensated vs hypotensive shock; in this scenario, the infant demonstrates compensated shock (blood pressure is not hypotensive)",
+          "Recognizes need for early/rapid intervention with bolus administration of isotonic crystalloids and vasoactive drug therapy within the first hour if shock signs/symptoms persist despite bolus fluid administration",
+          "Understands that the bolus recommendations, both type and amount, have changed to balanced/buffered crystalloids and 10-20 mL/kg per bolus, respectively",
+          "Recognizes the need for careful and frequent cardiorespiratory reassessment during and after each fluid bolus; the health care professional looks for signs of heart failure (increased respiratory distress or development of rales or hepatomegaly) and stops bolus fluid administration if signs of heart failure develop",
+          "Recognizes need for early/rapid administration of antibiotics (during the first hour after identification of shock symptoms)"
+        ],
+        "flow": {
+          "evaluate_initial_pat": {
+            "appearance": "Lethargic, does react to voices in room",
+            "breathing": "Increased rate and effort",
+            "circulation": "Pale, with significant mottling of extremities"
+          },
+          "identify": "Immediate intervention needed",
+          "intervene": [
+            "Activate the emergency response system. Emergency medical services requests additional assistance if needed.",
+            "Administer 100% oxygen by nonrebreathing face mask.",
+            "Apply cardiac monitor.",
+            "Apply blood pressure cuff.",
+            "Apply pulse oximeter."
+          ],
+          "evaluate_primary_abcde": {
+            "airway": "Clear",
+            "breathing": "Respiratory rate about 55/min; mild subcostal and intercostal retractions; mild nasal flaring; Spo2 93% on room air, increased to 97% with administration of 100% oxygen; lungs clear to auscultation",
+            "circulation": "Central pulses fair, peripheral pulses weak; heart rate 192/min; blood pressure 74/50 mm Hg; capillary refill 5 seconds; cool and mottled hands and feet",
+            "disability": "Lethargic",
+            "exposure": "Rectal temperature 39.0 °C (102.2 °F); no rash; weight 5.1 kg"
+          },
+          "identify_after_primary": [
+            "Respiratory distress",
+            "Compensated shock (likely septic shock)",
+            "Sinus tachycardia"
+          ],
+          "intervene_after_primary": [
+            "Obtain vascular access (IV/IO).",
+            "Administer a 10-20 mL/kg bolus of isotonic crystalloid rapidly IV/IO. Reassess during and after fluid bolus.",
+            "Stop fluid bolus if signs of heart failure develop (eg, increased respiratory distress or development of rales or hepatomegaly) or if vital signs fail to improve or begin to deteriorate.",
+            "Administer antibiotics within the first hour after recognition of shock (if not already done).",
+            "Obtain blood culture, if possible, before antibiotic administration, but do not delay antibiotic or fluid administration to obtain cultures.",
+            "Check POC glucose concentration and treat hypoglycemia, if needed.",
+            "If signs of shock persist, repeat fluid bolus of 10-20 mL/kg of balanced/buffered crystalloid as needed.",
+            "Begin vasoactive drug therapy if systemic perfusion fails to improve after 40-60 mL/kg of fluid therapy. Consider administration of epinephrine or norepinephrine infusion.",
+            "Ensure that bolus fluid therapy, administration of appropriate antibiotics, and initiation of vasoactive therapy (if shock is fluid refractory) are all accomplished within first hour after the identification of signs of septic shock."
+          ]
+        },
+        "instructor_note": "Partially improves with oxygen and fluids: repeat vitals HR 160-175/min; RR 50/min; SpO2 100% on 100% O2; BP 76/52; capillary refill STILL 4 seconds, hands/feet cool and dusky — shock persists, so repeat bolus then vasoactive therapy expected. TRAP: this is COMPENSATED (not hypotensive) shock — students who wait for hypotension fail. TRAP: must STOP the bolus if heart-failure signs appear. TRAP: lethargic infant requires early POC glucose (result 185 mg/dL).",
+        "debrief_question": "What are the therapeutic end points during shock management? (Answer: Normalized heart rate; improved peripheral perfusion, mental status, and urine output; normalized blood pressure; correction of metabolic/lactic acidosis)",
+        "paramedic_scope_na_candidates": [
+          "Administer antibiotics within the first hour",
+          "Obtain blood culture / urine culture",
+          "Begin vasoactive drug therapy (epinephrine or norepinephrine infusion)",
+          "Electrolytes, BUN/creatinine, calcium, CBC, PT/INR/PTT, capillary blood gas",
+          "Chest x-ray"
+        ]
+      },
+      "_bp_resolution": "RESOLVED per program decision: AHA prints 76/30 in the vitals box and 74/50 in the primary assessment. Rather than picking one, BOTH are carried as a PROGRESSION — the box value is the PRESENTING BP (what dispatch/first look gives you); the primary-assessment value is what the team finds moments later on their own assessment. Instructor runs it in that order. Same convention applies to PALS_PRACTICE_09 (box 70/40 -> primary 75/55)."
+    },
+    {
+      "case_code": "PALS_TEST_CASE_09",
+      "name": "Supraventricular Tachycardia (Infant; Unstable)",
+      "category": "Cardiac",
+      "subtype": "Supraventricular Tachycardia",
+      "checklist_key": "cardiac_svt",
+      "program_role": "TESTING ROUND 2 — CARDIAC",
+      "source_ref": "AHA PALS 2025 Module 5, Testing Case Scenario section, PDF pp.113-116",
+      "patient": {
+        "age": "3 months",
+        "sex": null,
+        "weight_kg": 5
+      },
+      "manikin_fit": "infant",
+      "card": {
+        "default_setting": "prehospital",
+        "lead_in": {
+          "prehospital": "You are dispatched to a house where a 3-month-old infant has respiratory distress and lethargy.",
+          "ed": "An ambulance is en route to the emergency department with a 3-month-old infant with respiratory distress and lethargy. An intravenous access has been placed.",
+          "inpatient": "You are called to examine a 3-month-old infant with respiratory distress and lethargy. The infant has an intravenous access in place.",
+          "picu": "You are called to the bedside of a 3-month-old infant with respiratory distress and lethargy. The infant has intravenous access."
+        },
+        "initial_vitals": {
+          "heart_rate": "235/min",
+          "blood_pressure": "50/32 mm Hg",
+          "respiratory_rate": "60/min",
+          "spo2": "92% on room air",
+          "temperature": "37.6 °C (99.7 °F)",
+          "weight": "5 kg",
+          "age": "3 months"
+        },
+        "vitals_instructor_adjustable": true,
+        "age_adjustable": true,
+        "overview": "Emphasis should be on recognition and management of supraventricular tachycardia (SVT) in an unstable patient, including possible rapid bolus administration of adenosine (only if intravenous [IV]/intraosseous [IO] access is readily available) and the safe delivery of synchronized cardioversion using appropriate doses. Vagal maneuvers may be performed while preparing adenosine or synchronized cardioversion but should not delay intervention.",
+        "objectives": [
+          "Differentiates between SVT and sinus tachycardia; in this scenario, the infant has unstable SVT",
+          "Describes potential vagal maneuvers used for an infant with SVT; a potential maneuver used in infants is ice to the face",
+          "Demonstrates the proper rapid bolus technique to administer adenosine",
+          "Discusses indications for synchronized cardioversion; in this scenario, the infant has signs of shock, including poor perfusion, hypotension, and altered mental status",
+          "Demonstrates safe delivery of synchronized cardioversion with appropriate dose in a patient with SVT and poor perfusion"
+        ],
+        "flow": {
+          "evaluate_initial_pat": {
+            "appearance": "Lethargic; minimal response to surrounding noises and caregivers",
+            "breathing": "Increased rate and effort, including significant retractions; grunting",
+            "circulation": "Mottled skin"
+          },
+          "identify": "Immediate intervention needed",
+          "intervene": [
+            "Activate the emergency response system. Emergency medical services requests additional assistance if needed.",
+            "Administer 100% oxygen by nonrebreathing face mask.",
+            "Apply cardiac monitor.",
+            "Apply blood pressure cuff.",
+            "Apply pulse oximeter."
+          ],
+          "evaluate_primary_abcde": {
+            "airway": "Clear",
+            "breathing": "Respiratory rate 60/min; moderate intercostal retractions; Spo2 92% before supplemental oxygen and 100% after 100% oxygen administered; crackles throughout lung fields; grunting",
+            "circulation": "Adequate central pulses, weak peripheral pulses; heart rate 235/min; blood pressure 50/32 mm Hg; cool skin; capillary refill about 4 seconds",
+            "disability": "Moans and withdraws to pain",
+            "exposure": "Temperature 37.6 °C (99.7 °F); weight 5 kg"
+          },
+          "identify_after_primary": [
+            "Altered level of consciousness",
+            "Regular, narrow-complex tachycardia/SVT with a pulse and signs of poor perfusion",
+            "Respiratory distress vs respiratory failure",
+            "Hypotensive shock"
+          ],
+          "intervene_after_primary": [
+            "Establish IV/IO access or verify function of existing access but do not delay synchronized cardioversion if IV/IO access not readily available.",
+            "Perform vagal maneuvers if they do not delay adenosine or cardioversion.",
+            "If functional IV is in place or is established immediately, administer adenosine. Begin recording continuous rhythm strip via defibrillator.",
+            "Give adenosine 0.1 mg/kg (maximum dose: 6 mg) IV/IO by rapid bolus followed by rapid saline flush.",
+            "If first dose of adenosine results in no change in rhythm, administer adenosine 0.2 mg/kg rapid bolus (maximum dose: 12 mg) if it can be given more rapidly than providing synchronized cardioversion.",
+            "If adenosine is ineffective, provide synchronized cardioversion.",
+            "Deliver synchronized cardioversion as soon as it is available, unless other therapies (eg, adenosine) have worked by the time synchronized cardioversion can be delivered. (Do not delay cardioversion to attempt other therapies if synchronized cardioversion can be provided immediately.)",
+            "As soon as monitor/defibrillator arrives, attach pads and begin recording rhythm strip.",
+            "\"Clear\" and perform synchronized cardioversion (0.5-1 J/kg).",
+            "If initial synchronized cardioversion is unsuccessful, \"clear\" and perform synchronized cardioversion with 2 J/kg.",
+            "Prepare to assist ventilation (with bag-mask device) if needed."
+          ]
+        },
+        "instructor_note": "BRANCHING. If rapid adenosine or cardioversion IS given: converts to sinus rhythm — HR 155/min, RR 54/min, SpO2 97% on 100% O2, BP improves to 80/60, cap refill 3 s. If NOT given: DETERIORATES — HR 235/min, SpO2 falls to 90%, BP 48/36, weak pulses, cap refill ~5 s, mottling worse. TRAP: this is UNSTABLE SVT — do NOT delay cardioversion to obtain access or attempt vagal maneuvers. Liver palpable 3 cm below costal margin (early heart failure); crackles throughout lung fields at presentation.",
+        "debrief_question": "Instructor should ask students to state the indications for synchronized cardioversion. If time allows, discuss the need for expert consultation before administering a precardioversion sedative to an infant with SVT and hemodynamic instability.",
+        "paramedic_scope_na_candidates": [
+          "Expert consultation before precardioversion sedative",
+          "Chest x-ray",
+          "Electrolytes / laboratory studies"
+        ]
+      }
+    },
+    {
+      "case_code": "PALS_TEST_CASE_13",
+      "name": "Disordered Control of Breathing Disease (Child)",
+      "category": "Respiratory",
+      "subtype": "Disordered Control of Breathing",
+      "checklist_key": "resp_disordered_control_breathing",
+      "program_role": "TESTING ROUND 3 — RESPIRATORY",
+      "source_ref": "AHA PALS 2025 Module 5, Testing Case Scenario section, PDF pp.129-131",
+      "patient": {
+        "age": "4 years",
+        "sex": "male",
+        "weight_kg": 17
+      },
+      "manikin_fit": "toddler",
+      "_title_note": "AHA prints 'Disordered Control of Breathing DISEASE' on both the overview and debrief pages — verified at 300 dpi. Looks like an AHA typo but it is verbatim.",
+      "card": {
+        "default_setting": "prehospital",
+        "lead_in": {
+          "prehospital": "You respond to a 911 call for a 4 year old having a seizure with respiratory distress.",
+          "ed": "Emergency responders arrive with a 4-year-old boy brought from his home after mother called 911 because her child had a seizure with respiratory distress.",
+          "inpatient": "You are called to the room of a 4-year-old boy who is being admitted after having a seizure with respiratory distress.",
+          "picu": null
+        },
+        "initial_vitals": {
+          "heart_rate": "130/min",
+          "blood_pressure": "98/62 mm Hg",
+          "respiratory_rate": "8/min",
+          "spo2": "80% on room air",
+          "temperature": "39.7 °C (103.5 °F)",
+          "weight": "17 kg",
+          "age": "4 years"
+        },
+        "vitals_instructor_adjustable": true,
+        "age_adjustable": true,
+        "overview": "Emphasis of this scenario is on recognition and immediate management of respiratory failure caused by disordered control of breathing (inadequate respiratory rate and effort), and decreased level of consciousness. Interventions include opening the airway and providing bag-mask ventilation with 100% oxygen. During debriefing, discuss with the student the indications for intubation in this patient and methods to estimate appropriate endotracheal tube sizes.",
+        "objectives": [
+          "Identifies respiratory distress vs respiratory failure; in this scenario, respiratory failure is present",
+          "Summarizes signs of disordered control of breathing; in this scenario, the child demonstrated inadequate spontaneous respiratory effort with very slow, irregular, and shallow breaths",
+          "Recalls causes of disordered control of breathing: common causes include drugs, increased intracranial pressure, and seizures",
+          "Discusses correct interventions for disordered control of breathing; in this scenario, interventions include opening the airway and provision of bag-mask ventilation with 100% oxygen"
+        ],
+        "flow": {
+          "evaluate_initial_pat": {
+            "appearance": "Lethargic; eyes closed; no visible reaction to his mother's voice or noises in environment",
+            "breathing": "Very slow respiratory rate with minimal chest rise; snoring",
+            "circulation": "Dusky appearing"
+          },
+          "identify": "Immediate intervention needed",
+          "intervene": [
+            "Activate the emergency response system. Emergency medical services requests additional assistance if needed.",
+            "Position the child to open the airway.",
+            "Begin bag-mask ventilation with 100% oxygen.",
+            "Apply cardiac monitor.",
+            "Apply blood pressure cuff.",
+            "Apply pulse oximeter."
+          ],
+          "evaluate_primary_abcde": {
+            "airway": "Snoring respirations when child lying on his back, relieved when airway opened",
+            "breathing": "Spontaneous respiratory rate 8/min; shallow and irregular; Spo2 80% on room air, increases to 99% with bag-mask ventilation with 100% oxygen at a rate of 20/min",
+            "circulation": "Heart rate 130/min; dusky (before bag-mask ventilation with 100% oxygen); strong radial pulse; capillary refill 2 seconds; blood pressure 98/62 mm Hg",
+            "disability": "Lethargic; responsive to painful stimuli",
+            "exposure": "Temperature 39.7 °C (103.5 °F); weight 17 kg"
+          },
+          "identify_after_primary": [
+            "Respiratory failure (inadequate respiratory rate and effort)",
+            "Disordered control of breathing"
+          ],
+          "intervene_after_primary": [
+            "Verify chest rise with bag-mask ventilation and monitor response to bag-mask ventilation with oxygen.",
+            "Continue bag-mask ventilation with 100% oxygen and monitor for increase in child's spontaneous respiratory effort—match ventilation with child's effort if possible.",
+            "Consider insertion of oropharyngeal or nasopharyngeal airway.",
+            "Establish vascular access (intravenous).",
+            "Treat fever with antipyretic.",
+            "Closely monitor patient's level of consciousness, spontaneous respiratory effort, and airway protective mechanisms (ability to cough to protect airway).",
+            "As child's spontaneous respiratory effort improves, provide bag-mask ventilation that assists the child's spontaneous respiratory effort.",
+            "Once the child's spontaneous respiratory rate and depth are adequate, cease bag-mask ventilation and provide nonrebreathing mask with 100% oxygen.",
+            "Perform frequent reassessment to ensure that child continues to demonstrate adequate respiratory rate and effort and airway protective mechanisms.",
+            "Wean supplemental oxygen concentration as tolerated.",
+            "If slow, irregular, inadequate breathing recurs, resume bag-mask ventilation with 100% oxygen and obtain expert consultation to plan for advanced airway insertion and support of ventilation.",
+            "Check glucose using point-of-care testing.",
+            "Arrange for transfer of the child to a higher level of care for evaluation, observation, and care."
+          ]
+        },
+        "instructor_note": "IMPROVES with effective bag-mask ventilation: repeat vitals — RR 30/min (BMV rate); HR 136/min; SpO2 99% on 100% O2; BP 94/58; good chest rise; spontaneous breaths increasing; becoming more responsive. TRAP: this is respiratory FAILURE, not distress — oxygen alone is inadequate, BMV required immediately. TRAP: snoring is POSITIONAL — open the airway first. POC glucose important after seizure with decreased LOC (166 mg/dL). Postictal, febrile 39.7 °C.",
+        "debrief_question": "What would be the indications for endotracheal intubation in a child with disordered control of breathing? (Answer: Inadequate spontaneous respiratory effort and/or failure to maintain a patent airway) How would you estimate the size endotracheal tube to use?",
+        "_drift_resolved": "⚠ NO DRIFT. 2025 STILL says 'endotracheal intubation' here — verified at 300 dpi. Do NOT normalize this to 'positive-pressure ventilation'.",
+        "paramedic_scope_na_candidates": [
+          "Endotracheal intubation / mechanical ventilation (N/A unless local protocol permits)",
+          "Expert consultation for advanced airway insertion",
+          "Electrolytes; BUN/creatinine; CBC; blood culture",
+          "Arterial blood gas",
+          "Chest x-ray"
+        ]
+      }
+    },
+    {
+      "case_code": "PALS_TEST_CASE_03",
+      "name": "Upper Airway Obstruction (Infant)",
+      "category": "Respiratory",
+      "subtype": "Upper Airway Obstruction",
+      "checklist_key": "resp_upper_airway_obstruction",
+      "program_role": "SWAP CANDIDATE — infant respiratory (replaces the 10-yr PALS_PRACTICE_03)",
+      "source_ref": "AHA PALS 2025 Module 5, Testing Case Scenario section, PDF pp.89-91",
+      "patient": {
+        "age": "9 months",
+        "sex": "male",
+        "weight_kg": 8
+      },
+      "manikin_fit": "infant",
+      "card": {
+        "default_setting": "prehospital",
+        "lead_in": {
+          "prehospital": "You are called to a home in the middle of the night for a 9-month-old infant who is having difficulty breathing. He has had upper respiratory congestion and a low-grade fever for the past 2 days.",
+          "ed": "A 9-month-old infant presents with sudden onset of noisy breathing during the night. He has had upper respiratory congestion and a low-grade fever for the past 2 days.",
+          "inpatient": "A 9-month-old infant has just been admitted from his pediatrician's office after presenting with difficulty breathing. He has had upper respiratory congestion and a low-grade fever for the past 2 days.",
+          "picu": "A 9-month-old infant admitted 2 days ago with newly diagnosed diabetes has developed noisy breathing."
+        },
+        "initial_vitals": {
+          "heart_rate": "140/min",
+          "blood_pressure": "86/58 mm Hg",
+          "respiratory_rate": "48/min",
+          "spo2": "89% on room air",
+          "temperature": "38.0 °C (100.4 °F)",
+          "weight": "8 kg",
+          "age": "9 months"
+        },
+        "vitals_instructor_adjustable": true,
+        "age_adjustable": true,
+        "overview": "Emphasis in this scenario is on rapid recognition and management of respiratory distress associated with upper airway obstruction. Appropriate therapies include allowing the infant to assume position of comfort and administering oxygen, nebulized epinephrine, and dexamethasone. The health care professional must demonstrate frequent reassessment to verify continued improvement in response to therapy and must be able to describe the clinical signs of deterioration that would indicate the need to obtain immediate expert consultation to provide advanced monitoring and care.",
+        "objectives": [
+          "Identifies the signs and symptoms of respiratory distress caused by upper airway obstruction; in this scenario, they include tachypnea, increased respiratory effort, and stridor",
+          "Recognizes importance of allowing the infant to maintain a position of comfort and for health care professionals to minimize stimulation; health care professionals should avoid unnecessary venipuncture for laboratory studies and establish an intravenous access only if it is absolutely necessary",
+          "Performs correct interventions for significant upper airway obstruction; in this scenario, these include administration of oxygen, nebulized epinephrine, and dexamethasone",
+          "Reassesses patient frequently to determine response to each intervention"
+        ],
+        "flow": {
+          "evaluate_initial_pat": {
+            "appearance": "Crying and fussy; being held by parent in attempt to console",
+            "breathing": "Tachypneic with increased work of breathing, severe stridor with agitation, mild stridor at rest",
+            "circulation": "Appears pale"
+          },
+          "identify": "Respiratory distress",
+          "intervene": [
+            "Perform rapid cardiopulmonary assessment.",
+            "Apply cardiac monitor.",
+            "Apply blood pressure cuff.",
+            "Apply pulse oximeter."
+          ],
+          "evaluate_primary_abcde": {
+            "airway": "Unobstructed but noisy; high-pitched inspiratory stridor when agitated, stridor minimal but still audible when resting",
+            "breathing": "Respiratory rate 48/min; suprasternal retractions; transmitted upper airway noises to lung fields—otherwise, lung fields are clear; good aeration bilaterally; no wheezing; Spo2 89% before oxygen administration and 98% after provision of oxygen by face mask or nasal cannula",
+            "circulation": "Heart rate 140/min; skin pink and well perfused; strong peripheral pulses; capillary refill 2 seconds; blood pressure 86/58 mm Hg",
+            "disability": "Awake and alert; fussy but consolable",
+            "exposure": "Temperature 38.0 °C (100.4 °F); weight 8 kg"
+          },
+          "identify_after_primary": [
+            "Respiratory distress",
+            "Upper airway obstruction"
+          ],
+          "intervene_after_primary": [
+            "Administer oxygen by face mask or nasal cannula. Assess response to oxygen.",
+            "Allow infant to maintain position of comfort; encourage parent to hold infant.",
+            "Give nebulized epinephrine.",
+            "Reassess cardiorespiratory status after epinephrine administration.",
+            "Attempt to minimize stimulation of the infant.",
+            "Monitor for at least 2 hours for recurrent airway edema/stridor. If signs recur: if oxygenation remains adequate and health care professional is familiar with its use, consider heliox; be prepared to obtain expert consultation.",
+            "Administer oral/intravenous/intramuscular corticosteroid (eg, dexamethasone).",
+            "Wean supplemental oxygen as tolerated."
+          ]
+        },
+        "instructor_note": "IMPROVES with oxygen + nebulized epinephrine: HR 158/min, RR 32/min, SpO2 99%, BP 92/66; stridor now only with agitation, resolved at rest. TRAP: this is respiratory DISTRESS, not failure — do not over-intervene. TRAP: MINIMIZE STIMULATION — avoid unnecessary venipuncture/labs; glucose check should be DEFERRED here (alert infant, fed well, agitation worsens obstruction). This is the one case that deliberately breaks the usual 'check glucose early' rule.",
+        "debrief_question": "This infant was stable in the scenario. However, if your interventions were not successful, what would be the signs of deterioration and possible indications for bag-mask ventilation or other airway or ventilation support? (Answer: Very rapid or inadequate respiratory rate or irregular breathing pattern; signs of significantly increased work of breathing; decreased breath sounds or aeration; deterioration in level of consciousness, hypoxemia, or cyanosis)",
+        "paramedic_scope_na_candidates": [
+          "Dexamethasone (unless carried on local protocol)",
+          "Heliox",
+          "Intubation and mechanical ventilation / advanced monitoring",
+          "Expert consultation",
+          "Lateral soft tissue neck radiographs"
+        ]
+      }
+    },
+    {
+      "case_code": "PALS_TEST_CASE_14",
+      "name": "Bradycardia (Infant; Hypoxia, Cardiopulmonary Failure)",
+      "category": "Cardiac",
+      "subtype": "Bradycardia",
+      "checklist_key": "cardiac_bradycardia",
+      "program_role": "SWAP CANDIDATE — infant bradycardia (replaces the 8-yr PALS_PRACTICE_16)",
+      "source_ref": "AHA PALS 2025 Module 5, Testing Case Scenario section, PDF pp.133-135",
+      "patient": {
+        "age": "3 months",
+        "sex": "male",
+        "weight_kg": 5.7
+      },
+      "manikin_fit": "infant",
+      "_correction": "This is a 3-MONTH-old (5.7 kg), not the 9-month-old I previously stated. Still infant — swap remains valid.",
+      "card": {
+        "default_setting": "prehospital",
+        "lead_in": {
+          "prehospital": "You are dispatched to the home of a 3-month-old infant with difficulty breathing.",
+          "ed": "You are working in the emergency department and are asked to see a 3-month-old infant with difficulty breathing brought in by his parents.",
+          "inpatient": "You are a member of the emergency response team called to evaluate a 3-month-old infant admitted earlier in the day with difficulty breathing.",
+          "picu": "You are asked to see a 3-month-old infant admitted earlier in the day with difficulty breathing."
+        },
+        "initial_vitals": {
+          "heart_rate": "45/min",
+          "blood_pressure": "Not obtainable",
+          "respiratory_rate": "4/min",
+          "spo2": "Not obtainable",
+          "temperature": "39.6 °C (103.2 °F)",
+          "weight": "5.7 kg",
+          "age": "3 months"
+        },
+        "vitals_instructor_adjustable": true,
+        "age_adjustable": true,
+        "overview": "Emphasis should be on identification of cardiopulmonary failure and management of hypoxic bradycardia associated with shock and likely lung tissue disease. Priorities include immediate bag-mask ventilation with 100% oxygen. Chest compressions are also required, and epinephrine is administered. The heart rate rises, and perfusion improves. The health care professional should also be able to discuss the preparation for insertion of an advanced airway device, such as an endotracheal tube and the method to estimate appropriate cuffed tube size.",
+        "objectives": [
+          "Demonstrates the support of oxygenation and ventilation in a patient with hypoxic bradycardia",
+          "Recognizes indications for CPR in a bradycardic patient; in this scenario, compressions are needed in addition to bag-mask ventilation because, despite oxygenation and ventilation, the infant has a heart rate less than 60/min with signs of poor perfusion",
+          "States 3 causes of bradycardia; these include hypoxia (most common), vagal stimulation, heart block, and drug overdose",
+          "Describes appropriate indications for and dose of epinephrine for bradycardia"
+        ],
+        "flow": {
+          "evaluate_initial_pat": {
+            "appearance": "No visible reaction to noises, caregivers",
+            "breathing": "Very slow respiratory rate; grunting",
+            "circulation": "Pale; cyanotic"
+          },
+          "identify": "Immediate intervention needed",
+          "intervene": [
+            "Activate the emergency response system. Emergency medical services requests additional assistance if needed.",
+            "Check for response (no response) and perform simultaneous check for breathing (still very slow) and brachial pulse (very slow).",
+            "Begin bag-mask ventilation with 100% oxygen.",
+            "Apply cardiac monitor.",
+            "Apply blood pressure cuff.",
+            "Apply pulse oximeter."
+          ],
+          "evaluate_primary_abcde": {
+            "airway": "Clear",
+            "breathing": "Respiratory rate 4/min; Spo2 not obtainable; severe intercostal and subcostal retraction; nasal flaring; grunting; very poor air entry bilaterally; scattered wheezes",
+            "circulation": "Heart rate 45/min (sinus bradycardia) after short period of bag-mask ventilation; peripheral pulses absent, weak central pulses; extremities cool with sluggish capillary refill; unable to obtain blood pressure",
+            "disability": "Unresponsive",
+            "exposure": "Temperature 39.6 °C (103.2 °F); weight 5.7 kg; no rashes"
+          },
+          "identify_after_primary": [
+            "Cardiopulmonary failure",
+            "Sinus bradycardia"
+          ],
+          "intervene_after_primary": [
+            "Continue bag-mask ventilation with 100% oxygen.",
+            "Begin chest compressions when heart rate does not increase to 60/min or greater and signs of poor perfusion persist despite bag-mask ventilation with 100% oxygen.",
+            "Obtain vascular access (intravenous [IV]/intraosseous [IO]).",
+            "Administer epinephrine 0.01 mg/kg (0.1 mg/mL concentration; maximum dose 1 mg) IV/IO followed by a rapid saline flush.",
+            "Discontinue chest compressions when heart rate 60/min or greater (and rising) and perfusion improves.",
+            "Continue bag-mask ventilation with 100% oxygen at a rate of 20-30/min.",
+            "Prepare for advanced airway placement.",
+            "Experienced PALS health care professionals may consider administration of a fluid bolus of 20 mL/kg of isotonic crystalloid; reassess during and after; stop if signs of heart failure develop."
+          ]
+        },
+        "instructor_note": "IMPROVES after CPR + epinephrine: HR rises to 130/min; SpO2 92% with BMV 16-20/min on 100% O2; BP 63/42 — but cap refill STILL 4-5 s, weak peripheral pulses, lethargic, apneic. TRAP: chest compressions ARE required — HR stays <60 with poor perfusion DESPITE effective BMV with 100% O2. Students who ventilate alone and wait will FAIL. TRAP: compressions STOP once HR >=60 and rising with improved perfusion. Glucose 75 mg/dL. Blood gas NOT indicated.",
+        "debrief_question": "In addition to hypoxia, what are 3 other causes of bradycardia in infants and children? This scenario did not include advanced airway insertion. In preparing for intubation, how would you estimate the correct cuffed and uncuffed endotracheal tube size for this infant?",
+        "paramedic_scope_na_candidates": [
+          "Endotracheal intubation / advanced airway placement (discussion only)",
+          "Chest x-ray",
+          "Laboratory studies other than POC glucose",
+          "Blood gas — explicitly not indicated here"
+        ]
+      }
+    },
+    {
+      "case_code": "PALS_TEST_CASE_06",
+      "name": "Lung Tissue (Parenchymal) Disease (Child)",
+      "category": "Respiratory",
+      "subtype": "Lung Tissue Disease",
+      "checklist_key": "resp_lung_tissue_disease",
+      "program_role": "RESPIRATORY PRACTICE — replaces PALS_PRACTICE_07 (whose pages are missing from the scan). 3-yr-old = TODDLER manikin.",
+      "source_ref": "AHA PALS 2025 Module 5, Testing Case Scenario section, PDF pp.101-104",
+      "patient": {
+        "age": "3 years",
+        "sex": "male",
+        "weight_kg": 12
+      },
+      "manikin_fit": "toddler",
+      "narrative_status": "complete",
+      "card": {
+        "default_setting": "prehospital",
+        "lead_in": {
+          "prehospital": "You are responding to a 911 call for a 3-year-old boy in respiratory distress.",
+          "ed": "A 3-year-old boy is brought in by first responders from his home after his mother called 911 saying that her child had respiratory distress.",
+          "inpatient": "You are called to the room of a 3-year-old boy who is being admitted from the emergency department for respiratory distress.",
+          "picu": "You are evaluating a 3-year-old boy at change of shift with new-onset respiratory distress."
+        },
+        "initial_vitals": {
+          "heart_rate": "160/min",
+          "blood_pressure": "110/78 mm Hg",
+          "respiratory_rate": "38/min",
+          "spo2": "80% on room air",
+          "temperature": "38.5 °C (101.4 °F)",
+          "weight": "12 kg",
+          "age": "3 years"
+        },
+        "vitals_instructor_adjustable": true,
+        "age_adjustable": true,
+        "overview": "Rapid recognition of respiratory failure associated with lung tissue (parenchymal) disease. Signs of respiratory failure (significant respiratory effort, hypoxemia despite high-flow supplemental oxygen, decreased level of consciousness) should prompt immediate escalation: 100% oxygen, then bag-mask ventilation. During debriefing, the method to estimate endotracheal tube size is discussed. Although not required for successful completion, the possible use of CPAP or noninvasive ventilation can be addressed, with emphasis that such therapy must be provided in settings where continuous monitoring is provided and intubation equipment and appropriate expertise are readily available.",
+        "objectives": [
+          "Distinguishes between respiratory distress and respiratory failure; in this scenario, the child's clinical signs are consistent with respiratory failure",
+          "Identifies signs of lung tissue disease: tachypnea, increased respiratory effort, grunting, crackles (rales), tachycardia, and hypoxemia despite oxygen administration",
+          "Implements correct interventions: high concentration of oxygen, appropriate monitoring, frequent reassessment, and more advanced support of oxygenation and ventilation (typically bag-mask ventilation and then intubation and positive-pressure ventilation)",
+          "Describes how noninvasive ventilatory support (CPAP or noninvasive positive-pressure ventilation) may improve oxygenation in lung tissue disease by increasing alveolar volume and improving matching of ventilation and perfusion",
+          "Recalls the common causes of lung tissue disease: pneumonia and aspiration"
+        ],
+        "flow": {
+          "evaluate_initial_pat": {
+            "appearance": "Lethargic",
+            "breathing": "Increased respiratory effort; grunting",
+            "circulation": "Pale skin"
+          },
+          "identify": "Respiratory failure; Lung tissue disease",
+          "intervene": [
+            "Allow child to maintain position of comfort.",
+            "Administer high concentration of oxygen.",
+            "Apply cardiac monitor and pulse oximeter.",
+            "Assess response to oxygen.",
+            "Escalate to bag-mask ventilation when hypoxemia persists despite 100% oxygen.",
+            "Obtain intravenous access.",
+            "Identify indications for continuous monitoring."
+          ],
+          "evaluate_primary_abcde": {
+            "airway": "Patent",
+            "breathing": "Respiratory rate 38/min; increased effort with occasional grunting; crackles heard over right chest; SpO2 80% on room air — and STILL 80% with 100% oxygen by nonrebreathing face mask",
+            "circulation": "Heart rate 160/min; pale skin; strong radial pulse; central and peripheral pulses remain strong; capillary refill remains 2 seconds; blood pressure 110/78 mm Hg (110/74 on repeat)",
+            "disability": "Lethargic; becoming less responsive; only arouses to painful stimuli",
+            "exposure": "Temperature 38.5 °C (101.4 °F); weight 12 kg"
+          }
+        },
+        "instructor_note": "KEY TRAP: SpO2 stays at 80% EVEN ON 100% OXYGEN by nonrebreather — that is the signal this is respiratory FAILURE, not distress, and the team must escalate to bag-mask ventilation. Neuro status DECLINES (lethargic -> only arouses to pain). SAMPLE: worsening respiratory distress, cough, and fever for 2 days; recently diagnosed with influenza; no allergies/meds/PMH.",
+        "debrief_question": "How will you estimate the appropriate cuffed endotracheal tube size? | Can you explain why CPAP or noninvasive positive-pressure ventilation might improve this child's oxygenation?",
+        "_drift_note": "2025 KEEPS endotracheal-intubation / cuffed-ETT language here. Do NOT normalize to PPV.",
+        "paramedic_scope_na_candidates": [
+          "endotracheal intubation and mechanical ventilation",
+          "CPAP / noninvasive PPV initiation (scope varies by service)",
+          "chest x-ray and lab work",
+          "PICU transfer / intensivist consultation"
+        ]
+      }
+    }
+  ]
+}

@@ -11575,8 +11575,16 @@ migrated (8 practice + 6 testing); the 3 `*_cert_tier_check` constraints now rea
 `app/labs/adv-cert/grade/page.tsx`) updated in the same change.
 
 ### New columns on existing tables
-- `scenarios.narrative_status` text — `complete | pending_extraction | not_indexed`
-  (CHECK). **Gates card display**: only `complete` scenarios are ever presented.
+- `scenarios.narrative_status` text — `complete | pending_extraction | not_indexed
+  | INCOMPLETE_SCAN_GAP` (CHECK). **Gates card display**: only `complete`
+  scenarios are ever presented. (`INCOMPLETE_SCAN_GAP` = card started but source
+  pages missing — added 2026-07-12 with the narrative load.)
+- `scenarios.pals_narrative` jsonb — the PALS display card (lead-in,
+  initial_vitals, flow, objectives, instructor_note, debrief) loaded VERBATIM
+  from the AHA-2025 narrative files (`docs/pals/pals_card_narratives_*.json` +
+  the PRACTICE_03 exemplar). Rendered by the Phase-2 card UI; gated on
+  `narrative_status='complete'`. As of 2026-07-12: 16 scenarios complete
+  (all 16 carry a narrative), 18 narratives loaded total.
 - `scenarios.pals_checklist_id` uuid → `pals_checklists(id)` (FK
   `scenarios_pals_checklist_id_fkey`, ON DELETE SET NULL). A PALS scenario → its
   one pathophysiology checklist. NULL for TBD/not-yet-indexed testing cases.

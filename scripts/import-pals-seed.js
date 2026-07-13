@@ -76,6 +76,27 @@ async function main() {
   const practice = seed.practice_scenarios || [];
   const testing = seed.testing_case_scenarios || [];
 
+  // Narrative cards (Cowork AHA-2025 files, same dir as the seed), keyed by
+  // case_code and stored VERBATIM into scenarios.pals_narrative. The exemplar
+  // carries PRACTICE_03's narrative. Cards flagged incomplete in the files stay
+  // gated by narrative_status (the seed is the authority on completeness).
+  const seedDir = path.dirname(file);
+  const narrativeByCode = {};
+  for (const nf of ['pals_card_narratives_PRACTICE.json', 'pals_card_narratives_TESTING.json']) {
+    const np = path.join(seedDir, nf);
+    if (fs.existsSync(np)) {
+      const nd = JSON.parse(fs.readFileSync(np, 'utf8'));
+      for (const c of nd.cards || []) if (c && c.case_code) narrativeByCode[c.case_code] = c;
+    }
+  }
+  {
+    const exP = path.join(seedDir, 'PALS_PRACTICE_03_EXEMPLAR.json');
+    if (fs.existsSync(exP)) {
+      const ex = JSON.parse(fs.readFileSync(exP, 'utf8'));
+      if (ex && ex.case_code && !narrativeByCode[ex.case_code]) narrativeByCode[ex.case_code] = ex;
+    }
+  }
+
   const conn = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
   if (!conn) { console.error('No SUPABASE_DB_URL / DATABASE_URL configured.'); process.exit(1); }
   const client = new Client({ connectionString: conn, ssl: { rejectUnauthorized: false } });
@@ -83,7 +104,7 @@ async function main() {
 
   const stats = {
     clIns: 0, clUpd: 0, critIns: 0, critUpd: 0, critDeact: 0,
-    scenIns: 0, scenUpd: 0, linked: 0, unlinked: 0,
+    scenIns: 0, scenUpd: 0, linked: 0, unlinked: 0, narr: 0,
   };
   const idByKey = {};
   const warnings = [];
@@ -171,6 +192,8 @@ async function main() {
         if (checklistId) stats.linked++; else stats.unlinked++;
 
         const meta = caseMeta(rec);
+        const narrative = narrativeByCode[rec.case_code] ? JSON.stringify(narrativeByCode[rec.case_code]) : null;
+        if (narrative) stats.narr++;
         const ex = await client.query(
           'SELECT id FROM scenarios WHERE case_code=$1 AND cert_course=$2',
           [rec.case_code, course]
@@ -180,17 +203,18 @@ async function main() {
             `UPDATE scenarios
                SET title=$1, category=COALESCE(category,$2), cert_tier=$3,
                    narrative_status=$4, pals_checklist_id=$5, pals_case_meta=$6::jsonb,
+                   pals_narrative=COALESCE($7::jsonb, pals_narrative),
                    is_active=true
-             WHERE id=$7`,
-            [rec.name, rec.category || null, g.tier, rec.narrative_status || null, checklistId, meta, ex.rows[0].id]
+             WHERE id=$8`,
+            [rec.name, rec.category || null, g.tier, rec.narrative_status || null, checklistId, meta, narrative, ex.rows[0].id]
           );
           stats.scenUpd++;
         } else {
           await client.query(
             `INSERT INTO scenarios
-               (title, category, case_code, cert_course, cert_tier, narrative_status, pals_checklist_id, pals_case_meta, is_active)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,true)`,
-            [rec.name, rec.category || null, rec.case_code, course, g.tier, rec.narrative_status || null, checklistId, meta]
+               (title, category, case_code, cert_course, cert_tier, narrative_status, pals_checklist_id, pals_case_meta, pals_narrative, is_active)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9::jsonb,true)`,
+            [rec.name, rec.category || null, rec.case_code, course, g.tier, rec.narrative_status || null, checklistId, meta, narrative]
           );
           stats.scenIns++;
         }
@@ -209,7 +233,8 @@ async function main() {
     console.log(
       `Checklists: ${stats.clIns} new / ${stats.clUpd} updated | ` +
       `Criteria: ${stats.critIns} new / ${stats.critUpd} updated / ${stats.critDeact} deactivated | ` +
-      `Scenarios: ${stats.scenIns} new / ${stats.scenUpd} updated (${stats.linked} linked to a checklist, ${stats.unlinked} unlinked)`
+      `Scenarios: ${stats.scenIns} new / ${stats.scenUpd} updated (${stats.linked} linked to a checklist, ${stats.unlinked} unlinked) | ` +
+      `Narratives loaded: ${stats.narr}`
     );
     if (warnings.length) {
       console.log(`\n⚠ ${warnings.length} unlinked/notable:`);
