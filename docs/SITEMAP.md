@@ -1,5 +1,6 @@
 # PMI EMS Scheduler — Site Map
-> Refreshed 2026-07-01 (Compliance Docs + expiry Compliance Tracker removed, consolidated into Clinical Tracker).
+> Refreshed 2026-07-13 (`/labs/pals/grade` — PALS testing checklist grading, Checkpoint C — added).
+> Previously refreshed 2026-07-01 (Compliance Docs + expiry Compliance Tracker removed, consolidated into Clinical Tracker).
 > Previously refreshed 2026-06-29 (LVFR day index redirect added; Clinical Tracker promoted to primary card).
 > Previously refreshed 2026-06-09 (Exam Self-Scheduling pages added).
 
@@ -229,6 +230,7 @@ Canonical home for lab day operations. 38 pages.
 | `/labs/schedule/new` | New lab day |
 | `/labs/grade/station/[id]` | Grading page — has **Export JSON**, **Update from JSON**, no-email-on-file warning toast. For `station_type='skill_drill'` early-returns a dedicated `SkillDrillStationView` (no rubric / Platinum / submit — just SkillDrillReference cards + an observations textarea persisted to localStorage). |
 | `/labs/adv-cert/grade` | **Advanced-Cert (ACLS/PALS) megacode grading** (instructor+). Pick course → testing day → group → team-lead + members → drawn scenario; renders the scenario's ordered segments + criteria checklist, per-segment pass/fail, instructor-set overall group pass/fail. Saves to `adv_cert_test_attempts` (+ attempt_students / segment_results / criterion_results) with a client-minted `client_uuid` for offline-readiness, and writes a `team_lead_log` row for the test team-lead. Backed by `/api/adv-cert/*`. Linked from the Labs hub (Megacode Grading tile). |
+| `/labs/pals/grade` | **PALS testing checklist grading** (instructor+, Checkpoint C — 2026-07-13). Own structure, NOT the ACLS segment chain: testing day (`cert_course='pals'`) → group → team-lead (graded student) + members → PALS scenario (gated on `narrative_status='complete'`); renders the case's OCR'd AHA narrative card (`PalsCaseCard`) + its pathophysiology checklist's flat Critical Performance Steps with a three-state (checked/not_checked/na) toggle per step, verbatim scripted `instructor_prompt`, `is_critical` flagging. Result (PASS/NR) is computed client-side from the AHA rule (all in-scope steps checked) rather than instructor-picked. Supports `retest_of` linkage (open-NR picker) and shows the server-computed 30-day `remediation_due_at` clock. **Offline-hardened**: in-progress form auto-persists to `localStorage` (survives reload) and a failed save queues locally for auto-sync on reconnect (`lib/pals-offline.ts`) — the piece the ACLS station never built beyond the `client_uuid` dedup key. Saves to `pals_test_attempts` (+ attempt_students / criterion_results). Backed by `/api/pals/*`. Linked from the Labs hub (PALS Testing Grading tile) and from a PALS-tagged station's Grade button. |
 | `/labs/scenarios` | Scenario library (with checkbox multi-select + **Export Selected as JSON**) |
 | `/labs/scenarios/[id]` | Scenario editor (with **Export JSON** + **Update from JSON** buttons) |
 | `/labs/scenarios/new` | New scenario |

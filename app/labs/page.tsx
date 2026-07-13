@@ -125,6 +125,14 @@ export default function LabsPage() {
       show: isInstructor,
     },
     {
+      title: 'PALS Testing Grading',
+      description: 'AHA PALS checklist testing — PASS / NR per student',
+      href: '/labs/pals/grade',
+      icon: Stethoscope,
+      color: 'sky',
+      show: isInstructor,
+    },
+    {
       title: 'Stations',
       description: 'Manage lab stations and equipment',
       // /labs/stations has no index page (only /log and /pool subroutes).
