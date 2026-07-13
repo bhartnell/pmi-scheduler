@@ -179,7 +179,10 @@ export async function POST() {
       exam_module: d.exam_module || null,
       has_quiz: d.has_quiz || false,
       quiz_chapters: d.quiz_chapters || [],
-      time_blocks: d.time_blocks || null,
+      // course_calendar.json never carries time_blocks — omit the key
+      // entirely (rather than upserting null) so re-seeding doesn't wipe
+      // out per-day time_blocks values that were set directly in the DB.
+      ...(d.time_blocks !== undefined ? { time_blocks: d.time_blocks } : {}),
       reinforcement_activities: d.reinforcement_activities || null,
     }));
 
