@@ -215,7 +215,7 @@ export default function AhaHubPage() {
               icon={Stethoscope}
               cohorts={data.courses.pals}
               templateCount={data.templatesAvailable.pals}
-              viewHref="/labs/pals/grade"
+              viewHref="/labs/pals-hub"
               color="bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
             />
           </div>
