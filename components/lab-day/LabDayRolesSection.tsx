@@ -210,7 +210,7 @@ export default function LabDayRolesSection({
                   const candidates = (availabilityLoaded && !showAllInstructors)
                     ? notYetAssigned.filter(inst => {
                         const avail = getAvailInfo(availabilityMap, inst);
-                        return !avail || isDefaultVisibleGroup(avail);
+                        return !avail || isDefaultVisibleGroup(avail.group);
                       })
                     : notYetAssigned;
                   if (candidates.length === 0 && availabilityLoaded && !showAllInstructors) {

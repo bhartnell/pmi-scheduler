@@ -10,8 +10,10 @@ import { isRtOnlyInstructor } from '@/lib/rt-only-instructors';
  * active instructor classified into one of four display groups:
  *
  *   "available"        — green dot. Full-time instructors are
- *                        available BY DEFAULT for the lab window
- *                        (0830-1700) and need no explicit submission;
+ *                        available BY DEFAULT for the requested
+ *                        [date, start_time, end_time] window (the
+ *                        CALLING lab day's actual scheduled time —
+ *                        see callers) and need no explicit submission;
  *                        part-time instructors need explicit
  *                        availability covering the slot. Either way,
  *                        no scheduling conflicts.
@@ -21,10 +23,22 @@ import { isRtOnlyInstructor } from '@/lib/rt-only-instructors';
  *   "conflict"         — amber dot. May or may not have submitted
  *                        availability, but has a class block,
  *                        manual hour log, LVFR, shift, or other-
- *                        lab-day overlap during the slot.
+ *                        lab-day overlap that OVERLAPS the requested
+ *                        [start_time, end_time] window — a same-day
+ *                        class/event outside that window is NOT a
+ *                        conflict (real time-range intersection, not
+ *                        "has anything at all that day").
  *   "no_availability"  — gray dot. Part-time instructor, active, but
  *                        no availability record submitted for the
  *                        slot.
+ *
+ * IMPORTANT: callers must pass the LAB's actual start_time/end_time,
+ * not a fixed all-day placeholder — passing an artificially wide
+ * window (e.g. 08:00-17:00 for every lab regardless of its real time)
+ * causes false conflicts: a class that doesn't overlap the real lab
+ * time gets flagged anyway because it overlaps the wider placeholder
+ * window. See app/labs/schedule/[id]/page.tsx and
+ * stations/new/page.tsx for the current callers.
  *
  * Sources checked, in order:
  *   1. instructor_availability (explicit submissions, must cover
@@ -86,7 +100,6 @@ export async function GET(request: NextRequest) {
       conflicts: { source: string; title: string; start_time: string; end_time: string }[];
       same_day_hours: number;
       same_day_stations: { station_number: number; station_type: string }[];
-      partial_day_conflict: boolean;
     }>();
 
     for (const instr of allInstructors) {
@@ -102,7 +115,6 @@ export async function GET(request: NextRequest) {
         conflicts: [],
         same_day_hours: 0,
         same_day_stations: [],
-        partial_day_conflict: false,       // computed below once all conflicts are in
       });
     }
 
@@ -374,51 +386,12 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Partial-day-conflict detection. `startTime`/`endTime` above is
-    // always the full requested lab-day window (callers pass a fixed
-    // 08:00-17:00 today — see app/labs/schedule/[id]/page.tsx and
-    // stations/new/page.tsx), not the actual narrower time of any one
-    // station/rotation. Without this, a single short class block (e.g.
-    // an 08:30-10:00 lecture) that merely overlaps somewhere inside
-    // that wide window flags the instructor "conflict" for the ENTIRE
-    // day and hides them from every station's picker by default, even
-    // when they're free for the rest of the day. (2026-07-14: this hid
-    // 5 full-time instructors — each with just one class block that
-    // whole week — from lab-day instructor selection.)
-    // Merge each instructor's conflict windows and check whether they
-    // fully cover [startTime, endTime): only then is this genuinely an
-    // all-day unavailability (e.g. LVFR Academy, a full class day, or
-    // several blocks that together leave no gap). A conflict that
-    // doesn't fully cover the window is "partial" — the instructor
-    // still needs the amber conflict badge, but shouldn't be hidden
-    // from the default picker.
-    const conflictsCoverWindow = (
-      conflicts: { start_time: string; end_time: string }[]
-    ): boolean => {
-      const intervals = conflicts
-        .filter(c => c.start_time && c.end_time)
-        .map(c => [c.start_time, c.end_time] as const)
-        .sort((a, b) => a[0].localeCompare(b[0]));
-      let cursor = startTime;
-      for (const [s, e] of intervals) {
-        if (s > cursor) return false; // gap before this interval
-        if (e > cursor) cursor = e;
-        if (cursor >= endTime) return true;
-      }
-      return cursor >= endTime;
-    };
-    instructorMap.forEach(v => {
-      if (v.conflicts.length > 0) {
-        v.partial_day_conflict = !conflictsCoverWindow(v.conflicts);
-      }
-    });
-
     // Group classification — runs after every signal has been
     // collected. Conflict trumps everything (operator must see the
     // warning); volunteer signal trumps explicit availability so a
     // volunteer who DIDN'T submit availability still gets the blue
     // dot. Full-time instructors are available BY DEFAULT for the
-    // 0830-1700 lab window — they don't submit explicit availability
+    // requested lab window — they don't submit explicit availability
     // rows, so requiring has_explicit_availability for them
     // incorrectly demoted every conflict-free full-timer to
     // "no_availability" and hid them from the picker (bug: full-time

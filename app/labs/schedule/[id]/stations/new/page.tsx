@@ -27,6 +27,8 @@ interface LabDay {
   id: string;
   date: string;
   title: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
   is_nremt_testing?: boolean;
   cohort: {
     id: string;
@@ -201,18 +203,24 @@ export default function NewStationPage() {
     fetchDrillDocs();
   }, [stationType, selectedDrillIds]);
 
-  // Fetch instructor availability when labDay is loaded
+  // Fetch instructor availability when labDay is loaded. Uses THIS lab
+  // day's actual start/end time (not a fixed all-day window) so a class
+  // block that doesn't overlap this specific lab's time isn't treated as
+  // a conflict — see app/labs/schedule/[id]/page.tsx for the full
+  // rationale (same fetch pattern, kept in sync).
   useEffect(() => {
     if (!labDay?.date) return;
+    const labStart = labDay.start_time || '08:00:00';
+    const labEnd = labDay.end_time || '17:00:00';
     setAvailabilityLoading(true);
-    fetch(`/api/lab-management/instructor-availability?date=${labDay.date}&start_time=08:00&end_time=17:00&lab_day_id=${labDay.id}`)
+    fetch(`/api/lab-management/instructor-availability?date=${labDay.date}&start_time=${labStart}&end_time=${labEnd}&lab_day_id=${labDay.id}`)
       .then(res => res.json())
       .then(data => {
         if (data.success) setInstructorAvailability(data.instructors || []);
       })
       .catch(() => {})
       .finally(() => setAvailabilityLoading(false));
-  }, [labDay?.date, labDay?.id]);
+  }, [labDay?.date, labDay?.id, labDay?.start_time, labDay?.end_time]);
 
   // Availability lookup map
   const availabilityMap = useMemo(() => {
