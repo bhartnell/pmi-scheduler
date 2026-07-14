@@ -1,5 +1,6 @@
 # PMI EMS Scheduler — Site Map
-> Refreshed 2026-07-13 (`/labs/aha-hub` — top-level AHA hub, Phase 1 of AHA HUB + ACLS REPEATABLE — added).
+> Refreshed 2026-07-14 (`/labs/pals-hub` — PALS Hub, mirrors ACLS Hub — added).
+> Previously refreshed 2026-07-13 (`/labs/aha-hub` — top-level AHA hub, Phase 1 of AHA HUB + ACLS REPEATABLE — added).
 > Previously refreshed 2026-07-13 (`/labs/pals/grade` — PALS testing checklist grading, Checkpoint C — added).
 > Previously refreshed 2026-07-01 (Compliance Docs + expiry Compliance Tracker removed, consolidated into Clinical Tracker).
 > Previously refreshed 2026-06-29 (LVFR day index redirect added; Clinical Tracker promoted to primary card).
@@ -214,13 +215,14 @@ Canonical home for cohort + student + planner workflows. 22 pages.
 
 ## Labs
 
-Canonical home for lab day operations. 39 pages.
+Canonical home for lab day operations. 40 pages.
 
 | Path | Notes |
 |------|-------|
 | `/labs` | Hub (formerly `/lab-management`) |
-| `/labs/aha-hub` | **AHA Hub** (instructor+, Phase 1 of the AHA HUB + ACLS REPEATABLE build, 2026-07-13) — top-level, read-only landing page listing every cohort's ACLS and PALS courses (day count, date range, testing-day count per cohort), plus an admin-only "Assign AHA Course to a Cohort" entry point that links to `/admin/aha-courses` (the AHA Course Generator). Purely additive — does not replace `/labs/acls-hub` or `/labs/pals/grade`, both still linked from here as "Open hub". Surfaces the `cert_course=NULL` template gap (flagged, not fixed here) if a course has zero `lab_day_templates`. Backed by `/api/adv-cert/aha-hub`. Linked from the Labs hub (AHA Hub tile). |
+| `/labs/aha-hub` | **AHA Hub** (instructor+, Phase 1 of the AHA HUB + ACLS REPEATABLE build, 2026-07-13) — top-level, read-only landing page listing every cohort's ACLS and PALS courses (day count, date range, testing-day count per cohort), plus an admin-only "Assign AHA Course to a Cohort" entry point that links to `/admin/aha-courses` (the AHA Course Generator). Purely additive — does not replace `/labs/acls-hub`, `/labs/pals-hub`, or `/labs/pals/grade`. Surfaces the `cert_course=NULL` template gap (flagged, not fixed here) if a course has zero `lab_day_templates`. Backed by `/api/adv-cert/aha-hub`. Linked from the Labs hub (AHA Hub tile). |
 | `/labs/acls-hub` | ACLS Hub — read-only aggregator for the full ACLS event (Day 1/Day 2 schedule, lab sections, two-day/all-section coordinator stats, by-instructor, print). Linked from `/calendar` and `/labs/aha-hub`. |
+| `/labs/pals-hub` | **PALS Hub** (instructor+, 2026-07-14, Task Handoff Queue: "AHA HUB: PALS aggregated view mirroring ACLS Hub") — read-only aggregator for the full PALS event, mirrors `/labs/acls-hub`'s shape: Day 1/Day 2 schedule, lab sections (Ben-built via the UI, never auto-created here), team-lead coverage per student (≥1 `pals_test_attempts` row as the tested lead = covered, PASS or NR both count), by-instructor, print. Links out to `/labs/pals/grade` for actual grading — doesn't replace it. Backed by `/api/adv-cert/pals-hub`. Linked from the Labs hub (PALS Hub tile) and `/labs/aha-hub`. |
 | `/labs/schedule` | Lab day list |
 | `/labs/schedule/[id]` | Lab day details — primary lab-day view |
 | `/labs/schedule/[id]/assignments` | Per-station assignments |

@@ -134,6 +134,14 @@ export default function LabsPage() {
       show: isInstructor,
     },
     {
+      title: 'PALS Hub',
+      description: 'Full PALS event — schedule, sections, team-lead coverage',
+      href: '/labs/pals-hub',
+      icon: Stethoscope,
+      color: 'emerald',
+      show: isInstructor,
+    },
+    {
       title: 'PALS Testing Grading',
       description: 'AHA PALS checklist testing — PASS / NR per student',
       href: '/labs/pals/grade',
