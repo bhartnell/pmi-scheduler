@@ -1,5 +1,6 @@
 # PMI EMS Scheduler — Site Map
-> Refreshed 2026-07-13 (`/labs/pals/grade` — PALS testing checklist grading, Checkpoint C — added).
+> Refreshed 2026-07-13 (`/labs/aha-hub` — top-level AHA hub, Phase 1 of AHA HUB + ACLS REPEATABLE — added).
+> Previously refreshed 2026-07-13 (`/labs/pals/grade` — PALS testing checklist grading, Checkpoint C — added).
 > Previously refreshed 2026-07-01 (Compliance Docs + expiry Compliance Tracker removed, consolidated into Clinical Tracker).
 > Previously refreshed 2026-06-29 (LVFR day index redirect added; Clinical Tracker promoted to primary card).
 > Previously refreshed 2026-06-09 (Exam Self-Scheduling pages added).
@@ -213,12 +214,13 @@ Canonical home for cohort + student + planner workflows. 22 pages.
 
 ## Labs
 
-Canonical home for lab day operations. 38 pages.
+Canonical home for lab day operations. 39 pages.
 
 | Path | Notes |
 |------|-------|
 | `/labs` | Hub (formerly `/lab-management`) |
-| `/labs/acls-hub` | ACLS Hub — read-only aggregator for the full ACLS event (Day 1/Day 2 schedule, lab sections, two-day/all-section coordinator stats, by-instructor, print). Linked from `/calendar`. |
+| `/labs/aha-hub` | **AHA Hub** (instructor+, Phase 1 of the AHA HUB + ACLS REPEATABLE build, 2026-07-13) — top-level, read-only landing page listing every cohort's ACLS and PALS courses (day count, date range, testing-day count per cohort), plus an admin-only "Assign AHA Course to a Cohort" entry point that links to `/admin/aha-courses` (the AHA Course Generator). Purely additive — does not replace `/labs/acls-hub` or `/labs/pals/grade`, both still linked from here as "Open hub". Surfaces the `cert_course=NULL` template gap (flagged, not fixed here) if a course has zero `lab_day_templates`. Backed by `/api/adv-cert/aha-hub`. Linked from the Labs hub (AHA Hub tile). |
+| `/labs/acls-hub` | ACLS Hub — read-only aggregator for the full ACLS event (Day 1/Day 2 schedule, lab sections, two-day/all-section coordinator stats, by-instructor, print). Linked from `/calendar` and `/labs/aha-hub`. |
 | `/labs/schedule` | Lab day list |
 | `/labs/schedule/[id]` | Lab day details — primary lab-day view |
 | `/labs/schedule/[id]/assignments` | Per-station assignments |
