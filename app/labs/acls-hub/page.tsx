@@ -17,8 +17,8 @@
  */
 
 import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft, Loader2, RefreshCw, Printer, CheckCircle2, XCircle, Clock,
@@ -57,9 +57,10 @@ const TYPE_COLOR: Record<string, string> = {
   exam: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200',
 };
 
-export default function AclsHubPage() {
+function AclsHubPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [cohort, setCohort] = useState<any>(null);
   const [dates, setDates] = useState<string[]>([]);
@@ -71,6 +72,13 @@ export default function AclsHubPage() {
   const [activeDate, setActiveDate] = useState<string>('all');
 
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/signin'); }, [status, router]);
+
+  // Deep-link: ?date=YYYY-MM-DD (from the calendar's "Open ACLS Hub"
+  // button) pre-selects that day's tab once the real dates are known.
+  useEffect(() => {
+    const dateParam = searchParams.get('date');
+    if (dateParam && dates.includes(dateParam)) setActiveDate(dateParam);
+  }, [searchParams, dates]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -384,13 +392,17 @@ export default function AclsHubPage() {
                           {d.stations.length > 0 && (
                             <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
                               {d.stations.map(st => (
-                                <div key={st.id} className="text-xs border border-gray-100 dark:border-gray-700 rounded p-1.5">
+                                <Link
+                                  key={st.id}
+                                  href={`/labs/adv-cert/grade?labDayId=${d.id}&stationId=${st.id}`}
+                                  className="block text-xs border border-gray-100 dark:border-gray-700 rounded p-1.5 hover:border-red-300 dark:hover:border-red-700 hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors"
+                                >
                                   <div className="font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
                                     <MapPin className="w-3 h-3 text-gray-400" />#{st.station_number} {st.room || ''}
                                   </div>
                                   <div className="text-gray-500 dark:text-gray-400">{st.scenario?.case_code || st.scenario?.title || st.custom_title || '—'}</div>
                                   <div className="text-gray-400">{st.instructor_name || '— unassigned —'}</div>
-                                </div>
+                                </Link>
                               ))}
                             </div>
                           )}
@@ -465,5 +477,13 @@ export default function AclsHubPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AclsHubPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin text-gray-400" /></div>}>
+      <AclsHubPageContent />
+    </Suspense>
   );
 }

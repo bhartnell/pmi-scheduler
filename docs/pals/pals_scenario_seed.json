@@ -1439,10 +1439,12 @@
     },
     {
       "case_code": "PALS_TEST_CASE_05",
-      "name": "Infant, 9 months (2-day history)",
-      "category": "TBD",
-      "checklist_key": "TBD",
-      "narrative_status": "pending_extraction"
+      "name": "Pulseless Electrical Activity (Infant, 9 mo; Arrest)",
+      "category": "Cardiac arrest",
+      "checklist_key": "cardiac_asystole_pea",
+      "narrative_status": "pending_extraction",
+      "age": "9 mo",
+      "manikin_fit": "infant"
     },
     {
       "case_code": "PALS_TEST_CASE_06",
@@ -1533,20 +1535,6 @@
       "manikin_fit": "infant",
       "narrative_status": "complete",
       "narrative_file": "pals_card_narratives_TESTING.json"
-    },
-    {
-      "case_code": "PALS_TEST_CASE_15",
-      "name": "(not yet indexed)",
-      "category": "TBD",
-      "checklist_key": "TBD",
-      "narrative_status": "not_indexed"
-    },
-    {
-      "case_code": "PALS_TEST_CASE_16",
-      "name": "(not yet indexed)",
-      "category": "TBD",
-      "checklist_key": "TBD",
-      "narrative_status": "not_indexed"
     }
   ],
   "program_testing_selection": {
@@ -1575,15 +1563,97 @@
     "note": "These are the program's carried-forward 2020 picks (T7/T9/T13), verified to be the SAME cases in 2025. All infant/toddler — manikin-optimal."
   },
   "open_items": [
-    "✅ LAUNCH SET COMPLETE + VERIFIED: testing 07/09/13 (program's 3 rounds) with full verbatim 2025 narratives.",
-    "✅ BP conflicts RESOLVED by convention: carry both values as presenting -> on-assessment progression (TEST_CASE_07, PRACTICE_09).",
-    "✅ RESPIRATORY GAP CLOSED: PALS_TEST_CASE_06 (Lung Tissue, 3-yr-old, toddler-feasible) substitutes for PALS_PRACTICE_07, whose pages are missing from the scan.",
-    "⚠ SCAN GAP (deferred by Ben — no book access this week): PALS_PRACTICE_07 (book pp.142-143) and PALS_PRACTICE_15 (pp.174-176 incl. entire debriefing tool) are INCOMPLETE. PALS_PRACTICE_11 (pp.158-159) also missing. Do NOT display these cards — gate on narrative_status.",
-    "⚠ Disordered-Control-of-Breathing practice slot: use PALS_TEST_CASE_13 (4-yr, toddler) since PALS_PRACTICE_15 has a scan gap.",
-    "⚠ DRIFT IS NOT GLOBAL — do NOT normalize intubation->PPV. 2025 KEEPS 'endotracheal intubation' in TEST_CASE_06, TEST_CASE_13, PRACTICE_07, PRACTICE_15. Only PRACTICE_03 changed to PPV; PRACTICE_04 / TEST_CASE_03 use bag-mask wording.",
-    "⚠ PALS_PRACTICE_01 is 12-yr/46kg — NOT manikin-feasible. Drop from practice set.",
-    "⚠ cert_tier enum: still megacode_* — Code decision.",
-    "Schedule seed still to be rebuilt against Module 6 2025 timings."
+    "✅ LAUNCH SET LOCKED. Testing rounds 07/09/13. Practice 12 cases locked in program_practice_selection.",
+    "✅ Testing bank is 14 cards (NOT 16) — pages 137+ are the Team Dynamics tool and ECG strips. Phantom entries 15/16 removed.",
+    "✅ Only TWO Disordered-Control-of-Breathing cards exist in all of 2025: PRACTICE_15 (infant) and TEST_CASE_13 (child). Confirmed, not an indexing miss.",
+    "⚠ PALS_PRACTICE_15 is a PARTIAL card (debrief tool missing from scan) but is RUNNABLE — lead-in/vitals/PAT/primary ABCDE all present. Re-scan book pp.174-176 when convenient.",
+    "⚠ PALS_PRACTICE_07 also partial (book pp.142-143) — NOT USED in the locked set; TEST_CASE_06 covers lung tissue instead.",
+    "⚠ DRIFT IS NOT GLOBAL — do NOT normalize intubation->PPV. 2025 KEEPS 'endotracheal intubation' in TEST_CASE_06, TEST_CASE_13, PRACTICE_07, PRACTICE_15.",
+    "⚠ cert_tier enum still megacode_* — Code decision."
   ],
-  "vitals_convention": "Where AHA prints two different values for the same vital (vitals box vs primary assessment), BOTH are carried as a PROGRESSION, not a contradiction: the box = PRESENTING value; the primary assessment = what the team finds on their own assessment moments later. Applies to PALS_TEST_CASE_07 and PALS_PRACTICE_09."
+  "vitals_convention": "Where AHA prints two different values for the same vital (vitals box vs primary assessment), BOTH are carried as a PROGRESSION, not a contradiction: the box = PRESENTING value; the primary assessment = what the team finds on their own assessment moments later. Applies to PALS_TEST_CASE_07 and PALS_PRACTICE_09.",
+  "program_practice_selection": {
+    "_decided": "Locked 2026-07-11 by Claude at Ben's direction (Ben on the road, no book access). Rationale recorded so it can be revisited.",
+    "test_integrity": "NONE of the 12 practice cases is a testing case. Where a practice case shares a pathology with a test case, it is a DIFFERENT AGE BAND — which is the same design principle AHA's own bank uses (forces transfer of the algorithm rather than rehearsal of a memorized case).",
+    "respiratory": [
+      {
+        "case": "PALS_PRACTICE_04",
+        "subtype": "Upper Airway Obstruction",
+        "age": "1 yr",
+        "manikin": "toddler"
+      },
+      {
+        "case": "PALS_PRACTICE_03",
+        "subtype": "Lower Airway Obstruction",
+        "age": "10 yr",
+        "manikin": "age-adjust down OR brief the manikin as-is"
+      },
+      {
+        "case": "PALS_TEST_CASE_06",
+        "subtype": "Lung Tissue Disease",
+        "age": "3 yr",
+        "manikin": "toddler"
+      },
+      {
+        "case": "PALS_PRACTICE_15",
+        "subtype": "Disordered Control of Breathing",
+        "age": "6 mo",
+        "manikin": "infant",
+        "⚠ PARTIAL CARD": "Lead-in, vitals, overview, objectives, PAT, and FULL primary ABCDE are captured — enough to RUN the scenario. MISSING: post-primary intervene list + the debriefing tool (book pp.174-176 absent from scan). Debrief from the DCoB checklist + the overview line: 'discuss indications for intubation and methods to estimate ETT size.'"
+      }
+    ],
+    "shock": [
+      {
+        "case": "PALS_PRACTICE_02",
+        "subtype": "Hypovolemic (NAT)",
+        "age": "6 mo",
+        "manikin": "infant"
+      },
+      {
+        "case": "PALS_PRACTICE_08",
+        "subtype": "Distributive (Septic)",
+        "age": "12 yr",
+        "manikin": "largest available — BRIEF THE AGE. Deliberately a different age band from the septic TEST case (4-mo infant), so no test rehearsal."
+      },
+      {
+        "case": "PALS_PRACTICE_13",
+        "subtype": "Obstructive / Tension Pneumothorax",
+        "age": "8 yr",
+        "manikin": "brief the age — barotrauma teaching case, keep"
+      },
+      {
+        "case": "PALS_PRACTICE_14",
+        "subtype": "Cardiogenic",
+        "age": "4 mo",
+        "manikin": "infant"
+      }
+    ],
+    "arrhythmia": [
+      {
+        "case": "PALS_PRACTICE_05",
+        "subtype": "Asystole",
+        "age": "6 mo",
+        "manikin": "infant"
+      },
+      {
+        "case": "PALS_PRACTICE_12",
+        "subtype": "Pulseless VT",
+        "age": "6 mo",
+        "manikin": "infant"
+      },
+      {
+        "case": "PALS_PRACTICE_10",
+        "subtype": "Wide-Complex Tachycardia (stable)",
+        "age": "3 mo",
+        "manikin": "infant"
+      },
+      {
+        "case": "PALS_TEST_CASE_14",
+        "subtype": "Bradycardia",
+        "age": "3 mo",
+        "manikin": "infant"
+      }
+    ],
+    "count": "12 = 4 Respiratory + 4 Shock + 4 Arrhythmia ✅ AHA-compliant"
+  }
 }

@@ -11649,3 +11649,15 @@ scenarios are selectable in `/labs/pals/grade`.
 (1:1). Checklists are SHARED by pathophysiology across 32 scenarios, so a 1:1 link
 would duplicate criteria 32×. Modeled as `checklist_key`-keyed checklists +
 `scenarios.pals_checklist_id` instead.
+
+**Data correction (2026-07-14, PALS Hub Build Plan):** `docs/pals/pals_scenario_seed.json`
+was 2 versions behind Ben's authoritative source; the DB matched the stale version.
+Fixed via `_backup_scenarios_pals_20260714` (backup) then a scoped `UPDATE`/archive:
+`PALS_TEST_CASE_05` was `category='TBD'`/`checklist_key` unset — corrected to
+`category='Cardiac arrest'`, `pals_checklist_id` → `cardiac_asystole_pea`, and
+`pals_case_meta` now carries `age='9 mo'`/`manikin_fit='infant'` (matches
+`PALS_TEST_CASE_04`'s existing pattern for the same checklist). `PALS_TEST_CASE_15`/`_16`
+were phantom testing-bank rows (`category='TBD'`, `narrative_status='not_indexed'`,
+0 references anywhere) — the real 2025 AHA testing bank is 14 cards, not 16 (pages
+137+ in the source scan are the Team Dynamics Debriefing Tool and ECG strips, not
+case cards). Archived via `is_active=false` (not deleted, per Archive-don't-delete).
