@@ -43,6 +43,7 @@ interface LabDayDetail {
   date: string;
   stations: { id: string; station_name: string; instructor_name: string | null }[];
   attendance_count?: number;
+  cert_course?: string | null;
 }
 
 interface EventDetailPanelProps {
@@ -192,6 +193,7 @@ export default function EventDetailPanel({ event, open, onClose }: EventDetailPa
             date: data.labDay.date,
             stations: data.labDay.stations || [],
             attendance_count: data.labDay.attendance_count,
+            cert_course: data.labDay.cert_course,
           });
         }
       })
@@ -410,6 +412,28 @@ export default function EventDetailPanel({ event, open, onClose }: EventDetailPa
               </Link>
             );
           })()}
+
+          {/* Open Hub — cert_course-aware, additive alongside "Open Lab Day".
+              For ACLS/PALS lab days, deep-links to the aggregated hub scoped
+              to this event's date instead of just the plain lab-day page. */}
+          {labDayDetail?.cert_course === 'acls' && (
+            <Link
+              href={`/labs/acls-hub?date=${encodeURIComponent(labDayDetail.date)}`}
+              className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/20 rounded-lg hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open ACLS Hub
+            </Link>
+          )}
+          {labDayDetail?.cert_course === 'pals' && (
+            <Link
+              href={`/labs/pals-hub?date=${encodeURIComponent(labDayDetail.date)}`}
+              className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open PALS Hub
+            </Link>
+          )}
 
           {/* Edit in Planner — pass the event's date so the planner
               lands on the right week instead of falling back to its
