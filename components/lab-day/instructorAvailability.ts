@@ -26,10 +26,18 @@ export function getAvailInfo(
   return undefined;
 }
 
-/** True when the given availability group should show by default (before
- * the operator opts into "Show all instructors"). */
-export function isDefaultVisibleGroup(group: InstructorAvailabilityEntry['group']): boolean {
-  return group === 'available' || group === 'volunteer';
+/** True when the given availability entry should show by default (before
+ * the operator opts into "Show all instructors"). Conflict entries whose
+ * conflicts don't cover the whole requested window (partial_day_conflict)
+ * stay visible too — a short class block shouldn't hide someone from every
+ * station all day; the amber conflict badge still surfaces via
+ * availabilitySuffix() so the operator can see why. */
+export function isDefaultVisibleGroup(
+  entry: Pick<InstructorAvailabilityEntry, 'group' | 'partial_day_conflict'>
+): boolean {
+  if (entry.group === 'available' || entry.group === 'volunteer') return true;
+  if (entry.group === 'conflict' && entry.partial_day_conflict) return true;
+  return false;
 }
 
 // Color/label convention per the endpoint's own doc comment:

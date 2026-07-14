@@ -1381,7 +1381,7 @@ export default function EditStationModal({
                   const available = (availabilityLoaded && !showAllInstructors)
                     ? notYetAdded.filter(i => {
                         const avail = getAvailInfo(availabilityMap, i);
-                        return !avail || isDefaultVisibleGroup(avail.group);
+                        return !avail || isDefaultVisibleGroup(avail);
                       })
                     : notYetAdded;
                   const staffInstructors = available.filter(i => i.role !== 'volunteer_instructor');

@@ -86,6 +86,7 @@ export async function GET(request: NextRequest) {
       conflicts: { source: string; title: string; start_time: string; end_time: string }[];
       same_day_hours: number;
       same_day_stations: { station_number: number; station_type: string }[];
+      partial_day_conflict: boolean;
     }>();
 
     for (const instr of allInstructors) {
@@ -101,6 +102,7 @@ export async function GET(request: NextRequest) {
         conflicts: [],
         same_day_hours: 0,
         same_day_stations: [],
+        partial_day_conflict: false,       // computed below once all conflicts are in
       });
     }
 
@@ -371,6 +373,45 @@ export async function GET(request: NextRequest) {
         // volunteer_events / volunteer_event_signups absent — skip
       }
     }
+
+    // Partial-day-conflict detection. `startTime`/`endTime` above is
+    // always the full requested lab-day window (callers pass a fixed
+    // 08:00-17:00 today — see app/labs/schedule/[id]/page.tsx and
+    // stations/new/page.tsx), not the actual narrower time of any one
+    // station/rotation. Without this, a single short class block (e.g.
+    // an 08:30-10:00 lecture) that merely overlaps somewhere inside
+    // that wide window flags the instructor "conflict" for the ENTIRE
+    // day and hides them from every station's picker by default, even
+    // when they're free for the rest of the day. (2026-07-14: this hid
+    // 5 full-time instructors — each with just one class block that
+    // whole week — from lab-day instructor selection.)
+    // Merge each instructor's conflict windows and check whether they
+    // fully cover [startTime, endTime): only then is this genuinely an
+    // all-day unavailability (e.g. LVFR Academy, a full class day, or
+    // several blocks that together leave no gap). A conflict that
+    // doesn't fully cover the window is "partial" — the instructor
+    // still needs the amber conflict badge, but shouldn't be hidden
+    // from the default picker.
+    const conflictsCoverWindow = (
+      conflicts: { start_time: string; end_time: string }[]
+    ): boolean => {
+      const intervals = conflicts
+        .filter(c => c.start_time && c.end_time)
+        .map(c => [c.start_time, c.end_time] as const)
+        .sort((a, b) => a[0].localeCompare(b[0]));
+      let cursor = startTime;
+      for (const [s, e] of intervals) {
+        if (s > cursor) return false; // gap before this interval
+        if (e > cursor) cursor = e;
+        if (cursor >= endTime) return true;
+      }
+      return cursor >= endTime;
+    };
+    instructorMap.forEach(v => {
+      if (v.conflicts.length > 0) {
+        v.partial_day_conflict = !conflictsCoverWindow(v.conflicts);
+      }
+    });
 
     // Group classification — runs after every signal has been
     // collected. Conflict trumps everything (operator must see the

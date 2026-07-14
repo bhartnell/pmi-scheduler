@@ -132,6 +132,12 @@ export interface InstructorAvailabilityEntry {
   conflicts: { source: string; title: string; start_time: string; end_time: string }[];
   same_day_hours: number;
   same_day_stations: { station_number: number; station_type: string }[];
+  // True when this instructor's conflicts don't fully cover the
+  // requested day window (e.g. one short class block, not an all-day
+  // commitment) — see the route's classification comment. Pickers use
+  // this to keep partial-conflict instructors visible by default
+  // instead of hiding them for the whole day over a brief overlap.
+  partial_day_conflict: boolean;
 }
 
 export interface LabDayRole {
