@@ -164,6 +164,19 @@ async function checkSourceExists(
   mapping: any
 ): Promise<boolean> {
   try {
+    // lvfr_assignment source_id is a composite "<assignment_id>:<role>" (see
+    // syncLvfrAssignment in lib/google-calendar.ts), not a bare row id — it
+    // needs its own lookup rather than a plain tableMap entry.
+    if (mapping.source_type === 'lvfr_assignment') {
+      const assignmentId = String(mapping.source_id).split(':')[0];
+      const { data } = await supabase
+        .from('lvfr_aemt_instructor_assignments')
+        .select('id')
+        .eq('id', assignmentId)
+        .maybeSingle();
+      return !!data;
+    }
+
     const tableMap: Record<string, string> = {
       station_assignment: 'station_instructors',
       lab_day_role: 'lab_day_roles',

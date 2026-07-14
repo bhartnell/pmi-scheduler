@@ -385,20 +385,18 @@ export async function POST(request: NextRequest) {
         const lvfrIdToEmail = new Map<string, string>();
         for (const u of lvfrUsers ?? []) lvfrIdToEmail.set(u.id, u.email);
 
-        // Fetch per-instructor custom times from plan_placements
-        const { data: placements } = await supabase
-          .from('lvfr_aemt_plan_placements')
-          .select('instructor_id, date, start_time, end_time, custom_title');
-
-        const placementMap = new Map<string, { start_time: string; end_time: string; custom_title?: string }>();
-        for (const p of placements ?? []) {
-          placementMap.set(`${p.instructor_id}:${p.date}`, {
-            start_time: p.start_time,
-            end_time: p.end_time,
-            custom_title: p.custom_title ?? undefined,
-          });
-        }
-
+        // NOTE: deliberately does NOT read lvfr_aemt_plan_placements for
+        // title/time overrides. That table is the LVFR course-planner's
+        // draft/drag-drop surface, not the calendar's source of truth
+        // (lvfr_aemt_instructor_assignments is — see docs/DATABASE_SCHEMA.md
+        // and the 2026-07-14 LVFR sync fix notes), and its rows can be stale
+        // or drawn from an abandoned draft plan instance. Sourcing titles/
+        // times from it is what put old per-lesson titles ("Ch 7: Human
+        // Body...") and stale times on instructors' calendars on 2026-07-11.
+        // Every LVFR event now gets the same generic "LVFR — Day N" title
+        // and the same daytime AM/PM fallback window (07:30-15:30, see
+        // PROGRAM_TIME_DEFAULTS.AEMT in lib/google-calendar.ts) that the
+        // other two sync call sites already use.
         for (const a of lvfrAssignments) {
           const rolePairs: Array<{ instrId: string | null; role: 'primary' | 'secondary' | 'additional' }> = [
             { instrId: a.primary_instructor_id, role: 'primary' },
@@ -417,21 +415,13 @@ export async function POST(request: NextRequest) {
               continue;
             }
 
-            const compositeId = `${a.id}:${role}`;
-            const { data: existingLvfrMapping } = await supabase
-              .from('google_calendar_events')
-              .select('id')
-              .ilike('user_email', email)
-              .eq('source_type', 'lvfr_assignment')
-              .eq('source_id', compositeId)
-              .single();
-
-            if (existingLvfrMapping) {
-              lvfrSkipped++;
-              continue;
-            }
-
-            const placement = placementMap.get(`${instrId}:${a.date}`);
+            // Always call syncLvfrAssignment — it internally checks for an
+            // existing mapping and PATCHes the Google event in place (same
+            // event ID, no delete+recreate) when one exists, or creates one
+            // when it doesn't. This is what makes "Sync All" self-healing:
+            // previously an existing mapping was skipped outright here, so
+            // a stale/wrong event created once could never be corrected by
+            // re-running this route.
             try {
               await syncLvfrAssignment({
                 userEmail: email,
@@ -439,9 +429,6 @@ export async function POST(request: NextRequest) {
                 role,
                 dayNumber: a.day_number,
                 date: a.date,
-                startTime: placement?.start_time || undefined,
-                endTime: placement?.end_time || undefined,
-                customTitle: placement?.custom_title || undefined,
               });
               lvfrSynced++;
             } catch {
