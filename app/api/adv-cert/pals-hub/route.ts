@@ -89,7 +89,7 @@ export async function GET(request: NextRequest) {
         .from('lab_stations')
         .select(`
           id, lab_day_id, station_number, custom_title, room, instructor_name, instructor_id,
-          rotation_minutes, num_rotations, station_notes,
+          rotation_minutes, num_rotations, station_notes, station_type,
           scenario:scenarios(id, title, case_code)
         `)
         .in('lab_day_id', labDayIds)
