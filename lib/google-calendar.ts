@@ -117,6 +117,16 @@ interface CalendarEventParams {
   startDateTime: string; // ISO 8601
   endDateTime: string;   // ISO 8601
   colorId?: string;
+  /** All-day event: YYYY-MM-DD start date (exclusive end is computed as +1 day unless allDayEndDate is set). Takes precedence over startDateTime/endDateTime when set. */
+  allDayDate?: string;
+  /** All-day event: exclusive end date (YYYY-MM-DD), for multi-day all-day events. Defaults to allDayDate + 1 day. */
+  allDayEndDate?: string;
+}
+
+function addOneDay(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().split('T')[0];
 }
 
 /**
@@ -127,6 +137,7 @@ export async function createGoogleEvent(
   params: CalendarEventParams
 ): Promise<string | null> {
   try {
+    const isAllDay = !!params.allDayDate;
     const response = await fetch(`${GOOGLE_CALENDAR_API}/calendars/primary/events`, {
       method: 'POST',
       headers: {
@@ -136,8 +147,8 @@ export async function createGoogleEvent(
       body: JSON.stringify({
         summary: params.summary,
         description: params.description || '',
-        start: { dateTime: params.startDateTime, timeZone: TIMEZONE },
-        end: { dateTime: params.endDateTime, timeZone: TIMEZONE },
+        start: isAllDay ? { date: params.allDayDate } : { dateTime: params.startDateTime, timeZone: TIMEZONE },
+        end: isAllDay ? { date: params.allDayEndDate || addOneDay(params.allDayDate!) } : { dateTime: params.endDateTime, timeZone: TIMEZONE },
         colorId: params.colorId,
         reminders: { useDefault: true },
       }),
@@ -577,6 +588,92 @@ export async function removeGeneralLabDefault(params: {
     await deleteEventMapping(params.userEmail, 'general_lab', params.labDayId);
   } catch (err) {
     console.error('[gcal] Error removing general-lab default:', err);
+  }
+}
+
+interface PalsAllDayParams {
+  userEmail: string;
+  labDayId: string; // lab_days.id for the PALS day — source_id, one event per instructor per day
+  date: string;      // YYYY-MM-DD
+  cohortLabel?: string;
+  dayLabel?: string; // e.g. "Day 1" / "Day 2"
+}
+
+/**
+ * Create the all-day PALS event for a paramedic instructor on a G14 PALS
+ * course day (7/16, 7/17 — Ben confirmed 2026-07-15: PALS replaces the
+ * instructor's regular classes on these dates). source_id is the PALS
+ * lab_days.id (one all-day event per instructor per PALS day). Idempotent
+ * (check-before-create) and rolls the Google event back if the mapping store
+ * fails, same guarantee as syncGeneralLabDefault. Does NOT touch the
+ * regular-class schedule_block rows — those are suppressed separately via
+ * pmi_schedule_blocks.status='cancelled' (the existing, already-wired
+ * suppression mechanism — see push-to-shared/feed.ics/instructor-blocks,
+ * which already filter it out).
+ */
+export async function syncPalsAllDayEvent(params: PalsAllDayParams): Promise<void> {
+  try {
+    if (!(await shouldSyncForUser(params.userEmail, 'sync_lab_assignments'))) return;
+
+    const existing = await getEventMapping(params.userEmail, 'pals_all_day', params.labDayId);
+    if (existing) return;
+
+    const accessToken = await getAccessTokenForUser(params.userEmail);
+    if (!accessToken) return;
+
+    const summary = params.cohortLabel
+      ? `PALS Certification — ${params.cohortLabel}${params.dayLabel ? ` (${params.dayLabel})` : ''}`
+      : 'PALS Certification';
+
+    const eventId = await createGoogleEvent(accessToken, {
+      summary,
+      description: 'PALS certification day — replaces regular classes on this date. Created by PMI EMS Scheduler.',
+      startDateTime: '',
+      endDateTime: '',
+      allDayDate: params.date,
+      colorId: COLOR_GENERAL_LAB,
+    });
+
+    if (eventId) {
+      const stored = await storeEventMapping({
+        user_email: params.userEmail,
+        google_event_id: eventId,
+        source_type: 'pals_all_day',
+        source_id: params.labDayId,
+        lab_day_id: params.labDayId,
+        event_summary: summary,
+      });
+      if (!stored) {
+        await deleteGoogleEvent(accessToken, eventId);
+        console.error(
+          `[gcal] PALS all-day mapping store failed for lab_day ${params.labDayId}; rolled back the Google event to prevent duplicates`
+        );
+      }
+    }
+  } catch (err) {
+    console.error('[gcal] Error syncing PALS all-day event:', err);
+  }
+}
+
+/**
+ * Remove the all-day PALS event for an instructor on a PALS day. Safe no-op
+ * if no mapping exists.
+ */
+export async function removePalsAllDayEvent(params: {
+  userEmail: string;
+  labDayId: string;
+}): Promise<void> {
+  try {
+    const mapping = await getEventMapping(params.userEmail, 'pals_all_day', params.labDayId);
+    if (!mapping) return;
+
+    const accessToken = await getAccessTokenForUser(params.userEmail);
+    if (accessToken) {
+      await deleteGoogleEvent(accessToken, mapping.google_event_id);
+    }
+    await deleteEventMapping(params.userEmail, 'pals_all_day', params.labDayId);
+  } catch (err) {
+    console.error('[gcal] Error removing PALS all-day event:', err);
   }
 }
 

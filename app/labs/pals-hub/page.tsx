@@ -54,6 +54,15 @@ interface CalEvent {
   event_type: string; instructor_names?: string[]; room?: string; linked_url?: string; status?: string;
 }
 
+// PALS days replace an instructor's regular classes on that date (Ben
+// confirmed 2026-07-15) — those schedule_block rows are suppressed via
+// pmi_schedule_blocks.status='cancelled' (the existing mechanism already used
+// by /calendar, push-to-shared, and feed.ics). /api/calendar/unified doesn't
+// filter cancelled server-side (the main /calendar page needs to be able to
+// show them via its own toggle), so filter them out here — the PALS Hub
+// schedule should only ever show what's actually happening on a PALS day.
+const isNotCancelled = (e: CalEvent) => e.status !== 'cancelled';
+
 const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : '');
 const prettyDate = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }); } catch { return d; } };
 
@@ -103,7 +112,7 @@ function PalsHubPageContent() {
           const end = hub.dates[hub.dates.length - 1];
           const uRes = await fetch(`/api/calendar/unified?cohort_id=${hub.cohort.id}&start=${start}&end=${end}&include=classes,labs,exams`);
           const u = await uRes.json();
-          setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date)));
+          setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date) && isNotCancelled(e)));
         } else {
           setEvents([]);
         }
