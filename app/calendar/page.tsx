@@ -1376,12 +1376,15 @@ function CalendarContent() {
           </span>
         )}
 
-        {/* ACLS Hub — read-only aggregator for the full ACLS event */}
+        {/* AHA Hub — read-only aggregator for ACLS + PALS events. Was a
+            direct link to /labs/acls-hub only; repointed so PALS is
+            reachable from the same toolbar button (Task Handoff Queue,
+            2026-07-15). */}
         <Link
-          href="/labs/acls-hub"
+          href="/labs/aha-hub"
           className="ml-auto inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-md bg-red-600 hover:bg-red-700 text-white"
         >
-          <GraduationCap className="h-3.5 w-3.5" /> ACLS Hub
+          <GraduationCap className="h-3.5 w-3.5" /> AHA Hub
         </Link>
 
         {/* Planning workspace — drag-to-arrange + publish (Stage 4b) */}
