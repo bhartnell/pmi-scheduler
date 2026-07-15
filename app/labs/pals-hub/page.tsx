@@ -115,6 +115,17 @@ function PalsHubPageContent() {
 
   const visibleDates = activeDate === 'all' ? dates : dates.filter(d => d === activeDate);
 
+  // Mirrors /labs/acls-hub: once a date has real sections (section_number > 1),
+  // hide that date's original unsectioned section-1 row from the aggregated
+  // view instead of double-displaying it. The row itself is never deleted —
+  // this is display-only, so a section build stays fully reversible.
+  const visibleLabDays = useMemo(() => {
+    const sectionedDates = new Set(
+      labDays.filter(d => (d.section_number ?? 1) > 1).map(d => d.date)
+    );
+    return labDays.filter(d => !((d.section_number ?? 1) === 1 && sectionedDates.has(d.date)));
+  }, [labDays]);
+
   // PALS TEAM-LEAD COVERAGE: each attempt's own student IS the tested team
   // lead (no separate team_lead column, unlike ACLS's megacode model — see
   // docs/pals/PALS_Grading_Model_Spec.md).
@@ -128,7 +139,7 @@ function PalsHubPageContent() {
   // threshold. Split attempts by the source lab_day's is_adv_cert_testing
   // flag to keep the two counts from bleeding into each other.
   const stats = useMemo(() => {
-    const testingDayIds = new Set(labDays.filter(d => d.is_adv_cert_testing).map(d => d.id));
+    const testingDayIds = new Set(visibleLabDays.filter(d => d.is_adv_cert_testing).map(d => d.id));
     const testingAttempts = attempts.filter(a => testingDayIds.has(a.lab_day_id));
     const practiceAttempts = attempts.filter(a => !testingDayIds.has(a.lab_day_id));
 
@@ -147,15 +158,15 @@ function PalsHubPageContent() {
     const covered = allStudents.filter(s => (practiceLeadCounts.get(s.id) || 0) >= PRACTICE_TL_REQUIRED);
     const notCovered = allStudents.filter(s => (practiceLeadCounts.get(s.id) || 0) < PRACTICE_TL_REQUIRED);
     const oversizedGroups = groups.filter(g => g.members.length > 6);
-    const sections = labDays.filter(d => (d.section_number ?? 1) > 1).length;
+    const sections = visibleLabDays.filter(d => (d.section_number ?? 1) > 1).length;
     return {
       passed, nr, groupsTested, totalGroups: groups.length,
       practiceLeadCounts, practiceTlRequired: PRACTICE_TL_REQUIRED,
       totalStudents: allStudents.length, coveredCount: covered.length, notCovered, oversizedGroups,
-      sections, labDaysCount: labDays.length, totalAttempts: attempts.length,
+      sections, labDaysCount: visibleLabDays.length, totalAttempts: attempts.length,
       practiceAttemptsCount: practiceAttempts.length, testingAttemptsCount: testingAttempts.length,
     };
-  }, [attempts, groups, labDays]);
+  }, [attempts, groups, visibleLabDays]);
 
   const attemptsByGroup = useMemo(() => {
     const m = new Map<string, Attempt[]>();
@@ -166,7 +177,7 @@ function PalsHubPageContent() {
   // By-instructor: every station assignment across all sections, grouped by name.
   const byInstructor = useMemo(() => {
     const m = new Map<string, { date: string; section: string; station: number; room: string | null; title: string }[]>();
-    for (const d of labDays) {
+    for (const d of visibleLabDays) {
       for (const st of d.stations) {
         const name = st.instructor_name?.trim();
         if (!name) continue;
@@ -182,7 +193,7 @@ function PalsHubPageContent() {
       }
     }
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
-  }, [labDays]);
+  }, [visibleLabDays]);
 
   if (status === 'loading') return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
   if (!session) return null;
@@ -251,7 +262,7 @@ function PalsHubPageContent() {
               <p className="text-sm mb-2">{dates.map(prettyDate).join('   ·   ')}</p>
               {dates.map((date, di) => {
                 const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-                const daySections = labDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
+                const daySections = visibleLabDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
                 return (
                   <div key={date} style={{ breakBefore: di > 0 ? 'page' : 'auto' }}>
                     <h2 className="text-base font-bold mt-3 mb-1">Day {di + 1} — {prettyDate(date)}</h2>
@@ -375,7 +386,7 @@ function PalsHubPageContent() {
             {/* Per day: schedule + sections */}
             {visibleDates.map((date) => {
               const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-              const daySections = labDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
+              const daySections = visibleLabDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
               return (
                 <section key={date} style={{ breakInside: 'avoid' }}>
                   <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
