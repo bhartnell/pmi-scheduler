@@ -27,13 +27,16 @@ import Link from 'next/link';
 import {
   ArrowLeft, Loader2, RefreshCw, Printer, CheckCircle2, XCircle, Clock,
   Users, UserCheck, MapPin, CalendarDays, Layers, Stethoscope, ClipboardCheck,
+  ClipboardList, AlertTriangle,
 } from 'lucide-react';
+import { palsAgendaForDay, PALS_DAY1_OVERFLOW_NOTE, type PalsAgendaBlock } from '@/lib/pals-day-structure';
 
 interface Member { id: string; first_name: string; last_name: string }
 interface Group { id: string; name: string; members: Member[] }
 interface Station {
   id: string; lab_day_id: string; station_number: number; custom_title: string | null;
   room: string | null; instructor_name: string | null; station_notes: string | null;
+  station_type?: string | null;
   scenario?: { id: string; title: string; case_code: string | null } | null;
 }
 interface LabDay {
@@ -394,6 +397,36 @@ function PalsHubPageContent() {
                     ))}
                   </div>
 
+                  {/* AHA 2025 reference agenda (PALS Hub Build Plan Phase 5) — a
+                      read-only, code-only transcription of
+                      docs/pals/PALS_2025_Day_Structure.md sections 1-2. This is
+                      NOT the live class schedule above (that comes from
+                      pmi_schedule_blocks via /api/calendar/unified) — it's shown
+                      so instructors can see the AHA-target agenda even when the
+                      live calendar for this day doesn't match it yet. Collapsed
+                      by default to avoid being mistaken for the live schedule. */}
+                  {(dates.indexOf(date) + 1 === 1 || dates.indexOf(date) + 1 === 2) && (
+                    <details className="mb-3 print:hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                      <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                        <ClipboardList className="w-3.5 h-3.5" /> AHA 2025 reference agenda (not the live schedule above — click to expand)
+                      </summary>
+                      <div className="divide-y divide-gray-100 dark:divide-gray-700 border-t border-gray-100 dark:border-gray-700">
+                        {palsAgendaForDay((dates.indexOf(date) + 1) as 1 | 2).map((b: PalsAgendaBlock, i: number) => (
+                          <div key={i} className="flex items-center gap-3 px-3 py-1 text-xs">
+                            <span className="font-mono text-gray-400 w-16 shrink-0">{b.start}</span>
+                            <span className="text-gray-400 w-14 shrink-0">{b.durationMinutes > 0 ? `${b.durationMinutes}m` : ''}</span>
+                            <span className={`text-gray-600 dark:text-gray-300 flex-1 ${b.type === 'lab' || b.type === 'testing' ? 'font-semibold' : ''}`}>{b.label}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {dates.indexOf(date) + 1 === 1 && (
+                        <div className="flex items-start gap-1.5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-200 dark:border-amber-800 rounded-b-lg">
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {PALS_DAY1_OVERFLOW_NOTE}
+                        </div>
+                      )}
+                    </details>
+                  )}
+
                   {/* Lab sections for the day — Ben builds these via the UI; this
                       view only displays what already exists, never creates any. */}
                   <div className="space-y-2">
@@ -418,22 +451,46 @@ function PalsHubPageContent() {
                               )}
                             </div>
                           </div>
-                          {/* Stations */}
+                          {/* Stations. station_type='skills' (Section A learning stations) are NOT
+                              graded in the app (attestation + printable competency sheet per AHA
+                              2025 — PALS Hub Build Plan Phase 5) — render as a plain card, not a
+                              link into the PASS/NR grading flow. Everything else (practice/testing
+                              scenario stations) keeps the existing "Grade" link. */}
                           {d.stations.length > 0 && (
                             <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
-                              {d.stations.map(st => (
-                                <Link
-                                  key={st.id}
-                                  href={`/labs/pals/grade?labDayId=${d.id}&stationId=${st.id}`}
-                                  className="block text-xs border border-gray-100 dark:border-gray-700 rounded p-1.5 hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors"
-                                >
-                                  <div className="font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
-                                    <MapPin className="w-3 h-3 text-gray-400" />#{st.station_number} {st.room || ''}
-                                  </div>
-                                  <div className="text-gray-500 dark:text-gray-400">{st.scenario?.case_code || st.scenario?.title || st.custom_title || '—'}</div>
-                                  <div className="text-gray-400">{st.instructor_name || '— unassigned —'}</div>
-                                </Link>
-                              ))}
+                              {d.stations.map(st => {
+                                const isSkills = st.station_type === 'skills';
+                                const body = (
+                                  <>
+                                    <div className="font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                                      <MapPin className="w-3 h-3 text-gray-400" />#{st.station_number} {st.room || ''}
+                                      {isSkills && (
+                                        <span className="ml-auto text-[9px] px-1 py-0.5 rounded bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 flex items-center gap-0.5">
+                                          <ClipboardList className="w-2.5 h-2.5" /> Attestation
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-gray-500 dark:text-gray-400">{st.scenario?.case_code || st.scenario?.title || st.custom_title || '—'}</div>
+                                    <div className="text-gray-400">{st.instructor_name || '— unassigned —'}</div>
+                                  </>
+                                );
+                                if (isSkills) {
+                                  return (
+                                    <div key={st.id} className="block text-xs border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-900/10 rounded p-1.5">
+                                      {body}
+                                    </div>
+                                  );
+                                }
+                                return (
+                                  <Link
+                                    key={st.id}
+                                    href={`/labs/pals/grade?labDayId=${d.id}&stationId=${st.id}`}
+                                    className="block text-xs border border-gray-100 dark:border-gray-700 rounded p-1.5 hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors"
+                                  >
+                                    {body}
+                                  </Link>
+                                );
+                              })}
                             </div>
                           )}
                           {dAttempts.length > 0 && (
