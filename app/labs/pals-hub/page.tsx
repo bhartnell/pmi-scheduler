@@ -63,6 +63,15 @@ const TYPE_COLOR: Record<string, string> = {
   exam: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200',
 };
 
+const AGENDA_TYPE_COLOR: Record<string, string> = {
+  lecture: 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-200',
+  practice: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200',
+  lab: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200',
+  testing: 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-200',
+  break: 'bg-gray-50 text-gray-400 dark:bg-gray-900 dark:text-gray-500',
+  lunch: 'bg-gray-50 text-gray-400 dark:bg-gray-900 dark:text-gray-500',
+};
+
 function PalsHubPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -76,6 +85,7 @@ function PalsHubPageContent() {
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeDate, setActiveDate] = useState<string>('all');
+  const [instructors, setInstructors] = useState<{ id: string; name: string; email: string }[]>([]);
 
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/signin'); }, [status, router]);
 
@@ -112,6 +122,34 @@ function PalsHubPageContent() {
   }, []);
 
   useEffect(() => { if (status === 'authenticated') load(); }, [load, status]);
+
+  // Instructor picker (Task Handoff Queue: "PALS HUB POLISH") — reference-only
+  // display, pulled from the same lab_users list the rest of lab management
+  // uses. Deliberately PATCHes instructor_name only (no instructor_email), so
+  // it does NOT trigger the calendar-sync/notification side effects that
+  // /api/lab-management/stations/[id] runs for a full assignment — this is
+  // just a quick label for Ben to see who's running each station, not a
+  // replacement for the per-section Assign/Edit flow.
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/lab-management/instructors')
+      .then(r => r.json())
+      .then(d => { if (d.success) setInstructors(d.instructors || []); })
+      .catch(() => { /* non-blocking */ });
+  }, [status]);
+
+  const updateStationInstructor = useCallback((labDayId: string, stationId: string, name: string) => {
+    const value = name.trim() || null;
+    setLabDays(prev => prev.map(d => d.id !== labDayId ? d : {
+      ...d,
+      stations: d.stations.map(st => st.id === stationId ? { ...st, instructor_name: value } : st),
+    }));
+    fetch(`/api/lab-management/stations/${stationId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ instructor_name: value }),
+    }).catch(() => { /* best-effort; Refresh reconciles */ });
+  }, []);
 
   const visibleDates = activeDate === 'all' ? dates : dates.filter(d => d === activeDate);
 
@@ -382,50 +420,53 @@ function PalsHubPageContent() {
                     <CalendarDays className="w-4 h-4 text-emerald-600" /> Day {dates.indexOf(date) + 1} — {prettyDate(date)}
                   </h2>
 
-                  {/* Schedule (didactic + labs together) */}
-                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 mb-3">
-                    {dayEvents.length === 0 ? (
-                      <div className="p-3 text-xs text-gray-400">No schedule blocks found for this day.</div>
-                    ) : dayEvents.map(e => (
-                      <div key={e.id} className="flex items-center gap-3 px-3 py-1.5 text-sm">
-                        <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${TYPE_COLOR[e.event_type] || TYPE_COLOR.class}`}>{e.event_type}</span>
-                        <span className="text-gray-800 dark:text-gray-100 flex-1">{e.title}</span>
-                        {e.room && <span className="text-xs text-gray-400 hidden sm:inline">{e.room}</span>}
-                        {e.instructor_names && e.instructor_names.length > 0 && <span className="text-xs text-gray-400 hidden md:inline">{e.instructor_names.join(', ')}</span>}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* AHA 2025 reference agenda (PALS Hub Build Plan Phase 5) — a
-                      read-only, code-only transcription of
-                      docs/pals/PALS_2025_Day_Structure.md sections 1-2. This is
-                      NOT the live class schedule above (that comes from
-                      pmi_schedule_blocks via /api/calendar/unified) — it's shown
-                      so instructors can see the AHA-target agenda even when the
-                      live calendar for this day doesn't match it yet. Collapsed
-                      by default to avoid being mistaken for the live schedule. */}
+                  {/* PALS lesson-by-lesson agenda — PRIMARY day-of schedule
+                      (Task Handoff Queue: "PALS HUB POLISH"). This is the
+                      AHA 2025 agenda (docs/pals/PALS_2025_Day_Structure.md),
+                      not pulled from pmi_schedule_blocks — on a PALS day the
+                      live calendar schedule below often still shows the
+                      instructors' regular classes (which PALS replaces on
+                      these dates), so the real day plan lives here instead. */}
                   {(dates.indexOf(date) + 1 === 1 || dates.indexOf(date) + 1 === 2) && (
-                    <details className="mb-3 print:hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-                        <ClipboardList className="w-3.5 h-3.5" /> AHA 2025 reference agenda (not the live schedule above — click to expand)
-                      </summary>
-                      <div className="divide-y divide-gray-100 dark:divide-gray-700 border-t border-gray-100 dark:border-gray-700">
-                        {palsAgendaForDay((dates.indexOf(date) + 1) as 1 | 2).map((b: PalsAgendaBlock, i: number) => (
-                          <div key={i} className="flex items-center gap-3 px-3 py-1 text-xs">
-                            <span className="font-mono text-gray-400 w-16 shrink-0">{b.start}</span>
-                            <span className="text-gray-400 w-14 shrink-0">{b.durationMinutes > 0 ? `${b.durationMinutes}m` : ''}</span>
-                            <span className={`text-gray-600 dark:text-gray-300 flex-1 ${b.type === 'lab' || b.type === 'testing' ? 'font-semibold' : ''}`}>{b.label}</span>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 mb-3">
+                      {palsAgendaForDay((dates.indexOf(date) + 1) as 1 | 2).map((b: PalsAgendaBlock, i: number) => (
+                        <div key={i} className="flex items-center gap-3 px-3 py-1.5 text-sm">
+                          <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-28 shrink-0">{b.start}{b.durationMinutes > 0 ? ` (${b.durationMinutes}m)` : ''}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${AGENDA_TYPE_COLOR[b.type] || AGENDA_TYPE_COLOR.lecture}`}>{b.type}</span>
+                          <span className={`text-gray-800 dark:text-gray-100 flex-1 ${b.type === 'lab' || b.type === 'testing' ? 'font-semibold' : ''}`}>{b.label}</span>
+                        </div>
+                      ))}
                       {dates.indexOf(date) + 1 === 1 && (
-                        <div className="flex items-start gap-1.5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-200 dark:border-amber-800 rounded-b-lg">
+                        <div className="flex items-start gap-1.5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20">
                           <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {PALS_DAY1_OVERFLOW_NOTE}
                         </div>
                       )}
-                    </details>
+                    </div>
                   )}
+
+                  {/* Live calendar schedule — secondary reference, collapsed.
+                      Should read empty on PALS days once the class-suppression
+                      sync (Task Handoff Queue part 3, PR #45 + Sync All)
+                      reaches Google/the live calendar; kept as a fallback in
+                      case anything else lands on the calendar for this date. */}
+                  <details className="mb-3 print:hidden bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <summary className="cursor-pointer select-none px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
+                      <ClipboardList className="w-3.5 h-3.5" /> Live calendar schedule ({dayEvents.length}) — click to expand
+                    </summary>
+                    <div className="divide-y divide-gray-100 dark:divide-gray-700 border-t border-gray-100 dark:border-gray-700">
+                      {dayEvents.length === 0 ? (
+                        <div className="p-3 text-xs text-gray-400">No schedule blocks found for this day.</div>
+                      ) : dayEvents.map(e => (
+                        <div key={e.id} className="flex items-center gap-3 px-3 py-1.5 text-sm">
+                          <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${TYPE_COLOR[e.event_type] || TYPE_COLOR.class}`}>{e.event_type}</span>
+                          <span className="text-gray-800 dark:text-gray-100 flex-1">{e.title}</span>
+                          {e.room && <span className="text-xs text-gray-400 hidden sm:inline">{e.room}</span>}
+                          {e.instructor_names && e.instructor_names.length > 0 && <span className="text-xs text-gray-400 hidden md:inline">{e.instructor_names.join(', ')}</span>}
+                        </div>
+                      ))}
+                    </div>
+                  </details>
 
                   {/* Lab sections for the day — Ben builds these via the UI; this
                       view only displays what already exists, never creates any. */}
@@ -471,24 +512,42 @@ function PalsHubPageContent() {
                                       )}
                                     </div>
                                     <div className="text-gray-500 dark:text-gray-400">{st.scenario?.case_code || st.scenario?.title || st.custom_title || '—'}</div>
-                                    <div className="text-gray-400">{st.instructor_name || '— unassigned —'}</div>
                                   </>
                                 );
-                                if (isSkills) {
-                                  return (
-                                    <div key={st.id} className="block text-xs border border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-900/10 rounded p-1.5">
-                                      {body}
-                                    </div>
-                                  );
-                                }
-                                return (
-                                  <Link
-                                    key={st.id}
-                                    href={`/labs/pals/grade?labDayId=${d.id}&stationId=${st.id}`}
-                                    className="block text-xs border border-gray-100 dark:border-gray-700 rounded p-1.5 hover:border-emerald-300 dark:hover:border-emerald-700 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 transition-colors"
+                                // Instructor picker: reference-only display (Task Handoff
+                                // Queue "PALS HUB POLISH") — kept outside the grade-link
+                                // <Link> below so picking a name doesn't navigate away.
+                                const picker = (
+                                  <select
+                                    value={st.instructor_name || ''}
+                                    onChange={(e) => updateStationInstructor(d.id, st.id, e.target.value)}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="mt-1 w-full text-[11px] bg-transparent border border-gray-200 dark:border-gray-600 rounded px-1 py-0.5 text-gray-500 dark:text-gray-400 print:hidden"
                                   >
-                                    {body}
-                                  </Link>
+                                    <option value="">— unassigned —</option>
+                                    {st.instructor_name && !instructors.some(i => i.name === st.instructor_name) && (
+                                      <option value={st.instructor_name}>{st.instructor_name} (not in list)</option>
+                                    )}
+                                    {instructors.map(i => <option key={i.id} value={i.name}>{i.name}</option>)}
+                                  </select>
+                                );
+                                return (
+                                  <div
+                                    key={st.id}
+                                    className={`text-xs border rounded p-1.5 ${isSkills ? 'border-amber-200 dark:border-amber-800 bg-amber-50/40 dark:bg-amber-900/10' : 'border-gray-100 dark:border-gray-700'}`}
+                                  >
+                                    {isSkills ? (
+                                      <div>{body}</div>
+                                    ) : (
+                                      <Link
+                                        href={`/labs/pals/grade?labDayId=${d.id}&stationId=${st.id}`}
+                                        className="block hover:text-emerald-700 dark:hover:text-emerald-300 transition-colors"
+                                      >
+                                        {body}
+                                      </Link>
+                                    )}
+                                    {picker}
+                                  </div>
                                 );
                               })}
                             </div>
