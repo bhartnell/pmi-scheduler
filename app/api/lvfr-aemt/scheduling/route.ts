@@ -181,6 +181,16 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: 'Day not found' }, { status: 404 });
   }
 
+  // Capture the prior primary/secondary BEFORE the upsert so a reassignment
+  // can delete the outgoing instructor's stale Google Calendar event instead
+  // of leaving it behind forever (removeLvfrAssignment was previously never
+  // called from here — reassigning/unassigning left phantom events).
+  const { data: previousAssignment } = await supabase
+    .from('lvfr_aemt_instructor_assignments')
+    .select('primary_instructor_id, secondary_instructor_id')
+    .eq('day_number', day_number)
+    .maybeSingle();
+
   const { error } = await supabase
     .from('lvfr_aemt_instructor_assignments')
     .upsert({
@@ -203,7 +213,7 @@ export async function PUT(request: NextRequest) {
   // still swallowed so a Google hiccup never fails the assignment save.
   await (async () => {
     try {
-      const { syncLvfrAssignment } = await import('@/lib/google-calendar');
+      const { syncLvfrAssignment, removeLvfrAssignment } = await import('@/lib/google-calendar');
       const supabase2 = getSupabaseAdmin();
 
       // Fetch the upserted row to get its UUID (needed for the composite source_id)
@@ -220,7 +230,24 @@ export async function PUT(request: NextRequest) {
         { instrId: assignment.secondary_instructor_id, role: 'secondary' },
       ];
 
-      const instrIds = rolePairs.map(r => r.instrId).filter(Boolean) as string[];
+      // Anyone who held primary/secondary before this save and no longer
+      // holds that same role needs their old Google event removed —
+      // otherwise a reassignment or unassignment leaves a phantom event on
+      // the outgoing instructor's calendar forever.
+      const outgoing: Array<{ instrId: string; role: 'primary' | 'secondary' }> = [];
+      if (previousAssignment?.primary_instructor_id &&
+          previousAssignment.primary_instructor_id !== assignment.primary_instructor_id) {
+        outgoing.push({ instrId: previousAssignment.primary_instructor_id, role: 'primary' });
+      }
+      if (previousAssignment?.secondary_instructor_id &&
+          previousAssignment.secondary_instructor_id !== assignment.secondary_instructor_id) {
+        outgoing.push({ instrId: previousAssignment.secondary_instructor_id, role: 'secondary' });
+      }
+
+      const instrIds = [
+        ...rolePairs.map(r => r.instrId),
+        ...outgoing.map(o => o.instrId),
+      ].filter(Boolean) as string[];
       if (instrIds.length === 0) return;
 
       const { data: users } = await supabase2
@@ -230,6 +257,12 @@ export async function PUT(request: NextRequest) {
 
       const idToEmail = new Map<string, string>();
       for (const u of users ?? []) idToEmail.set(u.id as string, u.email as string);
+
+      for (const { instrId, role } of outgoing) {
+        const email = idToEmail.get(instrId);
+        if (!email) continue;
+        await removeLvfrAssignment({ userEmail: email, assignmentId: assignment.id, role });
+      }
 
       for (const { instrId, role } of rolePairs) {
         if (!instrId) continue;
