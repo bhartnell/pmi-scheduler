@@ -11636,6 +11636,14 @@ migrated (8 practice + 6 testing); the 3 `*_cert_tier_check` constraints now rea
   (`pass|fail|remediated`), `verified_by`, `verified_at`,
   `instructor_initials`/`instructor_number`, `signature`, `remediation_notes`,
   `client_uuid` UNIQUE. UNIQUE `(student_id, skill_key, cert_course)`.
+- **`pals_agenda_instructors`** (added 2026-07-16) — reference-only instructor
+  label for the day-of DIDACTIC/VIDEO LESSON ROWS (L1-L10 style) in
+  `/labs/pals-hub`, mirroring `lab_stations.instructor_name` (PR #46) for rows
+  that have no other DB backing — the agenda itself is static reference data
+  in `lib/pals-day-structure.ts` (`PalsAgendaBlock.id`). `cohort_id` FK
+  (CASCADE), `date`, `block_id` text (matches `PalsAgendaBlock.id`),
+  `instructor_name`. UNIQUE `(cohort_id, date, block_id)`. No
+  calendar/availability side effects — same pattern as the station picker.
 
 **Content loaded (importer `scripts/import-pals-seed.js` from
 `docs/pals/pals_scenario_seed.json`):** 12 checklists · 150 criteria · 32
