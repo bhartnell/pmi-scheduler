@@ -95,6 +95,7 @@ function PalsHubPageContent() {
   const [loading, setLoading] = useState(true);
   const [activeDate, setActiveDate] = useState<string>('all');
   const [instructors, setInstructors] = useState<{ id: string; name: string; email: string }[]>([]);
+  const [agendaInstructors, setAgendaInstructors] = useState<Record<string, string>>({});
 
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/signin'); }, [status, router]);
 
@@ -123,6 +124,19 @@ function PalsHubPageContent() {
           const uRes = await fetch(`/api/calendar/unified?cohort_id=${hub.cohort.id}&start=${start}&end=${end}&include=classes,labs,exams`);
           const u = await uRes.json();
           setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date) && isNotCancelled(e)));
+
+          // Reference-only instructor assignments for the didactic agenda rows
+          // (Task Handoff Queue: "PALS hub - instructor picker on DIDACTIC
+          // AGENDA ROWS") — keyed date|blockId to match palsAgendaForDay's ids.
+          const aiRes = await fetch(`/api/adv-cert/pals-hub/agenda-instructors?cohortId=${hub.cohort.id}&start=${start}&end=${end}`);
+          const ai = await aiRes.json();
+          if (ai.success) {
+            const map: Record<string, string> = {};
+            for (const a of ai.assignments || []) {
+              if (a.instructor_name) map[`${a.date}|${a.block_id}`] = a.instructor_name;
+            }
+            setAgendaInstructors(map);
+          }
         } else {
           setEvents([]);
         }
@@ -159,6 +173,27 @@ function PalsHubPageContent() {
       body: JSON.stringify({ instructor_name: value }),
     }).catch(() => { /* best-effort; Refresh reconciles */ });
   }, []);
+
+  // Instructor picker for the didactic/video LESSON ROWS (Task Handoff
+  // Queue: "PALS hub - instructor picker on DIDACTIC AGENDA ROWS") — same
+  // reference-only pattern as updateStationInstructor above, just against
+  // the new pals_agenda_instructors table since these rows have no other
+  // DB backing.
+  const updateAgendaInstructor = useCallback((date: string, blockId: string, name: string) => {
+    const value = name.trim() || null;
+    const key = `${date}|${blockId}`;
+    setAgendaInstructors(prev => {
+      const next = { ...prev };
+      if (value) next[key] = value; else delete next[key];
+      return next;
+    });
+    if (!cohort?.id) return;
+    fetch('/api/adv-cert/pals-hub/agenda-instructors', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cohortId: cohort.id, date, blockId, instructorName: value }),
+    }).catch(() => { /* best-effort; Refresh reconciles */ });
+  }, [cohort]);
 
   const visibleDates = activeDate === 'all' ? dates : dates.filter(d => d === activeDate);
 
@@ -449,13 +484,30 @@ function PalsHubPageContent() {
                       these dates), so the real day plan lives here instead. */}
                   {(dates.indexOf(date) + 1 === 1 || dates.indexOf(date) + 1 === 2) && (
                     <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 mb-3">
-                      {palsAgendaForDay((dates.indexOf(date) + 1) as 1 | 2).map((b: PalsAgendaBlock, i: number) => (
-                        <div key={i} className="flex items-center gap-3 px-3 py-1.5 text-sm">
-                          <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-28 shrink-0">{b.start}{b.durationMinutes > 0 ? ` (${b.durationMinutes}m)` : ''}</span>
-                          <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${AGENDA_TYPE_COLOR[b.type] || AGENDA_TYPE_COLOR.lecture}`}>{b.type}</span>
-                          <span className={`text-gray-800 dark:text-gray-100 flex-1 ${b.type === 'lab' || b.type === 'testing' ? 'font-semibold' : ''}`}>{b.label}</span>
-                        </div>
-                      ))}
+                      {palsAgendaForDay((dates.indexOf(date) + 1) as 1 | 2).map((b: PalsAgendaBlock) => {
+                        const showPicker = b.type !== 'break' && b.type !== 'lunch';
+                        const current = agendaInstructors[`${date}|${b.id}`] || '';
+                        return (
+                          <div key={b.id} className="flex items-center gap-3 px-3 py-1.5 text-sm">
+                            <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-28 shrink-0">{b.start}{b.durationMinutes > 0 ? ` (${b.durationMinutes}m)` : ''}</span>
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${AGENDA_TYPE_COLOR[b.type] || AGENDA_TYPE_COLOR.lecture}`}>{b.type}</span>
+                            <span className={`text-gray-800 dark:text-gray-100 flex-1 ${b.type === 'lab' || b.type === 'testing' ? 'font-semibold' : ''}`}>{b.label}</span>
+                            {showPicker && (
+                              <select
+                                value={current}
+                                onChange={(e) => updateAgendaInstructor(date, b.id, e.target.value)}
+                                className="shrink-0 w-40 text-[11px] bg-transparent border border-gray-200 dark:border-gray-600 rounded px-1 py-0.5 text-gray-500 dark:text-gray-400 print:hidden"
+                              >
+                                <option value="">— unassigned —</option>
+                                {current && !instructors.some(i => i.name === current) && (
+                                  <option value={current}>{current} (not in list)</option>
+                                )}
+                                {instructors.map(i => <option key={i.id} value={i.name}>{i.name}</option>)}
+                              </select>
+                            )}
+                          </div>
+                        );
+                      })}
                       {dates.indexOf(date) + 1 === 1 && (
                         <div className="flex items-start gap-1.5 px-3 py-2 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20">
                           <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" /> {PALS_DAY1_OVERFLOW_NOTE}
