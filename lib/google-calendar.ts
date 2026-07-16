@@ -677,6 +677,101 @@ export async function removePalsAllDayEvent(params: {
   }
 }
 
+interface PalsDayParams {
+  userEmail: string;
+  /** `${cohort_id}:${date}` — ONE scheduled block per instructor per REAL PALS
+   *  date (NOT per section-day; sections live in the hub, not the calendar). */
+  sourceId: string;
+  date: string;      // YYYY-MM-DD
+  cohortLabel?: string;
+  dayLabel?: string; // "Day 1" / "Day 2" — the REAL course day, not section_number
+}
+
+// Real PALS course-day hours (Ben, 2026-07-15): a scheduled block, not an
+// all-day tag, so it sits in the day grid like the lab-section events.
+const PALS_DAY_START_TIME = '08:30';
+const PALS_DAY_END_TIME = '16:30';
+
+/**
+ * Create the SCHEDULED (08:30-16:30) PALS day-block event for an instructor on
+ * a real PALS course date. Replaces the old all-day per-section 'pals_all_day'
+ * model (which rendered as cramped stacked all-day bars and mislabeled the day
+ * from section_number). source_id = `${cohort_id}:${date}` → exactly one event
+ * per instructor per real PALS date, idempotent (check-before-create), and rolls
+ * the Google event back if the mapping store fails (same guarantee as the other
+ * sync primitives). Does NOT touch the regular-class schedule_block rows.
+ */
+export async function syncPalsDayEvent(params: PalsDayParams): Promise<void> {
+  try {
+    if (!(await shouldSyncForUser(params.userEmail, 'sync_lab_assignments'))) return;
+
+    const existing = await getEventMapping(params.userEmail, 'pals_day', params.sourceId);
+    if (existing) return;
+
+    const accessToken = await getAccessTokenForUser(params.userEmail);
+    if (!accessToken) return;
+
+    const { startDateTime, endDateTime } = buildDateTimes(
+      params.date,
+      PALS_DAY_START_TIME,
+      PALS_DAY_END_TIME,
+      'PM',
+    );
+
+    const summary = params.cohortLabel
+      ? `PALS Certification — ${params.cohortLabel}${params.dayLabel ? ` (${params.dayLabel})` : ''}`
+      : `PALS Certification${params.dayLabel ? ` (${params.dayLabel})` : ''}`;
+
+    const eventId = await createGoogleEvent(accessToken, {
+      summary,
+      description: 'PALS certification day — replaces regular classes on this date. Created by PMI EMS Scheduler.',
+      startDateTime,
+      endDateTime,
+      colorId: COLOR_GENERAL_LAB,
+    });
+
+    if (eventId) {
+      const stored = await storeEventMapping({
+        user_email: params.userEmail,
+        google_event_id: eventId,
+        source_type: 'pals_day',
+        source_id: params.sourceId,
+        event_summary: summary,
+      });
+      if (!stored) {
+        await deleteGoogleEvent(accessToken, eventId);
+        console.error(
+          `[gcal] PALS day mapping store failed for ${params.sourceId}; rolled back the Google event to prevent duplicates`
+        );
+      }
+    }
+  } catch (err) {
+    console.error('[gcal] Error syncing PALS day event:', err);
+  }
+}
+
+/**
+ * Remove the scheduled PALS day-block event for an instructor on a real PALS
+ * date. Safe no-op if no mapping exists.
+ */
+export async function removePalsDayEvent(params: {
+  userEmail: string;
+  sourceId: string;
+}): Promise<void> {
+  try {
+    const mapping = await getEventMapping(params.userEmail, 'pals_day', params.sourceId);
+    if (!mapping) return;
+
+    const accessToken = await getAccessTokenForUser(params.userEmail);
+    if (accessToken) {
+      await deleteGoogleEvent(accessToken, mapping.google_event_id);
+    }
+    await deleteEventMapping(params.userEmail, 'pals_day', params.sourceId);
+  } catch (err) {
+    console.error('[gcal] Error removing PALS day event:', err);
+  }
+}
+
 /**
  * Remove a Google Calendar event for a station assignment.
  */

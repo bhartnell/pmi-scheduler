@@ -452,15 +452,17 @@ export async function POST(request: NextRequest) {
       console.error('General-lab-default sync block failed:', err);
     }
 
-    // 7. PALS all-day events: instructors whose regular class is replaced by
-    //    a PALS course day get an all-day "PALS Certification" event.
-    //    Idempotent, cohort-scoped/repeatable (not G14/date-hardcoded).
-    let palsAllDay = { created: 0, instructors: 0, palsDays: 0 };
+    // 7. PALS day-block events: ONE scheduled 08:30-16:30 block per REAL PALS
+    //    course date (Day 1/Day 2), for instructors whose regular class that
+    //    date is replaced. Also RECONCILES away the deprecated per-section
+    //    all-day 'pals_all_day' events (the ~40-event flood). Idempotent,
+    //    cohort-scoped/repeatable (not G14/date-hardcoded).
+    let palsDay = { created: 0, removed: 0, instructors: 0, palsDays: 0 };
     try {
-      const { syncPalsAllDayEvents } = await import('@/lib/pals-all-day-sync');
-      palsAllDay = await syncPalsAllDayEvents(supabase, targetEmail ? { targetEmail } : {});
+      const { syncPalsDayEvents } = await import('@/lib/pals-all-day-sync');
+      palsDay = await syncPalsDayEvents(supabase, targetEmail ? { targetEmail } : {});
     } catch (err) {
-      console.error('PALS all-day sync block failed:', err);
+      console.error('PALS day sync block failed:', err);
     }
 
     return NextResponse.json({
@@ -475,13 +477,16 @@ export async function POST(request: NextRequest) {
       lvfr_failed: lvfrFailed,
       lvfr_skipped: lvfrSkipped,
       general_lab_created: generalLab.created,
+      general_lab_removed: generalLab.removed,
       general_lab_skipped: generalLab.skipped,
-      pals_all_day_created: palsAllDay.created,
+      pals_day_created: palsDay.created,
+      pals_all_day_removed: palsDay.removed,
       users_touched: usersTouched.size,
       message:
         `Bulk sync complete: ${synced} events created, ${seriesSynced} class series ` +
         `created, ${seriesUpdated} series updated, ${lvfrSynced} LVFR events created, ` +
-        `${generalLab.created} general-lab events created, ${palsAllDay.created} PALS all-day events created, ` +
+        `${generalLab.created} general-lab events created, ${generalLab.removed} general-lab removed, ` +
+        `${palsDay.created} PALS day-blocks created, ${palsDay.removed} old PALS all-day removed, ` +
         `${failed + seriesFailed + lvfrFailed} failed, ${skipped + lvfrSkipped} skipped`,
     });
   } catch (error) {

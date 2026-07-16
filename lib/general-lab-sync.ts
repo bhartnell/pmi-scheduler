@@ -48,7 +48,7 @@ export async function syncGeneralLabDefaults(
   const { data: labDays } = await supabase
     .from('lab_days')
     .select(`
-      id, date, title, start_time, end_time,
+      id, date, title, start_time, end_time, cert_course, is_archived,
       cohort:cohorts!inner(
         cohort_number,
         program:programs!inner(abbreviation)
@@ -98,7 +98,19 @@ export async function syncGeneralLabDefaults(
         stationLabDayIds.has(ld.id as string) ||
         roleLabDayIds.has(ld.id as string);
 
-      if (hasMoreSpecific) {
+      // PALS course days + archived days must NOT carry a general-lab event:
+      // PALS gets its own scheduled day-block (syncPalsDayEvents), and archived
+      // days shouldn't surface at all. Remove any existing general_lab there
+      // (the 24 wrong PALS general_lab events + the archived leftover's) and
+      // never create one. Scoped to THIS lab day only — the ~54 real
+      // paramedic-lab general_lab events on non-PALS days are untouched.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const isPalsOrArchived = (ld as any).cert_course === 'pals' || (ld as any).is_archived === true;
+
+      if (isPalsOrArchived) {
+        await removeGeneralLabDefault({ userEmail: email, labDayId: ld.id as string });
+        counts.removed++;
+      } else if (hasMoreSpecific) {
         // A station/role represents this instructor that day — ensure no
         // duplicate general-lab event lingers.
         await removeGeneralLabDefault({ userEmail: email, labDayId: ld.id as string });

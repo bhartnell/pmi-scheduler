@@ -1,34 +1,60 @@
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { syncPalsAllDayEvent } from '@/lib/google-calendar';
+import { syncPalsDayEvent, removePalsAllDayEvent } from '@/lib/google-calendar';
 
 /**
- * All-day PALS event generation pass (Task Handoff Queue, PALS HUB FUNCTION
- * restructure task part 2 — Ben confirmed 2026-07-15).
+ * PALS calendar day-block generation + reconcile pass (Task Handoff Queue,
+ * "CALENDAR EVENT MODEL" — Ben, 2026-07-16).
  *
- * For every PALS course day (lab_days.cert_course='pals', upcoming), find the
- * instructors whose REGULAR class that cohort/date is being replaced by PALS
- * (i.e. whoever is assigned to a pmi_schedule_blocks row for that cohort on
- * that exact date — regardless of the row's status, since the corresponding
- * suppression flips those rows to 'cancelled' separately) and give each of
- * them an all-day "PALS Certification" event on their personal Google
- * Calendar for that date. Idempotent (check-before-create via
- * syncPalsAllDayEvent's mapping check) and cohort-scoped/repeatable — this is
- * NOT hardcoded to G14 or 7/16-7/17; any future cohort's PALS days get the
- * same treatment automatically the next time this runs.
+ * Replaces the old per-section ALL-DAY 'pals_all_day' model, which flooded the
+ * calendar: each of the 6 PALS section-days emitted one pals_all_day event per
+ * instructor (+ the general-lab pass added 4 more per day), ~40 events total,
+ * with the day mislabeled from section_number ("Day 4"). Ben wants exactly ONE
+ * SCHEDULED 08:30-16:30 time-block per REAL PALS course DATE (7/16 = Day 1,
+ * 7/17 = Day 2), titled by real course day — sections belong in the hub, not the
+ * calendar.
  *
- * Deliberately does NOT touch pmi_schedule_blocks itself — suppressing the
- * regular class occurrences is the existing, separately-authorized
- * status='cancelled' mechanism (already wired through /calendar,
- * push-to-shared, feed.ics, and the personal-calendar RRULE/RDATE sync via
- * lib/instructor-blocks.ts). This pass only ADDS the all-day PALS event.
+ * This pass does two things, both idempotent + cohort-scoped (not G14-hardcoded):
+ *   1. RECONCILE: delete every existing 'pals_all_day' mapping (Google event +
+ *      DB row). The whole all-day model is deprecated, so all of them are stale.
+ *      Strictly scoped to source_type='pals_all_day' — never touches general_lab,
+ *      station, role, or any other event. (The general-lab-on-PALS-day cleanup —
+ *      the 24 wrong general_lab events — lives in syncGeneralLabDefaults, which
+ *      now removes general_lab for cert_course='pals' + is_archived lab days.)
+ *   2. GENERATE: for every REAL, NON-ARCHIVED PALS date, one scheduled
+ *      08:30-16:30 'pals_day' block per instructor whose regular class that date
+ *      is replaced. Day label = index into the cohort's UNIQUE sorted dates
+ *      (fixes the "Day 4" section-index bug).
+ *
+ * NOTE ON GOOGLE EXECUTION: the removePalsAllDayEvent / syncPalsDayEvent calls
+ * perform the actual Google delete/create when run with a valid OAuth token
+ * (i.e. from Ben's authenticated "Sync All"). A sandbox with no OAuth session is
+ * a safe no-op per call — nothing is deleted without credentials.
  */
-export async function syncPalsAllDayEvents(
+export async function syncPalsDayEvents(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   opts: { targetEmail?: string } = {},
-): Promise<{ created: number; instructors: number; palsDays: number }> {
-  const counts = { created: 0, instructors: 0, palsDays: 0 };
+): Promise<{ created: number; removed: number; instructors: number; palsDays: number }> {
+  const counts = { created: 0, removed: 0, instructors: 0, palsDays: 0 };
   const today = new Date().toISOString().split('T')[0];
 
+  // ── 1. RECONCILE — remove the deprecated per-section all-day events. ──
+  let oldQuery = supabase
+    .from('google_calendar_events')
+    .select('user_email, source_id')
+    .eq('source_type', 'pals_all_day');
+  if (opts.targetEmail) oldQuery = oldQuery.ilike('user_email', opts.targetEmail);
+  const { data: oldPals } = await oldQuery;
+  for (const r of oldPals ?? []) {
+    // source_id for the old model was the section lab_day_id.
+    await removePalsAllDayEvent({
+      userEmail: r.user_email as string,
+      labDayId: r.source_id as string,
+    });
+    counts.removed++;
+    await new Promise((res) => setTimeout(res, 120));
+  }
+
+  // ── 2. GENERATE — one scheduled block per REAL, non-archived PALS date. ──
   const { data: palsDays } = await supabase
     .from('lab_days')
     .select(`
@@ -36,35 +62,41 @@ export async function syncPalsAllDayEvents(
       cohort:cohorts!inner(cohort_number, program:programs!inner(abbreviation))
     `)
     .eq('cert_course', 'pals')
+    .eq('is_archived', false)
     .gte('date', today)
     .order('date');
   if (!palsDays?.length) return counts;
-  counts.palsDays = palsDays.length;
 
-  // Group by date so "Day 1"/"Day 2" labels are derived per cohort, not global.
-  const datesByCohort = new Map<string, string[]>();
+  // Unique real dates per cohort → correct "Day N" (dedupe the section-days).
+  const datesByCohort = new Map<string, Set<string>>();
   for (const d of palsDays) {
-    const arr = datesByCohort.get(d.cohort_id as string) || [];
-    arr.push(d.date as string);
-    datesByCohort.set(d.cohort_id as string, arr);
+    const set = datesByCohort.get(d.cohort_id as string) || new Set<string>();
+    set.add(d.date as string);
+    datesByCohort.set(d.cohort_id as string, set);
   }
-  for (const arr of datesByCohort.values()) arr.sort();
 
+  const seenDayKey = new Set<string>();
   const seenInstructors = new Set<string>();
 
   for (const ld of palsDays) {
+    const dayKey = `${ld.cohort_id}:${ld.date}`;
+    if (seenDayKey.has(dayKey)) continue; // one block per (cohort, date), not per section
+    seenDayKey.add(dayKey);
+    counts.palsDays++;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cohort = (ld as any).cohort;
     const c = Array.isArray(cohort) ? cohort[0] : cohort;
     const program = c?.program ? (Array.isArray(c.program) ? c.program[0] : c.program) : null;
     const cohortLabel = c && program?.abbreviation ? `${program.abbreviation} G${c.cohort_number}` : undefined;
-    const dayIndex = (datesByCohort.get(ld.cohort_id as string) || []).indexOf(ld.date as string) + 1;
+
+    const sortedDates = [...(datesByCohort.get(ld.cohort_id as string) as Set<string>)].sort();
+    const dayIndex = sortedDates.indexOf(ld.date as string) + 1;
     const dayLabel = dayIndex > 0 ? `Day ${dayIndex}` : undefined;
 
-    // Instructors whose regular class this cohort/date is being replaced —
-    // matched by schedule blocks for this cohort on this exact date,
-    // regardless of status (the suppression flip and this event creation are
-    // independently authorized/idempotent, so ordering between them doesn't matter).
+    // Instructors whose regular class this cohort/date is replaced (same,
+    // Ben-confirmed logic as the prior model — matched by schedule blocks for
+    // this cohort on this exact date, regardless of status).
     const { data: blockRows } = await supabase
       .from('pmi_schedule_blocks')
       .select('id, pmi_program_schedules!inner(cohort_id)')
@@ -75,7 +107,7 @@ export async function syncPalsAllDayEvents(
 
     const { data: instrRows } = await supabase
       .from('pmi_block_instructors')
-      .select('lab_users!inner(id, email, is_active, google_calendar_connected, google_calendar_scope)')
+      .select('lab_users!inner(email, is_active, google_calendar_connected, google_calendar_scope)')
       .in('schedule_block_id', blockIds);
 
     const emails = new Set<string>();
@@ -91,16 +123,15 @@ export async function syncPalsAllDayEvents(
     for (const email of emails) {
       if (opts.targetEmail && email.toLowerCase() !== opts.targetEmail.toLowerCase()) continue;
       seenInstructors.add(email);
-      await syncPalsAllDayEvent({
+      await syncPalsDayEvent({
         userEmail: email,
-        labDayId: ld.id as string,
+        sourceId: dayKey, // `${cohort_id}:${date}`
         date: ld.date as string,
         cohortLabel,
         dayLabel,
       });
       counts.created++;
-      // Pace Google API calls a touch (quota is per-user).
-      await new Promise((r) => setTimeout(r, 120));
+      await new Promise((res) => setTimeout(res, 120));
     }
   }
 
