@@ -21,9 +21,18 @@ import { syncPalsDayEvent, removePalsAllDayEvent } from '@/lib/google-calendar';
  *      the 24 wrong general_lab events — lives in syncGeneralLabDefaults, which
  *      now removes general_lab for cert_course='pals' + is_archived lab days.)
  *   2. GENERATE: for every REAL, NON-ARCHIVED PALS date, one scheduled
- *      08:30-16:30 'pals_day' block per instructor whose regular class that date
- *      is replaced. Day label = index into the cohort's UNIQUE sorted dates
- *      (fixes the "Day 4" section-index bug).
+ *      08:30-16:30 'pals_day' block per instructor selected by RULE (Ben,
+ *      2026-07-16 correction): every FULL-TIME, PARAMEDIC-tagged, AVAILABLE
+ *      instructor on that date — same candidate shape as the general-lab-default
+ *      rule (lib/general-lab-sync.ts), reused here instead of the old
+ *      "class-replaced" pmi_block_instructors join, which silently dropped
+ *      anyone (e.g. Rae) not directly linked to a replaced schedule block.
+ *      AVAILABLE = has a submitted instructor_availability row for the date;
+ *      no row = excluded (OUT / not submitted). Also excludes anyone with an
+ *      LVFR assignment that date (lvfr_aemt_instructor_assignments, any of
+ *      primary/secondary/additional/AM/PM instructor or coordinator). Day
+ *      label = index into the cohort's UNIQUE sorted dates (fixes the "Day 4"
+ *      section-index bug).
  *
  * NOTE ON GOOGLE EXECUTION: the removePalsAllDayEvent / syncPalsDayEvent calls
  * perform the actual Google delete/create when run with a valid OAuth token
@@ -67,6 +76,19 @@ export async function syncPalsDayEvents(
     .order('date');
   if (!palsDays?.length) return counts;
 
+  // Candidate pool: FULL-TIME, PARAMEDIC-tagged, calendar-connected instructors
+  // (excludes EMT/RT via primary_program, part-timers via is_part_time).
+  const { data: candidateInstructors } = await supabase
+    .from('lab_users')
+    .select('id, email')
+    .eq('primary_program', 'paramedic')
+    .eq('is_part_time', false)
+    .eq('is_active', true)
+    .eq('google_calendar_connected', true)
+    .eq('google_calendar_scope', 'events');
+  if (!candidateInstructors?.length) return counts;
+  const candidateIds = candidateInstructors.map((i) => i.id as string);
+
   // Unique real dates per cohort → correct "Day N" (dedupe the section-days).
   const datesByCohort = new Map<string, Set<string>>();
   for (const d of palsDays) {
@@ -94,30 +116,48 @@ export async function syncPalsDayEvents(
     const dayIndex = sortedDates.indexOf(ld.date as string) + 1;
     const dayLabel = dayIndex > 0 ? `Day ${dayIndex}` : undefined;
 
-    // Instructors whose regular class this cohort/date is replaced (same,
-    // Ben-confirmed logic as the prior model — matched by schedule blocks for
-    // this cohort on this exact date, regardless of status).
-    const { data: blockRows } = await supabase
-      .from('pmi_schedule_blocks')
-      .select('id, pmi_program_schedules!inner(cohort_id)')
+    // AVAILABLE that date: has a submitted instructor_availability row.
+    const { data: availRows } = await supabase
+      .from('instructor_availability')
+      .select('instructor_id')
       .eq('date', ld.date as string)
-      .eq('pmi_program_schedules.cohort_id', ld.cohort_id as string);
-    const blockIds = (blockRows ?? []).map((r) => r.id as string);
-    if (!blockIds.length) continue;
+      .in('instructor_id', candidateIds);
+    const availableIds = new Set((availRows ?? []).map((r) => r.instructor_id as string));
+    if (!availableIds.size) continue;
 
-    const { data: instrRows } = await supabase
-      .from('pmi_block_instructors')
-      .select('lab_users!inner(email, is_active, google_calendar_connected, google_calendar_scope)')
-      .in('schedule_block_id', blockIds);
+    // Exclude anyone with an LVFR assignment that date, any role.
+    const { data: lvfrRows } = await supabase
+      .from('lvfr_aemt_instructor_assignments')
+      .select(
+        'primary_instructor_id, secondary_instructor_id, additional_instructors, am_instructor_id, am_coordinator_id, pm_instructor_id, pm_coordinator_id'
+      )
+      .eq('date', ld.date as string);
+    const lvfrIds = new Set<string>();
+    for (const r of lvfrRows ?? []) {
+      for (const key of [
+        'primary_instructor_id',
+        'secondary_instructor_id',
+        'am_instructor_id',
+        'am_coordinator_id',
+        'pm_instructor_id',
+        'pm_coordinator_id',
+      ] as const) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const v = (r as any)[key];
+        if (v) lvfrIds.add(v as string);
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      for (const v of ((r as any).additional_instructors ?? []) as string[]) {
+        if (v) lvfrIds.add(v);
+      }
+    }
 
     const emails = new Set<string>();
-    for (const r of instrRows ?? []) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const u = (r as any).lab_users;
-      const user = Array.isArray(u) ? u[0] : u;
-      if (!user?.email || !user.is_active) continue;
-      if (!user.google_calendar_connected || user.google_calendar_scope !== 'events') continue;
-      emails.add(user.email as string);
+    for (const instr of candidateInstructors) {
+      const id = instr.id as string;
+      if (!availableIds.has(id)) continue; // not AVAILABLE / OUT
+      if (lvfrIds.has(id)) continue; // has an LVFR assignment that day
+      emails.add(instr.email as string);
     }
 
     for (const email of emails) {
