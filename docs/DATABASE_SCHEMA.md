@@ -1761,6 +1761,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | drill_ids | text[] | YES | '{}'::uuid[] |  |
 | skill_sheet_id | uuid | YES |  | FK -> skill_sheets.id |
 | is_retake_station | boolean | YES | false |  |
+| debrief_minutes | integer | YES |  | Per-station debrief phase preset (migration `20260716_lab_stations_debrief_minutes.sql`); read by LabTimer.tsx as the default `debrief_seconds` when initializing a fresh timer for the lab day, falling back to the runtime 300s (5 min) default when unset |
 
 **Foreign Keys:**
 - `scenario_id` -> `scenarios.id` (`lab_stations_scenario_id_fkey`)
