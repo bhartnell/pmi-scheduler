@@ -153,6 +153,7 @@ export async function PATCH(
     if (body.station_number !== undefined) updateData.station_number = body.station_number;
     if (body.rotation_minutes !== undefined) updateData.rotation_minutes = body.rotation_minutes;
     if (body.num_rotations !== undefined) updateData.num_rotations = body.num_rotations;
+    if (body.debrief_minutes !== undefined) updateData.debrief_minutes = body.debrief_minutes;
     // Skills station document fields
     if (body.skill_sheet_url !== undefined) updateData.skill_sheet_url = body.skill_sheet_url;
     if (body.instructions_url !== undefined) updateData.instructions_url = body.instructions_url;

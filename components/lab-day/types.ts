@@ -67,6 +67,9 @@ export interface Station {
   notes: string | null;
   rotation_minutes: number;
   num_rotations: number;
+  /** Per-station debrief phase preset (minutes), nullable — falls back to
+   *  the LabTimer's runtime default (5 min) when unset. */
+  debrief_minutes?: number | null;
   // Legacy fields for backwards compatibility
   instructor?: {
     id: string;

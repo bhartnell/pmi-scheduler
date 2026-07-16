@@ -1058,7 +1058,13 @@ export default function LabDayPage() {
       </aside>
 
       {editingStation && (<EditStationModal station={editingStation} labDay={labDay} instructors={instructors} locations={locations} calendarAvailability={calendarAvailability} instructorAvailability={instructorAvailability} session={session} onClose={() => setEditingStation(null)} onSaved={() => { setEditingStation(null); fetchLabDay({ silent: true }); }} />)}
-      {showTimer && <LabTimer labDayId={labDayId} numRotations={labDay.num_rotations} rotationMinutes={labDay.rotation_duration} onClose={() => setShowTimer(false)} isController={true} />}
+      {showTimer && <LabTimer labDayId={labDayId} numRotations={labDay.num_rotations} rotationMinutes={labDay.rotation_duration} onClose={() => setShowTimer(false)} isController={true} defaultDebriefSeconds={(() => {
+        // First per-station debrief preset found (stations share one
+        // lab-day-wide timer, so the first configured value wins). Falls
+        // back to LabTimer's own 300s default when no station has one set.
+        const preset = labDay.stations?.find(s => s.debrief_minutes != null)?.debrief_minutes;
+        return preset != null ? preset * 60 : undefined;
+      })()} />}
       {roleModalStation?.scenario && (<ScenarioRoleModal station={roleModalStation} labDayId={labDayId} labDayDate={labDay.date} cohortStudents={cohortStudents} scenarioParticipation={scenarioParticipation} onClose={() => setRoleModalStation(null)} onSaved={async () => { await fetchScenarioParticipation(); setRoleModalStation(null); }} />)}
       {scenarioPickerState && (
         <ScenarioPickerModal

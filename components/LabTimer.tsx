@@ -39,6 +39,10 @@ interface LabTimerProps {
   rotationMinutes: number;
   onClose: () => void;
   isController?: boolean;
+  /** Default debrief alert (seconds) used only when initializing a fresh
+   *  timer for this lab day. Sourced from a per-station debrief_minutes
+   *  preset (see EditStationModal); falls back to 300s (5 min) when unset. */
+  defaultDebriefSeconds?: number;
 }
 
 interface TimerState {
@@ -81,7 +85,8 @@ export default function LabTimer({
   numRotations,
   rotationMinutes,
   onClose,
-  isController = true
+  isController = true,
+  defaultDebriefSeconds
 }: LabTimerProps) {
   const [timerState, setTimerState] = useState<TimerState | null>(null);
   const [displaySeconds, setDisplaySeconds] = useState(0);
@@ -314,7 +319,7 @@ export default function LabTimer({
         body: JSON.stringify({
           labDayId,
           durationSeconds: totalSeconds,
-          debriefSeconds: 300,
+          debriefSeconds: defaultDebriefSeconds || 300,
           mode: 'countdown'
         })
       });
@@ -327,7 +332,7 @@ export default function LabTimer({
     } catch (error) {
       console.error('Error initializing timer:', error);
     }
-  }, [labDayId, totalSeconds]);
+  }, [labDayId, totalSeconds, defaultDebriefSeconds]);
 
   // End lab - completely clear timer state
   const endLab = useCallback(async () => {

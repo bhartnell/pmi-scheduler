@@ -133,6 +133,7 @@ export default function EditStationModal({
     notes: '',
     rotation_minutes: '' as string | number,
     num_rotations: '' as string | number,
+    debrief_minutes: '' as string | number,
   });
 
   useEffect(() => {
@@ -186,6 +187,7 @@ export default function EditStationModal({
       notes: station.notes || '',
       rotation_minutes: (station as { rotation_minutes?: number | null }).rotation_minutes ?? '',
       num_rotations: (station as { num_rotations?: number | null }).num_rotations ?? '',
+      debrief_minutes: (station as { debrief_minutes?: number | null }).debrief_minutes ?? '',
     });
 
     setEditCustomSkills(customSkillsList);
@@ -507,6 +509,7 @@ export default function EditStationModal({
           notes: editForm.notes || null,
           rotation_minutes: editForm.rotation_minutes === '' ? null : Number(editForm.rotation_minutes),
           num_rotations: editForm.num_rotations === '' ? null : Number(editForm.num_rotations),
+          debrief_minutes: editForm.debrief_minutes === '' ? null : Number(editForm.debrief_minutes),
         })
       });
 
@@ -1451,7 +1454,7 @@ export default function EditStationModal({
           </div>
 
           {/* Rotation timing (per-station) */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Minutes per rotation</label>
               <input type="number" min={0} value={editForm.rotation_minutes}
@@ -1465,6 +1468,14 @@ export default function EditStationModal({
                 onChange={(e) => setEditForm(prev => ({ ...prev, num_rotations: e.target.value }))}
                 placeholder="e.g. 4"
                 className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Debrief preset (min)</label>
+              <input type="number" min={0} value={editForm.debrief_minutes}
+                onChange={(e) => setEditForm(prev => ({ ...prev, debrief_minutes: e.target.value }))}
+                placeholder="default: 5"
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Used as the Lab Timer&apos;s default debrief alert when this lab day&apos;s timer starts fresh.</p>
             </div>
           </div>
 
