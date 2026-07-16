@@ -10,8 +10,10 @@ import { isRtOnlyInstructor } from '@/lib/rt-only-instructors';
  * active instructor classified into one of four display groups:
  *
  *   "available"        — green dot. Full-time instructors are
- *                        available BY DEFAULT for the lab window
- *                        (0830-1700) and need no explicit submission;
+ *                        available BY DEFAULT for the requested
+ *                        [date, start_time, end_time] window (the
+ *                        CALLING lab day's actual scheduled time —
+ *                        see callers) and need no explicit submission;
  *                        part-time instructors need explicit
  *                        availability covering the slot. Either way,
  *                        no scheduling conflicts.
@@ -21,10 +23,22 @@ import { isRtOnlyInstructor } from '@/lib/rt-only-instructors';
  *   "conflict"         — amber dot. May or may not have submitted
  *                        availability, but has a class block,
  *                        manual hour log, LVFR, shift, or other-
- *                        lab-day overlap during the slot.
+ *                        lab-day overlap that OVERLAPS the requested
+ *                        [start_time, end_time] window — a same-day
+ *                        class/event outside that window is NOT a
+ *                        conflict (real time-range intersection, not
+ *                        "has anything at all that day").
  *   "no_availability"  — gray dot. Part-time instructor, active, but
  *                        no availability record submitted for the
  *                        slot.
+ *
+ * IMPORTANT: callers must pass the LAB's actual start_time/end_time,
+ * not a fixed all-day placeholder — passing an artificially wide
+ * window (e.g. 08:00-17:00 for every lab regardless of its real time)
+ * causes false conflicts: a class that doesn't overlap the real lab
+ * time gets flagged anyway because it overlaps the wider placeholder
+ * window. See app/labs/schedule/[id]/page.tsx and
+ * stations/new/page.tsx for the current callers.
  *
  * Sources checked, in order:
  *   1. instructor_availability (explicit submissions, must cover
@@ -377,7 +391,7 @@ export async function GET(request: NextRequest) {
     // warning); volunteer signal trumps explicit availability so a
     // volunteer who DIDN'T submit availability still gets the blue
     // dot. Full-time instructors are available BY DEFAULT for the
-    // 0830-1700 lab window — they don't submit explicit availability
+    // requested lab window — they don't submit explicit availability
     // rows, so requiring has_explicit_availability for them
     // incorrectly demoted every conflict-free full-timer to
     // "no_availability" and hid them from the picker (bug: full-time

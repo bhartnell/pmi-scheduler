@@ -186,22 +186,27 @@ export default function LabDayPage() {
 
   // Instructor-availability-aware planning (instructor_availability table +
   // classification endpoint — distinct from the Google-Calendar-derived
-  // calendarAvailability above). Fetched once at the lab-day level with a
-  // full working-day window (matches the convention already established in
-  // stations/new/page.tsx) and shared by the "Available Today" panel below
-  // plus the instructor pickers in EditStationModal / LabDayRolesSection —
-  // none of them refetch per station.
+  // calendarAvailability above). Fetched once at the lab-day level and
+  // shared by the "Available Today" panel below plus the instructor pickers
+  // in EditStationModal / LabDayRolesSection — none of them refetch per
+  // station. Uses THIS lab day's actual start/end time, not a fixed
+  // all-day window — a class block that doesn't overlap this specific
+  // lab's time is not a real conflict (2026-07-14: an 0830-1200 class was
+  // wrongly flagging instructors for an unrelated 1440-1700 lab because a
+  // hardcoded 08:00-17:00 window was used instead of the real lab time).
   const [instructorAvailability, setInstructorAvailability] = useState<InstructorAvailabilityEntry[]>([]);
   const [instructorAvailabilityLoading, setInstructorAvailabilityLoading] = useState(false);
   useEffect(() => {
     if (!labDay?.date || !labDay?.id) return;
+    const labStart = labDay.start_time || '08:00:00';
+    const labEnd = labDay.end_time || '17:00:00';
     setInstructorAvailabilityLoading(true);
-    fetch(`/api/lab-management/instructor-availability?date=${labDay.date}&start_time=08:00&end_time=17:00&lab_day_id=${labDay.id}`)
+    fetch(`/api/lab-management/instructor-availability?date=${labDay.date}&start_time=${labStart}&end_time=${labEnd}&lab_day_id=${labDay.id}`)
       .then(res => res.json())
       .then(data => { if (data.success) setInstructorAvailability(data.instructors || []); })
       .catch(() => {})
       .finally(() => setInstructorAvailabilityLoading(false));
-  }, [labDay?.date, labDay?.id]);
+  }, [labDay?.date, labDay?.id, labDay?.start_time, labDay?.end_time]);
 
   // ---- Fetch functions ----
   // `silent: true` skips the loading-spinner flash. Use it for post-
