@@ -465,6 +465,17 @@ export async function POST(request: NextRequest) {
       console.error('General-lab-default sync block failed:', err);
     }
 
+    // 7. PALS all-day events: instructors whose regular class is replaced by
+    //    a PALS course day get an all-day "PALS Certification" event.
+    //    Idempotent, cohort-scoped/repeatable (not G14/date-hardcoded).
+    let palsAllDay = { created: 0, instructors: 0, palsDays: 0 };
+    try {
+      const { syncPalsAllDayEvents } = await import('@/lib/pals-all-day-sync');
+      palsAllDay = await syncPalsAllDayEvents(supabase, targetEmail ? { targetEmail } : {});
+    } catch (err) {
+      console.error('PALS all-day sync block failed:', err);
+    }
+
     return NextResponse.json({
       success: true,
       synced,
@@ -478,11 +489,12 @@ export async function POST(request: NextRequest) {
       lvfr_skipped: lvfrSkipped,
       general_lab_created: generalLab.created,
       general_lab_skipped: generalLab.skipped,
+      pals_all_day_created: palsAllDay.created,
       users_touched: usersTouched.size,
       message:
         `Bulk sync complete: ${synced} events created, ${seriesSynced} class series ` +
         `created, ${seriesUpdated} series updated, ${lvfrSynced} LVFR events created, ` +
-        `${generalLab.created} general-lab events created, ` +
+        `${generalLab.created} general-lab events created, ${palsAllDay.created} PALS all-day events created, ` +
         `${failed + seriesFailed + lvfrFailed} failed, ${skipped + lvfrSkipped} skipped`,
     });
   } catch (error) {
