@@ -139,6 +139,22 @@ need the long-form history.
 - Preview branches cause deployment confusion and delays
 - Single developer workflow doesn't need PR review gates
 
+### Merge your own verified PRs (HARD REQUIREMENT)
+
+**Code merges its own verified PRs. Ben does NOT merge anything** — a PR left
+as a draft "waiting for Ben's merge/review" is stuck forever and never goes
+live (this silently stranded verified, CI-green work all week). So:
+
+- **Never leave finished, `type-check`/`build`-clean, verified work as a draft
+  waiting for Ben.** If work is done + verified, merge it to `main` (or push
+  directly, the preferred flow above) so it deploys.
+- When the session harness forces a branch/PR, **merge it yourself** once it's
+  verified — do not hand it to Ben to merge.
+- **Only HALT for Ben on genuine DECISIONS or destructive/irreversible steps**
+  (see Bucket 2 + Data Safety) — never merely to merge finished, verified code.
+- Merging is a production deploy: confirm `type-check`/`build` clean on the
+  merged result and that the change is additive/in-scope before pushing.
+
 ## Agent Autonomy Scope (HARD REQUIREMENT)
 
 **Act in scope; escalate only when warranted — not timid over-escalation.**
