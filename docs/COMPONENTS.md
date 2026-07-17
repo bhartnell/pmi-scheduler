@@ -160,6 +160,13 @@ auto-sync flow.
   unified calendar view across cohorts/labs/clinical.
 - `components/scheduling/RequestCoverageModal.tsx` — instructor
   coverage-request flow.
+- `components/pals/PalsCaseCard.tsx` — renders a PALS scenario's AHA
+  narrative (`scenarios.pals_narrative -> 'card'`) on the scenario/
+  grading view (`app/labs/pals/grade/page.tsx`). Rebuilt 2026-07-17
+  into the program's assessment order-of-ops (scene/dispatch -> boxed
+  vitals -> color-coded primary-assessment phase bands) instead of the
+  raw AHA card layout, with objectives/instructor notes/debrief
+  collapsed as de-emphasized teaching meta. No ACLS equivalent yet.
 
 ### Library additions (full list, 2026-05-23)
 
