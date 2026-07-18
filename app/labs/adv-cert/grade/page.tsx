@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, XCircle, Loader2, Save } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Loader2, Save, Crown } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import ScenarioFullDisplay from '@/components/scenario/ScenarioFullDisplay';
 import type { AdvCertScenario, CertCourse } from '@/types/adv-cert';
@@ -334,23 +334,46 @@ export default function AdvCertGradePage() {
                 </select>
               </div>
               <div>
-                <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Team members tested</span>
+                <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
+                  Team members tested — tap <Crown size={11} className="inline -mt-0.5" /> to set the team lead
+                </span>
                 <div className="flex flex-wrap gap-2">
                   {groupMembers.map((m) => {
-                    const on = memberIds.includes(m.id) || m.id === teamLeadId;
+                    const isLead = m.id === teamLeadId;
+                    const on = memberIds.includes(m.id) || isLead;
                     return (
-                      <button key={m.id} type="button" onClick={() => toggleMember(m.id)}
-                        disabled={m.id === teamLeadId}
-                        className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${
-                          on
-                            ? 'bg-blue-600 text-white border-blue-600'
-                            : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
-                        } ${m.id === teamLeadId ? 'opacity-70' : ''}`}>
-                        {m.last_name}, {m.first_name}{m.id === teamLeadId ? ' (lead)' : ''}
-                      </button>
+                      <span key={m.id} className={`inline-flex items-center rounded-full text-sm border transition-colors overflow-hidden ${
+                        on
+                          ? 'bg-blue-600 text-white border-blue-600'
+                          : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
+                      }`}>
+                        <button type="button" onClick={() => toggleMember(m.id)}
+                          disabled={isLead}
+                          className={`px-3 py-1.5 ${isLead ? 'opacity-90' : ''}`}>
+                          {m.last_name}, {m.first_name}{isLead ? ' (lead)' : ''}
+                        </button>
+                        <button type="button"
+                          onClick={() => setTeamLeadId(isLead ? '' : m.id)}
+                          title={isLead ? 'Clear team lead' : 'Set as team lead'}
+                          aria-label={isLead ? 'Clear team lead' : 'Set as team lead'}
+                          className={`px-2 py-1.5 border-l ${
+                            isLead
+                              ? 'border-blue-400 text-yellow-300'
+                              : on
+                                ? 'border-blue-400 text-blue-200 hover:text-yellow-200'
+                                : 'border-gray-300 dark:border-gray-600 text-gray-400 hover:text-yellow-500'
+                          }`}>
+                          <Crown size={14} fill={isLead ? 'currentColor' : 'none'} />
+                        </button>
+                      </span>
                     );
                   })}
                 </div>
+                {!teamLeadId && memberIds.length > 0 && (
+                  <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">
+                    No team lead set yet — this attempt cannot be saved until you tap a crown or use the dropdown above. Clicking a name only marks it tested, it does not register the lead.
+                  </p>
+                )}
               </div>
             </div>
           )}
