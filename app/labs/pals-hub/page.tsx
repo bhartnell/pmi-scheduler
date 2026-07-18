@@ -256,6 +256,29 @@ function PalsHubPageContent() {
     return m;
   }, [attempts]);
 
+  // ROTATION COUNTER PER SECTION (Task Handoff Queue: "raw per-station attempt
+  // counts don't map to rotations; instructors disagreed on rotations left").
+  // Expected rotations for a section = its station count (each group rotates
+  // through every station once). Skip "Learning Stations" sections — those are
+  // attestation-only (pals_skill_completions), never produce pals_test_attempts,
+  // so they'd show a false "0 of N" here. Derived read-only from the same
+  // attempts/labDays/groups this page already loads — no new API call.
+  const rotationCoverage = useMemo(() => {
+    const gradedSections = visibleLabDays.filter(
+      (d) => d.stations.length > 0 && !/learning/i.test(d.section_label || '')
+    );
+    return gradedSections.map((d) => {
+      const expected = d.stations.length;
+      const dAttempts = attempts.filter((a) => a.lab_day_id === d.id);
+      const perGroup = groups.map((g) => ({
+        group: g,
+        count: dAttempts.filter((a) => a.lab_group_id === g.id).length,
+      }));
+      const behind = perGroup.filter((p) => p.count < expected);
+      return { labDay: d, expected, perGroup, behind };
+    });
+  }, [visibleLabDays, attempts, groups]);
+
   // By-instructor: every station assignment across all sections, grouped by name.
   const byInstructor = useMemo(() => {
     const m = new Map<string, { date: string; section: string; station: number; room: string | null; title: string }[]>();
@@ -462,6 +485,49 @@ function PalsHubPageContent() {
                   ))}
                 </div>
                 <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">AHA goal: every student leads a PRACTICE case at least twice by the end of the course (regardless of PASS/NR — this tracks the opportunity, not the outcome).</p>
+              </section>
+            )}
+
+            {/* ROTATION COVERAGE BY SECTION — "Section X: rotation N of 4" +
+                which groups still need to go, derived from pals_test_attempts
+                by section/group (raw per-station counts don't map cleanly to
+                rotations left, so this converts count -> rotation N of
+                {stations in that section}). */}
+            {rotationCoverage.length > 0 && (
+              <section style={{ breakInside: 'avoid' }}>
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
+                  <RefreshCw className="w-4 h-4" /> Rotation coverage by section
+                </h2>
+                <div className="space-y-2">
+                  {rotationCoverage.map(({ labDay, expected, perGroup, behind }) => (
+                    <div key={labDay.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                          {labDay.section_label || labDay.title || 'Section'}
+                        </span>
+                        <span className="text-[11px] text-gray-400">{prettyDate(labDay.date)}</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {perGroup.map(({ group, count }) => (
+                          <span key={group.id} className={`text-[11px] px-2 py-0.5 rounded-full ${
+                            count >= expected
+                              ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                              : count === 0
+                                ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                                : 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                          }`}>
+                            {group.name}: rotation {count} of {expected}
+                          </span>
+                        ))}
+                      </div>
+                      {behind.length > 0 && (
+                        <p className="mt-1.5 text-[11px] text-amber-700 dark:text-amber-300">
+                          Still need to go: {behind.map((b) => `${b.group.name} (${b.count}/${expected})`).join(', ')}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </section>
             )}
 
