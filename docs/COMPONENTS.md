@@ -96,11 +96,17 @@ inline below the `xl` breakpoint, and in the floating right-side aside
 (paired with `SkillCoveragePanel`) at `xl`+, mirroring the existing
 skill-coverage responsive pattern.
 
-**`components/lab-day/instructorAvailability.ts`** (new, 2026-07-02) —
-Shared helpers (`buildAvailabilityMap`, `getAvailInfo`, `isDefaultVisibleGroup`,
-`availabilitySuffix`, `AVAILABILITY_GROUP_META`) for consuming
+**`components/lab-day/instructorAvailability.ts`** (new, 2026-07-02; updated 2026-07-21) —
+Shared helpers (`buildAvailabilityMap`, `getAvailInfo`, `availabilitySuffix`,
+`AVAILABILITY_GROUP_META`) for consuming
 `GET /api/lab-management/instructor-availability` responses, used by
 `EditStationModal`, `LabDayRolesSection`, and `AvailableInstructorsSection`.
+As of 2026-07-21, `EditStationModal` and `LabDayRolesSection` no longer hide
+conflicted/no-availability instructors from their assignment dropdowns (the
+"Show all instructors" toggle and `isDefaultVisibleGroup` filter were
+removed) — every instructor is always listed, with `availabilitySuffix`
+tagging conflicts/no-availability inline so the coordinator can still
+override, mirroring `AvailableInstructorsSection`'s sidebar language.
 
 ### Library / utilities
 

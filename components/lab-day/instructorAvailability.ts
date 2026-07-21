@@ -26,12 +26,6 @@ export function getAvailInfo(
   return undefined;
 }
 
-/** True when the given availability group should show by default (before
- * the operator opts into "Show all instructors"). */
-export function isDefaultVisibleGroup(group: InstructorAvailabilityEntry['group']): boolean {
-  return group === 'available' || group === 'volunteer';
-}
-
 // Color/label convention per the endpoint's own doc comment:
 // available=green, volunteer=blue, conflict=amber, no_availability=gray.
 export const AVAILABILITY_GROUP_META: Record<
