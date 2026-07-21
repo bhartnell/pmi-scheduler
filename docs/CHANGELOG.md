@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-07-21
+
+- `60348ac` | **Show all instructors in lab-station/role dropdowns, tag conflicts instead of hiding (Task Handoff Queue).** `EditStationModal`'s "Add instructor..." select and `LabDayRolesSection`'s Lab Lead/Roamer/Observer/Coordinator picker hid instructors classified `conflict` or `no_availability` (e.g. Ben with a known LVFR conflict) behind a "Show all instructors" toggle, blocking a coordinator override that should be their call. Removed the filter and the toggle; both dropdowns now always list every instructor, tagged inline via the existing `availabilitySuffix()` labels ("(Conflict: LVFR Academy)", "(No availability submitted)") that already mirror `AvailableInstructorsSection`'s sidebar language — informative, not restrictive. Also removed the now-unused `isDefaultVisibleGroup` helper from `components/lab-day/instructorAvailability.ts`. `type-check`/`build`/`eslint` clean (pre-existing unrelated lint errors on `calendarAvailability: any[]` untouched). Docs updated same effort: `COMPONENTS.md` (in the code commit), `CHANGELOG.md` (here).
+
 ## 2026-07-18
 
 - `e07073a` | **Add rotation-per-section coverage counter to PALS Hub (Task Handoff Queue, part 2 of the team-lead task; part 1 was the chip fix below).** Raw per-station attempt counts didn't map to rotations remaining, and instructors disagreed live during PALS about how many rotations were left per group. Added a "Rotation coverage by section" panel to `app/labs/pals-hub/page.tsx`, computed client-side from data the page already loads (no new API call): for each graded section, each group's `pals_test_attempts` count vs. that section's station count, color-coded, with a "still need to go" line. Skips "Learning Stations" sections (attestation-only, never produce test attempts). Verified against live G14 data first: Section D (Arrhythmia) Group 3 showed 1 of 4 rotations vs. 2-3 for peers, confirming a real gap worth surfacing. `type-check`/`build`/`eslint` clean.

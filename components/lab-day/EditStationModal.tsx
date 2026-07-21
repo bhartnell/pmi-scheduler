@@ -23,7 +23,7 @@ import type { StationMetadata } from '@/components/TemplateGuideSection';
 import CalendarAvailabilityDot from '@/components/CalendarAvailabilityDot';
 import type { Station, Scenario, Skill, Instructor, LabDay, InstructorAvailabilityEntry } from './types';
 import { STATION_TYPES } from './types';
-import { buildAvailabilityMap, getAvailInfo, availabilitySuffix, isDefaultVisibleGroup } from './instructorAvailability';
+import { buildAvailabilityMap, getAvailInfo, availabilitySuffix } from './instructorAvailability';
 import { formatCohortNumber } from '@/lib/format-cohort';
 import { useToast } from '@/components/Toast';
 import { Session } from 'next-auth';
@@ -56,9 +56,6 @@ export default function EditStationModal({
   onSaved,
 }: EditStationModalProps) {
   const toast = useToast();
-  // Default the "add instructor" picker to available + volunteer
-  // instructors; coordinators can opt into the full roster.
-  const [showAllInstructors, setShowAllInstructors] = useState(false);
   const availabilityMap = useMemo(() => buildAvailabilityMap(instructorAvailability), [instructorAvailability]);
 
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
@@ -1335,14 +1332,9 @@ export default function EditStationModal({
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Instructors</label>
               {instructorAvailability.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setShowAllInstructors(v => !v)}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
-                  title="By default only instructors classified Available or Volunteer for this date are shown."
-                >
-                  {showAllInstructors ? 'Show available + volunteer only' : 'Show all instructors'}
-                </button>
+                <span className="text-xs text-gray-500 dark:text-gray-400" title="Conflicts and unsubmitted availability are tagged, not hidden — use your judgment.">
+                  All instructors shown; conflicts tagged
+                </span>
               )}
             </div>
 
@@ -1380,15 +1372,8 @@ export default function EditStationModal({
                 <option value="">Add instructor...</option>
                 {(() => {
                   const notYetAdded = instructors.filter(i => !stationInstructors.some(si => si.user_email === i.email));
-                  const availabilityLoaded = instructorAvailability.length > 0;
-                  const available = (availabilityLoaded && !showAllInstructors)
-                    ? notYetAdded.filter(i => {
-                        const avail = getAvailInfo(availabilityMap, i);
-                        return !avail || isDefaultVisibleGroup(avail.group);
-                      })
-                    : notYetAdded;
-                  const staffInstructors = available.filter(i => i.role !== 'volunteer_instructor');
-                  const volunteerInstructors = available.filter(i => i.role === 'volunteer_instructor');
+                  const staffInstructors = notYetAdded.filter(i => i.role !== 'volunteer_instructor');
+                  const volunteerInstructors = notYetAdded.filter(i => i.role === 'volunteer_instructor');
                   const renderOption = (instructor: Instructor, suffix?: string) => {
                     const calAvail = instructor.email ? calendarAvailability.get(instructor.email.toLowerCase()) : undefined;
                     const dot = calAvail ? calAvail.status === 'free' ? '\u{1F7E2} ' : calAvail.status === 'partial' ? '\u{1F7E1} ' : calAvail.status === 'busy' ? '\u{1F534} ' : '\u26AA ' : '';
@@ -1408,9 +1393,6 @@ export default function EditStationModal({
                         <optgroup label="Volunteer Instructors">
                           {volunteerInstructors.map(i => renderOption(i, ' (Volunteer)'))}
                         </optgroup>
-                      )}
-                      {available.length === 0 && availabilityLoaded && !showAllInstructors && (
-                        <option value="" disabled>No available/volunteer instructors \u2014 click &quot;Show all instructors&quot; above</option>
                       )}
                     </>
                   );
