@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { requireAuth } from '@/lib/api-auth';
 import { wrapInEmailTemplate } from '@/lib/email-templates';
+import { isNremtTestingActiveToday } from '@/lib/email';
 
 const FROM_EMAIL = process.env.EMAIL_FROM || 'PMI Paramedic Tools <notifications@pmiparamedic.tools>';
 
@@ -21,6 +22,26 @@ export async function POST(request: NextRequest) {
     }
     if (!process.env.RESEND_API_KEY) {
       return NextResponse.json({ success: false, error: 'Email service not configured' }, { status: 503 });
+    }
+
+    // NREMT kill switch — this route instantiates its own Resend client and
+    // sends arbitrary free-form content to an arbitrary recipient list
+    // (e.g. the Scheduler Admin "Send Email to Respondents" button), so it
+    // bypasses lib/email.ts's central sendEmail() guard entirely, same as
+    // the 6 bypass routes closed in bf8715c0 (2026-04-19, "Close the 6
+    // email-send bypasses so NREMT kill switch holds everywhere"). This
+    // route was added later (2026-06-27, commit 9a8d4fcb) and was never
+    // swept into that fix. Block outright while NREMT testing is active
+    // today, mirroring the cohort-email and admin-test-email routes.
+    if (await isNremtTestingActiveToday()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Email sending is disabled during NREMT testing. Try again after testing concludes today.',
+          blocked: 'nremt_testing_day',
+        },
+        { status: 423 }
+      );
     }
 
     const resend = new Resend(process.env.RESEND_API_KEY);

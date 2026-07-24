@@ -5,6 +5,7 @@
 > Check constraints re-verified against live -- June 10, 2026 (all 146 documented CHECK definitions normalized to exact pg_get_constraintdef output; 4 had real value-list drift)
 > Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
 > Last updated: 2026-07-12 -- added `lab_days.is_archived` (migration `20260712_lab_days_is_archived.sql`, archive-not-delete flag excluding rows from the general lab schedule + ACLS hub list views)
+> Last updated: 2026-07-24 -- added `lab_template_stations.skill_sheet_id` (migration `20260724_lab_template_stations_skill_sheet_id.sql`, see `lab_template_stations` below)
 
 ## Summary
 
@@ -2526,12 +2527,15 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | difficulty | text | YES |  |  |
 | notes | text | YES |  |  |
 | metadata | jsonb | YES |  |  |
+| skill_sheet_id | uuid | YES |  | FK -> skill_sheets.id. Optional; when set, the apply/gap-fill generators (`app/api/admin/lab-templates/{apply,refresh-day,update-existing}/route.ts`) copy it onto the generated `lab_stations.skill_sheet_id` so the station is grading-ready immediately. Added migration `20260724_lab_template_stations_skill_sheet_id.sql` — root-cause fix for template-generated stations (e.g. the EMT "Capstone ... " template that doubles as the cohort's `is_nremt_testing` day) coming out with a `skills` jsonb description but no functional skill-sheet link, since the generators previously dropped that mapping entirely. |
 
 **Foreign Keys:**
 - `template_id` -> `lab_day_templates.id` (`lab_template_stations_template_id_fkey`)
+- `skill_sheet_id` -> `skill_sheets.id` (`lab_template_stations_skill_sheet_id_fkey`)
 
 **Indexes:**
 - `idx_lab_template_stations_template`: `CREATE INDEX idx_lab_template_stations_template ON public.lab_template_stations USING btree (template_id)`
+- `idx_lab_template_stations_skill_sheet`: `CREATE INDEX idx_lab_template_stations_skill_sheet ON public.lab_template_stations USING btree (skill_sheet_id) WHERE (skill_sheet_id IS NOT NULL)`
 
 **RLS Policies:**
 - `stations_delete` (DELETE, permissive, roles: {public})

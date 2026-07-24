@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
         id, name, description, week_number, day_number,
         stations:lab_template_stations(
           id, sort_order, station_type, station_name, skills, scenario_id,
-          scenario_title, difficulty, notes, metadata
+          scenario_title, difficulty, notes, metadata, skill_sheet_id
         )
       `)
       .eq('program', program)
@@ -279,6 +279,7 @@ export async function POST(request: NextRequest) {
         scenario_id?: string;
         notes?: string;
         metadata?: Record<string, unknown>;
+        skill_sheet_id?: string;
       }>;
 
       const stationsToInsert: Array<Record<string, unknown>> = [];
@@ -295,6 +296,10 @@ export async function POST(request: NextRequest) {
           station_number: s.sort_order || 1,
           station_type: stationType,
           scenario_id: s.scenario_id || null,
+          // See migration 20260724_lab_template_stations_skill_sheet_id.sql —
+          // carries the template's resolved skill_sheets FK through so a
+          // gap-filled station is grading-ready immediately.
+          skill_sheet_id: s.skill_sheet_id || null,
           custom_title: s.station_name || null,
           documentation_required: false,
           platinum_required: false,
