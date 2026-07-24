@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
         instructor_count, is_anchor, anchor_type, requires_review, review_notes,
         stations:lab_template_stations(
           id, sort_order, station_type, station_name, skills, scenario_id,
-          scenario_title, difficulty, notes, metadata
+          scenario_title, difficulty, notes, metadata, skill_sheet_id
         )
       `)
       .eq('program', program)
@@ -269,6 +269,7 @@ export async function POST(request: NextRequest) {
           scenario_id?: string;
           notes?: string;
           metadata?: Record<string, unknown>;
+          skill_sheet_id?: string;
         }) => {
           let drill_ids: string[] | null = null;
           let enrichedMetadata = s.metadata && Object.keys(s.metadata).length > 0 ? { ...s.metadata } : {};
@@ -328,6 +329,13 @@ export async function POST(request: NextRequest) {
             station_number: s.sort_order || 1,
             station_type: s.station_type || 'scenario',
             scenario_id: s.scenario_id || null,
+            // Carries the template's resolved skill_sheets FK (if set) onto
+            // the generated station so it's grading-ready immediately —
+            // previously dropped here, so every template-generated station
+            // came out with no functional skill_sheet link regardless of
+            // what the template's `skills[]` array described. See migration
+            // 20260724_lab_template_stations_skill_sheet_id.sql.
+            skill_sheet_id: s.skill_sheet_id || null,
             drill_ids: drill_ids,
             custom_title: s.station_name || null,
             documentation_required: false,
