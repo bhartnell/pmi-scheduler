@@ -187,8 +187,22 @@ const AVG_SKILL_TIME = 10; // ~70 min total / 7 skills
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-function getStationDisplayName(station: GridStation): string {
-  return station.skill_name || station.custom_title || station.scenario?.title || `Station ${station.station_number}`;
+function getStationDisplayName(station: GridStation, allStations?: GridStation[]): string {
+  const base = station.skill_name || station.custom_title || station.scenario?.title || `Station ${station.station_number}`;
+
+  // Disambiguate parallelized duplicate stations (e.g. two "Medical"
+  // stations opened to relieve a bottleneck) so the Occupancy board shows
+  // "Medical 1" / "Medical 2" instead of two identically-labeled cards —
+  // skill_name is intentionally shared across duplicates so the Completion
+  // rollup (skillColumns/skillCells in student-queue/route.ts) merges them,
+  // but that same shared name made them indistinguishable here.
+  if (!allStations) return base;
+  const siblings = allStations
+    .filter(s => (s.skill_name || s.custom_title || s.scenario?.title || `Station ${s.station_number}`) === base)
+    .sort((a, b) => a.station_number - b.station_number);
+  if (siblings.length <= 1) return base;
+  const index = siblings.findIndex(s => s.id === station.id) + 1;
+  return `${base} ${index > 0 ? index : siblings.length}`;
 }
 
 /** Abbreviate a skill name for column headers */
@@ -1460,7 +1474,7 @@ export default function CoordinatorViewPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* ─── Top Bar (sticky) ─────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-3">
+        <div className="max-w-[1600px] mx-auto px-4 py-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <Link
               href={`/labs/schedule/${labDayId}`}
@@ -1507,7 +1521,7 @@ export default function CoordinatorViewPage() {
               key={alert.id}
               className="animate-pulse bg-amber-500 dark:bg-amber-600 text-white border-b border-amber-600 dark:border-amber-700"
             >
-              <div className="max-w-7xl mx-auto px-4 py-2 flex items-center justify-between gap-3">
+              <div className="max-w-[1600px] mx-auto px-4 py-2 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <AlertTriangle className="w-5 h-5 flex-shrink-0" />
                   <span className="font-bold text-sm truncate">
@@ -1528,7 +1542,7 @@ export default function CoordinatorViewPage() {
       )}
 
       {/* ─── Title ────────────────────────────────────────────────────── */}
-      <div className="max-w-7xl mx-auto px-4 pt-4 pb-2">
+      <div className="max-w-[1600px] mx-auto px-4 pt-4 pb-2">
         {labDayInfo?.is_nremt_testing && (
           <div className="bg-red-600 text-white text-center py-2 font-bold rounded-lg mb-3 text-sm sm:text-base">
             NREMT Psychomotor Testing Day -- Official Examination
@@ -1545,7 +1559,7 @@ export default function CoordinatorViewPage() {
 
       {/* ─── Section 2: Stats Row (compact, sticky) ──────────────────── */}
       <div className="sticky top-[73px] z-20 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 py-2">
+        <div className="max-w-[1600px] mx-auto px-4 py-2">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-1.5">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -1592,8 +1606,17 @@ export default function CoordinatorViewPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-4">
-        {/* ─── Section 3: Station Board (PRIMARY WORKFLOW) ────────── */}
+      <main className="max-w-[1600px] mx-auto px-4 py-4">
+        {/* ─── Section 3: Station Board / Occupancy view (PRIMARY WORKFLOW) ── */}
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <Activity className="w-5 h-5 text-green-500" />
+            Station Occupancy
+          </h3>
+          <span className="text-sm text-gray-500 dark:text-gray-400">
+            Each physical station — who&apos;s there, pass/fail/open
+          </span>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
           {stations.map(station => {
             const stationStatus = getStationStatus(station, students, cells, alertStationIds);
@@ -1662,8 +1685,8 @@ export default function CoordinatorViewPage() {
                         </span>
                       )}
                     </div>
-                    <div className="text-sm sm:text-base font-bold text-gray-900 dark:text-white truncate" title={getStationDisplayName(station)}>
-                      {getStationDisplayName(station)}
+                    <div className="text-sm sm:text-base font-bold text-gray-900 dark:text-white truncate" title={getStationDisplayName(station, stations)}>
+                      {getStationDisplayName(station, stations)}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
@@ -2081,7 +2104,8 @@ export default function CoordinatorViewPage() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
             <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-blue-500" />
-              Individual Testing Tracker
+              Completion by Skill
+              <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(rolled up across duplicate stations)</span>
             </h3>
             <span className="text-sm text-gray-500 dark:text-gray-400">
               <strong className="text-gray-700 dark:text-gray-300">{skillTotalCompleted}/{skillTotalPossible}</strong> complete
@@ -2112,7 +2136,7 @@ export default function CoordinatorViewPage() {
                           <div className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[100px] mx-auto" title={col.skillName}>
                             {isLong ? `${abbreviated.slice(0, 15)}…` : abbreviated}
                           </div>
-                          {!labDayInfo?.is_nremt_testing && col.stationIds.length > 1 && (
+                          {col.stationIds.length > 1 && (
                             <div className="text-[11px] font-normal text-blue-500 dark:text-blue-400">
                               {col.stationIds.length} stations
                             </div>

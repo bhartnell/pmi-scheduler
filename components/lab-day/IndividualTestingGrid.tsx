@@ -661,7 +661,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
                       >
                         {isLong ? `${abbreviated.slice(0, 15)}…` : abbreviated}
                       </div>
-                      {!isNremtTesting && col.stationIds.length > 1 && (
+                      {col.stationIds.length > 1 && (
                         <div className="text-[11px] font-normal text-blue-500 dark:text-blue-400">
                           {col.stationIds.length} stations
                         </div>
