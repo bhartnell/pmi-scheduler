@@ -205,6 +205,60 @@ function getStationDisplayName(station: GridStation, allStations?: GridStation[]
   return `${base} ${index > 0 ? index : siblings.length}`;
 }
 
+type OccupancyGroup =
+  | { type: 'single'; station: GridStation }
+  | { type: 'combo'; stations: [GridStation, GridStation] };
+
+/**
+ * BVM + O2/NRB are graded sequentially by the same proctor in practice —
+ * showing them as two independent-looking station cards was display
+ * clutter on the Occupancy board (HOLD-MERGE Task Handoff Queue item,
+ * 2026-08-05). When a BVM station and an O2/NRB station share the same
+ * (non-empty) examiner, group them into one visual entry. Grading and
+ * tracking are untouched — each station keeps its own full card,
+ * independently gradable, just visually grouped.
+ */
+function getOccupancyGroups(
+  stations: GridStation[],
+  getProctor: (station: GridStation) => string | null
+): OccupancyGroup[] {
+  const bvmPattern = /\bbvm\b/i;
+  const o2Pattern = /non-?rebreather|\bnrb\b|\bo2\b/i;
+  const paired = new Set<string>();
+  const groups: OccupancyGroup[] = [];
+
+  const skillNameOf = (s: GridStation) => s.skill_name || s.custom_title || '';
+  const isBvm = (s: GridStation) => bvmPattern.test(skillNameOf(s));
+  const isO2 = (s: GridStation) => !isBvm(s) && o2Pattern.test(skillNameOf(s));
+
+  for (const station of stations) {
+    if (paired.has(station.id)) continue;
+    if (!isBvm(station) && !isO2(station)) {
+      groups.push({ type: 'single', station });
+      continue;
+    }
+    const proctor = (getProctor(station) || '').trim().toLowerCase();
+    const partner = proctor
+      ? stations.find(s =>
+          s.id !== station.id &&
+          !paired.has(s.id) &&
+          (isBvm(station) ? isO2(s) : isBvm(s)) &&
+          (getProctor(s) || '').trim().toLowerCase() === proctor
+        )
+      : undefined;
+
+    if (partner) {
+      paired.add(station.id);
+      paired.add(partner.id);
+      groups.push({ type: 'combo', stations: isBvm(station) ? [station, partner] : [partner, station] });
+    } else {
+      groups.push({ type: 'single', station });
+    }
+  }
+
+  return groups;
+}
+
 /** Abbreviate a skill name for column headers */
 function abbreviateSkill(name: string): string {
   // Keyed on EXACT DB skill_sheet / skill names. Prior version used
@@ -1470,6 +1524,337 @@ export default function CoordinatorViewPage() {
 
   if (!session) return null;
 
+  // Extracted so a BVM/O2/NRB pair sharing an examiner can be rendered
+  // twice (once per station) inside a shared combined-entry wrapper —
+  // see getOccupancyGroups() above. Behavior/markup for a single station
+  // card is unchanged from before the extraction.
+  const renderStationCard = (station: GridStation) => {
+    const stationStatus = getStationStatus(station, students, cells, alertStationIds);
+    const config = statusConfig[stationStatus];
+    const StatusIcon = config.icon;
+    const currentStudent = getCurrentStudentAtStation(station, students, cells);
+    const completedCount = getStationCompletedCount(station, students, cells);
+    const progressPercent = totalStudents > 0 ? Math.round((completedCount / totalStudents) * 100) : 0;
+    const displayProctor = getDisplayProctor(station);
+    const allStudentsDone = completedCount === totalStudents && totalStudents > 0;
+    const isAddedDuringExam = station.addedDuringExam || station.custom_title?.includes('(Added)');
+    const isRetakeStation = !!station.isRetakeStation;
+    const enRouteEntry = enRouteStudents[station.id];
+    const hasCurrentStudent = !!currentStudent;
+    const { eligible } = getEligibleStudentsForStation(station);
+    const selectedStudentId = stationDropdownSelections[station.id] || '';
+    const coordStatus: 'open' | 'closed' | 'break' = station.coordinatorStatus || 'open';
+    const isStationClosed = coordStatus === 'closed';
+    const isStationBreak = coordStatus === 'break';
+    const isStationUnavailable = isStationClosed || isStationBreak;
+
+    return (
+      <div
+        key={station.id}
+        className={`relative rounded-xl border-2 ${
+          isStationClosed
+            ? 'border-gray-400 bg-gray-100 dark:border-gray-600 dark:bg-gray-800/60 opacity-70'
+            : isStationBreak
+            ? 'border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20'
+            : isRetakeStation
+            ? // Retake stations get a purple tint + border so the
+              // coordinator can see at a glance which stations the
+              // retake queue will route to.
+              'border-purple-400 bg-purple-50 dark:border-purple-500 dark:bg-purple-900/10'
+            : `${config.border} ${config.bg}`
+        } p-3 sm:p-4 shadow-sm transition-all`}
+      >
+        {/* Station header */}
+        <div className="flex items-start justify-between mb-2 gap-2">
+          <div className="min-w-0 flex-1">
+            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1 flex-wrap">
+              {!labDayInfo?.is_nremt_testing && <>Station {station.station_number}</>}
+              {isAddedDuringExam && (
+                <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded-full normal-case">
+                  Additional Station
+                </span>
+              )}
+              {isRetakeStation && (
+                <span
+                  className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/40 px-1.5 py-0.5 rounded-full normal-case"
+                  title="Retake queue routes students here first"
+                >
+                  Retake
+                </span>
+              )}
+              {isStationClosed && (
+                <span className="text-[10px] font-semibold text-gray-700 dark:text-gray-300 bg-gray-300 dark:bg-gray-600 px-1.5 py-0.5 rounded-full normal-case inline-flex items-center gap-0.5">
+                  <Ban className="w-2.5 h-2.5" />
+                  Closed
+                </span>
+              )}
+              {isStationBreak && (
+                <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-200 dark:bg-amber-900/60 px-1.5 py-0.5 rounded-full normal-case inline-flex items-center gap-0.5">
+                  <Clock className="w-2.5 h-2.5" />
+                  On Break
+                </span>
+              )}
+            </div>
+            <div className="text-sm sm:text-base font-bold text-gray-900 dark:text-white truncate" title={getStationDisplayName(station, stations)}>
+              {getStationDisplayName(station, stations)}
+            </div>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${config.badge}`}>
+              <StatusIcon className="w-3 h-3" />
+              <span className="hidden sm:inline">{config.label}</span>
+            </span>
+            {/* Station status menu (close / break / reopen) */}
+            <div className="relative">
+              <button
+                onClick={() => setStatusMenuStationId(prev => prev === station.id ? null : station.id)}
+                disabled={statusSaving === station.id}
+                className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 min-w-[28px] min-h-[28px] flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
+                title="Station availability"
+                aria-label="Station availability menu"
+              >
+                {statusSaving === station.id ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Ban className="w-3.5 h-3.5" />
+                )}
+              </button>
+              {statusMenuStationId === station.id && (
+                <>
+                  {/* Backdrop to close menu on outside click */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setStatusMenuStationId(null)}
+                  />
+                  <div className="absolute right-0 top-full mt-1 z-50 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1">
+                    {isStationUnavailable && (
+                      <button
+                        onClick={() => handleSetStationStatus(station.id, 'open')}
+                        className="w-full text-left px-3 py-2 text-sm text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/30 flex items-center gap-2"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        Reopen
+                      </button>
+                    )}
+                    {!isStationClosed && (
+                      <button
+                        onClick={() => handleSetStationStatus(station.id, 'closed')}
+                        className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                      >
+                        <Ban className="w-4 h-4" />
+                        Temporarily Closed
+                      </button>
+                    )}
+                    {!isStationBreak && (
+                      <button
+                        onClick={() => handleSetStationStatus(station.id, 'break')}
+                        className="w-full text-left px-3 py-2 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 flex items-center gap-2"
+                      >
+                        <Clock className="w-4 h-4" />
+                        On Break (5–10 min)
+                      </button>
+                    )}
+                    {/* Retake-station toggle — NREMT-day only,
+                        since that's the only context where the
+                        retake queue does routing. */}
+                    {labDayInfo?.is_nremt_testing && (
+                      <button
+                        onClick={() => {
+                          setStatusMenuStationId(null);
+                          handleToggleRetakeStation(
+                            station.id,
+                            !isRetakeStation
+                          );
+                        }}
+                        className="w-full text-left px-3 py-2 text-sm text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700"
+                      >
+                        <RefreshCw className="w-4 h-4" />
+                        {isRetakeStation
+                          ? 'Unmark as retake station'
+                          : 'Mark as retake station'}
+                      </button>
+                    )}
+                    {/* Mid-exam delete — NREMT-day only, and only
+                        for overflow (addedDuringExam) or retake
+                        stations. Original template stations aren't
+                        deletable mid-exam; the RPC would reject
+                        anyway but we hide the option to avoid
+                        dead-end clicks. */}
+                    {labDayInfo?.is_nremt_testing &&
+                      (isAddedDuringExam || isRetakeStation) && (
+                        <button
+                          onClick={() => {
+                            setStatusMenuStationId(null);
+                            setDeleteStationConfirm(station);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete station
+                        </button>
+                      )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Current student or en route */}
+        <div className="mb-2 min-h-[1.5rem]">
+          {currentStudent ? (
+            <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
+              {currentStudent.first_name} {currentStudent.last_name}
+            </div>
+          ) : enRouteEntry ? (
+            <div className="flex items-center gap-1.5">
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
+                <ArrowRight className="w-3 h-3" />
+                En Route — {enRouteEntry.studentName}
+              </span>
+              {(Date.now() - enRouteEntry.sentAt) < 30000 && (
+                <button
+                  onClick={() => handleUndoSend(station.id)}
+                  className="p-0.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400"
+                  title="Undo send"
+                >
+                  <Undo2 className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="text-sm text-gray-400 dark:text-gray-500 italic">
+              {stationStatus === 'complete' ? 'All done' : 'Waiting...'}
+            </div>
+          )}
+        </div>
+
+        {/* Proctor / Instructor */}
+        <div className="mb-2 min-h-[1.25rem]">
+          {editingProctor === station.id ? (
+            <div className="flex items-center gap-1">
+              <input
+                type="text"
+                value={proctorName}
+                onChange={e => setProctorName(e.target.value)}
+                placeholder="Examiner name"
+                className="flex-1 text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-w-0"
+                autoFocus
+                onKeyDown={e => {
+                  if (e.key === 'Enter') handleSaveProctor(station.id);
+                  if (e.key === 'Escape') { setEditingProctor(null); setProctorName(''); }
+                }}
+              />
+              <button
+                onClick={() => handleSaveProctor(station.id)}
+                className="p-1 text-green-600 hover:text-green-700 min-w-[28px] min-h-[28px] flex items-center justify-center"
+              >
+                <Check className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => { setEditingProctor(null); setProctorName(''); }}
+                className="p-1 text-gray-400 hover:text-gray-600 min-w-[28px] min-h-[28px] flex items-center justify-center"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                {displayProctor ? `Examiner: ${displayProctor}` : 'No examiner assigned'}
+              </span>
+              <button
+                onClick={() => {
+                  setEditingProctor(station.id);
+                  setProctorName(displayProctor || '');
+                }}
+                className="flex-shrink-0 p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 min-w-[28px] min-h-[28px] flex items-center justify-center"
+                title="Change examiner"
+              >
+                <Edit3 className="w-3 h-3" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* All Complete badge */}
+        {allStudentsDone && (
+          <div className="mb-2">
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">
+              <CheckCircle2 className="w-3 h-3" />
+              All Complete
+            </span>
+          </div>
+        )}
+
+        {/* Send Student dropdown (only when no current student testing) */}
+        {!hasCurrentStudent && !allStudentsDone && (
+          <div className="mb-2">
+            <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5 block">
+              Send Student:
+            </label>
+            {isStationUnavailable ? (
+              <div className="text-xs italic text-gray-500 dark:text-gray-400 px-2 py-1.5 border border-dashed border-gray-300 dark:border-gray-600 rounded">
+                {isStationClosed ? 'Station temporarily closed' : 'Examiner on break — back soon'}
+              </div>
+            ) : (
+              <div className="flex items-center gap-1">
+                <select
+                  value={selectedStudentId}
+                  onChange={e => setStationDropdownSelections(prev => ({ ...prev, [station.id]: e.target.value }))}
+                  className="flex-1 text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-w-0 min-h-[32px]"
+                >
+                  <option value="">-- Select student --</option>
+                  {eligible.map(student => {
+                    const completions = getStudentCompletionCount(student, stations, cells);
+                    const needs = studentNeeds[student.id] || [];
+                    const needsLabel = needs.length > 0 ? ` -- needs: ${abbreviateNeeds(needs)}` : '';
+                    return (
+                      <option
+                        key={student.id}
+                        value={student.id}
+                      >
+                        {student.first_name} {student.last_name} ({completions}/{totalSkills > 0 ? totalSkills : totalStations}){needsLabel}
+                      </option>
+                    );
+                  })}
+                </select>
+                <button
+                  onClick={() => {
+                    if (selectedStudentId) {
+                      const student = students.find(s => s.id === selectedStudentId);
+                      if (student) {
+                        handleSendStudent(station.id, student.id, `${student.first_name} ${student.last_name}`);
+                      }
+                    }
+                  }}
+                  disabled={!selectedStudentId}
+                  className="flex-shrink-0 p-1.5 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:text-gray-300 dark:disabled:text-gray-600 min-w-[28px] min-h-[28px] flex items-center justify-center"
+                  title="Send student to this station"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Progress bar */}
+        <div className="flex items-center gap-2">
+          <div className="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-blue-500 dark:bg-blue-400 h-full rounded-full transition-all duration-500"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <span className="text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">
+            {completedCount}/{totalStudents}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* ─── Top Bar (sticky) ─────────────────────────────────────────── */}
@@ -1618,328 +2003,20 @@ export default function CoordinatorViewPage() {
           </span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-          {stations.map(station => {
-            const stationStatus = getStationStatus(station, students, cells, alertStationIds);
-            const config = statusConfig[stationStatus];
-            const StatusIcon = config.icon;
-            const currentStudent = getCurrentStudentAtStation(station, students, cells);
-            const completedCount = getStationCompletedCount(station, students, cells);
-            const progressPercent = totalStudents > 0 ? Math.round((completedCount / totalStudents) * 100) : 0;
-            const displayProctor = getDisplayProctor(station);
-            const allStudentsDone = completedCount === totalStudents && totalStudents > 0;
-            const isAddedDuringExam = station.addedDuringExam || station.custom_title?.includes('(Added)');
-            const isRetakeStation = !!station.isRetakeStation;
-            const enRouteEntry = enRouteStudents[station.id];
-            const hasCurrentStudent = !!currentStudent;
-            const { eligible } = getEligibleStudentsForStation(station);
-            const selectedStudentId = stationDropdownSelections[station.id] || '';
-            const coordStatus: 'open' | 'closed' | 'break' = station.coordinatorStatus || 'open';
-            const isStationClosed = coordStatus === 'closed';
-            const isStationBreak = coordStatus === 'break';
-            const isStationUnavailable = isStationClosed || isStationBreak;
-
+          {getOccupancyGroups(stations, getDisplayProctor).map(group => {
+            if (group.type === 'single') return renderStationCard(group.station);
+            const [bvmStation, o2Station] = group.stations;
             return (
               <div
-                key={station.id}
-                className={`relative rounded-xl border-2 ${
-                  isStationClosed
-                    ? 'border-gray-400 bg-gray-100 dark:border-gray-600 dark:bg-gray-800/60 opacity-70'
-                    : isStationBreak
-                    ? 'border-amber-400 bg-amber-50 dark:border-amber-600 dark:bg-amber-900/20'
-                    : isRetakeStation
-                    ? // Retake stations get a purple tint + border so the
-                      // coordinator can see at a glance which stations the
-                      // retake queue will route to.
-                      'border-purple-400 bg-purple-50 dark:border-purple-500 dark:bg-purple-900/10'
-                    : `${config.border} ${config.bg}`
-                } p-3 sm:p-4 shadow-sm transition-all`}
+                key={`combo-${bvmStation.id}-${o2Station.id}`}
+                className="col-span-2 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 bg-indigo-50/40 dark:bg-indigo-900/10 p-2 sm:p-3"
               >
-                {/* Station header */}
-                <div className="flex items-start justify-between mb-2 gap-2">
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide flex items-center gap-1 flex-wrap">
-                      {!labDayInfo?.is_nremt_testing && <>Station {station.station_number}</>}
-                      {isAddedDuringExam && (
-                        <span className="text-[10px] font-medium text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 rounded-full normal-case">
-                          Additional Station
-                        </span>
-                      )}
-                      {isRetakeStation && (
-                        <span
-                          className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/40 px-1.5 py-0.5 rounded-full normal-case"
-                          title="Retake queue routes students here first"
-                        >
-                          Retake
-                        </span>
-                      )}
-                      {isStationClosed && (
-                        <span className="text-[10px] font-semibold text-gray-700 dark:text-gray-300 bg-gray-300 dark:bg-gray-600 px-1.5 py-0.5 rounded-full normal-case inline-flex items-center gap-0.5">
-                          <Ban className="w-2.5 h-2.5" />
-                          Closed
-                        </span>
-                      )}
-                      {isStationBreak && (
-                        <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-200 dark:bg-amber-900/60 px-1.5 py-0.5 rounded-full normal-case inline-flex items-center gap-0.5">
-                          <Clock className="w-2.5 h-2.5" />
-                          On Break
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-sm sm:text-base font-bold text-gray-900 dark:text-white truncate" title={getStationDisplayName(station, stations)}>
-                      {getStationDisplayName(station, stations)}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${config.badge}`}>
-                      <StatusIcon className="w-3 h-3" />
-                      <span className="hidden sm:inline">{config.label}</span>
-                    </span>
-                    {/* Station status menu (close / break / reopen) */}
-                    <div className="relative">
-                      <button
-                        onClick={() => setStatusMenuStationId(prev => prev === station.id ? null : station.id)}
-                        disabled={statusSaving === station.id}
-                        className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 min-w-[28px] min-h-[28px] flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50"
-                        title="Station availability"
-                        aria-label="Station availability menu"
-                      >
-                        {statusSaving === station.id ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <Ban className="w-3.5 h-3.5" />
-                        )}
-                      </button>
-                      {statusMenuStationId === station.id && (
-                        <>
-                          {/* Backdrop to close menu on outside click */}
-                          <div
-                            className="fixed inset-0 z-40"
-                            onClick={() => setStatusMenuStationId(null)}
-                          />
-                          <div className="absolute right-0 top-full mt-1 z-50 w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg py-1">
-                            {isStationUnavailable && (
-                              <button
-                                onClick={() => handleSetStationStatus(station.id, 'open')}
-                                className="w-full text-left px-3 py-2 text-sm text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/30 flex items-center gap-2"
-                              >
-                                <CheckCircle2 className="w-4 h-4" />
-                                Reopen
-                              </button>
-                            )}
-                            {!isStationClosed && (
-                              <button
-                                onClick={() => handleSetStationStatus(station.id, 'closed')}
-                                className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-                              >
-                                <Ban className="w-4 h-4" />
-                                Temporarily Closed
-                              </button>
-                            )}
-                            {!isStationBreak && (
-                              <button
-                                onClick={() => handleSetStationStatus(station.id, 'break')}
-                                className="w-full text-left px-3 py-2 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 flex items-center gap-2"
-                              >
-                                <Clock className="w-4 h-4" />
-                                On Break (5–10 min)
-                              </button>
-                            )}
-                            {/* Retake-station toggle — NREMT-day only,
-                                since that's the only context where the
-                                retake queue does routing. */}
-                            {labDayInfo?.is_nremt_testing && (
-                              <button
-                                onClick={() => {
-                                  setStatusMenuStationId(null);
-                                  handleToggleRetakeStation(
-                                    station.id,
-                                    !isRetakeStation
-                                  );
-                                }}
-                                className="w-full text-left px-3 py-2 text-sm text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-900/30 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700"
-                              >
-                                <RefreshCw className="w-4 h-4" />
-                                {isRetakeStation
-                                  ? 'Unmark as retake station'
-                                  : 'Mark as retake station'}
-                              </button>
-                            )}
-                            {/* Mid-exam delete — NREMT-day only, and only
-                                for overflow (addedDuringExam) or retake
-                                stations. Original template stations aren't
-                                deletable mid-exam; the RPC would reject
-                                anyway but we hide the option to avoid
-                                dead-end clicks. */}
-                            {labDayInfo?.is_nremt_testing &&
-                              (isAddedDuringExam || isRetakeStation) && (
-                                <button
-                                  onClick={() => {
-                                    setStatusMenuStationId(null);
-                                    setDeleteStationConfirm(station);
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-sm text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2 border-t border-gray-200 dark:border-gray-700"
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                  Delete station
-                                </button>
-                              )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
+                <div className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-1.5 px-1">
+                  Combined proctor — BVM + O2/NRB (same examiner)
                 </div>
-
-                {/* Current student or en route */}
-                <div className="mb-2 min-h-[1.5rem]">
-                  {currentStudent ? (
-                    <div className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                      {currentStudent.first_name} {currentStudent.last_name}
-                    </div>
-                  ) : enRouteEntry ? (
-                    <div className="flex items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
-                        <ArrowRight className="w-3 h-3" />
-                        En Route — {enRouteEntry.studentName}
-                      </span>
-                      {(Date.now() - enRouteEntry.sentAt) < 30000 && (
-                        <button
-                          onClick={() => handleUndoSend(station.id)}
-                          className="p-0.5 text-gray-400 hover:text-red-500 dark:hover:text-red-400"
-                          title="Undo send"
-                        >
-                          <Undo2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-400 dark:text-gray-500 italic">
-                      {stationStatus === 'complete' ? 'All done' : 'Waiting...'}
-                    </div>
-                  )}
-                </div>
-
-                {/* Proctor / Instructor */}
-                <div className="mb-2 min-h-[1.25rem]">
-                  {editingProctor === station.id ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="text"
-                        value={proctorName}
-                        onChange={e => setProctorName(e.target.value)}
-                        placeholder="Examiner name"
-                        className="flex-1 text-xs px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-w-0"
-                        autoFocus
-                        onKeyDown={e => {
-                          if (e.key === 'Enter') handleSaveProctor(station.id);
-                          if (e.key === 'Escape') { setEditingProctor(null); setProctorName(''); }
-                        }}
-                      />
-                      <button
-                        onClick={() => handleSaveProctor(station.id)}
-                        className="p-1 text-green-600 hover:text-green-700 min-w-[28px] min-h-[28px] flex items-center justify-center"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => { setEditingProctor(null); setProctorName(''); }}
-                        className="p-1 text-gray-400 hover:text-gray-600 min-w-[28px] min-h-[28px] flex items-center justify-center"
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {displayProctor ? `Examiner: ${displayProctor}` : 'No examiner assigned'}
-                      </span>
-                      <button
-                        onClick={() => {
-                          setEditingProctor(station.id);
-                          setProctorName(displayProctor || '');
-                        }}
-                        className="flex-shrink-0 p-1 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 min-w-[28px] min-h-[28px] flex items-center justify-center"
-                        title="Change examiner"
-                      >
-                        <Edit3 className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* All Complete badge */}
-                {allStudentsDone && (
-                  <div className="mb-2">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300">
-                      <CheckCircle2 className="w-3 h-3" />
-                      All Complete
-                    </span>
-                  </div>
-                )}
-
-                {/* Send Student dropdown (only when no current student testing) */}
-                {!hasCurrentStudent && !allStudentsDone && (
-                  <div className="mb-2">
-                    <label className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-0.5 block">
-                      Send Student:
-                    </label>
-                    {isStationUnavailable ? (
-                      <div className="text-xs italic text-gray-500 dark:text-gray-400 px-2 py-1.5 border border-dashed border-gray-300 dark:border-gray-600 rounded">
-                        {isStationClosed ? 'Station temporarily closed' : 'Examiner on break — back soon'}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        <select
-                          value={selectedStudentId}
-                          onChange={e => setStationDropdownSelections(prev => ({ ...prev, [station.id]: e.target.value }))}
-                          className="flex-1 text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white min-w-0 min-h-[32px]"
-                        >
-                          <option value="">-- Select student --</option>
-                          {eligible.map(student => {
-                            const completions = getStudentCompletionCount(student, stations, cells);
-                            const needs = studentNeeds[student.id] || [];
-                            const needsLabel = needs.length > 0 ? ` -- needs: ${abbreviateNeeds(needs)}` : '';
-                            return (
-                              <option
-                                key={student.id}
-                                value={student.id}
-                              >
-                                {student.first_name} {student.last_name} ({completions}/{totalSkills > 0 ? totalSkills : totalStations}){needsLabel}
-                              </option>
-                            );
-                          })}
-                        </select>
-                        <button
-                          onClick={() => {
-                            if (selectedStudentId) {
-                              const student = students.find(s => s.id === selectedStudentId);
-                              if (student) {
-                                handleSendStudent(station.id, student.id, `${student.first_name} ${student.last_name}`);
-                              }
-                            }
-                          }}
-                          disabled={!selectedStudentId}
-                          className="flex-shrink-0 p-1.5 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 disabled:text-gray-300 dark:disabled:text-gray-600 min-w-[28px] min-h-[28px] flex items-center justify-center"
-                          title="Send student to this station"
-                        >
-                          <Send className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Progress bar */}
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-2 overflow-hidden">
-                    <div
-                      className="bg-blue-500 dark:bg-blue-400 h-full rounded-full transition-all duration-500"
-                      style={{ width: `${progressPercent}%` }}
-                    />
-                  </div>
-                  <span className="text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                    {completedCount}/{totalStudents}
-                  </span>
+                <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                  {renderStationCard(bvmStation)}
+                  {renderStationCard(o2Station)}
                 </div>
               </div>
             );
