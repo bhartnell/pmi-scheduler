@@ -471,7 +471,7 @@ export default function ChecklistAttendance({
                                   : 'text-gray-700 dark:text-gray-300'
                               }`}
                             >
-                              {student.last_name}, {student.first_name[0]}.
+                              {student.last_name}, {student.first_name}
                             </span>
                           </div>
                         </button>

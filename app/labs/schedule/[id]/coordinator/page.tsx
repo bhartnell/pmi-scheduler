@@ -2180,7 +2180,7 @@ export default function CoordinatorViewPage() {
                         className="text-left text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 hover:underline cursor-pointer"
                         title={`View details for ${row.student.last_name}, ${row.student.first_name}`}
                       >
-                        {row.student.last_name}, {row.student.first_name.charAt(0)}.
+                        {row.student.last_name}, {row.student.first_name}
                       </button>
                     </td>
 
