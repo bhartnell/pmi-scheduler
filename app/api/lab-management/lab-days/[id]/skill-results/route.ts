@@ -84,6 +84,7 @@ export async function GET(
         minimum_points: number | null;
         at_risk: boolean;
         critical_fail: boolean;
+        critical_fail_notes: string | null;
         is_retake: boolean;
         original_evaluation_id: string | null;
       }>;
@@ -172,6 +173,7 @@ export async function GET(
         minimum_points: minimumPoints,
         at_risk: atRisk,
         critical_fail: criticalFail,
+        critical_fail_notes: (ev as Record<string, unknown>).critical_fail_notes as string | null || null,
         is_retake: (ev as Record<string, unknown>).is_retake === true,
         original_evaluation_id: (ev as Record<string, unknown>).original_evaluation_id as string | null || null,
       });

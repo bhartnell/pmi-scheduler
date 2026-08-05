@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-08-05
+
+- `a7a3750` | **fix(lab results): surface critical-fail reason on results/tracker view (Task Handoff Queue).** The `skill-results` API (`app/api/lab-management/lab-days/[id]/skill-results/route.ts`) queried `critical_fail_notes` from `student_skill_evaluations` but never included it in the response payload, so the main results matrix (`app/labs/schedule/[id]/results/page.tsx`) had no way to show *why* an eval was a critical fail (e.g. 13/13 points but FAIL — correct NREMT critical-criteria auto-fail scoring, but looked like a scoring bug without the reason). Fix: API now returns `critical_fail_notes`; the matrix cell shows a red "!" badge (title = the reason) next to the score, and the `ScoreCell` tooltip also states the critical-fail reason. Display-only — no scoring/pass-fail logic touched. `type-check`/`build` clean.
+
 ## 2026-08-03
 
 - `bb69586f` | **fix(lab-day): stop right-side overlap of Available Today panel + chat at 100% zoom / tablet (day-of NREMT, layout only).** Two bounded fixes: (1) `AvailableInstructorsSection` (the "Available Today / Has a conflict / No availability submitted" panel) is now **collapsible** — same rotating-chevron toggle the skills/checklist sections use — so it can be minimized to reclaim right-side space. (2) `LabDayChatInner`: the open chat panel's right-dock now only applies at `xl:` (≥1280px, e.g. Ben's 67% zoom); below that (tablets + 100% zoom, where Stacie hit the overlap) it renders as a full-width **bottom sheet** instead of a 350px panel docked over the right-side station list. Closed state is unchanged (small bubble). No chat functionality, availability data, or station data touched — layout/positioning only. Applies to both the lab-day view and the coordinator view (shared component). type-check + build clean.
