@@ -698,7 +698,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
                     style={{ boxShadow: '2px 0 4px -2px rgba(0,0,0,0.1)' }}
                     title={`${student.last_name}, ${student.first_name}`}
                   >
-                    {student.last_name}, {student.first_name.charAt(0)}.
+                    {student.last_name}, {student.first_name}
                   </td>
 
                   {/* Skill cells */}
