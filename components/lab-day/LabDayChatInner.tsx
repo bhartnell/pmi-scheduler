@@ -513,10 +513,15 @@ export default function LabDayChatInner({
         <div
           className="fixed z-40 flex flex-col bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl print:hidden
             inset-x-0 bottom-0 h-[70vh] rounded-t-xl
-            sm:inset-auto sm:bottom-auto sm:right-4 sm:w-[350px] sm:h-[450px] sm:rounded-xl"
+            xl:inset-auto xl:bottom-auto xl:right-4 xl:w-[350px] xl:h-[450px] xl:rounded-xl"
           style={{
-            // Desktop: position above the floating button area
-            ...(typeof window !== 'undefined' && window.innerWidth >= 640
+            // Wide desktop only (>=1280px, e.g. Ben's 67% zoom): dock the panel
+            // bottom-right above the floating button, where there's clear gutter.
+            // Below xl (tablets + 100%-zoom / narrower desktop, where Stacie hit
+            // the overlap) the panel is a full-width BOTTOM SHEET instead — so it
+            // never covers the right-side station list / availability panels.
+            // Day-of NREMT overlap fix; layout only.
+            ...(typeof window !== 'undefined' && window.innerWidth >= 1280
               ? { bottom: `${bottomOffset + 56}px` }
               : {}),
           }}

@@ -1,6 +1,7 @@
 'use client';
 
-import { Users, Loader2 } from 'lucide-react';
+import { useState } from 'react';
+import { Users, Loader2, ChevronDown } from 'lucide-react';
 import type { InstructorAvailabilityEntry } from './types';
 
 interface AvailableInstructorsSectionProps {
@@ -20,6 +21,11 @@ export default function AvailableInstructorsSection({
   instructorAvailability,
   loading,
 }: AvailableInstructorsSectionProps) {
+  // Collapsible (mirrors the skills/checklist sections) so it can be minimized
+  // to reclaim right-side space at 100% zoom / tablet width where it otherwise
+  // crowds the panels + chat. Layout only — no data change.
+  const [collapsed, setCollapsed] = useState(false);
+
   if (loading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 print:hidden">
@@ -41,14 +47,24 @@ export default function AvailableInstructorsSection({
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 print:hidden">
-      <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+      <button
+        type="button"
+        onClick={() => setCollapsed(c => !c)}
+        aria-expanded={!collapsed}
+        className="w-full font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3 text-left"
+      >
         <Users className="w-5 h-5 text-green-600 dark:text-green-400" />
         Available Today
         <span className="text-xs font-normal text-gray-400 dark:text-gray-500">
           ({totalCount} instructor{totalCount !== 1 ? 's' : ''})
         </span>
-      </h3>
+        <ChevronDown
+          className={`w-4 h-4 text-gray-400 shrink-0 ml-auto transition-transform duration-200 ${collapsed ? '-rotate-90' : ''}`}
+        />
+      </button>
 
+      {!collapsed && (
+      <>
       {totalCount === 0 ? (
         <p className="text-sm text-gray-400 dark:text-gray-500 italic">
           No instructors have submitted availability or volunteered for this lab day yet.
@@ -150,6 +166,8 @@ export default function AvailableInstructorsSection({
             {noData.map(i => i.name).join(', ')}
           </p>
         </div>
+      )}
+      </>
       )}
     </div>
   );
