@@ -97,10 +97,23 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
   // ─── Data fetching ──────────────────────────────────────────────────────
 
   const sessionExpiredRef = useRef(false);
+  // Bumped on every fetchGrid call so a slower, older request (e.g. the
+  // manual Refresh button clicked mid-poll, racing the 5s interval) can
+  // detect it's no longer the latest and skip applying its response —
+  // otherwise an out-of-order response can clobber fresher state.
+  const requestIdRef = useRef(0);
+  // Once we've successfully rendered a populated grid, a later background
+  // poll that comes back empty is almost certainly a transient hiccup
+  // (slow/partial query under heavy polling load with many stations), not
+  // a real "no data" state — this is what was making the tracker appear
+  // to vanish under load. Only the very first load trusts an empty result.
+  const hasLoadedDataRef = useRef(false);
 
   const fetchGrid = useCallback(async (isBackground = false) => {
     if (!isBackground) setLoading(true);
     else setRefreshing(true);
+
+    const requestId = ++requestIdRef.current;
 
     try {
       const res = await fetch(`/api/lab-management/student-queue?lab_day_id=${labDayId}`);
@@ -109,18 +122,31 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
         return;
       }
       const data = await res.json();
+      if (requestId !== requestIdRef.current) return; // superseded by a newer request
+
       if (data.success) {
-        setStudents(data.students || []);
-        setStations(data.stations || []);
-        setCells(data.cells || {});
-        setSkillColumns(data.skillColumns || []);
-        setSkillCells(data.skillCells || {});
+        const nextStudents = data.students || [];
+        const nextStations = data.stations || [];
+        const looksEmpty = nextStudents.length === 0 || nextStations.length === 0;
+
+        if (isBackground && hasLoadedDataRef.current && looksEmpty) {
+          console.warn('[IndividualTestingGrid] Ignoring empty background refresh — keeping last known grid');
+        } else {
+          if (!looksEmpty) hasLoadedDataRef.current = true;
+          setStudents(nextStudents);
+          setStations(nextStations);
+          setCells(data.cells || {});
+          setSkillColumns(data.skillColumns || []);
+          setSkillCells(data.skillCells || {});
+        }
       }
     } catch (err) {
       console.error('Error fetching grid:', err);
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   }, [labDayId]);
 
