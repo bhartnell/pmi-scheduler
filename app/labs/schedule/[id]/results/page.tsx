@@ -47,6 +47,7 @@ interface Evaluation {
   minimum_points: number | null;
   at_risk: boolean;
   critical_fail: boolean;
+  critical_fail_notes: string | null;
   is_retake: boolean;
   original_evaluation_id: string | null;
 }
@@ -675,6 +676,14 @@ function CohortOverviewTab({
                         {bestEval ? (
                           <div className="relative inline-block">
                             <ScoreCell evaluation={bestEval} />
+                            {bestEval.critical_fail && (
+                              <span
+                                className="absolute -top-1 -left-1 w-3.5 h-3.5 rounded-full bg-red-700 text-white text-[8px] font-bold flex items-center justify-center"
+                                title={`Critical fail (auto-fail regardless of points)${bestEval.critical_fail_notes ? `: ${bestEval.critical_fail_notes}` : ' — no reason recorded'}`}
+                              >
+                                !
+                              </span>
+                            )}
                             {hasRetake && (
                               <span
                                 className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[8px] font-bold flex items-center justify-center"
@@ -789,7 +798,7 @@ function CohortOverviewTab({
 /* ─── Score Cell Component ────────────────────────────────────── */
 
 function ScoreCell({ evaluation }: { evaluation: Evaluation }) {
-  const { points_earned, points_possible, minimum_points, result, critical_fail, at_risk, email_status } = evaluation;
+  const { points_earned, points_possible, minimum_points, result, critical_fail, critical_fail_notes, at_risk, email_status } = evaluation;
 
   // Determine color
   let bgClass = '';
@@ -817,7 +826,8 @@ function ScoreCell({ evaluation }: { evaluation: Evaluation }) {
     label = result.toUpperCase();
   }
 
-  const tooltipText = `Points: ${points_earned}/${points_possible}${minimum_points !== null ? ` — Minimum: ${minimum_points}` : ''} — ${label}`;
+  const tooltipText = `Points: ${points_earned}/${points_possible}${minimum_points !== null ? ` — Minimum: ${minimum_points}` : ''} — ${label}`
+    + (critical_fail ? ` (auto-fail regardless of points${critical_fail_notes ? `: ${critical_fail_notes}` : ' — no reason recorded'})` : '');
 
   return (
     <div className="flex flex-col items-center gap-1">
