@@ -325,19 +325,23 @@ export const PROCTOR_GENERAL_RESPONSIBILITIES = `Thank you for serving as a Skil
 // ─── NREMT Minimum Point Thresholds ────────────────────────────
 
 /**
- * Minimum points required to pass each NREMT skill.
- * Keys are canonical names; use findMinimumPoints() for fuzzy matching.
+ * Minimum points required to pass each NREMT skill, per the official NREMT
+ * EMT psychomotor exam skill sheets (verified against the live skill_sheets
+ * total_possible_points for each source='nremt' sheet — e.g. BVM 12/16,
+ * O2 8/11, Cardiac/AED 12/17; not a flat percentage). Keys are the exact
+ * `skill_name` values used by the source='nremt' skill_sheets rows (E201-E217);
+ * use findMinimumPoints() for fuzzy matching against other name variants.
  */
 export const NREMT_MINIMUM_POINTS: Record<string, number> = {
-  'Patient assessment and management — medical': 33,
-  'Patient assessment and management — trauma': 33,
-  'BVM of Adult Apneic Patient': 12,
-  'O2 Administration by NRB': 8,
-  'Cardiac Arrest/AED': 13,
-  'Supine Spinal Immobilization': 11,
-  'Spinal Immobilization (Seated Patient)': 9,
-  'Bleeding Control / Shock Management': 5,
-  'Long Bone Immobilization': 8,
+  'Patient assessment and management — medical': 30,
+  'Patient assessment and management — trauma': 30,
+  'BVM ventilation of an apneic adult patient': 12,
+  'Oxygen administration by non-rebreather mask': 8,
+  'Cardiac arrest management with AED': 12,
+  'Spinal immobilization — supine patient': 10,
+  'Spinal immobilization — seated patient': 9,
+  'Bleeding control and shock management': 5,
+  'Long Bone Immobilization': 7,
   'Joint Immobilization': 7,
 };
 
