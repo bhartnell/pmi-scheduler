@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-08-08
+
+- `2ce37bb` | **fix(clinical): exclude internship-level withdrawn status from cohort tracker (Task Handoff Queue).** `student_internships` has its own `'withdrawn'` status value separate from `students.status`; the cohort tracker's "Show withdrawn students" toggle only ever excluded the student-level flag, so a student withdrawn from just that internship/rotation still rendered regardless of the toggle. Confirmed against live data (cohort `a5ef1462`, 3 affected students) matching Rae's report. Fix excludes `student_internships.status = 'withdrawn'` by default too, guarded to not break the "all internships" page's explicit `status=withdrawn` filter dropdown. Display/read-path only. `type-check`/`build` clean.
+
 ## 2026-08-05
 
 - `ae8328ae` | **coordinator batch (#3 + #6 only, NREMT-day hotfix): table results-only + retake-queue collapse.** #3: the completed-cell popover in `components/lab-day/IndividualTestingGrid.tsx` no longer offers "New Attempt" (removed `handleNewAttempt` + `findStationForSkill` + `RotateCcw`) so clicking a completed cell shows results actions only (View Score Sheet / Print / Download PDF) and never auto-creates a station attempt; the pass/fail Override action is intentionally KEPT (the override-removal, batch #1, was deliberately not pushed so an edit path stays live until the director-edit modal ships). #6: RETAKE QUEUE header in `app/labs/schedule/[id]/coordinator/page.tsx` is now a collapse toggle (`retakeCollapsed`). Cherry-picked from branch `coordinator-director-score-edit` (`f1954dca`); `IndividualTestingGrid` conflict resolved to keep the override. Display/UX-only, no data or scoring logic touched. Fresh-`.next` `type-check` clean.
