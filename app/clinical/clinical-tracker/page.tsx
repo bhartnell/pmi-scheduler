@@ -18,6 +18,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type ThreeState = 'ordered' | 'in_progress' | 'complete' | null;
+type FluStatus = 'received' | 'declined' | null;
 
 interface Cohort {
   id: string;
@@ -58,6 +59,7 @@ interface ComplioRow {
   health_insurance_complete: boolean;
   bls_complete: boolean;
   flu_shot_complete: boolean;
+  flu_shot_status: FluStatus;
   flu_declination: boolean;
   hospital_orientation_complete: boolean;
   exhibit_complete: boolean;
@@ -206,6 +208,39 @@ function CheckCell({
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       )}
+    </button>
+  );
+}
+
+// Flu shot R/D cell (Rae 8/11, item 2.d): single-letter status — R = received
+// (green), D = declined (amber). Clicking cycles — → R → D → —. The separate
+// "Flu Dec" column (the VHS declination FORM) is required regardless and stays
+// its own checkbox.
+function FluStatusCell({
+  value,
+  onChange,
+  saving,
+}: {
+  value: FluStatus;
+  onChange: (v: FluStatus) => void;
+  saving?: boolean;
+}) {
+  const next: FluStatus = value === null ? 'received' : value === 'received' ? 'declined' : null;
+  const letter = value === 'received' ? 'R' : value === 'declined' ? 'D' : '—';
+  const colors =
+    value === 'received'
+      ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+      : value === 'declined'
+      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+      : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400';
+  return (
+    <button
+      onClick={() => onChange(next)}
+      disabled={saving}
+      title={value === 'received' ? 'Received (click → Declined)' : value === 'declined' ? 'Declined (click → clear)' : 'Not set (click → Received)'}
+      className={`w-7 h-7 rounded text-xs font-bold text-center border border-transparent transition-opacity ${colors} ${saving ? 'opacity-50' : 'hover:opacity-80'}`}
+    >
+      {letter}
     </button>
   );
 }
@@ -414,7 +449,7 @@ function ComplioStudentPrintView({ s }: { s: ComplioRow }) {
       <PrintRow label="Physical exam" value={s.physical_complete} />
       <PrintRow label="Health insurance" value={s.health_insurance_complete} />
       <PrintRow label="AHA BLS Provider card" value={s.bls_complete} />
-      <PrintRow label="Flu shot" value={s.flu_shot_complete} />
+      <PrintRow label="Flu shot" value={s.flu_shot_status === 'received' ? 'Received' : s.flu_shot_status === 'declined' ? 'Declined' : ''} />
       <PrintRow label="VHS Influenza Declination form" value={s.flu_declination} />
       <PrintRow label="VHS Hospital Orientation form" value={s.hospital_orientation_complete} />
       <PrintRow label="Student Declaration of Responsibilities & Confidentiality (Exhibits A&B)" value={s.exhibit_complete} />
@@ -575,6 +610,7 @@ export default function ClinicalTrackerPage() {
             health_insurance_complete: d.health_insurance_complete ?? false,
             bls_complete: d.bls_complete ?? false,
             flu_shot_complete: d.flu_shot_complete ?? false,
+            flu_shot_status: d.flu_shot_status ?? null,
             flu_declination: d.flu_declination ?? false,
             hospital_orientation_complete: d.hospital_orientation_complete ?? false,
             exhibit_complete: d.exhibit_complete ?? false,
@@ -711,7 +747,7 @@ export default function ClinicalTrackerPage() {
     physical: complioRows.filter(r => r.physical_complete).length,
     h_ins: complioRows.filter(r => r.health_insurance_complete).length,
     bls: complioRows.filter(r => r.bls_complete).length,
-    flu: complioRows.filter(r => r.flu_shot_complete || r.flu_declination).length,
+    flu: complioRows.filter(r => r.flu_shot_status === 'received' || r.flu_declination).length,
     h_orient: complioRows.filter(r => r.hospital_orientation_complete).length,
     bg: complioRows.filter(r => r.background_check_status === 'complete').length,
     dt: complioRows.filter(r => r.drug_test_status === 'complete').length,
@@ -1064,7 +1100,7 @@ function ComplioTable({
               <TD><CheckCell value={row.physical_complete} onChange={v => onSave(row.student_id, 'physical_complete', v)} saving={sk('physical_complete')} /></TD>
               <TD><CheckCell value={row.health_insurance_complete} onChange={v => onSave(row.student_id, 'health_insurance_complete', v)} saving={sk('health_insurance_complete')} /></TD>
               <TD><CheckCell value={row.bls_complete} onChange={v => onSave(row.student_id, 'bls_complete', v)} saving={sk('bls_complete')} /></TD>
-              <TD><CheckCell value={row.flu_shot_complete} onChange={v => onSave(row.student_id, 'flu_shot_complete', v)} saving={sk('flu_shot_complete')} /></TD>
+              <TD><FluStatusCell value={row.flu_shot_status} onChange={v => onSave(row.student_id, 'flu_shot_status', v)} saving={sk('flu_shot_status')} /></TD>
               <TD><CheckCell value={row.flu_declination} onChange={v => onSave(row.student_id, 'flu_declination', v)} saving={sk('flu_declination')} /></TD>
               <TD><CheckCell value={row.hospital_orientation_complete} onChange={v => onSave(row.student_id, 'hospital_orientation_complete', v)} saving={sk('hospital_orientation_complete')} /></TD>
               <TD><CheckCell value={row.exhibit_complete} onChange={v => onSave(row.student_id, 'exhibit_complete', v)} saving={sk('exhibit_complete')} /></TD>

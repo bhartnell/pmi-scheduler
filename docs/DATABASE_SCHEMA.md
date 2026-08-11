@@ -971,7 +971,8 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | health_insurance_date | date | YES |  |  |
 | bls_complete | boolean | YES | false |  |
 | bls_expiration | date | YES |  |  |
-| flu_shot_complete | boolean | YES | false |  |
+| flu_shot_complete | boolean | YES | false | legacy; preserved for history, superseded by flu_shot_status for the grid (2026-08-11) |
+| flu_shot_status | text | YES |  | R/D: received \| declined \| null (Rae 2026-08-11); flu_declination = the separate VHS declination FORM |
 | flu_shot_date | date | YES |  |  |
 | flu_declination | boolean | YES | false |  |
 | hospital_orientation_complete | boolean | YES | false |  |
