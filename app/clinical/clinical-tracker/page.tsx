@@ -103,6 +103,12 @@ interface MceRow {
   orientation: boolean;
   conduct: boolean;
   mce_notes: string;
+  // Added 2026-08-11 (Rae feedback, mCE redesign) — see migration
+  // 20260811_mce_tracker_new_columns.sql. All start empty/false.
+  cs_attestation: boolean;
+  cs_orientation: boolean;
+  wpvp_training: boolean;
+  orientation_exam: boolean;
 }
 
 // ── Helper components ─────────────────────────────────────────────────────────
@@ -369,11 +375,12 @@ const COMPLIO_PRINT_FIELDS: PrintField<ComplioRow>[] = [
   { label: 'Drug test', get: s => s.drug_test_status },
 ];
 
-// mCE field set/order as of stage 2 (print-delivery fix only). Stage 4 adds
-// the new mCE columns (CS Attestation, CS orientation, WPVP curriculum,
-// Orientation exam) and reorders this to match the redesigned section
-// layout — this list gets updated alongside that.
+// mCE field set/order matches the redesigned table sections (item 3.a.ii):
+// Compliance -> Documents -> Modules -> Orientation exam. `nsp` is left out
+// (not part of Rae's finalized column list — hidden from view, not deleted;
+// see mceAgg above).
 const MCE_PRINT_FIELDS: PrintField<MceRow>[] = [
+  // Compliance
   { label: 'Background check', get: s => s.bg_check_status },
   { label: 'Drug test', get: s => s.drug_test_status },
   { label: 'Physical exam', get: s => s.physical },
@@ -387,20 +394,26 @@ const MCE_PRINT_FIELDS: PrintField<MceRow>[] = [
   { label: 'Varicella', get: s => s.vzv },
   { label: 'COVID-19 vaccine', get: s => s.covid },
   { label: 'AHA BLS Provider', get: s => s.bls },
+  // Documents
+  { label: 'CommonSpirit (CS) Attestation of Student Orientation', get: s => s.cs_attestation },
   { label: 'Confidentiality Statement', get: s => s.confidentiality },
   { label: 'Flu declination', get: s => s.flu_declination },
   { label: 'Hep B declination', get: s => s.hep_b_declination },
   { label: 'MMR declination', get: s => s.mmr_declination },
   { label: 'Tdap declination', get: s => s.tdap_declination },
   { label: 'Varicella declination', get: s => s.vzv_declination },
-  { label: 'NSP', get: s => s.nsp },
   { label: 'NV cultural competency certificate', get: s => s.cultural_competency },
   { label: 'Siena parking', get: s => s.parking },
   { label: 'Educational Training Agreement parts IV/V', get: s => s.eta_module },
   { label: 'Attestation and Letter of Good Standing (LGS)', get: s => s.attestation_lgs },
   { label: 'WPVP training attestation', get: s => s.wpvp },
-  { label: 'Hospital Orientation', get: s => s.orientation },
-  { label: 'Conduct', get: s => s.conduct },
+  // Modules
+  { label: 'CS clinical student orientation', get: s => s.cs_orientation },
+  { label: 'Dignity Health (DH) orientation', get: s => s.orientation },
+  { label: 'Standards of conduct', get: s => s.conduct },
+  { label: 'Workplace Violence Prevention training curriculum', get: s => s.wpvp_training },
+  // Orientation exam
+  { label: 'Orientation exam', get: s => s.orientation_exam },
 ];
 
 function printFieldRowHtml(label: string, value: boolean | ThreeState | string): string {
@@ -715,6 +728,10 @@ export default function ClinicalTrackerPage() {
           orientation: d.orientation ?? false,
           conduct: d.conduct ?? false,
           mce_notes: d.mce_notes ?? '',
+          cs_attestation: d.cs_attestation ?? false,
+          cs_orientation: d.cs_orientation ?? false,
+          wpvp_training: d.wpvp_training ?? false,
+          orientation_exam: d.orientation_exam ?? false,
         }));
         setMceRows(rows);
       }
@@ -809,29 +826,45 @@ export default function ClinicalTrackerPage() {
     shared: complioRows.filter(r => r.docs_shared_with_sites).length,
   };
 
+  // Ordered/grouped to match the redesigned mCE table sections (Compliance /
+  // Documents / Modules / Orientation exam — item 3.a.i). `nsp` isn't part
+  // of Rae's finalized column list, so it's hidden from view here too (data
+  // untouched, same "remove column = remove from view" rule as Complio).
   const mceAgg = {
+    // Compliance
     bg: mceRows.filter(r => r.bg_check_status === 'complete').length,
     dt: mceRows.filter(r => r.drug_test_status === 'complete').length,
     physical: mceRows.filter(r => r.physical).length,
     insurance: mceRows.filter(r => r.insurance).length,
     photo: mceRows.filter(r => r.photo).length,
     tb: mceRows.filter(r => r.tb).length,
-    mmr: mceRows.filter(r => r.mmr || r.mmr_declination).length,
-    flu: mceRows.filter(r => r.flu || r.flu_declination).length,
-    hep_b: mceRows.filter(r => r.hep_b || r.hep_b_declination).length,
-    tdap: mceRows.filter(r => r.tdap || r.tdap_declination).length,
-    vzv: mceRows.filter(r => r.vzv || r.vzv_declination).length,
+    mmr: mceRows.filter(r => r.mmr).length,
+    flu: mceRows.filter(r => r.flu).length,
+    hep_b: mceRows.filter(r => r.hep_b).length,
+    tdap: mceRows.filter(r => r.tdap).length,
+    vzv: mceRows.filter(r => r.vzv).length,
     covid: mceRows.filter(r => r.covid).length,
     bls: mceRows.filter(r => r.bls).length,
+    // Documents
+    cs_att: mceRows.filter(r => r.cs_attestation).length,
     confid: mceRows.filter(r => r.confidentiality).length,
-    nsp: mceRows.filter(r => r.nsp).length,
+    flu_dec: mceRows.filter(r => r.flu_declination).length,
+    hep_b_dec: mceRows.filter(r => r.hep_b_declination).length,
+    mmr_dec: mceRows.filter(r => r.mmr_declination).length,
+    tdap_dec: mceRows.filter(r => r.tdap_declination).length,
+    vzv_dec: mceRows.filter(r => r.vzv_declination).length,
     cult: mceRows.filter(r => r.cultural_competency).length,
     parking: mceRows.filter(r => r.parking).length,
     eta: mceRows.filter(r => r.eta_module).length,
     attest_lgs: mceRows.filter(r => r.attestation_lgs).length,
-    wpvp: mceRows.filter(r => r.wpvp).length,
-    orient: mceRows.filter(r => r.orientation).length,
+    wpvp_att: mceRows.filter(r => r.wpvp).length,
+    // Modules
+    cs_ori: mceRows.filter(r => r.cs_orientation).length,
+    dh_ori: mceRows.filter(r => r.orientation).length,
     conduct: mceRows.filter(r => r.conduct).length,
+    wpvp_tr: mceRows.filter(r => r.wpvp_training).length,
+    // Orientation exam
+    orient_exam: mceRows.filter(r => r.orientation_exam).length,
   };
 
   if (status === 'loading') {
@@ -999,15 +1032,18 @@ export default function ClinicalTrackerPage() {
                   <AggBar label="VZV" count={mceAgg.vzv} total={total} />
                   <AggBar label="COVID" count={mceAgg.covid} total={total} />
                   <AggBar label="BLS" count={mceAgg.bls} total={total} />
+                  <AggBar label="CS Attestation" count={mceAgg.cs_att} total={total} />
                   <AggBar label="Confidentiality" count={mceAgg.confid} total={total} />
-                  <AggBar label="NSP" count={mceAgg.nsp} total={total} />
                   <AggBar label="Cultural Comp." count={mceAgg.cult} total={total} />
                   <AggBar label="Parking" count={mceAgg.parking} total={total} />
-                  <AggBar label="ETA Module" count={mceAgg.eta} total={total} />
+                  <AggBar label="ETA 4/5" count={mceAgg.eta} total={total} />
                   <AggBar label="Attest LGS" count={mceAgg.attest_lgs} total={total} />
-                  <AggBar label="WPVP" count={mceAgg.wpvp} total={total} />
-                  <AggBar label="Orientation" count={mceAgg.orient} total={total} />
+                  <AggBar label="WPVP Attest." count={mceAgg.wpvp_att} total={total} />
+                  <AggBar label="CS Orientation" count={mceAgg.cs_ori} total={total} />
+                  <AggBar label="DH Orientation" count={mceAgg.dh_ori} total={total} />
                   <AggBar label="Conduct" count={mceAgg.conduct} total={total} />
+                  <AggBar label="WPVP Training" count={mceAgg.wpvp_tr} total={total} />
+                  <AggBar label="Orientation Exam" count={mceAgg.orient_exam} total={total} />
                 </>
               )}
             </div>
@@ -1200,6 +1236,21 @@ function ComplioTable({
 
 // ── mCE Modules table ─────────────────────────────────────────────────────────
 
+// Section-group header cell (item 3.a.i): a colored band + thick bottom
+// border above the column headers, grouping columns into the 4 mCE
+// sections (Compliance / Documents / Modules / Orientation exam). Purely
+// a heading — no data or interaction.
+function SectionTH({ children, span, colorClass }: { children: React.ReactNode; span: number; colorClass: string }) {
+  return (
+    <th
+      colSpan={span}
+      className={`px-1.5 py-1 text-center text-[10px] font-bold uppercase tracking-wide border-b-2 border-r-2 border-gray-400 dark:border-gray-500 last:border-r-0 ${colorClass}`}
+    >
+      {children}
+    </th>
+  );
+}
+
 function MceTable({
   rows,
   cohortId,
@@ -1216,9 +1267,22 @@ function MceTable({
   return (
     <table className="w-full text-xs">
       <thead className="sticky top-0 bg-white dark:bg-gray-800 z-10">
+        {/* Section header row (item 3.a.i) — column order below must match
+            3.a.ii exactly: Compliance (13) -> Documents (12) -> Modules (4)
+            -> Orientation exam (1). `nsp` is intentionally not part of this
+            layout (not in Rae's finalized list) — hidden from view only. */}
+        <tr>
+          <th colSpan={2} className="sticky left-0 bg-white dark:bg-gray-800 border-b-2 border-gray-400 dark:border-gray-500" />
+          <SectionTH span={13} colorClass="bg-blue-50 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">Compliance</SectionTH>
+          <SectionTH span={12} colorClass="bg-purple-50 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">Documents</SectionTH>
+          <SectionTH span={4} colorClass="bg-amber-50 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">Modules</SectionTH>
+          <SectionTH span={1} colorClass="bg-teal-50 text-teal-800 dark:bg-teal-900/30 dark:text-teal-300">Orient. Exam</SectionTH>
+          <th className="border-b-2 border-gray-400 dark:border-gray-500" />
+        </tr>
         <tr>
           <TH className="sticky left-0 bg-white dark:bg-gray-800 min-w-[130px]">Student</TH>
           <TH>Print</TH>
+          {/* Compliance */}
           <TH>BG</TH>
           <TH>DT</TH>
           <TH>Phys</TH>
@@ -1232,20 +1296,26 @@ function MceTable({
           <TH>VZV</TH>
           <TH>COVID</TH>
           <TH>BLS</TH>
+          {/* Documents */}
+          <TH>CS Att</TH>
           <TH>Confid</TH>
           <TH>Flu Dec</TH>
           <TH>Hep B Dec</TH>
           <TH>MMR Dec</TH>
           <TH>Tdap Dec</TH>
           <TH>VZV Dec</TH>
-          <TH>NSP</TH>
           <TH>Cult Comp</TH>
           <TH>Parking</TH>
           <TH>ETA 4/5</TH>
           <TH>Attest LGS</TH>
-          <TH>WPVP</TH>
-          <TH>Orient</TH>
+          <TH>WPVP Att</TH>
+          {/* Modules */}
+          <TH>CS ORI</TH>
+          <TH>DH ORI</TH>
           <TH>Conduct</TH>
+          <TH>WPVP TR</TH>
+          {/* Orientation exam */}
+          <TH>Orient Exam</TH>
           <TH>Notes</TH>
         </tr>
       </thead>
@@ -1267,6 +1337,7 @@ function MceTable({
                   <Printer className="w-3.5 h-3.5" />
                 </button>
               </TD>
+              {/* Compliance */}
               <TD><ThreeStateCell value={row.bg_check_status} onChange={v => save('bg_check_status', v)} saving={sk('bg_check_status')} /></TD>
               <TD><ThreeStateCell value={row.drug_test_status} onChange={v => save('drug_test_status', v)} saving={sk('drug_test_status')} /></TD>
               <TD><CheckCell value={row.physical} onChange={v => save('physical', v)} saving={sk('physical')} /></TD>
@@ -1280,20 +1351,26 @@ function MceTable({
               <TD><CheckCell value={row.vzv} onChange={v => save('vzv', v)} saving={sk('vzv')} /></TD>
               <TD><CheckCell value={row.covid} onChange={v => save('covid', v)} saving={sk('covid')} /></TD>
               <TD><CheckCell value={row.bls} onChange={v => save('bls', v)} saving={sk('bls')} /></TD>
+              {/* Documents */}
+              <TD><CheckCell value={row.cs_attestation} onChange={v => save('cs_attestation', v)} saving={sk('cs_attestation')} /></TD>
               <TD><CheckCell value={row.confidentiality} onChange={v => save('confidentiality', v)} saving={sk('confidentiality')} /></TD>
               <TD><CheckCell value={row.flu_declination} onChange={v => save('flu_declination', v)} saving={sk('flu_declination')} /></TD>
               <TD><CheckCell value={row.hep_b_declination} onChange={v => save('hep_b_declination', v)} saving={sk('hep_b_declination')} /></TD>
               <TD><CheckCell value={row.mmr_declination} onChange={v => save('mmr_declination', v)} saving={sk('mmr_declination')} /></TD>
               <TD><CheckCell value={row.tdap_declination} onChange={v => save('tdap_declination', v)} saving={sk('tdap_declination')} /></TD>
               <TD><CheckCell value={row.vzv_declination} onChange={v => save('vzv_declination', v)} saving={sk('vzv_declination')} /></TD>
-              <TD><CheckCell value={row.nsp} onChange={v => save('nsp', v)} saving={sk('nsp')} /></TD>
               <TD><CheckCell value={row.cultural_competency} onChange={v => save('cultural_competency', v)} saving={sk('cultural_competency')} /></TD>
               <TD><CheckCell value={row.parking} onChange={v => save('parking', v)} saving={sk('parking')} /></TD>
               <TD><CheckCell value={row.eta_module} onChange={v => save('eta_module', v)} saving={sk('eta_module')} /></TD>
               <TD><CheckCell value={row.attestation_lgs} onChange={v => save('attestation_lgs', v)} saving={sk('attestation_lgs')} /></TD>
               <TD><CheckCell value={row.wpvp} onChange={v => save('wpvp', v)} saving={sk('wpvp')} /></TD>
+              {/* Modules */}
+              <TD><CheckCell value={row.cs_orientation} onChange={v => save('cs_orientation', v)} saving={sk('cs_orientation')} /></TD>
               <TD><CheckCell value={row.orientation} onChange={v => save('orientation', v)} saving={sk('orientation')} /></TD>
               <TD><CheckCell value={row.conduct} onChange={v => save('conduct', v)} saving={sk('conduct')} /></TD>
+              <TD><CheckCell value={row.wpvp_training} onChange={v => save('wpvp_training', v)} saving={sk('wpvp_training')} /></TD>
+              {/* Orientation exam */}
+              <TD><CheckCell value={row.orientation_exam} onChange={v => save('orientation_exam', v)} saving={sk('orientation_exam')} /></TD>
               <TD>
                 <NotesCell
                   value={row.mce_notes}

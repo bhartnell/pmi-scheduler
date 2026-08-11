@@ -6,6 +6,7 @@
 > Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
 > Last updated: 2026-07-12 -- added `lab_days.is_archived` (migration `20260712_lab_days_is_archived.sql`, archive-not-delete flag excluding rows from the general lab schedule + ACLS hub list views)
 > Last updated: 2026-07-24 -- added `lab_template_stations.skill_sheet_id` (migration `20260724_lab_template_stations_skill_sheet_id.sql`, see `lab_template_stations` below)
+> Last updated: 2026-08-11 -- added `student_mce_modules.cs_attestation` / `cs_orientation` / `wpvp_training` / `orientation_exam` (migration `20260811_mce_tracker_new_columns.sql`, mCE tab redesign — see `student_mce_modules` below)
 
 ## Summary
 
@@ -1416,9 +1417,23 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | bg_check_status | text | YES |  | 3-state: ordered \| in_progress \| complete |
 | drug_test_status | text | YES |  | 3-state: ordered \| in_progress \| complete |
 | mce_notes | text | YES |  | Per-student notes for mCE tab |
-| nsp | boolean | YES | false |  |
+| nsp | boolean | YES | false | Hidden from the mCE tracker view (not part of Rae's finalized column list, 2026-08-11) — data preserved, not deleted |
+| cs_attestation | boolean | YES | false | CommonSpirit (CS) Attestation of Student Orientation — Documents section |
+| cs_orientation | boolean | YES | false | CS clinical student orientation module — Modules section |
+| wpvp_training | boolean | YES | false | Workplace Violence Prevention training curriculum — Modules section. Distinct from `wpvp` (WPVP training attestation, Documents section) |
+| orientation_exam | boolean | YES | false | Orientation exam completion — its own section; previously tracked only via `notes` |
 | created_at | timestamptz | YES | now() |  |
 | updated_at | timestamptz | YES | now() |  |
+
+> `cs_attestation` / `cs_orientation` / `wpvp_training` / `orientation_exam`
+> added by migration `20260811_mce_tracker_new_columns.sql` (Rae feedback,
+> Task Handoff Queue 2026-08-11 — mCE tab redesign into 4 sections:
+> Compliance / Documents / Modules / Orientation exam, see
+> `/clinical/clinical-tracker`, mCE tab). `orientation` is now labeled "DH
+> (Dignity Health) orientation" and `conduct` "Standards of conduct" in the
+> UI — same columns, unchanged meaning, just relabeled. All four new
+> columns are nullable booleans defaulting to `false` and started empty for
+> every existing row (no backfill).
 
 **Foreign Keys:**
 - `student_id` -> `students.id` (`student_mce_modules_student_id_fkey`)
