@@ -106,7 +106,18 @@ interface MceRow {
 
 // ── Helper components ─────────────────────────────────────────────────────────
 
+// Single-letter indicators per Rae's feedback (2026-08-11): the full-word
+// badges ate too much horizontal width (student name got buried under the
+// BG/DT dropdowns on the mCE tab). Color coding is unchanged — only the
+// on-screen text is shortened; the dropdown menu and title tooltip still
+// spell out the full word.
 const THREE_STATE_LABELS: Record<string, string> = {
+  ordered: 'O',
+  in_progress: 'IP',
+  complete: 'C',
+};
+
+const THREE_STATE_FULL_LABELS: Record<string, string> = {
   ordered: 'Ordered',
   in_progress: 'In Progress',
   complete: 'Complete',
@@ -145,12 +156,13 @@ function ThreeStateCell({
       <button
         onClick={() => setOpen(o => !o)}
         disabled={saving}
-        className={`min-w-[90px] px-2 py-1 rounded text-xs font-medium text-left flex items-center gap-1 border transition-opacity ${
+        title={value ? THREE_STATE_FULL_LABELS[value] : undefined}
+        className={`min-w-[34px] px-1.5 py-1 rounded text-xs font-medium text-center flex items-center justify-center gap-0.5 border transition-opacity ${
           value ? THREE_STATE_COLORS[value] : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 border-transparent'
         } ${saving ? 'opacity-50' : 'hover:opacity-80'}`}
       >
-        <span className="flex-1">{value ? THREE_STATE_LABELS[value] : '—'}</span>
-        <ChevronDown className="w-3 h-3 flex-shrink-0" />
+        <span>{value ? THREE_STATE_LABELS[value] : '—'}</span>
+        <ChevronDown className="w-2.5 h-2.5 flex-shrink-0" />
       </button>
       {open && (
         <div className="absolute z-50 left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg min-w-[120px]">
@@ -162,12 +174,26 @@ function ThreeStateCell({
                 opt ? THREE_STATE_COLORS[opt] : 'text-gray-500 dark:text-gray-400'
               } ${value === opt ? 'ring-1 ring-inset ring-gray-400' : ''}`}
             >
-              {opt ? THREE_STATE_LABELS[opt] : '— Clear —'}
+              {opt ? THREE_STATE_FULL_LABELS[opt] : '— Clear —'}
             </button>
           ))}
         </div>
       )}
     </div>
+  );
+}
+
+// N/A / greyed-out indicator for display-only exclusion logic (COVID-exempt,
+// TB1/TB2<->Q mutual exclusion). Never touches the underlying stored value —
+// purely a rendering choice layered on top of it (Rae feedback 2026-08-11).
+function NACell() {
+  return (
+    <span
+      title="N/A — determined by a related field"
+      className="inline-flex w-6 h-6 items-center justify-center rounded border-2 border-dashed border-gray-300 dark:border-gray-600 text-[9px] font-semibold text-gray-400 dark:text-gray-500"
+    >
+      N/A
+    </span>
   );
 }
 
@@ -184,7 +210,7 @@ function CheckCell({
     <button
       onClick={() => onChange(!value)}
       disabled={saving}
-      className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
+      className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
         value
           ? 'bg-green-500 border-green-500 text-white'
           : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-500'
@@ -192,7 +218,7 @@ function CheckCell({
       title={value ? 'Mark incomplete' : 'Mark complete'}
     >
       {value && (
-        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
         </svg>
       )}
@@ -402,9 +428,13 @@ function MceStudentPrintView({ s }: { s: MceRow }) {
 
 // ── Column header helpers ─────────────────────────────────────────────────────
 
+// Compressed padding + a defined right-hand border between every column
+// (Rae feedback 2026-08-11: without a clear vertical separator it's easy to
+// mark the wrong column for students lower on the list; the table also had
+// to scroll further than necessary to see every column).
 function TH({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap border-b border-gray-200 dark:border-gray-700 ${className}`}>
+    <th className={`px-1.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap border-b border-r border-gray-300 dark:border-gray-600 last:border-r-0 ${className}`}>
       {children}
     </th>
   );
@@ -412,7 +442,7 @@ function TH({ children, className = '' }: { children: React.ReactNode; className
 
 function TD({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <td className={`px-2 py-1.5 border-b border-gray-100 dark:border-gray-800 ${className}`}>
+    <td className={`px-1.5 py-1.5 border-b border-r border-gray-100 dark:border-gray-800 last:border-r-0 ${className}`}>
       {children}
     </td>
   );
@@ -712,7 +742,10 @@ export default function ClinicalTrackerPage() {
             onChange={e => setCohortId(e.target.value)}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
           >
-            {cohorts.map(c => (
+            {/* EMT cohorts don't attend hospital rotations, so Complio/mCE
+                don't apply to them — dropdown filter only, per Rae feedback
+                2026-08-11. Cohort data itself is untouched. */}
+            {cohorts.filter(c => c.program?.abbreviation !== 'EMT').map(c => (
               <option key={c.id} value={c.id}>
                 {cohortLabel(c)}
               </option>
