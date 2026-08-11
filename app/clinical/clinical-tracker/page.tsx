@@ -210,6 +210,22 @@ function CheckCell({
   );
 }
 
+// Display-only "N/A" indicator used when a column is greyed out by another
+// field (COVID exemption, TB PPD ↔ QuantiFERON mutual exclusion). It is
+// intentionally NON-interactive and does NOT touch the stored value — the
+// underlying check is preserved; to "un-grey", clear the controlling field
+// (e.g. uncheck QuantiFERON) and the real checkbox returns (Rae, 8/11).
+function NaCell({ title }: { title?: string }) {
+  return (
+    <span
+      title={title || 'Not applicable'}
+      className="inline-flex items-center justify-center w-6 h-6 rounded text-[9px] font-semibold text-gray-400 bg-gray-100 dark:bg-gray-700/50 dark:text-gray-500 select-none"
+    >
+      N/A
+    </span>
+  );
+}
+
 function NotesCell({ value, onChange, saving }: { value: string; onChange: (v: string) => void; saving?: boolean }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
@@ -878,8 +894,6 @@ export default function ClinicalTrackerPage() {
                   <AggBar label="Drug Test" count={complioAgg.dt} total={total} />
                   <AggBar label="Attestation" count={complioAgg.attest} total={total} />
                   <AggBar label="Docs Shared" count={complioAgg.shared} total={total} />
-                  <AggBar label="CHH Receipt" count={complioAgg.chh_r} total={total} />
-                  <AggBar label="CHH Approval" count={complioAgg.chh_a} total={total} />
                 </>
               ) : (
                 <>
@@ -981,7 +995,6 @@ function ComplioTable({
           <TH>MMR</TH>
           <TH>VZV</TH>
           <TH>Hep B</TH>
-          <TH>Hep B Dec</TH>
           <TH>Tdap</TH>
           <TH>COVID</TH>
           <TH>COVID Exmpt</TH>
@@ -998,8 +1011,6 @@ function ComplioTable({
           <TH>DT</TH>
           <TH>Attest</TH>
           <TH>Shared?</TH>
-          <TH>CHH Rcpt</TH>
-          <TH>CHH Appr</TH>
           <TH>Notes</TH>
         </tr>
       </thead>
@@ -1025,15 +1036,29 @@ function ComplioTable({
               <TD><CheckCell value={row.mmr_complete} onChange={v => onSave(row.student_id, 'mmr_complete', v)} saving={sk('mmr_complete')} /></TD>
               <TD><CheckCell value={row.vzv_complete} onChange={v => onSave(row.student_id, 'vzv_complete', v)} saving={sk('vzv_complete')} /></TD>
               <TD><CheckCell value={row.hep_b_complete} onChange={v => onSave(row.student_id, 'hep_b_complete', v)} saving={sk('hep_b_complete')} /></TD>
-              <TD><CheckCell value={row.hep_b_declination} onChange={v => onSave(row.student_id, 'hep_b_declination', v)} saving={sk('hep_b_declination')} /></TD>
               <TD><CheckCell value={row.tdap_complete} onChange={v => onSave(row.student_id, 'tdap_complete', v)} saving={sk('tdap_complete')} /></TD>
-              <TD><CheckCell value={row.covid_complete} onChange={v => onSave(row.student_id, 'covid_complete', v)} saving={sk('covid_complete')} /></TD>
+              {/* COVID greys to N/A when a COVID exemption is on file (display only). */}
+              <TD>
+                {row.covid_exemption
+                  ? <NaCell title="COVID-19 exemption on file — vaccine N/A" />
+                  : <CheckCell value={row.covid_complete} onChange={v => onSave(row.student_id, 'covid_complete', v)} saving={sk('covid_complete')} />}
+              </TD>
               <TD><CheckCell value={row.covid_exemption} onChange={v => onSave(row.student_id, 'covid_exemption', v)} saving={sk('covid_exemption')} /></TD>
-              <TD><CheckCell value={row.tb_test_1_complete} onChange={v => onSave(row.student_id, 'tb_test_1_complete', v)} saving={sk('tb_test_1_complete')} /></TD>
+              {/* TB PPD 1/2 ↔ QuantiFERON mutual exclusion (display only):
+                  QuantiFERON on file → both PPDs N/A; both PPDs done → QuantiFERON N/A. */}
+              <TD>
+                {row.tb_questionnaire
+                  ? <NaCell title="QuantiFERON on file — TB PPD not required" />
+                  : <CheckCell value={row.tb_test_1_complete} onChange={v => onSave(row.student_id, 'tb_test_1_complete', v)} saving={sk('tb_test_1_complete')} />}
+              </TD>
               <TD>
                 <div className="flex gap-1">
-                  <CheckCell value={row.tb_test_2_complete} onChange={v => onSave(row.student_id, 'tb_test_2_complete', v)} saving={sk('tb_test_2_complete')} />
-                  <CheckCell value={row.tb_questionnaire} onChange={v => onSave(row.student_id, 'tb_questionnaire', v)} saving={sk('tb_questionnaire')} />
+                  {row.tb_questionnaire
+                    ? <NaCell title="QuantiFERON on file — TB PPD not required" />
+                    : <CheckCell value={row.tb_test_2_complete} onChange={v => onSave(row.student_id, 'tb_test_2_complete', v)} saving={sk('tb_test_2_complete')} />}
+                  {(row.tb_test_1_complete && row.tb_test_2_complete)
+                    ? <NaCell title="Two TB PPDs on file — QuantiFERON not required" />
+                    : <CheckCell value={row.tb_questionnaire} onChange={v => onSave(row.student_id, 'tb_questionnaire', v)} saving={sk('tb_questionnaire')} />}
                 </div>
               </TD>
               <TD><CheckCell value={row.physical_complete} onChange={v => onSave(row.student_id, 'physical_complete', v)} saving={sk('physical_complete')} /></TD>
@@ -1059,8 +1084,6 @@ function ComplioTable({
               </TD>
               <TD><CheckCell value={row.attestation_complete} onChange={v => onSave(row.student_id, 'attestation_complete', v)} saving={sk('attestation_complete')} /></TD>
               <TD><CheckCell value={row.docs_shared_with_sites} onChange={v => onSave(row.student_id, 'docs_shared_with_sites', v)} saving={sk('docs_shared_with_sites')} /></TD>
-              <TD><CheckCell value={row.chh_receipt_complete} onChange={v => onSave(row.student_id, 'chh_receipt_complete', v)} saving={sk('chh_receipt_complete')} /></TD>
-              <TD><CheckCell value={row.chh_approval_complete} onChange={v => onSave(row.student_id, 'chh_approval_complete', v)} saving={sk('chh_approval_complete')} /></TD>
               <TD>
                 <NotesCell
                   value={row.complio_notes}
