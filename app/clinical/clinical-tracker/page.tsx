@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -280,148 +281,227 @@ function AggBar({ label, count, total }: { label: string; count: number; total: 
   );
 }
 
-// ── Print view ────────────────────────────────────────────────────────────────
+// ── Print ─────────────────────────────────────────────────────────────────────
+//
+// Rewritten 2026-08-11 (Rae feedback, item 1.c.ii — BUG): the old PrintModal
+// rendered its content over the page with a `fixed` wrapper and relied on
+// `window.print()` + `print:hidden`/`print:p-0` Tailwind classes to hide
+// everything else. app/globals.css's global print stylesheet has a
+// `.fixed { display: none !important }` rule (for hiding fixed headers/
+// sidebars) that ALSO hid the print modal itself the instant printing
+// started — so what actually printed was whatever was left visible
+// underneath: the full cohort table, not the individual-student view the
+// on-screen preview showed. Every other print flow in this app
+// (lib/print-utils.ts's openPrintWindow) sidesteps this whole class of bug
+// by rendering into a brand-new, isolated browser window/document that
+// never shares CSS with the main app — so it's what this now uses too.
 
-function PrintModal({
-  student,
-  tab,
+type PrintField<T> = { label: string; get: (s: T) => boolean | ThreeState | string };
+
+// Full item names for the student-facing printout (Rae, item 1.c.iv) — the
+// tracker shorthand (MMR, VZV, TB1...) is fine for staff but confusing for
+// students. "Complio"/"mCE" package-purchase tracking columns are excluded
+// per item 1.c.iii (internal-only; they track whether the student bought
+// the tracking package/subscription, not a clinical requirement), as were
+// Attestation / Docs Shared / CHH Receipt / CHH Approval before this
+// rewrite — all four stay visible in the admin table only.
+const COMPLIO_PRINT_FIELDS: PrintField<ComplioRow>[] = [
+  { label: 'MMR', get: s => s.mmr_complete },
+  { label: 'Varicella', get: s => s.vzv_complete },
+  { label: 'Hepatitis B', get: s => s.hep_b_complete },
+  { label: 'TDAP', get: s => s.tdap_complete },
+  { label: 'COVID-19', get: s => s.covid_complete },
+  { label: 'COVID-19 Exemption', get: s => s.covid_exemption },
+  { label: 'TB PPD 1', get: s => s.tb_test_1_complete },
+  { label: 'TB PPD 2', get: s => s.tb_test_2_complete },
+  { label: 'QuantiFERON', get: s => s.tb_questionnaire },
+  { label: 'Physical exam', get: s => s.physical_complete },
+  { label: 'Health insurance', get: s => s.health_insurance_complete },
+  { label: 'AHA BLS Provider card', get: s => s.bls_complete },
+  { label: 'Flu shot', get: s => s.flu_shot_complete },
+  { label: 'VHS Influenza Declination form', get: s => s.flu_declination },
+  { label: 'VHS Hospital Orientation form', get: s => s.hospital_orientation_complete },
+  { label: 'Student Declaration of Responsibilities & Student Confidentiality-Exhibits A&B', get: s => s.exhibit_complete },
+  { label: 'Background check', get: s => s.background_check_status },
+  { label: 'Drug test', get: s => s.drug_test_status },
+];
+
+// mCE field set/order as of stage 2 (print-delivery fix only). Stage 4 adds
+// the new mCE columns (CS Attestation, CS orientation, WPVP curriculum,
+// Orientation exam) and reorders this to match the redesigned section
+// layout — this list gets updated alongside that.
+const MCE_PRINT_FIELDS: PrintField<MceRow>[] = [
+  { label: 'Background check', get: s => s.bg_check_status },
+  { label: 'Drug test', get: s => s.drug_test_status },
+  { label: 'Physical exam', get: s => s.physical },
+  { label: 'Liability insurance', get: s => s.insurance },
+  { label: 'Student photograph', get: s => s.photo },
+  { label: 'TB clearance', get: s => s.tb },
+  { label: 'MMR', get: s => s.mmr },
+  { label: 'Influenza vaccine', get: s => s.flu },
+  { label: 'Hepatitis B', get: s => s.hep_b },
+  { label: 'Tdap', get: s => s.tdap },
+  { label: 'Varicella', get: s => s.vzv },
+  { label: 'COVID-19 vaccine', get: s => s.covid },
+  { label: 'AHA BLS Provider', get: s => s.bls },
+  { label: 'Confidentiality Statement', get: s => s.confidentiality },
+  { label: 'Flu declination', get: s => s.flu_declination },
+  { label: 'Hep B declination', get: s => s.hep_b_declination },
+  { label: 'MMR declination', get: s => s.mmr_declination },
+  { label: 'Tdap declination', get: s => s.tdap_declination },
+  { label: 'Varicella declination', get: s => s.vzv_declination },
+  { label: 'NSP', get: s => s.nsp },
+  { label: 'NV cultural competency certificate', get: s => s.cultural_competency },
+  { label: 'Siena parking', get: s => s.parking },
+  { label: 'Educational Training Agreement parts IV/V', get: s => s.eta_module },
+  { label: 'Attestation and Letter of Good Standing (LGS)', get: s => s.attestation_lgs },
+  { label: 'WPVP training attestation', get: s => s.wpvp },
+  { label: 'Hospital Orientation', get: s => s.orientation },
+  { label: 'Conduct', get: s => s.conduct },
+];
+
+function printFieldRowHtml(label: string, value: boolean | ThreeState | string): string {
+  let display = '—';
+  let color = '#9ca3af';
+  if (typeof value === 'boolean') {
+    display = value ? '✓ Yes' : '✗ No';
+    color = value ? '#16a34a' : '#dc2626';
+  } else if (value === 'complete') { display = 'Complete'; color = '#16a34a'; }
+  else if (value === 'in_progress') { display = 'In Progress'; color = '#2563eb'; }
+  else if (value === 'ordered') { display = 'Ordered'; color = '#ca8a04'; }
+  else if (typeof value === 'string' && value) { display = escapeHtml(value); color = '#374151'; }
+
+  return `<div class="two-col" style="justify-content: space-between; grid-template-columns: 1fr auto; padding: 3px 0; border-bottom: 1px solid #eee;">
+    <span class="label" style="font-weight: 400;">${escapeHtml(label)}</span>
+    <span class="value" style="font-weight: 600; color: ${color};">${display}</span>
+  </div>`;
+}
+
+function studentPrintSectionHtml<T extends ComplioRow | MceRow>(
+  title: string,
+  fields: PrintField<T>[],
+  row: T,
+  notes: string
+): string {
+  const rowsHtml = fields.map(f => printFieldRowHtml(f.label, f.get(row))).join('');
+  const notesHtml = notes
+    ? `<div style="margin-top: 8px; padding: 8px; background: #f9fafb; border-radius: 4px;">
+        <p style="font-size: 11px; font-weight: 600; color: #666; margin-bottom: 4px;">Notes</p>
+        <p style="font-size: 12px; color: #111;">${escapeHtml(notes)}</p>
+      </div>`
+    : '';
+  return `<div class="section">
+    <h2>${escapeHtml(title)}</h2>
+    ${rowsHtml}
+    ${notesHtml}
+  </div>`;
+}
+
+function buildClinicalPrintHtml(opts: {
+  studentName: string;
+  complioRow?: ComplioRow | null;
+  mceRow?: MceRow | null;
+  includeComplio: boolean;
+  includeMce: boolean;
+}): string {
+  const { studentName, complioRow, mceRow, includeComplio, includeMce } = opts;
+  const sections: string[] = [];
+  if (includeComplio && complioRow) {
+    sections.push(studentPrintSectionHtml('Complio Clearance Checklist', COMPLIO_PRINT_FIELDS, complioRow, complioRow.complio_notes));
+  }
+  if (includeMce && mceRow) {
+    sections.push(studentPrintSectionHtml('mCE Clearance Checklist', MCE_PRINT_FIELDS, mceRow, mceRow.mce_notes));
+  }
+  return printHeader('Clinical Clearance Checklist', studentName) + sections.join('') + printFooter();
+}
+
+// ── Print options modal ───────────────────────────────────────────────────────
+//
+// Lets staff pick one or both checklists to print for a student (Rae, item
+// 1.c.i) instead of always printing whichever tab the Print icon was
+// clicked from.
+
+interface PrintRequest {
+  studentName: string;
+  complioRow: ComplioRow | null;
+  mceRow: MceRow | null;
+  initialTab: 'complio' | 'mce';
+}
+
+function PrintOptionsModal({
+  request,
+  complioDisabled,
   onClose,
 }: {
-  student: ComplioRow | MceRow;
-  tab: 'complio' | 'mce';
+  request: PrintRequest;
+  complioDisabled: boolean;
   onClose: () => void;
 }) {
-  const name = `${student.last_name}, ${student.first_name}`;
+  const [includeComplio, setIncludeComplio] = useState(
+    request.initialTab === 'complio' && !!request.complioRow && !complioDisabled
+  );
+  const [includeMce, setIncludeMce] = useState(
+    request.initialTab === 'mce' && !!request.mceRow
+  );
+
+  const handlePrint = () => {
+    const html = buildClinicalPrintHtml({
+      studentName: request.studentName,
+      complioRow: request.complioRow,
+      mceRow: request.mceRow,
+      includeComplio,
+      includeMce,
+    });
+    openPrintWindow(`Clinical Clearance — ${request.studentName}`, html);
+    onClose();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center p-4 overflow-y-auto print:bg-white print:p-0">
-      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-2xl w-full mt-8 print:shadow-none print:mt-0">
-        <div className="flex items-center justify-between p-4 border-b print:hidden">
-          <h2 className="font-semibold text-gray-900 dark:text-white">Print Preview — {name}</h2>
-          <div className="flex gap-2">
-            <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
-            >
-              <Printer className="w-4 h-4" /> Print
-            </button>
-            <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
+    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-sm w-full">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+          <h2 className="font-semibold text-gray-900 dark:text-white">Print — {request.studentName}</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+            <X className="w-4 h-4" />
+          </button>
         </div>
-        <div className="p-6 text-sm" id="print-content">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h3 className="text-xl font-bold">{name}</h3>
-              <p className="text-gray-500 text-xs">Clinical {tab === 'complio' ? 'Complio' : 'mCE'} Checklist</p>
-            </div>
-            <div className="text-xs text-gray-400">{new Date().toLocaleDateString()}</div>
-          </div>
-
-          {tab === 'complio' ? (
-            <ComplioStudentPrintView s={student as ComplioRow} />
-          ) : (
-            <MceStudentPrintView s={student as MceRow} />
-          )}
+        <div className="p-4 space-y-3">
+          <p className="text-sm text-gray-500 dark:text-gray-400">Select which checklist(s) to print:</p>
+          <label className={`flex items-center gap-2 text-sm ${complioDisabled || !request.complioRow ? 'text-gray-400 dark:text-gray-600' : 'text-gray-800 dark:text-gray-200'}`}>
+            <input
+              type="checkbox"
+              checked={includeComplio}
+              disabled={complioDisabled || !request.complioRow}
+              onChange={e => setIncludeComplio(e.target.checked)}
+              className="w-4 h-4 text-teal-600 rounded"
+            />
+            Complio Clearance Checklist
+            {complioDisabled && <span className="text-xs italic">(N/A for this program)</span>}
+          </label>
+          <label className={`flex items-center gap-2 text-sm ${!request.mceRow ? 'text-gray-400 dark:text-gray-600' : 'text-gray-800 dark:text-gray-200'}`}>
+            <input
+              type="checkbox"
+              checked={includeMce}
+              disabled={!request.mceRow}
+              onChange={e => setIncludeMce(e.target.checked)}
+              className="w-4 h-4 text-teal-600 rounded"
+            />
+            mCE Clearance Checklist
+          </label>
+        </div>
+        <div className="flex justify-end gap-2 p-4 border-t border-gray-200 dark:border-gray-700">
+          <button onClick={onClose} className="px-3 py-1.5 text-sm rounded text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+            Cancel
+          </button>
+          <button
+            onClick={handlePrint}
+            disabled={!includeComplio && !includeMce}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Printer className="w-4 h-4" /> Print
+          </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function PrintRow({ label, value }: { label: string; value: boolean | ThreeState | string }) {
-  let display = '—';
-  let color = 'text-gray-400';
-  if (typeof value === 'boolean') {
-    display = value ? '✓' : '✗';
-    color = value ? 'text-green-600' : 'text-red-400';
-  } else if (value === 'complete') { display = 'Complete'; color = 'text-green-600'; }
-  else if (value === 'in_progress') { display = 'In Progress'; color = 'text-blue-600'; }
-  else if (value === 'ordered') { display = 'Ordered'; color = 'text-yellow-600'; }
-  else if (typeof value === 'string' && value) { display = value; color = 'text-gray-700'; }
-
-  return (
-    <div className="flex items-center justify-between py-1 border-b border-gray-100 last:border-0">
-      <span className="text-gray-700">{label}</span>
-      <span className={`font-medium ${color}`}>{display}</span>
-    </div>
-  );
-}
-
-function ComplioStudentPrintView({ s }: { s: ComplioRow }) {
-  return (
-    <div className="space-y-1">
-      <PrintRow label="Complio" value={s.complio_complete} />
-      <PrintRow label="mCE" value={s.mce_complete} />
-      <PrintRow label="MMR" value={s.mmr_complete} />
-      <PrintRow label="VZV" value={s.vzv_complete} />
-      <PrintRow label="Hep B" value={s.hep_b_complete} />
-      <PrintRow label="Hep B Declination" value={s.hep_b_declination} />
-      <PrintRow label="Tdap" value={s.tdap_complete} />
-      <PrintRow label="COVID" value={s.covid_complete} />
-      <PrintRow label="COVID Exemption" value={s.covid_exemption} />
-      <PrintRow label="TB Test 1" value={s.tb_test_1_complete} />
-      <PrintRow label="TB Test 2 / Questionnaire" value={s.tb_test_2_complete || s.tb_questionnaire} />
-      <PrintRow label="Physical" value={s.physical_complete} />
-      <PrintRow label="Health Insurance" value={s.health_insurance_complete} />
-      <PrintRow label="BLS" value={s.bls_complete} />
-      <PrintRow label="Flu Shot" value={s.flu_shot_complete} />
-      <PrintRow label="Flu Declination" value={s.flu_declination} />
-      <PrintRow label="Hospital Orientation" value={s.hospital_orientation_complete} />
-      <PrintRow label="Exhibit" value={s.exhibit_complete} />
-      <PrintRow label="Background Check" value={s.background_check_status} />
-      <PrintRow label="Drug Test" value={s.drug_test_status} />
-      {/* Attestation / Docs Shared / CHH Receipt / CHH Approval are
-          intentionally omitted from the STUDENT print-out (Rae, feedback
-          8ac4ace6) — they're internal tracking fields and stay visible
-          in the admin table above. */}
-      {s.complio_notes && (
-        <div className="mt-3 p-2 bg-gray-50 rounded">
-          <p className="text-xs font-semibold text-gray-500 mb-1">Notes</p>
-          <p className="text-sm text-gray-800">{s.complio_notes}</p>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function MceStudentPrintView({ s }: { s: MceRow }) {
-  return (
-    <div className="space-y-1">
-      <PrintRow label="Background Check" value={s.bg_check_status} />
-      <PrintRow label="Drug Test" value={s.drug_test_status} />
-      <PrintRow label="Physical" value={s.physical} />
-      <PrintRow label="Insurance" value={s.insurance} />
-      <PrintRow label="Photo" value={s.photo} />
-      <PrintRow label="TB" value={s.tb} />
-      <PrintRow label="MMR" value={s.mmr} />
-      <PrintRow label="Flu" value={s.flu} />
-      <PrintRow label="Hep B" value={s.hep_b} />
-      <PrintRow label="Tdap" value={s.tdap} />
-      <PrintRow label="VZV" value={s.vzv} />
-      <PrintRow label="COVID" value={s.covid} />
-      <PrintRow label="BLS" value={s.bls} />
-      <PrintRow label="Confidentiality" value={s.confidentiality} />
-      <PrintRow label="Flu Declination" value={s.flu_declination} />
-      <PrintRow label="Hep B Declination" value={s.hep_b_declination} />
-      <PrintRow label="MMR Declination" value={s.mmr_declination} />
-      <PrintRow label="Tdap Declination" value={s.tdap_declination} />
-      <PrintRow label="VZV Declination" value={s.vzv_declination} />
-      <PrintRow label="NSP" value={s.nsp} />
-      <PrintRow label="Cultural Competency" value={s.cultural_competency} />
-      <PrintRow label="Parking" value={s.parking} />
-      <PrintRow label="ETA Module" value={s.eta_module} />
-      <PrintRow label="Attestation LGS" value={s.attestation_lgs} />
-      <PrintRow label="WPVP" value={s.wpvp} />
-      <PrintRow label="Orientation" value={s.orientation} />
-      <PrintRow label="Conduct" value={s.conduct} />
-      {s.mce_notes && (
-        <div className="mt-3 p-2 bg-gray-50 rounded">
-          <p className="text-xs font-semibold text-gray-500 mb-1">Notes</p>
-          <p className="text-sm text-gray-800">{s.mce_notes}</p>
-        </div>
-      )}
     </div>
   );
 }
@@ -462,8 +542,24 @@ export default function ClinicalTrackerPage() {
   const [mceRows, setMceRows] = useState<MceRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
-  const [printStudent, setPrintStudent] = useState<ComplioRow | MceRow | null>(null);
+  const [printRequest, setPrintRequest] = useState<PrintRequest | null>(null);
   const [showAgg, setShowAgg] = useState(true);
+
+  // Look up a student's row in both tabs' data (both are always fetched
+  // together regardless of which tab is active — see fetchData below) so
+  // the print dialog can offer "both" even when launched from one tab.
+  const openPrintFor = useCallback((studentId: string, initialTab: 'complio' | 'mce') => {
+    const complioRow = complioRows.find(r => r.student_id === studentId) || null;
+    const mceRow = mceRows.find(r => r.student_id === studentId) || null;
+    const source = initialTab === 'complio' ? complioRow : mceRow;
+    if (!source) return;
+    setPrintRequest({
+      studentName: `${source.last_name}, ${source.first_name}`,
+      complioRow,
+      mceRow,
+      initialTab,
+    });
+  }, [complioRows, mceRows]);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin');
@@ -887,7 +983,7 @@ export default function ClinicalTrackerPage() {
               cohortId={cohortId}
               saving={saving}
               onSave={saveComplio}
-              onPrint={s => setPrintStudent(s)}
+              onPrint={s => openPrintFor(s.student_id, 'complio')}
             />
           ) : (
             <MceTable
@@ -895,7 +991,7 @@ export default function ClinicalTrackerPage() {
               cohortId={cohortId}
               saving={saving}
               onSave={saveMce}
-              onPrint={s => setPrintStudent(s)}
+              onPrint={s => openPrintFor(s.student_id, 'mce')}
             />
           )}
 
@@ -909,12 +1005,12 @@ export default function ClinicalTrackerPage() {
         )}
       </main>
 
-      {/* Print modal */}
-      {printStudent && (
-        <PrintModal
-          student={printStudent}
-          tab={tab}
-          onClose={() => setPrintStudent(null)}
+      {/* Print options modal */}
+      {printRequest && (
+        <PrintOptionsModal
+          request={printRequest}
+          complioDisabled={isAemtCohort}
+          onClose={() => setPrintRequest(null)}
         />
       )}
     </div>
