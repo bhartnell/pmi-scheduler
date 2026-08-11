@@ -118,6 +118,16 @@ const THREE_STATE_COLORS: Record<string, string> = {
   complete: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
 };
 
+// Compact single-letter indicators for the grid cells (Rae, 8/11): the full
+// "In Progress"/"Ordered"/"Complete" labels made BG/DT the widest columns and
+// forced horizontal scroll. Same color coding as above; the dropdown still
+// shows the full labels and a hover tooltip names the state.
+const THREE_STATE_LETTERS: Record<string, string> = {
+  ordered: 'O',
+  in_progress: 'IP',
+  complete: 'C',
+};
+
 function ThreeStateCell({
   value,
   onChange,
@@ -145,12 +155,12 @@ function ThreeStateCell({
       <button
         onClick={() => setOpen(o => !o)}
         disabled={saving}
-        className={`min-w-[90px] px-2 py-1 rounded text-xs font-medium text-left flex items-center gap-1 border transition-opacity ${
+        title={value ? THREE_STATE_LABELS[value] : 'Not set'}
+        className={`w-9 h-7 rounded text-xs font-bold text-center border transition-opacity ${
           value ? THREE_STATE_COLORS[value] : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 border-transparent'
         } ${saving ? 'opacity-50' : 'hover:opacity-80'}`}
       >
-        <span className="flex-1">{value ? THREE_STATE_LABELS[value] : '—'}</span>
-        <ChevronDown className="w-3 h-3 flex-shrink-0" />
+        {value ? THREE_STATE_LETTERS[value] : '—'}
       </button>
       {open && (
         <div className="absolute z-50 left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg min-w-[120px]">
@@ -404,15 +414,19 @@ function MceStudentPrintView({ s }: { s: MceRow }) {
 
 function TH({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap border-b border-gray-200 dark:border-gray-700 ${className}`}>
+    <th className={`px-1.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap border-b border-r border-gray-300 dark:border-gray-600 last:border-r-0 ${className}`}>
       {children}
     </th>
   );
 }
 
 function TD({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  // Vertical column separators (border-r, gray-300) are deliberately MORE
+  // defined than the horizontal row rules (border-b, gray-100): Rae was
+  // mis-marking columns for students lower in the list, so the column
+  // boundaries need to read clearly across a wide grid.
   return (
-    <td className={`px-2 py-1.5 border-b border-gray-100 dark:border-gray-800 ${className}`}>
+    <td className={`px-1.5 py-1.5 border-b border-gray-100 dark:border-gray-800 border-r border-gray-300 dark:border-gray-600 last:border-r-0 ${className}`}>
       {children}
     </td>
   );
@@ -449,11 +463,16 @@ export default function ClinicalTrackerPage() {
         if (d.success && d.cohorts) {
           const sorted = [...d.cohorts].sort((a: Cohort, b: Cohort) => b.cohort_number - a.cohort_number);
           setCohorts(sorted);
-          // Default to the first cohort that actually has students, not just
-          // the first in sort order — an empty-cohort default would still
-          // look broken (0/0) even once the dropdown itself is populated.
-          const populated = sorted.find(c => (c.student_count ?? 0) > 0);
-          const initial = searchParams.get('cohortId') || populated?.id || sorted[0]?.id || '';
+          // EMT cohorts don't attend hospital rotations (no Complio/mCE), so
+          // they're filtered out of the selector (Rae, 8/11). Default selection
+          // also skips EMT. Full `cohorts` is kept so a deep-linked EMT cohortId
+          // still resolves and shows the existing EMT N/A panel rather than breaking.
+          const selectable = sorted.filter((c: Cohort) => c.program?.abbreviation !== 'EMT');
+          // Default to the first selectable cohort that actually has students,
+          // not just the first in sort order — an empty-cohort default would
+          // still look broken (0/0) even once the dropdown is populated.
+          const populated = selectable.find((c: Cohort) => (c.student_count ?? 0) > 0);
+          const initial = searchParams.get('cohortId') || populated?.id || selectable[0]?.id || '';
           setCohortId(initial);
         }
       })
@@ -712,11 +731,13 @@ export default function ClinicalTrackerPage() {
             onChange={e => setCohortId(e.target.value)}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
           >
-            {cohorts.map(c => (
-              <option key={c.id} value={c.id}>
-                {cohortLabel(c)}
-              </option>
-            ))}
+            {cohorts
+              .filter(c => c.program?.abbreviation !== 'EMT' || c.id === cohortId)
+              .map(c => (
+                <option key={c.id} value={c.id}>
+                  {cohortLabel(c)}
+                </option>
+              ))}
           </select>
 
           {/* Tabs */}
