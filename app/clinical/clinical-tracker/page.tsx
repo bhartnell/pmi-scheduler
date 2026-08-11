@@ -103,8 +103,84 @@ interface MceRow {
   wpvp: boolean;
   orientation: boolean;
   conduct: boolean;
+  // New (Rae 2026-08-11, §3.a.ii)
+  cs_attestation: boolean;
+  cs_orientation: boolean;
+  wpvp_curriculum: boolean;
+  orientation_exam: boolean;
   mce_notes: string;
 }
+
+// ── mCE column layout (Rae 2026-08-11, brief §3.a.ii) ─────────────────────────
+// Data-driven so the grid, the completion-overview aggregate, and the student
+// print stay in lockstep. Sections render with header bands + thick separators;
+// left-to-right order matches Rae's list exactly. `nsp` is intentionally absent
+// (older layout — column kept in DB, just not shown). `full` = the full item
+// name used on the student print-out.
+type MceColKind = 'check' | 'threestate';
+interface MceCol {
+  key: keyof MceRow;
+  short: string;
+  full: string;
+  kind: MceColKind;
+}
+interface MceSection {
+  name: string;
+  cols: MceCol[];
+}
+const MCE_SECTIONS: MceSection[] = [
+  {
+    name: 'Compliance',
+    cols: [
+      { key: 'bg_check_status', short: 'BG', full: 'Background check', kind: 'threestate' },
+      { key: 'drug_test_status', short: 'DT', full: 'Drug test', kind: 'threestate' },
+      { key: 'physical', short: 'Phys', full: 'Physical exam', kind: 'check' },
+      { key: 'insurance', short: 'Ins', full: 'Liability insurance', kind: 'check' },
+      { key: 'photo', short: 'Photo', full: 'Student photograph', kind: 'check' },
+      { key: 'tb', short: 'TB', full: 'TB clearance', kind: 'check' },
+      { key: 'mmr', short: 'MMR', full: 'MMR', kind: 'check' },
+      { key: 'flu', short: 'Flu', full: 'Influenza vaccine', kind: 'check' },
+      { key: 'hep_b', short: 'Hep B', full: 'Hepatitis B', kind: 'check' },
+      { key: 'tdap', short: 'Tdap', full: 'Tdap', kind: 'check' },
+      { key: 'vzv', short: 'VZV', full: 'Varicella', kind: 'check' },
+      { key: 'covid', short: 'COVID', full: 'COVID-19 vaccine', kind: 'check' },
+      { key: 'bls', short: 'BLS', full: 'AHA BLS Provider', kind: 'check' },
+    ],
+  },
+  {
+    name: 'Documents',
+    cols: [
+      { key: 'cs_attestation', short: 'CS Att', full: 'CommonSpirit Attestation of Student Orientation', kind: 'check' },
+      { key: 'confidentiality', short: 'Confid', full: 'Confidentiality Statement', kind: 'check' },
+      { key: 'flu_declination', short: 'Flu Dec', full: 'Flu declination', kind: 'check' },
+      { key: 'hep_b_declination', short: 'Hep B Dec', full: 'Hep B declination', kind: 'check' },
+      { key: 'mmr_declination', short: 'MMR Dec', full: 'MMR declination', kind: 'check' },
+      { key: 'tdap_declination', short: 'Tdap Dec', full: 'Tdap declination', kind: 'check' },
+      { key: 'vzv_declination', short: 'VZV Dec', full: 'Varicella declination', kind: 'check' },
+      { key: 'cultural_competency', short: 'Cult', full: 'NV cultural competency certificate', kind: 'check' },
+      { key: 'parking', short: 'Parking', full: 'Siena parking', kind: 'check' },
+      { key: 'eta_module', short: 'ETA 4/5', full: 'Educational Training Agreement parts IV/V', kind: 'check' },
+      { key: 'attestation_lgs', short: 'Att LGS', full: 'Attestation and Letter of Good Standing (LGS)', kind: 'check' },
+      { key: 'wpvp', short: 'WPVP Att', full: 'WPVP training attestation', kind: 'check' },
+    ],
+  },
+  {
+    name: 'Modules',
+    cols: [
+      { key: 'cs_orientation', short: 'CS Ori', full: 'CS clinical student orientation', kind: 'check' },
+      { key: 'orientation', short: 'DH Ori', full: 'Dignity Health (DH) orientation', kind: 'check' },
+      { key: 'conduct', short: 'Conduct', full: 'Standards of conduct', kind: 'check' },
+      { key: 'wpvp_curriculum', short: 'WPVP Tr', full: 'Workplace Violence Prevention training curriculum', kind: 'check' },
+    ],
+  },
+  {
+    name: 'Exam',
+    cols: [
+      { key: 'orientation_exam', short: 'Exam', full: 'Orientation exam', kind: 'check' },
+    ],
+  },
+];
+const MCE_COLS: MceCol[] = MCE_SECTIONS.flatMap(s => s.cols);
 
 // ── Helper components ─────────────────────────────────────────────────────────
 
@@ -466,35 +542,20 @@ function ComplioStudentPrintView({ s }: { s: ComplioRow }) {
 }
 
 function MceStudentPrintView({ s }: { s: MceRow }) {
+  // Data-driven from MCE_SECTIONS so print names/order stay in lockstep with
+  // the grid — grouped by section with FULL item names (Rae 8/11, §3.a.ii).
   return (
-    <div className="space-y-1">
-      <PrintRow label="Background Check" value={s.bg_check_status} />
-      <PrintRow label="Drug Test" value={s.drug_test_status} />
-      <PrintRow label="Physical" value={s.physical} />
-      <PrintRow label="Insurance" value={s.insurance} />
-      <PrintRow label="Photo" value={s.photo} />
-      <PrintRow label="TB" value={s.tb} />
-      <PrintRow label="MMR" value={s.mmr} />
-      <PrintRow label="Flu" value={s.flu} />
-      <PrintRow label="Hep B" value={s.hep_b} />
-      <PrintRow label="Tdap" value={s.tdap} />
-      <PrintRow label="VZV" value={s.vzv} />
-      <PrintRow label="COVID" value={s.covid} />
-      <PrintRow label="BLS" value={s.bls} />
-      <PrintRow label="Confidentiality" value={s.confidentiality} />
-      <PrintRow label="Flu Declination" value={s.flu_declination} />
-      <PrintRow label="Hep B Declination" value={s.hep_b_declination} />
-      <PrintRow label="MMR Declination" value={s.mmr_declination} />
-      <PrintRow label="Tdap Declination" value={s.tdap_declination} />
-      <PrintRow label="VZV Declination" value={s.vzv_declination} />
-      <PrintRow label="NSP" value={s.nsp} />
-      <PrintRow label="Cultural Competency" value={s.cultural_competency} />
-      <PrintRow label="Parking" value={s.parking} />
-      <PrintRow label="ETA Module" value={s.eta_module} />
-      <PrintRow label="Attestation LGS" value={s.attestation_lgs} />
-      <PrintRow label="WPVP" value={s.wpvp} />
-      <PrintRow label="Orientation" value={s.orientation} />
-      <PrintRow label="Conduct" value={s.conduct} />
+    <div className="space-y-2">
+      {MCE_SECTIONS.map(section => (
+        <div key={section.name}>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mt-2 mb-1">{section.name}</p>
+          <div className="space-y-1">
+            {section.cols.map(col => (
+              <PrintRow key={col.key} label={col.full} value={s[col.key] as boolean | ThreeState | string} />
+            ))}
+          </div>
+        </div>
+      ))}
       {s.mce_notes && (
         <div className="mt-3 p-2 bg-gray-50 rounded">
           <p className="text-xs font-semibold text-gray-500 mb-1">Notes</p>
@@ -660,6 +721,10 @@ export default function ClinicalTrackerPage() {
           wpvp: d.wpvp ?? false,
           orientation: d.orientation ?? false,
           conduct: d.conduct ?? false,
+          cs_attestation: d.cs_attestation ?? false,
+          cs_orientation: d.cs_orientation ?? false,
+          wpvp_curriculum: d.wpvp_curriculum ?? false,
+          orientation_exam: d.orientation_exam ?? false,
           mce_notes: d.mce_notes ?? '',
         }));
         setMceRows(rows);
@@ -757,30 +822,12 @@ export default function ClinicalTrackerPage() {
     chh_a: complioRows.filter(r => r.chh_approval_complete).length,
   };
 
-  const mceAgg = {
-    bg: mceRows.filter(r => r.bg_check_status === 'complete').length,
-    dt: mceRows.filter(r => r.drug_test_status === 'complete').length,
-    physical: mceRows.filter(r => r.physical).length,
-    insurance: mceRows.filter(r => r.insurance).length,
-    photo: mceRows.filter(r => r.photo).length,
-    tb: mceRows.filter(r => r.tb).length,
-    mmr: mceRows.filter(r => r.mmr || r.mmr_declination).length,
-    flu: mceRows.filter(r => r.flu || r.flu_declination).length,
-    hep_b: mceRows.filter(r => r.hep_b || r.hep_b_declination).length,
-    tdap: mceRows.filter(r => r.tdap || r.tdap_declination).length,
-    vzv: mceRows.filter(r => r.vzv || r.vzv_declination).length,
-    covid: mceRows.filter(r => r.covid).length,
-    bls: mceRows.filter(r => r.bls).length,
-    confid: mceRows.filter(r => r.confidentiality).length,
-    nsp: mceRows.filter(r => r.nsp).length,
-    cult: mceRows.filter(r => r.cultural_competency).length,
-    parking: mceRows.filter(r => r.parking).length,
-    eta: mceRows.filter(r => r.eta_module).length,
-    attest_lgs: mceRows.filter(r => r.attestation_lgs).length,
-    wpvp: mceRows.filter(r => r.wpvp).length,
-    orient: mceRows.filter(r => r.orientation).length,
-    conduct: mceRows.filter(r => r.conduct).length,
-  };
+  // mCE aggregate is data-driven from MCE_SECTIONS so the completion overview
+  // always matches the grid's columns (Rae 2026-08-11 redesign).
+  const mceColCount = (col: MceCol) =>
+    col.kind === 'threestate'
+      ? mceRows.filter(r => r[col.key] === 'complete').length
+      : mceRows.filter(r => r[col.key] === true).length;
 
   if (status === 'loading') {
     return (
@@ -933,28 +980,9 @@ export default function ClinicalTrackerPage() {
                 </>
               ) : (
                 <>
-                  <AggBar label="BG Check" count={mceAgg.bg} total={total} />
-                  <AggBar label="Drug Test" count={mceAgg.dt} total={total} />
-                  <AggBar label="Physical" count={mceAgg.physical} total={total} />
-                  <AggBar label="Insurance" count={mceAgg.insurance} total={total} />
-                  <AggBar label="Photo" count={mceAgg.photo} total={total} />
-                  <AggBar label="TB" count={mceAgg.tb} total={total} />
-                  <AggBar label="MMR" count={mceAgg.mmr} total={total} />
-                  <AggBar label="Flu" count={mceAgg.flu} total={total} />
-                  <AggBar label="Hep B" count={mceAgg.hep_b} total={total} />
-                  <AggBar label="Tdap" count={mceAgg.tdap} total={total} />
-                  <AggBar label="VZV" count={mceAgg.vzv} total={total} />
-                  <AggBar label="COVID" count={mceAgg.covid} total={total} />
-                  <AggBar label="BLS" count={mceAgg.bls} total={total} />
-                  <AggBar label="Confidentiality" count={mceAgg.confid} total={total} />
-                  <AggBar label="NSP" count={mceAgg.nsp} total={total} />
-                  <AggBar label="Cultural Comp." count={mceAgg.cult} total={total} />
-                  <AggBar label="Parking" count={mceAgg.parking} total={total} />
-                  <AggBar label="ETA Module" count={mceAgg.eta} total={total} />
-                  <AggBar label="Attest LGS" count={mceAgg.attest_lgs} total={total} />
-                  <AggBar label="WPVP" count={mceAgg.wpvp} total={total} />
-                  <AggBar label="Orientation" count={mceAgg.orient} total={total} />
-                  <AggBar label="Conduct" count={mceAgg.conduct} total={total} />
+                  {MCE_COLS.map(col => (
+                    <AggBar key={col.key} label={col.short} count={mceColCount(col)} total={total} />
+                  ))}
                 </>
               )}
             </div>
@@ -1150,40 +1178,48 @@ function MceTable({
   onSave: (studentId: string, cohortId: string, field: string, value: unknown) => void;
   onPrint: (row: MceRow) => void;
 }) {
+  // Thick separator marking each section boundary (Rae 8/11 redesign).
+  const sectionBorder = 'border-l-2 border-gray-400 dark:border-gray-500';
   return (
     <table className="w-full text-xs">
       <thead className="sticky top-0 bg-white dark:bg-gray-800 z-10">
+        {/* Section header bands: Compliance / Documents / Modules / Exam */}
         <tr>
-          <TH className="sticky left-0 bg-white dark:bg-gray-800 min-w-[130px]">Student</TH>
-          <TH>Print</TH>
-          <TH>BG</TH>
-          <TH>DT</TH>
-          <TH>Phys</TH>
-          <TH>Ins</TH>
-          <TH>Photo</TH>
-          <TH>TB</TH>
-          <TH>MMR</TH>
-          <TH>Flu</TH>
-          <TH>Hep B</TH>
-          <TH>Tdap</TH>
-          <TH>VZV</TH>
-          <TH>COVID</TH>
-          <TH>BLS</TH>
-          <TH>Confid</TH>
-          <TH>Flu Dec</TH>
-          <TH>Hep B Dec</TH>
-          <TH>MMR Dec</TH>
-          <TH>Tdap Dec</TH>
-          <TH>VZV Dec</TH>
-          <TH>NSP</TH>
-          <TH>Cult Comp</TH>
-          <TH>Parking</TH>
-          <TH>ETA 4/5</TH>
-          <TH>Attest LGS</TH>
-          <TH>WPVP</TH>
-          <TH>Orient</TH>
-          <TH>Conduct</TH>
-          <TH>Notes</TH>
+          <th
+            rowSpan={2}
+            className="sticky left-0 z-10 bg-white dark:bg-gray-800 px-1.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-r border-gray-300 dark:border-gray-600 min-w-[130px] align-bottom"
+          >
+            Student
+          </th>
+          <th
+            rowSpan={2}
+            className="bg-white dark:bg-gray-800 px-1.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-r border-gray-300 dark:border-gray-600 align-bottom"
+          >
+            Print
+          </th>
+          {MCE_SECTIONS.map(section => (
+            <th
+              key={section.name}
+              colSpan={section.cols.length}
+              className={`px-1.5 py-1 text-center text-[10px] font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/40 border-b-2 border-gray-300 dark:border-gray-600 ${sectionBorder}`}
+            >
+              {section.name}
+            </th>
+          ))}
+          <th
+            rowSpan={2}
+            className={`bg-white dark:bg-gray-800 px-1.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-r border-gray-300 dark:border-gray-600 align-bottom ${sectionBorder}`}
+          >
+            Notes
+          </th>
+        </tr>
+        {/* Column headers */}
+        <tr>
+          {MCE_SECTIONS.flatMap(section =>
+            section.cols.map((col, i) => (
+              <TH key={col.key} className={i === 0 ? sectionBorder : ''}>{col.short}</TH>
+            )),
+          )}
         </tr>
       </thead>
       <tbody>
@@ -1204,34 +1240,26 @@ function MceTable({
                   <Printer className="w-3.5 h-3.5" />
                 </button>
               </TD>
-              <TD><ThreeStateCell value={row.bg_check_status} onChange={v => save('bg_check_status', v)} saving={sk('bg_check_status')} /></TD>
-              <TD><ThreeStateCell value={row.drug_test_status} onChange={v => save('drug_test_status', v)} saving={sk('drug_test_status')} /></TD>
-              <TD><CheckCell value={row.physical} onChange={v => save('physical', v)} saving={sk('physical')} /></TD>
-              <TD><CheckCell value={row.insurance} onChange={v => save('insurance', v)} saving={sk('insurance')} /></TD>
-              <TD><CheckCell value={row.photo} onChange={v => save('photo', v)} saving={sk('photo')} /></TD>
-              <TD><CheckCell value={row.tb} onChange={v => save('tb', v)} saving={sk('tb')} /></TD>
-              <TD><CheckCell value={row.mmr} onChange={v => save('mmr', v)} saving={sk('mmr')} /></TD>
-              <TD><CheckCell value={row.flu} onChange={v => save('flu', v)} saving={sk('flu')} /></TD>
-              <TD><CheckCell value={row.hep_b} onChange={v => save('hep_b', v)} saving={sk('hep_b')} /></TD>
-              <TD><CheckCell value={row.tdap} onChange={v => save('tdap', v)} saving={sk('tdap')} /></TD>
-              <TD><CheckCell value={row.vzv} onChange={v => save('vzv', v)} saving={sk('vzv')} /></TD>
-              <TD><CheckCell value={row.covid} onChange={v => save('covid', v)} saving={sk('covid')} /></TD>
-              <TD><CheckCell value={row.bls} onChange={v => save('bls', v)} saving={sk('bls')} /></TD>
-              <TD><CheckCell value={row.confidentiality} onChange={v => save('confidentiality', v)} saving={sk('confidentiality')} /></TD>
-              <TD><CheckCell value={row.flu_declination} onChange={v => save('flu_declination', v)} saving={sk('flu_declination')} /></TD>
-              <TD><CheckCell value={row.hep_b_declination} onChange={v => save('hep_b_declination', v)} saving={sk('hep_b_declination')} /></TD>
-              <TD><CheckCell value={row.mmr_declination} onChange={v => save('mmr_declination', v)} saving={sk('mmr_declination')} /></TD>
-              <TD><CheckCell value={row.tdap_declination} onChange={v => save('tdap_declination', v)} saving={sk('tdap_declination')} /></TD>
-              <TD><CheckCell value={row.vzv_declination} onChange={v => save('vzv_declination', v)} saving={sk('vzv_declination')} /></TD>
-              <TD><CheckCell value={row.nsp} onChange={v => save('nsp', v)} saving={sk('nsp')} /></TD>
-              <TD><CheckCell value={row.cultural_competency} onChange={v => save('cultural_competency', v)} saving={sk('cultural_competency')} /></TD>
-              <TD><CheckCell value={row.parking} onChange={v => save('parking', v)} saving={sk('parking')} /></TD>
-              <TD><CheckCell value={row.eta_module} onChange={v => save('eta_module', v)} saving={sk('eta_module')} /></TD>
-              <TD><CheckCell value={row.attestation_lgs} onChange={v => save('attestation_lgs', v)} saving={sk('attestation_lgs')} /></TD>
-              <TD><CheckCell value={row.wpvp} onChange={v => save('wpvp', v)} saving={sk('wpvp')} /></TD>
-              <TD><CheckCell value={row.orientation} onChange={v => save('orientation', v)} saving={sk('orientation')} /></TD>
-              <TD><CheckCell value={row.conduct} onChange={v => save('conduct', v)} saving={sk('conduct')} /></TD>
-              <TD>
+              {MCE_SECTIONS.flatMap(section =>
+                section.cols.map((col, i) => (
+                  <TD key={col.key} className={i === 0 ? sectionBorder : ''}>
+                    {col.kind === 'threestate' ? (
+                      <ThreeStateCell
+                        value={row[col.key] as ThreeState}
+                        onChange={v => save(col.key as string, v)}
+                        saving={sk(col.key as string)}
+                      />
+                    ) : (
+                      <CheckCell
+                        value={row[col.key] as boolean}
+                        onChange={v => save(col.key as string, v)}
+                        saving={sk(col.key as string)}
+                      />
+                    )}
+                  </TD>
+                )),
+              )}
+              <TD className={sectionBorder}>
                 <NotesCell
                   value={row.mce_notes}
                   onChange={v => save('mce_notes', v)}

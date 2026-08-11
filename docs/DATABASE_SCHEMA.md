@@ -1409,15 +1409,19 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | eta_module | boolean | YES | false |  |
 | attestation_lgs | boolean | YES | false |  |
 | wpvp | boolean | YES | false |  |
-| orientation | boolean | YES | false |  |
-| conduct | boolean | YES | false |  |
+| orientation | boolean | YES | false | surfaced as "DH Ori" (Dignity Health orientation) since 2026-08-11 |
+| conduct | boolean | YES | false | Standards of conduct |
+| cs_attestation | boolean | YES | false | CommonSpirit Attestation of Student Orientation [CS Att] (Rae 2026-08-11) |
+| cs_orientation | boolean | YES | false | CS clinical student orientation module [CS ORI] (Rae 2026-08-11) |
+| wpvp_curriculum | boolean | YES | false | WPVP training CURRICULUM [WPVP TR]; distinct from wpvp=WPVP attestation (Rae 2026-08-11) |
+| orientation_exam | boolean | YES | false | Orientation exam [EXAM] (Rae 2026-08-11) |
 | all_complete | boolean | YES | false |  |
 | completion_date | date | YES |  |  |
 | notes | text | YES |  |  |
 | bg_check_status | text | YES |  | 3-state: ordered \| in_progress \| complete |
 | drug_test_status | text | YES |  | 3-state: ordered \| in_progress \| complete |
 | mce_notes | text | YES |  | Per-student notes for mCE tab |
-| nsp | boolean | YES | false |  |
+| nsp | boolean | YES | false | REMOVED from the tracker view 2026-08-11 (older layout); column kept for recoverability |
 | created_at | timestamptz | YES | now() |  |
 | updated_at | timestamptz | YES | now() |  |
 
