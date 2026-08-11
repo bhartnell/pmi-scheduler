@@ -198,6 +198,49 @@ function NACell() {
   );
 }
 
+// Single-letter Flu shot entry (item 2.d): the VHS flu declination form is
+// required regardless of vaccination status, so "received" and "declined"
+// are tracked as two separate stored booleans (flu_shot_complete /
+// flu_declination) but shown as one cycling R/D control: none -> R -> D ->
+// none. Both underlying fields are preserved — this only changes how they're
+// entered/displayed.
+function FluCell({
+  received,
+  declined,
+  onChange,
+  saving,
+}: {
+  received: boolean;
+  declined: boolean;
+  onChange: (received: boolean, declined: boolean) => void;
+  saving?: boolean;
+}) {
+  const state: 'R' | 'D' | 'none' = received ? 'R' : declined ? 'D' : 'none';
+  const cycle = () => {
+    if (state === 'none') onChange(true, false);
+    else if (state === 'R') onChange(false, true);
+    else onChange(false, false);
+  };
+  const style =
+    state === 'R'
+      ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+      : state === 'D'
+      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+      : 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500';
+  const title =
+    state === 'R' ? 'Received' : state === 'D' ? 'Declined (VHS declination form on file)' : 'Click to set: Received';
+  return (
+    <button
+      onClick={cycle}
+      disabled={saving}
+      title={title}
+      className={`w-6 h-6 rounded text-xs font-semibold flex items-center justify-center transition-opacity ${style} ${saving ? 'opacity-50' : 'hover:opacity-80'}`}
+    >
+      {state === 'none' ? '—' : state}
+    </button>
+  );
+}
+
 function CheckCell({
   value,
   onChange,
@@ -764,8 +807,6 @@ export default function ClinicalTrackerPage() {
     dt: complioRows.filter(r => r.drug_test_status === 'complete').length,
     attest: complioRows.filter(r => r.attestation_complete).length,
     shared: complioRows.filter(r => r.docs_shared_with_sites).length,
-    chh_r: complioRows.filter(r => r.chh_receipt_complete).length,
-    chh_a: complioRows.filter(r => r.chh_approval_complete).length,
   };
 
   const mceAgg = {
@@ -942,8 +983,6 @@ export default function ClinicalTrackerPage() {
                   <AggBar label="Drug Test" count={complioAgg.dt} total={total} />
                   <AggBar label="Attestation" count={complioAgg.attest} total={total} />
                   <AggBar label="Docs Shared" count={complioAgg.shared} total={total} />
-                  <AggBar label="CHH Receipt" count={complioAgg.chh_r} total={total} />
-                  <AggBar label="CHH Approval" count={complioAgg.chh_a} total={total} />
                 </>
               ) : (
                 <>
@@ -1043,7 +1082,6 @@ function ComplioTable({
           <TH>MMR</TH>
           <TH>VZV</TH>
           <TH>Hep B</TH>
-          <TH>Hep B Dec</TH>
           <TH>Tdap</TH>
           <TH>COVID</TH>
           <TH>COVID Exmpt</TH>
@@ -1052,16 +1090,13 @@ function ComplioTable({
           <TH>Phys</TH>
           <TH>H Ins</TH>
           <TH>BLS</TH>
-          <TH>Flu Sh</TH>
-          <TH>Flu Dec</TH>
+          <TH>Flu</TH>
           <TH>H Orient</TH>
           <TH>Exhib</TH>
           <TH>BG</TH>
           <TH>DT</TH>
           <TH>Attest</TH>
           <TH>Shared?</TH>
-          <TH>CHH Rcpt</TH>
-          <TH>CHH Appr</TH>
           <TH>Notes</TH>
         </tr>
       </thead>
@@ -1087,22 +1122,49 @@ function ComplioTable({
               <TD><CheckCell value={row.mmr_complete} onChange={v => onSave(row.student_id, 'mmr_complete', v)} saving={sk('mmr_complete')} /></TD>
               <TD><CheckCell value={row.vzv_complete} onChange={v => onSave(row.student_id, 'vzv_complete', v)} saving={sk('vzv_complete')} /></TD>
               <TD><CheckCell value={row.hep_b_complete} onChange={v => onSave(row.student_id, 'hep_b_complete', v)} saving={sk('hep_b_complete')} /></TD>
-              <TD><CheckCell value={row.hep_b_declination} onChange={v => onSave(row.student_id, 'hep_b_declination', v)} saving={sk('hep_b_declination')} /></TD>
               <TD><CheckCell value={row.tdap_complete} onChange={v => onSave(row.student_id, 'tdap_complete', v)} saving={sk('tdap_complete')} /></TD>
-              <TD><CheckCell value={row.covid_complete} onChange={v => onSave(row.student_id, 'covid_complete', v)} saving={sk('covid_complete')} /></TD>
+              {/* COVID-exempt (item 2.b): a submitted medical/religious exemption
+                  request makes the COVID column N/A — display only, covid_complete
+                  is left exactly as stored. */}
+              <TD>
+                {row.covid_exemption
+                  ? <NACell />
+                  : <CheckCell value={row.covid_complete} onChange={v => onSave(row.student_id, 'covid_complete', v)} saving={sk('covid_complete')} />}
+              </TD>
               <TD><CheckCell value={row.covid_exemption} onChange={v => onSave(row.student_id, 'covid_exemption', v)} saving={sk('covid_exemption')} /></TD>
-              <TD><CheckCell value={row.tb_test_1_complete} onChange={v => onSave(row.student_id, 'tb_test_1_complete', v)} saving={sk('tb_test_1_complete')} /></TD>
+              {/* TB1/TB2 <-> QuantiFERON mutual exclusion (item 2.c): students need
+                  EITHER 2 negative PPDs OR 1 negative QuantiFERON. Marking Q greys
+                  TB1/TB2; marking both PPDs greys Q. Display only — none of the
+                  three stored booleans are touched by this logic. */}
+              <TD>
+                {row.tb_questionnaire
+                  ? <NACell />
+                  : <CheckCell value={row.tb_test_1_complete} onChange={v => onSave(row.student_id, 'tb_test_1_complete', v)} saving={sk('tb_test_1_complete')} />}
+              </TD>
               <TD>
                 <div className="flex gap-1">
-                  <CheckCell value={row.tb_test_2_complete} onChange={v => onSave(row.student_id, 'tb_test_2_complete', v)} saving={sk('tb_test_2_complete')} />
-                  <CheckCell value={row.tb_questionnaire} onChange={v => onSave(row.student_id, 'tb_questionnaire', v)} saving={sk('tb_questionnaire')} />
+                  {row.tb_questionnaire
+                    ? <NACell />
+                    : <CheckCell value={row.tb_test_2_complete} onChange={v => onSave(row.student_id, 'tb_test_2_complete', v)} saving={sk('tb_test_2_complete')} />}
+                  {row.tb_test_1_complete && row.tb_test_2_complete
+                    ? <NACell />
+                    : <CheckCell value={row.tb_questionnaire} onChange={v => onSave(row.student_id, 'tb_questionnaire', v)} saving={sk('tb_questionnaire')} />}
                 </div>
               </TD>
               <TD><CheckCell value={row.physical_complete} onChange={v => onSave(row.student_id, 'physical_complete', v)} saving={sk('physical_complete')} /></TD>
               <TD><CheckCell value={row.health_insurance_complete} onChange={v => onSave(row.student_id, 'health_insurance_complete', v)} saving={sk('health_insurance_complete')} /></TD>
               <TD><CheckCell value={row.bls_complete} onChange={v => onSave(row.student_id, 'bls_complete', v)} saving={sk('bls_complete')} /></TD>
-              <TD><CheckCell value={row.flu_shot_complete} onChange={v => onSave(row.student_id, 'flu_shot_complete', v)} saving={sk('flu_shot_complete')} /></TD>
-              <TD><CheckCell value={row.flu_declination} onChange={v => onSave(row.student_id, 'flu_declination', v)} saving={sk('flu_declination')} /></TD>
+              <TD>
+                <FluCell
+                  received={row.flu_shot_complete}
+                  declined={row.flu_declination}
+                  onChange={(received, declined) => {
+                    onSave(row.student_id, 'flu_shot_complete', received);
+                    onSave(row.student_id, 'flu_declination', declined);
+                  }}
+                  saving={sk('flu_shot_complete') || sk('flu_declination')}
+                />
+              </TD>
               <TD><CheckCell value={row.hospital_orientation_complete} onChange={v => onSave(row.student_id, 'hospital_orientation_complete', v)} saving={sk('hospital_orientation_complete')} /></TD>
               <TD><CheckCell value={row.exhibit_complete} onChange={v => onSave(row.student_id, 'exhibit_complete', v)} saving={sk('exhibit_complete')} /></TD>
               <TD>
@@ -1121,8 +1183,6 @@ function ComplioTable({
               </TD>
               <TD><CheckCell value={row.attestation_complete} onChange={v => onSave(row.student_id, 'attestation_complete', v)} saving={sk('attestation_complete')} /></TD>
               <TD><CheckCell value={row.docs_shared_with_sites} onChange={v => onSave(row.student_id, 'docs_shared_with_sites', v)} saving={sk('docs_shared_with_sites')} /></TD>
-              <TD><CheckCell value={row.chh_receipt_complete} onChange={v => onSave(row.student_id, 'chh_receipt_complete', v)} saving={sk('chh_receipt_complete')} /></TD>
-              <TD><CheckCell value={row.chh_approval_complete} onChange={v => onSave(row.student_id, 'chh_approval_complete', v)} saving={sk('chh_approval_complete')} /></TD>
               <TD>
                 <NotesCell
                   value={row.complio_notes}
