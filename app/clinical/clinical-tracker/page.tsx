@@ -267,25 +267,59 @@ function AggBar({ label, count, total }: { label: string; count: number; total: 
 // ── Print view ────────────────────────────────────────────────────────────────
 
 function PrintModal({
-  student,
-  tab,
+  complio,
+  mce,
+  defaultTab,
   onClose,
 }: {
-  student: ComplioRow | MceRow;
-  tab: 'complio' | 'mce';
+  complio: ComplioRow | null;
+  mce: MceRow | null;
+  defaultTab: 'complio' | 'mce';
   onClose: () => void;
 }) {
-  const name = `${student.last_name}, ${student.first_name}`;
+  // Which checklist(s) to print. Default to the tab the print button was
+  // clicked from; Rae can add the other if a matching row exists (brief 1.c.i).
+  const [includeComplio, setIncludeComplio] = useState(defaultTab === 'complio' && !!complio);
+  const [includeMce, setIncludeMce] = useState(defaultTab === 'mce' && !!mce);
+
+  const anyRow = complio || mce;
+  if (!anyRow) return null;
+  const name = `${anyRow.last_name}, ${anyRow.first_name}`;
+  const nothingSelected = !((includeComplio && complio) || (includeMce && mce));
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center p-4 overflow-y-auto print:bg-white print:p-0">
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-2xl w-full mt-8 print:shadow-none print:mt-0">
         <div className="flex items-center justify-between p-4 border-b print:hidden">
           <h2 className="font-semibold text-gray-900 dark:text-white">Print Preview — {name}</h2>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
+            {/* One-or-both checklist selection */}
+            <div className="flex items-center gap-3 text-sm">
+              <label className={`flex items-center gap-1.5 ${complio ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}>
+                <input
+                  type="checkbox"
+                  checked={includeComplio && !!complio}
+                  disabled={!complio}
+                  onChange={e => setIncludeComplio(e.target.checked)}
+                  className="accent-teal-600"
+                />
+                Complio
+              </label>
+              <label className={`flex items-center gap-1.5 ${mce ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}>
+                <input
+                  type="checkbox"
+                  checked={includeMce && !!mce}
+                  disabled={!mce}
+                  onChange={e => setIncludeMce(e.target.checked)}
+                  className="accent-teal-600"
+                />
+                mCE
+              </label>
+            </div>
             <button
               onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+              disabled={nothingSelected}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
             >
               <Printer className="w-4 h-4" /> Print
             </button>
@@ -298,15 +332,26 @@ function PrintModal({
           <div className="flex justify-between items-start mb-4">
             <div>
               <h3 className="text-xl font-bold">{name}</h3>
-              <p className="text-gray-500 text-xs">Clinical {tab === 'complio' ? 'Complio' : 'mCE'} Checklist</p>
+              <p className="text-gray-500 text-xs">Clinical Clearance Checklist</p>
             </div>
             <div className="text-xs text-gray-400">{new Date().toLocaleDateString()}</div>
           </div>
 
-          {tab === 'complio' ? (
-            <ComplioStudentPrintView s={student as ComplioRow} />
-          ) : (
-            <MceStudentPrintView s={student as MceRow} />
+          {nothingSelected && (
+            <p className="text-gray-400 italic print:hidden">Select at least one checklist to print.</p>
+          )}
+
+          {includeComplio && complio && (
+            <section>
+              <h4 className="font-semibold text-gray-700 dark:text-gray-200 border-b-2 border-gray-300 pb-1 mb-2">Complio Checklist</h4>
+              <ComplioStudentPrintView s={complio} />
+            </section>
+          )}
+          {includeMce && mce && (
+            <section className={includeComplio && complio ? 'mt-6 page-break-before' : ''}>
+              <h4 className="font-semibold text-gray-700 dark:text-gray-200 border-b-2 border-gray-300 pb-1 mb-2">mCE Checklist</h4>
+              <MceStudentPrintView s={mce} />
+            </section>
           )}
         </div>
       </div>
@@ -334,32 +379,31 @@ function PrintRow({ label, value }: { label: string; value: boolean | ThreeState
 }
 
 function ComplioStudentPrintView({ s }: { s: ComplioRow }) {
+  // Student-facing print: FULL item names (brief 1.c.iv), and the internal
+  // "Complio"/"mCE" package-subscription rows are omitted (1.c.iii). Attestation
+  // / Docs Shared / CHH Receipt / CHH Approval / Hep B Declination stay OFF the
+  // student print (internal tracking / removed columns) but remain in the admin
+  // grid above.
   return (
     <div className="space-y-1">
-      <PrintRow label="Complio" value={s.complio_complete} />
-      <PrintRow label="mCE" value={s.mce_complete} />
       <PrintRow label="MMR" value={s.mmr_complete} />
-      <PrintRow label="VZV" value={s.vzv_complete} />
-      <PrintRow label="Hep B" value={s.hep_b_complete} />
-      <PrintRow label="Hep B Declination" value={s.hep_b_declination} />
+      <PrintRow label="Varicella" value={s.vzv_complete} />
+      <PrintRow label="Hepatitis B" value={s.hep_b_complete} />
       <PrintRow label="Tdap" value={s.tdap_complete} />
-      <PrintRow label="COVID" value={s.covid_complete} />
-      <PrintRow label="COVID Exemption" value={s.covid_exemption} />
-      <PrintRow label="TB Test 1" value={s.tb_test_1_complete} />
-      <PrintRow label="TB Test 2 / Questionnaire" value={s.tb_test_2_complete || s.tb_questionnaire} />
-      <PrintRow label="Physical" value={s.physical_complete} />
-      <PrintRow label="Health Insurance" value={s.health_insurance_complete} />
-      <PrintRow label="BLS" value={s.bls_complete} />
-      <PrintRow label="Flu Shot" value={s.flu_shot_complete} />
-      <PrintRow label="Flu Declination" value={s.flu_declination} />
-      <PrintRow label="Hospital Orientation" value={s.hospital_orientation_complete} />
-      <PrintRow label="Exhibit" value={s.exhibit_complete} />
-      <PrintRow label="Background Check" value={s.background_check_status} />
-      <PrintRow label="Drug Test" value={s.drug_test_status} />
-      {/* Attestation / Docs Shared / CHH Receipt / CHH Approval are
-          intentionally omitted from the STUDENT print-out (Rae, feedback
-          8ac4ace6) — they're internal tracking fields and stay visible
-          in the admin table above. */}
+      <PrintRow label="COVID-19" value={s.covid_complete} />
+      <PrintRow label="COVID-19 Exemption" value={s.covid_exemption} />
+      <PrintRow label="TB PPD 1" value={s.tb_test_1_complete} />
+      <PrintRow label="TB PPD 2" value={s.tb_test_2_complete} />
+      <PrintRow label="QuantiFERON" value={s.tb_questionnaire} />
+      <PrintRow label="Physical exam" value={s.physical_complete} />
+      <PrintRow label="Health insurance" value={s.health_insurance_complete} />
+      <PrintRow label="AHA BLS Provider card" value={s.bls_complete} />
+      <PrintRow label="Flu shot" value={s.flu_shot_complete} />
+      <PrintRow label="VHS Influenza Declination form" value={s.flu_declination} />
+      <PrintRow label="VHS Hospital Orientation form" value={s.hospital_orientation_complete} />
+      <PrintRow label="Student Declaration of Responsibilities & Confidentiality (Exhibits A&B)" value={s.exhibit_complete} />
+      <PrintRow label="Background check" value={s.background_check_status} />
+      <PrintRow label="Drug test" value={s.drug_test_status} />
       {s.complio_notes && (
         <div className="mt-3 p-2 bg-gray-50 rounded">
           <p className="text-xs font-semibold text-gray-500 mb-1">Notes</p>
@@ -446,7 +490,7 @@ export default function ClinicalTrackerPage() {
   const [mceRows, setMceRows] = useState<MceRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
-  const [printStudent, setPrintStudent] = useState<ComplioRow | MceRow | null>(null);
+  const [printStudentId, setPrintStudentId] = useState<string | null>(null);
   const [showAgg, setShowAgg] = useState(true);
 
   useEffect(() => {
@@ -875,7 +919,7 @@ export default function ClinicalTrackerPage() {
               cohortId={cohortId}
               saving={saving}
               onSave={saveComplio}
-              onPrint={s => setPrintStudent(s)}
+              onPrint={s => setPrintStudentId(s.student_id)}
             />
           ) : (
             <MceTable
@@ -883,7 +927,7 @@ export default function ClinicalTrackerPage() {
               cohortId={cohortId}
               saving={saving}
               onSave={saveMce}
-              onPrint={s => setPrintStudent(s)}
+              onPrint={s => setPrintStudentId(s.student_id)}
             />
           )}
 
@@ -897,12 +941,14 @@ export default function ClinicalTrackerPage() {
         )}
       </main>
 
-      {/* Print modal */}
-      {printStudent && (
+      {/* Print modal — looks up BOTH checklists for the student so Rae can
+          print one or both at once (brief 1.c.i). */}
+      {printStudentId && (
         <PrintModal
-          student={printStudent}
-          tab={tab}
-          onClose={() => setPrintStudent(null)}
+          complio={complioRows.find(r => r.student_id === printStudentId) || null}
+          mce={mceRows.find(r => r.student_id === printStudentId) || null}
+          defaultTab={tab}
+          onClose={() => setPrintStudentId(null)}
         />
       )}
     </div>
