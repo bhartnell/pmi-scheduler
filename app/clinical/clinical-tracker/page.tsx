@@ -1081,6 +1081,13 @@ function ComplioTable({
       <tbody>
         {rows.map(row => {
           const sk = (f: string) => saving[`complio-${row.student_id}-${f}`];
+          // Both TB paths on file at once (e.g. legacy dual entry) used to grey
+          // TB1, TB2, AND QuantiFERON to N/A simultaneously — locking all three
+          // with no way to un-grey any of them, since the field that would clear
+          // the others was itself hidden behind N/A. Skip the grey-out in this
+          // conflict case so all three stay real, clickable checkboxes and staff
+          // can clear whichever entry is extra (bug: 2026-08-13, Alpuerto + 14 others).
+          const tbConflict = row.tb_questionnaire && row.tb_test_1_complete && row.tb_test_2_complete;
           return (
             <tr key={row.student_id} className="hover:bg-gray-50 dark:hover:bg-gray-750">
               <TD className="sticky left-0 bg-white dark:bg-gray-800 font-medium text-gray-900 dark:text-white whitespace-nowrap">
@@ -1109,18 +1116,19 @@ function ComplioTable({
               </TD>
               <TD><CheckCell value={row.covid_exemption} onChange={v => onSave(row.student_id, 'covid_exemption', v)} saving={sk('covid_exemption')} /></TD>
               {/* TB PPD 1/2 ↔ QuantiFERON mutual exclusion (display only):
-                  QuantiFERON on file → both PPDs N/A; both PPDs done → QuantiFERON N/A. */}
+                  QuantiFERON on file → both PPDs N/A; both PPDs done → QuantiFERON N/A.
+                  Suppressed when tbConflict (all three on file) — see note above. */}
               <TD>
-                {row.tb_questionnaire
+                {row.tb_questionnaire && !tbConflict
                   ? <NaCell title="QuantiFERON on file — TB PPD not required" />
                   : <CheckCell value={row.tb_test_1_complete} onChange={v => onSave(row.student_id, 'tb_test_1_complete', v)} saving={sk('tb_test_1_complete')} />}
               </TD>
               <TD>
-                <div className="flex gap-1">
-                  {row.tb_questionnaire
+                <div className="flex gap-1" title={tbConflict ? 'TB PPD 1/2 and QuantiFERON are all on file — clear whichever is extra' : undefined}>
+                  {row.tb_questionnaire && !tbConflict
                     ? <NaCell title="QuantiFERON on file — TB PPD not required" />
                     : <CheckCell value={row.tb_test_2_complete} onChange={v => onSave(row.student_id, 'tb_test_2_complete', v)} saving={sk('tb_test_2_complete')} />}
-                  {(row.tb_test_1_complete && row.tb_test_2_complete)
+                  {(row.tb_test_1_complete && row.tb_test_2_complete) && !tbConflict
                     ? <NaCell title="Two TB PPDs on file — QuantiFERON not required" />
                     : <CheckCell value={row.tb_questionnaire} onChange={v => onSave(row.student_id, 'tb_questionnaire', v)} saving={sk('tb_questionnaire')} />}
                 </div>
