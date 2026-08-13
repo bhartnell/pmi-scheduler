@@ -250,6 +250,27 @@ export default function StationCards({
               </div>
             )}
 
+            {/* OSCE Review Board pointer.
+                station_type='osce' stations (e.g. "S3 Week 14 - OSCE
+                Review Board") aren't scored here — the OSCE system
+                (osce_assessments / osce_evaluator_scores, reached via
+                /admin/osce-events) owns evaluator scoring for these.
+                This is a non-intrusive banner only: no scoring UI on
+                the lab side, just a pointer to where results live. */}
+            {station.station_type === 'osce' && (
+              <div className="mb-3 print:hidden flex items-center gap-2 px-3 py-2 text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-800 dark:text-amber-300">
+                <ClipboardCheck className="w-4 h-4 flex-shrink-0" />
+                <span className="flex-1">OSCE Review Board — scored in the OSCE system</span>
+                <Link
+                  href="/admin/osce-results"
+                  className="inline-flex items-center gap-1 font-medium underline hover:no-underline flex-shrink-0"
+                >
+                  View Results
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+            )}
+
             {/* Template Guide (from applied template metadata) */}
             {station.metadata && Object.keys(station.metadata).length > 0 && (
               <div className="mb-3">

@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-08-13
+
+- (pending commit) | **feat(osce): surface OSCE results (nav entry-point fix).** `/admin/osce-results` was a working page with no nav entry point. Added a `Results` tab on the OSCE event detail page (`app/admin/osce-events/[id]/page.tsx`, new `ResultsTab`) scoped to that event via a new optional `?event_id=` filter on `GET /api/osce/results` (backward-compatible — no param still returns all events, CSV export unchanged). Added "OSCE Results" cards next to the existing OSCE Events cards on `/admin` and `/clinical`. Added a non-intrusive `station_type === 'osce'` banner in `components/lab-day/StationCards.tsx` (used by `/labs/schedule/[id]`) pointing OSCE Review Board lab-day stations at `/admin/osce-results` instead of a confusing blank — no scoring UI added on the lab side. Display/nav-only, no data writes. type-check + build clean.
+
 ## 2026-08-08
 
 - `2ce37bb` | **fix(clinical): exclude internship-level withdrawn status from cohort tracker (Task Handoff Queue).** `student_internships` has its own `'withdrawn'` status value separate from `students.status`; the cohort tracker's "Show withdrawn students" toggle only ever excluded the student-level flag, so a student withdrawn from just that internship/rotation still rendered regardless of the toggle. Confirmed against live data (cohort `a5ef1462`, 3 affected students) matching Rae's report. Fix excludes `student_internships.status = 'withdrawn'` by default too, guarded to not break the "all internships" page's explicit `status=withdrawn` filter dropdown. Display/read-path only. `type-check`/`build` clean.

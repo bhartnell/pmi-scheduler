@@ -258,6 +258,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-amber-600',
         },
         {
+          href: '/admin/osce-results',
+          icon: BarChart3,
+          title: 'OSCE Results',
+          description: 'View evaluator scores and assessment results across all OSCE events',
+          color: 'bg-amber-600',
+        },
+        {
           href: '/admin/exam-sessions',
           icon: CalendarDays,
           title: 'Written Exam Sessions',
