@@ -513,6 +513,14 @@ export async function GET(request: NextRequest) {
     const evalCellByStudentSheet: Record<string, SkillCellValue & { _hasPass?: boolean; _anyRetake?: boolean }> = {};
     for (const evalItem of (evaluations || [])) {
       if (!evalItem.skill_sheet_id) continue;
+      // A stale/abandoned in_progress row (e.g. attempt 1 left open, result
+      // defaulted to 'pass') must never be treated as a final result here —
+      // it previously got hardcoded to status:'completed' below regardless
+      // of its real status, letting an in_progress "pass" mask a completed
+      // critical-fail attempt 2. in_progress rows still surface their own
+      // "grading in progress" badge via the station-based `cells` overlay
+      // further down; they just don't belong in this completed-result map.
+      if (evalItem.status !== 'complete') continue;
       const key = `${evalItem.student_id}__${evalItem.skill_sheet_id}`;
       const summary = evalSummaryMap[evalItem.id] || null;
       const isRetake = Boolean((evalItem as Record<string, unknown>).is_retake);
