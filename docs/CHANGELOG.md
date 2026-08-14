@@ -9,6 +9,11 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-08-14
+
+- (pending commit) | **fix(skill-evaluations): breadcrumb Back button dead link (Task Handoff Queue).** `app/skill-evaluations/[id]/page.tsx` breadcrumb "Back" used `router.back()`, which is a no-op when the page has no browser history (e.g. opened via a direct/bookmarked/deep link) — matches Ben's 2026-08-13 feedback report. Replaced with a deterministic `Link` back to `/labs/schedule/{lab_day.id}/coordinator` (falls back to `/lab-management` if `lab_day` is unset). Display/nav-only. type-check + build clean.
+- (pending commit) | **fix(feedback): create missing `feedback-screenshots` storage bucket (Task Handoff Queue).** `/api/feedback` has uploaded to a Supabase Storage bucket named `feedback-screenshots` since `archive/20260226_feedback_screenshots.sql` added the `screenshot_url` column, but that migration's bucket-creation step was manual and was never done — uploads failed with `StorageApiError: Bucket not found`, swallowed as non-fatal, so screenshots silently dropped while the report row still saved. Applied `supabase/migrations/20260813_feedback_screenshots_bucket.sql` (idempotent `INSERT ... ON CONFLICT DO NOTHING` into `storage.buckets`, public, 5MB limit, image/png+jpeg only — matching the upload validation already in the route) directly via Supabase MCP and confirmed the bucket now exists. Purely additive, no existing data touched.
+
 ## 2026-08-13
 
 - (pending commit) | **feat(osce): surface OSCE results (nav entry-point fix).** `/admin/osce-results` was a working page with no nav entry point. Added a `Results` tab on the OSCE event detail page (`app/admin/osce-events/[id]/page.tsx`, new `ResultsTab`) scoped to that event via a new optional `?event_id=` filter on `GET /api/osce/results` (backward-compatible — no param still returns all events, CSV export unchanged). Added "OSCE Results" cards next to the existing OSCE Events cards on `/admin` and `/clinical`. Added a non-intrusive `station_type === 'osce'` banner in `components/lab-day/StationCards.tsx` (used by `/labs/schedule/[id]`) pointing OSCE Review Board lab-day stations at `/admin/osce-results` instead of a confusing blank — no scoring UI added on the lab side. Display/nav-only, no data writes. type-check + build clean.
