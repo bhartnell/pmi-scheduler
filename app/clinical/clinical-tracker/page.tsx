@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -392,6 +393,96 @@ function AggBar({ label, count, total }: { label: string; count: number; total: 
 }
 
 // ── Print view ────────────────────────────────────────────────────────────────
+//
+// BUG FIX (2026-08-14, Rae — blank student print-out): this used to print via
+// `window.print()` on the current page with the preview modal's content
+// scoped visible through #print-content. app/globals.css's global print
+// stylesheet also has `.fixed { display: none !important }` (added 2026-07-12
+// to hide fixed headers/sidebars on other pages) — the modal's own wrapper is
+// `className="fixed ..."`, so that rule hid the ENTIRE modal, #print-content
+// included, the instant printing started. The per-student isolation rule
+// added for the modal never got a chance to apply because its ancestor was
+// already `display: none`. Net result: nothing printed but blank pages.
+// Fixed by generating the print HTML as a plain string and printing it in an
+// isolated new window via lib/print-utils.ts's openPrintWindow — the same
+// pattern already used by every other print flow in the app — which can't be
+// touched by the main page's print CSS at all.
+
+function printFieldRowHtml(label: string, value: boolean | ThreeState | string): string {
+  let text = '—';
+  let color = '#9ca3af';
+  if (typeof value === 'boolean') {
+    text = value ? '✓' : '✗';
+    color = value ? '#16a34a' : '#f87171';
+  } else if (value === 'complete') { text = 'Complete'; color = '#16a34a'; }
+  else if (value === 'in_progress') { text = 'In Progress'; color = '#2563eb'; }
+  else if (value === 'ordered') { text = 'Ordered'; color = '#ca8a04'; }
+  else if (typeof value === 'string' && value) { text = value; color = '#374151'; }
+
+  return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f3f4f6;font-size:12px;">
+    <span style="color:#374151;">${escapeHtml(label)}</span>
+    <span style="font-weight:600;color:${color};">${escapeHtml(text)}</span>
+  </div>`;
+}
+
+function notesBlockHtml(notes: string): string {
+  if (!notes) return '';
+  return `<div style="margin-top:12px;padding:8px;background:#f9fafb;border-radius:4px;">
+    <p style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:4px;">Notes</p>
+    <p style="font-size:13px;color:#1f2937;">${escapeHtml(notes)}</p>
+  </div>`;
+}
+
+// Mirrors ComplioStudentPrintView's field list/order exactly (full item
+// names, package-subscription rows omitted — Rae 1.c.iii/1.c.iv).
+function complioPrintHtml(s: ComplioRow): string {
+  const rows: Array<[string, boolean | ThreeState | string]> = [
+    ['MMR', s.mmr_complete],
+    ['Varicella', s.vzv_complete],
+    ['Hepatitis B', s.hep_b_complete],
+    ['Tdap', s.tdap_complete],
+    ['COVID-19', s.covid_complete],
+    ['COVID-19 Exemption', s.covid_exemption],
+    ['TB PPD 1', s.tb_test_1_complete],
+    ['TB PPD 2', s.tb_test_2_complete],
+    ['QuantiFERON', s.tb_questionnaire],
+    ['Physical exam', s.physical_complete],
+    ['Health insurance', s.health_insurance_complete],
+    ['AHA BLS Provider card', s.bls_complete],
+    ['Flu shot', s.flu_shot_status === 'received' ? 'Received' : s.flu_shot_status === 'declined' ? 'Declined' : ''],
+    ['VHS Influenza Declination form', s.flu_declination],
+    ['VHS Hospital Orientation form', s.hospital_orientation_complete],
+    ['Student Declaration of Responsibilities & Confidentiality (Exhibits A&B)', s.exhibit_complete],
+    ['Background check', s.background_check_status],
+    ['Drug test', s.drug_test_status],
+  ];
+  return rows.map(([label, value]) => printFieldRowHtml(label, value)).join('') + notesBlockHtml(s.complio_notes);
+}
+
+// Mirrors MceStudentPrintView — data-driven from MCE_SECTIONS so print
+// names/order stay in lockstep with the grid (Rae 8/11, §3.a.ii).
+function mcePrintHtml(s: MceRow): string {
+  const sectionsHtml = MCE_SECTIONS.map(section => {
+    const rowsHtml = section.cols.map(col => printFieldRowHtml(col.full, s[col.key] as boolean | ThreeState | string)).join('');
+    return `<p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin:10px 0 4px;">${escapeHtml(section.name)}</p>${rowsHtml}`;
+  }).join('');
+  return sectionsHtml + notesBlockHtml(s.mce_notes);
+}
+
+function buildClinicalPrintHtml(opts: {
+  studentName: string;
+  complio: ComplioRow | null;
+  mce: MceRow | null;
+}): string {
+  const sections: string[] = [];
+  if (opts.complio) {
+    sections.push(`<div class="section"><h2>Complio Clearance Checklist</h2>${complioPrintHtml(opts.complio)}</div>`);
+  }
+  if (opts.mce) {
+    sections.push(`<div class="section"${sections.length ? ' style="page-break-before: always;"' : ''}><h2>mCE Clearance Checklist</h2>${mcePrintHtml(opts.mce)}</div>`);
+  }
+  return printHeader('Clinical Clearance Checklist', opts.studentName) + sections.join('') + printFooter();
+}
 
 function PrintModal({
   complio,
@@ -444,7 +535,14 @@ function PrintModal({
               </label>
             </div>
             <button
-              onClick={() => window.print()}
+              onClick={() => {
+                const html = buildClinicalPrintHtml({
+                  studentName: name,
+                  complio: includeComplio ? complio : null,
+                  mce: includeMce ? mce : null,
+                });
+                openPrintWindow('Clinical Clearance Checklist', html);
+              }}
               disabled={nothingSelected}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
             >
