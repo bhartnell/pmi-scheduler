@@ -59,11 +59,28 @@ export async function GET(request: NextRequest) {
     // stationSkillMap ended up empty for every NREMT station, so the
     // Pass-2 evaluation-column builder below failed to match any
     // evaluation back to an existing station column.
-    const { data: stations } = await supabase
+    const { data: stations, error: stationsErr } = await supabase
       .from('lab_stations')
       .select('id, station_number, station_type, custom_title, skill_name, skill_sheet_id, is_retake_station, metadata, scenario:scenarios(id, title)')
       .eq('lab_day_id', labDayId)
       .order('station_number');
+
+    // Bug 2026-08-13 (Ben): a transient Supabase error here was silently
+    // swallowed (destructured `data` without checking `error`), so
+    // `stations` fell through as `undefined` -> `stations || []` -> an
+    // empty station list. Since the client's IndividualTestingGrid gates
+    // its ENTIRE table on `students.length === 0 || stations.length === 0`
+    // and polls this endpoint every 5s, one flaky query response was
+    // enough to make the whole results grid vanish mid-session even
+    // though nothing was actually wrong with the data. Surface the error
+    // instead of pretending the lab day has zero stations.
+    if (stationsErr) {
+      console.error('Error fetching stations for student-queue:', stationsErr);
+      return NextResponse.json(
+        { success: false, error: 'Failed to load stations' },
+        { status: 500 }
+      );
+    }
 
     // 3. Get station instructors (primary instructor per station)
     const stationIds = (stations || []).map((s: { id: string }) => s.id);
@@ -88,12 +105,22 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Get active students from the cohort
-    const { data: students } = await supabase
+    const { data: students, error: studentsErr } = await supabase
       .from('students')
       .select('id, first_name, last_name')
       .eq('cohort_id', labDay.cohort_id)
       .eq('status', 'active')
       .order('last_name');
+
+    // Same silent-swallow risk as the stations query above — a transient
+    // error must not be treated as "this cohort has 0 active students".
+    if (studentsErr) {
+      console.error('Error fetching students for student-queue:', studentsErr);
+      return NextResponse.json(
+        { success: false, error: 'Failed to load students' },
+        { status: 500 }
+      );
+    }
 
     // 5. Get queue entries for this lab day
     const { data: queueEntries } = await supabase
