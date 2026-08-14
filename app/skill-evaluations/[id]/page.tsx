@@ -205,9 +205,12 @@ export default function EvaluationDetailPage() {
       {/* Breadcrumb */}
       <div className="bg-white dark:bg-gray-800 border-b dark:border-gray-700 px-4 py-3">
         <nav className="max-w-2xl mx-auto flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-          <button onClick={() => router.back()} className="hover:text-blue-600 inline-flex items-center gap-1">
+          <Link
+            href={evaluation.lab_day?.id ? `/labs/schedule/${evaluation.lab_day.id}/coordinator` : '/lab-management'}
+            className="hover:text-blue-600 inline-flex items-center gap-1"
+          >
             <ArrowLeft className="w-4 h-4" /> Back
-          </button>
+          </Link>
           <ChevronRight className="w-3 h-3" />
           <span className="text-gray-900 dark:text-white font-medium truncate">{sheet?.skill_name || 'Evaluation'}</span>
         </nav>
