@@ -143,11 +143,14 @@ export async function GET(request: NextRequest) {
     // Resolution order (first wins):
     //   1. lab_stations.skill_sheet_id (typed FK column) — NREMT stations
     //   2. lab_stations.metadata.skill_sheet_id (legacy metadata path)
-    //   3. station_skills → skills.skill_sheet_ids[0] (station-pick path)
     //
-    // Historically only (2) and (3) were checked, so NREMT stations
-    // (which only populate the typed column) produced an empty
-    // stationSkillMap and the tracker duplicated every skill column.
+    // A third fallback (station_skills → skills.skill_sheet_ids[0]) was
+    // removed 2026-08-15: `skills.skill_sheet_ids` was never a real column
+    // (no migration ever created it — skill_sheets links to a separate
+    // canonical_skills table, not skills), so the query always errored at
+    // the DB level (453x in prod postgres_logs on 2026-08-14) and the
+    // fallback never resolved a single station. Removing it is a no-op
+    // behaviorally and stops the log noise.
     let stationSkillMap: Record<string, string> = {};
     const stationAddedDuringExamMap: Record<string, boolean> = {};
     const stationSuffixMap: Record<string, string> = {};
@@ -158,35 +161,18 @@ export async function GET(request: NextRequest) {
       if (sheetId) stationSkillMap[(s as { id: string }).id] = sheetId;
     }
 
-    if (stationIds.length > 0) {
-      const { data: stationSkills } = await supabase
-        .from('station_skills')
-        .select('station_id, skill:skills!station_skills_skill_id_fkey(id, skill_sheet_ids)')
-        .in('station_id', stationIds);
-
-      // (2) Metadata fallback + collect added_during_exam / suffix flags.
-      for (const s of (stations || [])) {
-        const meta = (s as { metadata?: Record<string, unknown> | null }).metadata || null;
-        const sid = (s as { id: string }).id;
-        if (!stationSkillMap[sid] && meta?.skill_sheet_id) {
-          stationSkillMap[sid] = meta.skill_sheet_id as string;
-        }
-        if (meta?.added_during_exam) {
-          stationAddedDuringExamMap[sid] = true;
-        }
-        if (meta?.station_suffix) {
-          stationSuffixMap[sid] = meta.station_suffix as string;
-        }
+    // (2) Metadata fallback + collect added_during_exam / suffix flags.
+    for (const s of (stations || [])) {
+      const meta = (s as { metadata?: Record<string, unknown> | null }).metadata || null;
+      const sid = (s as { id: string }).id;
+      if (!stationSkillMap[sid] && meta?.skill_sheet_id) {
+        stationSkillMap[sid] = meta.skill_sheet_id as string;
       }
-
-      // (3) station_skills mapping as final fallback.
-      if (stationSkills) {
-        for (const ss of stationSkills) {
-          const skill = ss.skill as unknown as { id: string; skill_sheet_ids?: string[] } | null;
-          if (skill?.skill_sheet_ids?.length && !stationSkillMap[ss.station_id]) {
-            stationSkillMap[ss.station_id] = skill.skill_sheet_ids[0];
-          }
-        }
+      if (meta?.added_during_exam) {
+        stationAddedDuringExamMap[sid] = true;
+      }
+      if (meta?.station_suffix) {
+        stationSuffixMap[sid] = meta.station_suffix as string;
       }
     }
 

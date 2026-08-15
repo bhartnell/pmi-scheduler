@@ -45,6 +45,12 @@ export async function GET(
     const stationSkillSheetMap: Record<string, string> = {};
     const skillSheetToName: Record<string, string> = {};
 
+    // A station_skills → skills.skill_sheet_ids[0] fallback was removed here
+    // 2026-08-15: `skills.skill_sheet_ids` was never a real column (no
+    // migration ever created it — skill_sheets links to a separate
+    // canonical_skills table, not skills), so the query always errored at
+    // the DB level (453x in prod postgres_logs on 2026-08-14) and never
+    // resolved a single station. Removing it is a no-op behaviorally.
     if (stationIds.length > 0) {
       // Check metadata for skill_sheet_id
       for (const s of (stations || [])) {
@@ -52,21 +58,6 @@ export async function GET(
         if (meta?.skill_sheet_id) {
           stationSkillSheetMap[s.id] = meta.skill_sheet_id as string;
           skillSheetToName[meta.skill_sheet_id as string] = s.skill_name || s.custom_title || 'Unknown Skill';
-        }
-      }
-
-      // Also check station_skills table
-      const { data: stationSkills } = await supabase
-        .from('station_skills')
-        .select('station_id, skill:skills!station_skills_skill_id_fkey(id, skill_sheet_ids)')
-        .in('station_id', stationIds);
-
-      if (stationSkills) {
-        for (const ss of stationSkills) {
-          const skill = ss.skill as unknown as { id: string; skill_sheet_ids?: string[] } | null;
-          if (skill?.skill_sheet_ids?.length && !stationSkillSheetMap[ss.station_id]) {
-            stationSkillSheetMap[ss.station_id] = skill.skill_sheet_ids[0];
-          }
         }
       }
     }
