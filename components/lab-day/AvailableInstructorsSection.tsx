@@ -24,7 +24,29 @@ export default function AvailableInstructorsSection({
   // Collapsible (mirrors the skills/checklist sections) so it can be minimized
   // to reclaim right-side space at 100% zoom / tablet width where it otherwise
   // crowds the panels + chat. Layout only — no data change.
-  const [collapsed, setCollapsed] = useState(false);
+  // Persisted in localStorage — mirrors SkillCoveragePanel's pattern — so a
+  // parent remount (every save on the lab-day page refetches and re-renders)
+  // doesn't snap the panel back open (feedback e71974bc: Stacie had to
+  // re-collapse it repeatedly).
+  const collapsedStorageKey = 'available-today-collapsed';
+  const [collapsed, setCollapsedState] = useState<boolean>(() => {
+    try {
+      return window.localStorage.getItem(collapsedStorageKey) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const setCollapsed = (updater: boolean | ((v: boolean) => boolean)) => {
+    setCollapsedState(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      try {
+        window.localStorage.setItem(collapsedStorageKey, next ? '1' : '0');
+      } catch {
+        // Storage unavailable — state still works for this mount
+      }
+      return next;
+    });
+  };
 
   if (loading) {
     return (
