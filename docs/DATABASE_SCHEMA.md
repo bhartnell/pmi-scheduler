@@ -6,6 +6,7 @@
 > Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
 > Last updated: 2026-07-12 -- added `lab_days.is_archived` (migration `20260712_lab_days_is_archived.sql`, archive-not-delete flag excluding rows from the general lab schedule + ACLS hub list views)
 > Last updated: 2026-07-24 -- added `lab_template_stations.skill_sheet_id` (migration `20260724_lab_template_stations_skill_sheet_id.sql`, see `lab_template_stations` below)
+> Last updated: 2026-08-15 -- added `checklist_attendance.marked_at` / `.marked_by` (migration `20260815_checklist_attendance_marked_by.sql`, fixes prod PGRST204 on attendance save, see `checklist_attendance` below)
 
 ## Summary
 
@@ -9991,6 +9992,8 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 | attended | boolean | YES | false |  |
 | notes | text | YES |  |  |
 | created_at | timestamp with time zone | YES | now() |  |
+| marked_at | timestamp with time zone | YES |  | Added 20260815 |
+| marked_by | text | YES |  | Instructor email; added 20260815 |
 
 **Foreign Keys:**
 - `student_id` -> `students.id` (checklist_attendance_student_id_fkey)
