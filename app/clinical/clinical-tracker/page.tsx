@@ -433,9 +433,26 @@ function notesBlockHtml(notes: string): string {
   </div>`;
 }
 
+// TB clearance is one requirement with two accepted paths: two PPDs, or a single
+// QuantiFERON. The print-out keys off the path the student actually cleared on so
+// the unused path reads "N/A" instead of a misleading ✗ (Rae, 2026-08-14).
+// Unlike the editable grid, print does NOT suppress this when all three are on
+// file — the grid's `tbConflict` escape hatch exists only so staff can still click
+// a greyed-out checkbox to clear the extra entry, which a read-only print can't need.
+function tbPrintValues(s: ComplioRow): { ppd1: boolean | string; ppd2: boolean | string; quantiferon: boolean | string } {
+  const qPath = s.tb_questionnaire === true;
+  const bothPpd = s.tb_test_1_complete === true && s.tb_test_2_complete === true;
+  return {
+    ppd1: qPath ? 'N/A' : s.tb_test_1_complete,
+    ppd2: qPath ? 'N/A' : s.tb_test_2_complete,
+    quantiferon: !qPath && bothPpd ? 'N/A' : s.tb_questionnaire,
+  };
+}
+
 // Mirrors ComplioStudentPrintView's field list/order exactly (full item
 // names, package-subscription rows omitted — Rae 1.c.iii/1.c.iv).
 function complioPrintHtml(s: ComplioRow): string {
+  const tb = tbPrintValues(s);
   const rows: Array<[string, boolean | ThreeState | string]> = [
     ['MMR', s.mmr_complete],
     ['Varicella', s.vzv_complete],
@@ -443,9 +460,9 @@ function complioPrintHtml(s: ComplioRow): string {
     ['Tdap', s.tdap_complete],
     ['COVID-19', s.covid_complete],
     ['COVID-19 Exemption', s.covid_exemption],
-    ['TB PPD 1', s.tb_test_1_complete],
-    ['TB PPD 2', s.tb_test_2_complete],
-    ['QuantiFERON', s.tb_questionnaire],
+    ['TB PPD 1', tb.ppd1],
+    ['TB PPD 2', tb.ppd2],
+    ['QuantiFERON', tb.quantiferon],
     ['Physical exam', s.physical_complete],
     ['Health insurance', s.health_insurance_complete],
     ['AHA BLS Provider card', s.bls_complete],
@@ -609,6 +626,7 @@ function ComplioStudentPrintView({ s }: { s: ComplioRow }) {
   // / Docs Shared / CHH Receipt / CHH Approval / Hep B Declination stay OFF the
   // student print (internal tracking / removed columns) but remain in the admin
   // grid above.
+  const tb = tbPrintValues(s);
   return (
     <div className="space-y-1">
       <PrintRow label="MMR" value={s.mmr_complete} />
@@ -617,9 +635,9 @@ function ComplioStudentPrintView({ s }: { s: ComplioRow }) {
       <PrintRow label="Tdap" value={s.tdap_complete} />
       <PrintRow label="COVID-19" value={s.covid_complete} />
       <PrintRow label="COVID-19 Exemption" value={s.covid_exemption} />
-      <PrintRow label="TB PPD 1" value={s.tb_test_1_complete} />
-      <PrintRow label="TB PPD 2" value={s.tb_test_2_complete} />
-      <PrintRow label="QuantiFERON" value={s.tb_questionnaire} />
+      <PrintRow label="TB PPD 1" value={tb.ppd1} />
+      <PrintRow label="TB PPD 2" value={tb.ppd2} />
+      <PrintRow label="QuantiFERON" value={tb.quantiferon} />
       <PrintRow label="Physical exam" value={s.physical_complete} />
       <PrintRow label="Health insurance" value={s.health_insurance_complete} />
       <PrintRow label="AHA BLS Provider card" value={s.bls_complete} />
