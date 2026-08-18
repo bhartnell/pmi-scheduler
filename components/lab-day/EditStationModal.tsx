@@ -1406,13 +1406,43 @@ export default function EditStationModal({
               )}
             </div>
 
+            {/* "+ Custom name..." is a placeholder path (Ben, 2026-08-18): the real
+                workflows are volunteer-instructor status or the station notes. An
+                email is still required here because it's the identity key for this
+                assignment end to end — station_instructors upserts on
+                (station_id, user_email), and remove/set-primary/dedup all match on
+                it, as do the assignment notification and calendar sync. Name-only
+                entry used to fail SILENTLY: the label promised a name, the Add
+                button was disabled with no explanation, and the typed name was
+                dropped on save (stpeterson, 2026-08-03). Surfaced rather than
+                fixed by inventing an email, which would be fabricated data. */}
             {isCustomInstructor && (
-              <div className="mt-3 flex gap-2">
-                <input type="text" value={editForm.instructor_name} onChange={(e) => setEditForm(prev => ({ ...prev, instructor_name: e.target.value }))} placeholder="Name" className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
-                <input type="email" value={editForm.instructor_email} onChange={(e) => setEditForm(prev => ({ ...prev, instructor_email: e.target.value }))} placeholder="Email" className="flex-1 px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
-                <button type="button" onClick={() => { if (editForm.instructor_email) addStationInstructor(editForm.instructor_name, editForm.instructor_email, stationInstructors.length === 0); }} disabled={!editForm.instructor_email} className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-                  <Plus className="w-5 h-5" />
-                </button>
+              <div className="mt-3">
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Name</label>
+                    <input type="text" value={editForm.instructor_name} onChange={(e) => setEditForm(prev => ({ ...prev, instructor_name: e.target.value }))} placeholder="Jane Doe" className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <input type="email" value={editForm.instructor_email} onChange={(e) => setEditForm(prev => ({ ...prev, instructor_email: e.target.value }))} placeholder="jane@pmi.edu" className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700" />
+                  </div>
+                  <button type="button" onClick={() => { if (editForm.instructor_email) addStationInstructor(editForm.instructor_name, editForm.instructor_email, stationInstructors.length === 0); }} disabled={!editForm.instructor_email} title={!editForm.instructor_email ? 'Enter an email address to add this instructor' : 'Add instructor'} className="self-end px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <Plus className="w-5 h-5" />
+                  </button>
+                </div>
+                {editForm.instructor_name.trim() && !editForm.instructor_email.trim() ? (
+                  <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-500">
+                    An email is required to add &ldquo;{editForm.instructor_name.trim()}&rdquo; — a name on its own can&apos;t be saved to this station.
+                    For a guest or volunteer without an email, set their role to Volunteer Instructor in Admin &rarr; Users so they appear in the list above, or record them in Station Notes below.
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+                    Email required — it&apos;s how the assignment, notification, and calendar invite are tracked.
+                  </p>
+                )}
               </div>
             )}
 
