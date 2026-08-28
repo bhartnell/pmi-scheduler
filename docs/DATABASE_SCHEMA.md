@@ -7,6 +7,7 @@
 > Last updated: 2026-07-12 -- added `lab_days.is_archived` (migration `20260712_lab_days_is_archived.sql`, archive-not-delete flag excluding rows from the general lab schedule + ACLS hub list views)
 > Last updated: 2026-07-24 -- added `lab_template_stations.skill_sheet_id` (migration `20260724_lab_template_stations_skill_sheet_id.sql`, see `lab_template_stations` below)
 > Last updated: 2026-08-15 -- added `checklist_attendance.marked_at` / `.marked_by` (migration `20260815_checklist_attendance_marked_by.sql`, fixes prod PGRST204 on attendance save, see `checklist_attendance` below)
+> Last updated: 2026-08-28 -- RLS hardening Tiers 0-1 (migrations `20260828_tier0_backup_tables_enable_rls.sql`, `20260828_tier1_policy_exists_tables_enable_rls.sql`): enabled RLS on the 46 `_backup_*` archival tables (no policies -- service-role-only) and on `equipment`/`feedback_reports`/`onboarding_assignments` (existing policies now enforced). No column/table shape changes. See Task Handoff Queue `[SECURITY - advisors, NEEDS BEN]` for the full tiered plan and remaining Tiers 2-3.
 
 ## Summary
 
