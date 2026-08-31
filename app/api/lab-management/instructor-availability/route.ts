@@ -150,13 +150,25 @@ export async function GET(request: NextRequest) {
 
     // 2. Check pmi_schedule_blocks conflicts
     // Get blocks that are on this date (date-based) or on this day_of_week (recurring)
+    //
+    // block_type = 'lab' is excluded: those rows are the master-semester-
+    // schedule's placeholder for "when this cohort's lab period happens"
+    // (e.g. "S3 Pm Lab" 11:00-12:30), not a real separate class commitment
+    // — the actual lab staffing lives in lab_days / lab_day_roles /
+    // lab_stations, checked separately below. Without this filter, every
+    // instructor on a lab's cohort-wide planner roster gets falsely
+    // flagged CONFLICT against the very lab they're being scheduled for
+    // (bug: 2026-08-31, 5 FT paramedic instructors all showed CONFLICT
+    // because they were listed on the "Day 1 S2 Lab" schedule-block
+    // placeholder for that same lab's own time slot).
     const { data: dateBlocks } = await supabase
       .from('pmi_schedule_blocks')
       .select(`
         id, title, course_name, start_time, end_time, block_type,
         instructors:pmi_block_instructors(instructor_id)
       `)
-      .eq('date', date);
+      .eq('date', date)
+      .neq('block_type', 'lab');
 
     const { data: recurringBlocks } = await supabase
       .from('pmi_schedule_blocks')
@@ -166,7 +178,8 @@ export async function GET(request: NextRequest) {
       `)
       .eq('day_of_week', dayOfWeek)
       .eq('is_recurring', true)
-      .is('date', null);
+      .is('date', null)
+      .neq('block_type', 'lab');
 
     const allBlocks = [...(dateBlocks || []), ...(recurringBlocks || [])];
     for (const block of allBlocks) {

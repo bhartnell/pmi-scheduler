@@ -211,6 +211,16 @@ export async function GET(request: NextRequest) {
         // to the coordinator view. Without this query, a class like
         // Gannon's EMS 121 that's assigned in the planner doesn't
         // show as "Gannon teaching" on the coordinator calendar.
+        //
+        // block_type = 'lab' is excluded here too: those rows are the
+        // master-schedule's placeholder for a cohort's lab period
+        // ("S3 Pm Lab", "Day 1 S2 Lab", etc.) — the same time slot
+        // already surfaces as a real `lab_assignment` block via
+        // lab_days / lab_day_roles / lab_stations above. Counting them
+        // here double-counted every lab as both a lab AND a "class" for
+        // each instructor on the cohort roster, inflating the semester
+        // heat map (bug: 2026-08-31, weeks showed 16 blocks that should
+        // have been ~2 actual lab days).
         supabase
           .from('pmi_schedule_blocks')
           .select(`
@@ -228,6 +238,7 @@ export async function GET(request: NextRequest) {
           .gte('date', startDate)
           .lte('date', endDate)
           .neq('status', 'cancelled')
+          .neq('block_type', 'lab')
           .or('instructor_id.not.is.null,additional_instructor_id.not.is.null')
           .order('date'),
       ]);
