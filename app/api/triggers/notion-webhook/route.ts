@@ -62,6 +62,8 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${triggerToken}`,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'experimental-cc-routine-2026-04-01',
       },
       body: incoming && incoming.trim() ? incoming : '{}',
     });
