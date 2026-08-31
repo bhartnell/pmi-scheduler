@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { createNotification } from '@/lib/notifications';
 import { wrapInEmailTemplate, EMAIL_COLORS } from '@/lib/email-templates';
-import { isNremtTestingActiveToday } from '@/lib/email';
+import { isNremtTestingActiveToday, isEmailCategoryEnabled } from '@/lib/email';
 
 const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
 const FROM_EMAIL =
@@ -150,7 +150,7 @@ async function processInstructorWeek(
   weekStart: Date,
   weekEnd: Date,
   availabilityByInstructor: Set<string>
-): Promise<'sent' | 'skipped' | 'already_sent'> {
+): Promise<'sent' | 'skipped' | 'already_sent' | 'email_opted_out'> {
   const weekStartStr = toDateString(weekStart);
 
   // Check if availability already submitted for this week
@@ -184,6 +184,15 @@ async function processInstructorWeek(
       '[nremt-guard] Skipped availability-reminder cron send — NREMT testing active'
     );
     return 'skipped';
+  }
+
+  // Respect the recipient's Settings > Notifications > "Email lab
+  // reminders" toggle (defaults to true — unset for most part-timers
+  // today, so this only skips people who explicitly opted out). The
+  // in-app notification above is unaffected; this only gates the email.
+  const emailEnabled = await isEmailCategoryEnabled(instructor.email, 'email_lab_reminders', true);
+  if (!emailEnabled) {
+    return 'email_opted_out'; // in-app notification created; email intentionally skipped
   }
 
   // Send email if Resend is configured
@@ -299,6 +308,7 @@ export async function GET(request: NextRequest) {
   let totalSent = 0;
   let totalAlreadySent = 0;
   let totalSkipped = 0;
+  let totalEmailOptedOut = 0;
   const errors: string[] = [];
 
   // Process each week
@@ -338,6 +348,7 @@ export async function GET(request: NextRequest) {
       if (result.status === 'fulfilled') {
         if (result.value === 'sent') totalSent++;
         else if (result.value === 'already_sent') totalAlreadySent++;
+        else if (result.value === 'email_opted_out') totalEmailOptedOut++;
         else totalSkipped++;
       } else {
         const errMsg =
@@ -355,6 +366,7 @@ export async function GET(request: NextRequest) {
     sent: totalSent,
     already_sent: totalAlreadySent,
     skipped: totalSkipped,
+    email_opted_out: totalEmailOptedOut,
     errors,
     duration_ms: Date.now() - startTime,
   };
