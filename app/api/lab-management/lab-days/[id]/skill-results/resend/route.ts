@@ -32,6 +32,28 @@ export async function POST(
 
     const supabase = getSupabaseAdmin();
 
+    // BLOCK: no automatic result emails during NREMT testing days.
+    // Mirrors the guard in /api/skill-sheets/evaluations/send-email —
+    // this bulk "Resend Results Emails" path was missing it entirely
+    // (a comment further down claimed it was scoped, but nothing
+    // actually checked is_nremt_testing), which is exactly how a
+    // student could get emailed NREMT results after the single-send
+    // path was shut off. Checked before the evaluations query so it
+    // fires even for a "resend all unsent" call with no evaluations
+    // fetched yet.
+    const { data: labDayForGuard } = await supabase
+      .from('lab_days')
+      .select('is_nremt_testing')
+      .eq('id', labDayId)
+      .single();
+
+    if (labDayForGuard?.is_nremt_testing) {
+      return NextResponse.json(
+        { success: false, error: 'Email results are disabled during NREMT testing.' },
+        { status: 403 }
+      );
+    }
+
     // Build query for evaluations to resend
     let query = supabase
       .from('student_skill_evaluations')
@@ -128,8 +150,7 @@ export async function POST(
           ? new Date(labDay.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
           : new Date(evaluation.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-        // Send email. Scope NREMT guard to this lab day specifically
-        // — see /api/skill-sheets/evaluations/send-email for context.
+        // NREMT guard already enforced above for this whole lab day.
         const emailResult = await sendSkillEvaluationEmail(student.email, {
           evaluationId: evaluation.id,
           studentFirstName: student.first_name,
