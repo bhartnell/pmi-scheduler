@@ -8,6 +8,7 @@
 > Last updated: 2026-07-24 -- added `lab_template_stations.skill_sheet_id` (migration `20260724_lab_template_stations_skill_sheet_id.sql`, see `lab_template_stations` below)
 > Last updated: 2026-08-15 -- added `checklist_attendance.marked_at` / `.marked_by` (migration `20260815_checklist_attendance_marked_by.sql`, fixes prod PGRST204 on attendance save, see `checklist_attendance` below)
 > Last updated: 2026-08-28 -- RLS hardening Tiers 0-1 (migrations `20260828_tier0_backup_tables_enable_rls.sql`, `20260828_tier1_policy_exists_tables_enable_rls.sql`): enabled RLS on the 46 `_backup_*` archival tables (no policies -- service-role-only) and on `equipment`/`feedback_reports`/`onboarding_assignments` (existing policies now enforced). No column/table shape changes. See Task Handoff Queue `[SECURITY - advisors, NEEDS BEN]` for the full tiered plan and remaining Tiers 2-3.
+> Last updated: 2026-09-01 -- added `student_skill_evaluations.edited_by` / `.edited_at` / `.edit_reason` for director-level score-sheet editing (migration `20260901_add_score_sheet_edit_audit.sql`). Build-in-branch, HOLD MERGE per Ben's directive -- migration NOT YET APPLIED to production, columns marked pending in the table entry below until it runs.
 
 ## Summary
 
@@ -1546,12 +1547,16 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | is_retake | boolean | YES | false |  |
 | original_evaluation_id | uuid | YES |  | FK -> student_skill_evaluations.id |
 | cert_level | text | YES |  |  |
+| edited_by | uuid | YES |  | FK -> lab_users.id. Director who last corrected this score sheet in place. Pending migration `20260901_add_score_sheet_edit_audit.sql` — NOT YET APPLIED to production as of this entry (build-in-branch, HOLD MERGE per Ben's directive). |
+| edited_at | timestamptz | YES |  | Timestamp of the last director correction. Pending migration `20260901_add_score_sheet_edit_audit.sql`. |
+| edit_reason | text | YES |  | Director-supplied reason for the correction. Pending migration `20260901_add_score_sheet_edit_audit.sql`. |
 
 **Foreign Keys:**
 - `lab_day_id` -> `lab_days.id` (`student_skill_evaluations_lab_day_id_fkey`)
 - `evaluator_id` -> `lab_users.id` (`student_skill_evaluations_evaluator_id_fkey`)
 - `student_id` -> `students.id` (`student_skill_evaluations_student_id_fkey`)
 - `skill_sheet_id` -> `skill_sheets.id` (`student_skill_evaluations_skill_sheet_id_fkey`)
+- `edited_by` -> `lab_users.id` (`student_skill_evaluations_edited_by_fkey`) — pending, see above
 
 **Check Constraints:**
 - `student_skill_evaluations_result_check`: `((result = ANY (ARRAY['pass'::text, 'fail'::text, 'remediation'::text])))`
