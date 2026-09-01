@@ -313,7 +313,7 @@ on 2026-05-23 (now linked from the hub's new "Cohort Progress" section).
 
 ## Student
 
-Student-facing portal. 11 pages.
+Student-facing portal. 12 pages.
 
 | Path | Notes |
 |------|-------|
@@ -326,6 +326,7 @@ Student-facing portal. 11 pages.
 | `/student/my-progress` | Progress dashboard |
 | `/student/peer-eval` | Peer eval workflow |
 | `/student/profile` | Profile |
+| `/student/skill-evaluations` | Skill evaluation results list (standard labs; NREMT/cert hard-excluded) — nav-linked "Skill Results" |
 | `/student/skill-evaluations/[id]` | Eval detail |
 | `/student/skill-sheets` | Skill sheets |
 

@@ -1545,6 +1545,14 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | is_retake | boolean | YES | false |  |
 | original_evaluation_id | uuid | YES |  | FK -> student_skill_evaluations.id |
 | cert_level | text | YES |  |  |
+| lab_station_id | uuid | YES |  | Physical station attempt happened at (occupancy/retest tracking); plain uuid, not FK-constrained |
+| scenario_id | uuid | YES |  | Scenario run for this attempt, when digitally assigned; plain uuid, not FK-constrained |
+| scenario_run | text | YES |  | Free-text scenario record (paper-friendly) |
+| edited_by | uuid | YES |  |  |
+| edited_at | timestamptz | YES |  |  |
+| edit_prior | jsonb | YES |  |  |
+| edit_reason | text | YES |  |  |
+| visibility_to_student | boolean | NO | true | In-app student visibility, decoupled from email_status (delivery-only). NREMT/cert rows (skill_sheets.is_nremt=true) are additionally hard-excluded at read time regardless of this flag. |
 
 **Foreign Keys:**
 - `lab_day_id` -> `lab_days.id` (`student_skill_evaluations_lab_day_id_fkey`)
