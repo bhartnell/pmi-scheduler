@@ -312,6 +312,54 @@ function getStationCompletedCount(
   return count;
 }
 
+// BVM + O2 are graded sequentially by the same examiner in practice (one
+// proctor runs both checks back-to-back), so the Occupancy board showing
+// them as two full separate cards is pure clutter (Task Handoff Queue,
+// Ben 2026-08-05). Combine them into one board slot when they share an
+// examiner — display-only: each station keeps its own full card/controls
+// below and its own independent grading record; nothing about
+// completion/tracking changes.
+const BVM_SKILL_NAME = 'BVM Ventilation of an Apneic Adult Patient';
+const O2_SKILL_NAME = 'Oxygen Administration by Non-Rebreather Mask';
+
+interface StationDisplayGroup {
+  key: string;
+  stations: GridStation[];
+}
+
+function groupBvmO2Stations(
+  stations: GridStation[],
+  getProctor: (station: GridStation) => string | null
+): StationDisplayGroup[] {
+  const consumed = new Set<string>();
+  const groups: StationDisplayGroup[] = [];
+
+  for (const station of stations) {
+    if (consumed.has(station.id)) continue;
+
+    if (station.skill_name === BVM_SKILL_NAME || station.skill_name === O2_SKILL_NAME) {
+      const partnerSkill = station.skill_name === BVM_SKILL_NAME ? O2_SKILL_NAME : BVM_SKILL_NAME;
+      const proctor = getProctor(station);
+      const partner = proctor
+        ? stations.find(
+            s => s.id !== station.id && !consumed.has(s.id) && s.skill_name === partnerSkill && getProctor(s) === proctor
+          )
+        : undefined;
+      if (partner) {
+        consumed.add(station.id);
+        consumed.add(partner.id);
+        groups.push({ key: `pair-${station.id}-${partner.id}`, stations: [station, partner] });
+        continue;
+      }
+    }
+
+    consumed.add(station.id);
+    groups.push({ key: station.id, stations: [station] });
+  }
+
+  return groups;
+}
+
 function getStudentCompletionCount(
   student: Student,
   stations: GridStation[],
@@ -1619,7 +1667,15 @@ export default function CoordinatorViewPage() {
           </span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-          {stations.map(station => {
+          {groupBvmO2Stations(stations, getDisplayProctor).map(group => (
+          <div key={group.key} className={group.stations.length > 1 ? 'flex flex-col gap-2' : 'contents'}>
+          {group.stations.length > 1 && (
+            <div className="flex items-center gap-1 text-[10px] font-semibold text-sky-600 dark:text-sky-400 px-1">
+              <Users className="w-3 h-3" />
+              BVM + O2 — same examiner
+            </div>
+          )}
+          {group.stations.map(station => {
             const stationStatus = getStationStatus(station, students, cells, alertStationIds);
             const config = statusConfig[stationStatus];
             const StatusIcon = config.icon;
@@ -1945,6 +2001,8 @@ export default function CoordinatorViewPage() {
               </div>
             );
           })}
+          </div>
+          ))}
 
           {/* Add Station Button */}
           {labDayInfo?.is_nremt_testing && (
