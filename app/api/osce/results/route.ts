@@ -22,16 +22,23 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const format = searchParams.get('format'); // 'csv' for export
+  const eventId = searchParams.get('event_id'); // optional: scope to a single OSCE event
 
   try {
     const supabase = getSupabaseAdmin();
 
-    // Get all assessments
-    const { data: assessments, error: aErr } = await supabase
+    // Get all assessments (optionally scoped to a single event)
+    let assessmentsQuery = supabase
       .from('osce_assessments')
       .select('*')
       .order('day_number')
       .order('slot_number');
+
+    if (eventId) {
+      assessmentsQuery = assessmentsQuery.eq('event_id', eventId);
+    }
+
+    const { data: assessments, error: aErr } = await assessmentsQuery;
 
     if (aErr) throw aErr;
 

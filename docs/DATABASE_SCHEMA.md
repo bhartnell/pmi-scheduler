@@ -6,6 +6,8 @@
 > Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
 > Last updated: 2026-07-12 -- added `lab_days.is_archived` (migration `20260712_lab_days_is_archived.sql`, archive-not-delete flag excluding rows from the general lab schedule + ACLS hub list views)
 > Last updated: 2026-07-24 -- added `lab_template_stations.skill_sheet_id` (migration `20260724_lab_template_stations_skill_sheet_id.sql`, see `lab_template_stations` below)
+> Last updated: 2026-08-15 -- added `checklist_attendance.marked_at` / `.marked_by` (migration `20260815_checklist_attendance_marked_by.sql`, fixes prod PGRST204 on attendance save, see `checklist_attendance` below)
+> Last updated: 2026-08-28 -- RLS hardening Tiers 0-1 (migrations `20260828_tier0_backup_tables_enable_rls.sql`, `20260828_tier1_policy_exists_tables_enable_rls.sql`): enabled RLS on the 46 `_backup_*` archival tables (no policies -- service-role-only) and on `equipment`/`feedback_reports`/`onboarding_assignments` (existing policies now enforced). No column/table shape changes. See Task Handoff Queue `[SECURITY - advisors, NEEDS BEN]` for the full tiered plan and remaining Tiers 2-3.
 
 ## Summary
 
@@ -971,7 +973,8 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | health_insurance_date | date | YES |  |  |
 | bls_complete | boolean | YES | false |  |
 | bls_expiration | date | YES |  |  |
-| flu_shot_complete | boolean | YES | false |  |
+| flu_shot_complete | boolean | YES | false | legacy; preserved for history, superseded by flu_shot_status for the grid (2026-08-11) |
+| flu_shot_status | text | YES |  | R/D: received \| declined \| null (Rae 2026-08-11); flu_declination = the separate VHS declination FORM |
 | flu_shot_date | date | YES |  |  |
 | flu_declination | boolean | YES | false |  |
 | hospital_orientation_complete | boolean | YES | false |  |
@@ -1408,15 +1411,19 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | eta_module | boolean | YES | false |  |
 | attestation_lgs | boolean | YES | false |  |
 | wpvp | boolean | YES | false |  |
-| orientation | boolean | YES | false |  |
-| conduct | boolean | YES | false |  |
+| orientation | boolean | YES | false | surfaced as "DH Ori" (Dignity Health orientation) since 2026-08-11 |
+| conduct | boolean | YES | false | Standards of conduct |
+| cs_attestation | boolean | YES | false | CommonSpirit Attestation of Student Orientation [CS Att] (Rae 2026-08-11) |
+| cs_orientation | boolean | YES | false | CS clinical student orientation module [CS ORI] (Rae 2026-08-11) |
+| wpvp_curriculum | boolean | YES | false | WPVP training CURRICULUM [WPVP TR]; distinct from wpvp=WPVP attestation (Rae 2026-08-11) |
+| orientation_exam | boolean | YES | false | Orientation exam [EXAM] (Rae 2026-08-11) |
 | all_complete | boolean | YES | false |  |
 | completion_date | date | YES |  |  |
 | notes | text | YES |  |  |
 | bg_check_status | text | YES |  | 3-state: ordered \| in_progress \| complete |
 | drug_test_status | text | YES |  | 3-state: ordered \| in_progress \| complete |
 | mce_notes | text | YES |  | Per-student notes for mCE tab |
-| nsp | boolean | YES | false |  |
+| nsp | boolean | YES | false | REMOVED from the tracker view 2026-08-11 (older layout); column kept for recoverability |
 | created_at | timestamptz | YES | now() |  |
 | updated_at | timestamptz | YES | now() |  |
 
@@ -9986,6 +9993,8 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 | attended | boolean | YES | false |  |
 | notes | text | YES |  |  |
 | created_at | timestamp with time zone | YES | now() |  |
+| marked_at | timestamp with time zone | YES |  | Added 20260815 |
+| marked_by | text | YES |  | Instructor email; added 20260815 |
 
 **Foreign Keys:**
 - `student_id` -> `students.id` (checklist_attendance_student_id_fkey)

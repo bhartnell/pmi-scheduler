@@ -422,6 +422,48 @@ export async function isStudentEmailBlackoutToday(): Promise<boolean> {
 }
 
 /**
+ * Per-user email-category opt-out check, for recurring/digest sends that
+ * bypass the central sendEmail() (cron jobs building their own Resend
+ * client). Reads `user_preferences.notification_settings[key]`; a missing
+ * row or missing key falls back to `defaultValue` (matches the column's
+ * own JSON default and the /api/notifications/preferences GET fallback).
+ *
+ * Fails OPEN to `defaultValue` on a lookup error — same rationale as the
+ * student blackout check: a transient DB hiccup shouldn't silently and
+ * permanently suppress (or leak) notifications, it should just fall back
+ * to the documented default for that category.
+ *
+ * Added 2026-08-31 after a Resend audit showed the weekly Availability
+ * Reminder and feedback-update crons ignored these toggles entirely and
+ * emailed every recipient regardless of their Settings > Notifications
+ * choice — 74 sends in August at 0% open rate.
+ */
+export async function isEmailCategoryEnabled(
+  email: string,
+  key: 'email_lab_reminders' | 'email_feedback_updates' | 'email_lab_assignments',
+  defaultValue: boolean
+): Promise<boolean> {
+  try {
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await supabase
+      .from('user_preferences')
+      .select('notification_settings')
+      .eq('user_email', email)
+      .maybeSingle();
+    if (error) {
+      console.error(`[email preference] lookup failed for ${email}; falling back to default (${defaultValue}):`, error);
+      return defaultValue;
+    }
+    const settings = data?.notification_settings as Record<string, unknown> | undefined;
+    const value = settings?.[key];
+    return value === undefined || value === null ? defaultValue : !!value;
+  } catch (err) {
+    console.error(`[email preference] exception for ${email}; falling back to default (${defaultValue}):`, err);
+    return defaultValue;
+  }
+}
+
+/**
  * Public check for other routes that bypass the central sendEmail()
  * (i.e. they use their own Resend client for custom templates). These
  * routes should still respect the NREMT kill switch — call this before

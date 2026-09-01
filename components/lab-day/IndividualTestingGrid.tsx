@@ -7,7 +7,6 @@ import {
   Clock,
   Circle,
   Eye,
-  RotateCcw,
   Edit2,
   Loader2,
   RefreshCw,
@@ -166,12 +165,6 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
   // ─── Helpers: find a station for a skill ────────────────────────────────
 
   /** Pick the first station that runs a given skill (for queue actions) */
-  const findStationForSkill = (skillName: string): GridStation | null => {
-    const col = skillColumns.find(c => c.skillName === skillName);
-    if (!col) return null;
-    return stations.find(s => col.stationIds.includes(s.id)) || null;
-  };
-
   // ─── Actions ────────────────────────────────────────────────────────────
 
   const handleSkillCellClick = (studentId: string, skillName: string) => {
@@ -210,42 +203,11 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
     }
   };
 
-  const handleNewAttempt = async (studentId: string, skillName: string) => {
-    const key = `${studentId}_${skillName}`;
-    const station = findStationForSkill(skillName);
-    if (!station) return;
-    setActionLoading(key);
-    try {
-      const res = await fetch('/api/lab-management/student-queue', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          lab_day_id: labDayId,
-          student_id: studentId,
-          station_id: station.id,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setSkillCells(prev => ({
-          ...prev,
-          [key]: {
-            queueId: data.entry?.id || null,
-            status: 'in_progress',
-            result: null,
-            evaluationId: null,
-            evalSummary: null,
-            teamRole: null,
-          },
-        }));
-      }
-    } catch (err) {
-      console.error('Error creating new attempt:', err);
-    } finally {
-      setActionLoading(null);
-      setPopoverCell(null);
-    }
-  };
+  // #3 (Ben 2026-08-05): the completion table is SKILL-rolled-up, so a cell maps
+  // to multiple physical stations — "send/new attempt" from a cell was ambiguous
+  // and created phantom retakes. Sending/retesting now lives ONLY on the station
+  // cards + the retake queue. The table cell popover is results-only, so the old
+  // handleNewAttempt (which POSTed a student-queue entry from a cell) is removed.
 
   const handleResetToNotStarted = async (studentId: string, skillName: string) => {
     const key = `${studentId}_${skillName}`;
@@ -523,12 +485,6 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/30 rounded-lg"
               >
                 <FileDown className="w-4 h-4" /> Download Student PDF
-              </button>
-              <button
-                onClick={(e) => { e.stopPropagation(); handleNewAttempt(studentId, skillName); }}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded-lg"
-              >
-                <RotateCcw className="w-4 h-4" /> New Attempt
               </button>
               <div className="border-t border-gray-100 dark:border-gray-700 my-1" />
               <button

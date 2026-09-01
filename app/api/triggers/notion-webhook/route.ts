@@ -51,19 +51,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
   }
 
-  // Forward to the Code routine trigger. Pass the original body through so the
-  // routine can see what changed; never log the token or the body.
+  // Forward to the Code routine trigger. Send a fixed, minimal body rather than
+  // Notion's raw payload — the routine reads the board itself, so the webhook is
+  // only a wake/poke, and passing Notion's arbitrary payload through risked a
+  // silent 400 if the fire endpoint validates the body shape strictly.
   let forwarded = false;
   let downstreamStatus = 0;
   try {
-    const incoming = await request.text().catch(() => '');
     const res = await fetch(triggerUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${triggerToken}`,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'experimental-cc-routine-2026-04-01',
       },
-      body: incoming && incoming.trim() ? incoming : '{}',
+      body: JSON.stringify({
+        text: 'Notion Task Handoff Queue changed — scan for Queued tasks assigned to Claude Code.',
+      }),
     });
     forwarded = res.ok;
     downstreamStatus = res.status;

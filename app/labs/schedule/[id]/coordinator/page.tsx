@@ -488,6 +488,7 @@ export default function CoordinatorViewPage() {
   // Retake queue
   const [retakeStatuses, setRetakeStatuses] = useState<RetakeStatus[]>([]);
   const [assigningRetake, setAssigningRetake] = useState<string | null>(null); // "studentId_skillSheetId"
+  const [retakeCollapsed, setRetakeCollapsed] = useState(false); // #6 collapse the retake queue (unwieldy on high-failure exams)
   const retakePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Progress table
@@ -2038,10 +2039,16 @@ export default function CoordinatorViewPage() {
         {labDayInfo?.is_nremt_testing && hasRetakeQueue && (
           <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border-2 border-amber-300 dark:border-amber-700 shadow-sm overflow-hidden mb-6">
             <div className="flex items-center justify-between px-4 py-3 bg-amber-100 dark:bg-amber-900/30 border-b border-amber-200 dark:border-amber-700">
-              <h3 className="text-base font-bold text-amber-900 dark:text-amber-200 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setRetakeCollapsed(c => !c)}
+                aria-expanded={!retakeCollapsed}
+                className="text-base font-bold text-amber-900 dark:text-amber-200 flex items-center gap-2"
+              >
                 <RotateCcw className="w-5 h-5" />
                 RETAKE QUEUE
-              </h3>
+                <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${retakeCollapsed ? '-rotate-90' : ''}`} />
+              </button>
               <button
                 onClick={() => fetchRetakeStatus()}
                 className="text-xs text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 font-medium"
@@ -2049,6 +2056,7 @@ export default function CoordinatorViewPage() {
                 Refresh
               </button>
             </div>
+            {!retakeCollapsed && (
             <div className="p-4 space-y-4">
               {retakeQueueData.eligible.length > 0 && (
                 <div>
@@ -2154,6 +2162,7 @@ export default function CoordinatorViewPage() {
                 </div>
               )}
             </div>
+            )}
           </div>
         )}
 
