@@ -95,6 +95,7 @@ export async function POST(req: NextRequest) {
         evaluator_name: o.name,
         evaluator_role: mapRole(o.role),
         valid_until: validUntil,
+        event_id: event.id,
       }));
 
       const { data: created, error: insertError } = await supabase
@@ -112,7 +113,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Single token creation
-    const { evaluator_name, evaluator_role, valid_hours } = body;
+    const { evaluator_name, evaluator_role, valid_hours, event_id } = body;
 
     if (!evaluator_name) {
       return NextResponse.json({ success: false, error: 'evaluator_name is required' }, { status: 400 });
@@ -122,12 +123,30 @@ export async function POST(req: NextRequest) {
       ? new Date(Date.now() + valid_hours * 60 * 60 * 1000).toISOString()
       : new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
+    // Resolve which event this token grants access to. Callers may pass an
+    // explicit event_id; otherwise default to the most recent open/closed
+    // event, same resolution the bulk path above uses. Without this, tokens
+    // were created with event_id left null, so /api/osce/validate-token could
+    // never resolve an event title/pin for them.
+    let resolvedEventId: string | null = event_id || null;
+    if (!resolvedEventId) {
+      const { data: defaultEvent } = await supabase
+        .from('osce_events')
+        .select('id')
+        .in('status', ['open', 'closed'])
+        .order('start_date', { ascending: false })
+        .limit(1)
+        .single();
+      resolvedEventId = defaultEvent?.id || null;
+    }
+
     const { data, error } = await supabase
       .from('osce_guest_tokens')
       .insert({
         evaluator_name,
         evaluator_role: evaluator_role || null,
         valid_until: validUntil,
+        event_id: resolvedEventId,
       })
       .select()
       .single();
