@@ -91,6 +91,7 @@
 | aha_instructor_number | text | YES |  | AHA instructor # for the AHA Results Export signature line |
 | signature_data | text | YES |  | PNG data URL of drawn/uploaded signature; NULL when signature_kind='auto' |
 | signature_kind | text | YES |  | 'drawn' \| 'uploaded' \| 'auto' (script-font name fallback) |
+| paramedic_lab_default | boolean | NO | true | Whether this instructor is included in paramedic-lab default-available classification. FALSE for RT/other-program full-timers who are assignable but not default-available (Ben 2026-08-07): `chooshmand@`, `dridgell@`, `madams@`, `tkankoski@`, `tmate@`. Added migration `20260807_instructor_unavailability.sql`. Not yet read by any endpoint — see instructor-availability picker wiring checkpoint (Task Handoff Queue, [AVAILABILITY SYSTEM]). |
 
 **Foreign Keys:**
 - `department_id` -> `departments.id` (`lab_users_department_id_fkey`)
@@ -3862,6 +3863,71 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 - `Users can manage own availability` (ALL, permissive, roles: {public})
 - `Users can update own availability` (UPDATE, permissive, roles: {public})
 - `Users can view availability` (SELECT, permissive, roles: {public})
+
+#### `instructor_unavailability`
+
+Added 2026-08-07 (Task Handoff Queue, [AVAILABILITY SYSTEM] + Josh Lomonaco tasks). `instructor_availability`/`recurring_availability_templates` store POSITIVE availability only — there was no way to mark a full-timer unavailable that beats the "full-time = default available" rule in `app/api/lab-management/instructor-availability`. Schema-only as of this commit; not yet read by any endpoint (dormant/empty until the picker-wiring checkpoint).
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| instructor_id | uuid | NO |  |  |
+| created_by | uuid | YES |  |  |
+| start_date | date | NO |  |  |
+| end_date | date | NO |  |  |
+| start_time | time without time zone | YES |  |  |
+| end_time | time without time zone | YES |  |  |
+| is_all_day | boolean | NO | true |  |
+| reason | text | YES |  |  |
+| notes | text | YES |  |  |
+| source_template_id | uuid | YES |  | FK -> recurring_unavailability_templates.id |
+| created_at | timestamptz | NO | now() |  |
+| updated_at | timestamptz | NO | now() |  |
+
+**Foreign Keys:**
+- `instructor_id` -> `lab_users.id` (`instructor_unavailability_instructor_id_fkey`)
+- `created_by` -> `lab_users.id` (`instructor_unavailability_created_by_fkey`)
+- `source_template_id` -> `recurring_unavailability_templates.id` (`instructor_unavailability_source_template_id_fkey`)
+
+**Note:** two FK paths to `lab_users` (`instructor_id`, `created_by`) — mirrors the existing `recurring_availability_templates` pattern. Use explicit FK hints (`!instructor_unavailability_instructor_id_fkey`) on any future `.select()` embed.
+
+**Indexes:**
+- `idx_instructor_unavailability_instructor_dates`: `(instructor_id, start_date, end_date)`
+
+**RLS Policies:**
+- `read instructor unavailability` (SELECT) / `write instructor unavailability` (ALL) — service_role, or `lab_users.role IN ('instructor','lead_instructor','admin','superadmin')`.
+
+#### `recurring_unavailability_templates`
+
+Sibling of `recurring_availability_templates`, but `end_date` is nullable to support open-ended ("until turned off") recurring unavailability rules, alongside date-bounded ones. Count-bounded rules ("15 Thursdays") are expected to resolve to a concrete `end_date` client-side at creation, same as how the availability template expands to explicit dates.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| instructor_id | uuid | NO |  |  |
+| created_by | uuid | YES |  |  |
+| weekdays | integer[] | NO |  | 0=Sun..6=Sat |
+| start_time | time without time zone | YES |  |  |
+| end_time | time without time zone | YES |  |  |
+| is_all_day | boolean | NO | true |  |
+| frequency | text | NO | 'weekly' | CHECK IN ('weekly','biweekly') |
+| start_date | date | NO |  |  |
+| end_date | date | YES |  | NULL = open-ended |
+| reason | text | YES |  |  |
+| notes | text | YES |  |  |
+| is_active | boolean | NO | true |  |
+| created_at | timestamptz | NO | now() |  |
+| updated_at | timestamptz | NO | now() |  |
+
+**Foreign Keys:**
+- `instructor_id` -> `lab_users.id` (`recurring_unavailability_templates_instructor_id_fkey`)
+- `created_by` -> `lab_users.id` (`recurring_unavailability_templates_created_by_fkey`)
+
+**Indexes:**
+- `idx_recurring_unavailability_instructor`: `(instructor_id) WHERE is_active = true`
+
+**RLS Policies:**
+- `read recurring unavailability templates` (SELECT) / `write recurring unavailability templates` (ALL) — service_role, or `lab_users.role IN ('instructor','lead_instructor','admin','superadmin')`.
 
 #### `open_shifts`
 
