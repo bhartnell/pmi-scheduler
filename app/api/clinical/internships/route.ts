@@ -78,6 +78,17 @@ export async function GET(request: NextRequest) {
 
     if (!includeWithdrawn) {
       query = query.neq('students.status', 'withdrawn');
+      // student_internships has its OWN 'withdrawn' status value
+      // (independent of students.status — a student can be withdrawn
+      // from just this internship/rotation while staying active
+      // overall). The check above only ever caught the student-level
+      // flag, so an internship-level withdrawal leaked through
+      // regardless of the cohort page's toggle. Skip this exclusion
+      // when the caller explicitly asked for status=withdrawn (the
+      // "all internships" filter dropdown's intentional use case).
+      if (status !== 'withdrawn') {
+        query = query.neq('status', 'withdrawn');
+      }
     }
 
     if (cohortId) {

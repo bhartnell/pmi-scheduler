@@ -14,10 +14,12 @@ import {
   X,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
 type ThreeState = 'ordered' | 'in_progress' | 'complete' | null;
+type FluStatus = 'received' | 'declined' | null;
 
 interface Cohort {
   id: string;
@@ -58,6 +60,7 @@ interface ComplioRow {
   health_insurance_complete: boolean;
   bls_complete: boolean;
   flu_shot_complete: boolean;
+  flu_shot_status: FluStatus;
   flu_declination: boolean;
   hospital_orientation_complete: boolean;
   exhibit_complete: boolean;
@@ -101,8 +104,84 @@ interface MceRow {
   wpvp: boolean;
   orientation: boolean;
   conduct: boolean;
+  // New (Rae 2026-08-11, §3.a.ii)
+  cs_attestation: boolean;
+  cs_orientation: boolean;
+  wpvp_curriculum: boolean;
+  orientation_exam: boolean;
   mce_notes: string;
 }
+
+// ── mCE column layout (Rae 2026-08-11, brief §3.a.ii) ─────────────────────────
+// Data-driven so the grid, the completion-overview aggregate, and the student
+// print stay in lockstep. Sections render with header bands + thick separators;
+// left-to-right order matches Rae's list exactly. `nsp` is intentionally absent
+// (older layout — column kept in DB, just not shown). `full` = the full item
+// name used on the student print-out.
+type MceColKind = 'check' | 'threestate';
+interface MceCol {
+  key: keyof MceRow;
+  short: string;
+  full: string;
+  kind: MceColKind;
+}
+interface MceSection {
+  name: string;
+  cols: MceCol[];
+}
+const MCE_SECTIONS: MceSection[] = [
+  {
+    name: 'Compliance',
+    cols: [
+      { key: 'bg_check_status', short: 'BG', full: 'Background check', kind: 'threestate' },
+      { key: 'drug_test_status', short: 'DT', full: 'Drug test', kind: 'threestate' },
+      { key: 'physical', short: 'Phys', full: 'Physical exam', kind: 'check' },
+      { key: 'insurance', short: 'Ins', full: 'Liability insurance', kind: 'check' },
+      { key: 'photo', short: 'Photo', full: 'Student photograph', kind: 'check' },
+      { key: 'tb', short: 'TB', full: 'TB clearance', kind: 'check' },
+      { key: 'mmr', short: 'MMR', full: 'MMR', kind: 'check' },
+      { key: 'flu', short: 'Flu', full: 'Influenza vaccine', kind: 'check' },
+      { key: 'hep_b', short: 'Hep B', full: 'Hepatitis B', kind: 'check' },
+      { key: 'tdap', short: 'Tdap', full: 'Tdap', kind: 'check' },
+      { key: 'vzv', short: 'VZV', full: 'Varicella', kind: 'check' },
+      { key: 'covid', short: 'COVID', full: 'COVID-19 vaccine', kind: 'check' },
+      { key: 'bls', short: 'BLS', full: 'AHA BLS Provider', kind: 'check' },
+    ],
+  },
+  {
+    name: 'Documents',
+    cols: [
+      { key: 'cs_attestation', short: 'CS Att', full: 'CommonSpirit Attestation of Student Orientation', kind: 'check' },
+      { key: 'confidentiality', short: 'Confid', full: 'Confidentiality Statement', kind: 'check' },
+      { key: 'flu_declination', short: 'Flu Dec', full: 'Flu declination', kind: 'check' },
+      { key: 'hep_b_declination', short: 'Hep B Dec', full: 'Hep B declination', kind: 'check' },
+      { key: 'mmr_declination', short: 'MMR Dec', full: 'MMR declination', kind: 'check' },
+      { key: 'tdap_declination', short: 'Tdap Dec', full: 'Tdap declination', kind: 'check' },
+      { key: 'vzv_declination', short: 'VZV Dec', full: 'Varicella declination', kind: 'check' },
+      { key: 'cultural_competency', short: 'Cult', full: 'NV cultural competency certificate', kind: 'check' },
+      { key: 'parking', short: 'Parking', full: 'Siena parking', kind: 'check' },
+      { key: 'eta_module', short: 'ETA 4/5', full: 'Educational Training Agreement parts IV/V', kind: 'check' },
+      { key: 'attestation_lgs', short: 'Att LGS', full: 'Attestation and Letter of Good Standing (LGS)', kind: 'check' },
+      { key: 'wpvp', short: 'WPVP Att', full: 'WPVP training attestation', kind: 'check' },
+    ],
+  },
+  {
+    name: 'Modules',
+    cols: [
+      { key: 'cs_orientation', short: 'CS Ori', full: 'CS clinical student orientation', kind: 'check' },
+      { key: 'orientation', short: 'DH Ori', full: 'Dignity Health (DH) orientation', kind: 'check' },
+      { key: 'conduct', short: 'Conduct', full: 'Standards of conduct', kind: 'check' },
+      { key: 'wpvp_curriculum', short: 'WPVP Tr', full: 'Workplace Violence Prevention training curriculum', kind: 'check' },
+    ],
+  },
+  {
+    name: 'Exam',
+    cols: [
+      { key: 'orientation_exam', short: 'Exam', full: 'Orientation exam', kind: 'check' },
+    ],
+  },
+];
+const MCE_COLS: MceCol[] = MCE_SECTIONS.flatMap(s => s.cols);
 
 // ── Helper components ─────────────────────────────────────────────────────────
 
@@ -116,6 +195,16 @@ const THREE_STATE_COLORS: Record<string, string> = {
   ordered: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/40 dark:text-yellow-300',
   in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300',
   complete: 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300',
+};
+
+// Compact single-letter indicators for the grid cells (Rae, 8/11): the full
+// "In Progress"/"Ordered"/"Complete" labels made BG/DT the widest columns and
+// forced horizontal scroll. Same color coding as above; the dropdown still
+// shows the full labels and a hover tooltip names the state.
+const THREE_STATE_LETTERS: Record<string, string> = {
+  ordered: 'O',
+  in_progress: 'IP',
+  complete: 'C',
 };
 
 function ThreeStateCell({
@@ -145,12 +234,12 @@ function ThreeStateCell({
       <button
         onClick={() => setOpen(o => !o)}
         disabled={saving}
-        className={`min-w-[90px] px-2 py-1 rounded text-xs font-medium text-left flex items-center gap-1 border transition-opacity ${
+        title={value ? THREE_STATE_LABELS[value] : 'Not set'}
+        className={`w-9 h-7 rounded text-xs font-bold text-center border transition-opacity ${
           value ? THREE_STATE_COLORS[value] : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 border-transparent'
         } ${saving ? 'opacity-50' : 'hover:opacity-80'}`}
       >
-        <span className="flex-1">{value ? THREE_STATE_LABELS[value] : '—'}</span>
-        <ChevronDown className="w-3 h-3 flex-shrink-0" />
+        {value ? THREE_STATE_LETTERS[value] : '—'}
       </button>
       {open && (
         <div className="absolute z-50 left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg min-w-[120px]">
@@ -197,6 +286,55 @@ function CheckCell({
         </svg>
       )}
     </button>
+  );
+}
+
+// Flu shot R/D cell (Rae 8/11, item 2.d): single-letter status — R = received
+// (green), D = declined (amber). Clicking cycles — → R → D → —. The separate
+// "Flu Dec" column (the VHS declination FORM) is required regardless and stays
+// its own checkbox.
+function FluStatusCell({
+  value,
+  onChange,
+  saving,
+}: {
+  value: FluStatus;
+  onChange: (v: FluStatus) => void;
+  saving?: boolean;
+}) {
+  const next: FluStatus = value === null ? 'received' : value === 'received' ? 'declined' : null;
+  const letter = value === 'received' ? 'R' : value === 'declined' ? 'D' : '—';
+  const colors =
+    value === 'received'
+      ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
+      : value === 'declined'
+      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300'
+      : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400';
+  return (
+    <button
+      onClick={() => onChange(next)}
+      disabled={saving}
+      title={value === 'received' ? 'Received (click → Declined)' : value === 'declined' ? 'Declined (click → clear)' : 'Not set (click → Received)'}
+      className={`w-7 h-7 rounded text-xs font-bold text-center border border-transparent transition-opacity ${colors} ${saving ? 'opacity-50' : 'hover:opacity-80'}`}
+    >
+      {letter}
+    </button>
+  );
+}
+
+// Display-only "N/A" indicator used when a column is greyed out by another
+// field (COVID exemption, TB PPD ↔ QuantiFERON mutual exclusion). It is
+// intentionally NON-interactive and does NOT touch the stored value — the
+// underlying check is preserved; to "un-grey", clear the controlling field
+// (e.g. uncheck QuantiFERON) and the real checkbox returns (Rae, 8/11).
+function NaCell({ title }: { title?: string }) {
+  return (
+    <span
+      title={title || 'Not applicable'}
+      className="inline-flex items-center justify-center w-6 h-6 rounded text-[9px] font-semibold text-gray-400 bg-gray-100 dark:bg-gray-700/50 dark:text-gray-500 select-none"
+    >
+      N/A
+    </span>
   );
 }
 
@@ -255,27 +393,175 @@ function AggBar({ label, count, total }: { label: string; count: number; total: 
 }
 
 // ── Print view ────────────────────────────────────────────────────────────────
+//
+// BUG FIX (2026-08-14, Rae — blank student print-out): this used to print via
+// `window.print()` on the current page with the preview modal's content
+// scoped visible through #print-content. app/globals.css's global print
+// stylesheet also has `.fixed { display: none !important }` (added 2026-07-12
+// to hide fixed headers/sidebars on other pages) — the modal's own wrapper is
+// `className="fixed ..."`, so that rule hid the ENTIRE modal, #print-content
+// included, the instant printing started. The per-student isolation rule
+// added for the modal never got a chance to apply because its ancestor was
+// already `display: none`. Net result: nothing printed but blank pages.
+// Fixed by generating the print HTML as a plain string and printing it in an
+// isolated new window via lib/print-utils.ts's openPrintWindow — the same
+// pattern already used by every other print flow in the app — which can't be
+// touched by the main page's print CSS at all.
+
+function printFieldRowHtml(label: string, value: boolean | ThreeState | string): string {
+  let text = '—';
+  let color = '#9ca3af';
+  if (typeof value === 'boolean') {
+    text = value ? '✓' : '✗';
+    color = value ? '#16a34a' : '#f87171';
+  } else if (value === 'complete') { text = 'Complete'; color = '#16a34a'; }
+  else if (value === 'in_progress') { text = 'In Progress'; color = '#2563eb'; }
+  else if (value === 'ordered') { text = 'Ordered'; color = '#ca8a04'; }
+  else if (typeof value === 'string' && value) { text = value; color = '#374151'; }
+
+  return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #f3f4f6;font-size:12px;">
+    <span style="color:#374151;">${escapeHtml(label)}</span>
+    <span style="font-weight:600;color:${color};">${escapeHtml(text)}</span>
+  </div>`;
+}
+
+function notesBlockHtml(notes: string): string {
+  if (!notes) return '';
+  return `<div style="margin-top:12px;padding:8px;background:#f9fafb;border-radius:4px;">
+    <p style="font-size:11px;font-weight:600;color:#6b7280;margin-bottom:4px;">Notes</p>
+    <p style="font-size:13px;color:#1f2937;">${escapeHtml(notes)}</p>
+  </div>`;
+}
+
+// TB clearance is one requirement with two accepted paths: two PPDs, or a single
+// QuantiFERON. The print-out keys off the path the student actually cleared on so
+// the unused path reads "N/A" instead of a misleading ✗ (Rae, 2026-08-14).
+// Unlike the editable grid, print does NOT suppress this when all three are on
+// file — the grid's `tbConflict` escape hatch exists only so staff can still click
+// a greyed-out checkbox to clear the extra entry, which a read-only print can't need.
+function tbPrintValues(s: ComplioRow): { ppd1: boolean | string; ppd2: boolean | string; quantiferon: boolean | string } {
+  const qPath = s.tb_questionnaire === true;
+  const bothPpd = s.tb_test_1_complete === true && s.tb_test_2_complete === true;
+  return {
+    ppd1: qPath ? 'N/A' : s.tb_test_1_complete,
+    ppd2: qPath ? 'N/A' : s.tb_test_2_complete,
+    quantiferon: !qPath && bothPpd ? 'N/A' : s.tb_questionnaire,
+  };
+}
+
+// Mirrors ComplioStudentPrintView's field list/order exactly (full item
+// names, package-subscription rows omitted — Rae 1.c.iii/1.c.iv).
+function complioPrintHtml(s: ComplioRow): string {
+  const tb = tbPrintValues(s);
+  const rows: Array<[string, boolean | ThreeState | string]> = [
+    ['MMR', s.mmr_complete],
+    ['Varicella', s.vzv_complete],
+    ['Hepatitis B', s.hep_b_complete],
+    ['Tdap', s.tdap_complete],
+    ['COVID-19', s.covid_complete],
+    ['COVID-19 Exemption', s.covid_exemption],
+    ['TB PPD 1', tb.ppd1],
+    ['TB PPD 2', tb.ppd2],
+    ['QuantiFERON', tb.quantiferon],
+    ['Physical exam', s.physical_complete],
+    ['Health insurance', s.health_insurance_complete],
+    ['AHA BLS Provider card', s.bls_complete],
+    ['Flu shot', s.flu_shot_status === 'received' ? 'Received' : s.flu_shot_status === 'declined' ? 'Declined' : ''],
+    ['VHS Influenza Declination form', s.flu_declination],
+    ['VHS Hospital Orientation form', s.hospital_orientation_complete],
+    ['Student Declaration of Responsibilities & Confidentiality (Exhibits A&B)', s.exhibit_complete],
+    ['Background check', s.background_check_status],
+    ['Drug test', s.drug_test_status],
+  ];
+  return rows.map(([label, value]) => printFieldRowHtml(label, value)).join('') + notesBlockHtml(s.complio_notes);
+}
+
+// Mirrors MceStudentPrintView — data-driven from MCE_SECTIONS so print
+// names/order stay in lockstep with the grid (Rae 8/11, §3.a.ii).
+function mcePrintHtml(s: MceRow): string {
+  const sectionsHtml = MCE_SECTIONS.map(section => {
+    const rowsHtml = section.cols.map(col => printFieldRowHtml(col.full, s[col.key] as boolean | ThreeState | string)).join('');
+    return `<p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#6b7280;margin:10px 0 4px;">${escapeHtml(section.name)}</p>${rowsHtml}`;
+  }).join('');
+  return sectionsHtml + notesBlockHtml(s.mce_notes);
+}
+
+function buildClinicalPrintHtml(opts: {
+  studentName: string;
+  complio: ComplioRow | null;
+  mce: MceRow | null;
+}): string {
+  const sections: string[] = [];
+  if (opts.complio) {
+    sections.push(`<div class="section"><h2>Complio Clearance Checklist</h2>${complioPrintHtml(opts.complio)}</div>`);
+  }
+  if (opts.mce) {
+    sections.push(`<div class="section"${sections.length ? ' style="page-break-before: always;"' : ''}><h2>mCE Clearance Checklist</h2>${mcePrintHtml(opts.mce)}</div>`);
+  }
+  return printHeader('Clinical Clearance Checklist', opts.studentName) + sections.join('') + printFooter();
+}
 
 function PrintModal({
-  student,
-  tab,
+  complio,
+  mce,
+  defaultTab,
   onClose,
 }: {
-  student: ComplioRow | MceRow;
-  tab: 'complio' | 'mce';
+  complio: ComplioRow | null;
+  mce: MceRow | null;
+  defaultTab: 'complio' | 'mce';
   onClose: () => void;
 }) {
-  const name = `${student.last_name}, ${student.first_name}`;
+  // Which checklist(s) to print. Default to the tab the print button was
+  // clicked from; Rae can add the other if a matching row exists (brief 1.c.i).
+  const [includeComplio, setIncludeComplio] = useState(defaultTab === 'complio' && !!complio);
+  const [includeMce, setIncludeMce] = useState(defaultTab === 'mce' && !!mce);
+
+  const anyRow = complio || mce;
+  if (!anyRow) return null;
+  const name = `${anyRow.last_name}, ${anyRow.first_name}`;
+  const nothingSelected = !((includeComplio && complio) || (includeMce && mce));
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center p-4 overflow-y-auto print:bg-white print:p-0">
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-2xl w-full mt-8 print:shadow-none print:mt-0">
         <div className="flex items-center justify-between p-4 border-b print:hidden">
           <h2 className="font-semibold text-gray-900 dark:text-white">Print Preview — {name}</h2>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
+            {/* One-or-both checklist selection */}
+            <div className="flex items-center gap-3 text-sm">
+              <label className={`flex items-center gap-1.5 ${complio ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}>
+                <input
+                  type="checkbox"
+                  checked={includeComplio && !!complio}
+                  disabled={!complio}
+                  onChange={e => setIncludeComplio(e.target.checked)}
+                  className="accent-teal-600"
+                />
+                Complio
+              </label>
+              <label className={`flex items-center gap-1.5 ${mce ? 'cursor-pointer' : 'opacity-40 cursor-not-allowed'}`}>
+                <input
+                  type="checkbox"
+                  checked={includeMce && !!mce}
+                  disabled={!mce}
+                  onChange={e => setIncludeMce(e.target.checked)}
+                  className="accent-teal-600"
+                />
+                mCE
+              </label>
+            </div>
             <button
-              onClick={() => window.print()}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+              onClick={() => {
+                const html = buildClinicalPrintHtml({
+                  studentName: name,
+                  complio: includeComplio ? complio : null,
+                  mce: includeMce ? mce : null,
+                });
+                openPrintWindow('Clinical Clearance Checklist', html);
+              }}
+              disabled={nothingSelected}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50"
             >
               <Printer className="w-4 h-4" /> Print
             </button>
@@ -288,15 +574,26 @@ function PrintModal({
           <div className="flex justify-between items-start mb-4">
             <div>
               <h3 className="text-xl font-bold">{name}</h3>
-              <p className="text-gray-500 text-xs">Clinical {tab === 'complio' ? 'Complio' : 'mCE'} Checklist</p>
+              <p className="text-gray-500 text-xs">Clinical Clearance Checklist</p>
             </div>
             <div className="text-xs text-gray-400">{new Date().toLocaleDateString()}</div>
           </div>
 
-          {tab === 'complio' ? (
-            <ComplioStudentPrintView s={student as ComplioRow} />
-          ) : (
-            <MceStudentPrintView s={student as MceRow} />
+          {nothingSelected && (
+            <p className="text-gray-400 italic print:hidden">Select at least one checklist to print.</p>
+          )}
+
+          {includeComplio && complio && (
+            <section>
+              <h4 className="font-semibold text-gray-700 dark:text-gray-200 border-b-2 border-gray-300 pb-1 mb-2">Complio Checklist</h4>
+              <ComplioStudentPrintView s={complio} />
+            </section>
+          )}
+          {includeMce && mce && (
+            <section className={includeComplio && complio ? 'mt-6 page-break-before' : ''}>
+              <h4 className="font-semibold text-gray-700 dark:text-gray-200 border-b-2 border-gray-300 pb-1 mb-2">mCE Checklist</h4>
+              <MceStudentPrintView s={mce} />
+            </section>
           )}
         </div>
       </div>
@@ -324,32 +621,32 @@ function PrintRow({ label, value }: { label: string; value: boolean | ThreeState
 }
 
 function ComplioStudentPrintView({ s }: { s: ComplioRow }) {
+  // Student-facing print: FULL item names (brief 1.c.iv), and the internal
+  // "Complio"/"mCE" package-subscription rows are omitted (1.c.iii). Attestation
+  // / Docs Shared / CHH Receipt / CHH Approval / Hep B Declination stay OFF the
+  // student print (internal tracking / removed columns) but remain in the admin
+  // grid above.
+  const tb = tbPrintValues(s);
   return (
     <div className="space-y-1">
-      <PrintRow label="Complio" value={s.complio_complete} />
-      <PrintRow label="mCE" value={s.mce_complete} />
       <PrintRow label="MMR" value={s.mmr_complete} />
-      <PrintRow label="VZV" value={s.vzv_complete} />
-      <PrintRow label="Hep B" value={s.hep_b_complete} />
-      <PrintRow label="Hep B Declination" value={s.hep_b_declination} />
+      <PrintRow label="Varicella" value={s.vzv_complete} />
+      <PrintRow label="Hepatitis B" value={s.hep_b_complete} />
       <PrintRow label="Tdap" value={s.tdap_complete} />
-      <PrintRow label="COVID" value={s.covid_complete} />
-      <PrintRow label="COVID Exemption" value={s.covid_exemption} />
-      <PrintRow label="TB Test 1" value={s.tb_test_1_complete} />
-      <PrintRow label="TB Test 2 / Questionnaire" value={s.tb_test_2_complete || s.tb_questionnaire} />
-      <PrintRow label="Physical" value={s.physical_complete} />
-      <PrintRow label="Health Insurance" value={s.health_insurance_complete} />
-      <PrintRow label="BLS" value={s.bls_complete} />
-      <PrintRow label="Flu Shot" value={s.flu_shot_complete} />
-      <PrintRow label="Flu Declination" value={s.flu_declination} />
-      <PrintRow label="Hospital Orientation" value={s.hospital_orientation_complete} />
-      <PrintRow label="Exhibit" value={s.exhibit_complete} />
-      <PrintRow label="Background Check" value={s.background_check_status} />
-      <PrintRow label="Drug Test" value={s.drug_test_status} />
-      {/* Attestation / Docs Shared / CHH Receipt / CHH Approval are
-          intentionally omitted from the STUDENT print-out (Rae, feedback
-          8ac4ace6) — they're internal tracking fields and stay visible
-          in the admin table above. */}
+      <PrintRow label="COVID-19" value={s.covid_complete} />
+      <PrintRow label="COVID-19 Exemption" value={s.covid_exemption} />
+      <PrintRow label="TB PPD 1" value={tb.ppd1} />
+      <PrintRow label="TB PPD 2" value={tb.ppd2} />
+      <PrintRow label="QuantiFERON" value={tb.quantiferon} />
+      <PrintRow label="Physical exam" value={s.physical_complete} />
+      <PrintRow label="Health insurance" value={s.health_insurance_complete} />
+      <PrintRow label="AHA BLS Provider card" value={s.bls_complete} />
+      <PrintRow label="Flu shot" value={s.flu_shot_status === 'received' ? 'Received' : s.flu_shot_status === 'declined' ? 'Declined' : ''} />
+      <PrintRow label="VHS Influenza Declination form" value={s.flu_declination} />
+      <PrintRow label="VHS Hospital Orientation form" value={s.hospital_orientation_complete} />
+      <PrintRow label="Student Declaration of Responsibilities & Confidentiality (Exhibits A&B)" value={s.exhibit_complete} />
+      <PrintRow label="Background check" value={s.background_check_status} />
+      <PrintRow label="Drug test" value={s.drug_test_status} />
       {s.complio_notes && (
         <div className="mt-3 p-2 bg-gray-50 rounded">
           <p className="text-xs font-semibold text-gray-500 mb-1">Notes</p>
@@ -361,35 +658,20 @@ function ComplioStudentPrintView({ s }: { s: ComplioRow }) {
 }
 
 function MceStudentPrintView({ s }: { s: MceRow }) {
+  // Data-driven from MCE_SECTIONS so print names/order stay in lockstep with
+  // the grid — grouped by section with FULL item names (Rae 8/11, §3.a.ii).
   return (
-    <div className="space-y-1">
-      <PrintRow label="Background Check" value={s.bg_check_status} />
-      <PrintRow label="Drug Test" value={s.drug_test_status} />
-      <PrintRow label="Physical" value={s.physical} />
-      <PrintRow label="Insurance" value={s.insurance} />
-      <PrintRow label="Photo" value={s.photo} />
-      <PrintRow label="TB" value={s.tb} />
-      <PrintRow label="MMR" value={s.mmr} />
-      <PrintRow label="Flu" value={s.flu} />
-      <PrintRow label="Hep B" value={s.hep_b} />
-      <PrintRow label="Tdap" value={s.tdap} />
-      <PrintRow label="VZV" value={s.vzv} />
-      <PrintRow label="COVID" value={s.covid} />
-      <PrintRow label="BLS" value={s.bls} />
-      <PrintRow label="Confidentiality" value={s.confidentiality} />
-      <PrintRow label="Flu Declination" value={s.flu_declination} />
-      <PrintRow label="Hep B Declination" value={s.hep_b_declination} />
-      <PrintRow label="MMR Declination" value={s.mmr_declination} />
-      <PrintRow label="Tdap Declination" value={s.tdap_declination} />
-      <PrintRow label="VZV Declination" value={s.vzv_declination} />
-      <PrintRow label="NSP" value={s.nsp} />
-      <PrintRow label="Cultural Competency" value={s.cultural_competency} />
-      <PrintRow label="Parking" value={s.parking} />
-      <PrintRow label="ETA Module" value={s.eta_module} />
-      <PrintRow label="Attestation LGS" value={s.attestation_lgs} />
-      <PrintRow label="WPVP" value={s.wpvp} />
-      <PrintRow label="Orientation" value={s.orientation} />
-      <PrintRow label="Conduct" value={s.conduct} />
+    <div className="space-y-2">
+      {MCE_SECTIONS.map(section => (
+        <div key={section.name}>
+          <p className="text-[11px] font-bold uppercase tracking-wide text-gray-500 mt-2 mb-1">{section.name}</p>
+          <div className="space-y-1">
+            {section.cols.map(col => (
+              <PrintRow key={col.key} label={col.full} value={s[col.key] as boolean | ThreeState | string} />
+            ))}
+          </div>
+        </div>
+      ))}
       {s.mce_notes && (
         <div className="mt-3 p-2 bg-gray-50 rounded">
           <p className="text-xs font-semibold text-gray-500 mb-1">Notes</p>
@@ -404,15 +686,19 @@ function MceStudentPrintView({ s }: { s: MceRow }) {
 
 function TH({ children, className = '' }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap border-b border-gray-200 dark:border-gray-700 ${className}`}>
+    <th className={`px-1.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 whitespace-nowrap border-b border-r border-gray-300 dark:border-gray-600 last:border-r-0 ${className}`}>
       {children}
     </th>
   );
 }
 
 function TD({ children, className = '' }: { children: React.ReactNode; className?: string }) {
+  // Vertical column separators (border-r, gray-300) are deliberately MORE
+  // defined than the horizontal row rules (border-b, gray-100): Rae was
+  // mis-marking columns for students lower in the list, so the column
+  // boundaries need to read clearly across a wide grid.
   return (
-    <td className={`px-2 py-1.5 border-b border-gray-100 dark:border-gray-800 ${className}`}>
+    <td className={`px-1.5 py-1.5 border-b border-gray-100 dark:border-gray-800 border-r border-gray-300 dark:border-gray-600 last:border-r-0 ${className}`}>
       {children}
     </td>
   );
@@ -432,7 +718,7 @@ export default function ClinicalTrackerPage() {
   const [mceRows, setMceRows] = useState<MceRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
-  const [printStudent, setPrintStudent] = useState<ComplioRow | MceRow | null>(null);
+  const [printStudentId, setPrintStudentId] = useState<string | null>(null);
   const [showAgg, setShowAgg] = useState(true);
 
   useEffect(() => {
@@ -449,11 +735,16 @@ export default function ClinicalTrackerPage() {
         if (d.success && d.cohorts) {
           const sorted = [...d.cohorts].sort((a: Cohort, b: Cohort) => b.cohort_number - a.cohort_number);
           setCohorts(sorted);
-          // Default to the first cohort that actually has students, not just
-          // the first in sort order — an empty-cohort default would still
-          // look broken (0/0) even once the dropdown itself is populated.
-          const populated = sorted.find(c => (c.student_count ?? 0) > 0);
-          const initial = searchParams.get('cohortId') || populated?.id || sorted[0]?.id || '';
+          // EMT cohorts don't attend hospital rotations (no Complio/mCE), so
+          // they're filtered out of the selector (Rae, 8/11). Default selection
+          // also skips EMT. Full `cohorts` is kept so a deep-linked EMT cohortId
+          // still resolves and shows the existing EMT N/A panel rather than breaking.
+          const selectable = sorted.filter((c: Cohort) => c.program?.abbreviation !== 'EMT');
+          // Default to the first selectable cohort that actually has students,
+          // not just the first in sort order — an empty-cohort default would
+          // still look broken (0/0) even once the dropdown is populated.
+          const populated = selectable.find((c: Cohort) => (c.student_count ?? 0) > 0);
+          const initial = searchParams.get('cohortId') || populated?.id || selectable[0]?.id || '';
           setCohortId(initial);
         }
       })
@@ -496,6 +787,7 @@ export default function ClinicalTrackerPage() {
             health_insurance_complete: d.health_insurance_complete ?? false,
             bls_complete: d.bls_complete ?? false,
             flu_shot_complete: d.flu_shot_complete ?? false,
+            flu_shot_status: d.flu_shot_status ?? null,
             flu_declination: d.flu_declination ?? false,
             hospital_orientation_complete: d.hospital_orientation_complete ?? false,
             exhibit_complete: d.exhibit_complete ?? false,
@@ -545,6 +837,10 @@ export default function ClinicalTrackerPage() {
           wpvp: d.wpvp ?? false,
           orientation: d.orientation ?? false,
           conduct: d.conduct ?? false,
+          cs_attestation: d.cs_attestation ?? false,
+          cs_orientation: d.cs_orientation ?? false,
+          wpvp_curriculum: d.wpvp_curriculum ?? false,
+          orientation_exam: d.orientation_exam ?? false,
           mce_notes: d.mce_notes ?? '',
         }));
         setMceRows(rows);
@@ -632,7 +928,7 @@ export default function ClinicalTrackerPage() {
     physical: complioRows.filter(r => r.physical_complete).length,
     h_ins: complioRows.filter(r => r.health_insurance_complete).length,
     bls: complioRows.filter(r => r.bls_complete).length,
-    flu: complioRows.filter(r => r.flu_shot_complete || r.flu_declination).length,
+    flu: complioRows.filter(r => r.flu_shot_status === 'received' || r.flu_declination).length,
     h_orient: complioRows.filter(r => r.hospital_orientation_complete).length,
     bg: complioRows.filter(r => r.background_check_status === 'complete').length,
     dt: complioRows.filter(r => r.drug_test_status === 'complete').length,
@@ -642,30 +938,12 @@ export default function ClinicalTrackerPage() {
     chh_a: complioRows.filter(r => r.chh_approval_complete).length,
   };
 
-  const mceAgg = {
-    bg: mceRows.filter(r => r.bg_check_status === 'complete').length,
-    dt: mceRows.filter(r => r.drug_test_status === 'complete').length,
-    physical: mceRows.filter(r => r.physical).length,
-    insurance: mceRows.filter(r => r.insurance).length,
-    photo: mceRows.filter(r => r.photo).length,
-    tb: mceRows.filter(r => r.tb).length,
-    mmr: mceRows.filter(r => r.mmr || r.mmr_declination).length,
-    flu: mceRows.filter(r => r.flu || r.flu_declination).length,
-    hep_b: mceRows.filter(r => r.hep_b || r.hep_b_declination).length,
-    tdap: mceRows.filter(r => r.tdap || r.tdap_declination).length,
-    vzv: mceRows.filter(r => r.vzv || r.vzv_declination).length,
-    covid: mceRows.filter(r => r.covid).length,
-    bls: mceRows.filter(r => r.bls).length,
-    confid: mceRows.filter(r => r.confidentiality).length,
-    nsp: mceRows.filter(r => r.nsp).length,
-    cult: mceRows.filter(r => r.cultural_competency).length,
-    parking: mceRows.filter(r => r.parking).length,
-    eta: mceRows.filter(r => r.eta_module).length,
-    attest_lgs: mceRows.filter(r => r.attestation_lgs).length,
-    wpvp: mceRows.filter(r => r.wpvp).length,
-    orient: mceRows.filter(r => r.orientation).length,
-    conduct: mceRows.filter(r => r.conduct).length,
-  };
+  // mCE aggregate is data-driven from MCE_SECTIONS so the completion overview
+  // always matches the grid's columns (Rae 2026-08-11 redesign).
+  const mceColCount = (col: MceCol) =>
+    col.kind === 'threestate'
+      ? mceRows.filter(r => r[col.key] === 'complete').length
+      : mceRows.filter(r => r[col.key] === true).length;
 
   if (status === 'loading') {
     return (
@@ -712,11 +990,13 @@ export default function ClinicalTrackerPage() {
             onChange={e => setCohortId(e.target.value)}
             className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
           >
-            {cohorts.map(c => (
-              <option key={c.id} value={c.id}>
-                {cohortLabel(c)}
-              </option>
-            ))}
+            {cohorts
+              .filter(c => c.program?.abbreviation !== 'EMT' || c.id === cohortId)
+              .map(c => (
+                <option key={c.id} value={c.id}>
+                  {cohortLabel(c)}
+                </option>
+              ))}
           </select>
 
           {/* Tabs */}
@@ -813,33 +1093,12 @@ export default function ClinicalTrackerPage() {
                   <AggBar label="Drug Test" count={complioAgg.dt} total={total} />
                   <AggBar label="Attestation" count={complioAgg.attest} total={total} />
                   <AggBar label="Docs Shared" count={complioAgg.shared} total={total} />
-                  <AggBar label="CHH Receipt" count={complioAgg.chh_r} total={total} />
-                  <AggBar label="CHH Approval" count={complioAgg.chh_a} total={total} />
                 </>
               ) : (
                 <>
-                  <AggBar label="BG Check" count={mceAgg.bg} total={total} />
-                  <AggBar label="Drug Test" count={mceAgg.dt} total={total} />
-                  <AggBar label="Physical" count={mceAgg.physical} total={total} />
-                  <AggBar label="Insurance" count={mceAgg.insurance} total={total} />
-                  <AggBar label="Photo" count={mceAgg.photo} total={total} />
-                  <AggBar label="TB" count={mceAgg.tb} total={total} />
-                  <AggBar label="MMR" count={mceAgg.mmr} total={total} />
-                  <AggBar label="Flu" count={mceAgg.flu} total={total} />
-                  <AggBar label="Hep B" count={mceAgg.hep_b} total={total} />
-                  <AggBar label="Tdap" count={mceAgg.tdap} total={total} />
-                  <AggBar label="VZV" count={mceAgg.vzv} total={total} />
-                  <AggBar label="COVID" count={mceAgg.covid} total={total} />
-                  <AggBar label="BLS" count={mceAgg.bls} total={total} />
-                  <AggBar label="Confidentiality" count={mceAgg.confid} total={total} />
-                  <AggBar label="NSP" count={mceAgg.nsp} total={total} />
-                  <AggBar label="Cultural Comp." count={mceAgg.cult} total={total} />
-                  <AggBar label="Parking" count={mceAgg.parking} total={total} />
-                  <AggBar label="ETA Module" count={mceAgg.eta} total={total} />
-                  <AggBar label="Attest LGS" count={mceAgg.attest_lgs} total={total} />
-                  <AggBar label="WPVP" count={mceAgg.wpvp} total={total} />
-                  <AggBar label="Orientation" count={mceAgg.orient} total={total} />
-                  <AggBar label="Conduct" count={mceAgg.conduct} total={total} />
+                  {MCE_COLS.map(col => (
+                    <AggBar key={col.key} label={col.short} count={mceColCount(col)} total={total} />
+                  ))}
                 </>
               )}
             </div>
@@ -854,7 +1113,7 @@ export default function ClinicalTrackerPage() {
               cohortId={cohortId}
               saving={saving}
               onSave={saveComplio}
-              onPrint={s => setPrintStudent(s)}
+              onPrint={s => setPrintStudentId(s.student_id)}
             />
           ) : (
             <MceTable
@@ -862,7 +1121,7 @@ export default function ClinicalTrackerPage() {
               cohortId={cohortId}
               saving={saving}
               onSave={saveMce}
-              onPrint={s => setPrintStudent(s)}
+              onPrint={s => setPrintStudentId(s.student_id)}
             />
           )}
 
@@ -876,12 +1135,14 @@ export default function ClinicalTrackerPage() {
         )}
       </main>
 
-      {/* Print modal */}
-      {printStudent && (
+      {/* Print modal — looks up BOTH checklists for the student so Rae can
+          print one or both at once (brief 1.c.i). */}
+      {printStudentId && (
         <PrintModal
-          student={printStudent}
-          tab={tab}
-          onClose={() => setPrintStudent(null)}
+          complio={complioRows.find(r => r.student_id === printStudentId) || null}
+          mce={mceRows.find(r => r.student_id === printStudentId) || null}
+          defaultTab={tab}
+          onClose={() => setPrintStudentId(null)}
         />
       )}
     </div>
@@ -914,7 +1175,6 @@ function ComplioTable({
           <TH>MMR</TH>
           <TH>VZV</TH>
           <TH>Hep B</TH>
-          <TH>Hep B Dec</TH>
           <TH>Tdap</TH>
           <TH>COVID</TH>
           <TH>COVID Exmpt</TH>
@@ -931,14 +1191,19 @@ function ComplioTable({
           <TH>DT</TH>
           <TH>Attest</TH>
           <TH>Shared?</TH>
-          <TH>CHH Rcpt</TH>
-          <TH>CHH Appr</TH>
           <TH>Notes</TH>
         </tr>
       </thead>
       <tbody>
         {rows.map(row => {
           const sk = (f: string) => saving[`complio-${row.student_id}-${f}`];
+          // Both TB paths on file at once (e.g. legacy dual entry) used to grey
+          // TB1, TB2, AND QuantiFERON to N/A simultaneously — locking all three
+          // with no way to un-grey any of them, since the field that would clear
+          // the others was itself hidden behind N/A. Skip the grey-out in this
+          // conflict case so all three stay real, clickable checkboxes and staff
+          // can clear whichever entry is extra (bug: 2026-08-13, Alpuerto + 14 others).
+          const tbConflict = row.tb_questionnaire && row.tb_test_1_complete && row.tb_test_2_complete;
           return (
             <tr key={row.student_id} className="hover:bg-gray-50 dark:hover:bg-gray-750">
               <TD className="sticky left-0 bg-white dark:bg-gray-800 font-medium text-gray-900 dark:text-white whitespace-nowrap">
@@ -958,21 +1223,36 @@ function ComplioTable({
               <TD><CheckCell value={row.mmr_complete} onChange={v => onSave(row.student_id, 'mmr_complete', v)} saving={sk('mmr_complete')} /></TD>
               <TD><CheckCell value={row.vzv_complete} onChange={v => onSave(row.student_id, 'vzv_complete', v)} saving={sk('vzv_complete')} /></TD>
               <TD><CheckCell value={row.hep_b_complete} onChange={v => onSave(row.student_id, 'hep_b_complete', v)} saving={sk('hep_b_complete')} /></TD>
-              <TD><CheckCell value={row.hep_b_declination} onChange={v => onSave(row.student_id, 'hep_b_declination', v)} saving={sk('hep_b_declination')} /></TD>
               <TD><CheckCell value={row.tdap_complete} onChange={v => onSave(row.student_id, 'tdap_complete', v)} saving={sk('tdap_complete')} /></TD>
-              <TD><CheckCell value={row.covid_complete} onChange={v => onSave(row.student_id, 'covid_complete', v)} saving={sk('covid_complete')} /></TD>
-              <TD><CheckCell value={row.covid_exemption} onChange={v => onSave(row.student_id, 'covid_exemption', v)} saving={sk('covid_exemption')} /></TD>
-              <TD><CheckCell value={row.tb_test_1_complete} onChange={v => onSave(row.student_id, 'tb_test_1_complete', v)} saving={sk('tb_test_1_complete')} /></TD>
+              {/* COVID greys to N/A when a COVID exemption is on file (display only). */}
               <TD>
-                <div className="flex gap-1">
-                  <CheckCell value={row.tb_test_2_complete} onChange={v => onSave(row.student_id, 'tb_test_2_complete', v)} saving={sk('tb_test_2_complete')} />
-                  <CheckCell value={row.tb_questionnaire} onChange={v => onSave(row.student_id, 'tb_questionnaire', v)} saving={sk('tb_questionnaire')} />
+                {row.covid_exemption
+                  ? <NaCell title="COVID-19 exemption on file — vaccine N/A" />
+                  : <CheckCell value={row.covid_complete} onChange={v => onSave(row.student_id, 'covid_complete', v)} saving={sk('covid_complete')} />}
+              </TD>
+              <TD><CheckCell value={row.covid_exemption} onChange={v => onSave(row.student_id, 'covid_exemption', v)} saving={sk('covid_exemption')} /></TD>
+              {/* TB PPD 1/2 ↔ QuantiFERON mutual exclusion (display only):
+                  QuantiFERON on file → both PPDs N/A; both PPDs done → QuantiFERON N/A.
+                  Suppressed when tbConflict (all three on file) — see note above. */}
+              <TD>
+                {row.tb_questionnaire && !tbConflict
+                  ? <NaCell title="QuantiFERON on file — TB PPD not required" />
+                  : <CheckCell value={row.tb_test_1_complete} onChange={v => onSave(row.student_id, 'tb_test_1_complete', v)} saving={sk('tb_test_1_complete')} />}
+              </TD>
+              <TD>
+                <div className="flex gap-1" title={tbConflict ? 'TB PPD 1/2 and QuantiFERON are all on file — clear whichever is extra' : undefined}>
+                  {row.tb_questionnaire && !tbConflict
+                    ? <NaCell title="QuantiFERON on file — TB PPD not required" />
+                    : <CheckCell value={row.tb_test_2_complete} onChange={v => onSave(row.student_id, 'tb_test_2_complete', v)} saving={sk('tb_test_2_complete')} />}
+                  {(row.tb_test_1_complete && row.tb_test_2_complete) && !tbConflict
+                    ? <NaCell title="Two TB PPDs on file — QuantiFERON not required" />
+                    : <CheckCell value={row.tb_questionnaire} onChange={v => onSave(row.student_id, 'tb_questionnaire', v)} saving={sk('tb_questionnaire')} />}
                 </div>
               </TD>
               <TD><CheckCell value={row.physical_complete} onChange={v => onSave(row.student_id, 'physical_complete', v)} saving={sk('physical_complete')} /></TD>
               <TD><CheckCell value={row.health_insurance_complete} onChange={v => onSave(row.student_id, 'health_insurance_complete', v)} saving={sk('health_insurance_complete')} /></TD>
               <TD><CheckCell value={row.bls_complete} onChange={v => onSave(row.student_id, 'bls_complete', v)} saving={sk('bls_complete')} /></TD>
-              <TD><CheckCell value={row.flu_shot_complete} onChange={v => onSave(row.student_id, 'flu_shot_complete', v)} saving={sk('flu_shot_complete')} /></TD>
+              <TD><FluStatusCell value={row.flu_shot_status} onChange={v => onSave(row.student_id, 'flu_shot_status', v)} saving={sk('flu_shot_status')} /></TD>
               <TD><CheckCell value={row.flu_declination} onChange={v => onSave(row.student_id, 'flu_declination', v)} saving={sk('flu_declination')} /></TD>
               <TD><CheckCell value={row.hospital_orientation_complete} onChange={v => onSave(row.student_id, 'hospital_orientation_complete', v)} saving={sk('hospital_orientation_complete')} /></TD>
               <TD><CheckCell value={row.exhibit_complete} onChange={v => onSave(row.student_id, 'exhibit_complete', v)} saving={sk('exhibit_complete')} /></TD>
@@ -992,8 +1272,6 @@ function ComplioTable({
               </TD>
               <TD><CheckCell value={row.attestation_complete} onChange={v => onSave(row.student_id, 'attestation_complete', v)} saving={sk('attestation_complete')} /></TD>
               <TD><CheckCell value={row.docs_shared_with_sites} onChange={v => onSave(row.student_id, 'docs_shared_with_sites', v)} saving={sk('docs_shared_with_sites')} /></TD>
-              <TD><CheckCell value={row.chh_receipt_complete} onChange={v => onSave(row.student_id, 'chh_receipt_complete', v)} saving={sk('chh_receipt_complete')} /></TD>
-              <TD><CheckCell value={row.chh_approval_complete} onChange={v => onSave(row.student_id, 'chh_approval_complete', v)} saving={sk('chh_approval_complete')} /></TD>
               <TD>
                 <NotesCell
                   value={row.complio_notes}
@@ -1024,40 +1302,48 @@ function MceTable({
   onSave: (studentId: string, cohortId: string, field: string, value: unknown) => void;
   onPrint: (row: MceRow) => void;
 }) {
+  // Thick separator marking each section boundary (Rae 8/11 redesign).
+  const sectionBorder = 'border-l-2 border-gray-400 dark:border-gray-500';
   return (
     <table className="w-full text-xs">
       <thead className="sticky top-0 bg-white dark:bg-gray-800 z-10">
+        {/* Section header bands: Compliance / Documents / Modules / Exam */}
         <tr>
-          <TH className="sticky left-0 bg-white dark:bg-gray-800 min-w-[130px]">Student</TH>
-          <TH>Print</TH>
-          <TH>BG</TH>
-          <TH>DT</TH>
-          <TH>Phys</TH>
-          <TH>Ins</TH>
-          <TH>Photo</TH>
-          <TH>TB</TH>
-          <TH>MMR</TH>
-          <TH>Flu</TH>
-          <TH>Hep B</TH>
-          <TH>Tdap</TH>
-          <TH>VZV</TH>
-          <TH>COVID</TH>
-          <TH>BLS</TH>
-          <TH>Confid</TH>
-          <TH>Flu Dec</TH>
-          <TH>Hep B Dec</TH>
-          <TH>MMR Dec</TH>
-          <TH>Tdap Dec</TH>
-          <TH>VZV Dec</TH>
-          <TH>NSP</TH>
-          <TH>Cult Comp</TH>
-          <TH>Parking</TH>
-          <TH>ETA 4/5</TH>
-          <TH>Attest LGS</TH>
-          <TH>WPVP</TH>
-          <TH>Orient</TH>
-          <TH>Conduct</TH>
-          <TH>Notes</TH>
+          <th
+            rowSpan={2}
+            className="sticky left-0 z-10 bg-white dark:bg-gray-800 px-1.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-r border-gray-300 dark:border-gray-600 min-w-[130px] align-bottom"
+          >
+            Student
+          </th>
+          <th
+            rowSpan={2}
+            className="bg-white dark:bg-gray-800 px-1.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-r border-gray-300 dark:border-gray-600 align-bottom"
+          >
+            Print
+          </th>
+          {MCE_SECTIONS.map(section => (
+            <th
+              key={section.name}
+              colSpan={section.cols.length}
+              className={`px-1.5 py-1 text-center text-[10px] font-bold uppercase tracking-wide text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/40 border-b-2 border-gray-300 dark:border-gray-600 ${sectionBorder}`}
+            >
+              {section.name}
+            </th>
+          ))}
+          <th
+            rowSpan={2}
+            className={`bg-white dark:bg-gray-800 px-1.5 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400 border-b border-r border-gray-300 dark:border-gray-600 align-bottom ${sectionBorder}`}
+          >
+            Notes
+          </th>
+        </tr>
+        {/* Column headers */}
+        <tr>
+          {MCE_SECTIONS.flatMap(section =>
+            section.cols.map((col, i) => (
+              <TH key={col.key} className={i === 0 ? sectionBorder : ''}>{col.short}</TH>
+            )),
+          )}
         </tr>
       </thead>
       <tbody>
@@ -1078,34 +1364,26 @@ function MceTable({
                   <Printer className="w-3.5 h-3.5" />
                 </button>
               </TD>
-              <TD><ThreeStateCell value={row.bg_check_status} onChange={v => save('bg_check_status', v)} saving={sk('bg_check_status')} /></TD>
-              <TD><ThreeStateCell value={row.drug_test_status} onChange={v => save('drug_test_status', v)} saving={sk('drug_test_status')} /></TD>
-              <TD><CheckCell value={row.physical} onChange={v => save('physical', v)} saving={sk('physical')} /></TD>
-              <TD><CheckCell value={row.insurance} onChange={v => save('insurance', v)} saving={sk('insurance')} /></TD>
-              <TD><CheckCell value={row.photo} onChange={v => save('photo', v)} saving={sk('photo')} /></TD>
-              <TD><CheckCell value={row.tb} onChange={v => save('tb', v)} saving={sk('tb')} /></TD>
-              <TD><CheckCell value={row.mmr} onChange={v => save('mmr', v)} saving={sk('mmr')} /></TD>
-              <TD><CheckCell value={row.flu} onChange={v => save('flu', v)} saving={sk('flu')} /></TD>
-              <TD><CheckCell value={row.hep_b} onChange={v => save('hep_b', v)} saving={sk('hep_b')} /></TD>
-              <TD><CheckCell value={row.tdap} onChange={v => save('tdap', v)} saving={sk('tdap')} /></TD>
-              <TD><CheckCell value={row.vzv} onChange={v => save('vzv', v)} saving={sk('vzv')} /></TD>
-              <TD><CheckCell value={row.covid} onChange={v => save('covid', v)} saving={sk('covid')} /></TD>
-              <TD><CheckCell value={row.bls} onChange={v => save('bls', v)} saving={sk('bls')} /></TD>
-              <TD><CheckCell value={row.confidentiality} onChange={v => save('confidentiality', v)} saving={sk('confidentiality')} /></TD>
-              <TD><CheckCell value={row.flu_declination} onChange={v => save('flu_declination', v)} saving={sk('flu_declination')} /></TD>
-              <TD><CheckCell value={row.hep_b_declination} onChange={v => save('hep_b_declination', v)} saving={sk('hep_b_declination')} /></TD>
-              <TD><CheckCell value={row.mmr_declination} onChange={v => save('mmr_declination', v)} saving={sk('mmr_declination')} /></TD>
-              <TD><CheckCell value={row.tdap_declination} onChange={v => save('tdap_declination', v)} saving={sk('tdap_declination')} /></TD>
-              <TD><CheckCell value={row.vzv_declination} onChange={v => save('vzv_declination', v)} saving={sk('vzv_declination')} /></TD>
-              <TD><CheckCell value={row.nsp} onChange={v => save('nsp', v)} saving={sk('nsp')} /></TD>
-              <TD><CheckCell value={row.cultural_competency} onChange={v => save('cultural_competency', v)} saving={sk('cultural_competency')} /></TD>
-              <TD><CheckCell value={row.parking} onChange={v => save('parking', v)} saving={sk('parking')} /></TD>
-              <TD><CheckCell value={row.eta_module} onChange={v => save('eta_module', v)} saving={sk('eta_module')} /></TD>
-              <TD><CheckCell value={row.attestation_lgs} onChange={v => save('attestation_lgs', v)} saving={sk('attestation_lgs')} /></TD>
-              <TD><CheckCell value={row.wpvp} onChange={v => save('wpvp', v)} saving={sk('wpvp')} /></TD>
-              <TD><CheckCell value={row.orientation} onChange={v => save('orientation', v)} saving={sk('orientation')} /></TD>
-              <TD><CheckCell value={row.conduct} onChange={v => save('conduct', v)} saving={sk('conduct')} /></TD>
-              <TD>
+              {MCE_SECTIONS.flatMap(section =>
+                section.cols.map((col, i) => (
+                  <TD key={col.key} className={i === 0 ? sectionBorder : ''}>
+                    {col.kind === 'threestate' ? (
+                      <ThreeStateCell
+                        value={row[col.key] as ThreeState}
+                        onChange={v => save(col.key as string, v)}
+                        saving={sk(col.key as string)}
+                      />
+                    ) : (
+                      <CheckCell
+                        value={row[col.key] as boolean}
+                        onChange={v => save(col.key as string, v)}
+                        saving={sk(col.key as string)}
+                      />
+                    )}
+                  </TD>
+                )),
+              )}
+              <TD className={sectionBorder}>
                 <NotesCell
                   value={row.mce_notes}
                   onChange={v => save('mce_notes', v)}

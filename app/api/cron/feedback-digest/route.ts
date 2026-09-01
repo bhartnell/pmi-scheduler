@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { wrapInEmailTemplate, EMAIL_COLORS } from '@/lib/email-templates';
-import { isNremtTestingActiveToday, isStudentEmailAddress, isStudentEmailBlackoutToday } from '@/lib/email';
+import { isNremtTestingActiveToday, isStudentEmailAddress, isStudentEmailBlackoutToday, isEmailCategoryEnabled } from '@/lib/email';
 
 const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
 
@@ -177,6 +177,27 @@ export async function GET(request: NextRequest) {
   for (const [email, items] of byReporter.entries()) {
     try {
       if (isStudentEmailAddress(email) && (await isStudentEmailBlackoutToday())) {
+        skipped++;
+        continue;
+      }
+
+      // Respect Settings > Notifications > "Email feedback updates"
+      // (defaults to FALSE — per the notification_settings column default
+      // and role defaults, most reporters have never opted in). This cron
+      // previously ignored the toggle entirely and emailed every reporter
+      // with a resolved report, regardless of whether they'd asked for it.
+      // Still mark digest_sent_at below so an opted-out reporter's older
+      // resolved items don't keep re-queuing every run.
+      const emailEnabled = await isEmailCategoryEnabled(email, 'email_feedback_updates', false);
+      if (!emailEnabled) {
+        const ids = items.map((i) => i.id);
+        const { error: updateError } = await supabase
+          .from('feedback_reports')
+          .update({ digest_sent_at: now })
+          .in('id', ids);
+        if (updateError) {
+          console.error(`[FEEDBACK-DIGEST] Failed to mark digest_sent_at (opted out) for ${email}:`, updateError.message);
+        }
         skipped++;
         continue;
       }

@@ -558,6 +558,12 @@ export default function ClinicalDashboardPage() {
                   description="Evaluator signups"
                 />
                 <SecondaryCard
+                  href="/admin/osce-results"
+                  icon={BarChart3}
+                  title="OSCE Results"
+                  description="Evaluator scores"
+                />
+                <SecondaryCard
                   href="/admin/volunteer-events"
                   icon={Users}
                   title="Volunteer Recruitment"

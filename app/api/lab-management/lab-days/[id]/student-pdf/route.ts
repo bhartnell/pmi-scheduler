@@ -68,9 +68,12 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Student not found' }, { status: 404 });
     }
 
-    // 3. Every evaluation the student has for this lab day, newest last,
-    //    with the nested student/skill_sheet/evaluator/lab_day fields
-    //    required by the shared template.
+    // 3. Every COMPLETED evaluation the student has for this lab day, newest
+    //    last, with the nested student/skill_sheet/evaluator/lab_day fields
+    //    required by the shared template. Excludes in_progress rows — an
+    //    abandoned/stale in_progress attempt (e.g. a "pass" left open when
+    //    grading was restarted) must never appear on the official printout
+    //    alongside or instead of the real completed result.
     const { data: evaluations, error: evalsError } = await supabase
       .from('student_skill_evaluations')
       .select(`
@@ -82,6 +85,7 @@ export async function GET(
       `)
       .eq('lab_day_id', labDayId)
       .eq('student_id', studentId)
+      .eq('status', 'complete')
       .order('created_at', { ascending: true });
 
     if (evalsError) {

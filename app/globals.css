@@ -86,6 +86,29 @@ body {
     display: none !important;
   }
 
+  /* ── Clinical Tracker per-student print isolation ──────────────────────
+     The clinical tracker (app/clinical/clinical-tracker) prints via
+     window.print() from a modal whose body is #print-content. Without
+     isolation the ENTIRE page printed — the cohort-aggregate rollup and the
+     wide grid — instead of the per-student checklist, and the grid clipped
+     to blank. When that modal is mounted, hide everything and paint ONLY
+     #print-content at the top of the page. Scoped via :has() so it only
+     applies while the print modal is open. */
+  body:has(#print-content) * {
+    visibility: hidden !important;
+  }
+  body:has(#print-content) #print-content,
+  body:has(#print-content) #print-content * {
+    visibility: visible !important;
+  }
+  body:has(#print-content) #print-content {
+    position: absolute !important;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0 !important;
+  }
+
   /* Reset background and colors for print */
   body {
     background: white !important;

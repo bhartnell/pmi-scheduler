@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         email,
         cohort_id,
         status,
-        cohorts (
+        cohorts!students_cohort_id_fkey (
           id,
           cohort_number,
           semester,

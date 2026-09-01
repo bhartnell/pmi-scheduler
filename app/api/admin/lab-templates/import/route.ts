@@ -280,6 +280,23 @@ export async function POST(request: NextRequest) {
     const skippedPlaceholders = placeholders;
 
     const supabase = getSupabaseAdmin();
+
+    // Build a normalized-title -> scenario_id lookup once per request.
+    // Uploaded lab-template JSON only ever carries a human-readable
+    // `scenario_title`, never a real `scenarios.id` UUID. Without this
+    // resolution step every "scenario" station lands with scenario_id
+    // NULL even when a matching scenario already exists in the library —
+    // the root cause of "prebuilt labs load without the scenario
+    // selected." Only an exact case-insensitive/trimmed title match sets
+    // scenario_id; anything unmatched is left NULL rather than guessed at.
+    const scenarioIdByTitle = new Map<string, string>();
+    {
+      const { data: allScenarios } = await supabase.from('scenarios').select('id, title');
+      for (const s of allScenarios || []) {
+        if (s.title) scenarioIdByTitle.set(s.title.trim().toLowerCase(), s.id);
+      }
+    }
+
     // updated_by stamp on every row we write. Lets the audit trigger
     // attribute changes to "import-route via <admin email>" instead
     // of leaving updated_by NULL.
@@ -374,6 +391,9 @@ export async function POST(request: NextRequest) {
             station_type: s.station_type,
             station_name: s.station_name || null,
             skills: s.skills && s.skills.length > 0 ? s.skills : null,
+            scenario_id: s.scenario_title
+              ? scenarioIdByTitle.get(String(s.scenario_title).trim().toLowerCase()) || null
+              : null,
             scenario_title: s.scenario_title || null,
             difficulty: s.difficulty || null,
             notes: s.format_notes || null,

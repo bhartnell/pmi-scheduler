@@ -275,6 +275,7 @@ export const STATION_TYPES = [
   { value: 'warmup', label: 'Warm-up', description: 'Warm-up activity' },
   { value: 'debrief', label: 'Debrief', description: 'Debrief session' },
   { value: 'briefing', label: 'Briefing', description: 'Pre-lab briefing' },
+  { value: 'osce', label: 'OSCE Review Board', description: 'Scored in the separate OSCE system' },
 ];
 
 export const STATION_TYPE_COLORS: Record<string, string> = {
@@ -288,6 +289,7 @@ export const STATION_TYPE_COLORS: Record<string, string> = {
   warmup: 'border-teal-200 bg-teal-50 dark:border-teal-700 dark:bg-teal-900/30',
   debrief: 'border-indigo-200 bg-indigo-50 dark:border-indigo-700 dark:bg-indigo-900/30',
   briefing: 'border-cyan-200 bg-cyan-50 dark:border-cyan-700 dark:bg-cyan-900/30',
+  osce: 'border-amber-200 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/30',
 };
 
 export const STATION_TYPE_BADGES: Record<string, string> = {
@@ -301,4 +303,5 @@ export const STATION_TYPE_BADGES: Record<string, string> = {
   warmup: 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300',
   debrief: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300',
   briefing: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/50 dark:text-cyan-300',
+  osce: 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300',
 };

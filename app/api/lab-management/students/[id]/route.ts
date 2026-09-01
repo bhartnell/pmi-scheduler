@@ -104,6 +104,7 @@ export async function PATCH(
     if (body.email !== undefined) allowedFields.email = body.email;
     if (body.phone !== undefined) allowedFields.phone = body.phone;
     if (body.cohort_id !== undefined) allowedFields.cohort_id = body.cohort_id;
+    let statusChangedTo: string | null = null;
     if (body.status !== undefined) {
       // Lifecycle status (active/withdrawn/graduated/on_hold) is
       // FERPA-adjacent — restrict actually CHANGING it to lead_instructor+,
@@ -122,6 +123,9 @@ export async function PATCH(
           { error: 'Forbidden — lead instructor or above required to change student status' },
           { status: 403 }
         );
+      }
+      if (current && current.status !== body.status) {
+        statusChangedTo = body.status;
       }
       allowedFields.status = body.status;
     }
@@ -158,6 +162,27 @@ export async function PATCH(
       .single();
 
     if (error) throw error;
+
+    // This generic edit path can change lifecycle status directly
+    // (e.g. the status dropdown on the student edit form), bypassing
+    // the dedicated /withdraw and /graduate routes' enrollment sync.
+    // Mirror that sync here so an active student_program_enrollments
+    // row never goes stale — a stale 'active' row blocks a later
+    // re-enroll via the one_active_enrollment_per_student constraint.
+    if (statusChangedTo === 'withdrawn' || statusChangedTo === 'graduated') {
+      const { error: enrollErr } = await supabase
+        .from('student_program_enrollments')
+        .update({
+          status: statusChangedTo,
+          end_date: new Date().toISOString().slice(0, 10),
+          updated_at: new Date().toISOString(),
+        })
+        .eq('student_id', id)
+        .eq('status', 'active');
+      if (enrollErr) {
+        console.error('[students PATCH] enrollment sync failed', enrollErr);
+      }
+    }
 
     return NextResponse.json({ success: true, student: data });
   } catch (error) {

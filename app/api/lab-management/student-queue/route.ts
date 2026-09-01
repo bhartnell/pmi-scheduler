@@ -59,11 +59,28 @@ export async function GET(request: NextRequest) {
     // stationSkillMap ended up empty for every NREMT station, so the
     // Pass-2 evaluation-column builder below failed to match any
     // evaluation back to an existing station column.
-    const { data: stations } = await supabase
+    const { data: stations, error: stationsErr } = await supabase
       .from('lab_stations')
       .select('id, station_number, station_type, custom_title, skill_name, skill_sheet_id, is_retake_station, metadata, scenario:scenarios(id, title)')
       .eq('lab_day_id', labDayId)
       .order('station_number');
+
+    // Bug 2026-08-13 (Ben): a transient Supabase error here was silently
+    // swallowed (destructured `data` without checking `error`), so
+    // `stations` fell through as `undefined` -> `stations || []` -> an
+    // empty station list. Since the client's IndividualTestingGrid gates
+    // its ENTIRE table on `students.length === 0 || stations.length === 0`
+    // and polls this endpoint every 5s, one flaky query response was
+    // enough to make the whole results grid vanish mid-session even
+    // though nothing was actually wrong with the data. Surface the error
+    // instead of pretending the lab day has zero stations.
+    if (stationsErr) {
+      console.error('Error fetching stations for student-queue:', stationsErr);
+      return NextResponse.json(
+        { success: false, error: 'Failed to load stations' },
+        { status: 500 }
+      );
+    }
 
     // 3. Get station instructors (primary instructor per station)
     const stationIds = (stations || []).map((s: { id: string }) => s.id);
@@ -88,12 +105,22 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. Get active students from the cohort
-    const { data: students } = await supabase
+    const { data: students, error: studentsErr } = await supabase
       .from('students')
       .select('id, first_name, last_name')
       .eq('cohort_id', labDay.cohort_id)
       .eq('status', 'active')
       .order('last_name');
+
+    // Same silent-swallow risk as the stations query above — a transient
+    // error must not be treated as "this cohort has 0 active students".
+    if (studentsErr) {
+      console.error('Error fetching students for student-queue:', studentsErr);
+      return NextResponse.json(
+        { success: false, error: 'Failed to load students' },
+        { status: 500 }
+      );
+    }
 
     // 5. Get queue entries for this lab day
     const { data: queueEntries } = await supabase
@@ -116,11 +143,14 @@ export async function GET(request: NextRequest) {
     // Resolution order (first wins):
     //   1. lab_stations.skill_sheet_id (typed FK column) — NREMT stations
     //   2. lab_stations.metadata.skill_sheet_id (legacy metadata path)
-    //   3. station_skills → skills.skill_sheet_ids[0] (station-pick path)
     //
-    // Historically only (2) and (3) were checked, so NREMT stations
-    // (which only populate the typed column) produced an empty
-    // stationSkillMap and the tracker duplicated every skill column.
+    // A third fallback (station_skills → skills.skill_sheet_ids[0]) was
+    // removed 2026-08-15: `skills.skill_sheet_ids` was never a real column
+    // (no migration ever created it — skill_sheets links to a separate
+    // canonical_skills table, not skills), so the query always errored at
+    // the DB level (453x in prod postgres_logs on 2026-08-14) and the
+    // fallback never resolved a single station. Removing it is a no-op
+    // behaviorally and stops the log noise.
     let stationSkillMap: Record<string, string> = {};
     const stationAddedDuringExamMap: Record<string, boolean> = {};
     const stationSuffixMap: Record<string, string> = {};
@@ -131,35 +161,18 @@ export async function GET(request: NextRequest) {
       if (sheetId) stationSkillMap[(s as { id: string }).id] = sheetId;
     }
 
-    if (stationIds.length > 0) {
-      const { data: stationSkills } = await supabase
-        .from('station_skills')
-        .select('station_id, skill:skills!station_skills_skill_id_fkey(id, skill_sheet_ids)')
-        .in('station_id', stationIds);
-
-      // (2) Metadata fallback + collect added_during_exam / suffix flags.
-      for (const s of (stations || [])) {
-        const meta = (s as { metadata?: Record<string, unknown> | null }).metadata || null;
-        const sid = (s as { id: string }).id;
-        if (!stationSkillMap[sid] && meta?.skill_sheet_id) {
-          stationSkillMap[sid] = meta.skill_sheet_id as string;
-        }
-        if (meta?.added_during_exam) {
-          stationAddedDuringExamMap[sid] = true;
-        }
-        if (meta?.station_suffix) {
-          stationSuffixMap[sid] = meta.station_suffix as string;
-        }
+    // (2) Metadata fallback + collect added_during_exam / suffix flags.
+    for (const s of (stations || [])) {
+      const meta = (s as { metadata?: Record<string, unknown> | null }).metadata || null;
+      const sid = (s as { id: string }).id;
+      if (!stationSkillMap[sid] && meta?.skill_sheet_id) {
+        stationSkillMap[sid] = meta.skill_sheet_id as string;
       }
-
-      // (3) station_skills mapping as final fallback.
-      if (stationSkills) {
-        for (const ss of stationSkills) {
-          const skill = ss.skill as unknown as { id: string; skill_sheet_ids?: string[] } | null;
-          if (skill?.skill_sheet_ids?.length && !stationSkillMap[ss.station_id]) {
-            stationSkillMap[ss.station_id] = skill.skill_sheet_ids[0];
-          }
-        }
+      if (meta?.added_during_exam) {
+        stationAddedDuringExamMap[sid] = true;
+      }
+      if (meta?.station_suffix) {
+        stationSuffixMap[sid] = meta.station_suffix as string;
       }
     }
 
@@ -513,6 +526,14 @@ export async function GET(request: NextRequest) {
     const evalCellByStudentSheet: Record<string, SkillCellValue & { _hasPass?: boolean; _anyRetake?: boolean }> = {};
     for (const evalItem of (evaluations || [])) {
       if (!evalItem.skill_sheet_id) continue;
+      // A stale/abandoned in_progress row (e.g. attempt 1 left open, result
+      // defaulted to 'pass') must never be treated as a final result here —
+      // it previously got hardcoded to status:'completed' below regardless
+      // of its real status, letting an in_progress "pass" mask a completed
+      // critical-fail attempt 2. in_progress rows still surface their own
+      // "grading in progress" badge via the station-based `cells` overlay
+      // further down; they just don't belong in this completed-result map.
+      if (evalItem.status !== 'complete') continue;
       const key = `${evalItem.student_id}__${evalItem.skill_sheet_id}`;
       const summary = evalSummaryMap[evalItem.id] || null;
       const isRetake = Boolean((evalItem as Record<string, unknown>).is_retake);
