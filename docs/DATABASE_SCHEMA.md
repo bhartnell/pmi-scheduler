@@ -11,6 +11,7 @@
 > Last updated: 2026-09-01 -- Tier 0b (migration `20260901_tier0b_new_backup_tables_enable_rls.sql`, PR #83): enabled RLS on 11 more dated `_backup_*` restore-point tables created 08-28..09-01 that had missed the original Tier 0 pass. No column/table shape changes.
 > Last updated: 2026-09-01 -- Tier 3 critical item (migration `20260901_tier3_revoke_anon_execute_admin_rpcs.sql`, PR #84): revoked the implicit `PUBLIC` `EXECUTE` grant (inherited by `anon`/`authenticated`) on 7 SECURITY DEFINER functions with zero anon/authenticated callers anywhere in the app -- `get_all_users()`, `create_notification(...)` (both overloads), `update_library_item_status()`, `delete_station_admin()`, `promote_student_to_program()`, `pmi_link_block_on_lab_day_insert()`, `pmi_link_lab_day_on_block_publish()`. `service_role`'s separate grant is untouched. **Correction, same day:** PR #84's migration actually reads `REVOKE EXECUTE ... FROM anon, authenticated`, which is a no-op against a PUBLIC-only grant -- it did not itself close anything. `20260901_fix_tier3_revoke_used_ineffective_role_list.sql` adds the working `REVOKE ... FROM PUBLIC` form (already live since applied directly via Supabase MCP in parallel) so the tracked migration history matches the actually-secure state. Also same day, PR #86 (migration `20260901_critical_revoke_anon_execute_security_definer.sql`) closed the remaining 6 flagged functions -- `is_superadmin`, `is_access_admin`, `has_ops_access`, `is_inventory_admin`, `is_print_operator` (revoked from `anon` only, `authenticated` retained since they gate live `TO {public}` RLS policies on ~35 tables) and `has_pmi_ops_role` (revoked fully, confirmed unused by any policy) -- all 14 originally-flagged anon-executable SECURITY DEFINER functions are now closed. Still undocumented/untouched: `moi_check_key`/`moi_set_station`/`moi_station_progress` (schema drift -- created directly against production outside any tracked migration; a shared-key kiosk/PIN auth flow, not an oversight -- flagged to Ben on the Task Handoff Queue item). No column/table shape changes.
 > Last updated: 2026-09-01 -- Tier 2 (migration `20260901_tier2_live_tables_enable_rls.sql`): enabled RLS (no policy -- service-role-only) on the 49 live tables flagged `rls_disabled_in_public`. Repo-wide grep of every table confirmed 100% of live read/write paths go through `getSupabaseAdmin()` (service_role); this app never uses Supabase Auth anywhere, so `authenticated` is unreachable through the app regardless, and the app's small set of anon-key client components touch none of these 49 tables. No column/table shape changes. `rls_disabled_in_public` now 0 -- Tier 2 complete. See CHANGELOG.md for the full 49-table list.
+> Last updated: 2026-09-01 -- OSCE invite+links stage (migration `20260901_osce_guest_token_invites.sql`): added `email`, `agency`, `invited_at`, `invite_send_count`, `invite_last_error` to `osce_guest_tokens` so a token can carry the evaluator's email and track whether an invite was actually sent. See `osce_guest_tokens` below.
 
 ## Summary
 
@@ -10564,10 +10565,18 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 | valid_from | timestamp with time zone | YES | now() |  |
 | valid_until | timestamp with time zone | YES | (now() + '24:00:00'::interval) |  |
 | created_at | timestamp with time zone | YES | now() |  |
-| event_id | uuid | YES |  | FK -> osce_events.id |
+| event_id | uuid | YES |  | FK -> osce_events.id — defaults to the most recent open/closed event when a caller omits it (`resolveDefaultEventId` in `app/api/osce/guest-tokens/route.ts`, PR #90 + 2026-09-01 pass) |
+| email | text | YES |  | Added `20260901_osce_guest_token_invites.sql` — the evaluator's email, needed to actually send them their invite link |
+| agency | text | YES |  | Added `20260901_osce_guest_token_invites.sql` — display/context only |
+| invited_at | timestamptz | YES |  | Added `20260901_osce_guest_token_invites.sql` — set when an invite email has been sent at least once |
+| invite_send_count | integer | NO | 0 | Added `20260901_osce_guest_token_invites.sql` |
+| invite_last_error | text | YES |  | Added `20260901_osce_guest_token_invites.sql` — error from the most recent failed send attempt |
 
 **Foreign Keys:**
 - `event_id` -> `osce_events.id` (osce_guest_tokens_event_id_fkey)
+
+**Indexes (added 2026-09-01):**
+- `idx_osce_guest_tokens_email`: `CREATE INDEX idx_osce_guest_tokens_email ON public.osce_guest_tokens USING btree (email)`
 
 **Check Constraints:**
 - `osce_guest_tokens_evaluator_role_check`: `((evaluator_role = ANY (ARRAY['md'::text, 'faculty'::text, 'agency'::text])))`
