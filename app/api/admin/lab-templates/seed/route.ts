@@ -34,6 +34,27 @@ export async function POST(request: Request) {
     }
 
     const supabase = getSupabaseAdmin();
+
+    // Build a normalized-title -> scenario_id lookup once per request.
+    // The embedded seed JSON only ever carries a human-readable
+    // `scenario_title` (never a real `scenarios.id` UUID — the S3 file's
+    // "scenario-stemi-cardiogenic" style strings live under
+    // `available_scenarios[].scenario_id`, a separate multi-option menu
+    // field folded into station metadata, not a single-scenario FK). Without
+    // this resolution step every "scenario" station lands with scenario_id
+    // NULL even when a matching scenario already exists in the library —
+    // the root cause of "prebuilt labs load without the scenario selected."
+    // Only an exact case-insensitive/trimmed title match sets scenario_id;
+    // anything unmatched is left NULL (scenario_title still carries the
+    // descriptive text) rather than guessed at.
+    const scenarioIdByTitle = new Map<string, string>();
+    {
+      const { data: allScenarios } = await supabase.from('scenarios').select('id, title');
+      for (const s of allScenarios || []) {
+        if (s.title) scenarioIdByTitle.set(s.title.trim().toLowerCase(), s.id);
+      }
+    }
+
     const dataDir = path.join(process.cwd(), 'data');
     const files = ['paramedic_s1_labs.json', 'paramedic_s2_labs.json', 'paramedic_s3_labs.json', 'emt_s1_labs.json', 'aemt_s1_labs.json'];
     const results: Array<{
@@ -237,12 +258,17 @@ export async function POST(request: Request) {
               if (s.scenario_cards) metadata.scenario_cards = s.scenario_cards;
               if (s.available_scenarios) metadata.available_scenarios = s.available_scenarios;
 
+              const resolvedScenarioId = s.scenario_title
+                ? scenarioIdByTitle.get(String(s.scenario_title).trim().toLowerCase()) || null
+                : null;
+
               return {
                 template_id: templateId,
                 sort_order: idx + 1,
                 station_type: s.station_type,
                 station_name: s.station_name || null,
                 skills: s.skills && s.skills.length > 0 ? s.skills : null,
+                scenario_id: resolvedScenarioId,
                 scenario_title: s.scenario_title || null,
                 difficulty: s.difficulty || null,
                 notes: s.format_notes || s.description || null,
