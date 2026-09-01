@@ -406,7 +406,7 @@ export default function SkillResultsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Breadcrumbs */}
         <Breadcrumbs
           entityTitle={labDay?.title || 'Lab Day'}
