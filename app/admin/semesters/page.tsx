@@ -35,6 +35,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   X,
+  CalendarClock,
 } from 'lucide-react';
 import { canAccessAdmin } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -482,6 +483,15 @@ function EditSemesterModal({
   const [selectedCohorts, setSelectedCohorts] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
+  // Per-cohort manual start/stop window drafts, keyed by cohort_id.
+  // A value of 'remove' clears an existing override on save; an
+  // object upserts a new/edited window. Cohorts with no entry here
+  // are left untouched.
+  const [overrideDrafts, setOverrideDrafts] = useState<
+    Map<string, { start_date: string; end_date: string } | 'remove'>
+  >(new Map());
+  const [editingWindowFor, setEditingWindowFor] = useState<string | null>(null);
+
   // Load cohorts in this semester so the cascade dialog renders.
   useEffect(() => {
     let cancelled = false;
@@ -523,8 +533,17 @@ function EditSemesterModal({
       // Only include `delete_cohort_overrides` for cohorts that BOTH
       // have an override AND were selected. Cohorts without
       // overrides automatically pick up the new dates via the
-      // resolver's tier-2 fallback.
-      const deleteOverrides = overriddenSelected.map(c => c.cohort_id);
+      // resolver's tier-2 fallback. Merge in any explicit removals
+      // from the cohort-window editor below (deduped via Set).
+      const deleteOverrides = new Set(overriddenSelected.map(c => c.cohort_id));
+      const upsertOverrides: { cohort_id: string; start_date: string; end_date: string }[] = [];
+      overrideDrafts.forEach((draft, cohortId) => {
+        if (draft === 'remove') {
+          deleteOverrides.add(cohortId);
+        } else {
+          upsertOverrides.push({ cohort_id: cohortId, ...draft });
+        }
+      });
 
       const res = await fetch(
         `/api/scheduling/planner/semesters/${semester.id}`,
@@ -535,7 +554,8 @@ function EditSemesterModal({
             name,
             start_date: startDate,
             end_date: endDate,
-            delete_cohort_overrides: deleteOverrides,
+            delete_cohort_overrides: Array.from(deleteOverrides),
+            upsert_cohort_overrides: upsertOverrides,
           }),
         }
       );
@@ -544,10 +564,18 @@ function EditSemesterModal({
         throw new Error(data.error || 'Failed to save');
       }
       const data = await res.json();
-      const msg = data.overrides_deleted > 0
-        ? `Saved · ${data.overrides_deleted} cohort override${data.overrides_deleted === 1 ? '' : 's'} removed`
-        : 'Saved';
-      toast.success(msg);
+      const parts: string[] = [];
+      if (data.overrides_upserted > 0) {
+        parts.push(`${data.overrides_upserted} window${data.overrides_upserted === 1 ? '' : 's'} saved`);
+      }
+      if (data.overrides_deleted > 0) {
+        parts.push(`${data.overrides_deleted} override${data.overrides_deleted === 1 ? '' : 's'} removed`);
+      }
+      if (data.override_upsert_error) {
+        toast.error(`Semester saved, but window save failed: ${data.override_upsert_error}`);
+      } else {
+        toast.success(parts.length > 0 ? `Saved · ${parts.join(', ')}` : 'Saved');
+      }
       onSaved();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to save');
@@ -658,6 +686,63 @@ function EditSemesterModal({
               </div>
             </div>
           )}
+
+          {/* Per-cohort schedule windows — the manual start/stop
+              mechanism for a cohort that runs off the standard
+              calendar or bridges two semesters by a week or two.
+              Always visible (not gated by dateChanged) since this
+              is independent of whether the semester's own dates
+              were edited this session. */}
+          {cohorts !== null && cohorts.length > 0 && (
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+              <div className="flex items-start gap-2 mb-3">
+                <CalendarClock className="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-xs font-semibold text-gray-900 dark:text-gray-100">
+                    Per-cohort schedule windows
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                    Set a manual start/stop date for a cohort instead of the semester&apos;s standard dates — for a cohort that starts off-calendar or bridges into the next semester by a week or two.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                {cohorts.map(c => (
+                  <CohortWindowRow
+                    key={c.cohort_id}
+                    cohort={c}
+                    editing={editingWindowFor === c.cohort_id}
+                    draft={overrideDrafts.get(c.cohort_id)}
+                    onStartEdit={() => setEditingWindowFor(c.cohort_id)}
+                    onCancelEdit={() => setEditingWindowFor(null)}
+                    onSaveDraft={(start, end) => {
+                      setOverrideDrafts(prev => {
+                        const next = new Map(prev);
+                        next.set(c.cohort_id, { start_date: start, end_date: end });
+                        return next;
+                      });
+                      setEditingWindowFor(null);
+                    }}
+                    onRemove={() => {
+                      setOverrideDrafts(prev => {
+                        const next = new Map(prev);
+                        next.set(c.cohort_id, 'remove');
+                        return next;
+                      });
+                      setEditingWindowFor(null);
+                    }}
+                    onUndo={() => {
+                      setOverrideDrafts(prev => {
+                        const next = new Map(prev);
+                        next.delete(c.cohort_id);
+                        return next;
+                      });
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="px-5 py-4 border-t border-gray-200 dark:border-gray-700 flex items-center justify-end gap-2">
@@ -676,6 +761,133 @@ function EditSemesterModal({
             {saving ? 'Saving…' : 'Save'}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Per-cohort schedule window row ─────────────────────────────────────────
+
+function CohortWindowRow({
+  cohort,
+  editing,
+  draft,
+  onStartEdit,
+  onCancelEdit,
+  onSaveDraft,
+  onRemove,
+  onUndo,
+}: {
+  cohort: CohortRow;
+  editing: boolean;
+  draft: { start_date: string; end_date: string } | 'remove' | undefined;
+  onStartEdit: () => void;
+  onCancelEdit: () => void;
+  onSaveDraft: (start: string, end: string) => void;
+  onRemove: () => void;
+  onUndo: () => void;
+}) {
+  const effectiveStart =
+    draft && draft !== 'remove' ? draft.start_date : cohort.override_start_date;
+  const effectiveEnd =
+    draft && draft !== 'remove' ? draft.end_date : cohort.override_end_date;
+  const hasEffectiveWindow = draft === 'remove' ? false : !!effectiveStart && !!effectiveEnd;
+
+  const [start, setStart] = useState(effectiveStart ?? '');
+  const [end, setEnd] = useState(effectiveEnd ?? '');
+
+  const label = `${cohort.program_abbreviation || '?'} G${cohort.cohort_number ?? '?'}`;
+
+  if (editing) {
+    return (
+      <div className="flex flex-wrap items-end gap-2 p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
+        <span className="text-xs font-medium text-gray-900 dark:text-gray-100 mr-1">
+          {label}
+        </span>
+        <div>
+          <label className="block text-[10px] text-gray-600 dark:text-gray-400">Start</label>
+          <input
+            type="date"
+            value={start}
+            onChange={e => setStart(e.target.value)}
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-xs text-gray-900 dark:text-gray-100"
+          />
+        </div>
+        <div>
+          <label className="block text-[10px] text-gray-600 dark:text-gray-400">End</label>
+          <input
+            type="date"
+            value={end}
+            onChange={e => setEnd(e.target.value)}
+            className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-xs text-gray-900 dark:text-gray-100"
+          />
+        </div>
+        <button
+          onClick={() => start && end && onSaveDraft(start, end)}
+          disabled={!start || !end || end < start}
+          className="px-2 py-1 text-[11px] font-medium rounded bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50"
+        >
+          Set
+        </button>
+        <button
+          onClick={onCancelEdit}
+          className="px-2 py-1 text-[11px] text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-2 text-xs py-1">
+      <div className="flex items-center gap-2">
+        <span className="font-medium text-gray-900 dark:text-gray-100">{label}</span>
+        {hasEffectiveWindow ? (
+          <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200">
+            {effectiveStart} → {effectiveEnd}
+          </span>
+        ) : (
+          <span className="px-1.5 py-0.5 rounded text-[10px] bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+            Standard (semester dates)
+          </span>
+        )}
+        {draft && draft !== 'remove' && (
+          <span className="text-[10px] text-blue-700 dark:text-blue-300 italic">unsaved</span>
+        )}
+        {draft === 'remove' && (
+          <span className="text-[10px] text-red-600 dark:text-red-400 italic">removing on save</span>
+        )}
+      </div>
+      <div className="flex items-center gap-1">
+        {draft !== undefined ? (
+          <button
+            onClick={onUndo}
+            className="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-white dark:hover:bg-gray-700"
+            title="Undo pending change"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        ) : (
+          <>
+            <button
+              onClick={onStartEdit}
+              className="p-1 rounded text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-white dark:hover:bg-gray-700"
+              title={hasEffectiveWindow ? 'Edit window' : 'Set custom window'}
+            >
+              <Pencil className="w-3.5 h-3.5" />
+            </button>
+            {hasEffectiveWindow && (
+              <button
+                onClick={onRemove}
+                className="p-1 rounded text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-white dark:hover:bg-gray-700"
+                title="Remove window (fall back to semester dates)"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </>
+        )}
       </div>
     </div>
   );
