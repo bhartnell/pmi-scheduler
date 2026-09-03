@@ -3396,7 +3396,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | visit_date | date | NO |  |  |
 | visit_time | time without time zone | YES |  |  |
 | cohort_id | uuid | YES |  |  |
-| entire_class | boolean | YES | false |  |
+| entire_class | boolean | YES | false | When true, individual `clinical_visit_students` rows are deliberately NOT written — the roster is implied by `cohort_id`. Confirmed intentional 2026-09-03 (Task Handoff Queue audit): create/update/GET/export paths all treat `entire_class=true` as "skip per-student rows," consistently. |
 | comments | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
 | updated_at | timestamptz | YES | now() |  |
