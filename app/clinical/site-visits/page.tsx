@@ -452,10 +452,10 @@ export default function SiteVisitsPage() {
                 <p className="text-gray-600 dark:text-gray-400">Track instructor visits to clinical sites and field agencies</p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Link
                 href="/clinical/site-visit-settings"
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                className="flex items-center gap-2 px-4 min-h-[44px] bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                 title="Alert Settings"
               >
                 <Settings className="w-4 h-4" />
@@ -463,7 +463,7 @@ export default function SiteVisitsPage() {
               </Link>
               <button
                 onClick={handleExport}
-                className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="flex items-center gap-2 px-4 min-h-[44px] bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 <FileSpreadsheet className="w-4 h-4" />
                 Export
@@ -473,7 +473,7 @@ export default function SiteVisitsPage() {
                   resetForm();
                   setShowForm(true);
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors"
+                className="flex items-center gap-2 px-4 min-h-[44px] bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors font-medium"
               >
                 <Plus className="w-4 h-4" />
                 Log Visit
@@ -724,14 +724,14 @@ export default function SiteVisitsPage() {
                     <div className="flex items-center gap-2 ml-4">
                       <button
                         onClick={() => openEditForm(visit)}
-                        className="p-2 text-gray-500 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        className="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 hover:text-teal-600 dark:hover:text-teal-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         title="Edit visit"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setDeleteConfirm(visit.id)}
-                        className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                        className="min-w-[44px] min-h-[44px] flex items-center justify-center text-gray-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                         title="Delete visit"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -748,13 +748,13 @@ export default function SiteVisitsPage() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleDelete(visit.id)}
-                          className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
+                          className="px-4 min-h-[44px] bg-red-600 text-white rounded hover:bg-red-700 transition-colors text-sm"
                         >
                           Delete
                         </button>
                         <button
                           onClick={() => setDeleteConfirm(null)}
-                          className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
+                          className="px-4 min-h-[44px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-sm"
                         >
                           Cancel
                         </button>
@@ -781,7 +781,7 @@ export default function SiteVisitsPage() {
                   setShowForm(false);
                   resetForm();
                 }}
-                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                className="min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -800,7 +800,7 @@ export default function SiteVisitsPage() {
                     setFormDepartments([]);
                   }}
                   required
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base"
                 >
                   <option value="">Select a site or agency...</option>
                   <optgroup label="Clinical Sites (Hospitals)">
@@ -832,7 +832,7 @@ export default function SiteVisitsPage() {
                         key={dept.id}
                         type="button"
                         onClick={() => toggleDepartment(dept.department)}
-                        className={`px-3 py-1 rounded-full text-sm transition-colors ${
+                        className={`px-4 min-h-[44px] rounded-full text-sm transition-colors ${
                           formDepartments.includes(dept.department)
                             ? 'bg-teal-600 text-white'
                             : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
@@ -856,7 +856,7 @@ export default function SiteVisitsPage() {
                     value={formVisitDate}
                     onChange={(e) => setFormVisitDate(e.target.value)}
                     required
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base"
                   />
                 </div>
                 <div>
@@ -867,7 +867,7 @@ export default function SiteVisitsPage() {
                     type="time"
                     value={formVisitTime}
                     onChange={(e) => setFormVisitTime(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    className="w-full px-3 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base"
                   />
                 </div>
               </div>
@@ -891,7 +891,7 @@ export default function SiteVisitsPage() {
                         setFormVisitorId(matchingInstructor?.id || '');
                       }
                     }}
-                    className="text-sm text-teal-600 dark:text-teal-400 hover:underline"
+                    className="px-3 min-h-[44px] text-sm text-teal-600 dark:text-teal-400 hover:underline"
                   >
                     Change
                   </button>
@@ -906,7 +906,7 @@ export default function SiteVisitsPage() {
                 <select
                   value={formCohortId}
                   onChange={(e) => setFormCohortId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                  className="w-full px-3 py-3 min-h-[44px] border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base"
                 >
                   <option value="">Select cohort...</option>
                   {cohorts.map(cohort => (
@@ -920,56 +920,83 @@ export default function SiteVisitsPage() {
               {/* Students Selection */}
               {formCohortId && (
                 <div>
-                  <div className="flex items-center gap-4 mb-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        checked={formEntireClass}
-                        onChange={() => {
-                          setFormEntireClass(true);
-                          setFormStudentIds([]);
-                        }}
-                        className="text-teal-600"
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Entire Class</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input
-                        type="radio"
-                        checked={!formEntireClass}
-                        onChange={() => setFormEntireClass(false)}
-                        className="text-teal-600"
-                      />
-                      <span className="text-sm text-gray-700 dark:text-gray-300">Specific Students</span>
-                    </label>
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFormEntireClass(true);
+                        setFormStudentIds([]);
+                      }}
+                      className={`flex-1 min-h-[44px] px-3 rounded-lg text-sm font-medium border transition-colors ${
+                        formEntireClass
+                          ? 'bg-teal-600 border-teal-600 text-white'
+                          : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      Entire Class
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormEntireClass(false)}
+                      className={`flex-1 min-h-[44px] px-3 rounded-lg text-sm font-medium border transition-colors ${
+                        !formEntireClass
+                          ? 'bg-teal-600 border-teal-600 text-white'
+                          : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      Specific Students
+                    </button>
                   </div>
 
                   {!formEntireClass && (
-                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 max-h-48 overflow-y-auto">
-                      {loadingStudents ? (
-                        <div className="text-center text-gray-500 py-4">Loading students...</div>
-                      ) : cohortStudents.length === 0 ? (
-                        <div className="text-center text-gray-500 py-4">No students in this cohort</div>
-                      ) : (
-                        <div className="space-y-2">
-                          {cohortStudents.map(student => (
-                            <label
-                              key={student.id}
-                              className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 p-2 rounded"
-                            >
-                              <input
-                                type="checkbox"
-                                checked={formStudentIds.includes(student.id)}
-                                onChange={() => toggleStudent(student.id)}
-                                className="text-teal-600 rounded"
-                              />
-                              <span className="text-gray-700 dark:text-gray-300">
-                                {student.first_name} {student.last_name}
-                              </span>
-                            </label>
-                          ))}
+                    <div className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+                      {!loadingStudents && cohortStudents.length > 0 && (
+                        <div className="flex gap-2 p-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+                          <button
+                            type="button"
+                            onClick={() => setFormStudentIds(cohortStudents.map(s => s.id))}
+                            className="px-3 min-h-[36px] text-sm text-teal-600 dark:text-teal-400 hover:underline"
+                          >
+                            Select All
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setFormStudentIds([])}
+                            className="px-3 min-h-[36px] text-sm text-gray-500 dark:text-gray-400 hover:underline"
+                          >
+                            Clear
+                          </button>
+                          <span className="ml-auto self-center text-xs text-gray-500 dark:text-gray-400 pr-2">
+                            {formStudentIds.length} selected
+                          </span>
                         </div>
                       )}
+                      <div className="max-h-56 overflow-y-auto">
+                        {loadingStudents ? (
+                          <div className="text-center text-gray-500 py-4">Loading students...</div>
+                        ) : cohortStudents.length === 0 ? (
+                          <div className="text-center text-gray-500 py-4">No students in this cohort</div>
+                        ) : (
+                          <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
+                            {cohortStudents.map(student => (
+                              <label
+                                key={student.id}
+                                className="flex items-center gap-3 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 px-3 min-h-[44px]"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={formStudentIds.includes(student.id)}
+                                  onChange={() => toggleStudent(student.id)}
+                                  className="w-5 h-5 text-teal-600 rounded shrink-0"
+                                />
+                                <span className="text-gray-700 dark:text-gray-300">
+                                  {student.first_name} {student.last_name}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -985,26 +1012,26 @@ export default function SiteVisitsPage() {
                   onChange={(e) => setFormComments(e.target.value)}
                   rows={2}
                   placeholder="Notes about the visit..."
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+                  className="w-full px-3 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-base"
                 />
               </div>
 
               {/* Submit */}
-              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex flex-col-reverse sm:flex-row justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700 sticky bottom-0 bg-white dark:bg-gray-800 -mx-6 -mb-6 px-6 pb-6">
                 <button
                   type="button"
                   onClick={() => {
                     setShowForm(false);
                     resetForm();
                   }}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+                  className="px-4 min-h-[44px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting || !formSiteId || !formVisitDate || !formVisitorName}
-                  className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="px-4 min-h-[44px] bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
                 >
                   {submitting ? (
                     <>
