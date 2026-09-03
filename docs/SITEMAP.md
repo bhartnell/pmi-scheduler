@@ -137,6 +137,7 @@ Two doors — labeled to keep directors out of the student dead-end:
 | Path | Component | Role |
 |------|-----------|------|
 | `/` | `app/page.tsx` | any authenticated |
+| `/attendance` | quick, phone-first roll call over existing `checklists`/`checklist_attendance` (field trips / facility tours); entry point is the UserMenu dropdown, not a hub card, per Ben's no-clutter request | instructor+ (API-enforced) |
 | `/calendar` | unified calendar | instructor+ |
 | `/help` | help hub | any |
 | `/notifications` | inbox | any |

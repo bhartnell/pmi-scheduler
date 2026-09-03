@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-09-03
+
+- (pending commit) | **feat(attendance): quick phone-first attendance page over existing `checklists`/`checklist_attendance` (Task Handoff Queue `[FEATURE - Low]`, Ben's use case 2026-09-03).** New `/attendance` route: defaults to today's active checklists across every cohort (new `GET /api/lab-management/checklists/today`, joins `cohorts`/`programs` for a display label), falls back to a cohort picker for anything not scheduled today, then a large-tap-target roster reusing the existing single-toggle (`POST`) and mark-all (`PATCH`) attendance endpoints — no new tables, no schema change. Entry point is the `UserMenu` dropdown ("Quick Attendance"), not a hub card, per Ben's explicit no-clutter-on-shared-pages request. `docs/SITEMAP.md` updated. `type-check`/`build`/`eslint` clean.
+
 ## 2026-09-02
 
 - (pending commit) | **data(lvfr-aemt): correct 12 legacy `lvfr_schedule_items` quiz-review rows storing `requirement='optional'` -> `'required'` (Task Handoff Queue `[DATA FIX - approved]`, Ben-approved 2026-07-06).** Display layer (`app/lvfr-aemt/day/[date]/page.tsx`) and new-row defaults (`defaultRequirement()` in `app/api/lvfr-aemt/runsheet/items/route.ts`) already treat `item_type='quiz'` rows as mandatory regardless of the stored value — this fix corrects the underlying data so it matches, instead of relying on the display-layer workaround indefinitely. Scope verified live before touching anything: exactly 12 rows matched `item_type='quiz' AND requirement='optional'` (all titled "Quiz Review"), matching the ticket's stated count. Snapshotted the 12 rows first (`_backup_lvfr_schedule_items_quiz_optional_20260902`, RLS enabled per the Tier 0 backup-table pattern) then ran the scoped `UPDATE`; verified post-apply: 0 rows still `optional`, 12 confirmed in the backup table. Migration: `supabase/migrations/20260902_lvfr_quiz_review_optional_to_required.sql` (applied live via Supabase MCP, has a `-- ROLLBACK:` block). No `app/` code changed, so no `type-check`/`build` run this session.
