@@ -109,6 +109,16 @@ export default function LabTimer({
   // Track mount status so async fetch responses don't try to call
   // setState / onClose after the component has unmounted.
   const mountedRef = useRef(true);
+  // Cross-device clock-skew correction (Task Handoff Queue "grading-view
+  // timer" ticket, Ben decision 2026-09-01: cross-user desync). Two
+  // controllers' devices can disagree on system clock by seconds to
+  // minutes; computing elapsed time from raw Date.now() means each
+  // device shows a DIFFERENT countdown for the same server-authoritative
+  // timer. The timer-display kiosk pages (app/timer-display/*) already
+  // solved this by comparing the API's serverTime to the client's
+  // Date.now() and applying the delta to every subsequent calculation —
+  // this mirrors that proven fix here.
+  const serverTimeOffsetRef = useRef(0);
   const [readyStatuses, setReadyStatuses] = useState<ReadyStatus[]>([]);
   const [allStations, setAllStations] = useState<Station[]>([]);
   const [showStaleWarning, setShowStaleWarning] = useState(false);
@@ -192,6 +202,10 @@ export default function LabTimer({
       if (data?.stop_polling) {
         setSessionExpired(true);
         return null;
+      }
+
+      if (data.serverTime) {
+        serverTimeOffsetRef.current = new Date(data.serverTime).getTime() - Date.now();
       }
 
       if (data.success) {
@@ -560,7 +574,7 @@ export default function LabTimer({
         return timerState.elapsed_when_paused || 0;
       } else if (timerState.status === 'running' && timerState.started_at) {
         const startTime = new Date(timerState.started_at).getTime();
-        const now = Date.now();
+        const now = Date.now() + serverTimeOffsetRef.current;
         return Math.floor((now - startTime) / 1000);
       }
       return 0;
