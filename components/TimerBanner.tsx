@@ -53,6 +53,13 @@ export default function TimerBanner({
 
   const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const versionRef = useRef<number>(0);
+  // Sequencing guard for fetchTimerState (see comment on the function
+  // below) — tracks the highest request sequence number whose response
+  // has actually been applied to state, so a slower/older response that
+  // lands AFTER a newer one can be detected and discarded instead of
+  // rolling timerState backwards.
+  const requestSeqRef = useRef(0);
+  const appliedSeqRef = useRef(0);
 
   // Load audio settings from localStorage
   const [audioSettings, setAudioSettings] = useState<Partial<TimerAudioSettings>>(() =>
@@ -87,14 +94,37 @@ export default function TimerBanner({
     playBeeps(count);
   }, [playBeeps]);
 
-  // Fetch timer state from server with version tracking
+  // Fetch timer state from server with version tracking.
+  //
+  // This is called from TWO independent, uncoordinated triggers that can
+  // fire close together: the visibility poll below (5s while running) and
+  // the realtime postgres_changes handler further down, which re-fetches
+  // on EVERY UPDATE to this lab day's row — including ones made by OTHER
+  // instructors/controllers on other devices or from the standard lab
+  // view's LabTimer (e.g. someone rapid-firing +1/-1 adjustments re-fires
+  // the realtime handler here on every click). Neither call is cancelled
+  // or sequenced against the other, so with enough concurrent requests in
+  // flight, responses can land out of network order. Without a guard, a
+  // straggler response for an OLDER request can arrive AFTER a newer one
+  // and silently roll timerState back to a stale value — a concrete,
+  // code-level mechanism for the display "flickering between two values"
+  // that doesn't require any interval/subscription leak. requestSeqRef /
+  // appliedSeqRef below make applying a response idempotent-in-order:
+  // a response is only applied if no later-issued request has already
+  // applied its own result.
   const fetchTimerState = useCallback(async () => {
+    const seq = ++requestSeqRef.current;
     try {
       const url = versionRef.current > 0
         ? `/api/lab-management/timer?labDayId=${labDayId}&version=${versionRef.current}`
         : `/api/lab-management/timer?labDayId=${labDayId}`;
       const res = await fetch(url);
       const data = await res.json();
+
+      // A newer fetchTimerState call already applied its response —
+      // this one is a straggler; discard instead of rolling state back.
+      if (seq < appliedSeqRef.current) return;
+      appliedSeqRef.current = seq;
 
       // If not modified, skip state update to save re-renders
       if (data.not_modified) {
@@ -111,6 +141,18 @@ export default function TimerBanner({
         }
         if (data.timer) {
           hadTimerRef.current = true;
+          // Stale guard: a timer left running/paused from a PREVIOUS lab
+          // day (forgotten End Lab) should not render as if it were live.
+          // The server already computes this (isStale = lab day's date is
+          // in the past); LabTimer already checks it (see its `checkStale`
+          // param) but TimerBanner never did — treat it the same way the
+          // "timer record gone" branch below already treats an ended lab:
+          // hide the banner instead of showing/ticking stale data.
+          if (data.isStale && data.timer.status !== 'stopped') {
+            setIsDismissed(true);
+            setTimerState(null);
+            return;
+          }
           setTimerState(data.timer);
           // Un-dismiss when a new timer appears
           setIsDismissed(false);
