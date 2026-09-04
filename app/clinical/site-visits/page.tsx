@@ -48,11 +48,16 @@ interface Program {
 interface Cohort {
   id: string;
   cohort_number: number;
+  current_semester: number | null;
   program: Program;
   is_active: boolean;
   // Computed display name
   displayName: string;
 }
+
+// Site visits only apply to AEMT and later-semester Paramedic cohorts (clinical
+// rotations) — EMT doesn't do clinical site visits in this program's structure.
+const SITE_VISIT_ELIGIBLE_PARAMEDIC_SEMESTERS = [3, 4];
 
 interface Student {
   id: string;
@@ -236,11 +241,28 @@ export default function SiteVisitsPage() {
 
       if (sitesData.success) setSites(sitesData.sites || []);
       if (cohortsData.success) {
-        // Transform cohorts to add displayName
-        const transformedCohorts = (cohortsData.cohorts || []).map((c: any) => ({
-          ...c,
-          displayName: `${c.program?.abbreviation || 'Unknown'} ${c.cohort_number}`,
-        }));
+        // Filter to cohorts eligible for clinical site visits (AEMT + S3/S4
+        // Paramedic), then transform + sort into a logical program/semester order.
+        const rawCohorts: Omit<Cohort, 'displayName'>[] = cohortsData.cohorts || [];
+        const transformedCohorts: Cohort[] = rawCohorts
+          .filter((c) => {
+            const abbr = c.program?.abbreviation;
+            if (abbr === 'AEMT') return true;
+            if (abbr === 'PM') return SITE_VISIT_ELIGIBLE_PARAMEDIC_SEMESTERS.includes(c.current_semester ?? -1);
+            return false;
+          })
+          .map((c) => ({
+            ...c,
+            displayName: `${c.program?.abbreviation || 'Unknown'} ${c.cohort_number}`,
+          }))
+          .sort((a, b) => {
+            const programOrder = (abbr: string) => (abbr === 'AEMT' ? 0 : abbr === 'PM' ? 1 : 2);
+            const programDiff = programOrder(a.program?.abbreviation) - programOrder(b.program?.abbreviation);
+            if (programDiff !== 0) return programDiff;
+            const semesterDiff = (a.current_semester ?? 0) - (b.current_semester ?? 0);
+            if (semesterDiff !== 0) return semesterDiff;
+            return a.cohort_number - b.cohort_number;
+          });
         setCohorts(transformedCohorts);
       }
       if (instructorsData.success) setInstructors(instructorsData.instructors || []);
