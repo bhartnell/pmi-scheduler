@@ -32,14 +32,21 @@ export async function GET() {
       .from('google_calendar_events')
       .select('id', { count: 'exact', head: true });
 
-    // Events by source type
+    // Events by source type, plus the most recent creation per type so
+    // a source that has silently stopped producing events (e.g. one
+    // that's only ever created by a manual admin action) is visible
+    // here instead of only in the raw event counts.
     const { data: byTypeRaw } = await supabase
       .from('google_calendar_events')
-      .select('source_type');
+      .select('source_type, created_at');
 
     const eventsByType: Record<string, number> = {};
+    const lastSyncedByType: Record<string, string> = {};
     (byTypeRaw || []).forEach((r) => {
       eventsByType[r.source_type] = (eventsByType[r.source_type] || 0) + 1;
+      if (!lastSyncedByType[r.source_type] || r.created_at > lastSyncedByType[r.source_type]) {
+        lastSyncedByType[r.source_type] = r.created_at;
+      }
     });
 
     // Events per user (for instructor table)
@@ -83,6 +90,7 @@ export async function GET() {
         needsReauthCount,
         totalEvents: totalEvents || 0,
         eventsByType,
+        lastSyncedByType,
       },
       recentLogs,
     });
