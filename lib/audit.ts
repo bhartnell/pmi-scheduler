@@ -203,6 +203,31 @@ export async function logStudentUpdate(
 }
 
 /**
+ * Log when a director corrects an already-submitted skill evaluation
+ * (score-sheet score/result/critical-fail correction, saved in place via
+ * PATCH rather than a new attempt). Gated by canEditScoreSheets in
+ * lib/permissions.ts — this wrapper doesn't re-check permission, it just
+ * records what already happened.
+ */
+export async function logEvaluationEdit(
+  user: AuditUser,
+  evaluationId: string,
+  description: string,
+  diff?: Record<string, unknown>,
+  ipAddress?: string
+): Promise<void> {
+  await logAuditEvent({
+    user,
+    action: 'update',
+    resourceType: 'skill_evaluation',
+    resourceId: evaluationId,
+    resourceDescription: description,
+    ipAddress,
+    metadata: diff,
+  });
+}
+
+/**
  * Log when a student record is deleted
  */
 export async function logStudentDelete(

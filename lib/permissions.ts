@@ -51,6 +51,31 @@ export const PROTECTED_SUPERADMINS = [
 ];
 
 // ============================================
+// Director-Level Score-Sheet Editing
+// ============================================
+
+// Director list is a deliberate narrow allowlist per Ben's ticket (not
+// role-based) to avoid sweeping in other admin-role users; extend by adding
+// emails here, or replace with a role tier later if Ben wants a
+// "technical-admin" role added. Emails verified against existing usages in
+// this repo (app/sql/user-roles-migration.sql, supabase/migrations/20260408_open_lab.sql,
+// app/api/scheduling/coverage-requests/route.ts, app/api/cron/site-visit-reminders/route.ts).
+export const SCORE_SHEET_DIRECTOR_EMAILS = [
+  'bhartnell@pmi.edu',
+  'rniedfeldt@pmi.edu',
+  'ryyoung@pmi.edu',
+];
+
+/**
+ * Check if a user is allowed to correct an already-submitted skill
+ * evaluation score sheet in place (PATCH, not a new attempt).
+ */
+export function canEditScoreSheets(email: string | null | undefined): boolean {
+  if (!email) return false;
+  return SCORE_SHEET_DIRECTOR_EMAILS.includes(email.toLowerCase());
+}
+
+// ============================================
 // Permission Check Functions
 // ============================================
 
