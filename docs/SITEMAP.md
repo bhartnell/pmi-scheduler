@@ -1,5 +1,6 @@
 # PMI EMS Scheduler — Site Map
-> Refreshed 2026-09-01 (OSCE invite+links stage: `/admin/osce-tokens` now linked from the Admin hub — was previously direct-URL-only; corrected the stale `/osce-evaluator-signup` redirect entry — it's a live page, not a redirect. See OSCE section below.)
+> Refreshed 2026-09-04 (CoAEMSP Clinical/Field Visit Log export: new "CoAEMSP Log" button on `/clinical/site-visits` (cohort filter required), backed by new `/api/clinical/site-visits/export-coaemsp` route — one accreditation-format .docx per cohort.)
+> Previously refreshed 2026-09-01 (OSCE invite+links stage: `/admin/osce-tokens` now linked from the Admin hub — was previously direct-URL-only; corrected the stale `/osce-evaluator-signup` redirect entry — it's a live page, not a redirect. See OSCE section below.)
 > Previously refreshed 2026-07-15 (PALS hub findability fix: home page's main-nav card and `/calendar` toolbar button repointed from `/labs/acls-hub` to `/labs/aha-hub` so PALS is reachable the same way ACLS always was; `/labs/acls-hub` gained a back-link to `/labs/aha-hub`).
 > Previously refreshed 2026-07-15 (PALS Hub Build Plan Phases 5-6: AHA 2025 reference agenda display + Section A/B/C/D/E certification template seed + skills/attestation station styling on `/labs/pals-hub`).
 > Previously refreshed 2026-07-14 (PALS Hub Build Plan: corrected practice TL threshold to ≥2 + oversized-group warning, station direct-links on both AHA hubs, calendar "Open Hub" deep-link with `?date=`).
@@ -281,7 +282,7 @@ Canonical home for lab day operations. 40 pages.
 | `/clinical/preceptors` | Preceptor directory |
 | `/clinical/ride-alongs` + `/availability` + `/shifts` | Ride-along scheduling |
 | `/clinical/rotation-scheduler` | Rotation scheduler |
-| `/clinical/site-visits`, `/clinical/site-visit-settings` | Site visit admin |
+| `/clinical/site-visits`, `/clinical/site-visit-settings` | Site visit admin. "CoAEMSP Log" button (cohort filter required) exports the official CoAEMSP Clinical/Field Visit Log as one .docx per cohort via `/api/clinical/site-visits/export-coaemsp`. |
 | `/clinical/summative-evaluations` + `/[id]/grade` | Summative evals |
 
 ## Reports
