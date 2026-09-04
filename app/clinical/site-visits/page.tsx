@@ -27,8 +27,29 @@ import {
   Settings,
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
+import { formatCohortNumber } from '@/lib/format-cohort';
 import SiteVisitAlerts from '@/components/SiteVisitAlerts';
 import Breadcrumbs from '@/components/Breadcrumbs';
+
+// Site visits only apply to the clinical/internship phase of training:
+// AEMT cohorts (site visits throughout) and Paramedic cohorts in semesters
+// 3 (clinical rotations) and 4 (field internship). EMT has no clinical
+// rotation component and is excluded; other programs (e.g. LVFR) are
+// already excluded upstream by /api/lab-management/cohorts.
+function isSiteVisitEligible(cohort: { program?: { abbreviation?: string | null } | null; current_semester?: number | null }): boolean {
+  const abbr = cohort.program?.abbreviation;
+  if (abbr === 'AEMT') return true;
+  if (abbr === 'PM') return cohort.current_semester === 3 || cohort.current_semester === 4;
+  return false;
+}
+
+// Logical order: AEMT first, then Paramedic grouped by semester (S3 before
+// S4), then by cohort number within each group.
+function cohortSortKey(cohort: { program?: { abbreviation?: string | null } | null; current_semester?: number | null; cohort_number: number }): [number, number, number] {
+  const programRank = cohort.program?.abbreviation === 'AEMT' ? 0 : 1;
+  const semesterRank = cohort.current_semester ?? 0;
+  return [programRank, semesterRank, Number(cohort.cohort_number)];
+}
 
 interface ClinicalSite {
   id: string;
@@ -236,11 +257,20 @@ export default function SiteVisitsPage() {
 
       if (sitesData.success) setSites(sitesData.sites || []);
       if (cohortsData.success) {
-        // Transform cohorts to add displayName
-        const transformedCohorts = (cohortsData.cohorts || []).map((c: any) => ({
-          ...c,
-          displayName: `${c.program?.abbreviation || 'Unknown'} ${c.cohort_number}`,
-        }));
+        // Only AEMT and Paramedic S3/S4 cohorts do clinical site visits;
+        // sort into a logical order for the selector (see isSiteVisitEligible
+        // / cohortSortKey above).
+        const transformedCohorts = (cohortsData.cohorts || [])
+          .filter(isSiteVisitEligible)
+          .sort((a: any, b: any) => {
+            const [ap, as_, an] = cohortSortKey(a);
+            const [bp, bs, bn] = cohortSortKey(b);
+            return ap - bp || as_ - bs || an - bn;
+          })
+          .map((c: any) => ({
+            ...c,
+            displayName: `${c.program?.abbreviation || 'Unknown'} ${formatCohortNumber(c.cohort_number)}`,
+          }));
         setCohorts(transformedCohorts);
       }
       if (instructorsData.success) setInstructors(instructorsData.instructors || []);
