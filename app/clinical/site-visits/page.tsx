@@ -48,6 +48,7 @@ interface Program {
 interface Cohort {
   id: string;
   cohort_number: number;
+  current_semester: number | null;
   program: Program;
   is_active: boolean;
   // Computed display name
@@ -236,8 +237,26 @@ export default function SiteVisitsPage() {
 
       if (sitesData.success) setSites(sitesData.sites || []);
       if (cohortsData.success) {
+        // Site visits only apply to AEMT (whole program) and Paramedic
+        // semesters 3-4 (the clinical/internship phase) - EMT students
+        // don't do site visits, and Paramedic S1-S2 aren't in clinicals yet.
+        const eligibleCohorts = (cohortsData.cohorts || []).filter((c: any) =>
+          c.program?.abbreviation === 'AEMT' ||
+          (c.program?.abbreviation === 'PM' && (c.current_semester === 3 || c.current_semester === 4))
+        );
+        // Logical order: AEMT first, then Paramedic by semester (S4 before
+        // S3, most clinically-advanced first), then cohort number descending.
+        eligibleCohorts.sort((a: any, b: any) => {
+          if (a.program?.abbreviation !== b.program?.abbreviation) {
+            return a.program?.abbreviation === 'AEMT' ? -1 : 1;
+          }
+          if ((b.current_semester || 0) !== (a.current_semester || 0)) {
+            return (b.current_semester || 0) - (a.current_semester || 0);
+          }
+          return Number(b.cohort_number) - Number(a.cohort_number);
+        });
         // Transform cohorts to add displayName
-        const transformedCohorts = (cohortsData.cohorts || []).map((c: any) => ({
+        const transformedCohorts = eligibleCohorts.map((c: any) => ({
           ...c,
           displayName: `${c.program?.abbreviation || 'Unknown'} ${c.cohort_number}`,
         }));
