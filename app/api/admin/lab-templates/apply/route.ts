@@ -128,6 +128,7 @@ export async function POST(request: NextRequest) {
       .select(`
         id, name, description, week_number, day_number, category,
         instructor_count, is_anchor, anchor_type, requires_review, review_notes,
+        lab_mode, is_adv_cert_testing, cert_course, section_number, section_label,
         stations:lab_template_stations(
           id, sort_order, station_type, station_name, skills, scenario_id,
           scenario_title, difficulty, notes, metadata, skill_sheet_id
@@ -245,6 +246,17 @@ export async function POST(request: NextRequest) {
           day_number: dayNum,
           notes: template.description || null,
           source_template_id: template.id,
+          // Copied from the template so generated lab_days match the
+          // template's intended shape (e.g. lab_mode='individual_testing'
+          // for one-at-a-time testing/OSCE-style days) — previously
+          // silently dropped here, so every template-generated lab_day
+          // came out on the DB default ('group_rotations') regardless of
+          // what the template specified.
+          lab_mode: (template as { lab_mode?: string | null }).lab_mode || undefined,
+          is_adv_cert_testing: (template as { is_adv_cert_testing?: boolean }).is_adv_cert_testing || undefined,
+          cert_course: (template as { cert_course?: string | null }).cert_course || undefined,
+          section_number: (template as { section_number?: number | null }).section_number || undefined,
+          section_label: (template as { section_label?: string | null }).section_label || undefined,
         })
         .select('id, date, title, week_number, day_number')
         .single();
