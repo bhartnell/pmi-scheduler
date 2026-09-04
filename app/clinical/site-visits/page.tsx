@@ -429,6 +429,11 @@ export default function SiteVisitsPage() {
     window.open(`/api/clinical/site-visits/export?${params.toString()}`, '_blank');
   };
 
+  const handleExportCoAEMSP = () => {
+    if (!filterCohortId) return;
+    window.open(`/api/clinical/site-visits/export-coaemsp?cohortId=${filterCohortId}`, '_blank');
+  };
+
   const toggleDepartment = (dept: string) => {
     setFormDepartments(prev =>
       prev.includes(dept)
@@ -486,6 +491,15 @@ export default function SiteVisitsPage() {
               >
                 <FileSpreadsheet className="w-4 h-4" />
                 Export
+              </button>
+              <button
+                onClick={handleExportCoAEMSP}
+                disabled={!filterCohortId}
+                title={filterCohortId ? 'Export official CoAEMSP Clinical/Field Visit Log for the selected cohort' : 'Select a Cohort filter above to export its CoAEMSP log'}
+                className="flex items-center gap-2 px-4 min-h-[44px] bg-emerald-700 text-white rounded-lg hover:bg-emerald-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-700"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                CoAEMSP Log
               </button>
               <button
                 onClick={() => {
