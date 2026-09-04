@@ -365,7 +365,7 @@ function EnterContent() {
         </div>
 
         <p className="text-center text-slate-500 text-xs mt-6">
-          Spring 2026 &mdash; March 30-31
+          Enter the event code from your evaluator invitation
         </p>
       </div>
     </div>
