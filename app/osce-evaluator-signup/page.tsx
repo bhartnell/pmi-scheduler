@@ -14,8 +14,16 @@ interface TimeBlock {
   observer_count: number;
 }
 
+interface EventInfo {
+  title: string;
+  subtitle: string | null;
+  description: string | null;
+  location: string | null;
+}
+
 export default function OsceEvaluatorSignup() {
   const [blocks, setBlocks] = useState<TimeBlock[]>([]);
+  const [event, setEvent] = useState<EventInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedBlocks, setSelectedBlocks] = useState<Set<string>>(new Set());
   const [agencyPref, setAgencyPref] = useState(false);
@@ -31,7 +39,10 @@ export default function OsceEvaluatorSignup() {
     setLoading(true);
     fetch('/api/osce/time-blocks')
       .then(r => r.json())
-      .then(data => setBlocks(data.blocks || []))
+      .then(data => {
+        setBlocks(data.blocks || []);
+        setEvent(data.event || null);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   };
@@ -53,6 +64,21 @@ export default function OsceEvaluatorSignup() {
     const date = new Date(d + 'T12:00:00');
     return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
   };
+
+  // Derive per-day summary cards (date + time span) from the event's actual time blocks
+  // instead of hardcoding dates — so this page works for any OSCE event without a rebuild.
+  const dayGroups = Array.from(
+    blocks.reduce((map, b) => {
+      const existing = map.get(b.day_number);
+      if (!existing) {
+        map.set(b.day_number, { date: b.date, start: b.start_time, end: b.end_time });
+      } else {
+        if (b.start_time < existing.start) existing.start = b.start_time;
+        if (b.end_time > existing.end) existing.end = b.end_time;
+      }
+      return map;
+    }, new Map<number, { date: string; start: string; end: string }>())
+  ).sort(([a], [b]) => a - b);
 
   // Validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -212,25 +238,24 @@ export default function OsceEvaluatorSignup() {
           <div className="osce-hero-inner">
             <p className="osce-institution">Pima Medical Institute &mdash; Paramedic Program</p>
             <h1>Clinical Capstone<br />Evaluator Registration</h1>
-            <p className="osce-hero-subtitle">Join our Medical Directors and faculty as an evaluator for the Spring 2026 Paramedic Clinical Capstone assessment.</p>
+            <p className="osce-hero-subtitle">{event?.description || 'Join our Medical Directors and faculty as an evaluator for the Paramedic Clinical Capstone assessment.'}</p>
           </div>
         </header>
 
-        <div className="osce-info-strip">
-          <div className="osce-info-card">
-            <div className="osce-label">Day 1</div>
-            <div className="osce-value">Monday, March 30</div>
-            <div className="osce-sub">0900 &ndash; 1700</div>
-          </div>
-          <div className="osce-info-card">
-            <div className="osce-label">Day 2</div>
-            <div className="osce-value">Tuesday, March 31</div>
-            <div className="osce-sub">1300 &ndash; 1700</div>
-          </div>
+        <div className="osce-info-strip" style={{ gridTemplateColumns: `repeat(${dayGroups.length + 1}, 1fr)` }}>
+          {dayGroups.map(([dayNumber, group]) => (
+            <div className="osce-info-card" key={dayNumber}>
+              <div className="osce-label">Day {dayNumber}</div>
+              <div className="osce-value">{formatDate(group.date)}</div>
+              <div className="osce-sub">{formatTime(group.start)} &ndash; {formatTime(group.end)}</div>
+            </div>
+          ))}
           <div className="osce-info-card">
             <div className="osce-label">Location</div>
-            <div className="osce-value">PMI Paramedic Lab</div>
-            <div className="osce-sub">Las Vegas Campus</div>
+            <div className="osce-value">{event?.location?.split('—')[0]?.trim() || event?.location || 'TBD'}</div>
+            {event?.location?.includes('—') && (
+              <div className="osce-sub">{event.location.split('—').slice(1).join('—').trim()}</div>
+            )}
           </div>
         </div>
 

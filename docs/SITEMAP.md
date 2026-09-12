@@ -1,5 +1,7 @@
 # PMI EMS Scheduler — Site Map
-> Refreshed 2026-07-15 (PALS hub findability fix: home page's main-nav card and `/calendar` toolbar button repointed from `/labs/acls-hub` to `/labs/aha-hub` so PALS is reachable the same way ACLS always was; `/labs/acls-hub` gained a back-link to `/labs/aha-hub`).
+> Refreshed 2026-09-04 (CoAEMSP Clinical/Field Visit Log export: new "CoAEMSP Log" button on `/clinical/site-visits` (cohort filter required), backed by new `/api/clinical/site-visits/export-coaemsp` route — one accreditation-format .docx per cohort.)
+> Previously refreshed 2026-09-01 (OSCE invite+links stage: `/admin/osce-tokens` now linked from the Admin hub — was previously direct-URL-only; corrected the stale `/osce-evaluator-signup` redirect entry — it's a live page, not a redirect. See OSCE section below.)
+> Previously refreshed 2026-07-15 (PALS hub findability fix: home page's main-nav card and `/calendar` toolbar button repointed from `/labs/acls-hub` to `/labs/aha-hub` so PALS is reachable the same way ACLS always was; `/labs/acls-hub` gained a back-link to `/labs/aha-hub`).
 > Previously refreshed 2026-07-15 (PALS Hub Build Plan Phases 5-6: AHA 2025 reference agenda display + Section A/B/C/D/E certification template seed + skills/attestation station styling on `/labs/pals-hub`).
 > Previously refreshed 2026-07-14 (PALS Hub Build Plan: corrected practice TL threshold to ≥2 + oversized-group warning, station direct-links on both AHA hubs, calendar "Open Hub" deep-link with `?date=`).
 > Previously refreshed 2026-07-14 (`/labs/pals-hub` — PALS Hub, mirrors ACLS Hub — added).
@@ -136,6 +138,7 @@ Two doors — labeled to keep directors out of the student dead-end:
 | Path | Component | Role |
 |------|-----------|------|
 | `/` | `app/page.tsx` | any authenticated |
+| `/attendance` | quick, phone-first roll call over existing `checklists`/`checklist_attendance` (field trips / facility tours); entry point is the UserMenu dropdown, not a hub card, per Ben's no-clutter request | instructor+ (API-enforced) |
 | `/calendar` | unified calendar | instructor+ |
 | `/help` | help hub | any |
 | `/notifications` | inbox | any |
@@ -279,7 +282,7 @@ Canonical home for lab day operations. 40 pages.
 | `/clinical/preceptors` | Preceptor directory |
 | `/clinical/ride-alongs` + `/availability` + `/shifts` | Ride-along scheduling |
 | `/clinical/rotation-scheduler` | Rotation scheduler |
-| `/clinical/site-visits`, `/clinical/site-visit-settings` | Site visit admin |
+| `/clinical/site-visits`, `/clinical/site-visit-settings` | Site visit admin. "CoAEMSP Log" button (cohort filter required) exports the official CoAEMSP Clinical/Field Visit Log as one .docx per cohort via `/api/clinical/site-visits/export-coaemsp`. |
 | `/clinical/summative-evaluations` + `/[id]/grade` | Summative evals |
 
 ## Reports
@@ -382,10 +385,13 @@ Case study system. 10 pages.
 | Path | Notes |
 |------|-------|
 | `/osce`, `/osce/[slug]` | Public OSCE landing |
-| `/osce-evaluator-signup` → `/osce/spring-2026` (redirect) |
+| `/osce-evaluator-signup` | Public self-serve observer registration form (picks time blocks, writes `osce_observers`). NOT a redirect — corrected 2026-09-01; previous entry here was stale. Still hardcoded to "Spring 2026" copy/dates in the JSX rather than reading the selected event, flagged separately as a Repeatability-Rule gap for a future pass. |
 | `/osce-scenario`, `/osce-scenario/[letter]` | Scenario library |
-| `/osce-scoring/{enter,dashboard,[assessmentId]}` | Scoring workflow |
-| `/admin/osce-events`, `/admin/osce-tokens`, `/admin/osce-observers`, `/admin/osce-results` | Admin |
+| `/osce-scoring/{enter,dashboard,[assessmentId]}` | Scoring workflow. `/osce-scoring/enter` accepts either the event PIN + name-select flow, or a `?token=` guest-token link (see `/admin/osce-tokens`) |
+| `/admin/osce-events` | Admin — create/manage OSCE events, observers, time blocks, results (per event) |
+| `/admin/osce-tokens` | Admin — generate per-evaluator guest-token links scoped to one event and email invites to external evaluators (chiefs/agency/clinical leadership). Now linked from the Admin hub (2026-09-01); previously reachable only by direct URL. |
+| `/admin/osce-observers` | Redirect stub → most recent event's `/admin/osce-events/[id]` (Observers tab) |
+| `/admin/osce-results` | Admin — evaluator scores/results across events |
 
 ## Settings, Auth, Misc
 

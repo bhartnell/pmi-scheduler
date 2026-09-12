@@ -258,6 +258,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-amber-600',
         },
         {
+          href: '/admin/osce-tokens',
+          icon: Key,
+          title: 'OSCE Guest Tokens & Invites',
+          description: 'Generate per-evaluator access links and email invitations to external OSCE evaluators',
+          color: 'bg-amber-600',
+        },
+        {
           href: '/admin/osce-results',
           icon: BarChart3,
           title: 'OSCE Results',

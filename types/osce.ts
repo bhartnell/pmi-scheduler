@@ -54,3 +54,32 @@ export interface OsceObserverBlock {
   start_time: string;
   end_time: string;
 }
+
+/** Evaluator role recorded on a guest token (matches osce_guest_tokens_evaluator_role_check). */
+export type OsceGuestTokenRole = 'md' | 'faculty' | 'agency';
+
+/**
+ * A guest-token grading-access link generated for one external evaluator.
+ * The token itself is the credential — `${APP_URL}/osce-scoring/enter?token=...`
+ * signs the evaluator straight into the scoring dashboard, no login required.
+ * Scoped to one osce_events row (event_id) per the Repeatability Rule — every
+ * OSCE event gets its own independent set of tokens.
+ */
+export interface OsceGuestToken {
+  id: string;
+  token: string;
+  evaluator_name: string;
+  evaluator_role: OsceGuestTokenRole | null;
+  email: string | null;
+  agency: string | null;
+  event_id: string | null;
+  valid_from: string;
+  valid_until: string;
+  created_at: string;
+  /** Set when an invite email has been sent at least once. */
+  invited_at: string | null;
+  /** How many times an invite email was successfully sent for this token. */
+  invite_send_count: number;
+  /** Error message from the most recent failed invite send, if any. */
+  invite_last_error: string | null;
+}

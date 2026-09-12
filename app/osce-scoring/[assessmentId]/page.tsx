@@ -344,6 +344,7 @@ export default function ScoringPage() {
   const [expandedNotes, setExpandedNotes] = useState<Set<string>>(new Set());
   const [isOnline, setIsOnline] = useState(true);
   const [isTestMode, setIsTestMode] = useState(false);
+  const [eventTitle, setEventTitle] = useState('OSCE Clinical Capstone');
   const [showScenario, setShowScenario] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('osce_show_scenario');
@@ -394,6 +395,7 @@ export default function ScoringPage() {
         if (pin.toUpperCase() === 'TEST2026' || title.includes('TEST') || title.includes('DRY RUN')) {
           setIsTestMode(true);
         }
+        if (title) setEventTitle(title);
       } catch { /* ignore */ }
     }
 
@@ -589,7 +591,7 @@ ${score.oral_notes ? `<div class="notes"><strong>Oral Board Notes:</strong> ${sc
 ${score.concerns_notes ? `<div class="notes"><strong>Concerns:</strong> ${score.concerns_notes}</div>` : ''}
 ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${score.general_notes}</div>` : ''}
 
-<p style="font-size:11px;color:#999;margin-top:24px;text-align:center;">Pima Medical Institute &mdash; Paramedic Program &mdash; Spring 2026 Clinical Capstone</p>
+<p style="font-size:11px;color:#999;margin-top:24px;text-align:center;">Pima Medical Institute &mdash; Paramedic Program &mdash; ${eventTitle}</p>
 </body></html>`);
 
     printWindow.document.close();

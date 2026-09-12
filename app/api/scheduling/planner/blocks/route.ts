@@ -190,6 +190,37 @@ export async function POST(request: NextRequest) {
       }));
       await supabase.from('pmi_block_instructors').insert(assignments);
 
+      // On-change calendar autosync (2026-09-12): the PUT hook (editing an
+      // existing block's instructors) already calls applyInstructorDiff →
+      // syncSeriesForUser, but a brand-new block with instructors attached
+      // at creation time had no equivalent — it just sat unsynced until
+      // someone used "Sync Now" or an edit touched it. Best-effort, run in
+      // parallel per instructor; awaited so it isn't killed by the
+      // serverless freeze-on-response (per the 2026-07-06 finding).
+      try {
+        const { data: instructorRows } = await supabase
+          .from('lab_users')
+          .select('email')
+          .in('id', newInstructorIds);
+        const emails = (instructorRows ?? [])
+          .map((r) => r.email as string)
+          .filter(Boolean);
+        if (emails.length > 0) {
+          const { syncSeriesForUser } = await import('@/lib/calendar-auto-sync');
+          await Promise.allSettled(
+            emails.map((email) =>
+              syncSeriesForUser({
+                userEmail: email,
+                recurringGroupId: recurring_group_id || null,
+                blockIdForOneOff: recurring_group_id ? null : data.id,
+              })
+            )
+          );
+        }
+      } catch (e) {
+        console.error('[planner/blocks POST] calendar autosync error', e);
+      }
+
       // Re-fetch to include instructors in the response
       const { data: refreshed } = await supabase
         .from('pmi_schedule_blocks')

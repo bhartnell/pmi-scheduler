@@ -370,6 +370,12 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
   const [testLoading, setTestLoading] = useState(false);
   const [clearTestLoading, setClearTestLoading] = useState(false);
   const [clearTestConfirm, setClearTestConfirm] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState<Record<string, Record<string, string | null>>>({});
+  const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
+  const [sendingInvites, setSendingInvites] = useState(false);
+  const [sendingObserverId, setSendingObserverId] = useState<string | null>(null);
+  const [inviteResult, setInviteResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [confirmSendAll, setConfirmSendAll] = useState(false);
 
   const emptyObserverForm = {
     name: '', title: '', agency: '', email: '', phone: '', role: '',
@@ -400,10 +406,63 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
     } catch { /* ignore */ }
   }, [eventId]);
 
+  const fetchInviteStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/osce/events/${eventId}/calendar-invites`);
+      if (res.ok) {
+        const data = await res.json();
+        setInviteStatus(data.invite_status || {});
+        setCalendarConnected(!!data.calendar_connected);
+      }
+    } catch { /* ignore */ }
+  }, [eventId]);
+
   useEffect(() => {
     fetchObservers();
     fetchTimeBlocks();
-  }, [fetchObservers, fetchTimeBlocks]);
+    fetchInviteStatus();
+  }, [fetchObservers, fetchTimeBlocks, fetchInviteStatus]);
+
+  const observerInviteSent = (observerId: string) => {
+    const blocks = inviteStatus[observerId];
+    if (!blocks) return false;
+    return Object.values(blocks).some((v) => !!v);
+  };
+
+  const handleSendInvites = async (opts: { action: 'send_all' } | { action: 'send_observer'; observerId: string }) => {
+    if (opts.action === 'send_all') {
+      setSendingInvites(true);
+    } else {
+      setSendingObserverId(opts.observerId);
+    }
+    setInviteResult(null);
+    try {
+      const res = await fetch(`/api/osce/events/${eventId}/calendar-invites`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          opts.action === 'send_all'
+            ? { action: 'send_all' }
+            : { action: 'send_observer', observer_id: opts.observerId }
+        ),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setInviteResult({ type: 'success', message: data.message || 'Invites sent.' });
+        fetchInviteStatus();
+      } else if (data.needs_calendar) {
+        setCalendarConnected(false);
+        setInviteResult({ type: 'error', message: data.error || 'Google Calendar not connected.' });
+      } else {
+        setInviteResult({ type: 'error', message: data.error || 'Failed to send invites.' });
+      }
+    } catch {
+      setInviteResult({ type: 'error', message: 'Network error sending invites.' });
+    }
+    setSendingInvites(false);
+    setSendingObserverId(null);
+    setConfirmSendAll(false);
+  };
 
   const handleDelete = async (observerId: string) => {
     try {
@@ -776,16 +835,62 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
           <Download className="w-4 h-4" />
           Export CSV
         </a>
-        <button
-          disabled
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 rounded-lg text-sm font-medium cursor-not-allowed"
-          title="Coming soon"
-        >
-          <Send className="w-4 h-4" />
-          Send Calendar Invites
-          <span className="text-xs">(Coming soon)</span>
-        </button>
+        {confirmSendAll ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-amber-700 dark:text-amber-300 max-w-[220px]">
+              Send Google Calendar invites to all {observers.length} observer{observers.length !== 1 ? 's' : ''} now?
+            </span>
+            <button
+              onClick={() => handleSendInvites({ action: 'send_all' })}
+              disabled={sendingInvites}
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium disabled:opacity-50"
+            >
+              {sendingInvites ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              Confirm Send
+            </button>
+            <button
+              onClick={() => setConfirmSendAll(false)}
+              disabled={sendingInvites}
+              className="px-3 py-1.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmSendAll(true)}
+            disabled={observers.length === 0 || calendarConnected === false}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            title={
+              calendarConnected === false
+                ? 'Connect Google Calendar in Settings first'
+                : observers.length === 0
+                ? 'Add observers first'
+                : 'Send Google Calendar invites to all observers'
+            }
+          >
+            <Send className="w-4 h-4" />
+            Send Calendar Invites
+          </button>
+        )}
       </div>
+
+      {calendarConnected === false && (
+        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          Google Calendar isn&apos;t connected for your account, so invites can&apos;t send yet. Connect it in Settings, then come back here.
+        </div>
+      )}
+      {inviteResult && (
+        <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 text-sm ${
+          inviteResult.type === 'success'
+            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+        }`}>
+          {inviteResult.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
+          {inviteResult.message}
+        </div>
+      )}
 
       {/* Test mode section (only for draft events) */}
       {event.status === 'draft' && (
@@ -841,7 +946,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              {['Name', 'Title', 'Agency', 'Email', 'Phone', 'Role', 'Blocks', 'Registered', ''].map(h => (
+              {['Name', 'Title', 'Agency', 'Email', 'Phone', 'Role', 'Blocks', 'Invited', 'Registered', ''].map(h => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -878,9 +983,27 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
                       {o.blocks.length === 0 && <span className="text-xs text-gray-400">None</span>}
                     </div>
                   </td>
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                    {observerInviteSent(o.id) ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400">
+                        <Check className="w-3.5 h-3.5" /> Sent
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">Not sent</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{new Date(o.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-sm">
                     <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleSendInvites({ action: 'send_observer', observerId: o.id })}
+                        disabled={sendingObserverId === o.id || o.blocks.length === 0 || calendarConnected === false}
+                        className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={observerInviteSent(o.id) ? 'Resend calendar invite' : 'Send calendar invite'}
+                        aria-label="Send calendar invite"
+                      >
+                        {sendingObserverId === o.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      </button>
                       <button onClick={() => openEditModal(o)} className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded" title="Edit observer" aria-label="Edit observer">
                         <Edit3 className="w-4 h-4" />
                       </button>
@@ -900,7 +1023,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
                 </tr>
                 {expandedId === o.id && (
                   <tr>
-                    <td colSpan={9} className="px-4 py-3 bg-gray-50 dark:bg-gray-900">
+                    <td colSpan={10} className="px-4 py-3 bg-gray-50 dark:bg-gray-900">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div><span className="font-medium text-gray-500 dark:text-gray-400">Phone:</span> <span className="text-gray-900 dark:text-white">{o.phone || 'N/A'}</span></div>
                         <div><span className="font-medium text-gray-500 dark:text-gray-400">Role:</span> <span className="text-gray-900 dark:text-white">{o.role || 'N/A'}</span></div>
