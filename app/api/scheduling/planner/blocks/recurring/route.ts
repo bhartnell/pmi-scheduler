@@ -7,6 +7,7 @@ import {
   resolveSemesterIdForDate,
   cohortIdForProgramSchedule,
 } from '@/lib/planner-semester';
+import { syncSeriesForUser } from '@/lib/calendar-auto-sync';
 
 /**
  * POST /api/scheduling/planner/blocks/recurring
@@ -235,6 +236,35 @@ export async function POST(request: NextRequest) {
         const batch = assignments.slice(i, i + 100);
         await supabase.from('pmi_block_instructors').insert(batch);
       }
+
+      // Calendar auto-sync: push the newly-created series to the assigned
+      // instructor's calendar. Fire-and-forget (mirrors the PUT hook in
+      // blocks/[id]/route.ts) so the response returns immediately — a
+      // Google sync failure here is logged but never blocks series
+      // creation.
+      void (async () => {
+        try {
+          const { data: instr } = await supabase
+            .from('lab_users')
+            .select('email')
+            .eq('id', instructor_id)
+            .maybeSingle();
+          if (instr?.email) {
+            const result = await syncSeriesForUser({
+              userEmail: instr.email,
+              recurringGroupId,
+              blockIdForOneOff: null,
+            });
+            if (result.status === 'failed') {
+              console.warn(`[planner-block recurring POST] auto-sync failed for ${instr.email}:`, result.error);
+            } else {
+              console.log(`[planner-block recurring POST] auto-sync ${result.status} for ${instr.email}`);
+            }
+          }
+        } catch (err) {
+          console.error('[planner-block recurring POST] auto-sync error:', err);
+        }
+      })();
     }
 
     return NextResponse.json({

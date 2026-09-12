@@ -199,6 +199,20 @@ export async function POST(request: NextRequest) {
       // Calendar sync is best-effort
     }
 
+    // General-lab-default reconcile, scoped to this instructor. A station
+    // assignment is MORE specific than the generic lab-day event (see
+    // lib/general-lab-sync.ts precedence rules), so adding one here can
+    // mean this instructor's general-lab-default event for that lab day
+    // should now be suppressed. Scoped via targetEmail so this is a
+    // single-instructor pass, not the full-table "Sync All" reconcile.
+    // Best-effort — never fails the station assignment itself.
+    try {
+      const { syncGeneralLabDefaults } = await import('@/lib/general-lab-sync');
+      await syncGeneralLabDefaults(supabase, { targetEmail: userEmail });
+    } catch (err) {
+      console.error('[station-instructors POST] general-lab-default sync failed:', err);
+    }
+
     return NextResponse.json({ success: true, instructor: data });
   } catch (error) {
     console.error('Error adding station instructor:', error);
@@ -238,6 +252,19 @@ export async function DELETE(request: NextRequest) {
     try {
       const { removeLabStationAssignment } = await import('@/lib/google-calendar');
       removeLabStationAssignment({ userEmail, stationId }).catch(() => {});
+    } catch {
+      // Calendar sync is best-effort
+    }
+
+    // Fire-and-forget: reconcile this instructor's general-lab-default
+    // event for the affected lab day — removing the (more specific)
+    // station assignment can mean the generic lab-day event should now
+    // exist again. Scoped to this instructor via targetEmail.
+    try {
+      const { syncGeneralLabDefaults } = await import('@/lib/general-lab-sync');
+      syncGeneralLabDefaults(supabase, { targetEmail: userEmail }).catch((err) => {
+        console.error('[station-instructors DELETE] general-lab-default sync failed:', err);
+      });
     } catch {
       // Calendar sync is best-effort
     }

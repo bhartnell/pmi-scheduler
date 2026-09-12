@@ -197,6 +197,9 @@ export async function POST(request: NextRequest) {
     let skippedCount = 0;
     let outOfRangeCount = 0;
     const errors: string[] = [];
+    // Tracks whether any lab_day created below carried cert_course='pals'
+    // from its template — triggers the PALS day-block sync after the loop.
+    let createdPalsDay = false;
 
     for (const template of sorted) {
       const weekNum = template.week_number || 1;
@@ -268,6 +271,9 @@ export async function POST(request: NextRequest) {
       }
 
       createdLabDays.push(labDay);
+      if ((template as { cert_course?: string | null }).cert_course === 'pals') {
+        createdPalsDay = true;
+      }
 
       // Create stations for this lab day from the template's stations
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -365,6 +371,23 @@ export async function POST(request: NextRequest) {
           console.error('Error creating stations from template:', stationsError);
           errors.push(`W${weekNum}D${dayNum} stations: ${stationsError.message}`);
         }
+      }
+    }
+
+    // PALS day-block sync: this generic template-apply path also sets
+    // lab_days.cert_course='pals' when a template carries it (see the
+    // insert above). syncPalsDayEvents has no per-lab-day scoping — only
+    // an optional targetEmail — so this fires an unscoped full-table
+    // reconcile rather than something limited to just this apply's new
+    // days. Accepted cost/design tradeoff for a rarely-called admin
+    // action, not an oversight. Best-effort — never fails the apply
+    // response.
+    if (createdPalsDay) {
+      try {
+        const { syncPalsDayEvents } = await import('@/lib/pals-all-day-sync');
+        await syncPalsDayEvents(supabase);
+      } catch (err) {
+        console.error('[lab-templates/apply] pals-day sync failed:', err);
       }
     }
 

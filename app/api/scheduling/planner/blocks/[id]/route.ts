@@ -358,6 +358,86 @@ export async function PUT(
   }
 }
 
+/**
+ * Resolve every instructor (join table + legacy direct columns) currently
+ * assigned across a set of blocks, as lowercased lab_users emails. Used to
+ * capture "who was assigned" BEFORE a delete removes the rows.
+ */
+async function collectAffectedInstructorEmails(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  blockIds: string[]
+): Promise<Set<string>> {
+  if (blockIds.length === 0) return new Set();
+  const { data: blocks } = await supabase
+    .from('pmi_schedule_blocks')
+    .select('id, instructor_id, additional_instructor_id')
+    .in('id', blockIds);
+  const instructorIds = new Set<string>();
+  for (const b of blocks ?? []) {
+    if (b.instructor_id) instructorIds.add(b.instructor_id);
+    if (b.additional_instructor_id) instructorIds.add(b.additional_instructor_id);
+  }
+  const { data: joinRows } = await supabase
+    .from('pmi_block_instructors')
+    .select('instructor_id')
+    .in('schedule_block_id', blockIds);
+  for (const r of joinRows ?? []) {
+    if (r.instructor_id) instructorIds.add(r.instructor_id);
+  }
+  if (instructorIds.size === 0) return new Set();
+  const { data: users } = await supabase
+    .from('lab_users')
+    .select('id, email')
+    .in('id', Array.from(instructorIds));
+  return new Set((users ?? []).map((u) => (u.email as string).toLowerCase()));
+}
+
+/**
+ * Reconcile Google Calendar AFTER a delete. For each affected instructor,
+ * re-run syncSeriesForUser for the (recurringGroupId | blockIdForOneOff)
+ * key: if OTHER blocks in that series still exist for the instructor (a
+ * "this_and_future"/"all" partial delete, or a different day/week under
+ * the same recurring_group_id), this PATCHes the Google event's RRULE down
+ * to the remaining dates instead of destroying it outright. Only when
+ * syncSeriesForUser reports 'no-blocks' (the instructor has nothing left
+ * in this series) do we call removeSeriesForUser to delete the orphaned
+ * Google event + mapping — exactly the contract documented on
+ * syncSeriesForUser in lib/calendar-auto-sync.ts. Awaited (not
+ * fire-and-forget): Vercel freezes the serverless function as soon as the
+ * response returns, so a detached promise here could leave the Google
+ * event orphaned (same bug class as commit 0a98e539). Never throws —
+ * calendar cleanup is best-effort and must never block the delete
+ * response.
+ */
+async function reconcileCalendarAfterDelete(
+  emails: Set<string>,
+  recurringGroupId: string | null,
+  blockIdForOneOff: string | null
+): Promise<void> {
+  if (emails.size === 0) return;
+  try {
+    const { syncSeriesForUser, removeSeriesForUser } = await import('@/lib/calendar-auto-sync');
+    const settled = await Promise.allSettled(
+      Array.from(emails).map(async (email) => {
+        const result = await syncSeriesForUser({ userEmail: email, recurringGroupId, blockIdForOneOff });
+        if (result.status === 'no-blocks') {
+          return removeSeriesForUser({ userEmail: email, recurringGroupId, blockIdForOneOff });
+        }
+        return result;
+      })
+    );
+    for (const s of settled) {
+      if (s.status === 'rejected') {
+        console.error('[planner-block DELETE] auto-sync rejected:', s.reason);
+      } else if (s.value.status === 'failed') {
+        console.warn('[planner-block DELETE] auto-sync failed:', 'error' in s.value ? s.value.error : '');
+      }
+    }
+  } catch (err) {
+    console.error('[planner-block DELETE] reconcileCalendarAfterDelete error:', err);
+  }
+}
+
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -388,6 +468,23 @@ export async function DELETE(
       if (fetchError) throw fetchError;
 
       if (targetBlock?.recurring_group_id) {
+        // Capture who's assigned across the blocks THIS delete will
+        // remove, BEFORE removing them.
+        let idsQuery = supabase
+          .from('pmi_schedule_blocks')
+          .select('id')
+          .eq('recurring_group_id', targetBlock.recurring_group_id);
+        if (deleteMode === 'this_and_future' && targetBlock.date) {
+          idsQuery = idsQuery
+            .gte('date', targetBlock.date)
+            .eq('day_of_week', targetBlock.day_of_week);
+        }
+        const { data: idsToDelete } = await idsQuery;
+        const affectedEmails = await collectAffectedInstructorEmails(
+          supabase,
+          (idsToDelete ?? []).map((b: { id: string }) => b.id)
+        );
+
         let deleteQuery = supabase
           .from('pmi_schedule_blocks')
           .delete()
@@ -402,17 +499,37 @@ export async function DELETE(
         const { error: batchError } = await deleteQuery;
         if (batchError) throw batchError;
 
+        // The whole recurring_group_id is the series key here — an 'all'
+        // delete removes every block in the group, and 'this_and_future'
+        // removes a day/week-scoped subset of the SAME group. Either way
+        // reconcile is keyed by recurringGroupId; syncSeriesForUser
+        // recomputes from whatever's left (may be nothing => removed).
+        await reconcileCalendarAfterDelete(affectedEmails, targetBlock.recurring_group_id, null);
+
         return NextResponse.json({ success: true, batch_deleted: true });
       }
     }
 
-    // Single delete
+    // Single delete — capture assignment + series key BEFORE deleting.
+    const { data: blockBeforeDelete } = await supabase
+      .from('pmi_schedule_blocks')
+      .select('id, recurring_group_id')
+      .eq('id', id)
+      .maybeSingle();
+    const affectedEmails = await collectAffectedInstructorEmails(supabase, [id]);
+
     const { error } = await supabase
       .from('pmi_schedule_blocks')
       .delete()
       .eq('id', id);
 
     if (error) throw error;
+
+    await reconcileCalendarAfterDelete(
+      affectedEmails,
+      blockBeforeDelete?.recurring_group_id ?? null,
+      blockBeforeDelete?.recurring_group_id ? null : id
+    );
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {

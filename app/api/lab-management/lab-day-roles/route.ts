@@ -180,6 +180,22 @@ export async function POST(request: NextRequest) {
       console.error('Failed to sync lab day role to calendar:', syncError);
     }
 
+    // General-lab-default reconcile, scoped to this instructor. A role
+    // assignment (lab_lead/roamer/observer/coordinator) is MORE specific
+    // than the generic lab-day event (see lib/general-lab-sync.ts
+    // precedence rules), so adding one here can mean this instructor's
+    // general-lab-default event for that lab day should now be
+    // suppressed. Best-effort — never fails the role assignment itself.
+    try {
+      const roleInstructorEmail = processedRole.instructor?.email;
+      if (roleInstructorEmail) {
+        const { syncGeneralLabDefaults } = await import('@/lib/general-lab-sync');
+        await syncGeneralLabDefaults(supabase, { targetEmail: roleInstructorEmail });
+      }
+    } catch (err) {
+      console.error('[lab-day-roles POST] general-lab-default sync failed:', err);
+    }
+
     return NextResponse.json({ success: true, role: processedRole });
   } catch (error) {
     console.error('Error adding role:', error);
@@ -224,14 +240,26 @@ export async function DELETE(request: NextRequest) {
       // freezes the serverless function on response, so a detached promise can
       // skip the delete — same bug class fixed in 0a98e539.
       if (roleRecord) {
+        const instructor = Array.isArray(roleRecord.instructor) ? roleRecord.instructor[0] : roleRecord.instructor;
         try {
           const { removeLabDayRole } = await import('@/lib/google-calendar');
-          const instructor = Array.isArray(roleRecord.instructor) ? roleRecord.instructor[0] : roleRecord.instructor;
           if (instructor?.email) {
             await removeLabDayRole({ userEmail: instructor.email, roleId });
           }
         } catch (err) {
           console.error('[lab-day-roles] role event removal failed:', err);
+        }
+
+        // General-lab-default reconcile, scoped to this instructor —
+        // removing a role can mean the generic lab-day event should now
+        // exist again for that instructor/day.
+        try {
+          if (instructor?.email) {
+            const { syncGeneralLabDefaults } = await import('@/lib/general-lab-sync');
+            await syncGeneralLabDefaults(supabase, { targetEmail: instructor.email });
+          }
+        } catch (err) {
+          console.error('[lab-day-roles DELETE] general-lab-default sync failed:', err);
         }
       }
     } else if (labDayId) {
@@ -250,6 +278,7 @@ export async function DELETE(request: NextRequest) {
       if (error) throw error;
 
       // Remove Google Calendar events for each role — AWAITED (see above).
+      const affectedEmails = new Set<string>();
       if (roles && roles.length > 0) {
         try {
           const { removeLabDayRole } = await import('@/lib/google-calendar');
@@ -257,10 +286,23 @@ export async function DELETE(request: NextRequest) {
             const instructor = Array.isArray(r.instructor) ? r.instructor[0] : r.instructor;
             if (instructor?.email) {
               await removeLabDayRole({ userEmail: instructor.email, roleId: r.id });
+              affectedEmails.add(instructor.email);
             }
           }
         } catch (err) {
           console.error('[lab-day-roles] role events removal failed:', err);
+        }
+
+        // General-lab-default reconcile, once per affected instructor —
+        // removing these roles can mean the generic lab-day event should
+        // now exist again for them on this lab day.
+        try {
+          const { syncGeneralLabDefaults } = await import('@/lib/general-lab-sync');
+          for (const email of affectedEmails) {
+            await syncGeneralLabDefaults(supabase, { targetEmail: email });
+          }
+        } catch (err) {
+          console.error('[lab-day-roles DELETE] general-lab-default sync failed:', err);
         }
       }
     } else {

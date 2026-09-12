@@ -73,6 +73,26 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await configureExistingCohortDay({ labDayId: lab_day_id, templateId: template_id, dryRun });
+
+    // PALS day-block sync: configureExistingCohortDay can gap-fill
+    // lab_days.cert_course to 'pals' on an already-existing day (see
+    // lib/aha-course-generator.ts). Only fire when that field actually
+    // changed to 'pals' this call. Same unscoped-reconcile tradeoff as
+    // aha-courses/generate (syncPalsDayEvents has no per-lab-day
+    // scoping) — accepted cost for a rarely-called admin action.
+    // Best-effort — never fails the configure response.
+    const setPalsThisCall = !dryRun && result.field_changes.some(
+      (c) => c.field === 'cert_course' && c.action === 'fill_gap' && c.to === 'pals'
+    );
+    if (setPalsThisCall) {
+      try {
+        const { syncPalsDayEvents } = await import('@/lib/pals-all-day-sync');
+        await syncPalsDayEvents(getSupabaseAdmin());
+      } catch (err) {
+        console.error('[aha-courses/configure-day] pals-day sync failed:', err);
+      }
+    }
+
     return NextResponse.json({ success: true, ...result });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);

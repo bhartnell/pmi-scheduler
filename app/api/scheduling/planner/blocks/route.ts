@@ -6,6 +6,7 @@ import {
   assignSemesterId,
   cohortIdForProgramSchedule,
 } from '@/lib/planner-semester';
+import { applyInstructorDiff, type InstructorDiff } from '@/lib/calendar-auto-sync';
 
 const BLOCK_SELECT = `
   *,
@@ -25,6 +26,53 @@ const BLOCK_SELECT = `
     id, title, date
   )
 `;
+
+/**
+ * Fire-and-forget calendar sync after a planner block CREATE. Mirrors
+ * fireInstructorAutoSync in blocks/[id]/route.ts (same fire-and-forget
+ * style, same error handling) but as a pure "sync" — a brand-new block
+ * has no OLD instructor state, so this is applyInstructorDiff with an
+ * empty oldEmails set. Never throws — calendar sync is best-effort and
+ * must never block the API response.
+ */
+async function fireCreateAutoSync(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  block: { id: string; recurring_group_id: string | null; instructor_id: string | null; additional_instructor_id: string | null },
+  instructorIds: string[]
+): Promise<void> {
+  try {
+    const allIds = Array.from(
+      new Set([block.instructor_id, block.additional_instructor_id, ...instructorIds].filter(Boolean) as string[])
+    );
+    if (allIds.length === 0) return;
+
+    const { data: users } = await supabase
+      .from('lab_users')
+      .select('id, email')
+      .in('id', allIds);
+    const newEmails = new Set<string>();
+    for (const u of users ?? []) newEmails.add((u.email as string).toLowerCase());
+    if (newEmails.size === 0) return;
+
+    const diff: InstructorDiff = {
+      recurringGroupId: block.recurring_group_id,
+      blockIdForOneOff: block.recurring_group_id ? null : block.id,
+      oldEmails: new Set(),
+      newEmails,
+    };
+
+    const results = await applyInstructorDiff(diff);
+    for (const r of results) {
+      if (r.result.status === 'failed') {
+        console.warn(`[planner-block POST] auto-sync ${r.action} failed for ${r.email}:`, 'error' in r.result ? r.result.error : '');
+      } else {
+        console.log(`[planner-block POST] auto-sync ${r.action} ${r.result.status} for ${r.email}`);
+      }
+    }
+  } catch (err) {
+    console.error('[planner-block POST] fireCreateAutoSync error:', err);
+  }
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -197,8 +245,35 @@ export async function POST(request: NextRequest) {
         .eq('id', data.id)
         .single();
 
+      // Calendar auto-sync: new block + instructor assignments, mirrors
+      // the PUT hook's fire-and-forget style so the API response returns
+      // immediately (Google sync failures are logged, never fatal).
+      void fireCreateAutoSync(
+        supabase,
+        {
+          id: data.id,
+          recurring_group_id: data.recurring_group_id ?? null,
+          instructor_id: data.instructor_id ?? null,
+          additional_instructor_id: data.additional_instructor_id ?? null,
+        },
+        newInstructorIds
+      );
+
       return NextResponse.json({ block: refreshed || data });
     }
+
+    // Calendar auto-sync for the direct-FK instructor_id/additional_instructor_id
+    // case (no instructor_ids join-table assignments on this create).
+    void fireCreateAutoSync(
+      supabase,
+      {
+        id: data.id,
+        recurring_group_id: data.recurring_group_id ?? null,
+        instructor_id: data.instructor_id ?? null,
+        additional_instructor_id: data.additional_instructor_id ?? null,
+      },
+      []
+    );
 
     return NextResponse.json({ block: data });
   } catch (err: unknown) {

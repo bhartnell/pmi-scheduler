@@ -59,6 +59,25 @@ export async function POST(request: NextRequest) {
       dryRun,
     });
 
+    // PALS day-block sync: this is the real write path that sets
+    // lab_days.cert_course='pals' on newly-created days (see
+    // lib/aha-course-generator.ts). syncPalsDayEvents has no per-lab-day
+    // scoping — only an optional targetEmail — so a fresh PALS course
+    // generation calls it unscoped, which reconciles the WHOLE table
+    // (every upcoming, non-archived PALS date for every candidate
+    // instructor), not just this cohort's new days. That's an accepted
+    // cost/design tradeoff for a rarely-called admin action, not an
+    // oversight. Best-effort — never fails the generate response.
+    if (!dryRun && cert_course === 'pals' && result.created_count > 0) {
+      try {
+        const { getSupabaseAdmin } = await import('@/lib/supabase');
+        const { syncPalsDayEvents } = await import('@/lib/pals-all-day-sync');
+        await syncPalsDayEvents(getSupabaseAdmin());
+      } catch (err) {
+        console.error('[aha-courses/generate] pals-day sync failed:', err);
+      }
+    }
+
     return NextResponse.json({ success: true, ...result });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : String(error);
