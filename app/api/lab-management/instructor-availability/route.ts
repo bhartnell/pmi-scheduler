@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     // instructors and shouldn't appear on this list (records kept for ACLS).
     const { data: rawInstructors } = await supabase
       .from('lab_users')
-      .select('id, name, email, is_part_time')
+      .select('id, name, email, is_part_time, paramedic_lab_default')
       .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin'])
       .eq('is_active', true)
       .order('name');
@@ -99,6 +99,7 @@ export async function GET(request: NextRequest) {
     const instructorMap = new Map<string, {
       id: string; name: string; email: string;
       is_part_time: boolean;
+      paramedic_lab_default: boolean;
       available: boolean;
       group: Group;
       has_explicit_availability: boolean;
@@ -114,6 +115,7 @@ export async function GET(request: NextRequest) {
         name: instr.name,
         email: instr.email,
         is_part_time: !!instr.is_part_time,
+        paramedic_lab_default: instr.paramedic_lab_default !== false,
         available: true,
         group: 'no_availability',         // upgraded below as evidence comes in
         has_explicit_availability: false,
@@ -452,14 +454,26 @@ export async function GET(request: NextRequest) {
     // instructor with zero conflicts was excluded from the dropdown).
     // Only an actual conflict (handled above) should exclude a
     // full-timer now. Part-time instructors still must have
-    // submitted explicit availability to count as "available". Falls
-    // through to "no_availability" when nothing else applies.
+    // submitted explicit availability to count as "available".
+    //
+    // paramedic_lab_default gates the full-timer default-available
+    // bucket specifically (Ben 2026-08-07): an instructor flagged
+    // false (RT/other-program full-timers helping on ACLS only) is
+    // NEVER excluded from this list — see commit 60348ac, dropdowns
+    // always show everyone — but they don't get the free "available"
+    // green dot just for being full-time; they fall through to
+    // "no_availability" (gray, still pickable) unless something else
+    // (volunteer signup or explicit availability) promotes them. This
+    // is a no-op against live data today: every instructor who passes
+    // the is_active + role filter above currently has
+    // paramedic_lab_default=true (the 5 flagged-false RT accounts are
+    // is_active=false and never reach this code).
     instructorMap.forEach(v => {
       if (v.conflicts.length > 0) {
         v.group = 'conflict';
       } else if (v.is_volunteer) {
         v.group = 'volunteer';
-      } else if (!v.is_part_time) {
+      } else if (!v.is_part_time && v.paramedic_lab_default) {
         v.group = 'available';
       } else if (v.has_explicit_availability) {
         v.group = 'available';
