@@ -19,6 +19,49 @@ export interface InstructorAvailability {
   };
 }
 
+export interface InstructorUnavailabilityBlock {
+  id: string;
+  instructor_id: string;
+  start_date: string;
+  end_date: string;
+  start_time: string | null;
+  end_time: string | null;
+  is_all_day: boolean;
+  reason: string | null;
+  notes: string | null;
+  source_template_id: string | null;
+  created_at: string;
+  updated_at: string;
+  instructor?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
+export interface RecurringUnavailabilityTemplate {
+  id: string;
+  instructor_id: string;
+  created_by: string | null;
+  weekdays: number[];
+  start_time: string | null;
+  end_time: string | null;
+  is_all_day: boolean;
+  frequency: 'weekly' | 'biweekly';
+  start_date: string;
+  end_date: string | null;
+  reason: string | null;
+  notes: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  instructor?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+}
+
 export type ShiftDepartment = 'EMT' | 'AEMT' | 'Paramedic' | 'General';
 export type SignupStatus = 'pending' | 'confirmed' | 'declined' | 'withdrawn';
 
