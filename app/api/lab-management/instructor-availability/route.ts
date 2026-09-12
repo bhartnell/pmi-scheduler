@@ -43,6 +43,12 @@ import { isRtOnlyInstructor } from '@/lib/rt-only-instructors';
  * Sources checked, in order:
  *   1. instructor_availability (explicit submissions, must cover
  *      slot fully — start_time <= slot.start AND end_time >= slot.end)
+ *   1b. instructor_unavailability (explicit override blocks, one-off
+ *      or recurring-generated — see recurring_unavailability_templates).
+ *      Date-range match; is_all_day=true blocks the whole day
+ *      regardless of the requested window, otherwise only a real
+ *      time-range overlap with [start_time, end_time] is a conflict
+ *      (same block-based semantics as every other source below).
  *   2. pmi_block_instructors → pmi_schedule_blocks (class teaching)
  *   3. lab_stations on the same date (other lab_day = conflict;
  *      same lab_day = same_day_stations badge, not a conflict)
@@ -79,7 +85,7 @@ export async function GET(request: NextRequest) {
     // instructors and shouldn't appear on this list (records kept for ACLS).
     const { data: rawInstructors } = await supabase
       .from('lab_users')
-      .select('id, name, email, is_part_time')
+      .select('id, name, email, is_part_time, paramedic_lab_default')
       .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin'])
       .eq('is_active', true)
       .order('name');
@@ -93,6 +99,7 @@ export async function GET(request: NextRequest) {
     const instructorMap = new Map<string, {
       id: string; name: string; email: string;
       is_part_time: boolean;
+      paramedic_lab_default: boolean;
       available: boolean;
       group: Group;
       has_explicit_availability: boolean;
@@ -108,6 +115,7 @@ export async function GET(request: NextRequest) {
         name: instr.name,
         email: instr.email,
         is_part_time: !!instr.is_part_time,
+        paramedic_lab_default: instr.paramedic_lab_default !== false,
         available: true,
         group: 'no_availability',         // upgraded below as evidence comes in
         has_explicit_availability: false,
@@ -147,6 +155,41 @@ export async function GET(request: NextRequest) {
     const timesOverlap = (aStart: string, aEnd: string, bStart: string, bEnd: string): boolean => {
       return aStart < bEnd && aEnd > bStart;
     };
+
+    // 1b. instructor_unavailability — explicit override blocks (one-off
+    //     date-range entries, or rows generated from an active
+    //     recurring_unavailability_templates rule) that beat the
+    //     full-timer default-available assumption. A row whose date
+    //     range covers `date` is a candidate; is_all_day=true blocks
+    //     the whole day, otherwise only a real overlap between
+    //     [start_time, end_time] and the requested slot counts —
+    //     preserves the block-based "partial-day frees the remaining
+    //     hours" model used by every other source here. Table has 0
+    //     rows in production today, so this is a no-op until real
+    //     data exists.
+    try {
+      const { data: unavailRows } = await supabase
+        .from('instructor_unavailability')
+        .select('instructor_id, start_date, end_date, start_time, end_time, is_all_day, reason')
+        .lte('start_date', date)
+        .gte('end_date', date);
+      for (const u of unavailRows ?? []) {
+        const entry = instructorMap.get(u.instructor_id);
+        if (!entry) continue;
+        if (!u.is_all_day && u.start_time && u.end_time) {
+          if (!timesOverlap(u.start_time, u.end_time, startTime, endTime)) continue;
+        }
+        entry.available = false;
+        entry.conflicts.push({
+          source: 'unavailability',
+          title: u.reason || 'Unavailable',
+          start_time: u.is_all_day ? startTime : u.start_time || startTime,
+          end_time: u.is_all_day ? endTime : u.end_time || endTime,
+        });
+      }
+    } catch {
+      // instructor_unavailability table absent — skip silently.
+    }
 
     // 2. Check pmi_schedule_blocks conflicts
     // Get blocks that are on this date (date-based) or on this day_of_week (recurring)
@@ -411,14 +454,26 @@ export async function GET(request: NextRequest) {
     // instructor with zero conflicts was excluded from the dropdown).
     // Only an actual conflict (handled above) should exclude a
     // full-timer now. Part-time instructors still must have
-    // submitted explicit availability to count as "available". Falls
-    // through to "no_availability" when nothing else applies.
+    // submitted explicit availability to count as "available".
+    //
+    // paramedic_lab_default gates the full-timer default-available
+    // bucket specifically (Ben 2026-08-07): an instructor flagged
+    // false (RT/other-program full-timers helping on ACLS only) is
+    // NEVER excluded from this list — see commit 60348ac, dropdowns
+    // always show everyone — but they don't get the free "available"
+    // green dot just for being full-time; they fall through to
+    // "no_availability" (gray, still pickable) unless something else
+    // (volunteer signup or explicit availability) promotes them. This
+    // is a no-op against live data today: every instructor who passes
+    // the is_active + role filter above currently has
+    // paramedic_lab_default=true (the 5 flagged-false RT accounts are
+    // is_active=false and never reach this code).
     instructorMap.forEach(v => {
       if (v.conflicts.length > 0) {
         v.group = 'conflict';
       } else if (v.is_volunteer) {
         v.group = 'volunteer';
-      } else if (!v.is_part_time) {
+      } else if (!v.is_part_time && v.paramedic_lab_default) {
         v.group = 'available';
       } else if (v.has_explicit_availability) {
         v.group = 'available';

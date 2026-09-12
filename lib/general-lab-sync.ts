@@ -23,6 +23,15 @@ import { syncGeneralLabDefault, removeGeneralLabDefault } from '@/lib/google-cal
  * (is_active = true, dropping the is_part_time requirement) per Ben's
  * confirmed requirement. Stacie is EMT-tagged and therefore never generated
  * here — her calendar feeds admissions and must not be over-blocked.
+ *
+ * paramedic_lab_default filter (Ben 2026-08-07, checkpoint added
+ * 2026-09-12): only instructors flagged paramedic_lab_default=true get
+ * this "you're at the paramedic lab" baseline event — the column exists
+ * for RT/other-program full-timers who help on ACLS only and must not
+ * default-appear at the paramedic lab. No-op against live data today
+ * (the 5 flagged-false RT accounts are already is_active=false and
+ * excluded by the filter above), but wired correctly for when any of
+ * them are reactivated.
  */
 export async function syncGeneralLabDefaults(
   supabase: ReturnType<typeof getSupabaseAdmin>,
@@ -31,12 +40,14 @@ export async function syncGeneralLabDefaults(
   const counts = { created: 0, removed: 0, skipped: 0, instructors: 0, labDays: 0 };
   const today = new Date().toISOString().split('T')[0];
 
-  // 1. Active paramedic-tagged, calendar-connected instructors.
+  // 1. Active paramedic-tagged, calendar-connected instructors who are
+  //    in the paramedic-lab default-available pool.
   let instrQuery = supabase
     .from('lab_users')
     .select('id, email')
     .eq('primary_program', 'paramedic')
     .eq('is_active', true)
+    .eq('paramedic_lab_default', true)
     .eq('google_calendar_connected', true)
     .eq('google_calendar_scope', 'events');
   if (opts.targetEmail) instrQuery = instrQuery.ilike('email', opts.targetEmail);
