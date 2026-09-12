@@ -299,12 +299,13 @@ on 2026-05-23 (now linked from the hub's new "Cohort Progress" section).
 
 ## Scheduling
 
-15 pages.
+16 pages.
 
 | Path | Notes |
 |------|-------|
 | `/scheduling` | Hub |
 | `/scheduling/availability` + `/all` | Per-instructor + cohort availability |
+| `/scheduling/unavailability` | Self-edit day/week blocks + recurring (open-ended/date-bounded) unavailability rules — overrides the full-timer default-available rule in the staffing picker. Lead_instructor+ (matches the write gate on its CRUD routes). |
 | `/scheduling/planner` → redirects to `/academics/planner` |
 | `/scheduling/polls` + `/create` | Polls |
 | `/scheduling/reports` | Scheduling reports |

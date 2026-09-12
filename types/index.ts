@@ -110,6 +110,8 @@ export {
 export {
   // Types
   type InstructorAvailability,
+  type InstructorUnavailabilityBlock,
+  type RecurringUnavailabilityTemplate,
   type ShiftDepartment,
   type SignupStatus,
   type OpenShift,

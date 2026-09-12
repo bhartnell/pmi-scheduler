@@ -3881,7 +3881,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 
 #### `instructor_unavailability`
 
-Added 2026-08-07 (Task Handoff Queue, [AVAILABILITY SYSTEM] + Josh Lomonaco tasks). `instructor_availability`/`recurring_availability_templates` store POSITIVE availability only — there was no way to mark a full-timer unavailable that beats the "full-time = default available" rule in `app/api/lab-management/instructor-availability`. Wired into that picker as of 2026-09-12 (Task Handoff Queue, [AVAILABILITY SYSTEM]) — app code only, no new migration.
+Added 2026-08-07 (Task Handoff Queue, [AVAILABILITY SYSTEM] + Josh Lomonaco tasks). `instructor_availability`/`recurring_availability_templates` store POSITIVE availability only — there was no way to mark a full-timer unavailable that beats the "full-time = default available" rule in `app/api/lab-management/instructor-availability`. Wired into that picker as of 2026-09-12 (Task Handoff Queue, [AVAILABILITY SYSTEM]) — app code only, no new migration. Self-edit UI shipped the same day at `/scheduling/unavailability` (lead_instructor+, matching the CRUD routes' write gate) — day/week blocks + recurring rules (open-ended or date-bounded).
 
 | Column | Type | Nullable | Default | Notes |
 |--------|------|----------|---------|-------|
