@@ -96,7 +96,7 @@
 | aha_instructor_number | text | YES |  | AHA instructor # for the AHA Results Export signature line |
 | signature_data | text | YES |  | PNG data URL of drawn/uploaded signature; NULL when signature_kind='auto' |
 | signature_kind | text | YES |  | 'drawn' \| 'uploaded' \| 'auto' (script-font name fallback) |
-| paramedic_lab_default | boolean | NO | true | Whether this instructor is included in paramedic-lab default-available classification. FALSE for RT/other-program full-timers who are assignable but not default-available (Ben 2026-08-07): `chooshmand@`, `dridgell@`, `madams@`, `tkankoski@`, `tmate@`. Added migration `20260807_instructor_unavailability.sql`. Not yet read by any endpoint — see instructor-availability picker wiring checkpoint (Task Handoff Queue, [AVAILABILITY SYSTEM]). |
+| paramedic_lab_default | boolean | NO | true | Whether this instructor is included in paramedic-lab default-available classification. FALSE for RT/other-program full-timers who are assignable but not default-available (Ben 2026-08-07): `chooshmand@`, `dridgell@`, `madams@`, `tkankoski@`, `tmate@`. Added migration `20260807_instructor_unavailability.sql`. **Still not read by any endpoint** — replacing the hardcoded `lib/rt-only-instructors.ts` full-hide with this column is separate, not-yet-scheduled follow-up work (out of scope for the 2026-09-12 picker wiring, which only wired the `instructor_unavailability`/`recurring_unavailability_templates` override). |
 
 **Foreign Keys:**
 - `department_id` -> `departments.id` (`lab_users_department_id_fkey`)
@@ -3873,7 +3873,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 
 #### `instructor_unavailability`
 
-Added 2026-08-07 (Task Handoff Queue, [AVAILABILITY SYSTEM] + Josh Lomonaco tasks). `instructor_availability`/`recurring_availability_templates` store POSITIVE availability only — there was no way to mark a full-timer unavailable that beats the "full-time = default available" rule in `app/api/lab-management/instructor-availability`. Schema-only as of this commit; not yet read by any endpoint (dormant/empty until the picker-wiring checkpoint).
+Added 2026-08-07 (Task Handoff Queue, [AVAILABILITY SYSTEM] + Josh Lomonaco tasks). `instructor_availability`/`recurring_availability_templates` store POSITIVE availability only — there was no way to mark a full-timer unavailable that beats the "full-time = default available" rule in `app/api/lab-management/instructor-availability`. Wired into that picker as of 2026-09-12 (Task Handoff Queue, [AVAILABILITY SYSTEM]) — app code only, no new migration.
 
 | Column | Type | Nullable | Default | Notes |
 |--------|------|----------|---------|-------|
