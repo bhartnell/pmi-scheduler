@@ -403,6 +403,30 @@ export async function generateAhaCourseForCohort(
     }
   }
 
+  // On-change calendar autosync (2026-09-12): AHA days previously got no
+  // calendar coverage until someone ran the admin "Sync All" — neither the
+  // general-lab-default event (ACLS days) nor the PALS scheduled day-block
+  // (PALS days) was ever wired to a save path. Scoped per created lab day
+  // (not a full reconcile) so generating a whole course's worth of days
+  // doesn't pay for re-scanning every upcoming lab day each time. Awaited +
+  // best-effort: a Google hiccup never fails the generation.
+  try {
+    const { syncGeneralLabDefaults } = await import('@/lib/general-lab-sync');
+    const { syncPalsDayEvents } = await import('@/lib/pals-all-day-sync');
+    for (const dayPlan of plan) {
+      if (!dayPlan.created_lab_day_id) continue;
+      // syncGeneralLabDefaults itself skips/removes general_lab for PALS
+      // days (see lib/general-lab-sync.ts isPalsOrArchived) — safe to call
+      // unconditionally for both ACLS and PALS days.
+      await syncGeneralLabDefaults(supabase, { labDayId: dayPlan.created_lab_day_id });
+      if (certCourse === 'pals') {
+        await syncPalsDayEvents(supabase, { labDayId: dayPlan.created_lab_day_id });
+      }
+    }
+  } catch (e) {
+    console.error('[aha-course-generator] calendar autosync error', e);
+  }
+
   return {
     cohort_id: cohortId,
     cert_course: certCourse,

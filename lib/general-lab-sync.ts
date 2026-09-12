@@ -23,10 +23,16 @@ import { syncGeneralLabDefault, removeGeneralLabDefault } from '@/lib/google-cal
  * (is_active = true, dropping the is_part_time requirement) per Ben's
  * confirmed requirement. Stacie is EMT-tagged and therefore never generated
  * here — her calendar feeds admissions and must not be over-blocked.
+ *
+ * `opts.labDayId` (2026-09-12, on-change autosync): scopes the whole pass to
+ * ONE lab day instead of every upcoming one — used by the lab-day creation
+ * hook so a new lab day gets its instructors' default-lab events immediately
+ * without paying for a full reconcile (which iterates every instructor ×
+ * every upcoming lab day and would risk a serverless timeout on save).
  */
 export async function syncGeneralLabDefaults(
   supabase: ReturnType<typeof getSupabaseAdmin>,
-  opts: { targetEmail?: string } = {},
+  opts: { targetEmail?: string; labDayId?: string } = {},
 ): Promise<{ created: number; removed: number; skipped: number; instructors: number; labDays: number }> {
   const counts = { created: 0, removed: 0, skipped: 0, instructors: 0, labDays: 0 };
   const today = new Date().toISOString().split('T')[0];
@@ -44,8 +50,9 @@ export async function syncGeneralLabDefaults(
   if (!instructors?.length) return counts;
   counts.instructors = instructors.length;
 
-  // 2. Upcoming PARAMEDIC-cohort lab days (program abbreviation 'PM').
-  const { data: labDays } = await supabase
+  // 2. Upcoming PARAMEDIC-cohort lab days (program abbreviation 'PM'),
+  // or just the one lab day when labDayId scopes this call.
+  let labDayQuery = supabase
     .from('lab_days')
     .select(`
       id, date, title, start_time, end_time, cert_course, is_archived,
@@ -54,9 +61,12 @@ export async function syncGeneralLabDefaults(
         program:programs!inner(abbreviation)
       )
     `)
-    .gte('date', today)
     .eq('cohort.program.abbreviation', 'PM')
     .order('date');
+  labDayQuery = opts.labDayId
+    ? labDayQuery.eq('id', opts.labDayId)
+    : labDayQuery.gte('date', today);
+  const { data: labDays } = await labDayQuery;
   if (!labDays?.length) return counts;
   counts.labDays = labDays.length;
 
