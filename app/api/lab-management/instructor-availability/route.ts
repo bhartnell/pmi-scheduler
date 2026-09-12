@@ -43,6 +43,12 @@ import { isRtOnlyInstructor } from '@/lib/rt-only-instructors';
  * Sources checked, in order:
  *   1. instructor_availability (explicit submissions, must cover
  *      slot fully — start_time <= slot.start AND end_time >= slot.end)
+ *   1b. instructor_unavailability (explicit override blocks, one-off
+ *      or recurring-generated — see recurring_unavailability_templates).
+ *      Date-range match; is_all_day=true blocks the whole day
+ *      regardless of the requested window, otherwise only a real
+ *      time-range overlap with [start_time, end_time] is a conflict
+ *      (same block-based semantics as every other source below).
  *   2. pmi_block_instructors → pmi_schedule_blocks (class teaching)
  *   3. lab_stations on the same date (other lab_day = conflict;
  *      same lab_day = same_day_stations badge, not a conflict)
@@ -147,6 +153,41 @@ export async function GET(request: NextRequest) {
     const timesOverlap = (aStart: string, aEnd: string, bStart: string, bEnd: string): boolean => {
       return aStart < bEnd && aEnd > bStart;
     };
+
+    // 1b. instructor_unavailability — explicit override blocks (one-off
+    //     date-range entries, or rows generated from an active
+    //     recurring_unavailability_templates rule) that beat the
+    //     full-timer default-available assumption. A row whose date
+    //     range covers `date` is a candidate; is_all_day=true blocks
+    //     the whole day, otherwise only a real overlap between
+    //     [start_time, end_time] and the requested slot counts —
+    //     preserves the block-based "partial-day frees the remaining
+    //     hours" model used by every other source here. Table has 0
+    //     rows in production today, so this is a no-op until real
+    //     data exists.
+    try {
+      const { data: unavailRows } = await supabase
+        .from('instructor_unavailability')
+        .select('instructor_id, start_date, end_date, start_time, end_time, is_all_day, reason')
+        .lte('start_date', date)
+        .gte('end_date', date);
+      for (const u of unavailRows ?? []) {
+        const entry = instructorMap.get(u.instructor_id);
+        if (!entry) continue;
+        if (!u.is_all_day && u.start_time && u.end_time) {
+          if (!timesOverlap(u.start_time, u.end_time, startTime, endTime)) continue;
+        }
+        entry.available = false;
+        entry.conflicts.push({
+          source: 'unavailability',
+          title: u.reason || 'Unavailable',
+          start_time: u.is_all_day ? startTime : u.start_time || startTime,
+          end_time: u.is_all_day ? endTime : u.end_time || endTime,
+        });
+      }
+    } catch {
+      // instructor_unavailability table absent — skip silently.
+    }
 
     // 2. Check pmi_schedule_blocks conflicts
     // Get blocks that are on this date (date-based) or on this day_of_week (recurring)
