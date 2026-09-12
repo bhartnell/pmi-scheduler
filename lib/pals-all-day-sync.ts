@@ -38,33 +38,42 @@ import { syncPalsDayEvent, removePalsAllDayEvent } from '@/lib/google-calendar';
  * perform the actual Google delete/create when run with a valid OAuth token
  * (i.e. from Ben's authenticated "Sync All"). A sandbox with no OAuth session is
  * a safe no-op per call — nothing is deleted without credentials.
+ *
+ * `opts.labDayId` (2026-09-12, on-change autosync): scopes GENERATE to ONE
+ * lab day and skips the legacy RECONCILE pass entirely (that cleanup is a
+ * one-time migration concern, not something every new lab day needs to
+ * repeat) — used by the lab-day creation hook so a new PALS day gets its
+ * scheduled block immediately without a full-reconcile's runtime cost.
  */
 export async function syncPalsDayEvents(
   supabase: ReturnType<typeof getSupabaseAdmin>,
-  opts: { targetEmail?: string } = {},
+  opts: { targetEmail?: string; labDayId?: string } = {},
 ): Promise<{ created: number; removed: number; instructors: number; palsDays: number }> {
   const counts = { created: 0, removed: 0, instructors: 0, palsDays: 0 };
   const today = new Date().toISOString().split('T')[0];
 
   // ── 1. RECONCILE — remove the deprecated per-section all-day events. ──
-  let oldQuery = supabase
-    .from('google_calendar_events')
-    .select('user_email, source_id')
-    .eq('source_type', 'pals_all_day');
-  if (opts.targetEmail) oldQuery = oldQuery.ilike('user_email', opts.targetEmail);
-  const { data: oldPals } = await oldQuery;
-  for (const r of oldPals ?? []) {
-    // source_id for the old model was the section lab_day_id.
-    await removePalsAllDayEvent({
-      userEmail: r.user_email as string,
-      labDayId: r.source_id as string,
-    });
-    counts.removed++;
-    await new Promise((res) => setTimeout(res, 120));
+  // Skipped when scoped to a single new lab day (nothing to reconcile there).
+  if (!opts.labDayId) {
+    let oldQuery = supabase
+      .from('google_calendar_events')
+      .select('user_email, source_id')
+      .eq('source_type', 'pals_all_day');
+    if (opts.targetEmail) oldQuery = oldQuery.ilike('user_email', opts.targetEmail);
+    const { data: oldPals } = await oldQuery;
+    for (const r of oldPals ?? []) {
+      // source_id for the old model was the section lab_day_id.
+      await removePalsAllDayEvent({
+        userEmail: r.user_email as string,
+        labDayId: r.source_id as string,
+      });
+      counts.removed++;
+      await new Promise((res) => setTimeout(res, 120));
+    }
   }
 
   // ── 2. GENERATE — one scheduled block per REAL, non-archived PALS date. ──
-  const { data: palsDays } = await supabase
+  let palsDayQuery = supabase
     .from('lab_days')
     .select(`
       id, date, cohort_id,
@@ -72,8 +81,11 @@ export async function syncPalsDayEvents(
     `)
     .eq('cert_course', 'pals')
     .eq('is_archived', false)
-    .gte('date', today)
     .order('date');
+  palsDayQuery = opts.labDayId
+    ? palsDayQuery.eq('id', opts.labDayId)
+    : palsDayQuery.gte('date', today);
+  const { data: palsDays } = await palsDayQuery;
   if (!palsDays?.length) return counts;
 
   // Candidate pool: FULL-TIME, PARAMEDIC-tagged, calendar-connected instructors
@@ -90,11 +102,29 @@ export async function syncPalsDayEvents(
   const candidateIds = candidateInstructors.map((i) => i.id as string);
 
   // Unique real dates per cohort → correct "Day N" (dedupe the section-days).
+  // Always computed from EVERY non-archived PALS day for the cohort (not
+  // just `palsDays`, which is scoped to one lab day when opts.labDayId is
+  // set) — otherwise a scoped call would mislabel every day "Day 1".
   const datesByCohort = new Map<string, Set<string>>();
-  for (const d of palsDays) {
-    const set = datesByCohort.get(d.cohort_id as string) || new Set<string>();
-    set.add(d.date as string);
-    datesByCohort.set(d.cohort_id as string, set);
+  if (opts.labDayId) {
+    const cohortIds = [...new Set(palsDays.map((d) => d.cohort_id as string))];
+    const { data: allCohortPalsDays } = await supabase
+      .from('lab_days')
+      .select('cohort_id, date')
+      .eq('cert_course', 'pals')
+      .eq('is_archived', false)
+      .in('cohort_id', cohortIds);
+    for (const d of allCohortPalsDays ?? []) {
+      const set = datesByCohort.get(d.cohort_id as string) || new Set<string>();
+      set.add(d.date as string);
+      datesByCohort.set(d.cohort_id as string, set);
+    }
+  } else {
+    for (const d of palsDays) {
+      const set = datesByCohort.get(d.cohort_id as string) || new Set<string>();
+      set.add(d.date as string);
+      datesByCohort.set(d.cohort_id as string, set);
+    }
   }
 
   const seenDayKey = new Set<string>();

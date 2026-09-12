@@ -310,6 +310,38 @@ export async function POST(request: NextRequest) {
       station = { ...data, scenario };
     }
 
+    // On-change calendar autosync (2026-09-12): a station created with an
+    // instructor already attached (e.g. duplicated from an existing one)
+    // previously got no calendar event until a later edit or a manual Sync
+    // All — station_instructors POST/stations/[id] PATCH already sync, but
+    // creation-with-instructor was a gap. Awaited (not fire-and-forget, see
+    // the 2026-07-06 Vercel-freeze finding), best-effort.
+    if (data?.instructor_email) {
+      try {
+        const { syncLabStationAssignment } = await import('@/lib/google-calendar');
+        const { data: labDay } = await supabase
+          .from('lab_days')
+          .select('id, title, date, start_time, end_time')
+          .eq('id', body.lab_day_id)
+          .single();
+        if (labDay) {
+          await syncLabStationAssignment({
+            userEmail: data.instructor_email,
+            stationId: data.id,
+            stationNumber: data.station_number,
+            labDayId: labDay.id,
+            labDayTitle: labDay.title || 'Lab Day',
+            labDayDate: labDay.date,
+            startTime: labDay.start_time || undefined,
+            endTime: labDay.end_time || undefined,
+            scenarioTitle: station?.scenario?.title || undefined,
+          });
+        }
+      } catch (e) {
+        console.error('[stations POST] calendar autosync error', e);
+      }
+    }
+
     return NextResponse.json({ success: true, station });
   } catch (error) {
     console.error('Error creating station:', error);
