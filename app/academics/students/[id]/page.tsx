@@ -7,6 +7,7 @@ import TransferCohortModal, { type TransferMode } from '@/components/students/Tr
 import CohortHistorySection, { type CohortHistoryHandle } from '@/components/students/CohortHistorySection';
 import GraduationModal from '@/components/students/GraduationModal';
 import WithdrawModal from '@/components/students/WithdrawModal';
+import StudentOsceResultsCard from '@/components/osce/StudentOsceResultsCard';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -1704,6 +1705,9 @@ export default function StudentDetailPage() {
 
         {/* Overview Tab Sections */}
         {activeTab === 'overview' && <>
+
+        {/* OSCE Results Section (clinical capstone — surfaced outside the OSCE module) */}
+        <StudentOsceResultsCard studentId={studentId} />
 
         {/* EMS Background Section */}
         {(student.prior_cert_level || student.years_ems_experience || student.prior_work_setting || student.prior_employer) && (

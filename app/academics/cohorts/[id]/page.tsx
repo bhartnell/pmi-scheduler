@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import CohortOsceResultsCard from '@/components/osce/CohortOsceResultsCard';
 import {
   ChevronRight,
   Users,
@@ -1028,6 +1029,9 @@ export default function CohortHubPage() {
             )}
           </div>
         )}
+
+        {/* OSCE Results Section (clinical capstone — surfaced outside the OSCE module) */}
+        <CohortOsceResultsCard cohortId={cohortId} />
 
         {/* Data Completion Section */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">

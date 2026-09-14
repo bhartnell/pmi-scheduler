@@ -19,6 +19,30 @@
 
 ### Major additions
 
+**`components/osce/StudentOsceResultsCard.tsx`** and
+**`components/osce/CohortOsceResultsCard.tsx`** (2026-09-14) — Surface OSCE
+assessment results (previously siloed inside the OSCE module) into the
+instructor-facing student/cohort views (Task Handoff Queue "Surface OSCE
+results in the instructor views"). `StudentOsceResultsCard` renders on
+`app/academics/students/[id]/page.tsx`'s Overview tab (top of the card
+stack — the OSCE is the clinical capstone); `CohortOsceResultsCard` renders
+on `app/academics/cohorts/[id]/page.tsx` as a per-student readiness rollup.
+Both are read-only and back onto the new `GET /api/osce/student-results` /
+`GET /api/osce/cohort-results` routes, which share grading math with the
+existing admin `/api/osce/results` via the new `lib/osce-results.ts`.
+**Important caveat:** `osce_assessments.student_name` /
+`osce_student_schedule.student_name` are free text with no FK to `students`
+(confirmed live — even the Fall 2026 event, built via direct SQL, used free
+text). Matching to a real student is done live/read-only at display time
+(`lib/osce-student-match.ts`, cohort-scoped to limit surname collisions) —
+deliberately **never written back to the database**, since an inferred name
+match is not a verified fact (Data Integrity Operating Rules). Exact
+full-name matches render normally; ambiguous surname-only matches (e.g. a
+shared surname within a cohort) still render, but flagged "Unconfirmed
+match" so the instructor viewing that student's own page can eyeball it.
+Whether to add a real `student_id` column and a verified-linking UI is an
+open decision handed back to Ben on the ticket rather than guessed at.
+
 **`components/students/WithdrawModal.tsx`** (2026-07-10) — Confirm-and-reason
 modal for withdrawing a student (`students.status = 'withdrawn'`), preserve-only
 and reversible via the existing Re-enroll flow. Mirrors `GraduationModal.tsx`'s
