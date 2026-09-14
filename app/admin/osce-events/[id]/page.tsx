@@ -54,6 +54,8 @@ interface OsceEvent {
   updated_at: string;
   observer_count: number;
   block_count: number;
+  cohort_id: string | null;
+  minutes_per_student: number;
 }
 
 interface ObserverBlock {
@@ -347,7 +349,7 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
       {activeTab === 'schedule' && <ScheduleTab eventId={eventId} />}
       {activeTab === 'agencies' && <AgenciesTab eventId={eventId} />}
       {activeTab === 'blocks' && <TimeBlocksTab eventId={eventId} event={event} onRefresh={fetchEvent} />}
-      {activeTab === 'students' && <StudentsTab eventId={eventId} />}
+      {activeTab === 'students' && <StudentsTab eventId={eventId} event={event} />}
       {activeTab === 'results' && <ResultsTab eventId={eventId} />}
       {activeTab === 'settings' && <SettingsTab event={event} onRefresh={fetchEvent} />}
     </div>
@@ -1731,7 +1733,176 @@ function TimeBlocksTab({ eventId, event, onRefresh }: { eventId: string; event: 
 // TAB 5: Students
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function StudentsTab({ eventId }: { eventId: string }) {
+const ALL_SCENARIOS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+/**
+ * Cohort roster auto-populate + capacity-based distribution + assessment
+ * generation — replaces the manual direct-SQL setup the Fall 2026 event
+ * needed (Task Handoff Queue "OSCE event creation in the UI — make it
+ * repeatable per cohort"). Shown only before a schedule has been generated;
+ * see app/api/osce/events/[id]/generate-roster for the one-shot guard.
+ */
+function RosterSetupPanel({ eventId, event, onGenerated }: { eventId: string; event: OsceEvent; onGenerated: () => void }) {
+  const [day1, setDay1] = useState<string[]>([]);
+  const [day2, setDay2] = useState<string[]>([]);
+  const [savingScenarios, setSavingScenarios] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [confirmGenerate, setConfirmGenerate] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/osce/events/${eventId}/day-scenarios`);
+        const data = await res.json();
+        if (data.success) {
+          setDay1(data.day1 || []);
+          setDay2(data.day2 || []);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [eventId]);
+
+  const overlap = day1.filter(s => day2.includes(s));
+
+  const toggle = (day: 1 | 2, scenario: string) => {
+    const [list, setList] = day === 1 ? [day1, setDay1] : [day2, setDay2];
+    setList(list.includes(scenario) ? list.filter(s => s !== scenario) : [...list, scenario]);
+  };
+
+  const saveScenarios = async () => {
+    setSavingScenarios(true);
+    try {
+      await fetch(`/api/osce/events/${eventId}/day-scenarios`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ day1, day2 }),
+      });
+    } catch { /* ignore */ }
+    setSavingScenarios(false);
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setResult(null);
+    try {
+      await saveScenarios();
+      const res = await fetch(`/api/osce/events/${eventId}/generate-roster`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setResult({ type: 'success', message: `Scheduled ${data.studentsScheduled} students across ${data.blocksUsed} blocks and created ${data.assessmentsCreated} assessments.` });
+        onGenerated();
+      } else {
+        setResult({ type: 'error', message: data.error || 'Failed to generate roster' });
+      }
+    } catch {
+      setResult({ type: 'error', message: 'Network error' });
+    }
+    setGenerating(false);
+    setConfirmGenerate(false);
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-5">
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Generate Roster &amp; Assessments</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Auto-populates this event&apos;s cohort roster into the time blocks below (even split, respecting each
+          block&apos;s capacity — {event.minutes_per_student} min/student, set in Settings), and creates the matching
+          scored assessments. One-shot: run once per event.
+        </p>
+        {!event.cohort_id && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5" /> Set a cohort for this event in the Settings tab first.
+          </p>
+        )}
+      </div>
+
+      {[1, 2].map(day => (
+        <div key={day}>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Day {day} Scenarios</label>
+          <div className="flex flex-wrap gap-2">
+            {ALL_SCENARIOS.map(s => {
+              const selected = (day === 1 ? day1 : day2).includes(s);
+              const isOverlap = overlap.includes(s);
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggle(day as 1 | 2, s)}
+                  className={`w-9 h-9 rounded-lg text-sm font-bold border transition-colors ${
+                    selected
+                      ? isOverlap
+                        ? 'bg-amber-100 border-amber-400 text-amber-800 dark:bg-amber-900/40 dark:border-amber-600 dark:text-amber-300'
+                        : 'bg-blue-600 border-blue-600 text-white'
+                      : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {overlap.length > 0 && (
+        <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+          Scenario{overlap.length !== 1 ? 's' : ''} {overlap.join(', ')} assigned to both days — a student on Day 1 could
+          brief a Day 2 student on it. Confirm this is intentional before generating.
+        </div>
+      )}
+
+      {result && (
+        <div className={`text-sm rounded-lg px-3 py-2 ${
+          result.type === 'success'
+            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+        }`}>
+          {result.message}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={saveScenarios}
+          disabled={savingScenarios}
+          className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
+        >
+          {savingScenarios ? 'Saving...' : 'Save Scenario Assignment'}
+        </button>
+        {confirmGenerate ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-600 dark:text-gray-300">Generate now? This can&apos;t be re-run without clearing the schedule first.</span>
+            <button
+              onClick={handleGenerate}
+              disabled={generating || !event.cohort_id || (day1.length === 0 && day2.length === 0)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium disabled:opacity-50"
+            >
+              {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+              Confirm Generate
+            </button>
+            <button onClick={() => setConfirmGenerate(false)} disabled={generating} className="px-3 py-1.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs">
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmGenerate(true)}
+            disabled={!event.cohort_id}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Zap className="w-4 h-4" />
+            Generate Roster &amp; Assessments
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) {
   const [schedule, setSchedule] = useState<ScheduleBlock[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -1785,7 +1956,7 @@ function StudentsTab({ eventId }: { eventId: string }) {
   const blocksWithStudents = schedule.filter(b => b.students.length > 0);
 
   if (blocksWithStudents.length === 0) {
-    return <div className="p-8 text-center text-gray-500 dark:text-gray-400">No students assigned to time blocks yet.</div>;
+    return <RosterSetupPanel eventId={eventId} event={event} onGenerated={fetchSchedule} />;
   }
 
   return (
@@ -2078,6 +2249,13 @@ function ResultsTab({ eventId }: { eventId: string }) {
 // TAB 7: Settings
 // ═══════════════════════════════════════════════════════════════════════════════
 
+interface SettingsCohort {
+  id: string;
+  cohort_number: number;
+  status?: 'active' | 'graduated';
+  program?: { abbreviation: string | null } | null;
+}
+
 function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => void }) {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -2091,6 +2269,8 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
     max_observers_per_block: event.max_observers_per_block,
     status: event.status,
     event_pin: event.event_pin || '',
+    cohort_id: event.cohort_id || '',
+    minutes_per_student: event.minutes_per_student,
   });
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -2098,6 +2278,17 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [cohorts, setCohorts] = useState<SettingsCohort[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/cohorts');
+        const data = await res.json();
+        if (data.success) setCohorts((data.cohorts || []).filter((c: SettingsCohort) => c.status !== 'graduated'));
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -2118,6 +2309,8 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
           max_observers_per_block: form.max_observers_per_block,
           status: form.status,
           event_pin: form.event_pin.trim() || null,
+          cohort_id: form.cohort_id || null,
+          minutes_per_student: form.minutes_per_student,
         }),
       });
       if (!res.ok) {
@@ -2227,6 +2420,28 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
                 <option value="closed">Closed</option>
                 <option value="archived">Archived</option>
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cohort</label>
+              <select value={form.cohort_id} onChange={e => setForm(p => ({ ...p, cohort_id: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">-- Not set --</option>
+                {cohorts.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.program?.abbreviation || 'Cohort'} {c.cohort_number}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Required to auto-populate the roster from the Students tab.</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Minutes Per Student</label>
+              <input type="number" min={5} max={120} value={form.minutes_per_student} onChange={e => setForm(p => ({ ...p, minutes_per_student: parseInt(e.target.value) || 32 }))}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Capacity default used to derive slots per time block (block length ÷ this).</p>
             </div>
           </div>
 

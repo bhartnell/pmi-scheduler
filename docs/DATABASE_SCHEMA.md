@@ -14,6 +14,7 @@
 > Last updated: 2026-09-01 -- OSCE invite+links stage (migration `20260901_osce_guest_token_invites.sql`): added `email`, `agency`, `invited_at`, `invite_send_count`, `invite_last_error` to `osce_guest_tokens` so a token can carry the evaluator's email and track whether an invite was actually sent. See `osce_guest_tokens` below.
 > Last updated: 2026-09-04 -- S3 lab template set applied to G14 (migration `20260904_s3_lab_apply_g14.sql`, Task Handoff Queue "S3 lab model"): generated G14's 15 Semester-3 `lab_days` from Ben's pre-existing S3 `lab_day_templates` set and linked them to the 15 already-published `pmi_schedule_blocks`. Corrected `lab_stations.drill_ids` type (doc said `text[]`, live DB is `uuid[]`). Fixed `POST /api/admin/lab-templates/apply` to actually copy `lab_mode`/`is_adv_cert_testing`/`cert_course`/`section_number`/`section_label` from template to generated `lab_days` (previously silently dropped). See `lab_day_templates` below for full detail.
 > Last updated: 2026-09-14 -- new table `osce_walkup_evaluators` (migration `20260914_osce_walkup_evaluators.sql`, Task Handoff Queue "OSCE walk-up evaluator login"): self-reported evaluators who show up on event day without being pre-invited. See `osce_walkup_evaluators` below.
+> Last updated: 2026-09-14 -- repeatable OSCE creation flow (migration `20260914_osce_repeatable_setup.sql`, Task Handoff Queue "OSCE event creation in the UI — make it repeatable per cohort"): added `osce_events.cohort_id` (FK -> cohorts) + `osce_events.minutes_per_student` (capacity default, 32), and new table `osce_day_scenarios` (per-day A-F scenario assignment). See both below.
 
 ## Summary
 
@@ -4333,6 +4334,11 @@ Sibling of `recurring_availability_templates`, but `end_date` is nullable to sup
 | updated_at | timestamptz | YES | now() |  |
 | event_pin | text | YES | 'OSCE2026'::text |  |
 | checklist_state | jsonb | YES | '{}'::jsonb |  |
+| cohort_id | uuid | YES |  | FK -> cohorts.id. Added 2026-09-14 for the repeatable creation-flow (roster auto-populate). Nullable — older events predating this column have no cohort link. |
+| minutes_per_student | integer | NO | 32 | Added 2026-09-14. Editable capacity default the roster-generation flow uses to derive per-block student capacity (block duration ÷ this value). See `osce_day_scenarios` below for the companion per-day scenario assignment. |
+
+**Foreign Keys:**
+- `cohort_id` -> `cohorts.id` (`osce_events_cohort_id_fkey`)
 
 **Unique Constraints:**
 - `osce_events_slug_key`: (slug)
@@ -4344,9 +4350,39 @@ Sibling of `recurring_availability_templates`, but `end_date` is nullable to sup
 - `idx_osce_events_slug`: `CREATE INDEX idx_osce_events_slug ON public.osce_events USING btree (slug)`
 - `idx_osce_events_status`: `CREATE INDEX idx_osce_events_status ON public.osce_events USING btree (status)`
 - `osce_events_slug_key`: `CREATE UNIQUE INDEX osce_events_slug_key ON public.osce_events USING btree (slug)`
+- `idx_osce_events_cohort`: `CREATE INDEX idx_osce_events_cohort ON public.osce_events USING btree (cohort_id)`
 
 **RLS Policies:**
 - `osce_events_service_role` (ALL, permissive, roles: {public})
+
+#### `osce_day_scenarios`
+
+Added 2026-09-14 (migration `20260914_osce_repeatable_setup.sql`). Which of
+scenarios A-F run on Day 1 vs Day 2 of an event — drives the roster
+generation flow's per-student scenario assignment and lets the creation UI
+warn when a scenario is assigned to both days (an exam-security concern
+when the two days aren't consecutive; see `app/admin/osce-events/[id]`
+Students tab).
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| event_id | uuid | NO |  | FK -> osce_events.id, ON DELETE CASCADE |
+| day_number | integer | NO |  | `CHECK (day_number IN (1, 2))` |
+| scenario | text | NO |  | `CHECK (scenario IN ('A','B','C','D','E','F'))` |
+| created_at | timestamptz | YES | now() |  |
+
+**Foreign Keys:**
+- `event_id` -> `osce_events.id` (`osce_day_scenarios_event_id_fkey`)
+
+**Unique Constraints:**
+- `osce_day_scenarios_event_id_day_number_scenario_key`: (event_id, day_number, scenario)
+
+**Indexes:**
+- `idx_osce_day_scenarios_event`: `CREATE INDEX idx_osce_day_scenarios_event ON public.osce_day_scenarios USING btree (event_id)`
+
+**RLS Policies:**
+- `osce_day_scenarios_all` (ALL, permissive, roles: {public})
 
 #### `osce_time_blocks`
 
