@@ -2661,6 +2661,9 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 - `idx_lab_timer_state_lab_day_id`: `CREATE INDEX idx_lab_timer_state_lab_day_id ON public.lab_timer_state USING btree (lab_day_id)`
 - `lab_timer_state_lab_day_id_key`: `CREATE UNIQUE INDEX lab_timer_state_lab_day_id_key ON public.lab_timer_state USING btree (lab_day_id)`
 
+**Triggers:**
+- `lab_timer_state_updated_at` (2026-09-14): `BEFORE UPDATE` → `update_updated_at_column()`. Added because `updated_at` had a `now()` default but was never touched by the PATCH route's UPDATE statements, so it stayed frozen at row-creation time no matter how many times the row changed (`version` climbing while `updated_at === created_at`).
+
 **RLS Policies:**
 - `Service can manage timer state` (ALL, permissive, roles: {public})
 - `Users can create timer state` (INSERT, permissive, roles: {authenticated})
