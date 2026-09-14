@@ -13,6 +13,7 @@
 > Last updated: 2026-09-01 -- Tier 2 (migration `20260901_tier2_live_tables_enable_rls.sql`): enabled RLS (no policy -- service-role-only) on the 49 live tables flagged `rls_disabled_in_public`. Repo-wide grep of every table confirmed 100% of live read/write paths go through `getSupabaseAdmin()` (service_role); this app never uses Supabase Auth anywhere, so `authenticated` is unreachable through the app regardless, and the app's small set of anon-key client components touch none of these 49 tables. No column/table shape changes. `rls_disabled_in_public` now 0 -- Tier 2 complete. See CHANGELOG.md for the full 49-table list.
 > Last updated: 2026-09-01 -- OSCE invite+links stage (migration `20260901_osce_guest_token_invites.sql`): added `email`, `agency`, `invited_at`, `invite_send_count`, `invite_last_error` to `osce_guest_tokens` so a token can carry the evaluator's email and track whether an invite was actually sent. See `osce_guest_tokens` below.
 > Last updated: 2026-09-04 -- S3 lab template set applied to G14 (migration `20260904_s3_lab_apply_g14.sql`, Task Handoff Queue "S3 lab model"): generated G14's 15 Semester-3 `lab_days` from Ben's pre-existing S3 `lab_day_templates` set and linked them to the 15 already-published `pmi_schedule_blocks`. Corrected `lab_stations.drill_ids` type (doc said `text[]`, live DB is `uuid[]`). Fixed `POST /api/admin/lab-templates/apply` to actually copy `lab_mode`/`is_adv_cert_testing`/`cert_course`/`section_number`/`section_label` from template to generated `lab_days` (previously silently dropped). See `lab_day_templates` below for full detail.
+> Last updated: 2026-09-14 -- new table `osce_walkup_evaluators` (migration `20260914_osce_walkup_evaluators.sql`, Task Handoff Queue "OSCE walk-up evaluator login"): self-reported evaluators who show up on event day without being pre-invited. See `osce_walkup_evaluators` below.
 
 ## Summary
 
@@ -10601,6 +10602,38 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 **RLS Policies:**
 - `osce_guest_tokens_all` (ALL, PERMISSIVE, roles: {public})
 - `osce_guest_tokens_select` (SELECT, PERMISSIVE, roles: {public})
+
+#### `osce_walkup_evaluators`
+
+Added `20260914_osce_walkup_evaluators.sql` (Task Handoff Queue "OSCE walk-up
+evaluator login"). Self-reported evaluators who show up on event day without
+being pre-invited (no closed roster, no email, no token, no OAuth — Ben's
+explicit direction) via the "not on this list" option on
+`app/osce-scoring/enter`. Deliberately a separate table from `osce_observers`
+rather than a new column there: `osce_observers` requires NOT NULL UNIQUE
+`email` and ties rows to time-block reservations, neither of which applies to
+someone who walks in unannounced. `/api/osce/validate-pin` merges rows from
+this table into its evaluator list (by name) so a walk-up can re-select
+themselves on a repeat visit instead of re-registering.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| event_id | uuid | NO |  | FK -> osce_events.id |
+| name | text | NO |  |  |
+| agency | text | NO |  |  |
+| role | text | YES |  | CHECK IN ('md','faculty','agency') |
+| created_at | timestamptz | YES | now() |  |
+
+**Foreign Keys:**
+- `event_id` -> `osce_events.id` (ON DELETE CASCADE)
+
+**Indexes:**
+- `idx_osce_walkup_evaluators_event`
+
+**RLS Policies:**
+- `osce_walkup_evaluators_public_insert` (INSERT, PERMISSIVE, roles: {public})
+- `osce_walkup_evaluators_service_all` (ALL, PERMISSIVE, roles: {public})
 
 #### `osce_scenarios`
 
