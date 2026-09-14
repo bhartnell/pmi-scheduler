@@ -105,6 +105,36 @@ export async function POST(request: NextRequest) {
     let skipped_count = 0;
     let failed = 0;
 
+    // ── Resolve the target cohort's program once per batch ──────────────────
+    // New students need a matching student_program_enrollments row alongside
+    // their students row (see BUG: importer wrote students but never
+    // student_program_enrollments — ~94 students across 6 cohorts silently
+    // missing enrollment rows). External-program cohorts (e.g. LVFR) are
+    // excluded — they track membership in their own tables and are already
+    // filtered out of PMI-facing rosters via is_external_program elsewhere
+    // (see app/api/students/route.ts).
+    let enrollmentProgram: 'emt' | 'aemt' | 'paramedic' | null = null;
+    let enrollmentStartDate: string | null = null;
+    if (cohort_id) {
+      const { data: importCohort } = await supabase
+        .from('cohorts')
+        .select('start_date, is_external_program, program:programs(abbreviation)')
+        .eq('id', cohort_id)
+        .single();
+
+      const abbreviation = (
+        importCohort?.program as unknown as { abbreviation?: string } | null
+      )?.abbreviation;
+
+      if (importCohort && !importCohort.is_external_program && abbreviation) {
+        enrollmentProgram =
+          abbreviation === 'PM' || abbreviation === 'PMD'
+            ? 'paramedic'
+            : (abbreviation.toLowerCase() as 'emt' | 'aemt');
+        enrollmentStartDate = importCohort.start_date || new Date().toISOString().slice(0, 10);
+      }
+    }
+
     for (const student of students) {
       const rowNum = student.row;
 
@@ -234,6 +264,25 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (insertError) throw insertError;
+
+        // Best-effort: create the matching enrollment row. Failure here
+        // doesn't roll back the student insert (already committed) — it's
+        // logged loudly so a gap is caught, not silently reintroduced.
+        if (enrollmentProgram && cohort_id) {
+          const { error: enrollError } = await supabase.from('student_program_enrollments').insert({
+            student_id: newStudent.id,
+            cohort_id,
+            program: enrollmentProgram,
+            status: 'active',
+            start_date: enrollmentStartDate,
+          });
+          if (enrollError) {
+            console.error(
+              `[import] Failed to create student_program_enrollments for new student ${newStudent.id} (row ${rowNum}):`,
+              enrollError
+            );
+          }
+        }
 
         results.push({
           row: rowNum,
