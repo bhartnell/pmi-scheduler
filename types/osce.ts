@@ -83,3 +83,18 @@ export interface OsceGuestToken {
   /** Error message from the most recent failed invite send, if any. */
   invite_last_error: string | null;
 }
+
+/**
+ * An evaluator who self-registered on event day via the "not on this list"
+ * walk-up path (app/osce-scoring/enter + /api/osce/walkup-evaluators),
+ * rather than being pre-invited via osce_observers or a guest token.
+ * Name/agency/role only — no email, no token, no OAuth, by design.
+ */
+export interface OsceWalkupEvaluator {
+  id: string;
+  event_id: string;
+  name: string;
+  agency: string;
+  role: OsceGuestTokenRole | null;
+  created_at: string;
+}

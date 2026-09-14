@@ -31,6 +31,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // PIN valid only within the event's date window (inclusive, with a 1-day grace
+    // on each side for time zone slop between the server and whoever is on-site).
+    const today = new Date().toISOString().split('T')[0];
+    const windowStart = new Date(event.start_date);
+    windowStart.setDate(windowStart.getDate() - 1);
+    const windowEnd = new Date(event.end_date);
+    windowEnd.setDate(windowEnd.getDate() + 1);
+    if (new Date(today) < windowStart || new Date(today) > windowEnd) {
+      return NextResponse.json(
+        { valid: false, error: 'This event code is not active right now' },
+        { status: 400 }
+      );
+    }
+
+    // Get walk-up evaluators who already self-registered for this event, so they
+    // can re-select themselves instead of registering again on a repeat visit.
+    const { data: walkups } = await supabase
+      .from('osce_walkup_evaluators')
+      .select('id, name, agency, role')
+      .eq('event_id', event.id)
+      .order('name');
+
     // Get observers for this event (registered evaluators)
     const { data: observers } = await supabase
       .from('osce_observers')
@@ -51,7 +73,7 @@ export async function POST(req: NextRequest) {
       name: string;
       label: string;
       role: string;
-      source: 'observer' | 'faculty';
+      source: 'observer' | 'faculty' | 'walkup';
     }
 
     const evaluators: Evaluator[] = [];
@@ -84,6 +106,23 @@ export async function POST(req: NextRequest) {
             label: `${f.name} (${roleLabel})`,
             role: 'faculty',
             source: 'faculty',
+          });
+        }
+      }
+    }
+
+    // Add previously self-registered walk-up evaluators (avoiding duplicates by name)
+    const knownNames = new Set(evaluators.map(e => e.name.toLowerCase()));
+    if (walkups) {
+      for (const w of walkups) {
+        if (!knownNames.has(w.name.toLowerCase())) {
+          const roleLabel = w.role === 'md' ? 'Medical Director' : w.role === 'faculty' ? 'Faculty' : w.agency;
+          evaluators.push({
+            id: w.id,
+            name: w.name,
+            label: `${w.name} (${roleLabel})`,
+            role: w.role || 'agency',
+            source: 'walkup',
           });
         }
       }

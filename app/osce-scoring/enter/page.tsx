@@ -35,6 +35,14 @@ function EnterContent() {
   const [token, setToken] = useState('');
   const [autoRedirect, setAutoRedirect] = useState(false);
 
+  // Walk-up evaluator self-registration state
+  const [showWalkupForm, setShowWalkupForm] = useState(false);
+  const [walkupName, setWalkupName] = useState('');
+  const [walkupAgency, setWalkupAgency] = useState('');
+  const [walkupRole, setWalkupRole] = useState('agency');
+  const [walkupSubmitting, setWalkupSubmitting] = useState(false);
+  const [walkupError, setWalkupError] = useState('');
+
   // Shared state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -116,24 +124,58 @@ function EnterContent() {
     setSelectedEvaluator(ev || null);
   }
 
-  function handlePinEnter() {
-    if (!selectedEvaluator || !eventInfo) return;
+  function enterAssessment(name: string, role: string) {
+    if (!eventInfo) return;
 
     // Store session in localStorage
     const session = {
       eventId: eventInfo.id,
-      evaluatorName: selectedEvaluator.name,
-      evaluatorRole: selectedEvaluator.role,
+      evaluatorName: name,
+      evaluatorRole: role,
       pin: pin.trim(),
       eventTitle: eventInfo.title,
     };
     localStorage.setItem('osce_session', JSON.stringify(session));
-    localStorage.setItem('osce_evaluator', JSON.stringify({
-      name: selectedEvaluator.name,
-      role: selectedEvaluator.role,
-    }));
+    localStorage.setItem('osce_evaluator', JSON.stringify({ name, role }));
 
     router.push('/osce-scoring/dashboard');
+  }
+
+  function handlePinEnter() {
+    if (!selectedEvaluator) return;
+    enterAssessment(selectedEvaluator.name, selectedEvaluator.role);
+  }
+
+  // ── Walk-up evaluator self-registration ────────────────────────────────────
+  async function handleWalkupSubmit() {
+    if (!walkupName.trim() || !walkupAgency.trim()) {
+      setWalkupError('Name and agency are required');
+      return;
+    }
+    setWalkupSubmitting(true);
+    setWalkupError('');
+    try {
+      const res = await fetch('/api/osce/walkup-evaluators', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pin: pin.trim(),
+          name: walkupName.trim(),
+          agency: walkupAgency.trim(),
+          role: walkupRole,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        enterAssessment(data.evaluator.name, data.evaluator.role);
+      } else {
+        setWalkupError(data.error || 'Registration failed');
+      }
+    } catch {
+      setWalkupError('Connection error. Please try again.');
+    } finally {
+      setWalkupSubmitting(false);
+    }
   }
 
   // ── Legacy token validation ─────────────────────────────────────────────────
@@ -190,6 +232,11 @@ function EnterContent() {
     setEvaluators([]);
     setSelectedEvaluator(null);
     setShowTokenFallback(false);
+    setShowWalkupForm(false);
+    setWalkupName('');
+    setWalkupAgency('');
+    setWalkupRole('agency');
+    setWalkupError('');
     setError('');
     localStorage.removeItem('osce_token');
     localStorage.removeItem('osce_evaluator');
@@ -349,17 +396,81 @@ function EnterContent() {
                 Enter Assessment
               </button>
 
-              <button
-                onClick={() => {
-                  setPinValidated(false);
-                  setPin('');
-                  setSelectedEvaluator(null);
-                  setError('');
-                }}
-                className="w-full mt-3 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-              >
-                Use a different event code
-              </button>
+              {!showWalkupForm ? (
+                <button
+                  onClick={() => { setShowWalkupForm(true); setWalkupError(''); }}
+                  className="w-full mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  Not on this list? Register as a walk-up evaluator
+                </button>
+              ) : (
+                <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                    Your Name
+                  </label>
+                  <input
+                    type="text"
+                    value={walkupName}
+                    onChange={e => { setWalkupName(e.target.value); setWalkupError(''); }}
+                    placeholder="Full name"
+                    className="w-full px-4 py-3 text-base border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 mt-3">
+                    Agency
+                  </label>
+                  <input
+                    type="text"
+                    value={walkupAgency}
+                    onChange={e => { setWalkupAgency(e.target.value); setWalkupError(''); }}
+                    placeholder="e.g., Clark County Fire Department"
+                    className="w-full px-4 py-3 text-base border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2 mt-3">
+                    Role
+                  </label>
+                  <select
+                    value={walkupRole}
+                    onChange={e => setWalkupRole(e.target.value)}
+                    className="w-full px-4 py-3 text-base border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="agency">Agency Representative</option>
+                    <option value="faculty">Faculty</option>
+                    <option value="md">Medical Director</option>
+                  </select>
+
+                  {walkupError && (
+                    <p className="mt-2 text-sm text-red-500 dark:text-red-400">{walkupError}</p>
+                  )}
+
+                  <button
+                    onClick={handleWalkupSubmit}
+                    disabled={walkupSubmitting || !walkupName.trim() || !walkupAgency.trim()}
+                    className="w-full mt-4 py-4 px-4 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-lg"
+                  >
+                    {walkupSubmitting ? 'Registering...' : 'Register & Enter Assessment'}
+                  </button>
+                  <button
+                    onClick={() => { setShowWalkupForm(false); setWalkupError(''); }}
+                    className="w-full mt-3 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                  >
+                    Back to evaluator list
+                  </button>
+                </div>
+              )}
+
+              {!showWalkupForm && (
+                <button
+                  onClick={() => {
+                    setPinValidated(false);
+                    setPin('');
+                    setSelectedEvaluator(null);
+                    setError('');
+                  }}
+                  className="w-full mt-3 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                >
+                  Use a different event code
+                </button>
+              )}
             </>
           )}
         </div>
