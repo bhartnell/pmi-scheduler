@@ -1051,10 +1051,81 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
         )}
       </div>
 
+      {/* Walk-up evaluators (self-registered on event day, not pre-invited) */}
+      <WalkupEvaluatorsPanel eventId={eventId} />
+
       {/* Modals */}
       {showAddModal && renderObserverModal(false)}
       {showEditModal && renderObserverModal(true)}
     </>
+  );
+}
+
+// Reconciliation list of evaluators who self-registered via the "not on this
+// list" walk-up path on event day (app/osce-scoring/enter), rather than
+// pre-registering through the observer signup form.
+function WalkupEvaluatorsPanel({ eventId }: { eventId: string }) {
+  interface WalkupEvaluator {
+    id: string;
+    name: string;
+    agency: string;
+    role: string | null;
+    created_at: string;
+  }
+
+  const [walkups, setWalkups] = useState<WalkupEvaluator[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/osce/walkup-evaluators?event_id=${eventId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setWalkups(data.walkups || []);
+        }
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [eventId]);
+
+  if (loading || walkups.length === 0) return null;
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center gap-2 mb-2">
+        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+          Walk-up Evaluators ({walkups.length})
+        </h3>
+      </div>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+        Self-registered on event day via the &quot;not on this list&quot; option — not pre-invited.
+      </p>
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50 dark:bg-gray-900">
+            <tr>
+              {['Name', 'Agency', 'Role', 'Registered'].map(h => (
+                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            {walkups.map(w => (
+              <tr key={w.id}>
+                <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">{w.name}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{w.agency}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{w.role || '--'}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{new Date(w.created_at).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
