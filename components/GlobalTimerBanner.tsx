@@ -201,7 +201,13 @@ export default function GlobalTimerBanner() {
       } else if (timer.status === 'running' && timer.started_at) {
         const startTime = new Date(timer.started_at).getTime();
         const now = Date.now() + serverTimeOffsetRef.current;
-        return Math.floor((now - startTime) / 1000);
+        // Sign-guard (Task Handoff Queue "rotation timer flicker" ticket,
+        // 2026-09-14, fixed on TimerBanner/LabTimer): started_at can land
+        // ahead of this client's corrected clock. Clamp a negative diff
+        // to 0 (not-started-yet) instead of letting it flow unclamped
+        // into `duration - elapsed`, which could render above the full
+        // duration.
+        return Math.max(0, Math.floor((now - startTime) / 1000));
       }
       return 0;
     };

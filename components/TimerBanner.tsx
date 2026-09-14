@@ -312,7 +312,18 @@ export default function TimerBanner({
       } else if (timerState.status === 'running' && timerState.started_at) {
         const startTime = new Date(timerState.started_at).getTime();
         const now = Date.now() + serverTimeOffsetRef.current;
-        return Math.floor((now - startTime) / 1000);
+        // Sign-guard (Task Handoff Queue "rotation timer flicker" ticket,
+        // 2026-09-14): started_at can land ahead of this client's
+        // corrected clock (server clock skew, or a resume calculation
+        // landing a few ms in the future). A negative diff here used to
+        // flow unclamped into `duration - elapsed` below, which could
+        // render ABOVE the full duration on one tick and the correct
+        // decrementing value on the next as the offset/response timing
+        // varied — the observed flip-flop between a frozen full-duration
+        // "Running" render and a correctly counting one. Treat "hasn't
+        // started yet from this client's view" as elapsed=0 (full
+        // duration, neutral color) instead of a negative number.
+        return Math.max(0, Math.floor((now - startTime) / 1000));
       }
       return 0;
     };
