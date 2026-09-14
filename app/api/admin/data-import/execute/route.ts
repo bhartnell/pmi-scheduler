@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
+import { createEnrollmentForNewStudent } from '@/lib/student-enrollment';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -258,10 +259,19 @@ async function executeStudents(
         results.push({ rowIndex: i, status: 'updated', message: `Updated ${existingStudent.first_name} ${existingStudent.last_name}` });
       } else {
         // Insert
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from('students')
-          .insert(studentData);
+          .insert(studentData)
+          .select('id')
+          .single();
         if (error) throw error;
+        if (cohortId && inserted) {
+          await createEnrollmentForNewStudent(supabase, {
+            studentId: inserted.id,
+            cohortId,
+            status: studentData.status as string | undefined,
+          });
+        }
         results.push({ rowIndex: i, status: 'imported', message: `Created ${row.first_name} ${row.last_name}` });
       }
     } catch (error) {
