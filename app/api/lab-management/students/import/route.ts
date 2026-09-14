@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
+import { createEnrollmentForNewStudent } from '@/lib/student-enrollment';
 
 interface ImportStudent {
   row: number;
@@ -234,6 +235,13 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (insertError) throw insertError;
+
+        if (cohort_id) {
+          await createEnrollmentForNewStudent(supabase, {
+            studentId: newStudent.id,
+            cohortId: cohort_id,
+          });
+        }
 
         results.push({
           row: rowNum,
