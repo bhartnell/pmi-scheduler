@@ -177,11 +177,11 @@ export async function POST(request: NextRequest) {
       if (station?.lab_day_id) {
         const { data: labDay } = await supabase
           .from('lab_days')
-          .select('id, title, date, start_time, end_time, location_id')
+          .select('id, title, date, start_time, end_time, location_id, is_archived')
           .eq('id', station.lab_day_id)
           .single();
 
-        if (labDay) {
+        if (labDay && !labDay.is_archived) {
           await syncLabStationAssignment({
             userEmail,
             stationId,
