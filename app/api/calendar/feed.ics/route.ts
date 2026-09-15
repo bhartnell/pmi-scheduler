@@ -236,6 +236,7 @@ export async function GET(request: NextRequest) {
       .lte('date', endDate)
       .eq('cohort.is_active', true)
       .eq('cohort.is_archived', false)
+      .eq('is_archived', false)
       .order('date');
     if (labsErr) throw labsErr;
     const labs = (labsData as unknown as LabDayRow[]) || [];
