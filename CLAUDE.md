@@ -551,6 +551,59 @@ half lets the doc rot. (This is the companion to the Documentation
 Update Rule below — the read-first and update-always halves are the
 same loop.)
 
+## Known-Issue Check (HARD REQUIREMENT)
+
+**Before forming any hypothesis about a reported problem, check history
+first.** On 2026-09-14 a timer bug was investigated from scratch; a later
+cross-reference of `feedback_reports` found 30+ prior reports of the same
+area between Feb and Jul 2026, including a July fix that had correctly
+identified the root cause (poll-only discovery) and then patched the
+symptom instead. Three fix attempts had already failed to hold, and none
+of it was visible at the start — discovery was repeated from zero and
+nearly reached a wrong conclusion. This is also succession infrastructure:
+the history has to survive without depending on Ben's memory.
+
+### Before diagnosing, in order
+
+1. Query the 🐞 Bug & Fix Log (Notion, Agent Ops Hub) filtered to the
+   relevant Area. `BUG_LOG.md` at the repo root is a generated snapshot
+   of the same log if Notion access isn't available (see Deliverable 2
+   note below).
+2. Query `feedback_reports` — search `description`, `page_url`, **and**
+   `resolution_notes`. Resolution notes are where past root causes and
+   file paths live.
+3. Read what prior fixes actually did; commit hashes and file paths
+   there are the fastest route into the code.
+
+### Acting on what you find
+
+| Finding | Action |
+|---|---|
+| Prior entry `Outcome = Recurred` / `Partially held` | The earlier fix did not hold. Read it, **do not repeat it**, escalate toward a structural fix. |
+| Prior fix names files or commits | **Start there.** Do not rediscover the surface. |
+| Several entries in one Area with `Fix Type = Config / tuning` | Signal the real fix is **Architectural**. Say so rather than tuning again. |
+| Prior entry closed with empty/vague notes | Treat as unknown, not fixed. Re-verify. |
+| No match | Enter discovery, and state that the check ran and came back empty. |
+
+Never open a new unconnected bug for something already in the log — link
+it and set the prior entry to `Recurred`.
+
+### Closing record (non-negotiable)
+
+Every shipped fix writes a Bug & Fix Log row with: Fix Type, the mechanism
+in one or two sentences, commit hash and file paths, and a **Verify By**
+date. A fix with no named mechanism is not closed. (Two historical timer
+reports were marked resolved with empty or commit-less notes; neither can
+now be evaluated and one may still be live.)
+
+`Status` ≠ `Outcome`. `Status = Done` means it shipped. `Outcome = Held`
+may only be set after the Verify By date is checked against live
+behaviour. Default on close is **Not yet verified**.
+
+`feedback_reports` stays the raw intake — do not migrate it into the Bug
+Log. The Bug Log is the curated, verified layer; the check above queries
+both.
+
 ## Documentation Update Rule (HARD REQUIREMENT)
 
 After every commit that adds, removes, or significantly changes
@@ -592,6 +645,12 @@ doc lag the live database.
 - Key IDs, table names, or configuration change
 - Team, cohort, or environment information changes
 - New companion doc is added
+
+**`BUG_LOG.md`** (repo root) — generated snapshot of the 🐞 Bug & Fix
+Log (Notion, Agent Ops Hub); Notion is the working source, this is the
+copy that travels with the code. Regenerate with
+`node scripts/export-bug-log.js` whenever the Bug & Fix Log changes
+(folds into the existing scheduled routine — do not hand-edit it).
 
 **`docs/CHANGELOG.md`** — update with EVERY commit. Format:
 ```
