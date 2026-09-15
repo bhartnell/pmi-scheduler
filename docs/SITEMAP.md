@@ -1,4 +1,10 @@
 # PMI EMS Scheduler — Site Map
+
+> **See also:** `BUG_LOG.md` (repo root) — generated snapshot of the 🐞 Bug
+> & Fix Log (Notion, Agent Ops Hub); query it (or Notion) for the relevant
+> Area before diagnosing a reported problem — see the Known-Issue Check
+> section of `CLAUDE.md`. Regenerate with `node scripts/export-bug-log.js`.
+
 > Refreshed 2026-09-04 (CoAEMSP Clinical/Field Visit Log export: new "CoAEMSP Log" button on `/clinical/site-visits` (cohort filter required), backed by new `/api/clinical/site-visits/export-coaemsp` route — one accreditation-format .docx per cohort.)
 > Previously refreshed 2026-09-01 (OSCE invite+links stage: `/admin/osce-tokens` now linked from the Admin hub — was previously direct-URL-only; corrected the stale `/osce-evaluator-signup` redirect entry — it's a live page, not a redirect. See OSCE section below.)
 > Previously refreshed 2026-07-15 (PALS hub findability fix: home page's main-nav card and `/calendar` toolbar button repointed from `/labs/acls-hub` to `/labs/aha-hub` so PALS is reachable the same way ACLS always was; `/labs/acls-hub` gained a back-link to `/labs/aha-hub`).
