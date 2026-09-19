@@ -5,6 +5,15 @@
 > Area before diagnosing a reported problem — see the Known-Issue Check
 > section of `CLAUDE.md`. Regenerate with `node scripts/export-bug-log.js`.
 
+> **See also:** 🗂️ Feature Register (Notion, Agent Ops Hub) — the
+> authoritative, evidence-based record of every feature's routes and exact
+> nav reachability (main nav / admin hub / drill-down / URL-only), with
+> Ben's keep/tuck-away/archive decisions. This file is a narrative
+> companion and can drift; the register is what cleanup decisions are
+> made from. `/admin/tools` (added 2026-09-19) is the guaranteed,
+> always-linked home for every feature the register marks "Tucked away."
+
+> Refreshed 2026-09-19 (`/admin/tools` — Admin Tools page added: guaranteed home for every "Tucked away" Feature Register entry, seeded with Instructor Onboarding, OSCE Admin, and the Report Generator; linked from `/admin/settings`. Root-caused why `/onboarding` was unreachable for admins/mentors: the only in-app link was the home-dashboard widget, gated on the viewer having their *own* active onboarding assignment — Ben is a mentor, not an instructor being onboarded, so it never showed for him. Fixed by giving `/onboarding` an unconditional entry point on the new page rather than changing the dashboard gate.)
 > Refreshed 2026-09-04 (CoAEMSP Clinical/Field Visit Log export: new "CoAEMSP Log" button on `/clinical/site-visits` (cohort filter required), backed by new `/api/clinical/site-visits/export-coaemsp` route — one accreditation-format .docx per cohort.)
 > Previously refreshed 2026-09-01 (OSCE invite+links stage: `/admin/osce-tokens` now linked from the Admin hub — was previously direct-URL-only; corrected the stale `/osce-evaluator-signup` redirect entry — it's a live page, not a redirect. See OSCE section below.)
 > Previously refreshed 2026-07-15 (PALS hub findability fix: home page's main-nav card and `/calendar` toolbar button repointed from `/labs/acls-hub` to `/labs/aha-hub` so PALS is reachable the same way ACLS always was; `/labs/acls-hub` gained a back-link to `/labs/aha-hub`).
@@ -148,7 +157,8 @@ Two doors — labeled to keep directors out of the student dead-end:
 | `/calendar` | unified calendar | instructor+ |
 | `/help` | help hub | any |
 | `/notifications` | inbox | any |
-| `/onboarding` | post-signup onboarding | pending → student |
+| `/onboarding` | **Stale entry corrected 2026-09-19** — this is Instructor Onboarding (mentor/mentee template + task-progress tracking for new instructors), not a post-signup student flow. Reachable only via the home-dashboard widget, itself gated to the viewer's *own* active assignment — an admin/mentor with no assignment of their own has no in-app path in. Guaranteed entry point added at `/admin/tools`. | any authenticated (assignment/admin-gated) |
+| `/admin/tools` | Admin Tools — guaranteed, always-linked home for every Feature Register row Ben has marked "Tucked away" (seeded 2026-09-19 with Instructor Onboarding, OSCE Admin, Report Generator); grouped by Area, driven by `lib/tucked-away-features.ts` | admin+ |
 | `/request-access` | external access request | unauth |
 | `/resources` | resource hub | any |
 | `/resources/medications` | medication reference | any |
