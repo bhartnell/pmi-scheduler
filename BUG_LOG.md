@@ -5,6 +5,10 @@ Generated snapshot of the 🐞 Bug & Fix Log (Notion, Agent Ops Hub).
 Regenerate with `node scripts/export-bug-log.js`.
 
 Last generated: 2026-09-15T00:26:58.502Z · 20 rows · 5 recurred/partially-held
+Manually appended BUG-21 on 2026-09-19 (no `NOTION_API_KEY` in this container to
+run the exporter — same limitation noted when BUG-7 was added). Regenerate with
+the real script once the key is reachable from this environment to pick up any
+other drift since 2026-09-15.
 
 See the Known-Issue Check section of `CLAUDE.md`: query this log
 (or the live Notion database, if reachable) for the relevant Area
@@ -59,8 +63,9 @@ before forming any hypothesis about a reported problem.
 | BUG-9 | [lab_template_stations does not carry scenario links through to generated lab days](https://app.notion.com/p/3dc5cd1cbc9b81b982d2f353540ee7c9) | High | Not yet fixed | Not yet verified | 2026-09-14 | — | — | 324 lab_template_stations rows, only 24 with scenario_id. Zero exact title matches available between template scenario_title free text and scenarios.title, so no naive backfill is possible. |
 | BUG-10 | [Orphaned scenario stations — 77 of 266 lab_stations rows typed 'scenario' have null scenario_id](https://app.notion.com/p/3dc5cd1cbc9b8111bf62efb39cc079e2) | Medium | Not yet fixed | Not yet verified | 2026-09-14 | — | — | SELECT count(*) FILTER (WHERE station_type='scenario' AND scenario_id IS NULL) FROM lab_stations = 77 of 266. |
 
-### Process / Board (1)
+### Process / Board (2)
 
 | Bug ID | Bug | Severity | Fix Type | Outcome | First Reported | Fix Deployed | Verify By | Evidence |
 |---|---|---|---|---|---|---|---|---|
 | BUG-12 | [Board cards left gated on events that had already completed weeks earlier](https://app.notion.com/p/3dc5cd1cbc9b8108bedaec6dda0cb057) | Medium | Documentation | Not yet verified | 2026-09-14 | 2026-09-14 | 2026-10-15 | ~7 cards found gated on events completed 6-8 weeks prior, producing an apparent AHA workstream stall. Three items found already complete while their cards said otherwise (G14 results export Jul 18, C… |
+| BUG-21 | [Past cleanup passes inferred keep/hide intent from code signals instead of Ben's actual decisions, so wanted features (Instructor Onboarding, OSCE admin tooling, Report Generator) drifted out of reach](https://app.notion.com/p/3e05cd1cbc9b81159b5cd83c6f5bbbdc) | Medium | Code patch | Not yet verified | 2026-09-19 | 2026-09-19 | 2026-10-17 | `/onboarding`'s only in-app link was gated on the viewer having their own active assignment (app/api/onboarding/dashboard/route.ts:20,64); Ben is a mentor, not an instructor, so it never showed for him. Live-code audit of all 289 `app/**/page.tsx` found 9 more zero-inbound-link pages plus a likely duplicate `/scheduling/planner/*` vs `/academics/planner/*`. Populated the Feature Register with 59 evidence-only rows; added `/admin/tools` as a guaranteed entry point for every "Tucked away" row. |

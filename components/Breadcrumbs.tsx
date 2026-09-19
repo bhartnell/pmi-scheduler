@@ -63,6 +63,7 @@ const ROUTE_LABELS: Record<string, string> = {
   'admin/osce-events': 'OSCE Events',
   'admin/osce-observers': 'OSCE Observers',
   'admin/settings': 'Settings',
+  'admin/tools': 'Admin Tools',
   'admin/scenarios': 'Scenarios',
   'admin/scenarios/bulk-import': 'Bulk Import',
   'instructor': 'Instructor Portal',
