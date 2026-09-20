@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       .from('equipment_maintenance')
       .select(`
         *,
-        equipment:equipment_item_id (id, name, category, location, condition)
+        equipment:equipment_item_id (id, name, condition, category:category_id(name), location:location_id(name))
       `)
       .order('scheduled_date', { ascending: false })
       .order('created_at', { ascending: false });
@@ -77,9 +77,34 @@ export async function GET(request: NextRequest) {
       .eq('status', 'scheduled')
       .lt('scheduled_date', today);
 
+    // Flatten the joined category/location names back to plain strings
+    // to match the existing API contract (equipment.category / equipment.location).
+    type JoinedEquipment = {
+      id: string;
+      name: string;
+      condition: string | null;
+      category: { name: string } | null;
+      location: { name: string } | null;
+    };
+    const records = (data ?? []).map((record) => {
+      const equipment = record.equipment as unknown as JoinedEquipment | null;
+      return {
+        ...record,
+        equipment: equipment
+          ? {
+              id: equipment.id,
+              name: equipment.name,
+              condition: equipment.condition,
+              category: equipment.category?.name ?? null,
+              location: equipment.location?.name ?? null,
+            }
+          : null,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      records: data ?? [],
+      records,
       overdueCount: overdueCount ?? 0,
     });
   } catch (error: unknown) {
