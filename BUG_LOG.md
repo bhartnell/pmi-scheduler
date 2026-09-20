@@ -5,10 +5,10 @@ Generated snapshot of the 🐞 Bug & Fix Log (Notion, Agent Ops Hub).
 Regenerate with `node scripts/export-bug-log.js`.
 
 Last generated: 2026-09-15T00:26:58.502Z · 20 rows · 5 recurred/partially-held
-Manually appended BUG-21 on 2026-09-19 (no `NOTION_API_KEY` in this container to
-run the exporter — same limitation noted when BUG-7 was added). Regenerate with
-the real script once the key is reachable from this environment to pick up any
-other drift since 2026-09-15.
+Manually appended BUG-21 on 2026-09-19 and BUG-22 on 2026-09-20 (no
+`NOTION_API_KEY` in this container to run the exporter — same limitation noted
+when BUG-7 was added). Regenerate with the real script once the key is
+reachable from this environment to pick up any other drift since 2026-09-15.
 
 See the Known-Issue Check section of `CLAUDE.md`: query this log
 (or the live Notion database, if reachable) for the relevant Area
@@ -30,11 +30,12 @@ before forming any hypothesis about a reported problem.
 | BUG-3 | [lab_timer_state.updated_at is never maintained — frozen at created_at](https://app.notion.com/p/3db5cd1cbc9b81229cdff98581ce1cb5) | Medium | Not yet fixed | Not yet verified | 2026-09-14 | — | — | Row 57bad453: version = 10 (ten updates) yet updated_at identical to created_at to the microsecond (2026-09-14 22:17:03.773225+00). No trigger, update path does not set it. |
 | BUG-13 | [ROOT PATTERN: four rotation-timer surfaces, each with its own state handling (NREMT timer is separate by design)](https://app.notion.com/p/3db5cd1cbc9b81229cdff98581ce1cb5) | High | Not yet fixed | Not yet verified | 2026-09-15 | — | — | Rotation-timer surfaces named in feedback_reports resolution_notes: components/LabTimer.tsx, components/GlobalTimerBanner.tsx, app/timer-display/[token]/page.tsx, app/timer-display/live/[labDayId]/pa… |
 
-### Infra / Cost (1)
+### Infra / Cost (2)
 
 | Bug ID | Bug | Severity | Fix Type | Outcome | First Reported | Fix Deployed | Verify By | Evidence |
 |---|---|---|---|---|---|---|---|---|
 | BUG-4 | [lab_users polled at ~2/s — 40% of all project edge traffic](https://app.notion.com/p/3db5cd1cbc9b81229cdff98581ce1cb5) | High | Not yet fixed | Not yet verified | 2026-09-14 | — | — | 2026-09-14: 14,559 requests of 36,550 total project edge requests (40%). 112-130 req/min during lab. Table content barely changes. Largest single consumer of the edge budget and unrelated to the time… |
+| BUG-22 | [Equipment Maintenance list crashes: PostgREST embed selects equipment_items.category/location which don't exist](https://app.notion.com/p/3e15cd1cbc9b81db9dd4eddaf98128ea) | Medium | Code patch | Not yet verified | 2026-09-20 | 2026-09-20 | 2026-09-27 | postgres_logs: 'column equipment_items_1.category does not exist', 6x 2026-09-19/20. Query was GET /api/admin/equipment/maintenance's embed `equipment:equipment_item_id (id, name, category, location, condition)` — equipment_items only has category_id/location_id FKs. Fixed by joining through the FKs and flattening server-side. Related, unfixed finding: POST/PUT in the same file verify/sync against the unrelated `equipment` table instead of `equipment_items`, which the real FK constraint points at — flagged for Ben, not guessed at. |
 
 ### Student Data / Import (1)
 
