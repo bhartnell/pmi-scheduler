@@ -5,11 +5,11 @@ Generated snapshot of the 🐞 Bug & Fix Log (Notion, Agent Ops Hub).
 Regenerate with `node scripts/export-bug-log.js`.
 
 Last generated: 2026-09-15T00:26:58.502Z · 20 rows · 5 recurred/partially-held
-Manually appended BUG-21 on 2026-09-19, BUG-22 on 2026-09-20, and BUG-24 on
-2026-09-22 (no `NOTION_API_KEY` in this container to run the exporter — same
-limitation noted when BUG-7 was added). Regenerate with the real script once
-the key is reachable from this environment to pick up any other drift since
-2026-09-15.
+Manually appended BUG-21 on 2026-09-19, BUG-22 on 2026-09-20, and BUG-24 and
+BUG-27 on 2026-09-22 (no `NOTION_API_KEY` in this container to run the
+exporter — same limitation noted when BUG-7 was added). Regenerate with the
+real script once the key is reachable from this environment to pick up any
+other drift since 2026-09-15.
 
 See the Known-Issue Check section of `CLAUDE.md`: query this log
 (or the live Notion database, if reachable) for the relevant Area
@@ -58,13 +58,14 @@ before forming any hypothesis about a reported problem.
 |---|---|---|---|---|---|---|---|---|
 | BUG-8 | [Skill/Scenario Coverage panel counts scheduled stations, not completed ones](https://app.notion.com/p/3dc5cd1cbc9b816aa1cada107907d02d) | High | Not yet fixed | Not yet verified | 2026-09-14 | — | — | Ben's screenshot showed counts against future dates (11/16, 11/23). Query confirms: G15 scenario stations = 13 run to date vs 75 scheduled; skills 43 done vs 15 scheduled. ~85% of displayed 'coverage… |
 
-### Lab Schedule Manager (3)
+### Lab Schedule Manager (4)
 
 | Bug ID | Bug | Severity | Fix Type | Outcome | First Reported | Fix Deployed | Verify By | Evidence |
 |---|---|---|---|---|---|---|---|---|
 | BUG-9 | [lab_template_stations does not carry scenario links through to generated lab days](https://app.notion.com/p/3dc5cd1cbc9b81b982d2f353540ee7c9) | High | Not yet fixed | Not yet verified | 2026-09-14 | — | — | 324 lab_template_stations rows, only 24 with scenario_id. Zero exact title matches available between template scenario_title free text and scenarios.title, so no naive backfill is possible. |
 | BUG-10 | [Orphaned scenario stations — 77 of 266 lab_stations rows typed 'scenario' have null scenario_id](https://app.notion.com/p/3dc5cd1cbc9b8111bf62efb39cc079e2) | Medium | Not yet fixed | Not yet verified | 2026-09-14 | — | — | SELECT count(*) FILTER (WHERE station_type='scenario' AND scenario_id IS NULL) FROM lab_stations = 77 of 266. |
 | BUG-24 | [lab_day_attendance query/upsert referenced nonexistent marked_at column across 5 routes](https://app.notion.com/p/3e35cd1cbc9b81159135c9ca542adc86) | Medium | Code patch | Not yet verified | 2026-09-22 | 2026-09-22 | 2026-09-29 | postgres_logs: 'column lab_day_attendance.marked_at does not exist', 22x in 24h. Live schema has marked_by/created_at/updated_at, no marked_at. Repointed 5 routes (attendance route, checkin, student/labs, student/my-progress, students portfolio) to updated_at. Distinct from the already-Done checklist_attendance.marked_at fix (different table). |
+| BUG-27 | [learning-style-report queried team_lead_log.station_id which does not exist (real column is lab_station_id)](https://app.notion.com/p/3e35cd1cbc9b81d9a60eca3759dd2353) | Medium | Code patch | Not yet verified | 2026-09-22 | 2026-09-22 | 2026-09-29 | postgres_logs: 'column team_lead_log.station_id does not exist', 22x in 24h. Live schema has lab_station_id, no station_id. Repointed app/api/lab-management/learning-style-report/route.ts's select + map keys to lab_station_id. |
 
 ### Process / Board (2)
 

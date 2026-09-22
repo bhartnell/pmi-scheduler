@@ -158,17 +158,17 @@ export async function GET(request: NextRequest) {
       // Fetch scenario participation (team assignments) for this lab day
       const { data: participation } = await supabase
         .from('team_lead_log')
-        .select('student_id, station_id')
+        .select('student_id, lab_station_id')
         .eq('lab_day_id', labDayId);
 
       // Build a map of station_id -> student_ids
       const stationStudentMap = new Map<string, string[]>();
       for (const p of participation || []) {
-        if (!p.station_id) continue;
-        if (!stationStudentMap.has(p.station_id)) {
-          stationStudentMap.set(p.station_id, []);
+        if (!p.lab_station_id) continue;
+        if (!stationStudentMap.has(p.lab_station_id)) {
+          stationStudentMap.set(p.lab_station_id, []);
         }
-        stationStudentMap.get(p.station_id)!.push(p.student_id);
+        stationStudentMap.get(p.lab_station_id)!.push(p.student_id);
       }
 
       byStation = stations.map((station) => {
