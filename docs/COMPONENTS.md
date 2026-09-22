@@ -19,6 +19,20 @@
 
 ### Major additions
 
+**`components/wiki/WikiArticleLink.tsx`** (2026-09-22) — Small reusable
+inline link from a feature page to its Help Wiki article (Task Handoff
+Queue "[WIKI v1] Build the in-app help wiki shell"). Embedded on
+`app/labs/schedule/[id]/page.tsx`, `app/admin/lab-templates/page.tsx`, and
+`app/academics/students/import/page.tsx`. The wiki itself lives at
+`/help/wiki` + `/help/wiki/[slug]`, backed by `lib/wiki.ts` (server-only,
+reads `content/wiki/*.md` via `gray-matter`/`marked`) and the client-safe
+`lib/wiki-constants.ts` / `lib/wiki-search.ts`. Content is markdown files
+in the repo — no CMS, no database table, reviewable in a normal PR. See
+`content/wiki/*.md` for the article template (What this is for / When
+you'd do this / Before you start / Steps / What good looks like / When it
+goes wrong / Related) and ship-with-empty-content warning: v1 intentionally
+ships with only 3 real articles rather than scaffolding placeholders.
+
 **`components/osce/StudentOsceResultsCard.tsx`** and
 **`components/osce/CohortOsceResultsCard.tsx`** (2026-09-14) — Surface OSCE
 assessment results (previously siloed inside the OSCE module) into the

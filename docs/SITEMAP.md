@@ -13,6 +13,7 @@
 > made from. `/admin/tools` (added 2026-09-19) is the guaranteed,
 > always-linked home for every feature the register marks "Tucked away."
 
+> Refreshed 2026-09-22 (Help Wiki v1: `/help/wiki` + `/help/wiki/[slug]` added — markdown-file-backed task how-tos, organized by "Running the program" / "Using the site", searchable across title+body, with role tags and a reusable `WikiArticleLink` embedded on `/labs/schedule/[id]`, `/admin/lab-templates`, and `/academics/students/import`. Entry point: new banner card on `/help`. Ships with 3 real articles verified against the live codebase (not click-tested — no OAuth-capable dev session in this environment); no CMS/DB in v1, content is `content/wiki/*.md`.)
 > Refreshed 2026-09-19 (`/admin/tools` — Admin Tools page added: guaranteed home for every "Tucked away" Feature Register entry, seeded with Instructor Onboarding, OSCE Admin, and the Report Generator; linked from `/admin/settings`. Root-caused why `/onboarding` was unreachable for admins/mentors: the only in-app link was the home-dashboard widget, gated on the viewer having their *own* active onboarding assignment — Ben is a mentor, not an instructor being onboarded, so it never showed for him. Fixed by giving `/onboarding` an unconditional entry point on the new page rather than changing the dashboard gate.)
 > Refreshed 2026-09-04 (CoAEMSP Clinical/Field Visit Log export: new "CoAEMSP Log" button on `/clinical/site-visits` (cohort filter required), backed by new `/api/clinical/site-visits/export-coaemsp` route — one accreditation-format .docx per cohort.)
 > Previously refreshed 2026-09-01 (OSCE invite+links stage: `/admin/osce-tokens` now linked from the Admin hub — was previously direct-URL-only; corrected the stale `/osce-evaluator-signup` redirect entry — it's a live page, not a redirect. See OSCE section below.)
@@ -155,7 +156,9 @@ Two doors — labeled to keep directors out of the student dead-end:
 | `/` | `app/page.tsx` | any authenticated |
 | `/attendance` | quick, phone-first roll call over existing `checklists`/`checklist_attendance` (field trips / facility tours); entry point is the UserMenu dropdown, not a hub card, per Ben's no-clutter request | instructor+ (API-enforced) |
 | `/calendar` | unified calendar | instructor+ |
-| `/help` | help hub | any |
+| `/help` | help hub (FAQ, shortcuts, role guides) — now also cards out to the Help Wiki | any |
+| `/help/wiki` | Help Wiki index — task how-tos, searchable, grouped into "Running the program" / "Using the site" | any |
+| `/help/wiki/[slug]` | Individual wiki article | any |
 | `/notifications` | inbox | any |
 | `/onboarding` | **Stale entry corrected 2026-09-19** — this is Instructor Onboarding (mentor/mentee template + task-progress tracking for new instructors), not a post-signup student flow. Reachable only via the home-dashboard widget, itself gated to the viewer's *own* active assignment — an admin/mentor with no assignment of their own has no in-app path in. Guaranteed entry point added at `/admin/tools`. | any authenticated (assignment/admin-gated) |
 | `/admin/tools` | Admin Tools — guaranteed, always-linked home for every Feature Register row Ben has marked "Tucked away" (seeded 2026-09-19 with Instructor Onboarding, OSCE Admin, Report Generator); grouped by Area, driven by `lib/tucked-away-features.ts` | admin+ |
