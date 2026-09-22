@@ -150,11 +150,11 @@ export async function GET(
           id,
           status,
           notes,
-          marked_at,
+          updated_at,
           lab_day:lab_days!lab_day_id(id, date, week_number, day_number)
         `)
         .eq('student_id', studentId)
-        .order('marked_at', { ascending: true }),
+        .order('updated_at', { ascending: true }),
 
       // Compliance wide-table
       supabase
@@ -265,7 +265,7 @@ export async function GET(
         day_number: labDayData?.day_number || null,
         status: a.status,
         notes: a.notes,
-        marked_at: a.marked_at,
+        marked_at: a.updated_at,
       };
     });
 

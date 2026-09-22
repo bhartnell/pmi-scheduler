@@ -70,11 +70,11 @@ export async function GET(request: NextRequest) {
           lab_day_id,
           status,
           notes,
-          marked_at,
+          updated_at,
           lab_day:lab_days(id, date, title, location, start_time, end_time, cohort_id)
         `)
         .eq('student_id', studentId)
-        .order('marked_at', { ascending: false });
+        .order('updated_at', { ascending: false });
 
       if (attendanceRecords && attendanceRecords.length > 0) {
         // 4. Collect lab_day_ids to fetch station completions in bulk
@@ -174,7 +174,7 @@ export async function GET(request: NextRequest) {
             endTime: labDay?.end_time || null,
             status: record.status,
             notes: record.notes || null,
-            markedAt: record.marked_at,
+            markedAt: record.updated_at,
             stations: completionsByLabDay.get(labDayId) || [],
             skillsSignedOff: signoffsByLabDay.get(labDayId) || [],
           };
