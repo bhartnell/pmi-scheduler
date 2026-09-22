@@ -262,11 +262,11 @@ export async function GET(request: NextRequest) {
           id,
           status,
           notes,
-          marked_at,
+          updated_at,
           lab_day:lab_days(id, date, title)
         `)
         .eq('student_id', studentId)
-        .order('marked_at', { ascending: false })
+        .order('updated_at', { ascending: false })
         .limit(500);
 
       if (attendanceRecords && attendanceRecords.length > 0) {
@@ -281,7 +281,7 @@ export async function GET(request: NextRequest) {
           labTitle: (r.lab_day as any)?.title || null,
           status: r.status,
           notes: r.notes || null,
-          markedAt: r.marked_at,
+          markedAt: r.updated_at,
         }));
       }
     } catch {
