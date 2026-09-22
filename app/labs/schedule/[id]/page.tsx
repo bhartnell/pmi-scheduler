@@ -72,6 +72,7 @@ import LabDayCheckInSection from '@/components/lab-day/LabDayCheckInSection';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import AvailableInstructorsSection from '@/components/lab-day/AvailableInstructorsSection';
 import ScenarioRoleModal from '@/components/lab-day/ScenarioRoleModal';
+import { WikiArticleLink } from '@/components/wiki/WikiArticleLink';
 import ScenarioPickerModal from '@/components/lab-day/ScenarioPickerModal';
 import DuplicateModals from '@/components/lab-day/DuplicateModals';
 import LabDayPrintView from '@/components/lab-day/LabDayPrintView';
@@ -558,6 +559,10 @@ export default function LabDayPage() {
       <LabDayPrintView labDay={labDay} labDayId={labDayId} labDayRoles={labDayRoles} cohortStudents={cohortStudents} showRosterPrint={showRosterPrint} rosterIncludePhotos={rosterIncludePhotos} onSetShowRosterPrint={setShowRosterPrint} onSetRosterIncludePhotos={setRosterIncludePhotos} formatDate={formatDate} formatTime={formatTime} />
 
       <LabDayHeader labDay={labDay} labDayId={labDayId} showDuplicateDropdown={showDuplicateDropdown} onSetShowDuplicateDropdown={setShowDuplicateDropdown} onOpenTimer={() => setShowTimer(true)} onPrint={() => handlePrint(labDay, labDayRoles, cohortStudents)} onDownloadPDF={() => handleDownloadPDF(labDay)} onExportCalendar={() => handleExportCalendar(labDay, labDayRoles)} onPrintRoster={() => handlePrintRoster(labDay, cohortStudents)} onCSVExport={() => handleCSVExport(labDayId, labDay.date, toast)} onOpenDuplicateModal={() => { setShowDuplicateModal(true); setShowDuplicateDropdown(false); }} onOpenNextWeekConfirm={() => { setShowDuplicateDropdown(false); setShowNextWeekConfirm(true); }} onOpenBulkDuplicateModal={() => { setShowDuplicateDropdown(false); setShowBulkDuplicateModal(true); }} formatDate={formatDate} formatTime={formatTime} />
+
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 flex justify-end print:hidden">
+        <WikiArticleLink slug="run-a-lab-day" label="Help: Running a lab day" />
+      </div>
 
       <main className={`max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6${showRosterPrint ? ' print:hidden' : ''}`}>
         {labDay.is_nremt_testing && (

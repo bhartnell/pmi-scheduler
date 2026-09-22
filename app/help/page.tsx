@@ -33,6 +33,7 @@ import {
   RefreshCw,
   Wrench,
   Minus,
+  BookOpen,
 } from 'lucide-react';
 import { APP_VERSION, VERSION_DATE } from '@/lib/version';
 
@@ -764,6 +765,23 @@ export default function HelpPage() {
       )}
 
       <div className="max-w-7xl mx-auto px-4 py-6">
+        {/* Wiki entry point — task how-tos, separate from the FAQ/reference content below */}
+        <Link
+          href="/help/wiki"
+          className="mb-6 flex items-center gap-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-5 text-white hover:from-blue-700 hover:to-indigo-700 transition-colors group"
+        >
+          <div className="p-2.5 bg-white/15 rounded-lg flex-shrink-0">
+            <BookOpen className="w-6 h-6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h2 className="font-bold">Help Wiki</h2>
+            <p className="text-sm text-blue-100">
+              Task-by-task playbooks — running a lab day, building from a template, enrolling students, and more.
+            </p>
+          </div>
+          <ArrowRight className="w-5 h-5 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
+        </Link>
+
         <div className="flex gap-6">
           {/* Sidebar Table of Contents */}
           <aside className="hidden lg:block w-56 flex-shrink-0">
