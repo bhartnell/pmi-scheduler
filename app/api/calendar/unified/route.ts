@@ -355,7 +355,7 @@ export async function GET(request: NextRequest) {
         let query = supabase
           .from('clinical_site_visits')
           .select(`
-            id, visit_date, start_time, end_time, status, notes,
+            id, visit_date, visit_time, comments,
             site:clinical_sites(id, name, abbreviation),
             cohort:cohorts(id, cohort_number, program:programs(id, name, abbreviation)),
             visitor:lab_users(id, name)
@@ -392,8 +392,8 @@ export async function GET(request: NextRequest) {
               source: 'clinical',
               title: `Clinical: ${site?.name || site?.abbreviation || 'Site Visit'}`,
               date: v.visit_date,
-              start_time: v.start_time || '06:00:00',
-              end_time: v.end_time || '18:00:00',
+              start_time: v.visit_time || '06:00:00',
+              end_time: v.visit_time || '18:00:00',
               program,
               color: PROGRAM_COLORS.clinical,
               cohort_number: cohort?.cohort_number,
@@ -403,7 +403,7 @@ export async function GET(request: NextRequest) {
               event_type: 'clinical',
               metadata: {
                 site_name: site?.name,
-                status: v.status,
+                comments: v.comments,
               },
             });
           }

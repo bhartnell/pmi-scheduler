@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { createNotification } from '@/lib/notifications';
 
 /**
  * POST /api/admin/calendar-sync/remind
@@ -70,19 +71,18 @@ export async function POST(request: NextRequest) {
     let sentCount = 0;
 
     for (const user of targets) {
-      try {
-        await supabase.from('notifications').insert({
-          user_id: user.id,
-          title: 'Connect Your Google Calendar',
-          message:
-            'Connect your Google Calendar in 3 quick steps to sync your assigned classes and labs.',
-          type: 'reminder',
-          link: '/settings/calendar-setup',
-          created_by: auth.session.user.email,
-        });
+      const result = await createNotification({
+        userEmail: user.email,
+        title: 'Connect Your Google Calendar',
+        message:
+          'Connect your Google Calendar in 3 quick steps to sync your assigned classes and labs.',
+        type: 'general',
+        linkUrl: '/settings/calendar-setup',
+      });
+      if (result.success) {
         sentCount++;
-      } catch (err) {
-        console.error(`Failed to notify ${user.email}:`, err);
+      } else {
+        console.error(`Failed to notify ${user.email}:`, result.error);
       }
     }
 
