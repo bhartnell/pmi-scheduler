@@ -43,7 +43,7 @@ import {
   Phone,
 } from 'lucide-react';
 import Barcode from 'react-barcode';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { canManageStudentRoster, hasMinRole, type Role } from '@/lib/permissions';
 import StudentCommunications from '@/components/StudentCommunications';
 import AttendanceAlertBanner from '@/components/AttendanceAlertBanner';
@@ -829,13 +829,6 @@ export default function StudentDetailPage() {
             entityTitle={`${student.first_name} ${student.last_name}`}
             className="mb-1"
           />
-          <Link
-            href="/academics/students"
-            className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 mt-1"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Students
-          </Link>
         </div>
       </div>
 
