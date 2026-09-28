@@ -399,7 +399,7 @@ export default function AdvCertGradePage() {
                   : 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
               }`}>
                 {scenario.cert_tier === 'scenario_testing' ? 'TESTING (scored)'
-                  : scenario.cert_tier === 'scenario_practice' ? 'Practice' : scenario.cert_tier}
+                  : scenario.cert_tier === 'scenario_practice' ? 'Practice (scored as megacode)' : scenario.cert_tier}
               </span>
             </div>
             {scenario.segments.length > 0 && (
