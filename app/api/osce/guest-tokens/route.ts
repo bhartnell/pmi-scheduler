@@ -25,7 +25,51 @@ export async function GET(req: NextRequest) {
     const { data, error } = await query;
 
     if (error) throw error;
-    return NextResponse.json({ success: true, tokens: data });
+
+    // When scoped to one event, also return the event details + each token's
+    // assigned block(s) (matched to the event's observer roster by email, then
+    // name) so the admin UI can build a copy-paste invite for a manual send.
+    let event = null;
+    let tokens = data || [];
+    if (eventId) {
+      const { data: ev } = await supabase
+        .from('osce_events')
+        .select('id, title, subtitle, location, start_date, end_date, event_pin')
+        .eq('id', eventId)
+        .maybeSingle();
+      event = ev || null;
+
+      const { data: observers } = await supabase
+        .from('osce_observers')
+        .select('id, name, email')
+        .eq('event_id', eventId);
+      const { data: blocks } = await supabase
+        .from('osce_time_blocks')
+        .select('id, label, date, start_time, end_time, sort_order')
+        .eq('event_id', eventId);
+      const obsIds = (observers || []).map(o => o.id);
+      const { data: links } = obsIds.length
+        ? await supabase.from('osce_observer_blocks').select('observer_id, block_id').in('observer_id', obsIds)
+        : { data: [] as Array<{ observer_id: string; block_id: string }> };
+
+      const blockById = new Map((blocks || []).map(b => [b.id, b]));
+      tokens = tokens.map(t => {
+        const email = (t.email || '').toLowerCase();
+        const name = (t.evaluator_name || '').toLowerCase();
+        const obs = (observers || []).find(o => email && (o.email || '').toLowerCase() === email)
+          || (observers || []).find(o => (o.name || '').toLowerCase() === name);
+        const assigned = obs
+          ? (links || [])
+              .filter(l => l.observer_id === obs.id)
+              .map(l => blockById.get(l.block_id))
+              .filter(Boolean)
+              .sort((a, b) => (a!.date + a!.start_time).localeCompare(b!.date + b!.start_time))
+          : [];
+        return { ...t, blocks: assigned };
+      });
+    }
+
+    return NextResponse.json({ success: true, tokens, event });
   } catch (err) {
     console.error('Error fetching guest tokens:', err);
     return NextResponse.json({ success: false, error: 'Failed to fetch tokens' }, { status: 500 });
@@ -233,6 +277,48 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     console.error('Error creating guest token:', err);
     return NextResponse.json({ success: false, error: 'Failed to create token' }, { status: 500 });
+  }
+}
+
+// PATCH - Admin: mark a token's invite as sent manually (Ben copies the link
+// and emails it from his own mailbox) or clear that mark. Body: { id, sent }.
+// Uses the same send-tracking columns as the Resend path so the roster shows
+// who has and hasn't been invited regardless of how the invite went out.
+export async function PATCH(req: NextRequest) {
+  const auth = await requireAuth('admin');
+  if (auth instanceof NextResponse) return auth;
+
+  try {
+    const body = await req.json();
+    if (!body.id || typeof body.sent !== 'boolean') {
+      return NextResponse.json({ success: false, error: 'id and sent (boolean) are required' }, { status: 400 });
+    }
+
+    const supabase = getSupabaseAdmin();
+    const { data: existing, error: readError } = await supabase
+      .from('osce_guest_tokens')
+      .select('id, invite_send_count')
+      .eq('id', body.id)
+      .single();
+    if (readError || !existing) {
+      return NextResponse.json({ success: false, error: 'Token not found' }, { status: 404 });
+    }
+
+    const update = body.sent
+      ? { invited_at: new Date().toISOString(), invite_send_count: (existing.invite_send_count || 0) + 1, invite_last_error: null }
+      : { invited_at: null, invite_send_count: 0 };
+
+    const { data, error } = await supabase
+      .from('osce_guest_tokens')
+      .update(update)
+      .eq('id', body.id)
+      .select()
+      .single();
+    if (error) throw error;
+    return NextResponse.json({ success: true, token: data });
+  } catch (err) {
+    console.error('Error updating token invite status:', err);
+    return NextResponse.json({ success: false, error: 'Failed to update invite status' }, { status: 500 });
   }
 }
 

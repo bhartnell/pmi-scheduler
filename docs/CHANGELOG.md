@@ -12,6 +12,7 @@ Format: `commit-hash | brief description`
 ## 2026-09-29
 
 - (this commit) | feat(aha): single-save credential block, typed cursive signature, AHA credential level (migration 20260929, applied)
+(pending) | feat(osce): guest invites are copy-link first — Copy Invite Text, Mark Sent (PATCH guest-tokens), Resend demoted to secondary
 
 ## 2026-09-28
 
