@@ -20,6 +20,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
+import AclsSkillsPanel from '@/components/AclsSkillsPanel';
 import {
   ArrowLeft, Loader2, RefreshCw, Printer, CheckCircle2, XCircle, Clock,
   Users, UserCheck, MapPin, CalendarDays, Layers, GraduationCap,
@@ -456,6 +457,8 @@ function AclsHubPageContent() {
                 })}
               </div>
             </section>
+
+            <AclsSkillsPanel groups={groups} />
 
             {/* By instructor */}
             {byInstructor.length > 0 && (
