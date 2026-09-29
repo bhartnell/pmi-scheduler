@@ -102,6 +102,10 @@ export async function PATCH(
     if (body.assessment_c !== undefined) updateData.assessment_c = body.assessment_c;
     if (body.assessment_d !== undefined) updateData.assessment_d = body.assessment_d;
     if (body.assessment_e !== undefined) updateData.assessment_e = body.assessment_e;
+    for (const k of ['x', 'a', 'b', 'c', 'd', 'e']) {
+      const f = `assessment_${k}_action`;
+      if (body[f] !== undefined) updateData[f] = body[f];
+    }
     if (body.general_impression !== undefined) updateData.general_impression = body.general_impression;
 
     // SAMPLE History (scenario-level)

@@ -4,6 +4,7 @@
 > Reconciled to live database -- June 8, 2026 (see "Schema Reconciliation Additions")
 > Check constraints re-verified against live -- June 10, 2026 (all 146 documented CHECK definitions normalized to exact pg_get_constraintdef output; 4 had real value-list drift)
 > Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
+> Last updated: 2026-09-29 -- added `scenarios.assessment_{x..e}_action` (Scenario Format v2); `phases` jsonb gains optional keys changes/triggers/modifiers/branch
 > Last updated: 2026-07-12 -- added `lab_days.is_archived` (migration `20260712_lab_days_is_archived.sql`, archive-not-delete flag excluding rows from the general lab schedule + ACLS hub list views)
 > Last updated: 2026-07-24 -- added `lab_template_stations.skill_sheet_id` (migration `20260724_lab_template_stations_skill_sheet_id.sql`, see `lab_template_stations` below)
 > Last updated: 2026-08-15 -- added `checklist_attendance.marked_at` / `.marked_by` (migration `20260815_checklist_attendance_marked_by.sql`, fixes prod PGRST204 on attendance save, see `checklist_attendance` below)
@@ -1869,6 +1870,12 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | assessment_c | text | YES |  |  |
 | assessment_d | text | YES |  |  |
 | assessment_e | text | YES |  |  |
+| assessment_x_action | text | YES |  | v2 expected learner action for X (migration `20260929_scenario_v2_assessment_actions.sql`) |
+| assessment_a_action | text | YES |  | v2 expected learner action for A (migration `20260929_scenario_v2_assessment_actions.sql`) |
+| assessment_b_action | text | YES |  | v2 expected learner action for B (migration `20260929_scenario_v2_assessment_actions.sql`) |
+| assessment_c_action | text | YES |  | v2 expected learner action for C (migration `20260929_scenario_v2_assessment_actions.sql`) |
+| assessment_d_action | text | YES |  | v2 expected learner action for D (migration `20260929_scenario_v2_assessment_actions.sql`) |
+| assessment_e_action | text | YES |  | v2 expected learner action for E (migration `20260929_scenario_v2_assessment_actions.sql`) |
 | avpu | text | YES |  |  |
 | initial_vitals | jsonb | YES |  | Vitals: { bp, pulse, hr, resp, rr, spo2, etco2, temp, glucose, blood_glucose, gcs, gcs_total, gcs_e, gcs_v, gcs_m, pupils, skin, loc, pain, ekg_rhythm, twelve_lead_notes, lung_sounds, lung_notes, jvd, edema, capillary_refill, pulse_quality, notes, other_findings[] } |
 | sample_history | jsonb | YES |  | SAMPLE: { signs_symptoms, allergies, medications, past_history, last_oral_intake, events } |
