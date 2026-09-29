@@ -18,6 +18,24 @@ interface Token {
   invited_at: string | null;
   invite_send_count: number;
   invite_last_error: string | null;
+  blocks?: TokenBlock[];
+}
+
+interface TokenBlock {
+  id: string;
+  label: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+}
+
+interface EventDetails {
+  title: string;
+  subtitle: string | null;
+  location: string | null;
+  start_date: string;
+  end_date: string;
+  event_pin: string | null;
 }
 
 interface OsceEventOption {
@@ -51,6 +69,7 @@ export default function OsceTokenManagement() {
 
   const [tokens, setTokens] = useState<Token[]>([]);
   const [tokensLoading, setTokensLoading] = useState(true);
+  const [eventDetails, setEventDetails] = useState<EventDetails | null>(null);
 
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState('');
@@ -95,7 +114,7 @@ export default function OsceTokenManagement() {
     try {
       const res = await fetch(`/api/osce/guest-tokens?event_id=${eventId}`);
       const data = await res.json();
-      if (data.success) setTokens(data.tokens);
+      if (data.success) { setTokens(data.tokens); setEventDetails(data.event || null); }
     } catch { /* ignore */ } finally { setTokensLoading(false); }
   }, [eventId]);
 
@@ -250,6 +269,66 @@ export default function OsceTokenManagement() {
     setBulkSending(false);
   }
 
+  // ── Manual-send tracking ────────────────────────────────────────────────
+  async function setManualSent(id: string, sent: boolean) {
+    try {
+      const res = await fetch('/api/osce/guest-tokens', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, sent }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTokens(prev => prev.map(t => (t.id === id ? { ...t, ...data.token, blocks: t.blocks } : t)));
+      }
+    } catch { /* ignore */ }
+  }
+
+  // ── Copy-paste invite text (for sending from Ben's own mailbox) ─────────
+  function fmtDate(d: string) {
+    return new Date(d + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' });
+  }
+  function fmtTime(t: string) {
+    const [h, m] = t.split(':').map(Number);
+    return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+  }
+  function buildInviteText(t: Token) {
+    const ev = eventDetails;
+    const title = ev?.title || selectedEvent?.title || 'OSCE';
+    const range = ev
+      ? ev.start_date === ev.end_date ? fmtDate(ev.start_date) : `${fmtDate(ev.start_date)} – ${fmtDate(ev.end_date)}`
+      : '';
+    const lines = [
+      `Subject: [PMI] OSCE Evaluator Invitation — ${title}`,
+      '',
+      `Hello ${t.evaluator_name},`,
+      '',
+      `You're invited to serve as an evaluator for the Pima Medical Institute Paramedic Program ${title}${ev?.subtitle ? ` (${ev.subtitle})` : ''}.`,
+      '',
+    ];
+    if (range) lines.push(`When: ${range}`);
+    if (ev?.location) lines.push(`Where: ${ev.location}`);
+    if (t.evaluator_role) lines.push(`Role: ${roleLabels[t.evaluator_role] || t.evaluator_role}`);
+    if (t.blocks && t.blocks.length > 0) {
+      lines.push('Your block(s):');
+      t.blocks.forEach(b => lines.push(`  - ${b.label}: ${fmtDate(b.date)}, ${fmtTime(b.start_time)}–${fmtTime(b.end_time)}`));
+    }
+    lines.push(
+      '',
+      'What we\'re asking: observe student scenario performances and score them using the online scoring form — no account or login needed.',
+      '',
+      `Your personal scoring link: ${getLink(t.token)}`,
+    );
+    if (ev?.event_pin) lines.push(`Event PIN (if prompted): ${ev.event_pin}`);
+    lines.push(`Link valid until ${new Date(t.valid_until).toLocaleDateString()}.`, '', 'Thank you,', 'PMI Paramedic Program');
+    return lines.join('\n');
+  }
+  function copyInviteText(t: Token) {
+    navigator.clipboard.writeText(buildInviteText(t));
+    setCopied(`text:${t.id}`);
+    setTimeout(() => setCopied(null), 2000);
+  }
+
   function getLink(token: string) {
     return `${window.location.origin}/osce-scoring/enter?token=${token}`;
   }
@@ -268,7 +347,7 @@ export default function OsceTokenManagement() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">OSCE Guest Tokens &amp; Invites</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Generate unique grading-access links for external evaluators and email them their invite.
+          Generate a unique grading-access link per evaluator, copy the link or a ready-to-paste invite, and send it from your own mailbox. Emailing via Resend is optional.
         </p>
       </div>
 
@@ -453,8 +532,8 @@ export default function OsceTokenManagement() {
                   </div>
                 ) : (
                   <button onClick={() => setConfirmBulkSend(true)}
-                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 min-h-[44px]">
-                    Send All Un-sent Invites ({unsentWithEmail.length})
+                    className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-200 dark:hover:bg-gray-600 min-h-[44px]">
+                    Email All Un-sent via Resend ({unsentWithEmail.length})
                   </button>
                 )
               )}
@@ -502,12 +581,20 @@ export default function OsceTokenManagement() {
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                           <button onClick={() => copyLink(t.token)}
-                            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 font-medium min-h-[44px]">
+                            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium min-h-[44px]">
                             {copied === t.token ? 'Copied!' : 'Copy Link'}
                           </button>
+                          <button onClick={() => copyInviteText(t)}
+                            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium min-h-[44px]">
+                            {copied === `text:${t.id}` ? 'Copied!' : 'Copy Invite Text'}
+                          </button>
+                          <button onClick={() => setManualSent(t.id, !t.invited_at)}
+                            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 font-medium min-h-[44px]">
+                            {t.invited_at ? 'Unmark Sent' : 'Mark Sent'}
+                          </button>
                           <button onClick={() => sendInvites([t.id])} disabled={!t.email || isSending}
-                            className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 font-medium min-h-[44px]">
-                            {isSending ? 'Sending...' : t.invited_at ? 'Resend Invite' : 'Send Invite'}
+                            className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-40 font-medium min-h-[44px]">
+                            {isSending ? 'Sending...' : t.invited_at ? 'Resend via Resend' : 'Email via Resend'}
                           </button>
                           <button onClick={() => handleRevoke(t.id)}
                             className="px-3 py-1.5 text-sm text-red-600 hover:text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg font-medium min-h-[44px]">
