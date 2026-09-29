@@ -116,6 +116,11 @@ export interface ScenarioPhase {
   patient_response?: string;
   expected_actions?: string[];
   duration_minutes?: number;
+  // v2 (all optional; phases without them render unchanged)
+  changes?: string | string[];
+  triggers?: string | string[];
+  modifiers?: string | string[];
+  branch?: string | string[] | Record<string, unknown>;
 }
 
 export interface Scenario {
@@ -156,6 +161,13 @@ export interface Scenario {
   assessment_c: string | null;
   assessment_d: string | null;
   assessment_e: string | null;
+  // v2: expected learner action beside each finding (nullable)
+  assessment_x_action?: string | null;
+  assessment_a_action?: string | null;
+  assessment_b_action?: string | null;
+  assessment_c_action?: string | null;
+  assessment_d_action?: string | null;
+  assessment_e_action?: string | null;
   avpu: string | null;
   
   // Vitals & History

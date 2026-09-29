@@ -11,11 +11,12 @@ Format: `commit-hash | brief description`
 
 ## 2026-09-29
 
+752de87 | Scenario Format v2: assessment_*_action columns, phase changes/triggers/modifiers/branch rendering + editor passthrough, compact instructor brief
 93dfdfb | fix(aha): PALS/ACLS hubs take ?cohortId + course picker; AHA Hub cohort rows link to that course (was always landing on the upcoming course)
 
 - (this commit) | feat(aha): single-save credential block, typed cursive signature, AHA credential level (migration 20260929, applied)
 (pending) | feat(osce): guest invites are copy-link first — Copy Invite Text, Mark Sent (PATCH guest-tokens), Resend demoted to secondary
-PENDING | feat(acls): skills-station capture (Airway/Adult BLS/Peds BLS) → pals_skill_completions via /api/adv-cert/skill-completions + AclsSkillsPanel on ACLS Hub (no schema change)
+a3d3ee4 | feat(acls): skills-station capture (Airway/Adult BLS/Peds BLS) → pals_skill_completions via /api/adv-cert/skill-completions + AclsSkillsPanel on ACLS Hub (no schema change)
 
 ## 2026-09-28
 

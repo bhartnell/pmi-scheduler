@@ -12,7 +12,7 @@
  *     to the edit form)
  *
  * Sections rendered, in instructor-workflow order:
- *   1. INSTRUCTOR NOTES (READ FIRST) — yellow banner
+ *   1. INSTRUCTOR BRIEF — yellow banner
  *   2. Dispatch Information
  *   3. Patient Information & Scene
  *   4. Primary Assessment (XABCDE)
@@ -137,11 +137,9 @@ export default function ScenarioFullDisplay({
         <div className="bg-yellow-100 dark:bg-yellow-900/40 p-4 rounded-lg border-2 border-yellow-400 dark:border-yellow-600">
           <h4 className="font-bold text-yellow-900 dark:text-yellow-200 mb-2 flex items-center gap-2 text-lg">
             <Info className="w-5 h-5" />
-            INSTRUCTOR NOTES (READ FIRST)
+            INSTRUCTOR BRIEF
           </h4>
-          <p className="text-sm text-yellow-800 dark:text-yellow-300 whitespace-pre-wrap">
-            {scenario.instructor_notes}
-          </p>
+          <InstructorBrief text={scenario.instructor_notes} />
         </div>
       )}
 
@@ -231,21 +229,22 @@ export default function ScenarioFullDisplay({
               </div>
             )}
             <div className="grid gap-2 mt-2">
-              {scenario.assessment_x && (
-                <AssessmentRow letter="X" text={scenario.assessment_x} />
+              {(scenario.assessment_x || scenario.assessment_x_action) && (
+                <AssessmentRow letter="X" text={scenario.assessment_x || ''} action={scenario.assessment_x_action} />
               )}
-              {scenario.assessment_a && (
-                <AssessmentRow letter="A" text={scenario.assessment_a} />
+              {(scenario.assessment_a || scenario.assessment_a_action) && (
+                <AssessmentRow letter="A" text={scenario.assessment_a || ''} action={scenario.assessment_a_action} />
               )}
-              {scenario.assessment_b && (
-                <AssessmentRow letter="B" text={scenario.assessment_b} />
+              {(scenario.assessment_b || scenario.assessment_b_action) && (
+                <AssessmentRow letter="B" text={scenario.assessment_b || ''} action={scenario.assessment_b_action} />
               )}
-              {scenario.assessment_c && (
-                <AssessmentRow letter="C" text={scenario.assessment_c} />
+              {(scenario.assessment_c || scenario.assessment_c_action) && (
+                <AssessmentRow letter="C" text={scenario.assessment_c || ''} action={scenario.assessment_c_action} />
               )}
-              {(scenario.assessment_d || scenario.gcs || scenario.pupils) && (
+              {(scenario.assessment_d || scenario.assessment_d_action || scenario.gcs || scenario.pupils) && (
                 <AssessmentRow
                   letter="D"
+                  action={scenario.assessment_d_action}
                   text={[
                     scenario.assessment_d,
                     scenario.gcs && `GCS: ${scenario.gcs}`,
@@ -253,8 +252,8 @@ export default function ScenarioFullDisplay({
                   ].filter(Boolean).join(' | ')}
                 />
               )}
-              {scenario.assessment_e && (
-                <AssessmentRow letter="E" text={scenario.assessment_e} />
+              {(scenario.assessment_e || scenario.assessment_e_action) && (
+                <AssessmentRow letter="E" text={scenario.assessment_e || ''} action={scenario.assessment_e_action} />
               )}
             </div>
           </div>
@@ -513,6 +512,7 @@ export default function ScenarioFullDisplay({
                         </p>
                       </div>
                     )}
+                    <PhaseTextBlock label="Changes on Entering This Phase" value={phase.changes} tone="blue" />
                     {Array.isArray(phase.expected_actions) && phase.expected_actions.length > 0 && (
                       <div>
                         <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -525,6 +525,9 @@ export default function ScenarioFullDisplay({
                         </ul>
                       </div>
                     )}
+                    <PhaseTextBlock label="Triggers (to Next Phase)" value={phase.triggers} tone="purple" />
+                    <PhaseTextBlock label="Modifiers (Correct vs Missed Action)" value={phase.modifiers} tone="orange" />
+                    <PhaseTextBlock label="Branch" value={phase.branch} tone="purple" />
                     {(() => {
                       // instructor_cues is a string[] (first-class phase field). Tolerate a
                       // legacy single string too. Filter blanks; hide if empty.
@@ -571,13 +574,81 @@ export default function ScenarioFullDisplay({
 
 // ─── Internal subcomponents ──────────────────────────────────────
 
-function AssessmentRow({ letter, text }: { letter: string; text: string }) {
+// v2: instructor_notes is a compact brief. Long legacy notes render collapsed
+// (clamped) with an expand toggle — content is never truncated or altered.
+const BRIEF_COLLAPSE_CHARS = 700;
+function InstructorBrief({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const long = typeof text === 'string' && text.length > BRIEF_COLLAPSE_CHARS;
+  return (
+    <div>
+      <p className={`text-sm text-yellow-800 dark:text-yellow-300 whitespace-pre-wrap ${long && !open ? 'line-clamp-6' : ''}`}>
+        {text}
+      </p>
+      {long && (
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="mt-2 text-xs font-medium text-yellow-900 dark:text-yellow-200 underline min-h-[44px] sm:min-h-0"
+        >
+          {open ? 'Show less' : `Show full notes (${text.length.toLocaleString()} chars)`}
+        </button>
+      )}
+    </div>
+  );
+}
+
+function AssessmentRow({ letter, text, action }: { letter: string; text: string; action?: string | null }) {
+  const hasAction = typeof action === 'string' && action.trim() !== '';
   return (
     <div className="flex items-start gap-2">
-      <span className="inline-block w-6 h-6 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 rounded text-center font-bold text-sm leading-6">
+      <span className="inline-block w-6 h-6 shrink-0 bg-gray-800 dark:bg-gray-200 text-white dark:text-gray-800 rounded text-center font-bold text-sm leading-6">
         {letter}
       </span>
-      <span className="text-gray-700 dark:text-gray-300 flex-1">{text}</span>
+      <div className="flex-1">
+        {text && <span className="text-gray-700 dark:text-gray-300">{text}</span>}
+        {hasAction && (
+          <div className="mt-0.5 text-sm text-emerald-800 dark:text-emerald-300">
+            <span className="font-semibold">Expected action:</span> {action}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// v2 phase fields (changes / triggers / modifiers / branch) may be a string,
+// string[], or (branch only) an object/array of objects. Render defensively.
+function PhaseTextBlock({ label, value, tone = 'gray' }: { label: string; value: unknown; tone?: 'gray' | 'blue' | 'purple' | 'orange' }) {
+  const toneCls = {
+    gray: 'text-gray-700 dark:text-gray-300',
+    blue: 'text-blue-800 dark:text-blue-300',
+    purple: 'text-purple-800 dark:text-purple-300',
+    orange: 'text-orange-800 dark:text-orange-300',
+  }[tone];
+  const toText = (v: unknown): string => {
+    if (v == null) return '';
+    if (typeof v === 'string') return v;
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v);
+    if (typeof v === 'object') {
+      return Object.entries(v as Record<string, unknown>)
+        .map(([k, val]) => `${k}: ${toText(val)}`)
+        .join('; ');
+    }
+    return '';
+  };
+  const items: string[] = (Array.isArray(value) ? value : [value]).map(toText).filter((t) => t.trim() !== '');
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <h5 className={`text-sm font-medium mb-1 ${toneCls}`}>{label}</h5>
+      {items.length === 1 ? (
+        <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-wrap">{items[0]}</p>
+      ) : (
+        <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside space-y-0.5">
+          {items.map((t, i) => <li key={i}>{t}</li>)}
+        </ul>
+      )}
     </div>
   );
 }
