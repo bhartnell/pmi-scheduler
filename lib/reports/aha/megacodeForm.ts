@@ -12,8 +12,9 @@
  */
 import type { MegacodeReport, MegacodeReportRow, MegacodeAttempt } from '@/lib/reports/aha/megacode';
 import { chainToVariant } from '@/lib/reports/aha/megacode';
+import { signatureFaceStack } from '@/lib/reports/aha/signature';
 
-export interface SignoffInstructor { name: string; ahaNumber: string | null; signatureData: string | null; signatureKind: string | null; }
+export interface SignoffInstructor { name: string; ahaNumber: string | null; signatureData: string | null; signatureKind: string | null; signatureText?: string | null; signatureFace?: string | null; }
 
 interface FormItem { text: string; dataIndex: number; fill?: string } // fill = numeric fill-in (default passing value), not a checkbox
 interface FormSection { key: string; heading: string; items: FormItem[]; isCprGrid?: boolean; }
@@ -186,7 +187,8 @@ function renderSignoff(row: MegacodeReportRow & { instructor?: SignoffInstructor
   const ins = row.instructor ?? null;
   let sig = `<u>${blank}</u>`;
   if (ins) {
-    if (ins.signatureData) sig = `<img class="sig" src="${ins.signatureData}" alt="signature" />`;
+    if (ins.signatureKind === 'typed' && ins.signatureText) sig = `<span class="sigscript" style="font-family:${signatureFaceStack(ins.signatureFace)}">${esc(ins.signatureText)}</span>`;
+    else if (ins.signatureData) sig = `<img class="sig" src="${ins.signatureData}" alt="signature" />`;
     else sig = `<span class="sigscript">${esc(ins.name)}</span>`;
   }
   const initials = ins ? esc(ins.name) : '<u>&nbsp;&nbsp;&nbsp;</u>';

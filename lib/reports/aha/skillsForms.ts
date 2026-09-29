@@ -14,6 +14,7 @@
  */
 import type { RosterStudent } from '@/lib/reports/roster';
 import type { SignoffInstructor } from '@/lib/reports/aha/megacodeForm';
+import { signatureFaceStack } from '@/lib/reports/aha/signature';
 
 interface Step { text: string; subs?: string[] }
 interface Section { heading: string; note?: string; steps: Step[]; notes?: string[] }
@@ -125,7 +126,8 @@ function fmtDate(d: string | null | undefined): string {
 
 function signoff(ins: SignoffInstructor | null, dateStr: string): string {
   let sig = '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>';
-  if (ins) sig = ins.signatureData ? `<img class="sig" src="${ins.signatureData}" alt="signature" />` : `<span class="sigscript">${esc(ins.name)}</span>`;
+  if (ins && ins.signatureKind === 'typed' && ins.signatureText) sig = `<span class="sigscript" style="font-family:${signatureFaceStack(ins.signatureFace)}">${esc(ins.signatureText)}</span>`;
+  else if (ins) sig = ins.signatureData ? `<img class="sig" src="${ins.signatureData}" alt="signature" />` : `<span class="sigscript">${esc(ins.name)}</span>`;
   const initials = ins ? esc(ins.name) : '<u>&nbsp;&nbsp;</u>';
   const num = ins?.ahaNumber ? esc(ins.ahaNumber) : '<u>&nbsp;&nbsp;&nbsp;</u>';
   const date = dateStr ? esc(dateStr) : '<u>&nbsp;&nbsp;&nbsp;</u>';

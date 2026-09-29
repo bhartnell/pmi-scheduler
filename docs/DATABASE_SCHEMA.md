@@ -99,7 +99,10 @@
 | lvfr_platoon | text | YES |  |  |
 | aha_instructor_number | text | YES |  | AHA instructor # for the AHA Results Export signature line |
 | signature_data | text | YES |  | PNG data URL of drawn/uploaded signature; NULL when signature_kind='auto' |
-| signature_kind | text | YES |  | 'drawn' \| 'uploaded' \| 'auto' (script-font name fallback) |
+| signature_kind | text | YES |  | 'drawn' \| 'uploaded' \| 'auto' (script-font name fallback) \| 'typed' (signature_text + signature_face) |
+| signature_text | text | YES |  | Typed-signature string (kind='typed'). Migration `20260929_lab_users_aha_credentials.sql` |
+| signature_face | text | YES |  | Typed-signature face key (`lib/reports/aha/signature.ts`) |
+| aha_credentials | ARRAY | YES |  | AHA credential level(s): AHA Faculty / ACLS Instructor / PALS Instructor (orthogonal to app role) |
 | paramedic_lab_default | boolean | NO | true | Whether this instructor is included in paramedic-lab default-available classification. FALSE for RT/other-program full-timers who are assignable but not default-available (Ben 2026-08-07): `chooshmand@`, `dridgell@`, `madams@`, `tkankoski@`, `tmate@`. Added migration `20260807_instructor_unavailability.sql`. **Still not read by any endpoint** — replacing the hardcoded `lib/rt-only-instructors.ts` full-hide with this column is separate, not-yet-scheduled follow-up work (out of scope for the 2026-09-12 picker wiring, which only wired the `instructor_unavailability`/`recurring_unavailability_templates` override). |
 
 **Foreign Keys:**
