@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, ChevronRight } from 'lucide-react';
+import { PAGE_ROUTES } from '@/lib/route-manifest';
 
 /**
  * Lookup map for route segments to human-readable labels.
@@ -165,6 +166,20 @@ function isDynamicSegment(segment: string): boolean {
   return false;
 }
 
+const ROUTES_BY_DEPTH: string[][][] = [];
+for (const route of PAGE_ROUTES) {
+  const segs = route.split('/').filter(Boolean);
+  (ROUTES_BY_DEPTH[segs.length] ||= []).push(segs);
+}
+
+/** True if a real page exists at this path (dynamic [param] routes match any segment). */
+function hasPage(segments: string[]): boolean {
+  if (segments.length === 0) return true;
+  return (ROUTES_BY_DEPTH[segments.length] || []).some((route) =>
+    route.every((seg, i) => seg === segments[i] || (seg.startsWith('[') && seg.endsWith(']')))
+  );
+}
+
 export interface BreadcrumbsProps {
   /** Display name for the last dynamic segment (e.g., a scenario title or lab day title) */
   entityTitle?: string;
@@ -184,6 +199,8 @@ export default function Breadcrumbs({ entityTitle, customSegments, className }: 
     label: string;
     href: string;
     isCurrent: boolean;
+    /** false when no page exists at href: render as plain text, never a dead link */
+    linkable?: boolean;
   }
 
   const items: BreadcrumbItem[] = [];
@@ -234,6 +251,11 @@ export default function Breadcrumbs({ entityTitle, customSegments, className }: 
     }
   }
 
+  // An ancestor with no page.tsx would 404 (or bounce elsewhere); show it as text instead.
+  for (let i = 1; i < items.length; i++) {
+    if (!items[i].isCurrent && !hasPage(segments.slice(0, i))) items[i].linkable = false;
+  }
+
   return (
     <nav aria-label="Breadcrumb" className={className}>
       <ol className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 list-none p-0 m-0 flex-wrap">
@@ -250,6 +272,8 @@ export default function Breadcrumbs({ entityTitle, customSegments, className }: 
                 {index === 0 && <Home className="w-3.5 h-3.5 inline mr-1" aria-hidden="true" />}
                 {item.label}
               </span>
+            ) : item.linkable === false ? (
+              <span>{item.label}</span>
             ) : (
               <Link
                 href={item.href}

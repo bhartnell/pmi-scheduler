@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-09-29
 
+- (this commit) | **fix(nav): Breadcrumbs no longer link to ancestor segments that have no page (Task Handoff Queue "[NAVIGATION - ARCHITECTURAL] 9 breadcrumb reports…", High).** Audit: the shared `components/Breadcrumbs.tsx` derived every crumb from URL segments, but ~30 ancestor paths have no `page.tsx` (`/skill-evaluations`, `/labs/pals`, `/clinical/internships/cohort`, `/students`, `/labs/grade`, `/labs/seating`, …) so the trail rendered dead links / 404s / redirects — the shared root cause behind the dead-link and wrong-landing reports. Added generated `lib/route-manifest.ts` (`node scripts/generate-route-manifest.js`, 292 routes) and the component now renders page-less ancestors as plain text. Only 104 of 292 pages use `<Breadcrumbs>` at all; explicit hierarchy/parent overrides, back-restores-list-state, and rollout to remaining pages are NOT done (need Ben's hierarchy call). Pure UI, no schema/data, `git revert`-able. `type-check` clean.
+
 93dfdfb | fix(aha): PALS/ACLS hubs take ?cohortId + course picker; AHA Hub cohort rows link to that course (was always landing on the upcoming course)
 
 - (this commit) | feat(aha): single-save credential block, typed cursive signature, AHA credential level (migration 20260929, applied)
