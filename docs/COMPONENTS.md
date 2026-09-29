@@ -146,6 +146,9 @@ removed) — every instructor is always listed, with `availabilitySuffix`
 tagging conflicts/no-availability inline so the coordinator can still
 override, mirroring `AvailableInstructorsSection`'s sidebar language.
 
+### ACLS skills capture
+- `components/AclsSkillsPanel.tsx` — pass/fail/remediated attestation per student for Airway Management, Adult BLS, Peds BLS; writes `pals_skill_completions` (cert_course='acls'). Used on `/labs/acls-hub`.
+
 ### Library / utilities
 
 **`lib/scenario-export.ts`** — Pure converters for Export JSON / Update
