@@ -11,7 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-09-29
 
-pending | fix(aha): PALS/ACLS hubs take ?cohortId + course picker; AHA Hub cohort rows link to that course (was always landing on the upcoming course)
+93dfdfb | fix(aha): PALS/ACLS hubs take ?cohortId + course picker; AHA Hub cohort rows link to that course (was always landing on the upcoming course)
 
 - (this commit) | feat(aha): single-save credential block, typed cursive signature, AHA credential level (migration 20260929, applied)
 (pending) | feat(osce): guest invites are copy-link first — Copy Invite Text, Mark Sent (PATCH guest-tokens), Resend demoted to secondary
