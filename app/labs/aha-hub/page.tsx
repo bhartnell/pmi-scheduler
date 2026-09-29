@@ -92,7 +92,13 @@ function CourseSection({
               {cohorts.map((c) => (
                 <tr key={c.cohort?.id} className="border-b border-gray-100 dark:border-gray-700/50">
                   <td className="py-1.5 pr-4 font-medium text-gray-900 dark:text-white">
-                    {c.cohort?.program?.abbreviation || c.cohort?.program?.name || ''} {c.cohort?.cohort_number}
+                    {viewHref && c.cohort?.id ? (
+                      <Link href={`${viewHref}?cohortId=${c.cohort.id}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+                        {c.cohort?.program?.abbreviation || c.cohort?.program?.name || ''} {c.cohort?.cohort_number}
+                      </Link>
+                    ) : (
+                      <>{c.cohort?.program?.abbreviation || c.cohort?.program?.name || ''} {c.cohort?.cohort_number}</>
+                    )}
                   </td>
                   <td className="py-1.5 pr-4 text-gray-600 dark:text-gray-400">{formatDates(c.dates)}</td>
                   <td className="py-1.5 pr-4 text-gray-600 dark:text-gray-400">{c.dayCount}</td>

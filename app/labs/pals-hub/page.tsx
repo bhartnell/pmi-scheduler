@@ -87,6 +87,8 @@ function PalsHubPageContent() {
   const searchParams = useSearchParams();
 
   const [cohort, setCohort] = useState<any>(null);
+  const [courseOptions, setCourseOptions] = useState<{ id: string; label: string; dates: string[] }[]>([]);
+  const cohortIdParam = searchParams.get('cohortId');
   const [dates, setDates] = useState<string[]>([]);
   const [labDays, setLabDays] = useState<LabDay[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -109,7 +111,7 @@ function PalsHubPageContent() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const hubRes = await fetch('/api/adv-cert/pals-hub');
+      const hubRes = await fetch(cohortIdParam ? `/api/adv-cert/pals-hub?cohortId=${encodeURIComponent(cohortIdParam)}` : '/api/adv-cert/pals-hub');
       const hub = await hubRes.json();
       if (hub.success) {
         setCohort(hub.cohort);
@@ -142,9 +144,27 @@ function PalsHubPageContent() {
         }
       }
     } catch { /* non-blocking */ } finally { setLoading(false); }
-  }, []);
+  }, [cohortIdParam]);
 
   useEffect(() => { if (status === 'authenticated') load(); }, [load, status]);
+
+  // Course picker: every cohort running this course (same source as the AHA Hub).
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/adv-cert/aha-hub')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.success) return;
+        setCourseOptions((d.courses?.pals || [])
+          .filter((c: any) => c.cohort?.id)
+          .map((c: any) => ({
+            id: c.cohort.id,
+            label: `${c.cohort.program?.abbreviation || ''} G${c.cohort.cohort_number ?? ''}`.trim(),
+            dates: c.dates || [],
+          })));
+      })
+      .catch(() => {});
+  }, [status]);
 
   // Instructor picker (Task Handoff Queue: "PALS HUB POLISH") — reference-only
   // display, pulled from the same lab_users list the rest of lab management
@@ -341,6 +361,25 @@ function PalsHubPageContent() {
               </button>
             </div>
           </div>
+          {/* Course selector — choose which cohort's PALS course to view */}
+          {courseOptions.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Course:</span>
+              {courseOptions.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/labs/pals-hub?cohortId=${c.id}`}
+                  className={`px-3 py-1.5 min-h-[36px] inline-flex items-center rounded-md text-sm border ${
+                    cohort?.id === c.id
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {c.label}{c.dates.length ? ` · ${c.dates[0]}` : ''}
+                </Link>
+              ))}
+            </div>
+          )}
           {/* Day selector */}
           {dates.length > 1 && (
             <div className="flex gap-1 mb-4">
