@@ -80,6 +80,23 @@ function ReadinessLabel({ value }: { value: string | null }) {
   return <span className={`font-medium ${entry?.color || ''}`}>{entry?.label || value}</span>;
 }
 
+// Readiness calls per student, with disagreement surfaced (never averaged away).
+function ReadinessSummary({ evaluators }: { evaluators: EvaluatorResult[] }) {
+  const calls = evaluators.map(e => e.readiness).filter((v): v is string => !!v);
+  if (calls.length === 0) return <span className="text-gray-400">--</span>;
+  const split = new Set(calls).size > 1;
+  return (
+    <div className="flex items-center justify-center gap-2 flex-wrap">
+      {calls.map((c, i) => <ReadinessLabel key={i} value={c} />)}
+      {split && (
+        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
+          Split
+        </span>
+      )}
+    </div>
+  );
+}
+
 export default function OsceResultsPage() {
   const [results, setResults] = useState<AssessmentResult[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,6 +172,7 @@ export default function OsceResultsPage() {
                   <th className="px-3 py-3 text-center font-semibold text-gray-900 dark:text-white">Slot</th>
                   <th className="px-3 py-3 text-center font-semibold text-gray-900 dark:text-white">Evaluators</th>
                   <th className="px-3 py-3 text-center font-semibold text-gray-900 dark:text-white">Submitted</th>
+                  <th className="px-3 py-3 text-center font-semibold text-gray-900 dark:text-white">Readiness</th>
                 </tr>
               </thead>
               <tbody>
@@ -179,10 +197,11 @@ export default function OsceResultsPage() {
                           {r.submitted_count}/{r.evaluator_count}
                         </span>
                       </td>
+                      <td className="px-3 py-3 text-center"><ReadinessSummary evaluators={r.evaluators} /></td>
                     </tr>
                     {expanded.has(r.id) && (
                       <tr key={`${r.id}-detail`}>
-                        <td colSpan={6} className="px-4 py-4 bg-gray-50 dark:bg-gray-900/50">
+                        <td colSpan={7} className="px-4 py-4 bg-gray-50 dark:bg-gray-900/50">
                           {r.evaluators.length === 0 ? (
                             <p className="text-gray-500 text-sm">No evaluator scores yet</p>
                           ) : (
