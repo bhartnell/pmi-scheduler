@@ -1193,6 +1193,21 @@ interface SiteVisitSyncParams {
 }
 
 /**
+ * Default calendar block for a site visit: 15 min drive/walk + 15 min per
+ * student. No student count is recorded yet, so this is the single-student
+ * case (30 min). When student selection lands, pass the count here.
+ */
+const SITE_VISIT_BASE_MINUTES = 15;
+const SITE_VISIT_PER_STUDENT_MINUTES = 15;
+
+function siteVisitEndTime(startTimeStr: string, studentCount = 1): string {
+  const [h, m] = startTimeStr.split(':').map(Number);
+  const duration = SITE_VISIT_BASE_MINUTES + SITE_VISIT_PER_STUDENT_MINUTES * Math.max(1, studentCount);
+  const total = Math.min((h || 0) * 60 + (m || 0) + duration, 23 * 60 + 59);
+  return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+}
+
+/**
  * Create a Google Calendar event for a clinical site visit.
  */
 export async function syncSiteVisit(params: SiteVisitSyncParams): Promise<void> {
@@ -1202,11 +1217,8 @@ export async function syncSiteVisit(params: SiteVisitSyncParams): Promise<void> 
     const accessToken = await getAccessTokenForUser(params.visitorEmail);
     if (!accessToken) return;
 
-    // Site visits are typically 1-2 hours; default to a 2-hour block
     const startTimeStr = params.visitTime || '09:00';
-    const [hours, minutes] = startTimeStr.split(':').map(Number);
-    const endHours = Math.min(hours + 2, 23);
-    const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}`;
+    const endTimeStr = siteVisitEndTime(startTimeStr);
 
     const { startDateTime, endDateTime } = buildDateTimes(
       params.visitDate,
@@ -1264,9 +1276,7 @@ export async function updateSiteVisit(params: SiteVisitSyncParams): Promise<void
     if (!accessToken) return;
 
     const startTimeStr = params.visitTime || '09:00';
-    const [hours, minutes] = startTimeStr.split(':').map(Number);
-    const endHours = Math.min(hours + 2, 23);
-    const endTimeStr = `${String(endHours).padStart(2, '0')}:${String(minutes || 0).padStart(2, '0')}`;
+    const endTimeStr = siteVisitEndTime(startTimeStr);
 
     const { startDateTime, endDateTime } = buildDateTimes(
       params.visitDate,

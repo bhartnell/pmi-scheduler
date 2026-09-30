@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 ## 2026-09-30
+(pending) | Site-visit Google Calendar events: default block 2h -> 30 min (15 base + 15/student helper); existing events untouched
 (pending) | ACLS skills capture: default-to-pass sheet, fail one click, one-action save (AclsSkillsPanel)
 PENDING | Add shared DualPaneGrading component (OSCE-style side-by-side, independently scrolling); applied to ACLS/PALS megacode grader
 
