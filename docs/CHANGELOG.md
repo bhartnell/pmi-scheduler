@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 ## 2026-09-30
+(pending) | ACLS skills capture: default-to-pass sheet, fail one click, one-action save (AclsSkillsPanel)
 
 - pending | adv-cert megacode grader: non-checklist (learning_station) cases show a pointer to the station grading form instead of "no segments" error; removed dev copy and em dashes from AHA grading pages
 
