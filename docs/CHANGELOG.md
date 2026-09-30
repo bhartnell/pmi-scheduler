@@ -11,7 +11,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-09-30
 
-- (this commit) | Skill Coverage panel: Skills/Scenarios/All type control, This/All-semesters scope, type-aware labels + CSV, unlinked free-text scenario station notice; wiki article on shift titles/volunteers
+- (this commit) | Skill Coverage panel: Skills/Scenarios/All type control, This/All-semesters scope, type-aware labels + CSV, unlinked free-text scenario station notice
+- (pending) | docs(wiki): article answering Stacie Peterson's 2026-06-16 question (Coverage shift signups title + volunteers). Content only, no code.
 
 ## 2026-09-29
 
