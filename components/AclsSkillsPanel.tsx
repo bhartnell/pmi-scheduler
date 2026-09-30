@@ -3,15 +3,17 @@
 /**
  * ACLS skills-station capture (Airway Management, Adult BLS, Peds BLS).
  * Attestation-level pass/fail/remediated per student per skill, stored in
- * pals_skill_completions via /api/adv-cert/skill-completions. Fail/remediated
- * requires a note. Never blocks anything else on the hub.
+ * pals_skill_completions via /api/adv-cert/skill-completions. The sheet opens
+ * with everyone defaulted to pass; fail/remediated is one click and requires a
+ * note; the whole sheet saves in one action (verifier/initials recorded by the API). Never blocks anything else on the hub.
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Loader2, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
 
 interface Member { id: string; first_name: string; last_name: string }
-interface Completion { student_id: string; skill_key: string; status: 'pass' | 'fail' | 'remediated'; remediation_notes: string | null }
+type Status = 'pass' | 'fail' | 'remediated';
+interface Completion { student_id: string; skill_key: string; status: Status; remediation_notes: string | null }
 
 const SKILLS = [
   { key: 'airway_management', label: 'Airway Management' },
@@ -23,7 +25,8 @@ export default function AclsSkillsPanel({ groups }: { groups: { id: string; name
   const [skill, setSkill] = useState(SKILLS[0].key);
   const [completions, setCompletions] = useState<Completion[]>([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [draft, setDraft] = useState<Record<string, Record<string, Status>>>({});
   const [error, setError] = useState<string | null>(null);
   const [notes, setNotes] = useState<Record<string, string>>({});
 
@@ -47,19 +50,38 @@ export default function AclsSkillsPanel({ groups }: { groups: { id: string; name
     return m;
   }, [completions, skill]);
 
-  const mark = async (studentId: string, status: 'pass' | 'fail' | 'remediated') => {
-    const remediationNotes = notes[studentId] || '';
-    if (status !== 'pass' && !remediationNotes.trim()) { setError('Enter a note for fail / remediated.'); return; }
-    setError(null); setSaving(studentId);
+  // Sheet opens complete: every student without a saved row defaults to pass in the UI only.
+  // Nothing is written until the sheet is saved by an instructor (verifier = signed-in user).
+  const statusOf = (studentId: string): Status =>
+    draft[skill]?.[studentId] ?? byStudent.get(studentId)?.status ?? 'pass';
+
+  const setStatus = (studentId: string, status: Status) => {
+    setError(null);
+    setDraft((d) => ({ ...d, [skill]: { ...d[skill], [studentId]: status } }));
+  };
+
+  const pending = students.filter((s) => !byStudent.has(s.id) || statusOf(s.id) !== byStudent.get(s.id)?.status
+    || (statusOf(s.id) !== 'pass' && (notes[s.id] ?? '') !== (byStudent.get(s.id)?.remediation_notes ?? (notes[s.id] ?? ''))));
+
+  const saveSheet = async () => {
+    const marks = students.map((s) => ({
+      studentId: s.id,
+      status: statusOf(s.id),
+      remediationNotes: notes[s.id] ?? byStudent.get(s.id)?.remediation_notes ?? '',
+    }));
+    const missing = marks.find((m) => m.status !== 'pass' && !m.remediationNotes.trim());
+    if (missing) { setError('Enter a note for every fail / remediated student.'); return; }
+    setError(null); setSaving(true);
     try {
       const res = await fetch('/api/adv-cert/skill-completions', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ certCourse: 'acls', skillKey: skill, marks: [{ studentId, status, remediationNotes }] }),
+        body: JSON.stringify({ certCourse: 'acls', skillKey: skill, marks }),
       });
       const json = await res.json();
       if (!json.success) { setError(json.error || 'Save failed'); return; }
-      setCompletions((prev) => [...prev.filter((c) => !(c.student_id === studentId && c.skill_key === skill)), ...json.completions]);
-    } catch { setError('Save failed'); } finally { setSaving(null); }
+      setCompletions((prev) => [...prev.filter((c) => c.skill_key !== skill), ...json.completions]);
+      setDraft((d) => ({ ...d, [skill]: {} }));
+    } catch { setError('Save failed'); } finally { setSaving(false); }
   };
 
   const done = students.filter((s) => byStudent.has(s.id)).length;
@@ -75,12 +97,18 @@ export default function AclsSkillsPanel({ groups }: { groups: { id: string; name
           </button>
         ))}
         <span className="self-center text-xs text-gray-500">{done} / {students.length} recorded</span>
+        <button onClick={saveSheet} disabled={saving || !students.length}
+          className="ml-auto px-4 min-h-[44px] rounded-lg text-sm bg-green-600 text-white disabled:opacity-50 flex items-center gap-2">
+          {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+          {pending.length ? `Save sheet (${pending.length} unsaved)` : 'Sheet saved'}
+        </button>
       </div>
       {error && <div className="text-xs text-red-600 mb-2">{error}</div>}
       {loading ? <Loader2 className="animate-spin text-gray-400" /> : (
         <div className="grid grid-cols-2 max-md:grid-cols-1 gap-2">
           {students.map((s) => {
             const c = byStudent.get(s.id);
+            const st = statusOf(s.id);
             return (
               <div key={s.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2 flex items-center gap-2">
                 <div className="flex-1 min-w-0">
@@ -89,13 +117,11 @@ export default function AclsSkillsPanel({ groups }: { groups: { id: string; name
                     placeholder="Note (required for fail / remediated)"
                     className="mt-1 w-full text-xs px-2 py-1 border rounded dark:bg-gray-700 dark:border-gray-600" />
                 </div>
-                {saving === s.id ? <Loader2 className="w-4 h-4 animate-spin" /> : (
-                  <div className="flex gap-1">
-                    <button title="Pass" onClick={() => mark(s.id, 'pass')} className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded ${c?.status === 'pass' ? 'bg-green-100 dark:bg-green-900/40' : ''}`}><CheckCircle2 className="w-5 h-5 text-green-600" /></button>
-                    <button title="Fail" onClick={() => mark(s.id, 'fail')} className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded ${c?.status === 'fail' ? 'bg-red-100 dark:bg-red-900/40' : ''}`}><XCircle className="w-5 h-5 text-red-600" /></button>
-                    <button title="Remediated" onClick={() => mark(s.id, 'remediated')} className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded ${c?.status === 'remediated' ? 'bg-amber-100 dark:bg-amber-900/40' : ''}`}><RotateCcw className="w-5 h-5 text-amber-600" /></button>
-                  </div>
-                )}
+                <div className="flex gap-1">
+                  <button title="Pass" onClick={() => setStatus(s.id, 'pass')} className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded ${st === 'pass' ? 'bg-green-100 dark:bg-green-900/40' : ''}`}><CheckCircle2 className="w-5 h-5 text-green-600" /></button>
+                  <button title="Fail" onClick={() => setStatus(s.id, 'fail')} className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded ${st === 'fail' ? 'bg-red-100 dark:bg-red-900/40' : ''}`}><XCircle className="w-5 h-5 text-red-600" /></button>
+                  <button title="Remediated" onClick={() => setStatus(s.id, 'remediated')} className={`min-w-[44px] min-h-[44px] flex items-center justify-center rounded ${st === 'remediated' ? 'bg-amber-100 dark:bg-amber-900/40' : ''}`}><RotateCcw className="w-5 h-5 text-amber-600" /></button>
+                </div>
               </div>
             );
           })}
