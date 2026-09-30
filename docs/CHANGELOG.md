@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-09-30
 
+PENDING | docs: read-only layout audit (docs/LAYOUT_AUDIT.md), no page changes
+
 PENDING | fix(ui): FloatingDock owns bottom-right overlays (Feedback/Preview/FAB no longer collide; closed FAB list no longer blocks touch scroll)
 
 - (pending) | docs(wiki): article answering Stacie Peterson's 2026-06-16 question (Coverage shift signups title + volunteers). Content only, no code.
