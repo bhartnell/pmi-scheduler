@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-09-30
+
+- (pending) | docs(wiki): article answering Stacie Peterson's 2026-06-16 question (Coverage shift signups title + volunteers). Content only, no code.
+
 ## 2026-09-29
 
 752de87 | Scenario Format v2: assessment_*_action columns, phase changes/triggers/modifiers/branch rendering + editor passthrough, compact instructor brief
