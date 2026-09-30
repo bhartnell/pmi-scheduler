@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 ## 2026-09-30
+PENDING | Add shared DualPaneGrading component (OSCE-style side-by-side, independently scrolling); applied to ACLS/PALS megacode grader
 
 - pending | OSCE results list: Readiness column shows every evaluator call with a Split flag on disagreement (view-only)
 
