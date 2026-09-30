@@ -276,8 +276,8 @@ export default function ScenarioFullDisplay({
               {initialVitals.bp && <VitalCell label="BP" value={initialVitals.bp} />}
               {initialVitals.hr && <VitalCell label="HR" value={initialVitals.hr} />}
               {initialVitals.rr && <VitalCell label="RR" value={initialVitals.rr} />}
-              {initialVitals.spo2 && <VitalCell label="SpO2" value={`${initialVitals.spo2}%`} />}
-              {initialVitals.temp && <VitalCell label="Temp" value={`${initialVitals.temp}°F`} />}
+              {initialVitals.spo2 && <VitalCell label="SpO2" value={withUnit(initialVitals.spo2, '%')} />}
+              {initialVitals.temp && <VitalCell label="Temp" value={withUnit(initialVitals.temp, '°F')} />}
               {initialVitals.bgl && <VitalCell label="BGL" value={initialVitals.bgl} />}
               {initialVitals.gcs && <VitalCell label="GCS" value={initialVitals.gcs} />}
               {initialVitals.etco2 && <VitalCell label="ETCO2" value={initialVitals.etco2} />}
@@ -486,8 +486,8 @@ export default function ScenarioFullDisplay({
                           {phase.vitals.bp && <PhaseVitalCell tone="blue" label="BP" value={phase.vitals.bp} />}
                           {phase.vitals.hr && <PhaseVitalCell tone="red" label="HR" value={phase.vitals.hr} />}
                           {phase.vitals.rr && <PhaseVitalCell tone="green" label="RR" value={phase.vitals.rr} />}
-                          {phase.vitals.spo2 && <PhaseVitalCell tone="purple" label="SpO2" value={`${phase.vitals.spo2}%`} />}
-                          {phase.vitals.temp && <PhaseVitalCell tone="orange" label="Temp" value={`${phase.vitals.temp}°F`} />}
+                          {phase.vitals.spo2 && <PhaseVitalCell tone="purple" label="SpO2" value={withUnit(phase.vitals.spo2, '%')} />}
+                          {phase.vitals.temp && <PhaseVitalCell tone="orange" label="Temp" value={withUnit(phase.vitals.temp, '°F')} />}
                           {phase.vitals.bgl && <PhaseVitalCell tone="yellow" label="BGL" value={phase.vitals.bgl} />}
                           {phase.vitals.gcs && <PhaseVitalCell tone="gray" label="GCS" value={phase.vitals.gcs} />}
                           {phase.vitals.etco2 && <PhaseVitalCell tone="cyan" label="ETCO2" value={phase.vitals.etco2} />}
@@ -513,19 +513,28 @@ export default function ScenarioFullDisplay({
                       </div>
                     )}
                     <PhaseTextBlock label="Changes on Entering This Phase" value={phase.changes} tone="blue" />
-                    {Array.isArray(phase.expected_actions) && phase.expected_actions.length > 0 && (
-                      <div>
-                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Expected Actions
-                        </h5>
-                        <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
-                          {phase.expected_actions.map((action: string, aIdx: number) => (
-                            <li key={aIdx}>{action}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    <PhaseTextBlock label="Triggers (to Next Phase)" value={phase.triggers} tone="purple" />
+                    {(() => {
+                      // expected_actions is string[] in v2; legacy rows store a single
+                      // string (split on newlines). Never drop an unexpected shape silently.
+                      const ea = phase.expected_actions;
+                      const actions: string[] = (Array.isArray(ea) ? ea : typeof ea === 'string' ? ea.split(/\r?\n/) : [])
+                        .map((a: unknown) => (typeof a === 'string' ? a : a == null ? '' : JSON.stringify(a)).trim())
+                        .filter((a: string) => a !== '');
+                      if (actions.length === 0) return null;
+                      return (
+                        <div>
+                          <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Expected Actions
+                          </h5>
+                          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
+                            {actions.map((action, aIdx) => (
+                              <li key={aIdx}>{action}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })()}
+                    <PhaseTextBlock label="Triggers (to Next Phase)" value={phase.triggers ?? phase.trigger} tone="purple" />
                     <PhaseTextBlock label="Modifiers (Correct vs Missed Action)" value={phase.modifiers} tone="orange" />
                     <PhaseTextBlock label="Branch" value={phase.branch} tone="purple" />
                     {(() => {
@@ -651,6 +660,13 @@ function PhaseTextBlock({ label, value, tone = 'gray' }: { label: string; value:
       )}
     </div>
   );
+}
+
+// Append a unit only when the stored value is a bare number. Stored values like
+// "89%", "89% RA" or "35.9°C" already carry their own unit and must not be stacked.
+function withUnit(value: unknown, unit: string): string {
+  const str = String(value ?? '').trim();
+  return /^-?\d+(\.\d+)?$/.test(str) ? `${str}${unit}` : str;
 }
 
 function VitalCell({ label, value }: { label: string; value: string | number }) {
