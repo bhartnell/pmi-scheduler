@@ -61,17 +61,13 @@ interface CoverageResponse {
   total_lab_days?: number;
   skills?: SkillRow[];
   /** Scenario-type stations with free-text titles and no scenarios record.
-      Not counted as scenario coverage; shown as their own group. */
-  unlinked_scenario_stations?: {
-    title: string;
-    lab_day_count: number;
-    last_run_date: string | null;
-  }[];
+      They can't be counted per scenario, so the panel says so. */
+  unlinked_scenarios?: { count: number; titles: string[] };
   error?: string;
 }
 
-type TypeView = 'skills' | 'scenarios' | 'all';
-type Scope = 'semester' | 'all';
+type TypeView = 'all' | 'skill' | 'scenario';
+type Scope = 'current' | 'all';
 
 type Filter = 'all' | 'smc_gap' | 'not_yet' | 'once' | 'multiple';
 
@@ -152,10 +148,10 @@ export default function SkillCoveragePanel({
     });
   };
   const [filter, setFilter] = useState<Filter>('all');
-  // Type is orthogonal to the completion tabs: Skills | Scenarios | All.
+  // Type is orthogonal to the completion tabs: completion counts recalculate
+  // within the selected type. Scope lets scenario history span semesters.
   const [typeView, setTypeView] = useState<TypeView>('all');
-  // Scope: this semester (default) or every semester for the cohort.
-  const [scope, setScope] = useState<Scope>('semester');
+  const [scope, setScope] = useState<Scope>('current');
   const [search, setSearch] = useState('');
   // Sort state. Default 'name asc' matches the API's default ordering
   // (display_order, then name), so the initial render doesn't reshuffle.
@@ -171,20 +167,18 @@ export default function SkillCoveragePanel({
     setError(null);
     try {
       const qs = new URLSearchParams();
+      if (semester != null) qs.set('semester', String(semester));
+      const smcTail = qs.toString() ? `?${qs.toString()}` : '';
       if (scope === 'all') qs.set('semester', 'all');
-      else if (semester != null) qs.set('semester', String(semester));
       const tail = qs.toString() ? `?${qs.toString()}` : '';
 
       // Fetch coverage + SMC in parallel. SMC is optional — if it fails
       // the panel still renders coverage, just without the gap markers.
       const [coverageRes, smcRes] = await Promise.all([
         fetch(`/api/lab-management/cohorts/${cohortId}/skill-coverage${tail}`),
-        // SMC requirements are per-semester; skip them in all-semester scope.
-        scope === 'all'
-          ? Promise.resolve(null)
-          : fetch(`/api/lab-management/cohorts/${cohortId}/smc-completion${tail}`).catch(
-              () => null
-            ),
+        fetch(`/api/lab-management/cohorts/${cohortId}/smc-completion${smcTail}`).catch(
+          () => null
+        ),
       ]);
 
       const coverageJson: CoverageResponse = await coverageRes.json();
@@ -261,8 +255,7 @@ export default function SkillCoveragePanel({
     if (!data?.skills) return [];
     const q = search.trim().toLowerCase();
     const filtered = data.skills.filter((s) => {
-      if (typeView === 'skills' && s.kind === 'scenario') return false;
-      if (typeView === 'scenarios' && s.kind !== 'scenario') return false;
+      if (typeView !== 'all' && (s.kind ?? 'skill') !== typeView) return false;
       // 'smc_gap' is not a status value — it's a composite: SMC-required
       // AND not yet covered. Handled explicitly here.
       if (filter === 'smc_gap') {
@@ -314,7 +307,7 @@ export default function SkillCoveragePanel({
       data.semester != null ? `Semester${data.semester}` : 'AllSemesters';
     const today = new Date().toISOString().split('T')[0];
     const typeLabel =
-      typeView === 'scenarios' ? 'ScenarioCoverage' : typeView === 'skills' ? 'SkillCoverage' : 'Coverage';
+      typeView === 'scenario' ? 'ScenarioCoverage' : 'SkillCoverage';
     const filename = `${typeLabel}_${cohortLabel}_${semLabel}_${today}.csv`;
 
     const escape = (v: string | number | null | undefined): string => {
@@ -325,8 +318,8 @@ export default function SkillCoveragePanel({
       return s;
     };
     const header = [
-      'Name',
-      'Type',
+      typeView === 'scenario' ? 'Scenario' : 'Skill',
+      ...(typeView === 'all' ? ['Type'] : []),
       'Category',
       'Lab Days',
       'Last Run',
@@ -343,7 +336,7 @@ export default function SkillCoveragePanel({
       lines.push(
         [
           escape(s.name),
-          escape(s.kind === 'scenario' ? 'Scenario' : 'Skill'),
+          ...(typeView === 'all' ? [escape(s.kind ?? 'skill')] : []),
           escape(s.category || ''),
           escape(s.lab_day_count),
           escape(s.last_run_date || ''),
@@ -368,8 +361,7 @@ export default function SkillCoveragePanel({
   const counts = useMemo(() => {
     const c = { multiple: 0, once: 0, not_yet: 0, total: 0, smc_gap: 0 };
     for (const s of data?.skills || []) {
-      if (typeView === 'skills' && s.kind === 'scenario') continue;
-      if (typeView === 'scenarios' && s.kind !== 'scenario') continue;
+      if (typeView !== 'all' && (s.kind ?? 'skill') !== typeView) continue;
       c.total++;
       c[s.status]++;
       if (s.smc_required && s.lab_day_count === 0) c.smc_gap++;
@@ -395,11 +387,9 @@ export default function SkillCoveragePanel({
   const effectiveSemester = data?.semester ?? null;
   const semesterLabel =
     effectiveSemester !== null ? `Semester ${effectiveSemester}` : 'All semesters';
-  const panelTitle =
-    typeView === 'scenarios' ? 'Scenario Coverage' : typeView === 'skills' ? 'Skill Coverage' : 'Skill & Scenario Coverage';
-  const itemNoun = typeView === 'scenarios' ? 'scenario' : typeView === 'skills' ? 'skill' : 'item';
-  const showUnlinked = typeView !== 'skills';
-  const unlinked = data?.unlinked_scenario_stations ?? [];
+  const panelTitle = typeView === 'scenario' ? 'Scenario Coverage' : 'Skill Coverage';
+  const noun = typeView === 'scenario' ? 'scenario' : typeView === 'skill' ? 'skill' : 'item';
+  const unlinked = data?.unlinked_scenarios;
 
   return (
     <div
@@ -460,35 +450,6 @@ export default function SkillCoveragePanel({
             <>
               {/* Filters */}
               <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700 space-y-2">
-                {/* Type segment + scope. Type is separate from the completion
-                    tabs below so "not yet" is answered per type. */}
-                <div className="flex items-center gap-2">
-                  <div className="inline-flex rounded overflow-hidden border border-gray-300 dark:border-gray-600" role="group" aria-label="Type">
-                    {(['skills', 'scenarios', 'all'] as TypeView[]).map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => { setTypeView(t); setFilter('all'); }}
-                        className={`px-2.5 py-1 text-xs font-medium ${
-                          typeView === t
-                            ? 'bg-blue-600 text-white'
-                            : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`}
-                      >
-                        {t === 'skills' ? 'Skills' : t === 'scenarios' ? 'Scenarios' : 'All'}
-                      </button>
-                    ))}
-                  </div>
-                  <select
-                    value={scope}
-                    onChange={(e) => setScope(e.target.value as Scope)}
-                    className="flex-1 min-w-0 px-1.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200"
-                    aria-label="Semester scope"
-                  >
-                    <option value="semester">This semester</option>
-                    <option value="all">All semesters (cohort history)</option>
-                  </select>
-                </div>
                 <div className="relative">
                   <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                   <input
@@ -498,6 +459,35 @@ export default function SkillCoveragePanel({
                     placeholder="Filter by name..."
                     className="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400"
                   />
+                </div>
+                {/* Type + scope controls. Type sits above the completion
+                    tabs because it's a separate dimension. */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="inline-flex rounded overflow-hidden border border-gray-300 dark:border-gray-600">
+                    {([['skill', 'Skills'], ['scenario', 'Scenarios'], ['all', 'All']] as [TypeView, string][]).map(([v, label]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setTypeView(v)}
+                        className={`px-2.5 py-1 text-xs font-medium ${
+                          typeView === v
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <select
+                    value={scope}
+                    onChange={(e) => setScope(e.target.value as Scope)}
+                    className="px-1.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200"
+                    aria-label="Semester scope"
+                  >
+                    <option value="current">This semester</option>
+                    <option value="all">All semesters</option>
+                  </select>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {/* Filter order: SMC gaps is the most actionable bucket
@@ -601,7 +591,7 @@ export default function SkillCoveragePanel({
 
                 {!loading && filteredSkills.length === 0 && (
                   <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                    No {itemNoun}s match your filter.
+                    No items match your filter.
                   </div>
                 )}
 
@@ -689,39 +679,6 @@ export default function SkillCoveragePanel({
                     );
                   })}
                 </ul>
-
-                {showUnlinked && unlinked.length > 0 && (
-                  <div className="border-t border-gray-200 dark:border-gray-700">
-                    <div className="px-4 py-2 bg-amber-50 dark:bg-amber-900/20 text-[11px] text-amber-800 dark:text-amber-200">
-                      <span className="font-semibold">Not counted above ({unlinked.length}):</span>{' '}
-                      these scenario stations use a free-text title with no linked scenario record,
-                      so they cannot be matched to the list. Counts above under-report scenarios run.
-                    </div>
-                    <ul className="divide-y divide-gray-100 dark:divide-gray-700">
-                      {unlinked.map((u) => (
-                        <li key={u.title} className="px-4 py-2 flex items-center gap-3">
-                          <Circle className="w-4 h-4 flex-shrink-0 text-amber-500" aria-hidden />
-                          <div className="flex-1 min-w-0 text-sm text-gray-900 dark:text-white truncate">
-                            {u.title}
-                            <span className="ml-2 text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
-                              unlinked
-                            </span>
-                          </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums">
-                              {u.lab_day_count}x
-                            </div>
-                            {u.last_run_date && (
-                              <div className="text-[11px] text-gray-500 dark:text-gray-400">
-                                {formatDate(u.last_run_date)}
-                              </div>
-                            )}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
               </div>
 
               {/* Footer */}
@@ -729,7 +686,20 @@ export default function SkillCoveragePanel({
                 <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-[11px] text-gray-500 dark:text-gray-400">
                   {data.total_lab_days ?? 0} lab day
                   {(data.total_lab_days ?? 0) === 1 ? '' : 's'} ·{' '}
-                  {counts.total} {itemNoun}{counts.total === 1 ? '' : 's'}
+                  {counts.total} {noun}{counts.total === 1 ? '' : 's'}
+                </div>
+              )}
+              {/* Scenario stations with free-text titles have no scenarios
+                  record, so they can't be counted above. Say so instead of
+                  presenting an incomplete count as complete. */}
+              {data && typeView !== 'skill' && unlinked && unlinked.count > 0 && (
+                <div
+                  className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-[11px] text-amber-700 dark:text-amber-300"
+                  title={unlinked.titles.join('\n')}
+                >
+                  {unlinked.count} scenario station{unlinked.count === 1 ? '' : 's'} in{' '}
+                  {semesterLabel.toLowerCase()} use free-text titles with no linked
+                  scenario, so they are not counted above.
                 </div>
               )}
             </>

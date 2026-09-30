@@ -28,15 +28,8 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  * coverage reporting — station_skills.skill_id is the authoritative path.
  *
  * Query params:
- *   semester — optional integer (1-4), or the literal 'all' to span every
- *              semester for the cohort (scenario history carries across a
- *              cohort's semesters). Defaults to cohort.current_semester
+ *   semester — optional integer (1-4). Defaults to cohort.current_semester
  *              if set, otherwise includes all semesters for the cohort.
- *
- * Response also carries `unlinked_scenario_stations`: scenario-type
- * stations that carry only free text (no scenarios record), grouped by
- * title. They cannot be counted as scenario coverage, so they are
- * surfaced separately rather than silently under-reporting.
  */
 export async function GET(
   request: NextRequest,
@@ -50,6 +43,8 @@ export async function GET(
     const supabase = getSupabaseAdmin();
 
     const semesterParam = request.nextUrl.searchParams.get('semester');
+    // semester=all spans every semester for the cohort (scenario history
+    // carries across a cohort's progression — feedback 4cf8680c).
     const allSemesters = semesterParam === 'all';
     const semesterFilter =
       semesterParam && !allSemesters ? parseInt(semesterParam, 10) : null;
@@ -167,11 +162,11 @@ export async function GET(
     const scenarioLabDays = new Map<string, Set<string>>();
     const scenarioLastDate = new Map<string, string>();
     const scenarioIdsSeen = new Set<string>();
-    // Free-text scenario stations (no scenario_id), keyed by normalized title.
-    const unlinkedByTitle = new Map<
-      string,
-      { title: string; labDays: Set<string>; last: string | null }
-    >();
+    // Scenario-type stations with no scenarios record (free-text title only).
+    // These can't be counted per scenario, so they're reported separately
+    // rather than silently under-reporting. No guessing at links.
+    const unlinkedScenarioTitles: string[] = [];
+    let unlinkedScenarioCount = 0;
 
     if (labDayIds.length > 0) {
       // Fetch lab_stations with scenario_id so we can aggregate scenarios
@@ -188,25 +183,10 @@ export async function GET(
         for (const st of stations) {
           stationIdToLabDay.set(st.id, st.lab_day_id);
 
-          // Free-text scenario station: scenario-type, no linked record.
-          if (
-            !st.scenario_id &&
-            (st.station_type ?? 'scenario') === 'scenario' &&
-            st.custom_title &&
-            st.custom_title.trim()
-          ) {
-            const key = st.custom_title.trim().toLowerCase();
-            const entry = unlinkedByTitle.get(key) || {
-              title: st.custom_title.trim(),
-              labDays: new Set<string>(),
-              last: null,
-            };
-            entry.labDays.add(st.lab_day_id);
-            const d = labDayDateMap.get(st.lab_day_id);
-            if (d && (!entry.last || d > entry.last)) entry.last = d;
-            unlinkedByTitle.set(key, entry);
+          if (!st.scenario_id && st.station_type === 'scenario') {
+            unlinkedScenarioCount++;
+            if (st.custom_title) unlinkedScenarioTitles.push(st.custom_title);
           }
-
           // Aggregate scenarios directly from lab_stations.scenario_id
           if (st.scenario_id) {
             scenarioIdsSeen.add(st.scenario_id);
@@ -339,13 +319,10 @@ export async function GET(
       semester: effectiveSemester,
       total_lab_days: labDayIds.length,
       skills: rows,
-      unlinked_scenario_stations: Array.from(unlinkedByTitle.values())
-        .map((u) => ({
-          title: u.title,
-          lab_day_count: u.labDays.size,
-          last_run_date: u.last,
-        }))
-        .sort((a, b) => a.title.localeCompare(b.title)),
+      unlinked_scenarios: {
+        count: unlinkedScenarioCount,
+        titles: Array.from(new Set(unlinkedScenarioTitles)).sort(),
+      },
     });
   } catch (error) {
     console.error('[skill-coverage] Error:', error);
