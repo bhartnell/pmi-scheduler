@@ -10,6 +10,8 @@ Format: `commit-hash | brief description`
 ---
 
 ## 2026-09-30
+
+- (this commit) | ACLS/PALS hubs: sort station sections by start_time (not section_number); ACLS hub + find-slots/find-conflicts/export-ics skip cancelled blocks
 (pending) | ScenarioFullDisplay: render legacy singular `trigger`, string `expected_actions`; no double unit on SpO2/temp (display-only, no data patches)
 (pending) | Site-visit Google Calendar events: default block 2h -> 30 min (15 base + 15/student helper); existing events untouched
 (pending) | ACLS skills capture: default-to-pass sheet, fail one click, one-action save (AclsSkillsPanel)
