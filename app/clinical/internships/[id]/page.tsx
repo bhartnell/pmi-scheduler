@@ -34,7 +34,7 @@ import {
   Phone,
   AlertTriangle
 } from 'lucide-react';
-import { canAccessClinical, canEditClinical, hasMinRole, type Role } from '@/lib/permissions';
+import { canAccessClinical, canEditClinical, canManageStudentRoster, hasMinRole, type Role } from '@/lib/permissions';
 import { parseDateSafe } from '@/lib/utils';
 // Summative Evaluations section removed 2026-04-24 — program no longer
 // uses the summative-eval workflow. API routes (/api/clinical/internships/
@@ -44,6 +44,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import PreceptorsSection from '@/components/clinical/PreceptorsSection';
 import CloseoutSection from '@/components/clinical/CloseoutSection';
 import CollapsibleCard from '@/components/clinical/CollapsibleCard';
+import GraduationModal from '@/components/students/GraduationModal';
 
 interface Internship {
   id: string;
@@ -301,6 +302,7 @@ export default function InternshipDetailPage() {
   const [saving, setSaving] = useState(false);
   const [notifying, setNotifying] = useState(false);
   const [userRole, setUserRole] = useState<Role | null>(null);
+  const [showNremtCloseout, setShowNremtCloseout] = useState(false);
   const [internship, setInternship] = useState<Internship | null>(null);
   const [preceptors, setPreceptors] = useState<Preceptor[]>([]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
@@ -800,6 +802,37 @@ export default function InternshipDetailPage() {
     setNotifying(false);
   };
 
+  // "NREMT Passed" close-out: the GraduationModal has already flipped the
+  // student to 'graduated'; here we stamp the internship's nremt_passed
+  // flag (same fields the closeout checklist uses) and reflect both locally.
+  const handleNremtCloseoutDone = async () => {
+    setShowNremtCloseout(false);
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const res = await fetch(`/api/clinical/internships/${internshipId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nremt_passed: true, nremt_passed_date: today }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j?.error || 'Save failed');
+      setFormData((prev: any) => ({
+        ...prev,
+        nremt_passed: true,
+        nremt_passed_date: prev.nremt_passed_date || today,
+      }));
+      showToast('Student closed out: NREMT passed and marked graduated.', 'success');
+    } catch (e) {
+      showToast(
+        `Student marked graduated, but NREMT Passed was not saved${e instanceof Error ? ` (${e.message})` : ''}. Please tick it in the closeout checklist.`,
+        'error'
+      );
+    }
+    setInternship(prev =>
+      prev && prev.students ? { ...prev, students: { ...prev.students, status: 'graduated' } } : prev
+    );
+  };
+
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
@@ -1152,6 +1185,21 @@ export default function InternshipDetailPage() {
         </div>
       )}
 
+      {showNremtCloseout && student && (
+        <GraduationModal
+          studentId={student.id}
+          studentName={`${student.first_name} ${student.last_name}`}
+          cohortLabel={
+            internship.cohorts
+              ? `${internship.cohorts.programs?.abbreviation ?? ''} Group ${internship.cohorts.cohort_number}`.trim()
+              : undefined
+          }
+          closeoutComplete={!!formData.cleared_for_nremt}
+          onClose={() => setShowNremtCloseout(false)}
+          onGraduated={handleNremtCloseoutDone}
+        />
+      )}
+
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         {/* No max-width cap — this page is desktop-primary. The header
@@ -1474,6 +1522,23 @@ export default function InternshipDetailPage() {
                   <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
                     <CheckCircle2 className="w-5 h-5" />
                     <span className="text-sm">Notified {formData.ryan_notified_date && formatDate(formData.ryan_notified_date)}</span>
+                  </div>
+                )}
+
+                {/* NREMT Passed close-out: marks NREMT passed + graduates the student */}
+                {userRole && canManageStudentRoster(userRole) && student && student.status !== 'graduated' && (
+                  <button
+                    onClick={() => setShowNremtCloseout(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 min-h-[44px]"
+                  >
+                    <Award className="w-4 h-4" />
+                    NREMT Passed — Close Out
+                  </button>
+                )}
+                {student?.status === 'graduated' && (
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span className="text-sm">Graduated</span>
                   </div>
                 )}
 
