@@ -13,6 +13,7 @@ Format: `commit-hash | brief description`
 
 - (pending) | feat(labs): skill-coverage panel - Skills/Scenarios/All type segment, all-semesters scope, correct header/footer/CSV, unlinked free-text scenario stations surfaced as an uncounted group
 - (pending) | feat(clinical): 'NREMT Passed - Close Out' button on internship page (stamps nremt_passed, graduates student via existing GraduationModal)
+- (pending) | docs(wiki): article answering Stacie Peterson's 2026-06-16 question (Coverage shift signups title + volunteers). Content only, no code.
 
 ## 2026-09-29
 
