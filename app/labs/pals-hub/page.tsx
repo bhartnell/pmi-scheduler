@@ -63,6 +63,18 @@ interface CalEvent {
 // schedule should only ever show what's actually happening on a PALS day.
 const isNotCancelled = (e: CalEvent) => e.status !== 'cancelled';
 
+// Sections are displayed in time order. section_number is an identifier
+// (referenced by pmi_schedule_blocks.linked_section_number), NOT a sort key.
+const bySectionTime = (
+  a: { start_time: string | null; section_number: number | null },
+  b: { start_time: string | null; section_number: number | null },
+) => {
+  if (a.start_time && b.start_time && a.start_time !== b.start_time) return a.start_time.localeCompare(b.start_time);
+  if (a.start_time && !b.start_time) return -1;
+  if (!a.start_time && b.start_time) return 1;
+  return (a.section_number ?? 1) - (b.section_number ?? 1);
+};
+
 const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : '');
 const prettyDate = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }); } catch { return d; } };
 
@@ -406,7 +418,7 @@ function PalsHubPageContent() {
               <p className="text-sm mb-2">{dates.map(prettyDate).join('   ·   ')}</p>
               {dates.map((date, di) => {
                 const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-                const daySections = visibleLabDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
+                const daySections = visibleLabDays.filter(d => d.date === date).sort(bySectionTime);
                 return (
                   <div key={date} style={{ breakBefore: di > 0 ? 'page' : 'auto' }}>
                     <h2 className="text-base font-bold mt-3 mb-1">Day {di + 1} — {prettyDate(date)}</h2>
@@ -573,7 +585,7 @@ function PalsHubPageContent() {
             {/* Per day: schedule + sections */}
             {visibleDates.map((date) => {
               const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-              const daySections = visibleLabDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
+              const daySections = visibleLabDays.filter(d => d.date === date).sort(bySectionTime);
               return (
                 <section key={date} style={{ breakInside: 'avoid' }}>
                   <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">

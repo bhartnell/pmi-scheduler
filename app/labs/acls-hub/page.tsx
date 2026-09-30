@@ -26,6 +26,18 @@ import {
   Users, UserCheck, MapPin, CalendarDays, Layers, GraduationCap,
 } from 'lucide-react';
 
+// Sections are displayed in time order. section_number is an identifier
+// (referenced by pmi_schedule_blocks.linked_section_number), NOT a sort key.
+const bySectionTime = (
+  a: { start_time: string | null; section_number: number | null },
+  b: { start_time: string | null; section_number: number | null },
+) => {
+  if (a.start_time && b.start_time && a.start_time !== b.start_time) return a.start_time.localeCompare(b.start_time);
+  if (a.start_time && !b.start_time) return -1;
+  if (!a.start_time && b.start_time) return 1;
+  return (a.section_number ?? 1) - (b.section_number ?? 1);
+};
+
 interface Member { id: string; first_name: string; last_name: string }
 interface Group { id: string; name: string; members: Member[] }
 interface Station {
@@ -100,7 +112,7 @@ function AclsHubPageContent() {
           const end = hub.dates[hub.dates.length - 1];
           const uRes = await fetch(`/api/calendar/unified?cohort_id=${hub.cohort.id}&start=${start}&end=${end}&include=classes,labs,exams`);
           const u = await uRes.json();
-          setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date)));
+          setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date) && e.status !== 'cancelled'));
         } else {
           setEvents([]);
         }
@@ -300,7 +312,7 @@ function AclsHubPageContent() {
               <p className="text-sm mb-2">{dates.map(prettyDate).join('   ·   ')}</p>
               {dates.map((date, di) => {
                 const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-                const daySections = visibleLabDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
+                const daySections = visibleLabDays.filter(d => d.date === date).sort(bySectionTime);
                 return (
                   <div key={date} style={{ breakBefore: di > 0 ? 'page' : 'auto' }}>
                     <h2 className="text-base font-bold mt-3 mb-1">Day {di + 1} — {prettyDate(date)}</h2>
@@ -392,7 +404,7 @@ function AclsHubPageContent() {
             {/* Per day: schedule + sections */}
             {visibleDates.map((date) => {
               const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-              const daySections = visibleLabDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
+              const daySections = visibleLabDays.filter(d => d.date === date).sort(bySectionTime);
               return (
                 <section key={date} style={{ breakInside: 'avoid' }}>
                   <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
