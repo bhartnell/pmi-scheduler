@@ -262,7 +262,7 @@ export default function AdvCertGradePage() {
 
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Advanced-Cert Megacode Grading</h1>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-        ACLS / PALS station testing — checklist scoring with an instructor-set group result.
+        ACLS / PALS station testing: checklist scoring with an instructor-set group result.
       </p>
 
       {/* Context selectors */}
@@ -409,9 +409,6 @@ export default function AdvCertGradePage() {
               </p>
             )}
 
-            <p className="mt-1 text-[11px] text-gray-400">
-              Grade each segment below. Case content (OCR-derived — proofread as needed) shows in the panel.
-            </p>
           </div>
 
           {/* Scenario reference — the SAME structured display the standard
@@ -423,12 +420,24 @@ export default function AdvCertGradePage() {
             </div>
           )}
 
-          {scenario.segments.length === 0 && (
+          {scenario.grading_model && scenario.grading_model !== 'adv_cert_checklist' && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm text-blue-800 dark:text-blue-300">
+              This is a learning station case and is graded on the station form, not the megacode checklist.{' '}
+              <Link
+                href={stationId ? `/labs/grade/station/${stationId}` : '/labs'}
+                className="font-medium underline"
+              >
+                {stationId ? 'Open the station grading form' : 'Go to Labs to grade from the lab day station'}
+              </Link>
+            </div>
+          )}
+
+          {scenario.segments.length === 0 && (!scenario.grading_model || scenario.grading_model === 'adv_cert_checklist') && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-sm text-yellow-800 dark:text-yellow-300">
               This scenario has no segments assembled yet. Import or assemble segments before grading.
             </div>
           )}
-          {scenario.segments.map((seg, i) => (
+          {(!scenario.grading_model || scenario.grading_model === 'adv_cert_checklist') && scenario.segments.map((seg, i) => (
             <div key={seg.id} className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -472,6 +481,7 @@ export default function AdvCertGradePage() {
           ))}
 
           {/* Overall */}
+          {(!scenario.grading_model || scenario.grading_model === 'adv_cert_checklist') && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Overall result</h3>
             <div className="flex gap-2 mb-3">
@@ -498,6 +508,7 @@ export default function AdvCertGradePage() {
               Save result
             </button>
           </div>
+          )}
         </div>
       )}
     </div>
