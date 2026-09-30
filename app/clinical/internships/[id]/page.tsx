@@ -24,6 +24,7 @@ import {
   Users,
   Bell,
   Award,
+  GraduationCap,
   ClipboardCheck,
   AlertCircle,
   CheckSquare,
@@ -44,6 +45,7 @@ import Breadcrumbs from '@/components/Breadcrumbs';
 import PreceptorsSection from '@/components/clinical/PreceptorsSection';
 import CloseoutSection from '@/components/clinical/CloseoutSection';
 import CollapsibleCard from '@/components/clinical/CollapsibleCard';
+import GraduationModal from '@/components/students/GraduationModal';
 
 interface Internship {
   id: string;
@@ -800,6 +802,30 @@ export default function InternshipDetailPage() {
     setNotifying(false);
   };
 
+  // 'NREMT Passed' close-out: opens the existing student GraduationModal,
+  // then stamps nremt_passed on this internship. Additive — reuses the
+  // students.status='graduated' state, nothing else changes.
+  const [showNremtPassedModal, setShowNremtPassedModal] = useState(false);
+
+  const handleNremtPassedGraduated = async () => {
+    setShowNremtPassedModal(false);
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      if (!formData.nremt_passed) {
+        const res = await fetch(`/api/clinical/internships/${internshipId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nremt_passed: true, nremt_passed_date: formData.nremt_passed_date || today }),
+        });
+        if (!res.ok) throw new Error('nremt flag save failed');
+      }
+      showToast('Student marked NREMT Passed and graduated.', 'success');
+    } catch {
+      showToast('Student graduated, but the NREMT Passed flag did not save. Tick it in the closeout checklist.', 'error');
+    }
+    fetchData();
+  };
+
   const showToast = (message: string, type: 'success' | 'error') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 3000);
@@ -1143,6 +1169,15 @@ export default function InternshipDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
+      {showNremtPassedModal && student && (
+        <GraduationModal
+          studentId={student.id}
+          studentName={`${student.first_name} ${student.last_name}`}
+          closeoutComplete={formData.closeout_completed}
+          onClose={() => setShowNremtPassedModal(false)}
+          onGraduated={handleNremtPassedGraduated}
+        />
+      )}
       {/* Toast */}
       {toast && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg ${
@@ -1477,6 +1512,22 @@ export default function InternshipDetailPage() {
                   </div>
                 )}
 
+                {/* NREMT Passed close-out: marks passed + graduates the student */}
+                {canEdit && student && student.status !== 'graduated' && (
+                  <button
+                    onClick={() => setShowNremtPassedModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 min-h-[44px]"
+                  >
+                    <GraduationCap className="w-4 h-4" />
+                    NREMT Passed - Close Out
+                  </button>
+                )}
+                {student?.status === 'graduated' && (
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                    <GraduationCap className="w-5 h-5" />
+                    <span className="text-sm">Graduated</span>
+                  </div>
+                )}
                 {/* Show cleared status badge when cleared */}
                 {formData.cleared_for_nremt && (
                   <div className="flex items-center gap-2 text-green-700 dark:text-green-400">

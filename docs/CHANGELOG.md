@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-09-30
+
+- (pending) | feat(clinical): 'NREMT Passed - Close Out' button on internship page (stamps nremt_passed, graduates student via existing GraduationModal)
+
 ## 2026-09-29
 
 752de87 | Scenario Format v2: assessment_*_action columns, phase changes/triggers/modifiers/branch rendering + editor passthrough, compact instructor brief
