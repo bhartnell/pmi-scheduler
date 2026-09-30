@@ -43,7 +43,11 @@ export async function GET(
     const supabase = getSupabaseAdmin();
 
     const semesterParam = request.nextUrl.searchParams.get('semester');
-    const semesterFilter = semesterParam ? parseInt(semesterParam, 10) : null;
+    // semester=all spans every semester for the cohort (scenario history
+    // carries across a cohort's progression — feedback 4cf8680c).
+    const allSemesters = semesterParam === 'all';
+    const semesterFilter =
+      semesterParam && !allSemesters ? parseInt(semesterParam, 10) : null;
 
     // 1. Load cohort + program so we can filter skills by cert_level
     const { data: cohort, error: cohortError } = await supabase
@@ -66,8 +70,9 @@ export async function GET(
 
     // Effective semester: query param wins; otherwise cohort.current_semester;
     // otherwise null (means "all semesters").
-    const effectiveSemester =
-      semesterFilter !== null && !isNaN(semesterFilter)
+    const effectiveSemester = allSemesters
+      ? null
+      : semesterFilter !== null && !isNaN(semesterFilter)
         ? semesterFilter
         : cohort.current_semester ?? null;
 
@@ -157,13 +162,18 @@ export async function GET(
     const scenarioLabDays = new Map<string, Set<string>>();
     const scenarioLastDate = new Map<string, string>();
     const scenarioIdsSeen = new Set<string>();
+    // Scenario-type stations with no scenarios record (free-text title only).
+    // These can't be counted per scenario, so they're reported separately
+    // rather than silently under-reporting. No guessing at links.
+    const unlinkedScenarioTitles: string[] = [];
+    let unlinkedScenarioCount = 0;
 
     if (labDayIds.length > 0) {
       // Fetch lab_stations with scenario_id so we can aggregate scenarios
       // in the same pass.
       const { data: stations, error: stationsError } = await supabase
         .from('lab_stations')
-        .select('id, lab_day_id, scenario_id')
+        .select('id, lab_day_id, scenario_id, station_type, custom_title')
         .in('lab_day_id', labDayIds);
 
       if (stationsError) {
@@ -173,6 +183,10 @@ export async function GET(
         for (const st of stations) {
           stationIdToLabDay.set(st.id, st.lab_day_id);
 
+          if (!st.scenario_id && st.station_type === 'scenario') {
+            unlinkedScenarioCount++;
+            if (st.custom_title) unlinkedScenarioTitles.push(st.custom_title);
+          }
           // Aggregate scenarios directly from lab_stations.scenario_id
           if (st.scenario_id) {
             scenarioIdsSeen.add(st.scenario_id);
@@ -305,6 +319,10 @@ export async function GET(
       semester: effectiveSemester,
       total_lab_days: labDayIds.length,
       skills: rows,
+      unlinked_scenarios: {
+        count: unlinkedScenarioCount,
+        titles: Array.from(new Set(unlinkedScenarioTitles)).sort(),
+      },
     });
   } catch (error) {
     console.error('[skill-coverage] Error:', error);

@@ -60,8 +60,14 @@ interface CoverageResponse {
   semester?: number | null;
   total_lab_days?: number;
   skills?: SkillRow[];
+  /** Scenario-type stations with free-text titles and no scenarios record.
+      They can't be counted per scenario, so the panel says so. */
+  unlinked_scenarios?: { count: number; titles: string[] };
   error?: string;
 }
+
+type TypeView = 'all' | 'skill' | 'scenario';
+type Scope = 'current' | 'all';
 
 type Filter = 'all' | 'smc_gap' | 'not_yet' | 'once' | 'multiple';
 
@@ -142,6 +148,10 @@ export default function SkillCoveragePanel({
     });
   };
   const [filter, setFilter] = useState<Filter>('all');
+  // Type is orthogonal to the completion tabs: completion counts recalculate
+  // within the selected type. Scope lets scenario history span semesters.
+  const [typeView, setTypeView] = useState<TypeView>('all');
+  const [scope, setScope] = useState<Scope>('current');
   const [search, setSearch] = useState('');
   // Sort state. Default 'name asc' matches the API's default ordering
   // (display_order, then name), so the initial render doesn't reshuffle.
@@ -158,13 +168,15 @@ export default function SkillCoveragePanel({
     try {
       const qs = new URLSearchParams();
       if (semester != null) qs.set('semester', String(semester));
+      const smcTail = qs.toString() ? `?${qs.toString()}` : '';
+      if (scope === 'all') qs.set('semester', 'all');
       const tail = qs.toString() ? `?${qs.toString()}` : '';
 
       // Fetch coverage + SMC in parallel. SMC is optional — if it fails
       // the panel still renders coverage, just without the gap markers.
       const [coverageRes, smcRes] = await Promise.all([
         fetch(`/api/lab-management/cohorts/${cohortId}/skill-coverage${tail}`),
-        fetch(`/api/lab-management/cohorts/${cohortId}/smc-completion${tail}`).catch(
+        fetch(`/api/lab-management/cohorts/${cohortId}/smc-completion${smcTail}`).catch(
           () => null
         ),
       ]);
@@ -233,7 +245,7 @@ export default function SkillCoveragePanel({
     } finally {
       setLoading(false);
     }
-  }, [cohortId, semester]);
+  }, [cohortId, semester, scope]);
 
   useEffect(() => {
     fetchCoverage();
@@ -243,6 +255,7 @@ export default function SkillCoveragePanel({
     if (!data?.skills) return [];
     const q = search.trim().toLowerCase();
     const filtered = data.skills.filter((s) => {
+      if (typeView !== 'all' && (s.kind ?? 'skill') !== typeView) return false;
       // 'smc_gap' is not a status value — it's a composite: SMC-required
       // AND not yet covered. Handled explicitly here.
       if (filter === 'smc_gap') {
@@ -280,7 +293,7 @@ export default function SkillCoveragePanel({
       return a.last_run_date!.localeCompare(b.last_run_date!) * dir;
     });
     return sorted;
-  }, [data, filter, search, sortKey, sortDir]);
+  }, [data, filter, search, sortKey, sortDir, typeView]);
 
   // Export currently-filtered rows (respects search + status filter) as CSV.
   // Filename includes cohort number + semester so downloaded files are
@@ -293,7 +306,9 @@ export default function SkillCoveragePanel({
     const semLabel =
       data.semester != null ? `Semester${data.semester}` : 'AllSemesters';
     const today = new Date().toISOString().split('T')[0];
-    const filename = `SkillCoverage_${cohortLabel}_${semLabel}_${today}.csv`;
+    const typeLabel =
+      typeView === 'scenario' ? 'ScenarioCoverage' : 'SkillCoverage';
+    const filename = `${typeLabel}_${cohortLabel}_${semLabel}_${today}.csv`;
 
     const escape = (v: string | number | null | undefined): string => {
       if (v == null) return '';
@@ -303,7 +318,8 @@ export default function SkillCoveragePanel({
       return s;
     };
     const header = [
-      'Skill',
+      typeView === 'scenario' ? 'Scenario' : 'Skill',
+      ...(typeView === 'all' ? ['Type'] : []),
       'Category',
       'Lab Days',
       'Last Run',
@@ -320,6 +336,7 @@ export default function SkillCoveragePanel({
       lines.push(
         [
           escape(s.name),
+          ...(typeView === 'all' ? [escape(s.kind ?? 'skill')] : []),
           escape(s.category || ''),
           escape(s.lab_day_count),
           escape(s.last_run_date || ''),
@@ -339,17 +356,18 @@ export default function SkillCoveragePanel({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [data, filteredSkills]);
+  }, [data, filteredSkills, typeView]);
 
   const counts = useMemo(() => {
     const c = { multiple: 0, once: 0, not_yet: 0, total: 0, smc_gap: 0 };
     for (const s of data?.skills || []) {
+      if (typeView !== 'all' && (s.kind ?? 'skill') !== typeView) continue;
       c.total++;
       c[s.status]++;
       if (s.smc_required && s.lab_day_count === 0) c.smc_gap++;
     }
     return c;
-  }, [data]);
+  }, [data, typeView]);
 
   if (!cohortId) {
     return (
@@ -369,6 +387,9 @@ export default function SkillCoveragePanel({
   const effectiveSemester = data?.semester ?? null;
   const semesterLabel =
     effectiveSemester !== null ? `Semester ${effectiveSemester}` : 'All semesters';
+  const panelTitle = typeView === 'scenario' ? 'Scenario Coverage' : 'Skill Coverage';
+  const noun = typeView === 'scenario' ? 'scenario' : typeView === 'skill' ? 'skill' : 'item';
+  const unlinked = data?.unlinked_scenarios;
 
   return (
     <div
@@ -390,7 +411,7 @@ export default function SkillCoveragePanel({
           )}
           <ClipboardCheck className="w-4 h-4 text-blue-600 dark:text-blue-400" />
           <span className="text-sm font-semibold text-gray-900 dark:text-white">
-            Skill Coverage
+            {panelTitle}
           </span>
           <span className="text-xs text-gray-500 dark:text-gray-400">
             {semesterLabel}
@@ -438,6 +459,35 @@ export default function SkillCoveragePanel({
                     placeholder="Filter by name..."
                     className="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400"
                   />
+                </div>
+                {/* Type + scope controls. Type sits above the completion
+                    tabs because it's a separate dimension. */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="inline-flex rounded overflow-hidden border border-gray-300 dark:border-gray-600">
+                    {([['skill', 'Skills'], ['scenario', 'Scenarios'], ['all', 'All']] as [TypeView, string][]).map(([v, label]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setTypeView(v)}
+                        className={`px-2.5 py-1 text-xs font-medium ${
+                          typeView === v
+                            ? 'bg-blue-600 text-white'
+                            : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  <select
+                    value={scope}
+                    onChange={(e) => setScope(e.target.value as Scope)}
+                    className="px-1.5 py-1 text-xs border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200"
+                    aria-label="Semester scope"
+                  >
+                    <option value="current">This semester</option>
+                    <option value="all">All semesters</option>
+                  </select>
                 </div>
                 <div className="flex flex-wrap gap-1">
                   {/* Filter order: SMC gaps is the most actionable bucket
@@ -541,7 +591,7 @@ export default function SkillCoveragePanel({
 
                 {!loading && filteredSkills.length === 0 && (
                   <div className="px-4 py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                    No skills match your filter.
+                    No items match your filter.
                   </div>
                 )}
 
@@ -636,7 +686,20 @@ export default function SkillCoveragePanel({
                 <div className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-[11px] text-gray-500 dark:text-gray-400">
                   {data.total_lab_days ?? 0} lab day
                   {(data.total_lab_days ?? 0) === 1 ? '' : 's'} ·{' '}
-                  {counts.total} skill{counts.total === 1 ? '' : 's'}
+                  {counts.total} {noun}{counts.total === 1 ? '' : 's'}
+                </div>
+              )}
+              {/* Scenario stations with free-text titles have no scenarios
+                  record, so they can't be counted above. Say so instead of
+                  presenting an incomplete count as complete. */}
+              {data && typeView !== 'skill' && unlinked && unlinked.count > 0 && (
+                <div
+                  className="px-4 py-2 border-t border-gray-200 dark:border-gray-700 text-[11px] text-amber-700 dark:text-amber-300"
+                  title={unlinked.titles.join('\n')}
+                >
+                  {unlinked.count} scenario station{unlinked.count === 1 ? '' : 's'} in{' '}
+                  {semesterLabel.toLowerCase()} use free-text titles with no linked
+                  scenario, so they are not counted above.
                 </div>
               )}
             </>
