@@ -24,6 +24,7 @@ import {
   Users,
   Bell,
   Award,
+  GraduationCap,
   ClipboardCheck,
   AlertCircle,
   CheckSquare,
@@ -300,6 +301,7 @@ export default function InternshipDetailPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [notifying, setNotifying] = useState(false);
+  const [closingOut, setClosingOut] = useState(false);
   const [userRole, setUserRole] = useState<Role | null>(null);
   const [internship, setInternship] = useState<Internship | null>(null);
   const [preceptors, setPreceptors] = useState<Preceptor[]>([]);
@@ -798,6 +800,64 @@ export default function InternshipDetailPage() {
       showToast('Failed to send notification', 'error');
     }
     setNotifying(false);
+  };
+
+  // "NREMT Passed" close-out: records nremt_passed on the internship, then
+  // reuses the existing student-level graduation flow (students.status =
+  // 'graduated', enrollment closed, history row). Nothing is deleted —
+  // the internship record stays fully readable.
+  const handleNremtPassedCloseout = async () => {
+    const studentId = internship?.students?.id;
+    if (!studentId || !userRole || !hasMinRole(userRole, 'lead_instructor')) return;
+    const name = `${internship?.students?.first_name ?? ''} ${internship?.students?.last_name ?? ''}`.trim();
+    if (!window.confirm(`Mark ${name || 'this student'} as NREMT Passed and graduated? This closes out their record (nothing is deleted).`)) return;
+
+    setClosingOut(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const payload: Record<string, any> = { ...formData, nremt_passed: true };
+      payload.nremt_passed_date = (formData.nremt_passed_date as string) || today;
+      for (const key of DATE_FIELDS) {
+        if (key in payload) {
+          const v = payload[key];
+          payload[key] = typeof v === 'string' && v ? v.split('T')[0] : null;
+        }
+      }
+      const putRes = await fetch(`/api/clinical/internships/${internshipId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      const putData = await putRes.json().catch(() => ({} as Record<string, unknown>));
+      if (!putRes.ok || !(putData as { success?: boolean }).success) {
+        showToast((putData as { error?: string }).error || 'Failed to record NREMT Passed', 'error');
+        setClosingOut(false);
+        return;
+      }
+      setFormData(prev => ({ ...prev, nremt_passed: true, nremt_passed_date: payload.nremt_passed_date }));
+      setHasChanges(false);
+      setDirtyFields(new Set());
+
+      const gradRes = await fetch(`/api/students/${studentId}/graduate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ graduation_date: payload.nremt_passed_date, reason: 'NREMT Passed (internship close-out)' }),
+      });
+      const gradData = await gradRes.json().catch(() => ({} as Record<string, unknown>));
+      if (gradRes.ok) {
+        setInternship(prev => (prev && prev.students ? { ...prev, students: { ...prev.students, status: 'graduated' } } : prev));
+        showToast('NREMT Passed recorded — student marked graduated.', 'success');
+      } else if ((gradData as { error?: string }).error === 'Student is already graduated') {
+        setInternship(prev => (prev && prev.students ? { ...prev, students: { ...prev.students, status: 'graduated' } } : prev));
+        showToast('NREMT Passed recorded (student was already graduated).', 'success');
+      } else {
+        showToast(`NREMT Passed saved, but graduation failed: ${(gradData as { error?: string }).error || gradRes.status}`, 'error');
+      }
+    } catch (err) {
+      console.error('Error closing out internship:', err);
+      showToast('Close-out failed', 'error');
+    }
+    setClosingOut(false);
   };
 
   const showToast = (message: string, type: 'success' | 'error') => {
@@ -1474,6 +1534,25 @@ export default function InternshipDetailPage() {
                   <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
                     <CheckCircle2 className="w-5 h-5" />
                     <span className="text-sm">Notified {formData.ryan_notified_date && formatDate(formData.ryan_notified_date)}</span>
+                  </div>
+                )}
+
+                {/* NREMT Passed close-out → graduated (lead instructor+) */}
+                {userRole && hasMinRole(userRole, 'lead_instructor') && internship?.students && internship.students.status !== 'graduated' && (
+                  <button
+                    onClick={handleNremtPassedCloseout}
+                    disabled={closingOut}
+                    className="flex items-center gap-2 px-4 py-2 min-h-[44px] bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                    title="Record NREMT Passed and move the student to Graduated"
+                  >
+                    {closingOut ? <Loader2 className="w-4 h-4 animate-spin" /> : <GraduationCap className="w-4 h-4" />}
+                    NREMT Passed
+                  </button>
+                )}
+                {internship?.students?.status === 'graduated' && (
+                  <div className="flex items-center gap-2 text-blue-700 dark:text-blue-400">
+                    <GraduationCap className="w-5 h-5" />
+                    <span className="text-sm">Graduated</span>
                   </div>
                 )}
 

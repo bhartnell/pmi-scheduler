@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-09-30
 
+
+- (this commit) | Clinical internship page: "NREMT Passed" close-out button (lead instructor+) — records nremt_passed and reuses /api/students/[id]/graduate to move the student to graduated; additive, nothing deleted
 - (this commit) | Skill Coverage panel: Skills/Scenarios/All type control, This/All-semesters scope, type-aware labels + CSV, unlinked free-text scenario station notice
 - (pending) | docs(wiki): article answering Stacie Peterson's 2026-06-16 question (Coverage shift signups title + volunteers). Content only, no code.
 
