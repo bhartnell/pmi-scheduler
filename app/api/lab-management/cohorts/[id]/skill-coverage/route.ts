@@ -28,8 +28,15 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  * coverage reporting — station_skills.skill_id is the authoritative path.
  *
  * Query params:
- *   semester — optional integer (1-4). Defaults to cohort.current_semester
+ *   semester — optional integer (1-4), or the literal 'all' to span every
+ *              semester for the cohort (scenario history carries across a
+ *              cohort's semesters). Defaults to cohort.current_semester
  *              if set, otherwise includes all semesters for the cohort.
+ *
+ * Response also carries `unlinked_scenario_stations`: scenario-type
+ * stations that carry only free text (no scenarios record), grouped by
+ * title. They cannot be counted as scenario coverage, so they are
+ * surfaced separately rather than silently under-reporting.
  */
 export async function GET(
   request: NextRequest,
@@ -43,7 +50,9 @@ export async function GET(
     const supabase = getSupabaseAdmin();
 
     const semesterParam = request.nextUrl.searchParams.get('semester');
-    const semesterFilter = semesterParam ? parseInt(semesterParam, 10) : null;
+    const allSemesters = semesterParam === 'all';
+    const semesterFilter =
+      semesterParam && !allSemesters ? parseInt(semesterParam, 10) : null;
 
     // 1. Load cohort + program so we can filter skills by cert_level
     const { data: cohort, error: cohortError } = await supabase
@@ -66,8 +75,9 @@ export async function GET(
 
     // Effective semester: query param wins; otherwise cohort.current_semester;
     // otherwise null (means "all semesters").
-    const effectiveSemester =
-      semesterFilter !== null && !isNaN(semesterFilter)
+    const effectiveSemester = allSemesters
+      ? null
+      : semesterFilter !== null && !isNaN(semesterFilter)
         ? semesterFilter
         : cohort.current_semester ?? null;
 
@@ -157,13 +167,18 @@ export async function GET(
     const scenarioLabDays = new Map<string, Set<string>>();
     const scenarioLastDate = new Map<string, string>();
     const scenarioIdsSeen = new Set<string>();
+    // Free-text scenario stations (no scenario_id), keyed by normalized title.
+    const unlinkedByTitle = new Map<
+      string,
+      { title: string; labDays: Set<string>; last: string | null }
+    >();
 
     if (labDayIds.length > 0) {
       // Fetch lab_stations with scenario_id so we can aggregate scenarios
       // in the same pass.
       const { data: stations, error: stationsError } = await supabase
         .from('lab_stations')
-        .select('id, lab_day_id, scenario_id')
+        .select('id, lab_day_id, scenario_id, station_type, custom_title')
         .in('lab_day_id', labDayIds);
 
       if (stationsError) {
@@ -172,6 +187,25 @@ export async function GET(
         const stationIdToLabDay = new Map<string, string>();
         for (const st of stations) {
           stationIdToLabDay.set(st.id, st.lab_day_id);
+
+          // Free-text scenario station: scenario-type, no linked record.
+          if (
+            !st.scenario_id &&
+            (st.station_type ?? 'scenario') === 'scenario' &&
+            st.custom_title &&
+            st.custom_title.trim()
+          ) {
+            const key = st.custom_title.trim().toLowerCase();
+            const entry = unlinkedByTitle.get(key) || {
+              title: st.custom_title.trim(),
+              labDays: new Set<string>(),
+              last: null,
+            };
+            entry.labDays.add(st.lab_day_id);
+            const d = labDayDateMap.get(st.lab_day_id);
+            if (d && (!entry.last || d > entry.last)) entry.last = d;
+            unlinkedByTitle.set(key, entry);
+          }
 
           // Aggregate scenarios directly from lab_stations.scenario_id
           if (st.scenario_id) {
@@ -305,6 +339,13 @@ export async function GET(
       semester: effectiveSemester,
       total_lab_days: labDayIds.length,
       skills: rows,
+      unlinked_scenario_stations: Array.from(unlinkedByTitle.values())
+        .map((u) => ({
+          title: u.title,
+          lab_day_count: u.labDays.size,
+          last_run_date: u.last,
+        }))
+        .sort((a, b) => a.title.localeCompare(b.title)),
     });
   } catch (error) {
     console.error('[skill-coverage] Error:', error);
