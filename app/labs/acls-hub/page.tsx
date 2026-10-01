@@ -19,6 +19,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
+import { RegionShell, RegionGrid, Region } from '@/components/layout/RegionShell';
 import Link from 'next/link';
 import AclsSkillsPanel from '@/components/AclsSkillsPanel';
 import RegionShell from '@/components/layout/RegionShell';
@@ -289,8 +290,12 @@ function AclsHubPageContent() {
   const cohortLabel = cohort ? `${cohort.program?.abbreviation || ''} G${cohort.cohort_number ?? ''}`.trim() : '';
 
   return (
+<<<<<<< HEAD
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="w-full px-4 py-3">
+=======
+    <RegionShell header={<>
+>>>>>>> origin/main
         {/* Controls (hidden on print) */}
         <div className="print:hidden">
           <div className="flex items-center gap-3 mb-3">
@@ -352,6 +357,7 @@ function AclsHubPageContent() {
         {saveError && (
           <div role="alert" className="print:hidden mb-3 rounded-md border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-3 py-2 text-sm text-red-700 dark:text-red-300">{saveError}</div>
         )}
+    </>}>
 
         {/* ── PRINT-ONLY SCHEDULE SHEET — clean instructor handout (the rest of
             the hub dashboard is hidden on print). Shows BOTH days regardless of
@@ -425,15 +431,18 @@ function AclsHubPageContent() {
             No ACLS event found. (Looks for lab days tagged <code>cert_course=acls</code>.)
           </div>
         ) : (
+<<<<<<< HEAD
           <div className="print:hidden">
           <RegionShell
             regions={[
               { key: 'overview', label: 'Overview', icon: <UserCheck className="w-4 h-4" />, children: (<>
             {/* Megacode coordinator stats — practice + testing, both days */}
+=======
+          <RegionGrid>
+            {/* ── Region 1: Overview ── */}
+            <Region title="Overview — megacode TL stats" icon={<UserCheck className="w-4 h-4" />}>
+>>>>>>> origin/main
             <section>
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
-                <UserCheck className="w-4 h-4" /> Megacode TL stats — practice + testing, both days
-              </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
                 <Stat label="Megacode lab days" value={megacodeLabDayIds.size} />
                 <Stat label="Groups" value={stats.totalGroups} />
@@ -461,20 +470,26 @@ function AclsHubPageContent() {
                 <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">Red = failed a megacode as team lead; gray = has not yet led a passing megacode. Goal: every student passes at least one megacode as team lead.</p>
               </section>
             )}
+            </Region>
 
+<<<<<<< HEAD
               </>) },
               { key: 'schedule', label: 'Schedule', icon: <CalendarDays className="w-4 h-4 text-red-600" />, children: (<>
             
+=======
+            {/* ── Region 2: Schedule (agenda rows) ── */}
+            <Region title="Schedule" icon={<CalendarDays className="w-4 h-4" />}>
+>>>>>>> origin/main
             {visibleDates.map((date) => {
               const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
               return (
                 <section key={date} style={{ breakInside: 'avoid' }}>
-                  <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
                     <CalendarDays className="w-4 h-4 text-red-600" /> Day {dates.indexOf(date) + 1} — {prettyDate(date)}
-                  </h2>
+                  </h3>
 
                   {/* Schedule (didactic + labs together) */}
-                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 mb-3">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 ">
                     {dayEvents.length === 0 ? (
                       <div className="p-3 text-xs text-gray-400">No schedule blocks found for this day.</div>
                     ) : dayEvents.map(e => {
@@ -526,6 +541,7 @@ function AclsHubPageContent() {
                 </section>
               );
             })}
+<<<<<<< HEAD
               </>) },
               { key: 'stations', label: 'Stations', icon: <MapPin className="w-4 h-4" />, children: (<>
             
@@ -538,6 +554,17 @@ function AclsHubPageContent() {
                   </h2>
 
                   {/* Lab sections for the day */}
+=======
+            </Region>
+
+            {/* ── Region 3: Stations (station cards per section) ── */}
+            <Region title="Stations" icon={<MapPin className="w-4 h-4" />}>
+            {visibleDates.map((date) => {
+              const daySections = visibleLabDays.filter(d => d.date === date).sort(bySectionTime);
+              return (
+                <section key={date}>
+                  <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-2">Day {dates.indexOf(date) + 1} — {prettyDate(date)}</h3>
+>>>>>>> origin/main
                   <div className="space-y-2">
                     {daySections.map(d => {
                       const isSection = (d.section_number ?? 1) > 1;
@@ -558,7 +585,7 @@ function AclsHubPageContent() {
                           </div>
                           {/* Stations */}
                           {d.stations.length > 0 && (
-                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
+                            <div className="mt-2 grid grid-cols-2 max-sm:grid-cols-1 gap-1.5">
                               {d.stations.map(st => (
                                 <Link
                                   key={st.id}
@@ -586,6 +613,7 @@ function AclsHubPageContent() {
                 </section>
               );
             })}
+<<<<<<< HEAD
             {/* By instructor */}
             {byInstructor.length > 0 && (
               <section style={{ breakInside: 'avoid' }}>
@@ -609,9 +637,16 @@ function AclsHubPageContent() {
             )}
               </>) },
               { key: 'progress', label: 'Student progress', icon: <Users className="w-4 h-4" />, children: (<>
+=======
+
+            </Region>
+
+            {/* ── Region 4: Student progress ── */}
+            <Region title="Student progress" icon={<Users className="w-4 h-4" />}>
+>>>>>>> origin/main
             {/* Per-group MEGACODE team-lead coverage (whole event) */}
             <section style={{ breakInside: 'avoid' }}>
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Users className="w-4 h-4" /> Groups — megacode TL coverage (practice + testing)</h2>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">Groups — megacode TL coverage (practice + testing)</h3>
               <div className="space-y-2">
                 {groups.map(g => {
                   const gAttempts = attemptsByGroup.get(g.id) || [];
@@ -644,13 +679,38 @@ function AclsHubPageContent() {
 
             <AclsSkillsPanel groups={groups} />
 
+<<<<<<< HEAD
               </>) },
             ]}
           />
           </div>
+=======
+            {/* By instructor */}
+            {byInstructor.length > 0 && (
+              <section style={{ breakInside: 'avoid' }}>
+                <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><UserCheck className="w-4 h-4" /> By instructor (station assignments)</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {byInstructor.map(([name, slots]) => (
+                    <div key={name} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+                      <div className="font-medium text-gray-800 dark:text-gray-100 mb-1">{name}</div>
+                      <div className="space-y-0.5">
+                        {slots.map((s, i) => (
+                          <div key={i} className="text-[11px] text-gray-500 dark:text-gray-400">
+                            Day {dates.indexOf(s.date) + 1} · {s.section} · #{s.station} {s.room ? `(${s.room})` : ''} — {s.title}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-1 text-[11px] text-gray-400">From station instructor labels. Assign via each section&apos;s Edit page (which also syncs to Google Calendar).</p>
+              </section>
+            )}
+            </Region>
+          </RegionGrid>
+>>>>>>> origin/main
         )}
-      </div>
-    </div>
+    </RegionShell>
   );
 }
 
