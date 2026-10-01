@@ -327,7 +327,7 @@ export default function PalsGradePage() {
 
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">PALS Testing Grading</h1>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-        AHA PALS 2025 Case Scenario Testing Checklist: PASS / NR per student (Team Leader), all in-scope steps checked.
+        Check off each step as the team leader performs it, then mark the team leader PASS or NR.
       </p>
 
       {/* Context selectors */}
