@@ -55,6 +55,13 @@ function getNotificationType(daysUntilExpiry: number): string | null {
 //   - Post-expiry: every 15 days recurring
 // ---------------------------------------------------------------------------
 
+// ARCHIVED 2026-10-01 (Ben decision): affiliation-expiry alerts are no longer
+// used (tracked on Pima's website instead). The vercel.json cron entry was
+// removed and this route now no-ops. To restore: re-add the vercel.json cron
+// entry, flip ARCHIVED to false, and first allow 'affiliation_expiry' in the
+// user_notifications_type_check constraint (inserts fail with 23514 otherwise).
+const ARCHIVED = true;
+
 export async function GET(request: NextRequest) {
   // Verify cron secret
   const authHeader = request.headers.get('authorization');
@@ -63,6 +70,10 @@ export async function GET(request: NextRequest) {
   if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     console.warn('[AFFILIATION-EXPIRY] Unauthorized cron request');
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  if (ARCHIVED) {
+    return NextResponse.json({ success: true, archived: true, notificationsSent: 0 });
   }
 
   const startTime = Date.now();

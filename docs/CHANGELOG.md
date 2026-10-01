@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-01
 
+(pending) | archive affiliation-expiry cron: removed vercel.json schedule, route no-ops (Ben decision; reversible)
+
 - (this commit) | ACLS hub schedule rows editable: per-block instructor + co-instructor (pmi_schedule_blocks.instructor_id/additional_instructor_id) + note (content_notes) via existing planner block PUT, instructor list from /api/lab-management/instructors; "(read-only)" subtitle removed; unified feed exposes the direct-FK ids in metadata. No schema change. "All instructors" value NOT built (no storage; flagged)
 - (this commit) | calendar/unified: `cohort_id` now actually scopes planner blocks (embedded .eq didn't drop parent rows) so other cohorts' blocks (EMT Lecture) leave the ACLS/PALS hub schedule + cohort ICS; find-conflicts/find-slots don't pass cohort_id so conflict detection is unchanged. Display-only
 - (this commit) | AHA typed signature: embed Dancing Script (SIL OFL) in server-rendered megacode/skills/packet HTML + profile preview (public/fonts); single `script` face, legacy face keys still accepted. No schema change
