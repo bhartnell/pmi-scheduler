@@ -43,6 +43,7 @@ export async function syncGeneralLabDefaults(
     .select('id, email')
     .eq('primary_program', 'paramedic')
     .eq('is_active', true)
+    .eq('paramedic_lab_default', true)
     .eq('google_calendar_connected', true)
     .eq('google_calendar_scope', 'events');
   if (opts.targetEmail) instrQuery = instrQuery.ilike('email', opts.targetEmail);

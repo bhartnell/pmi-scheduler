@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
     // instructors and shouldn't appear on this list (records kept for ACLS).
     const { data: rawInstructors } = await supabase
       .from('lab_users')
-      .select('id, name, email, is_part_time')
+      .select('id, name, email, is_part_time, paramedic_lab_default')
       .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin'])
       .eq('is_active', true)
       .order('name');
@@ -96,6 +96,7 @@ export async function GET(request: NextRequest) {
     const instructorMap = new Map<string, {
       id: string; name: string; email: string;
       is_part_time: boolean;
+      paramedic_lab_default: boolean;
       available: boolean;
       group: Group;
       has_explicit_availability: boolean;
@@ -111,6 +112,7 @@ export async function GET(request: NextRequest) {
         name: instr.name,
         email: instr.email,
         is_part_time: !!instr.is_part_time,
+        paramedic_lab_default: instr.paramedic_lab_default !== false,
         available: true,
         group: 'no_availability',         // upgraded below as evidence comes in
         has_explicit_availability: false,
@@ -493,7 +495,9 @@ export async function GET(request: NextRequest) {
       } else if (v.is_volunteer) {
         v.group = 'volunteer';
       } else if (!v.is_part_time) {
-        v.group = 'available';
+        // RT/other-program full-timers (paramedic_lab_default = false) stay
+        // assignable but are not default-available for paramedic labs.
+        v.group = v.paramedic_lab_default ? 'available' : 'no_availability';
       } else if (v.has_explicit_availability) {
         v.group = 'available';
       } else {

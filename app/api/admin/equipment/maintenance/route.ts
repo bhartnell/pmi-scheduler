@@ -154,15 +154,22 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Verify the equipment exists
+    // Verify against `equipment_items` — the table equipment_maintenance's FK
+    // (equipment_maintenance_equipment_item_id_fkey) actually references. The
+    // picker (GET /api/admin/equipment) lists the flat `equipment` table, so an
+    // id from it is rejected here instead of failing the FK or attaching to a
+    // wrong asset. Canonical-table decision pending (Task Handoff Queue).
     const { data: equipment, error: equipError } = await supabase
-      .from('equipment')
-      .select('id, name')
+      .from('equipment_items')
+      .select('id')
       .eq('id', equipment_item_id)
       .single();
 
     if (equipError || !equipment) {
-      return NextResponse.json({ error: 'Equipment not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Equipment item not found. Maintenance records can only be logged against tracked equipment items.' },
+        { status: 404 }
+      );
     }
 
     const record = {
@@ -186,17 +193,8 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // If completing maintenance, update the equipment's last_maintenance and next_maintenance fields
-    if (body.status === 'completed' && body.completed_date) {
-      await supabase
-        .from('equipment')
-        .update({
-          last_maintenance: body.completed_date,
-          next_maintenance: body.next_due_date ?? null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', equipment_item_id);
-    }
+    // NOTE: last/next_maintenance sync to `equipment` removed — that table is not
+    // the FK target, so the sync could write to an unrelated asset.
 
     return NextResponse.json({ success: true, record: data }, { status: 201 });
   } catch (error: unknown) {
