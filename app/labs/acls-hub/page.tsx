@@ -58,8 +58,8 @@ interface Attempt {
 interface CalEvent {
   id: string; title: string; date: string; start_time: string | null; end_time: string | null;
   event_type: string; instructor_names?: string[]; room?: string; linked_url?: string; status?: string;
-  source?: string; linked_id?: string; content_notes?: string;
-  metadata?: { instructor_id?: string | null; additional_instructor_id?: string | null };
+  source?: string; linked_id?: string; linked_lab_day_id?: string; content_notes?: string;
+  metadata?: { instructor_id?: string | null; additional_instructor_id?: string | null; linked_section_number?: number | null };
 }
 interface InstructorOpt { id: string; name: string }
 
@@ -275,6 +275,52 @@ function AclsHubPageContent() {
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [visibleLabDays]);
 
+  // One lab section (its station cards + attempt tally). Rendered nested under
+  // its schedule row when linked, standalone when no schedule row matches.
+  const renderSection = (d: LabDay) => {
+    const isSection = (d.section_number ?? 1) > 1;
+    const dAttempts = attempts.filter(a => a.lab_day_id === d.id);
+    return (
+      <div key={d.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2">
+            {isSection ? <Layers className="w-4 h-4 text-indigo-500" /> : <Clock className="w-4 h-4 text-gray-400" />}
+            {d.section_label || d.title || 'Lab'}
+            <span className="text-xs text-gray-400">{hhmm(d.start_time)}–{hhmm(d.end_time)} · {d.stations.length} stations{d.is_adv_cert_testing ? ' · scored' : ''}</span>
+          </div>
+          <div className="flex items-center gap-2 print:hidden">
+            <Link href={`/labs/schedule/${d.id}`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Open</Link>
+            <Link href={`/labs/schedule/${d.id}/edit`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Assign</Link>
+            <Link href={`/labs/schedule/${d.id}/acls-coordinator`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Tracker</Link>
+          </div>
+        </div>
+        {/* Stations */}
+        {d.stations.length > 0 && (
+          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
+            {d.stations.map(st => (
+              <Link
+                key={st.id}
+                href={`/labs/adv-cert/grade?labDayId=${d.id}&stationId=${st.id}`}
+                className="block text-xs border border-gray-100 dark:border-gray-700 rounded p-1.5 hover:border-red-300 dark:hover:border-red-700 hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors"
+              >
+                <div className="font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-gray-400" />#{st.station_number} {st.room || ''}
+                </div>
+                <div className="text-gray-500 dark:text-gray-400">{st.scenario?.case_code || st.scenario?.title || st.custom_title || '—'}</div>
+                <div className="text-gray-400">{st.instructor_name || '— unassigned —'}</div>
+              </Link>
+            ))}
+          </div>
+        )}
+        {dAttempts.length > 0 && (
+          <div className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+            {dAttempts.filter(a => a.overall_result === 'pass').length} pass · {dAttempts.filter(a => a.overall_result === 'fail').length} fail recorded here
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (status === 'loading') return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
   if (!session) return null;
 
@@ -462,6 +508,20 @@ function AclsHubPageContent() {
             {visibleDates.map((date) => {
               const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
               const daySections = visibleLabDays.filter(d => d.date === date).sort(bySectionTime);
+              // Join each lab row to its section: explicit FK first, then the
+              // block's linked_section_number (default 1) against the lab day's
+              // section_number. Each section nests under at most one row.
+              const claimed = new Set<string>();
+              const sectionFor = new Map<string, LabDay>();
+              for (const e of dayEvents) {
+                if (e.event_type !== 'lab') continue;
+                const d = daySections.find(x => !claimed.has(x.id) && (
+                  (e.linked_lab_day_id ? x.id === e.linked_lab_day_id
+                    : (x.section_number ?? 1) === (e.metadata?.linked_section_number ?? 1))
+                ));
+                if (d) { claimed.add(d.id); sectionFor.set(e.id, d); }
+              }
+              const unmatched = daySections.filter(d => !claimed.has(d.id));
               return (
                 <section key={date} style={{ breakInside: 'avoid' }}>
                   <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
@@ -475,8 +535,10 @@ function AclsHubPageContent() {
                     ) : dayEvents.map(e => {
                       const editable = e.source === 'planner' && !!e.linked_id;
                       const names = e.instructor_names || [];
+                      const nested = sectionFor.get(e.id);
                       return (
-                        <div key={e.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 text-sm">
+                        <div key={e.id}>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 text-sm">
                           <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
                           <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${TYPE_COLOR[e.event_type] || TYPE_COLOR.class}`}>{e.event_type}</span>
                           <span className="text-gray-800 dark:text-gray-100 flex-1 min-w-[12rem]">{e.title}</span>
@@ -514,56 +576,16 @@ function AclsHubPageContent() {
                             names.length > 0 && <span className="text-xs text-gray-400">{names.join(', ')}</span>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Lab sections for the day */}
-                  <div className="space-y-2">
-                    {daySections.map(d => {
-                      const isSection = (d.section_number ?? 1) > 1;
-                      const dAttempts = attempts.filter(a => a.lab_day_id === d.id);
-                      return (
-                        <div key={d.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                              {isSection ? <Layers className="w-4 h-4 text-indigo-500" /> : <Clock className="w-4 h-4 text-gray-400" />}
-                              {d.section_label || d.title || 'Lab'}
-                              <span className="text-xs text-gray-400">{hhmm(d.start_time)}–{hhmm(d.end_time)} · {d.stations.length} stations{d.is_adv_cert_testing ? ' · scored' : ''}</span>
-                            </div>
-                            <div className="flex items-center gap-2 print:hidden">
-                              <Link href={`/labs/schedule/${d.id}`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Open</Link>
-                              <Link href={`/labs/schedule/${d.id}/edit`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Assign</Link>
-                              <Link href={`/labs/schedule/${d.id}/acls-coordinator`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Tracker</Link>
-                            </div>
-                          </div>
-                          {/* Stations */}
-                          {d.stations.length > 0 && (
-                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
-                              {d.stations.map(st => (
-                                <Link
-                                  key={st.id}
-                                  href={`/labs/adv-cert/grade?labDayId=${d.id}&stationId=${st.id}`}
-                                  className="block text-xs border border-gray-100 dark:border-gray-700 rounded p-1.5 hover:border-red-300 dark:hover:border-red-700 hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors"
-                                >
-                                  <div className="font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
-                                    <MapPin className="w-3 h-3 text-gray-400" />#{st.station_number} {st.room || ''}
-                                  </div>
-                                  <div className="text-gray-500 dark:text-gray-400">{st.scenario?.case_code || st.scenario?.title || st.custom_title || '—'}</div>
-                                  <div className="text-gray-400">{st.instructor_name || '— unassigned —'}</div>
-                                </Link>
-                              ))}
-                            </div>
-                          )}
-                          {dAttempts.length > 0 && (
-                            <div className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">
-                              {dAttempts.filter(a => a.overall_result === 'pass').length} pass · {dAttempts.filter(a => a.overall_result === 'fail').length} fail recorded here
-                            </div>
-                          )}
+                        {nested && <div className="px-3 pb-2 pl-6">{renderSection(nested)}</div>}
                         </div>
                       );
                     })}
                   </div>
+
+                  {/* Lab sections with no matching schedule row (nothing is hidden) */}
+                  {unmatched.length > 0 && (
+                    <div className="space-y-2">{unmatched.map(renderSection)}</div>
+                  )}
                 </section>
               );
             })}
