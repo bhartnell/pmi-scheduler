@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-01
 
+- `(pending)` | **Data-only: 10/26 PALS-prep station swap (Task Handoff Queue, Ben GO 2026-10-01).** Pediatric Airway Review + Broselow Challenge moved onto G15 10/26 (replacing its duplicate Eclampsia-IFT / ACS stations, which also run 11/09 and 11/10); Pre-eclampsia Day 2 moved to 11/10 slot 4; 10/27 sec 1 (PALS Prep Day 2) archived, displaced stations parked there (no deletes). 10/26 retitled. Burn Center 10/27 sec 2 untouched. Backups: `_backup_lab_days_20261001_pals_swap`, `_backup_lab_stations_20261001_pals_swap`. Open: 10/26 #1 "Peds Med Draws and Broselow" vs #4 "Broselow Challenge" may overlap (kept both; Ben to trim). 11/10 title not updated.
+
 - pending | Read lab_users.paramedic_lab_default in instructor-availability picker + general-lab-sync; equipment maintenance POST verifies against equipment_items (FK target) and no longer syncs dates to `equipment`
 - 80dae3d | osce_observers.contact_email (additive): invites/reminders use COALESCE(contact_email, email); identity `email` unchanged; admin observer form field
 
