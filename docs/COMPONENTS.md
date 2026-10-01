@@ -199,6 +199,7 @@ auto-sync flow.
 - `components/lab-day/ScenarioPickerModal.tsx` — searchable scenario
   picker reused across station edit + checkoff flows.
 - `components/grading/DualPaneGrading.tsx` — shared side-by-side grading layout (scenario pane | scoring pane, each scrolls independently on >= lg; tab toggle below). Lifted from the OSCE scoring view. Used by `/labs/adv-cert/grade`; to be applied to standard/NREMT/PALS/OSCE.
+- `components/layout/RegionShell.tsx` — shared multi-region page shell (2-col grid on >= lg, sized to the viewport; each region scrolls inside itself; stacks below lg). Used by `/labs/acls-hub`; PALS hub to adopt. Same pane pattern as DualPaneGrading.
 - `components/grading/ScenarioReferencePanel.tsx` — read-only scenario
   reference panel on the grading page (so the grader can see scenario
   details without leaving the page).
