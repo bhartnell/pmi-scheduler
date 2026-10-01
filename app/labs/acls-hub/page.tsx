@@ -16,6 +16,7 @@
  * surfaces remain the fallback.
  */
 
+import StatTile from '@/components/StatTile';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
@@ -279,13 +280,6 @@ function AclsHubPageContent() {
   if (status === 'loading') return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
   if (!session) return null;
 
-  const Stat = ({ label, value, tone }: { label: string; value: React.ReactNode; tone?: string }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-      <div className={`text-xl font-bold ${tone || 'text-gray-900 dark:text-white'}`}>{value}</div>
-      <div className="text-[11px] text-gray-500 dark:text-gray-400">{label}</div>
-    </div>
-  );
-
   const cohortLabel = cohort ? `${cohort.program?.abbreviation || ''} G${cohort.cohort_number ?? ''}`.trim() : '';
 
   return (
@@ -429,31 +423,31 @@ function AclsHubPageContent() {
             {/* ── Region 1: Overview ── */}
             <Region title="Overview — megacode TL stats" icon={<UserCheck className="w-4 h-4" />}>
             <section>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                <Stat label="Megacode lab days" value={megacodeLabDayIds.size} />
-                <Stat label="Groups" value={stats.totalGroups} />
-                <Stat label="Megacode attempts" value={stats.totalAttempts} />
-                <Stat label="Passed" value={stats.passed} tone="text-green-600 dark:text-green-400" />
-                <Stat label="Failed" value={stats.failed} tone="text-red-600 dark:text-red-400" />
-                <Stat label="Passed as TL" value={`${stats.passedTLCount}/${stats.totalStudents}`} tone={stats.passedTLCount === stats.totalStudents && stats.totalStudents > 0 ? 'text-green-600 dark:text-green-400' : undefined} />
+              <div className="grid grid-cols-3 max-lg:grid-cols-2 gap-3">
+                <StatTile label="Megacode lab days" value={megacodeLabDayIds.size} />
+                <StatTile label="Groups" value={stats.totalGroups} />
+                <StatTile label="Megacode attempts" value={stats.totalAttempts} />
+                <StatTile label="Passed" value={stats.passed} tone="text-green-600 dark:text-green-400" />
+                <StatTile label="Failed" value={stats.failed} tone="text-red-600 dark:text-red-400" />
+                <StatTile label="Passed as TL" value={`${stats.passedTLCount}/${stats.totalStudents}`} tone={stats.passedTLCount === stats.totalStudents && stats.totalStudents > 0 ? 'text-green-600 dark:text-green-400' : undefined} />
               </div>
               <p className="mt-1 text-[11px] text-gray-400">Megacode attempts only (practice and final testing). A team-lead pass in practice counts toward the AHA team-lead distinction.</p>
             </section>
 
             {/* FAILURE MARKER — who hasn't passed megacode as TL yet */}
             {stats.notPassed.length > 0 && (
-              <section style={{ breakInside: 'avoid' }} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-800 rounded-lg p-3">
-                <h2 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1 flex items-center gap-1">
+              <section style={{ breakInside: 'avoid' }} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-800 rounded-xl p-4">
+                <h2 className="text-base font-semibold text-amber-900 dark:text-amber-100 mb-2 flex items-center gap-1">
                   <XCircle className="w-4 h-4" /> Not yet passed megacode as TL — {stats.notPassed.length} of {stats.totalStudents}
                 </h2>
                 <div className="flex flex-wrap gap-1.5">
                   {stats.notPassed.map(s => (
-                    <span key={s.id} className={`text-[11px] px-2 py-0.5 rounded-full ${s.failed ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                    <span key={s.id} className={`text-sm font-medium px-3 py-1 rounded-full ${s.failed ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
                       {s.last_name}, {s.first_name}{s.failed ? ' — failed' : ' — not yet'}
                     </span>
                   ))}
                 </div>
-                <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">Red = failed a megacode as team lead; gray = has not yet led a passing megacode. Goal: every student passes at least one megacode as team lead.</p>
+                <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">Red = failed a megacode as team lead; gray = has not yet led a passing megacode. Goal: every student passes at least one megacode as team lead.</p>
               </section>
             )}
             </Region>

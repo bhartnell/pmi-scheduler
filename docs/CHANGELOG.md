@@ -11,9 +11,9 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-01
 
+- pending | ACLS UI 3/6: reusable components/StatTile (site tile look, larger type) applied to ACLS hub megacode stats + not-yet-passed chips; legible at 75% zoom
 - (this commit) | ACLS UI 1/6: ACLS hub is now four viewport-sized regions (Overview / Schedule / Stations / Student progress), each scrolling inside itself, full width (no max-w cap); new shared components/layout/RegionShell.tsx (PALS to inherit). No data/schema change.
 - pending | copy(aha): remove developer/meta helper text from ACLS hub, PALS hub, and megacode/PALS grading pages; instructor-facing wording only (ACLS UI 6/6). String-only change.
-
 - pending | docs(claude-md): binding "Asking Ben" rule - plain English, 2-4 numbered options, one decision per message (Task Handoff Queue PROCESS card). Docs only.
 
 252e775 | archive affiliation-expiry cron: removed vercel.json schedule, route no-ops (Ben decision; reversible)
