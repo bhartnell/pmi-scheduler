@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-10-01
+
+- pending | Read lab_users.paramedic_lab_default in instructor-availability picker + general-lab-sync; equipment maintenance POST verifies against equipment_items (FK target) and no longer syncs dates to `equipment`
+
 ## 2026-09-30
 
 - (this commit) | ACLS/PALS hubs: sort station sections by start_time (not section_number); ACLS hub + find-slots/find-conflicts/export-ics skip cancelled blocks

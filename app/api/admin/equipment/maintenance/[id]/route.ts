@@ -75,18 +75,8 @@ export async function PUT(
     if (error) throw error;
     if (!data) return NextResponse.json({ error: 'Record not found' }, { status: 404 });
 
-    // Sync equipment last/next maintenance dates when completing
-    if (body.status === 'completed') {
-      const completedDate = body.completed_date ?? new Date().toISOString().split('T')[0];
-      await supabase
-        .from('equipment')
-        .update({
-          last_maintenance: completedDate,
-          next_maintenance: body.next_due_date ?? null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', existing.equipment_item_id);
-    }
+    // NOTE: last/next_maintenance sync to `equipment` removed — not the FK target
+    // (equipment_items is), so it could write to an unrelated asset.
 
     return NextResponse.json({ success: true, record: data });
   } catch (error) {
