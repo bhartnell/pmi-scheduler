@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-01
 
+252e775 | archive affiliation-expiry cron: removed vercel.json schedule, route no-ops (Ben decision; reversible)
+
 - (this commit) | ACLS hub schedule rows editable: per-block instructor + co-instructor (pmi_schedule_blocks.instructor_id/additional_instructor_id) + note (content_notes) via existing planner block PUT, instructor list from /api/lab-management/instructors; "(read-only)" subtitle removed; unified feed exposes the direct-FK ids in metadata. No schema change. "All instructors" value NOT built (no storage; flagged)
 - (this commit) | calendar/unified: `cohort_id` now actually scopes planner blocks (embedded .eq didn't drop parent rows) so other cohorts' blocks (EMT Lecture) leave the ACLS/PALS hub schedule + cohort ICS; find-conflicts/find-slots don't pass cohort_id so conflict detection is unchanged. Display-only
 - (this commit) | AHA typed signature: embed Dancing Script (SIL OFL) in server-rendered megacode/skills/packet HTML + profile preview (public/fonts); single `script` face, legacy face keys still accepted. No schema change
@@ -27,9 +29,9 @@ Format: `commit-hash | brief description`
 ## 2026-09-30
 
 - (this commit) | ACLS/PALS hubs: sort station sections by start_time (not section_number); ACLS hub + find-slots/find-conflicts/export-ics skip cancelled blocks
-(pending) | ScenarioFullDisplay: render legacy singular `trigger`, string `expected_actions`; no double unit on SpO2/temp (display-only, no data patches)
-(pending) | Site-visit Google Calendar events: default block 2h -> 30 min (15 base + 15/student helper); existing events untouched
-(pending) | ACLS skills capture: default-to-pass sheet, fail one click, one-action save (AclsSkillsPanel)
+252e775 | ScenarioFullDisplay: render legacy singular `trigger`, string `expected_actions`; no double unit on SpO2/temp (display-only, no data patches)
+252e775 | Site-visit Google Calendar events: default block 2h -> 30 min (15 base + 15/student helper); existing events untouched
+252e775 | ACLS skills capture: default-to-pass sheet, fail one click, one-action save (AclsSkillsPanel)
 PENDING | Add shared DualPaneGrading component (OSCE-style side-by-side, independently scrolling); applied to ACLS/PALS megacode grader
 
 - pending | OSCE results list: Readiness column shows every evaluator call with a Split flag on disagreement (view-only)
@@ -46,7 +48,7 @@ PENDING | Add shared DualPaneGrading component (OSCE-style side-by-side, indepen
 93dfdfb | fix(aha): PALS/ACLS hubs take ?cohortId + course picker; AHA Hub cohort rows link to that course (was always landing on the upcoming course)
 
 - (this commit) | feat(aha): single-save credential block, typed cursive signature, AHA credential level (migration 20260929, applied)
-(pending) | feat(osce): guest invites are copy-link first — Copy Invite Text, Mark Sent (PATCH guest-tokens), Resend demoted to secondary
+252e775 | feat(osce): guest invites are copy-link first — Copy Invite Text, Mark Sent (PATCH guest-tokens), Resend demoted to secondary
 a3d3ee4 | feat(acls): skills-station capture (Airway/Adult BLS/Peds BLS) → pals_skill_completions via /api/adv-cert/skill-completions + AclsSkillsPanel on ACLS Hub (no schema change)
 
 ## 2026-09-28
