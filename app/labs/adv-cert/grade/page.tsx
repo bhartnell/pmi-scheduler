@@ -263,7 +263,7 @@ export default function AdvCertGradePage() {
 
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Advanced-Cert Megacode Grading</h1>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-        ACLS / PALS station testing: checklist scoring with an instructor-set group result.
+        Pick a group and case, check off each step as the team leader performs it, then record the group result.
       </p>
 
       {/* Context selectors */}
@@ -442,7 +442,7 @@ export default function AdvCertGradePage() {
 
           {scenario.segments.length === 0 && (!scenario.grading_model || scenario.grading_model === 'adv_cert_checklist') && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-sm text-yellow-800 dark:text-yellow-300">
-              This scenario has no segments assembled yet. Import or assemble segments before grading.
+              This case has no grading steps yet, so it cannot be graded. Let the lead instructor know.
             </div>
           )}
           {(!scenario.grading_model || scenario.grading_model === 'adv_cert_checklist') && scenario.segments.map((seg, i) => (

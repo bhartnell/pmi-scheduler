@@ -12,6 +12,10 @@ Format: `commit-hash | brief description`
 ## 2026-10-01
 
 - (this commit) | ACLS UI 1/6: ACLS hub is now four viewport-sized regions (Overview / Schedule / Stations / Student progress), each scrolling inside itself, full width (no max-w cap); new shared components/layout/RegionShell.tsx (PALS to inherit). No data/schema change.
+- pending | copy(aha): remove developer/meta helper text from ACLS hub, PALS hub, and megacode/PALS grading pages; instructor-facing wording only (ACLS UI 6/6). String-only change.
+
+- pending | docs(claude-md): binding "Asking Ben" rule - plain English, 2-4 numbered options, one decision per message (Task Handoff Queue PROCESS card). Docs only.
+
 252e775 | archive affiliation-expiry cron: removed vercel.json schedule, route no-ops (Ben decision; reversible)
 
 - (this commit) | ACLS hub schedule rows editable: per-block instructor + co-instructor (pmi_schedule_blocks.instructor_id/additional_instructor_id) + note (content_notes) via existing planner block PUT, instructor list from /api/lab-management/instructors; "(read-only)" subtitle removed; unified feed exposes the direct-FK ids in metadata. No schema change. "All instructors" value NOT built (no storage; flagged)
