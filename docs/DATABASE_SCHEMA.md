@@ -4433,7 +4433,7 @@ Students tab).
 | name | text | NO |  |  |
 | title | text | NO |  |  |
 | agency | text | NO |  |  |
-| email | text | NO |  |  |
+| email | text | NO |  | identity/login address |
 | phone | text | YES |  |  |
 | contact_email | text | YES |  | Correspondence address (invites/reminders); falls back to `email` when NULL. `email` = identity/login |
 | role | text | YES |  |  |
@@ -4441,6 +4441,7 @@ Students tab).
 | agency_preference_note | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
 | event_id | uuid | NO |  |  |
+| contact_email | text | YES |  | correspondence address; invites use COALESCE(contact_email, email) (migration 20261001) |
 
 **Foreign Keys:**
 - `event_id` -> `osce_events.id` (`osce_observers_event_id_fkey`)
