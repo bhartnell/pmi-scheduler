@@ -487,7 +487,7 @@ function PalsHubPageContent() {
                 <Stat label="NR" value={stats.nr} tone="text-red-600 dark:text-red-400" />
                 <Stat label="Practice attempts" value={stats.practiceAttemptsCount} />
               </div>
-              <p className="mt-1 text-[11px] text-gray-400">Testing (AHA rule): PASS 2 of 3, satisfiable as team lead OR a team member — this does not require 2 TL turns (that requirement is practice-only, see below).</p>
+              <p className="mt-1 text-[11px] text-gray-400">Testing (AHA rule): PASS 2 of 3, satisfiable as team lead or as a team member. It does not require 2 team-lead turns (that applies to practice only, see below).</p>
             </section>
 
             {/* PRACTICE TEAM-LEAD COVERAGE — AHA 2025 Module 6 Lesson 12: every
@@ -518,7 +518,7 @@ function PalsHubPageContent() {
                     </span>
                   ))}
                 </div>
-                <p className="mt-1 text-[11px] text-red-700 dark:text-red-300">With 12 practice cases and one TL turn each, a group over 6 students cannot mathematically give every member 2 TL turns — add practice cases or resize the group.</p>
+                <p className="mt-1 text-[11px] text-red-700 dark:text-red-300">With 12 practice cases and one TL turn each, a group over 6 students cannot give every member 2 team-lead turns. Add practice cases or resize the group.</p>
               </section>
             )}
 
@@ -535,7 +535,7 @@ function PalsHubPageContent() {
                     </span>
                   ))}
                 </div>
-                <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">AHA goal: every student leads a PRACTICE case at least twice by the end of the course (regardless of PASS/NR — this tracks the opportunity, not the outcome).</p>
+                <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">AHA goal: every student leads a PRACTICE case at least twice by the end of the course (regardless of PASS or NR; this tracks the opportunity, not the outcome).</p>
               </section>
             )}
 

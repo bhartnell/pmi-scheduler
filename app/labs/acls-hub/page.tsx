@@ -432,7 +432,7 @@ function AclsHubPageContent() {
                 <StatTile label="Failed" value={stats.failed} tone="text-red-600 dark:text-red-400" />
                 <StatTile label="Passed as TL" value={`${stats.passedTLCount}/${stats.totalStudents}`} tone={stats.passedTLCount === stats.totalStudents && stats.totalStudents > 0 ? 'text-green-600 dark:text-green-400' : undefined} />
               </div>
-              <p className="mt-1 text-[11px] text-gray-400">MEGACODE ONLY (practice — now testing-graded — + final testing). A TL pass in practice counts toward the AHA team-lead distinction. Other ACLS scenarios (brady/tachy, cardiac-arrest learning) are tracked in the semester/course overview, not here.</p>
+              <p className="mt-1 text-[11px] text-gray-400">Megacode attempts only (practice and final testing). A team-lead pass in practice counts toward the AHA team-lead distinction.</p>
             </section>
 
             {/* FAILURE MARKER — who hasn't passed megacode as TL yet */}
@@ -448,7 +448,7 @@ function AclsHubPageContent() {
                     </span>
                   ))}
                 </div>
-                <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">Red = attempted &amp; failed a megacode as TL; gray = hasn&apos;t led a passing megacode yet. AHA goal: every student passes ≥1 megacode as team-lead.</p>
+                <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">Red = failed a megacode as team lead; gray = has not yet led a passing megacode. Goal: every student passes at least one megacode as team lead.</p>
               </section>
             )}
 
