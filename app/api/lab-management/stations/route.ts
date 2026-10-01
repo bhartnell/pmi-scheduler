@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { resolveRoomId } from '@/lib/lab-rooms';
 import { requireAuth } from '@/lib/api-auth';
 
 export async function GET(request: NextRequest) {
@@ -276,6 +277,7 @@ export async function POST(request: NextRequest) {
         instructor_name: body.instructor_name || null,
         instructor_email: body.instructor_email || null,
         room: body.room || null,
+        room_id: await resolveRoomId(supabase, body.room),
         notes: body.notes || null,
         rotation_minutes: body.rotation_minutes || 30,
         num_rotations: body.num_rotations || 4,

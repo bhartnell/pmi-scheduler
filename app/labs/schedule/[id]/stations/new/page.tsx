@@ -294,7 +294,7 @@ export default function NewStationPage() {
       }
 
       // Fetch locations for room dropdown
-      const locationsRes = await fetch('/api/lab-management/locations?type=room');
+      const locationsRes = await fetch('/api/lab-management/locations?type=lab_rooms');
       const locationsData = await locationsRes.json();
       if (locationsData.success) {
         setLocations(locationsData.locations || []);
@@ -1245,6 +1245,9 @@ export default function NewStationPage() {
                     <option key={loc.id} value={loc.name}>{loc.name}</option>
                   ))}
                 </select>
+                {room === 'Other' && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Put the actual location in the Notes field.</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
