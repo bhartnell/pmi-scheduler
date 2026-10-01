@@ -50,7 +50,7 @@ export default function RolePreviewSelector() {
   if (!realRole || !canAccessAdmin(realRole)) return null;
 
   return (
-    <div ref={ref} className="fixed bottom-4 right-20 z-[100] print:hidden">
+    <div ref={ref} className="relative print:hidden">
       <button
         onClick={() => setIsOpen(prev => !prev)}
         className={`flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg shadow-lg transition-colors ${

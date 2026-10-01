@@ -141,10 +141,11 @@ export default function QuickActionsMenu() {
   if (!effectiveRole || !hasMinRole(effectiveRole, 'instructor')) return null;
 
   return (
-    <div ref={menuRef} className="fixed bottom-[9rem] right-6 z-40 flex flex-col items-end gap-3 print:hidden">
-      {/* Action buttons - stagger upward when open */}
+    <div ref={menuRef} className="relative flex flex-col items-end gap-3 print:hidden">
+      {/* Action buttons - stagger upward when open. Absolutely positioned so the
+          (invisible) list never occupies space or blocks touch scrolling when closed. */}
       <div
-        className={`flex flex-col items-end gap-2 transition-all duration-200 ${
+        className={`absolute bottom-full right-0 mb-3 flex flex-col items-end gap-2 transition-all duration-200 ${
           isOpen
             ? 'opacity-100 translate-y-0 pointer-events-auto'
             : 'opacity-0 translate-y-4 pointer-events-none'
@@ -203,7 +204,7 @@ export default function QuickActionsMenu() {
 
       {/* Keyboard shortcut hint - shown briefly on render, then fades */}
       {!isOpen && (
-        <span aria-hidden="true" className="absolute -top-6 right-0 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap select-none pointer-events-none">
+        <span aria-hidden="true" className="max-md:hidden absolute -top-6 right-0 text-xs text-gray-400 dark:text-gray-500 whitespace-nowrap select-none pointer-events-none">
           press <kbd className="px-1 py-0.5 bg-gray-200 dark:bg-gray-700 rounded text-xs font-mono">.</kbd>
         </span>
       )}

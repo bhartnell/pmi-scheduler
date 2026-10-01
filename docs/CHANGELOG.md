@@ -41,6 +41,11 @@ PENDING | Add shared DualPaneGrading component (OSCE-style side-by-side, indepen
 - 80dae3d | feat(clinical): 'NREMT Passed - Close Out' button on internship page (stamps nremt_passed, graduates student via existing GraduationModal)
 - (this commit) | Skill Coverage panel: Skills/Scenarios/All type control, This/All-semesters scope, type-aware labels + CSV, unlinked free-text scenario station notice
 - 80dae3d | docs(wiki): article answering Stacie Peterson's 2026-06-16 question (Coverage shift signups title + volunteers). Content only, no code.
+PENDING | docs: read-only layout audit (docs/LAYOUT_AUDIT.md), no page changes
+
+PENDING | fix(ui): FloatingDock owns bottom-right overlays (Feedback/Preview/FAB no longer collide; closed FAB list no longer blocks touch scroll)
+
+- (pending) | docs(wiki): article answering Stacie Peterson's 2026-06-16 question (Coverage shift signups title + volunteers). Content only, no code.
 
 ## 2026-09-29
 
