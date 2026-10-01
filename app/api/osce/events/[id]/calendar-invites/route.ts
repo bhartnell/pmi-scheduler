@@ -118,7 +118,7 @@ export async function POST(
         // Get observers for this block
         const { data: observerBlocks } = await supabase
           .from('osce_observer_blocks')
-          .select('observer_id, osce_observers(id, name, email)')
+          .select('observer_id, osce_observers(id, name, email, contact_email)')
           .eq('block_id', block.id);
 
         if (!observerBlocks || observerBlocks.length === 0) {
@@ -139,7 +139,7 @@ export async function POST(
         const attendees = filteredBlocks.map((ob) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const obs = ob.osce_observers as any;
-          return { email: obs.email, displayName: obs.name };
+          return { email: obs.contact_email || obs.email, displayName: obs.name };
         }).filter((a) => a.email);
 
         if (attendees.length === 0) {
@@ -226,7 +226,7 @@ export async function POST(
             const allObserverAttendees = observerBlocks.map((ob) => {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const obs = ob.osce_observers as any;
-              return { email: obs.email, displayName: obs.name };
+              return { email: obs.contact_email || obs.email, displayName: obs.name };
             }).filter((a) => a.email);
 
             const patchRes = await fetch(
@@ -255,7 +255,7 @@ export async function POST(
           const allObserverAttendees = observerBlocks.map((ob) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const obs = ob.osce_observers as any;
-            return { email: obs.email, displayName: obs.name };
+            return { email: obs.contact_email || obs.email, displayName: obs.name };
           }).filter((a) => a.email);
 
           const createRes = await fetch(

@@ -4435,6 +4435,7 @@ Students tab).
 | agency | text | NO |  |  |
 | email | text | NO |  |  |
 | phone | text | YES |  |  |
+| contact_email | text | YES |  | Correspondence address (invites/reminders); falls back to `email` when NULL. `email` = identity/login |
 | role | text | YES |  |  |
 | agency_preference | boolean | YES | false |  |
 | agency_preference_note | text | YES |  |  |
