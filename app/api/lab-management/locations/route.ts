@@ -15,6 +15,18 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const locationType = searchParams.get('type') || 'room';
 
+    // Canonical lab-station picker: pmi_rooms flagged is_lab_location (retired rooms excluded).
+    if (locationType === 'lab_rooms') {
+      const { data: rooms, error: roomsError } = await supabase
+        .from('pmi_rooms')
+        .select('id, name')
+        .eq('is_lab_location', true)
+        .eq('is_active', true)
+        .order('display_order', { ascending: true });
+      if (roomsError) throw roomsError;
+      return NextResponse.json({ success: true, locations: rooms || [] });
+    }
+
     const { data: locations, error } = await supabase
       .from('locations')
       .select('id, name')

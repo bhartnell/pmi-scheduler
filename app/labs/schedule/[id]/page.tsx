@@ -222,7 +222,7 @@ export default function LabDayPage() {
       const [labDayRes, instructorsRes, locationsRes, rolesRes] = await Promise.all([
         fetch(`/api/lab-management/lab-days/${labDayId}`),
         fetch('/api/lab-management/instructors'),
-        fetch('/api/lab-management/locations?type=room'),
+        fetch('/api/lab-management/locations?type=lab_rooms'),
         fetch(`/api/lab-management/lab-day-roles?lab_day_id=${labDayId}`)
       ]);
       const labDayData = await labDayRes.json();

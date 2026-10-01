@@ -71,7 +71,7 @@ export default function AclsCoordinatorPage() {
         const [ldRes, instRes, locRes] = await Promise.all([
           fetch(`/api/lab-management/lab-days/${labDayId}`),
           fetch('/api/lab-management/instructors'),
-          fetch('/api/lab-management/locations?type=room'),
+          fetch('/api/lab-management/locations?type=lab_rooms'),
         ]);
         const ld = await ldRes.json();
         const inst = await instRes.json();
