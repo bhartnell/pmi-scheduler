@@ -11,6 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-01
 
+- pending | ACLS UI 3/6: reusable components/StatTile (site tile look, larger type) applied to ACLS hub megacode stats + not-yet-passed chips; legible at 75% zoom
 - pending | docs(claude-md): binding "Asking Ben" rule - plain English, 2-4 numbered options, one decision per message (Task Handoff Queue PROCESS card). Docs only.
 
 252e775 | archive affiliation-expiry cron: removed vercel.json schedule, route no-ops (Ben decision; reversible)

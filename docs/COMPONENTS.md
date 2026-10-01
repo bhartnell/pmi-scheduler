@@ -241,6 +241,8 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 
 ## Components
 
+- `components/StatTile.tsx` (2026-10-01): headline-number tile using the /labs hub card look (white rounded-xl, shadow-sm, optional icon square, 3xl number). Props: label, value, tone, icon, iconClass. Used on the ACLS hub.
+
 ### Layout & Page Structure
 
 | Component | File | Props | Description |
