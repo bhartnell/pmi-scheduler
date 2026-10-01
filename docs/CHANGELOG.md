@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-01
 
+- (pending) | ACLS hub: schedule list scoped to the hub's cohort (other cohorts' planner blocks leaked via the unified route's non-inner embedded filter; display only), inline per-block instructor + note editing via the existing planner block PUT, dropped "(read-only)" subtitle. unified route adds metadata.cohort_id/instructor_ids (additive). Queue cards ACLS MON 3/5 + 4/5.
+
 - (this commit) | AHA typed signature: embed Dancing Script (SIL OFL) in server-rendered megacode/skills/packet HTML + profile preview (public/fonts); single `script` face, legacy face keys still accepted. No schema change
 - (this commit) | Canonical lab-location picker: pmi_rooms.is_lab_location + lab_stations.room_id (migration 20261001_canonical_lab_rooms), `locations?type=lab_rooms`, server-side room_id resolve; The Hospital retired not deleted
 - (this commit) | ACLS coordinator: per-station "Edit room / instructor" reuses the lab-day EditStationModal (same lab_stations columns/save path)

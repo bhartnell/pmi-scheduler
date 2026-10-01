@@ -178,6 +178,8 @@ export async function GET(request: NextRequest) {
               metadata: {
                 block_type: block.block_type,
                 program_label: ps?.label,
+                cohort_id: cohort?.id,
+                instructor_ids: instructors.map((i) => i.instructor?.id).filter(Boolean),
               },
             });
           }

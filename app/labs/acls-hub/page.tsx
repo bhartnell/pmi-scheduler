@@ -23,7 +23,7 @@ import Link from 'next/link';
 import AclsSkillsPanel from '@/components/AclsSkillsPanel';
 import {
   ArrowLeft, Loader2, RefreshCw, Printer, CheckCircle2, XCircle, Clock,
-  Users, UserCheck, MapPin, CalendarDays, Layers, GraduationCap,
+  Users, UserCheck, MapPin, CalendarDays, Layers, GraduationCap, Pencil, X,
 } from 'lucide-react';
 
 // Sections are displayed in time order. section_number is an identifier
@@ -58,6 +58,8 @@ interface Attempt {
 interface CalEvent {
   id: string; title: string; date: string; start_time: string | null; end_time: string | null;
   event_type: string; instructor_names?: string[]; room?: string; linked_url?: string; status?: string;
+  source?: string; linked_id?: string; content_notes?: string;
+  metadata?: { cohort_id?: string; instructor_ids?: string[] };
 }
 
 const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : '');
@@ -86,6 +88,43 @@ function AclsHubPageContent() {
   const [loading, setLoading] = useState(true);
   const [activeDate, setActiveDate] = useState<string>('all');
 
+  // Inline schedule-row editing (instructors + note). Reuses the planner's block
+  // PUT (instructor_ids + content_notes) and instructor list — no second save path.
+  const [instructorList, setInstructorList] = useState<{ id: string; name: string }[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draft, setDraft] = useState<{ ids: string[]; note: string }>({ ids: [], note: '' });
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const startEdit = (e: CalEvent) => {
+    setEditingId(e.id);
+    setDraft({ ids: e.metadata?.instructor_ids || [], note: e.content_notes || '' });
+    setSaveError(null);
+  };
+
+  const saveEdit = async (e: CalEvent) => {
+    if (!e.linked_id) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/scheduling/planner/blocks/${e.linked_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instructor_ids: draft.ids, content_notes: draft.note }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setSaveError(data.error || 'Save failed'); return; }
+      const names = draft.ids.map(id => instructorList.find(i => i.id === id)?.name).filter(Boolean) as string[];
+      setEvents(prev => prev.map(ev => ev.id === e.id ? {
+        ...ev,
+        instructor_names: names,
+        content_notes: draft.note.trim() || undefined,
+        metadata: { ...ev.metadata, instructor_ids: draft.ids },
+      } : ev));
+      setEditingId(null);
+    } catch { setSaveError('Save failed'); } finally { setSaving(false); }
+  };
+
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/signin'); }, [status, router]);
 
   // Deep-link: ?date=YYYY-MM-DD (from the calendar's "Open ACLS Hub"
@@ -112,7 +151,15 @@ function AclsHubPageContent() {
           const end = hub.dates[hub.dates.length - 1];
           const uRes = await fetch(`/api/calendar/unified?cohort_id=${hub.cohort.id}&start=${start}&end=${end}&include=classes,labs,exams`);
           const u = await uRes.json();
-          setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date) && e.status !== 'cancelled'));
+          // Display filter only: the unified route's embedded cohort filter does
+          // not drop other cohorts' planner blocks (they come back with no
+          // cohort), so keep a planner block only if it belongs to THIS cohort.
+          // Blocks stay on the main schedule; conflict/availability detection
+          // reads its own sources and is unaffected.
+          setEvents((u.events || []).filter((e: CalEvent) =>
+            hub.dates.includes(e.date) && e.status !== 'cancelled' &&
+            (e.source !== 'planner' || e.metadata?.cohort_id === hub.cohort.id)
+          ));
         } else {
           setEvents([]);
         }
@@ -137,6 +184,14 @@ function AclsHubPageContent() {
             dates: c.dates || [],
           })));
       })
+      .catch(() => {});
+  }, [status]);
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/scheduling/planner/instructors')
+      .then((r) => r.json())
+      .then((d) => setInstructorList(Array.isArray(d.instructors) ? d.instructors : []))
       .catch(() => {});
   }, [status]);
 
@@ -253,7 +308,7 @@ function AclsHubPageContent() {
                 <GraduationCap className="w-6 h-6 text-red-600" /> ACLS Hub
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''} — full event, one place (read-only)
+                {cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''} — full event, one place
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -415,15 +470,70 @@ function AclsHubPageContent() {
                   <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 mb-3">
                     {dayEvents.length === 0 ? (
                       <div className="p-3 text-xs text-gray-400">No schedule blocks found for this day.</div>
-                    ) : dayEvents.map(e => (
-                      <div key={e.id} className="flex items-center gap-3 px-3 py-1.5 text-sm">
-                        <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${TYPE_COLOR[e.event_type] || TYPE_COLOR.class}`}>{e.event_type}</span>
-                        <span className="text-gray-800 dark:text-gray-100 flex-1">{e.title}</span>
-                        {e.room && <span className="text-xs text-gray-400 hidden sm:inline">{e.room}</span>}
-                        {e.instructor_names && e.instructor_names.length > 0 && <span className="text-xs text-gray-400 hidden md:inline">{e.instructor_names.join(', ')}</span>}
+                    ) : dayEvents.map(e => {
+                      const editable = e.source === 'planner' && !!e.linked_id;
+                      const isEditing = editingId === e.id;
+                      return (
+                      <div key={e.id} className="px-3 py-1.5 text-sm">
+                        <div className="flex items-center gap-3">
+                          <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${TYPE_COLOR[e.event_type] || TYPE_COLOR.class}`}>{e.event_type}</span>
+                          <span className="text-gray-800 dark:text-gray-100 flex-1">
+                            {e.title}
+                            {e.content_notes && !isEditing && <span className="block text-xs text-gray-500 dark:text-gray-400">{e.content_notes}</span>}
+                          </span>
+                          {e.room && <span className="text-xs text-gray-400 hidden sm:inline">{e.room}</span>}
+                          <span className="text-xs text-gray-500 dark:text-gray-400 hidden md:inline">
+                            {e.instructor_names && e.instructor_names.length > 0 ? e.instructor_names.join(', ') : (editable ? '— unassigned —' : '')}
+                          </span>
+                          {editable && !isEditing && (
+                            <button onClick={() => startEdit(e)} aria-label="Edit instructors and note" className="print:hidden shrink-0 inline-flex items-center justify-center min-h-[36px] min-w-[36px] rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                        {isEditing && (
+                          <div className="mt-2 ml-[7rem] grid grid-cols-2 max-md:grid-cols-1 gap-3 print:hidden">
+                            <div>
+                              <div className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Instructors</div>
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                {draft.ids.map(id => (
+                                  <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">
+                                    {instructorList.find(i => i.id === id)?.name || 'Unknown'}
+                                    <button onClick={() => setDraft(d => ({ ...d, ids: d.ids.filter(x => x !== id) }))} aria-label="Remove instructor"><X className="w-3 h-3" /></button>
+                                  </span>
+                                ))}
+                                <select
+                                  value=""
+                                  onChange={(ev) => { const v = ev.target.value; if (v) setDraft(d => ({ ...d, ids: [...d.ids, v] })); }}
+                                  className="text-xs min-h-[36px] px-2 border border-dashed border-gray-300 dark:border-gray-500 rounded-md bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200"
+                                >
+                                  <option value="">+ Add instructor</option>
+                                  {instructorList.filter(i => !draft.ids.includes(i.id)).map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                                </select>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Note</div>
+                              <textarea
+                                value={draft.note}
+                                onChange={(ev) => setDraft(d => ({ ...d, note: ev.target.value }))}
+                                rows={2}
+                                className="w-full px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                              />
+                            </div>
+                            <div className="col-span-2 max-md:col-span-1 flex items-center gap-2">
+                              <button onClick={() => saveEdit(e)} disabled={saving} className="px-3 min-h-[36px] text-sm rounded-md bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 inline-flex items-center gap-1">
+                                {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Save
+                              </button>
+                              <button onClick={() => setEditingId(null)} disabled={saving} className="px-3 min-h-[36px] text-sm rounded-md border border-gray-300 dark:border-gray-600">Cancel</button>
+                              {saveError && <span className="text-xs text-red-600 dark:text-red-400">{saveError}</span>}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
 
                   {/* Lab sections for the day */}
