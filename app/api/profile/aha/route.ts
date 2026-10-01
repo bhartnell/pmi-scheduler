@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { AHA_CREDENTIALS, SIGNATURE_FACES } from '@/lib/reports/aha/signature';
+import { AHA_CREDENTIALS, SIGNATURE_FACES, LEGACY_SIGNATURE_FACES } from '@/lib/reports/aha/signature';
 
 /**
  * Current user's own AHA instructor credentials (for the AHA Results Export
@@ -76,7 +76,7 @@ export async function PATCH(request: NextRequest) {
   }
   if ('signature_face' in body) {
     const v = body.signature_face;
-    if (v !== null && (typeof v !== 'string' || !(v in SIGNATURE_FACES))) {
+    if (v !== null && (typeof v !== 'string' || !(v in SIGNATURE_FACES || (LEGACY_SIGNATURE_FACES as readonly string[]).includes(v)))) {
       return NextResponse.json({ success: false, error: `signature_face must be one of ${Object.keys(SIGNATURE_FACES).join(', ')} or null` }, { status: 400 });
     }
     patch.signature_face = v ?? null;

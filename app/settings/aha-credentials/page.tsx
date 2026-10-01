@@ -34,7 +34,7 @@ export default function AhaCredentialsPage() {
   const [kind, setKind] = useState<SigKind>('auto');
   const [sigData, setSigData] = useState<string | null>(null);
   const [sigText, setSigText] = useState('');
-  const [sigFace, setSigFace] = useState('classic');
+  const [sigFace, setSigFace] = useState('script');
   const [creds, setCreds] = useState<string[]>([]);
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export default function AhaCredentialsPage() {
           setKind(p.signature_kind || 'auto');
           setSigData(p.signature_data || null);
           setSigText(p.signature_text || p.name || '');
-          setSigFace(p.signature_face || 'classic');
+          setSigFace((p.signature_face && p.signature_face in SIGNATURE_FACES ? p.signature_face : 'script'));
           setCreds(p.aha_credentials || []);
         }
       })
@@ -110,6 +110,7 @@ export default function AhaCredentialsPage() {
 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6">
+      <style>{`@font-face{font-family:'PMI Script';src:url(/fonts/DancingScript.ttf) format('truetype');font-weight:400 700;}`}</style>
       <Link href="/settings" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-4">
         <ArrowLeft className="w-4 h-4" /> Back to Settings
       </Link>
@@ -180,7 +181,7 @@ export default function AhaCredentialsPage() {
           )}
           {kind === 'auto' && (
             <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-md p-4 bg-white dark:bg-gray-900">
-              <span style={{ fontFamily: 'Brush Script MT, "Segoe Script", cursive', fontSize: '32px' }} className="text-gray-900 dark:text-gray-100">
+              <span style={{ fontFamily: "'PMI Script', 'Brush Script MT', cursive", fontSize: '32px' }} className="text-gray-900 dark:text-gray-100">
                 {name || 'Your Name'}
               </span>
               <p className="text-[11px] text-gray-400 mt-1">Fallback: your name rendered in a script font on the form.</p>

@@ -11,6 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-01
 
+- (this commit) | AHA typed signature: embed Dancing Script (SIL OFL) in server-rendered megacode/skills/packet HTML + profile preview (public/fonts); single `script` face, legacy face keys still accepted. No schema change
 - (this commit) | ACLS coordinator: per-station "Edit room / instructor" reuses the lab-day EditStationModal (same lab_stations columns/save path)
 
 - `(pending)` | **Data-only: 10/26 PALS-prep station swap (Task Handoff Queue, Ben GO 2026-10-01).** Pediatric Airway Review + Broselow Challenge moved onto G15 10/26 (replacing its duplicate Eclampsia-IFT / ACS stations, which also run 11/09 and 11/10); Pre-eclampsia Day 2 moved to 11/10 slot 4; 10/27 sec 1 (PALS Prep Day 2) archived, displaced stations parked there (no deletes). 10/26 retitled. Burn Center 10/27 sec 2 untouched. Backups: `_backup_lab_days_20261001_pals_swap`, `_backup_lab_stations_20261001_pals_swap`. Open: 10/26 #1 "Peds Med Draws and Broselow" vs #4 "Broselow Challenge" may overlap (kept both; Ben to trim). 11/10 title not updated.
