@@ -184,6 +184,52 @@ Action: send Ben a concise go/no-go request with:
 Do not send raw SQL or implementation details — send the decision, not the relay.
 Do not proceed until confirmed.
 
+### Asking Ben: plain English, one decision at a time (HARD REQUIREMENT)
+
+Added 2026-10-01 (Ben: "I am rubberstamping because I don't know what it
+means"; a technical format buries the real items). Applies to every card
+assigned to Benjamin and every notification sent to him.
+
+**The test:** could a paramedic program director who has never seen the
+codebase answer this correctly using only what they know about how the
+program runs? If no, it does not go to Ben: Code decides it, or it is tagged
+Reversible-Judgment for Claude AI to translate or investigate.
+
+**The shape, every time:**
+- **What is happening** - 1-2 plain sentences (what Ben, an instructor or a
+  student would notice). No file, table, column, route, PR or migration names.
+- **What I need** - one question, in his vocabulary.
+- **Options** - 2 to 4, numbered, each a consequence a person can picture; one
+  marked recommended with a half-line reason; include do-nothing when real.
+- **If you do nothing** - what happens and by when. If nothing, don't send it.
+
+He must be able to answer with a single number. If an option can't be written
+without technical names, it is not his decision. Technical detail goes in full
+on the card, not in what Ben is handed. Standard US keyboard characters only
+(no em dashes).
+
+**One decision per message / per card / per sweep run.** Lists die silently.
+Several asks = separate asks, in priority order; the next goes out only after
+the first is answered or has gone cold. A sweep that finds four sends the most
+time-critical and cards the rest. Narrow exception: decisions on the same
+deadline may batch (max three) if the message names the one to answer if he
+answers nothing else and what it unblocks. Never bury a decision in a status
+report.
+
+**No good options? Say so.** Don't invent a menu. Use: "No clean options" in
+the first line, what is happening, why there is no good answer, what I would do
+and its cost (or "no recommendation"), what I need. Not an escape hatch for an
+untranslated question.
+
+**Our duties:** an unanswered ask returns in the same words plus one line (how
+long open, what it blocks). Raised twice unanswered -> don't raise a third time
+the same way; re-examine (never his, or deadline passed and do-nothing won) and
+close it. Anything he answers is acted on and closed the same day. Self-check:
+a run of blanket approvals means the format has failed.
+
+(`AGENT_OPERATING_FRAMEWORK.md` is not in this repo; add this section there
+too where that file lives.)
+
 ### Empty-scan logging
 
 Scheduled runs that find nothing actionable (queue empty, no errors, no change from

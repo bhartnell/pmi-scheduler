@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-01
 
+- pending | docs(claude-md): binding "Asking Ben" rule - plain English, 2-4 numbered options, one decision per message (Task Handoff Queue PROCESS card). Docs only.
+
 252e775 | archive affiliation-expiry cron: removed vercel.json schedule, route no-ops (Ben decision; reversible)
 
 - (this commit) | ACLS hub schedule rows editable: per-block instructor + co-instructor (pmi_schedule_blocks.instructor_id/additional_instructor_id) + note (content_notes) via existing planner block PUT, instructor list from /api/lab-management/instructors; "(read-only)" subtitle removed; unified feed exposes the direct-FK ids in metadata. No schema change. "All instructors" value NOT built (no storage; flagged)
