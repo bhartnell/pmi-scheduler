@@ -431,6 +431,16 @@ After:  cohort:cohorts!students_cohort_id_fkey(id, cohort_number)
   are **escalate-to-Ben** and must snapshot first (`--backup`, see Migration
   Reversibility). This is the companion to the reversibility gate.
 
+## Reuse-Before-Building Rule (HARD REQUIREMENT)
+
+Before building any feature, ask in order: (1) do we have an established way
+to do this? (2) does it work? (3) could it work with modification? Only if all
+are no, build new. Specialized views (e.g. ACLS day) reuse the existing
+tables, components, and save paths (e.g. `EditStationModal` for station
+room/instructor) — never a second picker, save path, or parallel table. If an
+existing component genuinely can't be reused, report the specific reason on
+the task card before building anything new.
+
 ## Repeatability / Build-Modular Rule (HARD REQUIREMENT)
 
 **Before building any webapp feature, run a REPEATABILITY CHECK:**
