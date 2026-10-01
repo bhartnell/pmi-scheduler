@@ -58,7 +58,10 @@ interface Attempt {
 interface CalEvent {
   id: string; title: string; date: string; start_time: string | null; end_time: string | null;
   event_type: string; instructor_names?: string[]; room?: string; linked_url?: string; status?: string;
+  source?: string; linked_id?: string; content_notes?: string;
+  metadata?: { instructor_id?: string | null; additional_instructor_id?: string | null };
 }
+interface InstructorOpt { id: string; name: string }
 
 const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : '');
 const sname = (s?: { first_name: string; last_name: string } | null) => (s ? `${s.first_name} ${s.last_name}` : '—');
@@ -85,6 +88,9 @@ function AclsHubPageContent() {
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeDate, setActiveDate] = useState<string>('all');
+  const [instructorOpts, setInstructorOpts] = useState<InstructorOpt[]>([]);
+  const [savingBlock, setSavingBlock] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/signin'); }, [status, router]);
 
@@ -139,6 +145,53 @@ function AclsHubPageContent() {
       })
       .catch(() => {});
   }, [status]);
+
+  // Standard instructor list — same source the lab-day station dropdown uses.
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/lab-management/instructors')
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setInstructorOpts(d.instructors || []); })
+      .catch(() => {});
+  }, [status]);
+
+  // Persist one schedule-block field (instructor / co-instructor / note) via the
+  // existing planner block PUT, then mirror it into local state. 'this' mode:
+  // edits this one dated block only, never a recurring series.
+  const saveBlock = useCallback(async (e: CalEvent, patch: Record<string, string | null>) => {
+    if (!e.linked_id) return;
+    setSavingBlock(e.id);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/scheduling/planner/blocks/${e.linked_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...patch, update_mode: 'this' }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+      setEvents((prev) => prev.map((x) => {
+        if (x.id !== e.id) return x;
+        const next: CalEvent = { ...x, metadata: { ...x.metadata } };
+        if ('instructor_id' in patch) next.metadata!.instructor_id = patch.instructor_id || null;
+        if ('additional_instructor_id' in patch) next.metadata!.additional_instructor_id = patch.additional_instructor_id || null;
+        if ('content_notes' in patch) next.content_notes = patch.content_notes || undefined;
+        return next;
+      }));
+    } catch (err) {
+      setSaveError(`Could not save "${e.title}": ${err instanceof Error ? err.message : 'unknown error'}`);
+    } finally {
+      setSavingBlock(null);
+    }
+  }, []);
+
+  // Names for a schedule row: legacy many-to-many names + the direct-FK slots
+  // this hub now edits (so the print sheet and read-only rows show them too).
+  const rowInstructorNames = useCallback((e: CalEvent) => {
+    const direct = [e.metadata?.instructor_id, e.metadata?.additional_instructor_id]
+      .map((id) => instructorOpts.find((i) => i.id === id)?.name)
+      .filter(Boolean) as string[];
+    return [...new Set([...direct, ...(e.instructor_names || [])])];
+  }, [instructorOpts]);
 
   const visibleDates = activeDate === 'all' ? dates : dates.filter(d => d === activeDate);
 
@@ -253,7 +306,7 @@ function AclsHubPageContent() {
                 <GraduationCap className="w-6 h-6 text-red-600" /> ACLS Hub
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''} — full event, one place (read-only)
+                {cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''} — full event, one place
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -295,6 +348,10 @@ function AclsHubPageContent() {
           )}
         </div>
 
+        {saveError && (
+          <div role="alert" className="print:hidden mb-3 rounded-md border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-3 py-2 text-sm text-red-700 dark:text-red-300">{saveError}</div>
+        )}
+
         {/* ── PRINT-ONLY SCHEDULE SHEET — clean instructor handout (the rest of
             the hub dashboard is hidden on print). Shows BOTH days regardless of
             the on-screen day toggle. ── */}
@@ -325,7 +382,7 @@ function AclsHubPageContent() {
                             <tr key={e.id}>
                               <td>{hhmm(e.start_time)}–{hhmm(e.end_time)}</td>
                               <td>{e.title}</td>
-                              <td>{[e.room, (e.instructor_names || []).join(', ')].filter(Boolean).join(' · ')}</td>
+                              <td>{[e.room, rowInstructorNames(e).join(', '), e.content_notes].filter(Boolean).join(' · ')}</td>
                             </tr>
                           ))}
                       </tbody>
@@ -415,15 +472,50 @@ function AclsHubPageContent() {
                   <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 mb-3">
                     {dayEvents.length === 0 ? (
                       <div className="p-3 text-xs text-gray-400">No schedule blocks found for this day.</div>
-                    ) : dayEvents.map(e => (
-                      <div key={e.id} className="flex items-center gap-3 px-3 py-1.5 text-sm">
-                        <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${TYPE_COLOR[e.event_type] || TYPE_COLOR.class}`}>{e.event_type}</span>
-                        <span className="text-gray-800 dark:text-gray-100 flex-1">{e.title}</span>
-                        {e.room && <span className="text-xs text-gray-400 hidden sm:inline">{e.room}</span>}
-                        {e.instructor_names && e.instructor_names.length > 0 && <span className="text-xs text-gray-400 hidden md:inline">{e.instructor_names.join(', ')}</span>}
-                      </div>
-                    ))}
+                    ) : dayEvents.map(e => {
+                      const editable = e.source === 'planner' && !!e.linked_id;
+                      const names = e.instructor_names || [];
+                      return (
+                        <div key={e.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 text-sm">
+                          <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${TYPE_COLOR[e.event_type] || TYPE_COLOR.class}`}>{e.event_type}</span>
+                          <span className="text-gray-800 dark:text-gray-100 flex-1 min-w-[12rem]">{e.title}</span>
+                          {e.room && <span className="text-xs text-gray-400">{e.room}</span>}
+                          {editable ? (
+                            <>
+                              {[
+                                { field: 'instructor_id', label: 'Instructor', value: e.metadata?.instructor_id },
+                                { field: 'additional_instructor_id', label: 'Co-instructor', value: e.metadata?.additional_instructor_id },
+                              ].map(f => (
+                                <select
+                                  key={f.field}
+                                  aria-label={`${f.label} for ${e.title}`}
+                                  value={f.value || ''}
+                                  disabled={savingBlock === e.id}
+                                  onChange={(ev) => saveBlock(e, { [f.field]: ev.target.value || null })}
+                                  className="text-xs min-h-[36px] w-40 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1"
+                                >
+                                  <option value="">{f.label}: —</option>
+                                  {instructorOpts.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                                </select>
+                              ))}
+                              <input
+                                type="text"
+                                aria-label={`Note for ${e.title}`}
+                                placeholder="Note"
+                                defaultValue={e.content_notes || ''}
+                                disabled={savingBlock === e.id}
+                                onBlur={(ev) => { if (ev.target.value !== (e.content_notes || '')) saveBlock(e, { content_notes: ev.target.value || null }); }}
+                                className="text-xs min-h-[36px] w-56 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2"
+                              />
+                              {savingBlock === e.id && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />}
+                            </>
+                          ) : (
+                            names.length > 0 && <span className="text-xs text-gray-400">{names.join(', ')}</span>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {/* Lab sections for the day */}

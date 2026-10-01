@@ -88,6 +88,7 @@ export async function GET(request: NextRequest) {
           .select(`
             id, date, start_time, end_time, block_type, title, course_name, color,
             content_notes, status, linked_lab_day_id, linked_section_number,
+            instructor_id, additional_instructor_id,
             room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(id, name),
             program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
               id, label,
@@ -118,6 +119,13 @@ export async function GET(request: NextRequest) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const ps = block.program_schedule as any;
             const cohort = ps?.cohort;
+            // PostgREST's embedded-resource .eq() above does not drop parent rows
+            // (no !inner), so other cohorts' blocks (e.g. the EMT Lecture on an ACLS
+            // day) leak through with a null embed. Enforce the cohort scope here.
+            // Display scope only: availability/conflict detection reads blocks
+            // via find-conflicts/find-slots, not this cohort-scoped feed.
+            if (cohortId && cohort?.id !== cohortId) continue;
+
             const progAbbr = cohort?.program?.abbreviation;
             const program = mapProgramAbbr(progAbbr);
 
@@ -178,6 +186,8 @@ export async function GET(request: NextRequest) {
               metadata: {
                 block_type: block.block_type,
                 program_label: ps?.label,
+                instructor_id: block.instructor_id ?? null,
+                additional_instructor_id: block.additional_instructor_id ?? null,
               },
             });
           }
