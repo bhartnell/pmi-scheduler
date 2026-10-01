@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-01
 
+- (pending) | osce_observers.contact_email (additive): invites/reminders use COALESCE(contact_email, email); identity `email` unchanged; admin observer form field
+
 - `(pending)` | **Disarm LVFR reseed (data-safety, Task Handoff Queue).** `POST /api/lvfr-aemt/planner/reseed` now returns 410 and `scripts/reseed-lvfr-schedule.js` exits immediately; their hardcoded 30-day schedule was stale and would have overwritten `lvfr_aemt_course_days` for the finished 2026-07-14..09-17 course. Code retained; revert to re-enable. Repeatable cohort-scoped AEMT calendar builder is a later spec.
 
 ## 2026-09-30

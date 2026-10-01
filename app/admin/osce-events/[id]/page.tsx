@@ -74,6 +74,7 @@ interface Observer {
   title: string;
   agency: string;
   email: string;
+  contact_email: string | null;
   phone: string | null;
   role: string | null;
   agency_preference: boolean;
@@ -380,7 +381,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
   const [confirmSendAll, setConfirmSendAll] = useState(false);
 
   const emptyObserverForm = {
-    name: '', title: '', agency: '', email: '', phone: '', role: '',
+    name: '', title: '', agency: '', email: '', contact_email: '', phone: '', role: '',
     block_ids: [] as string[], agency_preference: false, agency_preference_note: '',
   };
   const [observerForm, setObserverForm] = useState(emptyObserverForm);
@@ -491,6 +492,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
             title: observerForm.title,
             agency: observerForm.agency,
             email: observerForm.email,
+            contact_email: observerForm.contact_email || null,
             phone: observerForm.phone || null,
             role: observerForm.role || null,
             block_ids: observerForm.block_ids,
@@ -513,6 +515,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
             title: observerForm.title,
             agency: observerForm.agency,
             email: observerForm.email,
+            contact_email: observerForm.contact_email || null,
             phone: observerForm.phone || null,
             role: observerForm.role || null,
             block_ids: observerForm.block_ids,
@@ -545,6 +548,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
       title: obs.title,
       agency: obs.agency,
       email: obs.email,
+      contact_email: obs.contact_email || '',
       phone: obs.phone || '',
       role: obs.role || '',
       block_ids: obs.blocks.map(b => b.block_id),
@@ -703,6 +707,12 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Email *</label>
               <input type="email" value={observerForm.email} onChange={e => setObserverForm(p => ({ ...p, email: e.target.value }))}
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Correspondence email (optional)</label>
+              <input type="email" value={observerForm.contact_email} onChange={e => setObserverForm(p => ({ ...p, contact_email: e.target.value }))}
+                placeholder="Invites go here instead of login email"
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
