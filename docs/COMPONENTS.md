@@ -619,3 +619,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 - **Barrel exports**: Subdirectories use `index.ts` files for clean imports (e.g., `components/ui/index.ts`, `components/dashboard/widgets/index.ts`).
 - **Shared type files**: Feature-specific types are colocated in `types.ts` files within component subdirectories (e.g., `components/grading/types.ts`, `components/lab-day/types.ts`).
 - **Dark mode**: All components support dark mode via Tailwind `dark:` variants, toggled by `next-themes`.
+
+## Layout
+
+- `components/layout/RegionShell.tsx` — `RegionShell` / `RegionGrid` / `Region`: full-width, viewport-height multi-region page shell (2x2 on lg+, stacked below); each region scrolls internally. Used by `/labs/acls-hub`; PALS hub to adopt. (Last updated: 2026-10-01)
