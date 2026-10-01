@@ -188,6 +188,7 @@ export async function GET(request: NextRequest) {
                 program_label: ps?.label,
                 instructor_id: block.instructor_id ?? null,
                 additional_instructor_id: block.additional_instructor_id ?? null,
+                linked_section_number: (block.linked_section_number as number | null) ?? null,
               },
             });
           }

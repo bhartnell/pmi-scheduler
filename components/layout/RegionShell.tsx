@@ -30,11 +30,11 @@ export function RegionGrid({ children }: { children: ReactNode }) {
 }
 
 /** One titled region; its body scrolls inside itself. */
-export function Region({ title, icon, children }: { title: string; icon?: ReactNode; children: ReactNode }) {
+export function Region({ title, icon, children, className = '' }: { title: string; icon?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section
       aria-label={title}
-      className="min-h-0 flex flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 max-lg:max-h-[75vh]"
+      className={`min-h-0 flex flex-col rounded-lg border border-gray-200 dark:border-gray-700 bg-white/60 dark:bg-gray-800/60 max-lg:max-h-[75vh] ${className}`}
     >
       <h2 className="shrink-0 px-3 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-1.5 border-b border-gray-200 dark:border-gray-700">
         {icon}
