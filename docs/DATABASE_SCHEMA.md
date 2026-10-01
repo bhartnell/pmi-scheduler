@@ -4,6 +4,7 @@
 > Reconciled to live database -- June 8, 2026 (see "Schema Reconciliation Additions")
 > Check constraints re-verified against live -- June 10, 2026 (all 146 documented CHECK definitions normalized to exact pg_get_constraintdef output; 4 had real value-list drift)
 > Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
+> Last updated: 2026-10-01 -- `lab_users.signature_face` now 'script' (embedded Dancing Script); legacy 'classic'/'formal'/'casual' still valid, render as script (no schema change)
 > Last updated: 2026-09-29 -- added `scenarios.assessment_{x..e}_action` (Scenario Format v2); `phases` jsonb gains optional keys changes/triggers/modifiers/branch
 > Last updated: 2026-07-12 -- added `lab_days.is_archived` (migration `20260712_lab_days_is_archived.sql`, archive-not-delete flag excluding rows from the general lab schedule + ACLS hub list views)
 > Last updated: 2026-07-24 -- added `lab_template_stations.skill_sheet_id` (migration `20260724_lab_template_stations_skill_sheet_id.sql`, see `lab_template_stations` below)

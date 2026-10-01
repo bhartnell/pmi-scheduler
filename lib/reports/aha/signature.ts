@@ -4,11 +4,13 @@ export const AHA_CREDENTIALS = ['AHA Faculty', 'ACLS Instructor', 'PALS Instruct
 
 // Face key -> CSS font stack. Stored as the key so the stack can evolve.
 export const SIGNATURE_FACES: Record<string, string> = {
-  classic: "'Brush Script MT', 'Segoe Script', 'Snell Roundhand', cursive",
-  formal: "'Snell Roundhand', 'Apple Chancery', 'Lucida Handwriting', cursive",
-  casual: "'Segoe Script', 'Bradley Hand', 'Comic Sans MS', cursive",
+  // Embedded Dancing Script (OFL) — same on every machine; @font-face is injected by the form renderers (server) and the profile page (public/fonts).
+  script: "'PMI Script', 'Brush Script MT', 'Segoe Script', cursive",
 };
 
+// Legacy keys saved before the embedded face existed; they render as 'script' too.
+export const LEGACY_SIGNATURE_FACES = ['classic', 'formal', 'casual'] as const;
+
 export function signatureFaceStack(face: string | null | undefined): string {
-  return SIGNATURE_FACES[face ?? ''] ?? SIGNATURE_FACES.classic;
+  return SIGNATURE_FACES[face ?? ''] ?? SIGNATURE_FACES.script;
 }
