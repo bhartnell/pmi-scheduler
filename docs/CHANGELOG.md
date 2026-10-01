@@ -12,6 +12,9 @@ Format: `commit-hash | brief description`
 ## 2026-10-01
 
 - (this PR) | ACLS UI 1/6: RegionShell four-region viewport-sized layout for ACLS hub; full-width (no max-w cap)
+- pending | copy(aha): remove developer/meta helper text from ACLS hub, PALS hub, and megacode/PALS grading pages; instructor-facing wording only (ACLS UI 6/6). String-only change.
+
+- pending | docs(claude-md): binding "Asking Ben" rule - plain English, 2-4 numbered options, one decision per message (Task Handoff Queue PROCESS card). Docs only.
 
 252e775 | archive affiliation-expiry cron: removed vercel.json schedule, route no-ops (Ben decision; reversible)
 
