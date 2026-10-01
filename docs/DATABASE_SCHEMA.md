@@ -1781,6 +1781,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | instructor_name | text | YES |  |  |
 | instructor_email | text | YES |  |  |
 | room | text | YES |  |  |
+| room_id | uuid | YES |  | FK -> pmi_rooms.id (canonical location; `room` text kept for legacy/unmapped values) |
 | rotation_minutes | integer | YES | 30 |  |
 | num_rotations | integer | YES | 4 |  |
 | station_type | text | YES | 'scenario'::text |  |
@@ -10015,6 +10016,7 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 | is_active | boolean | YES | true |  |
 | display_order | integer | YES | 0 |  |
 | created_at | timestamp with time zone | YES | now() |  |
+| is_lab_location | boolean | NO | false | Canonical lab-station picker members (Classroom 1 (EMT), Classroom 2 (Paramedic), Lab Room 1 (Big), Lab Room 2 (Small), Ambulance, Common Area, Outside, Other). The Hospital retired via is_active=false. |
 
 **Check Constraints:**
 - `pmi_rooms_room_type_check`: `((room_type = ANY (ARRAY['classroom'::text, 'lab'::text, 'computer_lab'::text, 'commons'::text, 'other'::text])))`
