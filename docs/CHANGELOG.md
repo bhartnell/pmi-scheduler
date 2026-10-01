@@ -11,6 +11,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-01
 
+- (this commit) | ACLS hub: inline per-block instructor + note editing (via planner PUT, pmi_block_instructors), "All instructors" shortcut, dropped "(read-only)" subtitle; schedule list hides other cohorts' blocks (EMT Lecture) by display filter only. unified feed metadata gains cohort_id + instructor_ids. No schema change
 - (this commit) | AHA typed signature: embed Dancing Script (SIL OFL) in server-rendered megacode/skills/packet HTML + profile preview (public/fonts); single `script` face, legacy face keys still accepted. No schema change
 - (this commit) | Canonical lab-location picker: pmi_rooms.is_lab_location + lab_stations.room_id (migration 20261001_canonical_lab_rooms), `locations?type=lab_rooms`, server-side room_id resolve; The Hospital retired not deleted
 - (this commit) | ACLS coordinator: per-station "Edit room / instructor" reuses the lab-day EditStationModal (same lab_stations columns/save path)

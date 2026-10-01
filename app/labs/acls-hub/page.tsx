@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * ACLS Hub — additive, READ-ONLY aggregator for the full ACLS event.
+ * ACLS Hub — aggregator for the full ACLS event (schedule rows are editable: instructors + note).
  *
  * Consolidates the scattered surfaces (planner / calendar / lab-day / coordinator)
  * into one accessible section for the instructor group running ACLS:
@@ -12,8 +12,8 @@
  *   - By-instructor view + a clean print option
  *
  * Reads existing sources only: /api/adv-cert/acls-hub (sections + groups +
- * attempts) and /api/calendar/unified (schedule). Writes nothing. The existing
- * surfaces remain the fallback.
+ * attempts) and /api/calendar/unified (schedule). Schedule-row edits go through
+ * the planner's PUT /api/scheduling/planner/blocks/[id] (instructor_ids, content_notes).
  */
 
 import { useSession } from 'next-auth/react';
@@ -58,6 +58,7 @@ interface Attempt {
 interface CalEvent {
   id: string; title: string; date: string; start_time: string | null; end_time: string | null;
   event_type: string; instructor_names?: string[]; room?: string; linked_url?: string; status?: string;
+  linked_id?: string; content_notes?: string; metadata?: { cohort_id?: string; instructor_ids?: string[] };
 }
 
 const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : '');
@@ -85,6 +86,12 @@ function AclsHubPageContent() {
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeDate, setActiveDate] = useState<string>('all');
+  const [instructorList, setInstructorList] = useState<{ id: string; name: string }[]>([]);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editIds, setEditIds] = useState<string[]>([]);
+  const [editNote, setEditNote] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/signin'); }, [status, router]);
 
@@ -112,7 +119,13 @@ function AclsHubPageContent() {
           const end = hub.dates[hub.dates.length - 1];
           const uRes = await fetch(`/api/calendar/unified?cohort_id=${hub.cohort.id}&start=${start}&end=${end}&include=classes,labs,exams`);
           const u = await uRes.json();
-          setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date) && e.status !== 'cancelled'));
+          // Display filter only: the unified feed returns other cohorts' schedule
+          // blocks too (e.g. the EMT Lecture). Hide blocks that belong to a
+          // different cohort; availability/conflict detection is a separate
+          // query and is untouched.
+          setEvents((u.events || []).filter((e: CalEvent) =>
+            hub.dates.includes(e.date) && e.status !== 'cancelled' &&
+            (!e.metadata?.cohort_id || e.metadata.cohort_id === hub.cohort.id)));
         } else {
           setEvents([]);
         }
@@ -121,6 +134,38 @@ function AclsHubPageContent() {
   }, [cohortIdParam]);
 
   useEffect(() => { if (status === 'authenticated') load(); }, [load, status]);
+
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/lab-management/instructors').then(r => r.json())
+      .then(d => setInstructorList(d.instructors || [])).catch(() => {});
+  }, [status]);
+
+  const startEdit = (e: CalEvent) => {
+    setEditingId(e.id);
+    setEditIds(e.metadata?.instructor_ids || []);
+    setEditNote(e.content_notes || '');
+    setSaveError(null);
+  };
+
+  const saveEdit = async (e: CalEvent) => {
+    if (!e.linked_id) return;
+    setSaving(true); setSaveError(null);
+    try {
+      const res = await fetch(`/api/scheduling/planner/blocks/${e.linked_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ instructor_ids: editIds, content_notes: editNote }),
+      });
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}));
+        setSaveError(res.status === 403 ? 'Lead instructor access required to edit.' : (j.error || 'Save failed'));
+        return;
+      }
+      setEditingId(null);
+      await load();
+    } catch { setSaveError('Save failed'); } finally { setSaving(false); }
+  };
 
   // Course picker: every cohort running this course (same source as the AHA Hub).
   useEffect(() => {
@@ -253,7 +298,7 @@ function AclsHubPageContent() {
                 <GraduationCap className="w-6 h-6 text-red-600" /> ACLS Hub
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''} — full event, one place (read-only)
+                {cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''} — full event, one place
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -416,12 +461,46 @@ function AclsHubPageContent() {
                     {dayEvents.length === 0 ? (
                       <div className="p-3 text-xs text-gray-400">No schedule blocks found for this day.</div>
                     ) : dayEvents.map(e => (
-                      <div key={e.id} className="flex items-center gap-3 px-3 py-1.5 text-sm">
+                      <div key={e.id}>
+                      <div className="flex items-center gap-3 px-3 py-1.5 text-sm">
                         <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
                         <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${TYPE_COLOR[e.event_type] || TYPE_COLOR.class}`}>{e.event_type}</span>
                         <span className="text-gray-800 dark:text-gray-100 flex-1">{e.title}</span>
                         {e.room && <span className="text-xs text-gray-400 hidden sm:inline">{e.room}</span>}
                         {e.instructor_names && e.instructor_names.length > 0 && <span className="text-xs text-gray-400 hidden md:inline">{e.instructor_names.join(', ')}</span>}
+                        {e.content_notes && <span className="text-xs italic text-amber-700 dark:text-amber-300 hidden md:inline">{e.content_notes}</span>}
+                        {e.id.startsWith('planner-') && e.linked_id && (
+                          <button onClick={() => (editingId === e.id ? setEditingId(null) : startEdit(e))} className="print:hidden text-xs px-2 py-1 min-h-[32px] rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                            {editingId === e.id ? 'Close' : 'Edit'}
+                          </button>
+                        )}
+                      </div>
+                      {editingId === e.id && (
+                        <div className="px-3 py-2 bg-gray-50 dark:bg-gray-900/40 text-sm space-y-2 print:hidden">
+                          <div className="flex flex-wrap gap-1.5">
+                            {editIds.map(id => (
+                              <span key={id} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200">
+                                {instructorList.find(i => i.id === id)?.name || 'Unknown'}
+                                <button onClick={() => setEditIds(editIds.filter(x => x !== id))} aria-label="Remove instructor">×</button>
+                              </span>
+                            ))}
+                            {editIds.length === 0 && <span className="text-xs text-gray-400">No instructors assigned</span>}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <select value="" onChange={ev => { if (ev.target.value) setEditIds([...editIds, ev.target.value]); }} className="px-2 py-1.5 min-h-[36px] border rounded dark:bg-gray-800 dark:border-gray-600 text-sm">
+                              <option value="">+ Add instructor…</option>
+                              {instructorList.filter(i => !editIds.includes(i.id)).map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                            </select>
+                            <button onClick={() => setEditIds(instructorList.map(i => i.id))} className="text-xs px-2 py-1.5 min-h-[36px] rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">All instructors</button>
+                          </div>
+                          <input value={editNote} onChange={ev => setEditNote(ev.target.value)} placeholder="Note for this block (optional)" className="w-full px-2 py-1.5 min-h-[36px] border rounded dark:bg-gray-800 dark:border-gray-600 text-sm" />
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => saveEdit(e)} disabled={saving} className="px-3 py-1.5 min-h-[36px] rounded bg-blue-600 text-white text-sm hover:bg-blue-700 disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
+                            <button onClick={() => setEditingId(null)} className="px-3 py-1.5 min-h-[36px] rounded border border-gray-300 dark:border-gray-600 text-sm">Cancel</button>
+                            {saveError && <span className="text-xs text-red-600">{saveError}</span>}
+                          </div>
+                        </div>
+                      )}
                       </div>
                     ))}
                   </div>
