@@ -90,6 +90,7 @@ export async function PUT(
     if (body.title !== undefined) updates.title = body.title.trim();
     if (body.agency !== undefined) updates.agency = body.agency.trim();
     if (body.email !== undefined) updates.email = body.email.trim().toLowerCase();
+    if (body.contact_email !== undefined) updates.contact_email = body.contact_email?.trim().toLowerCase() || null;
     if (body.phone !== undefined) updates.phone = body.phone?.trim() || null;
     if (body.role !== undefined) updates.role = body.role || null;
     if (body.agency_preference !== undefined) updates.agency_preference = body.agency_preference;

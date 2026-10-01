@@ -4433,13 +4433,14 @@ Students tab).
 | name | text | NO |  |  |
 | title | text | NO |  |  |
 | agency | text | NO |  |  |
-| email | text | NO |  |  |
+| email | text | NO |  | identity/login address |
 | phone | text | YES |  |  |
 | role | text | YES |  |  |
 | agency_preference | boolean | YES | false |  |
 | agency_preference_note | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
 | event_id | uuid | NO |  |  |
+| contact_email | text | YES |  | correspondence address; invites use COALESCE(contact_email, email) (migration 20261001) |
 
 **Foreign Keys:**
 - `event_id` -> `osce_events.id` (`osce_observers_event_id_fkey`)
