@@ -438,6 +438,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 |-----------|------|-------|-------------|
 | `NotificationBell` | `components/NotificationBell.tsx` | _(none)_ | Notification bell icon with unread count badge and dropdown list. |
 | `Toast` / `ToastProvider` | `components/Toast.tsx` | _(provider: `{ children }`)_ | Toast notification system. Exports `useToast` hook and `ToastProvider` context provider. |
+| `FloatingDock` | `components/FloatingDock.tsx` | `children` | Sole owner of the persistent bottom-right overlay corner (Quick Actions FAB, Role Preview, Feedback stack in flow). Add new persistent floating controls as children here, never with their own `fixed bottom-*/right-*`. |
 | `FeedbackButton` | `components/FeedbackButton.tsx` | _(none)_ | Floating feedback button with modal form for bugs, feature requests, and general feedback. |
 
 ### Onboarding

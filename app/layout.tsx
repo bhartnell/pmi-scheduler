@@ -13,6 +13,7 @@ import WhatsNewWrapper from '@/components/WhatsNewWrapper';
 import RolePreviewBanner from '@/components/RolePreviewBanner';
 import RolePreviewSelector from '@/components/RolePreviewSelector';
 import UserMenu from '@/components/UserMenu';
+import FloatingDock from '@/components/FloatingDock';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -43,10 +44,12 @@ export default function RootLayout({
             <ActivityTracker />
             <OnboardingTourWrapper />
             <WhatsNewWrapper />
-            <FeedbackButton />
-            <QuickActionsMenu />
+            <FloatingDock>
+              <QuickActionsMenu />
+              <RolePreviewSelector />
+              <FeedbackButton />
+            </FloatingDock>
             <UserMenu />
-            <RolePreviewSelector />
             <CommandPalette />
           </OfflineProvider>
         </Providers>
