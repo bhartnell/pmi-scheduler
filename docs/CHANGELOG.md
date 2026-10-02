@@ -11,7 +11,7 @@ Format: `commit-hash | brief description`
 
 2026-10-02
 
-pending | feat(acls-hub): present/absent toggle per student (existing lab_day_attendance; absent leaves counts, struck through) + learning-station Pass/Watch marks on the student panel
+a8ad351 | feat(acls-hub): present/absent toggle per student (existing lab_day_attendance; absent leaves counts, struck through) + learning-station Pass/Watch marks on the student panel
 fe2245f | ACLS learning-station tracker (Pass/Watch, own table acls_learning_marks, /labs/adv-cert/learning-station); learning_station cases route to it from lab-day Grade + ACLS hub
 
 35172cf5 | feat(acls-hub): read-only INCOMPLETE / CONTRADICTORY record check badge + filter on megacode attempts (detection only, no schema, save path untouched)
