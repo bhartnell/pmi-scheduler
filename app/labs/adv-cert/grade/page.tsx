@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import SheetScale from '@/components/grading/SheetScale';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -316,6 +317,7 @@ export default function AdvCertGradePage() {
         Pick a group and case, check off each step as the team leader performs it, then record the group result.
       </p>
 
+      <SheetScale>
       {/* Context selectors */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
@@ -634,6 +636,7 @@ export default function AdvCertGradePage() {
           }
         />
       )}
+      </SheetScale>
     </div>
   );
 }
