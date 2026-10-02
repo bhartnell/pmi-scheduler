@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+pending | feat(acls-board): Print opens a separate schedule-only handout document (own window, not the board with CSS hiding)
 
 pending | fix(grading): megacode sheet + learning-station tracker use full desktop width (drop max-w container; dual pane auto-fills, manual A-/A+ kept)
 
