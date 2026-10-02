@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 2026-10-02
 
+pending | fix(grading): megacode sheet + learning-station tracker use full desktop width (drop max-w container; dual pane auto-fills, manual A-/A+ kept)
+
 pending | fix(acls-board/hub): absent on ANY visible day shows as absent (Both-days view hid single-day/partial marks)
 
 pending | fix(acls-board): progress panel groups run across top + roster full width; Actual-start edit is optimistic (no disabled-while-saving)

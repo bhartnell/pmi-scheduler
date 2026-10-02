@@ -111,7 +111,7 @@ export default function AclsLearningStationPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-6 max-sm:p-3">
+    <div className="w-full max-w-none mx-auto p-6 max-sm:p-3">
       <Link href={returnTo || (labDayId ? `/labs/schedule/${labDayId}` : '/labs/acls-hub')} className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:underline mb-3">
         <ArrowLeft className="w-4 h-4" /> {returnTo ? 'Back' : 'Back to lab day'}
       </Link>
