@@ -11,7 +11,7 @@ Format: `commit-hash | brief description`
 
 2026-10-02
 
-pending | feat(acls-hub): read-only INCOMPLETE / CONTRADICTORY record check badge + filter on megacode attempts (detection only, no schema, save path untouched)
+35172cf5 | feat(acls-hub): read-only INCOMPLETE / CONTRADICTORY record check badge + filter on megacode attempts (detection only, no schema, save path untouched)
 
 feat(acls-hub): ACLS UI 4/6 adjustable time section (planned start, duration, actual start, signed delta); additive column `pmi_schedule_blocks.actual_start_time` (migration `20261002_schedule_block_actual_start.sql`, applied)
 
