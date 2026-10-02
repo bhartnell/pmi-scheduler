@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+(pending) | ACLS board Print now prints the selected day schedule handout (blocks + times + instructors + station plan) instead of a pointer sentence
 (pending) | feat(ccf): wire CcfTimer + editable CCF fields into megacode grading; adv_cert_test_attempts.ccf jsonb (additive, save tolerant if unmigrated)
 
 (pending) | feat(grading): megacode sheet gets adjustable Sheet size (A-/A+, shared key with dual-pane) via new components/grading/SheetScale

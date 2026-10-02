@@ -726,7 +726,70 @@ function BoardContent() {
             ))}
           </div>
         )}
-        <div className="hidden print:block text-sm">Use the current ACLS Hub print for the instructor handout (/labs/acls-hub).</div>
+        {/* PRINT-ONLY HANDOUT: the selected day's schedule only (Both days = one page per day). Renders the
+            already-computed board times, so paper matches the screen. Presentation only; no data touched. */}
+        <div className="hidden print:block text-black acls-board-print">
+          <style>{`@media print {
+            @page { margin: 0.5in; size: letter portrait; }
+            html, body { background: #fff !important; }
+            .acls-board-print table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+            .acls-board-print th, .acls-board-print td { border: 1px solid #000; padding: 4px 8px; text-align: left; vertical-align: top; font-size: 12pt; line-height: 1.3; }
+            .acls-board-print th { background: #e5e5e5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: 700; }
+          }`}</style>
+          {cohort && visibleDates.map((date, di) => {
+            const rows = orderFor(date).filter(id => !layout.rows[id]?.parked);
+            const first = rows.length ? layout.rows[rows[0]]?.at : null;
+            const secs = visibleLabDays.filter(d => d.date === date && !skillsRow(d) && d.stations.length > 0)
+              .sort((a, b) => toMin(a.start_time) - toMin(b.start_time) || (a.section_number ?? 1) - (b.section_number ?? 1));
+            return (
+              <div key={date} style={{ breakBefore: di > 0 ? 'page' : 'auto' }}>
+                <h1 className="text-2xl font-bold">ACLS Course Schedule — {cohortLabel}</h1>
+                <h2 className="text-lg font-bold mb-1">Day {dayNo(date)} — {prettyDate(date)}{first != null ? ` · ${fmt(first)}–${fmt(layout.ends[date])}` : ''}</h2>
+                <table>
+                  <thead><tr><th style={{ width: '120px' }}>Time</th><th>Block</th><th style={{ width: '170px' }}>Instructor</th></tr></thead>
+                  <tbody>
+                    {rows.length === 0
+                      ? <tr><td colSpan={3}>No schedule blocks.</td></tr>
+                      : rows.map(id => {
+                        const e = eventById.get(id); const at = layout.rows[id]?.at;
+                        if (!e || at == null) return null;
+                        return (
+                          <tr key={id} style={{ breakInside: 'avoid' }}>
+                            <td>{fmt(at)}–{fmt(at + DUR(id))}</td>
+                            <td>{e.title}</td>
+                            <td>{rowNames(e).join(', ')}</td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+                {secs.length > 0 && (
+                  <div>
+                    <h3 className="text-base font-bold mt-3 mb-1">Station plan</h3>
+                    {secs.map(s => (
+                      <div key={s.id} style={{ breakInside: 'avoid' }}>
+                        <div className="font-semibold">{s.section_label || s.title || 'Lab'}{s.start_time ? ` · ${hhmm(s.start_time)}–${hhmm(s.end_time)}` : ''}</div>
+                        <table>
+                          <thead><tr><th style={{ width: '40px' }}>#</th><th style={{ width: '130px' }}>Room</th><th>Case</th><th style={{ width: '170px' }}>Instructor</th></tr></thead>
+                          <tbody>
+                            {s.stations.map(st => (
+                              <tr key={st.id}>
+                                <td>{st.station_number}</td>
+                                <td>{st.room || ''}</td>
+                                <td>{st.scenario?.title ? `${st.scenario.case_code ? `${st.scenario.case_code.replace(/^CASE_/i, 'Case ').replace(/_/g, ' ')} - ` : ''}${st.scenario.title}` : st.scenario?.case_code || st.custom_title || ''}</td>
+                                <td>{st.instructor_name || ''}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {attemptPicker && (
