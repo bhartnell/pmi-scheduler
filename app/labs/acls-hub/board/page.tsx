@@ -127,7 +127,6 @@ function BoardContent() {
   const [loading, setLoading] = useState(true);
   const [activeDate, setActiveDate] = useState<string>('all');
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [savingBlock, setSavingBlock] = useState<string | null>(null);
   const [absentError, setAbsentError] = useState<string | null>(null);
 
   // One view: actual times, park and reorder are always available (no Plan/Run modes).
@@ -206,23 +205,29 @@ function BoardContent() {
   // Persist one schedule-block field via the existing planner block PUT ('this' = this dated block only).
   const saveBlock = useCallback(async (e: CalEvent, patch: Record<string, string | null>) => {
     if (!e.linked_id) return;
-    setSavingBlock(e.id); setSaveError(null);
+    setSaveError(null);
+    // Optimistic: move the row immediately, settle with the server after; roll back only the touched fields on failure.
+    const apply = (vals: { instructor_id?: string | null; actual_start_time?: string | null }) => setEvents(prev => prev.map(x => {
+      if (x.id !== e.id) return x;
+      const next: CalEvent = { ...x, metadata: { ...x.metadata } };
+      if ('instructor_id' in vals) next.metadata!.instructor_id = vals.instructor_id || null;
+      if ('actual_start_time' in vals) next.metadata!.actual_start_time = vals.actual_start_time || null;
+      return next;
+    }));
+    const prior: { instructor_id?: string | null; actual_start_time?: string | null } = {};
+    if ('instructor_id' in patch) prior.instructor_id = e.metadata?.instructor_id ?? null;
+    if ('actual_start_time' in patch) prior.actual_start_time = e.metadata?.actual_start_time ?? null;
+    apply(patch as { instructor_id?: string | null; actual_start_time?: string | null });
     try {
       const res = await fetch(`/api/scheduling/planner/blocks/${e.linked_id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...patch, update_mode: 'this' }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
-      setEvents(prev => prev.map(x => {
-        if (x.id !== e.id) return x;
-        const next: CalEvent = { ...x, metadata: { ...x.metadata } };
-        if ('instructor_id' in patch) next.metadata!.instructor_id = patch.instructor_id || null;
-        if ('actual_start_time' in patch) next.metadata!.actual_start_time = patch.actual_start_time || null;
-        return next;
-      }));
     } catch (err) {
-      setSaveError(`Could not save "${e.title}": ${err instanceof Error ? err.message : 'unknown error'}`);
-    } finally { setSavingBlock(null); }
+      apply(prior);
+      setSaveError(`Could not save "${e.title}" (row put back): ${err instanceof Error ? err.message : 'unknown error'}`);
+    }
   }, []);
 
   // Same visibility rule as the current hub: hide the monolithic section-1 day once split into sections.
@@ -437,7 +442,6 @@ function BoardContent() {
     const isLab = e.event_type === 'lab';
     const selected = !!sec && selectedSection === sec.id;
     const actual = e.metadata?.actual_start_time;
-    const busy = savingBlock === e.id;
     const inputCls = 'text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1';
     return (
       <div key={id}
@@ -455,7 +459,7 @@ function BoardContent() {
             <span className="text-[11px] text-gray-400">{dur} min</span>
             {editable && (
               <label className="text-[11px] text-gray-500 flex items-center gap-1">Actual
-                <input type="time" aria-label={`Actual start for ${e.title}`} key={`a-${id}-${actual}`} defaultValue={hhmm(actual)} disabled={busy}
+                <input type="time" aria-label={`Actual start for ${e.title}`} key={`a-${id}-${actual}`} defaultValue={hhmm(actual)}
                   onBlur={(ev) => { const v = ev.target.value; if (v !== hhmm(actual)) saveBlock(e, { actual_start_time: v ? `${v}:00` : null }); }}
                   className={`${inputCls} w-28 font-semibold`} />
               </label>
@@ -472,13 +476,12 @@ function BoardContent() {
         )}
         <span onClick={ev => ev.stopPropagation()} className="shrink-0">
           {editable ? (
-            <select aria-label={`Instructor for ${e.title}`} value={e.metadata?.instructor_id || ''} disabled={busy}
+            <select aria-label={`Instructor for ${e.title}`} value={e.metadata?.instructor_id || ''}
               onChange={(ev) => saveBlock(e, { instructor_id: ev.target.value || null })} className={`${inputCls} w-44`}>
               <option value="">Instructor: —</option>
               {instructorOpts.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           ) : (rowNames(e).length > 0 && <span className="text-xs text-gray-500">{rowNames(e).join(', ')}</span>)}
-          {busy && <Loader2 className="inline w-3.5 h-3.5 animate-spin text-gray-400 ml-1" />}
         </span>
       </div>
     );
@@ -604,10 +607,10 @@ function BoardContent() {
   const renderProgress = () => {
     const rows = groups.flatMap(g => g.members.map(m => ({ m, g })));
     return (
-      <div className="grid grid-cols-[max-content_minmax(0,1fr)] max-xl:grid-cols-1 gap-4 items-start">
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap gap-2 items-start">
           {groups.map(g => (
-            <div key={g.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2">
+            <div key={g.id} className="w-fit max-w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2">
               <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">{g.name}</div>
               <div className="flex flex-nowrap gap-1 whitespace-nowrap">
                 {g.members.map(m => (
