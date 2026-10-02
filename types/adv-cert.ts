@@ -87,6 +87,8 @@ export interface AdvCertSegmentResultInput {
   scenario_segment_id: string;
   result?: AdvCertResult | null;
   comments?: string | null;
+  /** observed = marked individually; bulk_confirmed = "mark remaining as passed" at save. */
+  completion_source?: 'observed' | 'bulk_confirmed' | 'inferred_at_export' | null;
   criteria: AdvCertCriterionResultInput[];
 }
 
