@@ -10,7 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 ## 2026-10-02
-PENDING | fix(lab-timer): timer GET no-store (drop max-age/SWR cache that let stale state overwrite fresh; grade-station jump regression)
+549fb1d | fix(lab-timer): timer GET no-store (drop max-age/SWR cache that let stale state overwrite fresh; grade-station jump regression)
 
 ## 2026-10-01
 
@@ -41,7 +41,7 @@ PENDING | fix(lab-timer): timer GET no-store (drop max-age/SWR cache that let st
 252e775 | ScenarioFullDisplay: render legacy singular `trigger`, string `expected_actions`; no double unit on SpO2/temp (display-only, no data patches)
 252e775 | Site-visit Google Calendar events: default block 2h -> 30 min (15 base + 15/student helper); existing events untouched
 252e775 | ACLS skills capture: default-to-pass sheet, fail one click, one-action save (AclsSkillsPanel)
-PENDING | Add shared DualPaneGrading component (OSCE-style side-by-side, independently scrolling); applied to ACLS/PALS megacode grader
+549fb1d | Add shared DualPaneGrading component (OSCE-style side-by-side, independently scrolling); applied to ACLS/PALS megacode grader
 
 - pending | OSCE results list: Readiness column shows every evaluator call with a Split flag on disagreement (view-only)
 
@@ -50,9 +50,9 @@ PENDING | Add shared DualPaneGrading component (OSCE-style side-by-side, indepen
 - 80dae3d | feat(clinical): 'NREMT Passed - Close Out' button on internship page (stamps nremt_passed, graduates student via existing GraduationModal)
 - (this commit) | Skill Coverage panel: Skills/Scenarios/All type control, This/All-semesters scope, type-aware labels + CSV, unlinked free-text scenario station notice
 - 80dae3d | docs(wiki): article answering Stacie Peterson's 2026-06-16 question (Coverage shift signups title + volunteers). Content only, no code.
-PENDING | docs: read-only layout audit (docs/LAYOUT_AUDIT.md), no page changes
+549fb1d | docs: read-only layout audit (docs/LAYOUT_AUDIT.md), no page changes
 
-PENDING | fix(ui): FloatingDock owns bottom-right overlays (Feedback/Preview/FAB no longer collide; closed FAB list no longer blocks touch scroll)
+549fb1d | fix(ui): FloatingDock owns bottom-right overlays (Feedback/Preview/FAB no longer collide; closed FAB list no longer blocks touch scroll)
 
 - (pending) | docs(wiki): article answering Stacie Peterson's 2026-06-16 question (Coverage shift signups title + volunteers). Content only, no code.
 
