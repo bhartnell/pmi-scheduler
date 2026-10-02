@@ -564,7 +564,10 @@ export default function AdvCertGradePage() {
               </button>
             </div>
             <div className="mb-3 space-y-3">
-              <CcfTimer key={ccfKey} onChange={(rec) => setCcf((prev) => (rec ? (prev?.source === 'entered' && prev.original ? { ...prev, intervals: rec.intervals } : rec) : prev && prev.source === 'calculated' ? null : prev))} />
+              <CcfTimer key={ccfKey}
+                devicePercent={ccf?.source === 'device' ? ccf.percent : null}
+                onDevicePercent={(pct) => setCcf(pct === null ? (ccf?.source === 'device' ? null : ccf) : { compression_seconds: 0, arrest_seconds: 0, percent: pct, source: 'device', intervals: [] })}
+                onChange={(rec) => setCcf((prev) => (rec ? (prev?.source === 'entered' && prev.original ? { ...prev, intervals: rec.intervals } : rec) : prev && prev.source === 'calculated' ? null : prev))} />
               <div className="rounded-md border border-gray-200 dark:border-gray-700 p-3">
                 <div className="text-sm font-medium text-gray-900 dark:text-white mb-2">
                   Chest compression fraction {ccf ? `(${ccf.source})` : '(optional)'}
