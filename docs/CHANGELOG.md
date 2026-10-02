@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ---
 
+pending | feat(ccf-timer): own draggable floating panel (position remembered), collapsible to the percent field alone, out of the bottom-right dock
 2026-10-02
 pending | feat(acls-board): Board is the ACLS hub — /labs/acls-hub redirects to /labs/acls-hub/board, old hub kept unrouted in _legacy, all links/breadcrumbs repointed, Board back goes to AHA Hub
 
