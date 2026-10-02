@@ -1,14 +1,14 @@
 'use client';
 
 // Compression-fraction calculator for the megacode grading sheet.
-// Three live controls only (Pulseless, Pause/Resume, ROSC) so nothing slows a code.
+// Its own small floating panel (drag handle, remembered position), NOT part of the bottom-right dock.
+// Collapsed = the CCF % field alone (stations reading Laerdal Session Viewer); open = Pulseless,
+// Pause/Resume, ROSC and the live readout (stations running the manual timer).
 // Aid, never an authority: the parent owns the CCF value and may edit it freely;
-// this component only reports a calculated record via onChange. Not wired into a
-// save path yet (see the wiring card); it never blocks a rotation.
+// this component only reports a calculated record via onChange. It never blocks a rotation.
 
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
-import { DOCK_PAGE_SLOT_ID } from '@/components/FloatingDock';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   CcfEvent, CcfRecord, DEFAULT_PAUSE_THRESHOLD_SECONDS, fmtClock, longPauses, summarize, toRecord,
 } from '@/lib/ccf';
@@ -18,33 +18,75 @@ export const PAUSE_LABELS = ['Intubation', 'Rhythm check', 'Defibrillation', 'Pu
 interface Props {
   onChange?: (record: CcfRecord | null) => void;
   pauseThresholdSeconds?: number;
-  /** Current CCF percent held by the page (any source); shown in device mode. */
+  /** Current CCF percent held by the page (any source). */
   percent?: number | null;
-  /** Percent typed in device mode (read off Laerdal Session Viewer); the page records source 'device'. */
+  /** Percent typed in the panel's field (read off Laerdal Session Viewer); the page records source 'device'. */
   onDevicePercent?: (percent: number | null) => void;
 }
 
-type Mode = 'timer' | 'device';
-const MODE_KEY = 'ccf-station-mode';
+const POS_KEY = 'ccf-panel-pos';
+const COLLAPSED_KEY = 'ccf-panel-collapsed';
+type Pos = { x: number; y: number };
 
 export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAUSE_THRESHOLD_SECONDS, percent = null, onDevicePercent }: Props) {
   const [events, setEvents] = useState<CcfEvent[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [labels, setLabels] = useState<Record<number, string>>({});
   const [expanded, setExpanded] = useState(false);
-  const [slot, setSlot] = useState<HTMLElement | null>(null);
-  useEffect(() => { setSlot(document.getElementById(DOCK_PAGE_SLOT_ID)); }, []);
 
-  // Mixed mode: some stations read CCF off Laerdal Session Viewer, others use the timer.
-  // The choice is remembered per browser so it is not re-set every attempt. Switching never
-  // touches the running timer state, which lives in `events`.
-  const [mode, setModeState] = useState<Mode>('timer');
+  // Collapsed choice and position are remembered per browser; neither touches the running
+  // timer state, which lives in `events`. Default position (null) is bottom-left, clear of the
+  // bottom-right dock and of the scoring sections.
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [collapsed, setCollapsedState] = useState(true);
+  const [pos, setPos] = useState<Pos | null>(null);
   useEffect(() => {
-    try { if (localStorage.getItem(MODE_KEY) === 'device') setModeState('device'); } catch { /* storage unavailable */ }
+    try {
+      const c = localStorage.getItem(COLLAPSED_KEY);
+      if (c !== null) setCollapsedState(c === '1');
+      const p = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+      if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) setPos(p);
+    } catch { /* storage unavailable */ }
   }, []);
-  const setMode = (m: Mode) => {
-    setModeState(m);
-    try { localStorage.setItem(MODE_KEY, m); } catch { /* storage unavailable */ }
+  const setCollapsed = (c: boolean) => {
+    setCollapsedState(c);
+    try { localStorage.setItem(COLLAPSED_KEY, c ? '1' : '0'); } catch { /* storage unavailable */ }
+  };
+
+  const clamp = useCallback((p: Pos): Pos => {
+    const r = panelRef.current?.getBoundingClientRect();
+    const w = r?.width ?? 0; const h = r?.height ?? 0;
+    return { x: Math.max(0, Math.min(p.x, window.innerWidth - w)), y: Math.max(0, Math.min(p.y, window.innerHeight - h)) };
+  }, []);
+  // Keep the panel on screen after a resize or when its size changes (collapse/expand/timeline).
+  useLayoutEffect(() => {
+    if (!pos) return;
+    const c = clamp(pos);
+    if (c.x !== pos.x || c.y !== pos.y) setPos(c);
+  }, [pos, collapsed, expanded, clamp]);
+  useEffect(() => {
+    const onResize = () => setPos((p) => (p ? clamp(p) : p));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [clamp]);
+
+  const drag = useRef<{ dx: number; dy: number } | null>(null);
+  const onHandleDown = (e: React.PointerEvent) => {
+    const r = panelRef.current?.getBoundingClientRect();
+    if (!r) return;
+    drag.current = { dx: e.clientX - r.left, dy: e.clientY - r.top };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onHandleMove = (e: React.PointerEvent) => {
+    if (drag.current) setPos(clamp({ x: e.clientX - drag.current.dx, y: e.clientY - drag.current.dy }));
+  };
+  const onHandleUp = () => {
+    if (!drag.current) return;
+    drag.current = null;
+    setPos((p) => {
+      if (p) { try { localStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* storage unavailable */ } }
+      return p;
+    });
   };
 
   const live = events.length > 0 && summarize(events, now).active;
@@ -71,40 +113,45 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
   const long = longPauses(s.intervals, pauseThresholdSeconds);
   const total = s.arrestSeconds || 1;
 
-  const modeSwitch = (
-    <div role="group" aria-label="CCF source" className="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 dark:bg-gray-700 p-1 text-sm font-medium">
-      {(['timer', 'device'] as const).map((m) => (
-        <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}
-          className={`min-h-[44px] rounded-md ${mode === m ? 'bg-white dark:bg-gray-900 shadow text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>
-          {m === 'timer' ? 'Timer' : 'Device (Session Viewer)'}
-        </button>
-      ))}
+  const handle = (
+    <div className="flex items-center gap-1">
+      <div role="button" aria-label="Drag to move the CCF panel" title="Drag to move"
+        onPointerDown={onHandleDown} onPointerMove={onHandleMove} onPointerUp={onHandleUp} onPointerCancel={onHandleUp}
+        className="flex flex-1 min-h-[44px] cursor-grab active:cursor-grabbing touch-none select-none items-center gap-1 rounded bg-gray-100 dark:bg-gray-700 px-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+        <GripVertical className="h-4 w-4" aria-hidden /> CCF
+      </div>
+      <button type="button" aria-expanded={!collapsed} aria-label={collapsed ? 'Expand CCF timer' : 'Collapse CCF timer'}
+        onClick={() => setCollapsed(!collapsed)}
+        className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
+        {collapsed ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+      </button>
     </div>
   );
 
-  const devicePanel = (
-    <div className="w-[20rem] max-w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 space-y-2 shadow-xl">
-      <label className="flex items-center justify-between gap-3 text-sm font-semibold text-gray-900 dark:text-white">
-        CCF % from Session Viewer
-        <input type="number" min={0} max={100} step="0.1" inputMode="decimal"
-          value={percent ?? ''}
-          onChange={(e) => onDevicePercent?.(e.target.value === '' ? null : Math.max(0, Math.min(100, Number(e.target.value))))}
-          className="min-h-[44px] w-24 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 text-lg font-bold" />
-      </label>
-      {modeSwitch}
-    </div>
+  const percentField = (
+    <label className="flex items-center justify-between gap-3 text-sm font-semibold text-gray-900 dark:text-white">
+      CCF % (e.g. from Session Viewer)
+      <input type="number" min={0} max={100} step="0.1" inputMode="decimal"
+        value={percent ?? ''}
+        onChange={(e) => onDevicePercent?.(e.target.value === '' ? null : Math.max(0, Math.min(100, Number(e.target.value))))}
+        className="min-h-[44px] w-20 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 text-lg font-bold" />
+    </label>
   );
 
-  const dockPanel = mode === 'device' ? devicePanel : (
-      <div className="w-[28rem] max-w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 space-y-2 shadow-xl">
-        <div className="flex items-baseline justify-between flex-wrap gap-2">
-          <h3 className="font-semibold text-gray-900 dark:text-white">Chest compression fraction (calculated)</h3>
-          <div className="text-sm text-gray-600 dark:text-gray-300">
-            Arrest {fmtClock(s.arrestSeconds)} | On chest {fmtClock(s.compressionSeconds)} |{' '}
-            <span className="text-lg font-bold text-gray-900 dark:text-white">{s.fraction === null ? '--' : `${s.fraction}%`}</span>
-          </div>
-        </div>
-        {modeSwitch}
+  return (
+    <>
+      <div ref={panelRef} role="region" aria-label="Chest compression fraction"
+        style={pos ? { left: pos.x, top: pos.y } : { left: 12, bottom: 12 }}
+        className={`fixed z-40 max-w-[calc(100vw-1.5rem)] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 space-y-2 shadow-xl ${collapsed ? 'w-[17rem]' : 'w-[28rem]'}`}>
+        {handle}
+        {percentField}
+        {!collapsed && (
+          <>
+            <div className="text-sm text-gray-600 dark:text-gray-300">
+              Arrest {fmtClock(s.arrestSeconds)} | On chest {fmtClock(s.compressionSeconds)} |{' '}
+              <span className="text-lg font-bold text-gray-900 dark:text-white">{s.fraction === null ? '--' : `${s.fraction}%`}</span>
+              {' '}(calculated)
+            </div>
         <div className="grid grid-cols-3 gap-3 max-sm:gap-2">
           <button type="button" disabled={s.active} onClick={() => press('pulseless')}
             className="min-h-[64px] rounded-lg bg-red-600 text-white text-lg font-bold disabled:opacity-40">
@@ -162,16 +209,10 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
           <button type="button" onClick={reset} className="min-h-[44px] px-3 text-sm underline text-gray-600 dark:text-gray-300">Clear timer</button>
         </div>
         )}
+          </>
+        )}
       </div>
-  );
-
-  return (
-    <>
-      {/* Pinned via the shared FloatingDock slot (fixed overlay, owned by the dock) so it stays
-          on screen however the page scrolls. Falls back to inline until the dock mounts. */}
-      {slot ? createPortal(dockPanel, slot) : dockPanel}
       <p className="text-xs text-gray-500">Only time between Pulseless and ROSC counts. Pressing Pulseless again after ROSC starts a second arrest window; the fractions are summed.</p>
-
     </>
   );
 }

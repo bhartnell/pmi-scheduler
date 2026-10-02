@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ---
 
+pending | feat(ccf-timer): own draggable floating panel (position remembered), collapsible to the percent field alone, out of the bottom-right dock
 2026-10-02
 
 pending | ACLS Board: per-section Rotation timer button opens the existing LabTimer (keyed to the section lab_day; no new timer)
