@@ -742,7 +742,7 @@ function BoardContent() {
             @page { margin: 0.5in; size: letter portrait; }
             html, body { background: #fff !important; }
             .acls-board-print table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-            .acls-board-print th, .acls-board-print td { border: 1px solid #000; padding: 4px 8px; text-align: left; vertical-align: top; font-size: 12pt; line-height: 1.3; }
+            .acls-board-print th, .acls-board-print td { border: 1px solid #000; padding: 4px 8px; text-align: left; vertical-align: top; font-size: 14pt; line-height: 1.3; }
             .acls-board-print th { background: #e5e5e5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: 700; }
           }`}</style>
           {cohort && visibleDates.map((date, di) => {
@@ -755,10 +755,10 @@ function BoardContent() {
                 <h1 className="text-2xl font-bold">ACLS Course Schedule — {cohortLabel}</h1>
                 <h2 className="text-lg font-bold mb-1">Day {dayNo(date)} — {prettyDate(date)}{first != null ? ` · ${fmt(first)}–${fmt(layout.ends[date])}` : ''}</h2>
                 <table>
-                  <thead><tr><th style={{ width: '120px' }}>Time</th><th>Block</th><th style={{ width: '170px' }}>Instructor</th></tr></thead>
+                  <thead><tr><th style={{ width: '135px' }}>Time</th><th>Block</th><th style={{ width: '200px' }}>Instructor(s)</th><th style={{ width: '200px' }}>Note</th></tr></thead>
                   <tbody>
                     {rows.length === 0
-                      ? <tr><td colSpan={3}>No schedule blocks.</td></tr>
+                      ? <tr><td colSpan={4}>No schedule blocks.</td></tr>
                       : rows.map(id => {
                         const e = eventById.get(id); const at = layout.rows[id]?.at;
                         if (!e || at == null) return null;
@@ -767,6 +767,7 @@ function BoardContent() {
                             <td>{fmt(at)}–{fmt(at + DUR(id))}</td>
                             <td>{e.title}</td>
                             <td>{rowNames(e).join(', ')}</td>
+                            <td>{e.content_notes || ''}</td>
                           </tr>
                         );
                       })}
