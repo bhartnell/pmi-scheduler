@@ -48,33 +48,36 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
   const total = s.arrestSeconds || 1;
 
   return (
-    <section className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-4 space-y-3">
-      <div className="flex items-baseline justify-between flex-wrap gap-2">
-        <h3 className="font-semibold text-gray-900 dark:text-white">Chest compression fraction (calculated)</h3>
-        <div className="text-sm text-gray-600 dark:text-gray-300">
-          Arrest {fmtClock(s.arrestSeconds)} | On chest {fmtClock(s.compressionSeconds)} |{' '}
-          <span className="text-lg font-bold text-gray-900 dark:text-white">{s.fraction === null ? '--' : `${s.fraction}%`}</span>
+    <>
+      {/* Control strip only is pinned (sticky within the scrolling grading pane, not an overlay);
+          the debrief block below scrolls normally. */}
+      <div className="sticky top-0 bottom-0 z-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 space-y-2 shadow-md">
+        <div className="flex items-baseline justify-between flex-wrap gap-2">
+          <h3 className="font-semibold text-gray-900 dark:text-white">Chest compression fraction (calculated)</h3>
+          <div className="text-sm text-gray-600 dark:text-gray-300">
+            Arrest {fmtClock(s.arrestSeconds)} | On chest {fmtClock(s.compressionSeconds)} |{' '}
+            <span className="text-lg font-bold text-gray-900 dark:text-white">{s.fraction === null ? '--' : `${s.fraction}%`}</span>
+          </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-3 max-sm:grid-cols-1">
-        <button type="button" disabled={s.active} onClick={() => press('pulseless')}
-          className="min-h-[96px] rounded-lg bg-red-600 text-white text-xl font-bold disabled:opacity-40">
-          Pulseless
-        </button>
-        <button type="button" disabled={!s.active} onClick={() => press(s.paused ? 'resume' : 'pause')}
-          className={`min-h-[96px] rounded-lg text-2xl font-bold text-white disabled:opacity-40 ${s.paused ? 'bg-green-600' : 'bg-amber-500'}`}>
-          {s.paused ? 'Resume' : 'Pause'}
-        </button>
-        <button type="button" disabled={!s.active} onClick={() => press('rosc')}
-          className="min-h-[96px] rounded-lg bg-blue-600 text-white text-xl font-bold disabled:opacity-40">
-          ROSC
-        </button>
+        <div className="grid grid-cols-3 gap-3 max-sm:gap-2">
+          <button type="button" disabled={s.active} onClick={() => press('pulseless')}
+            className="min-h-[64px] rounded-lg bg-red-600 text-white text-lg font-bold disabled:opacity-40">
+            Pulseless
+          </button>
+          <button type="button" disabled={!s.active} onClick={() => press(s.paused ? 'resume' : 'pause')}
+            className={`min-h-[64px] rounded-lg text-2xl font-bold text-white disabled:opacity-40 ${s.paused ? 'bg-green-600' : 'bg-amber-500'}`}>
+            {s.paused ? 'Resume' : 'Pause'}
+          </button>
+          <button type="button" disabled={!s.active} onClick={() => press('rosc')}
+            className="min-h-[64px] rounded-lg bg-blue-600 text-white text-lg font-bold disabled:opacity-40">
+            ROSC
+          </button>
+        </div>
       </div>
       <p className="text-xs text-gray-500">Only time between Pulseless and ROSC counts. Pressing Pulseless again after ROSC starts a second arrest window; the fractions are summed.</p>
 
       {finished && (
-        <div className="space-y-3 border-t border-gray-200 dark:border-gray-700 pt-3">
+        <div className="space-y-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-4">
           {s.longestPause ? (
             <p className="text-gray-900 dark:text-white">
               Longest time off the chest: <strong>{fmtClock((s.longestPause.end - s.longestPause.start) / 1000)}</strong>{' '}
@@ -110,6 +113,6 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
           <button type="button" onClick={reset} className="min-h-[44px] px-3 text-sm underline text-gray-600 dark:text-gray-300">Clear timer</button>
         </div>
       )}
-    </section>
+    </>
   );
 }
