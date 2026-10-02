@@ -9,6 +9,9 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-10-02
+PENDING | fix(lab-timer): timer GET no-store (drop max-age/SWR cache that let stale state overwrite fresh; grade-station jump regression)
+
 ## 2026-10-01
 
 - pending | ACLS UI 3/6: reusable components/StatTile (site tile look, larger type) applied to ACLS hub megacode stats + not-yet-passed chips; legible at 75% zoom
