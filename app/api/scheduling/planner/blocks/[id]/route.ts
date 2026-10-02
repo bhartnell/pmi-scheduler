@@ -113,6 +113,7 @@ export async function PUT(
     }
     if (body.start_time !== undefined) updates.start_time = body.start_time;
     if (body.end_time !== undefined) updates.end_time = body.end_time;
+    if (body.actual_start_time !== undefined) updates.actual_start_time = body.actual_start_time || null;
     if (body.block_type !== undefined) updates.block_type = body.block_type;
     if (body.title !== undefined) updates.title = body.title || null;
     if (body.course_name !== undefined) updates.course_name = body.course_name || null;

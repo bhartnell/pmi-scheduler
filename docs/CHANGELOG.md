@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+2026-10-02
+
+feat(acls-hub): ACLS UI 4/6 adjustable time section (planned start, duration, actual start, signed delta); additive column `pmi_schedule_blocks.actual_start_time` (migration `20261002_schedule_block_actual_start.sql`, applied)
+
 c827127 | feat(acls-hub): BLS/Airway become plain schedule rows (time + instructors); skills capture panel removed from hub (display-only; sections/stations/data untouched)
 ## 2026-10-02
 654b4c1 | fix(lab-day): Individual Testing Tracker no longer auto-collapses when checkoff detection loads late (latched default open state)

@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
           .select(`
             id, date, start_time, end_time, block_type, title, course_name, color,
             content_notes, status, linked_lab_day_id, linked_section_number,
-            instructor_id, additional_instructor_id,
+            instructor_id, additional_instructor_id, actual_start_time,
             room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(id, name),
             program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
               id, label,
@@ -188,6 +188,7 @@ export async function GET(request: NextRequest) {
                 program_label: ps?.label,
                 instructor_id: block.instructor_id ?? null,
                 additional_instructor_id: block.additional_instructor_id ?? null,
+                actual_start_time: (block.actual_start_time as string | null) ?? null,
                 linked_section_number: (block.linked_section_number as number | null) ?? null,
               },
             });

@@ -11864,3 +11864,6 @@ were phantom testing-bank rows (`category='TBD'`, `narrative_status='not_indexed
 0 references anywhere) — the real 2025 AHA testing bank is 14 cards, not 16 (pages
 137+ in the source scan are the Team Dynamics Debriefing Tool and ECG strips, not
 case cards). Archived via `is_active=false` (not deleted, per Archive-don't-delete).
+
+
+**2026-10-02 (ACLS UI 4/6):** `pmi_schedule_blocks.actual_start_time` (`time`, nullable) added — what really started, entered on the ACLS hub; planned stays in `start_time`, duration = `end_time - start_time`. Migration `20261002_schedule_block_actual_start.sql`, applied via MCP.
