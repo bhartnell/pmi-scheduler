@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 2026-10-03
 
+(pending) | fix(acls-board): all-day course container is the day header not a timed row (fixes every time/ends); station room+instructor are inline dropdowns; Plan/Run toggle removed; Track->Grade; case title under case code
+
 (pending) | feat(ccf): CCF calculator lib + CcfTimer component + debrief view (unwired, no schema)
 PENDING | feat(acls): megacode autoscore on grade page (blank section = miss), manual pass/fail kept as override with one combined warn dialog; no stored results recomputed
 PENDING | feat(acls): non-blocking incomplete-record prompt at megacode save, adv_cert_segment_results.completion_source (additive, applied), resolve-at-export check on AHA export (/api/adv-cert/record-flags)

@@ -16,7 +16,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, Play, Eye, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 import type { LabDay as FullLabDay, Station as FullStation, Instructor, InstructorAvailabilityEntry } from '@/components/lab-day/types';
@@ -25,7 +25,7 @@ interface Member { id: string; first_name: string; last_name: string }
 interface Group { id: string; name: string; members: Member[] }
 interface Station {
   id: string; lab_day_id: string; station_number: number; custom_title: string | null;
-  room: string | null; instructor_name: string | null; station_notes: string | null;
+  room: string | null; instructor_name: string | null; instructor_email?: string | null; station_notes: string | null;
   rotation_minutes?: number | null;
   scenario?: { id: string; title: string; case_code: string | null; cert_tier?: string | null } | null;
 }
@@ -129,7 +129,7 @@ function BoardContent() {
   const [savingBlock, setSavingBlock] = useState<string | null>(null);
   const [absentError, setAbsentError] = useState<string | null>(null);
 
-  const [runMode, setRunMode] = useState(false);
+  const runMode = true; // single view (Plan/Run toggle removed)
   const [regions, setRegions] = useState<RegionCfg[]>(DEFAULT_REGIONS);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(() => new Date());
@@ -255,8 +255,22 @@ function BoardContent() {
 
   // ── Time engine: order + duration, not fixed start times ──
   const eventById = useMemo(() => new Map(events.map(e => [e.id, e])), [events]);
+  // The all-day course container ("ACLS (Day 1 of 2)") is the day header, not a timed event:
+  // it spans the other blocks, so it must not take part in order, duration or the 'ends' clock.
+  const containerIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const date of dates) {
+      const day = events.filter(e => e.date === date);
+      for (const e of day) {
+        const s0 = toMin(e.start_time), e0 = toMin(e.end_time);
+        const inside = day.filter(x => x.id !== e.id && toMin(x.start_time) >= s0 && toMin(x.end_time) <= e0).length;
+        if (/\(day \d+ of \d+\)/i.test(e.title) || (e0 > s0 && inside >= 2 && e0 - s0 >= 360)) ids.add(e.id);
+      }
+    }
+    return ids;
+  }, [events, dates]);
   const baseOrder = useCallback((date: string) =>
-    events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '') || a.id.localeCompare(b.id)).map(e => e.id), [events]);
+    events.filter(e => e.date === date && !containerIds.has(e.id)).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '') || a.id.localeCompare(b.id)).map(e => e.id), [events, containerIds]);
   const orderFor = useCallback((date: string) => {
     const base = baseOrder(date);
     const saved = orderByDay[date];
@@ -271,7 +285,7 @@ function BoardContent() {
     for (const d of dates) {
       const ord = orderFor(d);
       const live = ord.filter(i => !parked.has(i)); const park = ord.filter(i => parked.has(i));
-      const firstStart = events.filter(e => e.date === d).map(e => toMin(e.start_time)).sort((a, b) => a - b)[0] ?? 0;
+      const firstStart = events.filter(e => e.date === d && !containerIds.has(e.id)).map(e => toMin(e.start_time)).sort((a, b) => a - b)[0] ?? 0;
       let clock = firstStart, shift = 0;
       for (const i of live) {
         const act = eventById.get(i)?.metadata?.actual_start_time;
@@ -284,7 +298,7 @@ function BoardContent() {
       ends[d] = clock;
     }
     return { rows: out, ends };
-  }, [dates, orderFor, parked, events, eventById, DUR]);
+  }, [dates, orderFor, parked, events, eventById, DUR, containerIds]);
 
   const moveRow = (date: string, id: string, beforeId: string | null) => {
     const ord = orderFor(date).filter(i => i !== id);
@@ -328,7 +342,7 @@ function BoardContent() {
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const isDone = useCallback((date: string, endMin: number) => date < todayStr || (date === todayStr && endMin <= nowMin), [todayStr, nowMin]);
   const overview = useMemo(() => {
-    const scoped = events.filter(e => visibleDates.includes(e.date) && !layout.rows[e.id]?.parked);
+    const scoped = events.filter(e => visibleDates.includes(e.date) && !containerIds.has(e.id) && !layout.rows[e.id]?.parked);
     const endOf = (e: CalEvent) => (layout.rows[e.id]?.at ?? toMin(e.start_time)) + DUR(e.id);
     const cls = scoped.filter(e => e.event_type !== 'lab');
     const lab = scoped.filter(e => e.event_type === 'lab');
@@ -353,16 +367,38 @@ function BoardContent() {
       failed: scopedAttempts.filter(a => a.overall_result === 'fail').length,
       scopedAttempts,
     };
-  }, [events, visibleDates, layout, DUR, sectionForEvent, isDone, todayStr, nowMin, attempts, visibleLabDays, groups, absentIds]);
+  }, [events, visibleDates, containerIds, layout, DUR, sectionForEvent, isDone, todayStr, nowMin, attempts, visibleLabDays, groups, absentIds]);
 
-  // ── Station editing: open the existing EditStationModal for one station ──
-  const openEditor = async (labDayId: string, stationId: string) => {
+  // ── Station editing: EditStationModal (full editor, opened from the modal wiring below) ──
+  // Inline station pickers: same writes as EditStationModal's save (station row + station_instructors join), no modal.
+  const [savingStation, setSavingStation] = useState<string | null>(null);
+  const saveStationField = async (st: Station, patch: { room?: string | null; instructor?: { name: string; email: string } | null }) => {
+    setSavingStation(st.id); setSaveError(null);
     try {
-      const d = await (await fetch(`/api/lab-management/lab-days/${labDayId}`)).json();
-      const st = d.success ? (d.labDay?.stations || []).find((s: FullStation) => s.id === stationId) : null;
-      if (!st) { setSaveError('Could not open the station editor.'); return; }
-      setEditing({ station: st, labDay: d.labDay });
-    } catch { setSaveError('Could not open the station editor.'); }
+      const body: Record<string, string | null> = {};
+      if ('room' in patch) body.room = patch.room || null;
+      if ('instructor' in patch) { body.instructor_name = patch.instructor?.name || null; body.instructor_email = patch.instructor?.email || null; }
+      const res = await fetch(`/api/lab-management/stations/${st.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+      if ('instructor' in patch) {
+        const ex = await (await fetch(`/api/lab-management/station-instructors?stationId=${st.id}`)).json();
+        const existing: string[] = ex.success ? ex.instructors.map((i: { user_email: string }) => i.user_email) : [];
+        for (const email of existing) {
+          if (email !== patch.instructor?.email) await fetch(`/api/lab-management/station-instructors?stationId=${st.id}&userEmail=${encodeURIComponent(email)}`, { method: 'DELETE' });
+        }
+        if (patch.instructor) {
+          await fetch('/api/lab-management/station-instructors', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ stationId: st.id, userEmail: patch.instructor.email, userName: patch.instructor.name, isPrimary: true }) });
+        }
+      }
+      setLabDays(prev => prev.map(d => ({ ...d, stations: d.stations.map(x => x.id !== st.id ? x : {
+        ...x,
+        ...('room' in patch ? { room: patch.room || null } : {}),
+        ...('instructor' in patch ? { instructor_name: patch.instructor?.name || null, instructor_email: patch.instructor?.email || null } : {}),
+      }) })));
+    } catch (err) {
+      setSaveError(`Could not save station ${st.station_number}: ${err instanceof Error ? err.message : 'unknown error'}`);
+    } finally { setSavingStation(null); }
   };
   const calEmails = useMemo(() => {
     const emails = new Set<string>();
@@ -422,7 +458,7 @@ function BoardContent() {
         <span className="font-mono text-xs text-gray-600 dark:text-gray-300 w-14 shrink-0">{fmt(L?.at ?? toMin(e.start_time))}</span>
         <span className="flex-1 min-w-[10rem] text-gray-800 dark:text-gray-100">{e.title}{L?.parked && <span className="ml-2 text-[10px] uppercase text-gray-400">parked</span>}</span>
         {runMode && (
-          <span className="flex items-center gap-2" onClick={ev => ev.stopPropagation()}>
+          <span className="flex items-center gap-2 print:hidden" onClick={ev => ev.stopPropagation()}>
             <span className="text-[11px] text-gray-400">{dur} min</span>
             {editable && (
               <label className="text-[11px] text-gray-500 flex items-center gap-1">Actual
@@ -470,18 +506,24 @@ function BoardContent() {
               <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Station {st.station_number}</span>
               <span className="text-[10px] lowercase px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300">{tag}</span>
             </div>
-            <div className="text-sm font-medium text-gray-900 dark:text-white leading-snug">{caseName}</div>
+            <div className="text-sm font-medium text-gray-900 dark:text-white leading-snug">{caseName}{st.scenario?.case_code && st.scenario.title && st.scenario.title !== st.scenario.case_code && <span className="block text-xs font-normal text-gray-500 dark:text-gray-400">{st.scenario.title}</span>}</div>
             <div className="text-[11px] text-gray-500 dark:text-gray-400">{[mins ? `${mins} min` : null, st.station_notes].filter(Boolean).join(' · ') || ' '}</div>
-            <button type="button" onClick={() => openEditor(d.id, st.id)} aria-label={`Room for station ${st.station_number}`}
-              className="text-left text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 px-2 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700">
-              <span className="truncate">{st.room || 'Room: —'}</span><ChevronDown className="w-3 h-3 text-gray-400 shrink-0" />
-            </button>
-            <button type="button" onClick={() => openEditor(d.id, st.id)} aria-label={`Instructor for station ${st.station_number}`}
-              className="text-left text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 px-2 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700">
-              <span className="truncate">{st.instructor_name || 'Instructor: —'}</span><ChevronDown className="w-3 h-3 text-gray-400 shrink-0" />
-            </button>
+            <select aria-label={`Room for station ${st.station_number}`} value={st.room || ''} disabled={savingStation === st.id}
+              onChange={ev => saveStationField(st, { room: ev.target.value || null })}
+              className="text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1">
+              <option value="">Room: —</option>
+              {st.room && !locations.some(l => l.name === st.room) && <option value={st.room}>{st.room}</option>}
+              {locations.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
+            </select>
+            <select aria-label={`Instructor for station ${st.station_number}`} value={fullInstructors.find(i => i.name === st.instructor_name)?.email || ''} disabled={savingStation === st.id}
+              onChange={ev => { const i = fullInstructors.find(x => x.email === ev.target.value); saveStationField(st, { instructor: i ? { name: i.name, email: i.email } : null }); }}
+              className="text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1">
+              <option value="">Instructor: —</option>
+              {st.instructor_name && !fullInstructors.some(i => i.name === st.instructor_name) && <option value="" disabled>{st.instructor_name}</option>}
+              {fullInstructors.map(i => <option key={i.id} value={i.email}>{i.name}</option>)}
+            </select>
             <Link href={href} className="self-end text-[11px] px-2 min-h-[28px] inline-flex items-center rounded border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20">
-              {learning ? 'Track' : 'Grade'}
+              Grade
             </Link>
           </div>
         );
@@ -501,7 +543,7 @@ function BoardContent() {
         return (
           <section key={date}>
             <div className="flex items-center justify-between mb-1.5">
-              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">Day {dayNo(date)} — {prettyDate(date)}</h3>
+              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">Day {dayNo(date)} — {prettyDate(date)}{events.find(e => e.date === date && containerIds.has(e.id)) && <span className="ml-2 font-normal text-gray-500 dark:text-gray-400">{events.find(e => e.date === date && containerIds.has(e.id))!.title}</span>}</h3>
               <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">ends {fmt(layout.ends[date] ?? 0)}</span>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
@@ -541,7 +583,7 @@ function BoardContent() {
                   <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{d.section_label || d.title || 'Lab'}</h4>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{d.num_rotations ?? d.stations.length} rotations</span>
                 </div>
-                <div onClick={ev => ev.stopPropagation()}>{renderStationTiles(d)}</div>
+                <div onClick={ev => ev.stopPropagation()} className="mt-2">{renderStationTiles(d)}</div>
               </div>
             ))}
           </section>
@@ -633,10 +675,6 @@ function BoardContent() {
               <p className="text-sm text-gray-500 dark:text-gray-400">{cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''}</p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="inline-flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
-                <button onClick={() => setRunMode(false)} className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm ${!runMode ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900' : ''}`}><Eye className="w-3.5 h-3.5" /> Plan</button>
-                <button onClick={() => setRunMode(true)} className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm ${runMode ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900' : ''}`}><Play className="w-3.5 h-3.5" /> Run</button>
-              </div>
               <button onClick={load} disabled={loading} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh</button>
               <button onClick={() => window.print()} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"><Printer className="w-3.5 h-3.5" /> Print</button>
             </div>

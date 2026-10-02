@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       const { data: stations } = await supabase
         .from('lab_stations')
         .select(`
-          id, lab_day_id, station_number, custom_title, room, instructor_name, instructor_id,
+          id, lab_day_id, station_number, custom_title, room, instructor_name, instructor_email, instructor_id,
           rotation_minutes, num_rotations, station_notes,
           scenario:scenarios(id, title, case_code, cert_tier)
         `)
