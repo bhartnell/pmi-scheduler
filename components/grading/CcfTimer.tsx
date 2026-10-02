@@ -18,15 +18,29 @@ export const PAUSE_LABELS = ['Intubation', 'Rhythm check', 'Defibrillation', 'Pu
 interface Props {
   onChange?: (record: CcfRecord | null) => void;
   pauseThresholdSeconds?: number;
+  /** Percent typed from a CPR device; kept distinct from timer-calculated and hand-edited values. */
+  devicePercent?: number | null;
+  onDevicePercent?: (percent: number | null) => void;
 }
 
-export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAUSE_THRESHOLD_SECONDS }: Props) {
+const MODE_KEY = 'ccfTimerMode';
+
+export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAUSE_THRESHOLD_SECONDS, devicePercent, onDevicePercent }: Props) {
   const [events, setEvents] = useState<CcfEvent[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [labels, setLabels] = useState<Record<number, string>>({});
   const [expanded, setExpanded] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   useEffect(() => { setSlot(document.getElementById(DOCK_PAGE_SLOT_ID)); }, []);
+  // Timer vs device entry; the choice is remembered per browser.
+  const [mode, setModeState] = useState<'timer' | 'device'>('timer');
+  useEffect(() => {
+    try { if (localStorage.getItem(MODE_KEY) === 'device') setModeState('device'); } catch { /* storage unavailable */ }
+  }, []);
+  const setMode = (m: 'timer' | 'device') => {
+    setModeState(m);
+    try { localStorage.setItem(MODE_KEY, m); } catch { /* storage unavailable */ }
+  };
 
   const live = events.length > 0 && summarize(events, now).active;
   useEffect(() => {
@@ -61,6 +75,23 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
             <span className="text-lg font-bold text-gray-900 dark:text-white">{s.fraction === null ? '--' : `${s.fraction}%`}</span>
           </div>
         </div>
+        <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="CCF entry mode">
+          {(['timer', 'device'] as const).map((m) => (
+            <button key={m} type="button" role="tab" aria-selected={mode === m} onClick={() => setMode(m)}
+              className={`min-h-[44px] rounded-lg text-sm font-semibold border ${mode === m ? 'bg-gray-900 text-white border-gray-900 dark:bg-white dark:text-gray-900' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}`}>
+              {m === 'timer' ? 'Timer' : 'Device %'}
+            </button>
+          ))}
+        </div>
+        {mode === 'device' && (
+          <label className="flex items-center gap-3 text-sm text-gray-900 dark:text-white">
+            CCF % from device
+            <input type="number" min={0} max={100} step="0.1" inputMode="decimal" value={devicePercent ?? ''}
+              onChange={(e) => onDevicePercent?.(e.target.value === '' ? null : Math.min(100, Math.max(0, Number(e.target.value))))}
+              className="min-h-[56px] w-32 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 text-xl font-bold" />
+          </label>
+        )}
+        {mode === 'timer' && (
         <div className="grid grid-cols-3 gap-3 max-sm:gap-2">
           <button type="button" disabled={s.active} onClick={() => press('pulseless')}
             className="min-h-[64px] rounded-lg bg-red-600 text-white text-lg font-bold disabled:opacity-40">
@@ -75,13 +106,14 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
             ROSC
           </button>
         </div>
-        {finished && (
+        )}
+        {mode === 'timer' && finished && (
           <button type="button" onClick={() => setExpanded((x) => !x)}
             className="min-h-[44px] w-full text-sm underline text-gray-600 dark:text-gray-300">
             {expanded ? 'Hide timeline' : 'Show timeline and pause tags'}
           </button>
         )}
-        {finished && expanded && (
+        {mode === 'timer' && finished && expanded && (
         <div className="space-y-3 max-h-[50vh] overflow-y-auto border-t border-gray-200 dark:border-gray-700 pt-2">
           {s.longestPause ? (
             <p className="text-gray-900 dark:text-white">
