@@ -213,7 +213,7 @@ export default function AhaHubPage() {
               icon={HeartPulse}
               cohorts={data.courses.acls}
               templateCount={data.templatesAvailable.acls}
-              viewHref="/labs/acls-hub"
+              viewHref="/labs/acls-hub/board"
               color="bg-sky-100 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400"
             />
             <CourseSection

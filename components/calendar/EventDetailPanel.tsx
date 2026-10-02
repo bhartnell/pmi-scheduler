@@ -418,7 +418,7 @@ export default function EventDetailPanel({ event, open, onClose }: EventDetailPa
               to this event's date instead of just the plain lab-day page. */}
           {labDayDetail?.cert_course === 'acls' && (
             <Link
-              href={`/labs/acls-hub?date=${encodeURIComponent(labDayDetail.date)}`}
+              href={`/labs/acls-hub/board?date=${encodeURIComponent(labDayDetail.date)}`}
               className="flex items-center justify-center gap-2 w-full px-4 py-2 text-sm font-medium text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-900/20 rounded-lg hover:bg-sky-100 dark:hover:bg-sky-900/30 transition-colors"
             >
               <ExternalLink className="h-4 w-4" />

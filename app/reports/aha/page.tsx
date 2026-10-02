@@ -204,7 +204,7 @@ export default function AhaExportPage() {
               ))}
             </ul>
             <div className="mt-4 flex flex-wrap gap-2 justify-end">
-              <Link href="/labs/acls-hub" className="px-4 py-2 min-h-[44px] inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 text-sm">Resolve on ACLS hub</Link>
+              <Link href="/labs/acls-hub/board" className="px-4 py-2 min-h-[44px] inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 text-sm">Resolve on ACLS hub</Link>
               <button type="button" onClick={() => { const a = pendingAction; setFlagged(null); setPendingAction(null); a?.(); }}
                 className="px-4 py-2 min-h-[44px] rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium">Export anyway</button>
               <button type="button" onClick={() => { setFlagged(null); setPendingAction(null); }}
