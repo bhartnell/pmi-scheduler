@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 2026-10-02
 
+pending | fix(acls-board/hub): absent on ANY visible day shows as absent (Both-days view hid single-day/partial marks)
+
 pending | fix(acls-board): progress panel groups run across top + roster full width; Actual-start edit is optimistic (no disabled-while-saving)
 this-commit | fix(acls-board): Here/Absent control works in default Both-days view (same fix as hub #197, board page was missed)
 pending | CCF timer: pin only the control strip (sticky in grading pane), debrief scrolls normally

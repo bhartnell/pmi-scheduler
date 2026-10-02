@@ -257,8 +257,8 @@ function AclsHubPageContent() {
   const absentIds = useMemo(() => {
     const days = visibleLabDays.filter(d => activeDate === 'all' || d.date === activeDate);
     if (!days.length) return new Set<string>();
-    const sets = days.map(d => new Set(absentByLabDay[d.id] || []));
-    return new Set([...sets[0]].filter(id => sets.every(st => st.has(id))));
+    // Absent on ANY visible lab day counts, so a partial save is never invisible.
+    return new Set(days.flatMap(d => absentByLabDay[d.id] || []));
   }, [visibleLabDays, activeDate, absentByLabDay]);
   const [absentError, setAbsentError] = useState<string | null>(null);
   const toggleAbsent = useCallback(async (studentId: string) => {
