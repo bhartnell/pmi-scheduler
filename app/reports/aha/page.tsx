@@ -43,6 +43,21 @@ export default function AhaExportPage() {
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  interface FlaggedAttempt { id: string; date: string | null; team_lead: string | null; scenario: string | null; overall_result: string; flags: string[]; segments_unmarked: number }
+  const [flagged, setFlagged] = useState<FlaggedAttempt[] | null>(null);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
+
+  // Resolve-at-export: list incomplete/contradictory megacode records first and
+  // offer proceed-anyway. Never blocks: a failed check just proceeds.
+  async function withRecordCheck(action: () => void) {
+    if (!cohortId) return toast.error('Pick a cohort');
+    try {
+      const d = await (await fetch(`/api/adv-cert/record-flags?cohortId=${cohortId}`)).json();
+      if (d.success && d.flagged?.length) { setFlagged(d.flagged); setPendingAction(() => action); return; }
+    } catch { /* proceed */ }
+    action();
+  }
+
   function open(print: boolean) {
     if (!cohortId) return toast.error('Pick a cohort');
     const p = new URLSearchParams({ template, cohortId });
@@ -119,11 +134,11 @@ export default function AhaExportPage() {
 
         <p className="mt-4 text-xs font-medium text-gray-500 dark:text-gray-400">View / print one form (single document):</p>
         <div className="mt-2 flex flex-wrap gap-2">
-          <button type="button" onClick={() => open(true)} disabled={!cohortId}
+          <button type="button" onClick={() => (template === 'megacode' ? withRecordCheck(() => open(true)) : open(true))} disabled={!cohortId}
             className="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-md text-sm font-medium">
             <ExternalLink className="w-4 h-4" /> Open &amp; Print
           </button>
-          <button type="button" onClick={() => open(false)} disabled={!cohortId}
+          <button type="button" onClick={() => (template === 'megacode' ? withRecordCheck(() => open(false)) : open(false))} disabled={!cohortId}
             className="inline-flex items-center gap-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 px-5 py-2.5 rounded-md text-sm font-medium">
             <FileText className="w-4 h-4" /> Open (no auto-print)
           </button>
@@ -155,7 +170,7 @@ export default function AhaExportPage() {
             : 'Files: one PDF per form type (all students).'}
         </p>
         <div className="mt-4">
-          <button type="button" onClick={downloadZip} disabled={!cohortId}
+          <button type="button" onClick={() => withRecordCheck(downloadZip)} disabled={!cohortId}
             className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-md text-sm font-medium">
             <Download className="w-4 h-4" /> Download ZIP
           </button>
@@ -167,6 +182,37 @@ export default function AhaExportPage() {
         <p><strong>Megacode:</strong> each student’s best scored attempt fills the form by rhythm section (Brady/VF/pVT/PEA/Asystole/Tachy/PCAC share the same criteria, so practice scenarios are valid testing cases per AHA). Named AHA variants show the scenario number; others are labeled by their rhythm chain. Students with no attempt (e.g. excused) are omitted.</p>
         <p><strong>Per-form instructor:</strong> pick the signing instructor per form export (re-select and re-open for a different signer) — keeps a recerting instructor’s signature off their own form.</p>
       </div>
+
+      {flagged && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full p-5 max-h-[80vh] overflow-y-auto">
+            <h2 className="text-base font-semibold text-gray-900 dark:text-white">
+              {flagged.length} megacode record{flagged.length === 1 ? '' : 's'} need attention
+            </h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Incomplete = result set but sections unmarked. Contradictory = overall pass with a failed section.
+              Resolve them on the ACLS hub, or export anyway.
+            </p>
+            <ul className="mt-3 divide-y divide-gray-200 dark:divide-gray-700 text-sm">
+              {flagged.map((f) => (
+                <li key={f.id} className="py-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                  <span className="font-medium text-gray-900 dark:text-white">{f.team_lead || 'Unknown lead'}</span>
+                  <span className="text-gray-500">{f.scenario || ''} {f.date || ''}</span>
+                  {f.flags.includes('incomplete') && <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800">Incomplete ({f.segments_unmarked} unmarked)</span>}
+                  {f.flags.includes('contradictory') && <span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-800">Contradictory</span>}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 flex flex-wrap gap-2 justify-end">
+              <Link href="/labs/acls-hub" className="px-4 py-2 min-h-[44px] inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 text-sm">Resolve on ACLS hub</Link>
+              <button type="button" onClick={() => { const a = pendingAction; setFlagged(null); setPendingAction(null); a?.(); }}
+                className="px-4 py-2 min-h-[44px] rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium">Export anyway</button>
+              <button type="button" onClick={() => { setFlagged(null); setPendingAction(null); }}
+                className="px-4 py-2 min-h-[44px] rounded-md border border-gray-300 dark:border-gray-600 text-sm">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

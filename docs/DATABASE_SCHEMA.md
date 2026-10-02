@@ -11726,6 +11726,7 @@ themselves on a repeat visit instead of re-registering.
 | scenario_segment_id | uuid | NO |  | FK -> adv_cert_scenario_segments.id |
 | result | text | YES |  |  |
 | comments | text | YES |  |  |
+| completion_source | text | YES |  | observed / bulk_confirmed / inferred_at_export; NULL = legacy or unmarked (added 2026-10-03) |
 
 **Foreign Keys:**
 - `attempt_id` -> `adv_cert_test_attempts.id` (adv_cert_segment_results_attempt_id_fkey)

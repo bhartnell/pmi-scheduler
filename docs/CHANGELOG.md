@@ -9,6 +9,9 @@ Format: `commit-hash | brief description`
 
 ---
 
+2026-10-03
+PENDING | feat(acls): non-blocking incomplete-record prompt at megacode save, adv_cert_segment_results.completion_source (additive, applied), resolve-at-export check on AHA export (/api/adv-cert/record-flags)
+
 2026-10-02
 PENDING | fix(acls-hub): narrowest block claims a section first (all-day container no longer steals stations); drop 'no instructor assigned' on BLS/Airway rows; scope Megacode lab-days tile to selected day
 

@@ -190,22 +190,38 @@ export default function AdvCertGradePage() {
     setMemberIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
-  async function handleSave() {
+  const [incompletePrompt, setIncompletePrompt] = useState<number | null>(null);
+
+  function handleSave() {
     if (!labDayId) return toast.error('Pick a testing day');
     if (!groupId) return toast.error('Pick a group');
     if (!scenarioId) return toast.error('Pick a scenario');
     if (!overall) return toast.error('Set the overall result (pass/fail)');
     if (!teamLeadId) return toast.error('Select the team lead');
 
-    const segment_results = (scenario?.segments || []).map((seg) => ({
+    // Non-blocking completeness prompt: every choice (and dismissing it) still
+    // lets the grader save, so a rotation is never held up.
+    const unmarked = (scenario?.segments || []).filter((seg) => !segResult[seg.id]).length;
+    if (unmarked > 0) { setIncompletePrompt(unmarked); return; }
+    void doSave('blank');
+  }
+
+  async function doSave(mode: 'bulk' | 'blank') {
+    setIncompletePrompt(null);
+    const segment_results = (scenario?.segments || []).map((seg) => {
+      const marked = segResult[seg.id] || null;
+      const bulk = mode === 'bulk' && !marked;
+      return {
       scenario_segment_id: seg.id,
-      result: segResult[seg.id] || null,
+      result: bulk ? ('pass' as const) : marked,
+      completion_source: bulk ? ('bulk_confirmed' as const) : marked ? ('observed' as const) : null,
       comments: segComments[seg.id] || null,
       criteria: (seg.segment?.criteria || []).map((c) => ({
         criterion_id: c.id,
         met: !!criteriaMet[`${seg.id}:${c.id}`],
       })),
-    }));
+      };
+    });
 
     const payload = {
       lab_day_id: labDayId,
@@ -515,6 +531,30 @@ export default function AdvCertGradePage() {
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save result
             </button>
+            {incompletePrompt !== null && (
+              <div className="mt-3 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm text-amber-900 dark:text-amber-200">
+                <p className="font-medium">
+                  Record incomplete: {incompletePrompt} section{incompletePrompt === 1 ? '' : 's'} unmarked.
+                  {overall === 'pass' ? ' Mark them all as passed?' : ''}
+                </p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {overall === 'pass' && (
+                    <button type="button" onClick={() => doSave('bulk')} disabled={saving}
+                      className="px-3 py-2 min-h-[44px] rounded-md bg-green-600 hover:bg-green-700 text-white text-sm font-medium">
+                      Mark remaining as passed &amp; save
+                    </button>
+                  )}
+                  <button type="button" onClick={() => doSave('blank')} disabled={saving}
+                    className="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium">
+                    Leave blank, save (I&apos;ll come back)
+                  </button>
+                  <button type="button" onClick={() => setIncompletePrompt(null)}
+                    className="px-3 py-2 min-h-[44px] rounded-md border border-gray-300 dark:border-gray-600 text-sm">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
           )}
         </div>
