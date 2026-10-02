@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+this-commit | fix(acls-board): Here/Absent control works in default Both-days view (same fix as hub #197, board page was missed)
 pending | CCF timer: pin only the control strip (sticky in grading pane), debrief scrolls normally
 (pending) | ACLS board Student progress: groups column sized to content beside roster, chips one line, roster gets remaining width; schedule/progress default full width
 (pending) | ACLS board Print now prints the selected day schedule handout (blocks + times + instructors + station plan) instead of a pointer sentence

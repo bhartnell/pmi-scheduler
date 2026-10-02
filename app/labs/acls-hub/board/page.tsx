@@ -321,8 +321,9 @@ function BoardContent() {
     return new Set([...sets[0]].filter(id => sets.every(st => st.has(id))));
   }, [visibleLabDays, activeDate, absentByLabDay]);
   const toggleAbsent = useCallback(async (studentId: string) => {
-    if (activeDate === 'all') return;
-    const days = visibleLabDays.filter(d => d.date === activeDate);
+    // "Both days" view marks/clears the student on every visible day; a single day only that day.
+    const days = visibleLabDays.filter(d => activeDate === 'all' || d.date === activeDate);
+    if (!days.length) return;
     const makeAbsent = !absentIds.has(studentId);
     setAbsentError(null);
     try {
@@ -633,9 +634,9 @@ function BoardContent() {
                     </td>
                     <td className="py-1 pr-2 text-xs text-gray-500">{g.name.replace(/^group\s*/i, '')}</td>
                     <td className="py-1 pr-2">
-                      <button type="button" onClick={() => toggleAbsent(m.id)} disabled={activeDate === 'all'}
-                        title={activeDate === 'all' ? 'Select Day 1 or Day 2 to change attendance' : absent ? 'Mark here' : 'Mark absent'}
-                        className={`text-xs px-2 min-h-[32px] rounded border disabled:opacity-40 ${absent ? 'border-gray-400 text-gray-500' : 'border-emerald-500 text-emerald-700 dark:text-emerald-300'}`}>
+                      <button type="button" onClick={() => toggleAbsent(m.id)}
+                        title={`${absent ? 'Mark here' : 'Mark absent'}${activeDate === 'all' ? ' (both days)' : ''}`}
+                        className={`text-xs px-2 min-h-[32px] rounded border ${absent ? 'border-gray-400 text-gray-500' : 'border-emerald-500 text-emerald-700 dark:text-emerald-300'}`}>
                         {absent ? 'Absent' : 'Here'}
                       </button>
                     </td>
