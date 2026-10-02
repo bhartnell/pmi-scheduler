@@ -204,24 +204,31 @@ function BoardContent() {
   }, [status]);
 
   // Persist one schedule-block field via the existing planner block PUT ('this' = this dated block only).
+  // Optimistic: apply locally first so the row moves immediately, then settle with the server.
+  // On failure only the fields this patch touched are rolled back.
   const saveBlock = useCallback(async (e: CalEvent, patch: Record<string, string | null>) => {
     if (!e.linked_id) return;
     setSavingBlock(e.id); setSaveError(null);
+    const applyFields = (src: Record<string, string | null>) => setEvents(prev => prev.map(x => {
+      if (x.id !== e.id) return x;
+      const next: CalEvent = { ...x, metadata: { ...x.metadata } };
+      if ('instructor_id' in src) next.metadata!.instructor_id = src.instructor_id || null;
+      if ('actual_start_time' in src) next.metadata!.actual_start_time = src.actual_start_time || null;
+      return next;
+    }));
+    const previous: Record<string, string | null> = {};
+    if ('instructor_id' in patch) previous.instructor_id = e.metadata?.instructor_id ?? null;
+    if ('actual_start_time' in patch) previous.actual_start_time = e.metadata?.actual_start_time ?? null;
+    applyFields(patch);
     try {
       const res = await fetch(`/api/scheduling/planner/blocks/${e.linked_id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...patch, update_mode: 'this' }),
       });
       if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
-      setEvents(prev => prev.map(x => {
-        if (x.id !== e.id) return x;
-        const next: CalEvent = { ...x, metadata: { ...x.metadata } };
-        if ('instructor_id' in patch) next.metadata!.instructor_id = patch.instructor_id || null;
-        if ('actual_start_time' in patch) next.metadata!.actual_start_time = patch.actual_start_time || null;
-        return next;
-      }));
     } catch (err) {
-      setSaveError(`Could not save "${e.title}": ${err instanceof Error ? err.message : 'unknown error'}`);
+      applyFields(previous);
+      setSaveError(`Could not save "${e.title}" (row put back): ${err instanceof Error ? err.message : 'unknown error'}`);
     } finally { setSavingBlock(null); }
   }, []);
 
@@ -455,7 +462,7 @@ function BoardContent() {
             <span className="text-[11px] text-gray-400">{dur} min</span>
             {editable && (
               <label className="text-[11px] text-gray-500 flex items-center gap-1">Actual
-                <input type="time" aria-label={`Actual start for ${e.title}`} key={`a-${id}-${actual}`} defaultValue={hhmm(actual)} disabled={busy}
+                <input type="time" aria-label={`Actual start for ${e.title}`} key={`a-${id}-${actual}`} defaultValue={hhmm(actual)}
                   onBlur={(ev) => { const v = ev.target.value; if (v !== hhmm(actual)) saveBlock(e, { actual_start_time: v ? `${v}:00` : null }); }}
                   className={`${inputCls} w-28 font-semibold`} />
               </label>
@@ -604,10 +611,10 @@ function BoardContent() {
   const renderProgress = () => {
     const rows = groups.flatMap(g => g.members.map(m => ({ m, g })));
     return (
-      <div className="grid grid-cols-[max-content_minmax(0,1fr)] max-xl:grid-cols-1 gap-4 items-start">
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-wrap gap-2 items-start">
           {groups.map(g => (
-            <div key={g.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2">
+            <div key={g.id} className="w-fit max-w-full overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2">
               <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">{g.name}</div>
               <div className="flex flex-nowrap gap-1 whitespace-nowrap">
                 {g.members.map(m => (
