@@ -10,6 +10,8 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+pending | fix(ccf-timer): render control strip in FloatingDock page slot (fixed overlay) instead of position:sticky; timeline/pause tags collapse behind a toggle
+
 
 pending | fix(grading): megacode sheet + learning-station tracker use full desktop width (drop max-w container; dual pane auto-fills, manual A-/A+ kept)
 
@@ -49,6 +51,7 @@ feat(acls-hub): ACLS UI 4/6 adjustable time section (planned start, duration, ac
 c827127 | feat(acls-hub): BLS/Airway become plain schedule rows (time + instructors); skills capture panel removed from hub (display-only; sections/stations/data untouched)
 ## 2026-10-02
 654b4c1 | fix(lab-day): Individual Testing Tracker no longer auto-collapses when checkoff detection loads late (latched default open state)
+(pending) | ccf-timer: Timer/Device % switch in dock panel (remembered), device percent typed without expanding, source=device kept distinct (extends #204)
 549fb1d | fix(lab-timer): timer GET no-store (drop max-age/SWR cache that let stale state overwrite fresh; grade-station jump regression)
 
 ## 2026-10-01
