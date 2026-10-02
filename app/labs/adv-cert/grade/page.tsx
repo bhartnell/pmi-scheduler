@@ -51,7 +51,8 @@ export default function AdvCertGradePage() {
   const [criteriaMet, setCriteriaMet] = useState<Record<string, boolean>>({});
   const [segResult, setSegResult] = useState<Record<string, 'pass' | 'fail' | ''>>({});
   const [segComments, setSegComments] = useState<Record<string, string>>({});
-  const [overall, setOverall] = useState<'pass' | 'fail' | ''>('');
+  // Manual pass/fail at the bottom is an OVERRIDE of the autoscore (empty = use the score).
+  const [overrideResult, setOverrideResult] = useState<'pass' | 'fail' | ''>('');
   const [overallComments, setOverallComments] = useState('');
 
   const [loadingScenario, setLoadingScenario] = useState(false);
@@ -180,7 +181,7 @@ export default function AdvCertGradePage() {
 
   function resetGrading() {
     setCriteriaMet({}); setSegResult({}); setSegComments({});
-    setOverall(''); setOverallComments('');
+    setOverrideResult(''); setOverallComments('');
   }
 
   const selectedGroup = useMemo(() => groups.find((g) => g.id === groupId), [groups, groupId]);
@@ -190,24 +191,33 @@ export default function AdvCertGradePage() {
     setMemberIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
 
-  const [incompletePrompt, setIncompletePrompt] = useState<number | null>(null);
+  // Autoscore: every section marked PASS = pass; a blank or FAIL section is a miss.
+  // Applies to grading from now on only - stored results are never recomputed.
+  const segCount = scenario?.segments?.length || 0;
+  const passedCount = (scenario?.segments || []).filter((seg) => segResult[seg.id] === 'pass').length;
+  const autoResult: 'pass' | 'fail' | '' = segCount === 0 ? '' : passedCount === segCount ? 'pass' : 'fail';
+  const overall: 'pass' | 'fail' | '' = overrideResult || autoResult;
+  const overridesScore = !!overrideResult && !!autoResult && overrideResult !== autoResult;
+
+  // ONE dialog for both the incomplete-record prompt and the override warning.
+  const [savePrompt, setSavePrompt] = useState<{ unmarked: number; override: boolean } | null>(null);
 
   function handleSave() {
     if (!labDayId) return toast.error('Pick a testing day');
     if (!groupId) return toast.error('Pick a group');
     if (!scenarioId) return toast.error('Pick a scenario');
-    if (!overall) return toast.error('Set the overall result (pass/fail)');
+    if (!overall) return toast.error('Mark the sections to score this case');
     if (!teamLeadId) return toast.error('Select the team lead');
 
-    // Non-blocking completeness prompt: every choice (and dismissing it) still
-    // lets the grader save, so a rotation is never held up.
+    // Non-blocking prompt: every choice (and dismissing it) still lets the
+    // grader save, so a rotation is never held up.
     const unmarked = (scenario?.segments || []).filter((seg) => !segResult[seg.id]).length;
-    if (unmarked > 0) { setIncompletePrompt(unmarked); return; }
+    if (unmarked > 0 || overridesScore) { setSavePrompt({ unmarked, override: overridesScore }); return; }
     void doSave('blank');
   }
 
   async function doSave(mode: 'bulk' | 'blank') {
-    setIncompletePrompt(null);
+    setSavePrompt(null);
     const segment_results = (scenario?.segments || []).map((seg) => {
       const marked = segResult[seg.id] || null;
       const bulk = mode === 'bulk' && !marked;
@@ -223,6 +233,10 @@ export default function AdvCertGradePage() {
       };
     });
 
+    // 'bulk' marks the unmarked sections passed, so re-score; an explicit override still wins.
+    const finalOverall = overrideResult || (mode === 'bulk'
+      ? ((scenario?.segments || []).every((seg) => segResult[seg.id] !== 'fail') ? 'pass' : 'fail')
+      : autoResult);
     const payload = {
       lab_day_id: labDayId,
       lab_station_id: stationId || null,
@@ -230,7 +244,7 @@ export default function AdvCertGradePage() {
       scenario_id: scenarioId,
       team_lead_id: teamLeadId,
       cert_course: course,
-      overall_result: overall,
+      overall_result: finalOverall,
       comments: overallComments || null,
       student_ids: Array.from(new Set([teamLeadId, ...memberIds])),
       segment_results,
@@ -247,7 +261,7 @@ export default function AdvCertGradePage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Saved — ${String(overall).toUpperCase()}${data.teamLeadLogWritten ? ' (team-lead logged)' : ''}`);
+        toast.success(`Saved — ${String(finalOverall).toUpperCase()}${data.teamLeadLogWritten ? ' (team-lead logged)' : ''}`);
         // Ready for the NEXT student at the SAME station: clear only the score
         // sheet + the per-student selection (team lead / members). KEEP the day,
         // group, station, and scenario context so the grader isn't bounced back
@@ -507,15 +521,20 @@ export default function AdvCertGradePage() {
           {/* Overall */}
           {(!scenario.grading_model || scenario.grading_model === 'adv_cert_checklist') && (
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Overall result</h3>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Overall result</h3>
+            <p className="text-sm mb-3 text-gray-600 dark:text-gray-300">
+              Auto-score: <span className={`font-semibold ${autoResult === 'pass' ? 'text-green-600' : 'text-red-600'}`}>{autoResult ? autoResult.toUpperCase() : '-'}</span>
+              {' '}({passedCount} of {segCount} sections marked pass; a blank counts as a miss).
+              {overrideResult ? ' Manual override is on - tap it again to go back to the score.' : ' Pass/Fail below overrides the score.'}
+            </p>
             <div className="flex gap-2 mb-3">
-              <button type="button" onClick={() => setOverall(overall === 'pass' ? '' : 'pass')}
+              <button type="button" onClick={() => setOverrideResult(overrideResult === 'pass' ? '' : 'pass')}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium border ${
                   overall === 'pass' ? 'bg-green-600 text-white border-green-600' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
                 }`}>
                 <CheckCircle2 className="w-4 h-4" /> Pass
               </button>
-              <button type="button" onClick={() => setOverall(overall === 'fail' ? '' : 'fail')}
+              <button type="button" onClick={() => setOverrideResult(overrideResult === 'fail' ? '' : 'fail')}
                 className={`flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium border ${
                   overall === 'fail' ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
                 }`}>
@@ -531,14 +550,20 @@ export default function AdvCertGradePage() {
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
               Save result
             </button>
-            {incompletePrompt !== null && (
+            {savePrompt !== null && (
               <div className="mt-3 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3 text-sm text-amber-900 dark:text-amber-200">
-                <p className="font-medium">
-                  Record incomplete: {incompletePrompt} section{incompletePrompt === 1 ? '' : 's'} unmarked.
-                  {overall === 'pass' ? ' Mark them all as passed?' : ''}
-                </p>
+                {savePrompt.unmarked > 0 && (
+                  <p className="font-medium">
+                    {savePrompt.unmarked} section{savePrompt.unmarked === 1 ? '' : 's'} unmarked (counted as a miss).
+                  </p>
+                )}
+                {savePrompt.override && (
+                  <p className="font-medium">
+                    The marked sheet scores {autoResult.toUpperCase()}, but you set {overrideResult.toUpperCase()}. Are you sure you want to override the score?
+                  </p>
+                )}
                 <div className="mt-2 flex flex-wrap gap-2">
-                  {overall === 'pass' && (
+                  {savePrompt.unmarked > 0 && overrideResult === 'pass' && (
                     <button type="button" onClick={() => doSave('bulk')} disabled={saving}
                       className="px-3 py-2 min-h-[44px] rounded-md bg-green-600 hover:bg-green-700 text-white text-sm font-medium">
                       Mark remaining as passed &amp; save
@@ -546,9 +571,9 @@ export default function AdvCertGradePage() {
                   )}
                   <button type="button" onClick={() => doSave('blank')} disabled={saving}
                     className="px-3 py-2 min-h-[44px] rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium">
-                    Leave blank, save (I&apos;ll come back)
+                    {savePrompt.override ? `Override and save as ${overall.toUpperCase()}` : `Save as ${overall.toUpperCase()} (I'll come back)`}
                   </button>
-                  <button type="button" onClick={() => setIncompletePrompt(null)}
+                  <button type="button" onClick={() => setSavePrompt(null)}
                     className="px-3 py-2 min-h-[44px] rounded-md border border-gray-300 dark:border-gray-600 text-sm">
                     Cancel
                   </button>
