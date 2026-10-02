@@ -18,15 +18,34 @@ export const PAUSE_LABELS = ['Intubation', 'Rhythm check', 'Defibrillation', 'Pu
 interface Props {
   onChange?: (record: CcfRecord | null) => void;
   pauseThresholdSeconds?: number;
+  /** Current CCF percent held by the page (any source); shown in device mode. */
+  percent?: number | null;
+  /** Percent typed in device mode (read off Laerdal Session Viewer); the page records source 'device'. */
+  onDevicePercent?: (percent: number | null) => void;
 }
 
-export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAUSE_THRESHOLD_SECONDS }: Props) {
+type Mode = 'timer' | 'device';
+const MODE_KEY = 'ccf-station-mode';
+
+export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAUSE_THRESHOLD_SECONDS, percent = null, onDevicePercent }: Props) {
   const [events, setEvents] = useState<CcfEvent[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [labels, setLabels] = useState<Record<number, string>>({});
   const [expanded, setExpanded] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   useEffect(() => { setSlot(document.getElementById(DOCK_PAGE_SLOT_ID)); }, []);
+
+  // Mixed mode: some stations read CCF off Laerdal Session Viewer, others use the timer.
+  // The choice is remembered per browser so it is not re-set every attempt. Switching never
+  // touches the running timer state, which lives in `events`.
+  const [mode, setModeState] = useState<Mode>('timer');
+  useEffect(() => {
+    try { if (localStorage.getItem(MODE_KEY) === 'device') setModeState('device'); } catch { /* storage unavailable */ }
+  }, []);
+  const setMode = (m: Mode) => {
+    setModeState(m);
+    try { localStorage.setItem(MODE_KEY, m); } catch { /* storage unavailable */ }
+  };
 
   const live = events.length > 0 && summarize(events, now).active;
   useEffect(() => {
@@ -52,7 +71,31 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
   const long = longPauses(s.intervals, pauseThresholdSeconds);
   const total = s.arrestSeconds || 1;
 
-  const dockPanel = (
+  const modeSwitch = (
+    <div role="group" aria-label="CCF source" className="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 dark:bg-gray-700 p-1 text-sm font-medium">
+      {(['timer', 'device'] as const).map((m) => (
+        <button key={m} type="button" aria-pressed={mode === m} onClick={() => setMode(m)}
+          className={`min-h-[44px] rounded-md ${mode === m ? 'bg-white dark:bg-gray-900 shadow text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>
+          {m === 'timer' ? 'Timer' : 'Device (Session Viewer)'}
+        </button>
+      ))}
+    </div>
+  );
+
+  const devicePanel = (
+    <div className="w-[20rem] max-w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 space-y-2 shadow-xl">
+      <label className="flex items-center justify-between gap-3 text-sm font-semibold text-gray-900 dark:text-white">
+        CCF % from Session Viewer
+        <input type="number" min={0} max={100} step="0.1" inputMode="decimal"
+          value={percent ?? ''}
+          onChange={(e) => onDevicePercent?.(e.target.value === '' ? null : Math.max(0, Math.min(100, Number(e.target.value))))}
+          className="min-h-[44px] w-24 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 text-lg font-bold" />
+      </label>
+      {modeSwitch}
+    </div>
+  );
+
+  const dockPanel = mode === 'device' ? devicePanel : (
       <div className="w-[28rem] max-w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 space-y-2 shadow-xl">
         <div className="flex items-baseline justify-between flex-wrap gap-2">
           <h3 className="font-semibold text-gray-900 dark:text-white">Chest compression fraction (calculated)</h3>
@@ -61,6 +104,7 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
             <span className="text-lg font-bold text-gray-900 dark:text-white">{s.fraction === null ? '--' : `${s.fraction}%`}</span>
           </div>
         </div>
+        {modeSwitch}
         <div className="grid grid-cols-3 gap-3 max-sm:gap-2">
           <button type="button" disabled={s.active} onClick={() => press('pulseless')}
             className="min-h-[64px] rounded-lg bg-red-600 text-white text-lg font-bold disabled:opacity-40">

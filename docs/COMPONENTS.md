@@ -199,7 +199,7 @@ auto-sync flow.
 - `components/lab-day/ScenarioPickerModal.tsx` — searchable scenario
   picker reused across station edit + checkoff flows.
 - `components/grading/DualPaneGrading.tsx` — shared side-by-side grading layout (scenario pane | scoring pane, each scrolls independently on >= lg; tab toggle below). Lifted from the OSCE scoring view. Has an A-/A+ sheet-size control (CSS zoom 70-150%, localStorage `pmi.gradingScale`). Used by `/labs/adv-cert/grade`; to be applied to standard/NREMT/PALS/OSCE.
-- `components/grading/CcfTimer.tsx` — chest-compression-fraction calculator (Pulseless / Pause-Resume / ROSC, multi-window, live %, post-ROSC debrief timeline with optional pause tags). Logic in `lib/ccf.ts`. NOT yet wired into `/labs/adv-cert/grade` or any save path (needs CCF storage + edit audit; see CCF wiring card). Score sheet gets the percentage only. (Last updated: 2026-10-02)
+- `components/grading/CcfTimer.tsx` — chest-compression-fraction control, pinned via the FloatingDock page slot (fixed overlay; replaces the non-functional `sticky`). Two remembered modes (localStorage `ccf-station-mode`): **Timer** (Pulseless / Pause-Resume / ROSC, live readout, timeline + pause tags) and **Device** (collapsed: just a CCF % field read off Laerdal Session Viewer, saved with source `device`, distinct from `entered`/`calculated`). Mode switch never disturbs a running timer. Logic in `lib/ccf.ts`; wired into `/labs/adv-cert/grade` (single consumer, shared ACLS/PALS). (Last updated: 2026-10-02)
 - `components/grading/ScenarioReferencePanel.tsx` — read-only scenario
   reference panel on the grading page (so the grader can see scenario
   details without leaving the page).
