@@ -56,8 +56,8 @@ const SPANS = [3, 4, 6, 8, 12];
 // Ben's own arrangement: stations below the schedule, student progress beside it.
 const DEFAULT_REGIONS: RegionCfg[] = [
   { id: 'overview', t: 'Overview', span: 12, on: true },
-  { id: 'schedule', t: 'Schedule', span: 7, on: true },
-  { id: 'progress', t: 'Student progress', span: 5, on: true },
+  { id: 'schedule', t: 'Schedule', span: 12, on: true },
+  { id: 'progress', t: 'Student progress', span: 12, on: true },
   { id: 'stations', t: 'Stations', span: 12, on: true },
 ];
 const SPAN_CLASS: Record<number, string> = {
@@ -603,12 +603,12 @@ function BoardContent() {
   const renderProgress = () => {
     const rows = groups.flatMap(g => g.members.map(m => ({ m, g })));
     return (
-      <div className="grid grid-cols-2 max-xl:grid-cols-1 gap-4">
-        <div className="grid grid-cols-2 gap-2 content-start">
+      <div className="grid grid-cols-[max-content_minmax(0,1fr)] max-xl:grid-cols-1 gap-4 items-start">
+        <div className="flex flex-col gap-2">
           {groups.map(g => (
             <div key={g.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2">
               <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">{g.name}</div>
-              <div className="flex flex-wrap gap-1">
+              <div className="flex flex-nowrap gap-1 whitespace-nowrap">
                 {g.members.map(m => (
                   <span key={m.id} className={`text-[11px] px-1.5 py-0.5 rounded-full ${absentIds.has(m.id) ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 line-through decoration-2 opacity-60' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'}`}>{m.last_name}</span>
                 ))}
@@ -616,9 +616,9 @@ function BoardContent() {
             </div>
           ))}
         </div>
-        <div>
+        <div className="min-w-0 overflow-x-auto">
           {absentError && <div role="alert" className="mb-2 text-xs text-red-700 dark:text-red-300">{absentError}</div>}
-          <table className="w-full text-sm">
+          <table className="w-full text-sm whitespace-nowrap">
             <thead><tr className="text-left text-[11px] uppercase text-gray-500 dark:text-gray-400">
               <th className="py-1 pr-2">Student</th><th className="py-1 pr-2">Grp</th><th className="py-1 pr-2">Attend</th><th className="py-1">Megacode result</th>
             </tr></thead>
