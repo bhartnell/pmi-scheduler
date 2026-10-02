@@ -315,7 +315,7 @@ function AclsHubPageContent() {
           <Clock className="w-4 h-4 text-gray-400" />
           <span className="font-medium">{d.section_label || d.title}</span>
           <span className="text-xs text-gray-400">{hhmm(d.start_time)}–{hhmm(d.end_time)}</span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">{names.length ? names.join(', ') : '— no instructor assigned —'}</span>
+          {names.length > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{names.join(', ')}</span>}
         </div>
       );
     }
@@ -515,7 +515,7 @@ function AclsHubPageContent() {
             <Region title="Overview — megacode TL stats" icon={<UserCheck className="w-4 h-4" />}>
             <section>
               <div className="grid grid-cols-3 max-lg:grid-cols-2 gap-3">
-                <StatTile label="Megacode lab days" value={megacodeLabDayIds.size} />
+                <StatTile label="Megacode lab days" value={visibleLabDays.filter(d => megacodeLabDayIds.has(d.id) && visibleDates.includes(d.date)).length} />
                 <StatTile label="Groups" value={stats.totalGroups} />
                 <StatTile label="Megacode attempts" value={stats.totalAttempts} />
                 <StatTile label="Passed" value={stats.passed} tone="text-green-600 dark:text-green-400" />
@@ -590,7 +590,12 @@ function AclsHubPageContent() {
               // section_number. Each section nests under at most one row.
               const claimed = new Set<string>();
               const sectionFor = new Map<string, LabDay>();
-              for (const e of dayEvents) {
+              // Narrowest block claims first: an all-day container (e.g. 'ACLS (Day 1
+              // of 2)') can carry the same section/lab-day link as the real lab block
+              // inside it and must not steal that section's stations.
+              const spanOf = (e: CalEvent) => (toMin(e.end_time) ?? 0) - (toMin(e.start_time) ?? 0);
+              const claimOrder = [...dayEvents].sort((a, b) => spanOf(a) - spanOf(b));
+              for (const e of claimOrder) {
                 if (e.event_type !== 'lab') continue;
                 const d = daySections.find(x => !claimed.has(x.id) && (
                   e.linked_lab_day_id ? x.id === e.linked_lab_day_id

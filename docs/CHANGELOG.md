@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+PENDING | fix(acls-hub): narrowest block claims a section first (all-day container no longer steals stations); drop 'no instructor assigned' on BLS/Airway rows; scope Megacode lab-days tile to selected day
 fe2245f | ACLS learning-station tracker (Pass/Watch, own table acls_learning_marks, /labs/adv-cert/learning-station); learning_station cases route to it from lab-day Grade + ACLS hub
 
 35172cf5 | feat(acls-hub): read-only INCOMPLETE / CONTRADICTORY record check badge + filter on megacode attempts (detection only, no schema, save path untouched)
