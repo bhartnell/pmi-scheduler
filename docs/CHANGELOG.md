@@ -20,6 +20,7 @@ c827127 | feat(acls-hub): BLS/Airway become plain schedule rows (time + instruct
 
 ## 2026-10-01
 
+- pending | ACLS UI 5/6: DualPaneGrading gets an A-/A+ sheet-size control (70-150%, remembered per browser, default 100%) so megacode scenario + scoring fit the screen. Additive, no data change.
 - pending | ACLS UI 3/6: reusable components/StatTile (site tile look, larger type) applied to ACLS hub megacode stats + not-yet-passed chips; legible at 75% zoom
 - (this commit) | ACLS UI 1/6: ACLS hub is now four viewport-sized regions (Overview / Schedule / Stations / Student progress), each scrolling inside itself, full width (no max-w cap); new shared components/layout/RegionShell.tsx (PALS to inherit). No data/schema change.
 - pending | ACLS hub: lab section station cards nest inside their linked schedule row (ACLS UI 2/6); unmatched sections still render below
