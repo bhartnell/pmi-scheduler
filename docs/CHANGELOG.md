@@ -10,6 +10,8 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+
+pending | fix(ccf-timer): docked panel gains remembered Timer / Device % switch; device percent typed without expanding, stored as source 'device'
 pending | fix(ccf-timer): render control strip in FloatingDock page slot (fixed overlay) instead of position:sticky; timeline/pause tags collapse behind a toggle
 
 

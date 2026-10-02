@@ -13,20 +13,35 @@ import {
   CcfEvent, CcfRecord, DEFAULT_PAUSE_THRESHOLD_SECONDS, fmtClock, longPauses, summarize, toRecord,
 } from '@/lib/ccf';
 
+const MODE_KEY = 'ccf-timer-mode';
+
 export const PAUSE_LABELS = ['Intubation', 'Rhythm check', 'Defibrillation', 'Pulse check', 'Vascular access', 'Other'] as const;
 
 interface Props {
   onChange?: (record: CcfRecord | null) => void;
+  /** Percent typed in device mode (a monitor/defib reading). Null clears it. Kept distinct from timer-calculated and hand-edited values. */
+  onDevicePercent?: (percent: number | null) => void;
+  /** Current percent held by the parent, shown in device mode so it stays visible while collapsed. */
+  devicePercent?: number | null;
   pauseThresholdSeconds?: number;
 }
 
-export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAUSE_THRESHOLD_SECONDS }: Props) {
+export default function CcfTimer({ onChange, onDevicePercent, devicePercent, pauseThresholdSeconds = DEFAULT_PAUSE_THRESHOLD_SECONDS }: Props) {
   const [events, setEvents] = useState<CcfEvent[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [labels, setLabels] = useState<Record<number, string>>({});
   const [expanded, setExpanded] = useState(false);
   const [slot, setSlot] = useState<HTMLElement | null>(null);
   useEffect(() => { setSlot(document.getElementById(DOCK_PAGE_SLOT_ID)); }, []);
+  // Timer vs device entry; the choice is remembered per browser (convenience only).
+  const [mode, setMode] = useState<'timer' | 'device'>('timer');
+  useEffect(() => {
+    try { if (localStorage.getItem(MODE_KEY) === 'device') setMode('device'); } catch { /* storage unavailable */ }
+  }, []);
+  const chooseMode = (m: 'timer' | 'device') => {
+    setMode(m);
+    try { localStorage.setItem(MODE_KEY, m); } catch { /* storage unavailable */ }
+  };
 
   const live = events.length > 0 && summarize(events, now).active;
   useEffect(() => {
@@ -54,6 +69,24 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
 
   const dockPanel = (
       <div className="w-[28rem] max-w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 space-y-2 shadow-xl">
+        <div role="group" aria-label="CCF entry mode" className="grid grid-cols-2 gap-1 rounded-lg bg-gray-100 dark:bg-gray-700 p-1">
+          {(['timer', 'device'] as const).map((m) => (
+            <button key={m} type="button" onClick={() => chooseMode(m)} aria-pressed={mode === m}
+              className={`min-h-[44px] rounded-md text-sm font-semibold ${mode === m ? 'bg-white dark:bg-gray-900 shadow text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-300'}`}>
+              {m === 'timer' ? 'Timer' : 'Device %'}
+            </button>
+          ))}
+        </div>
+        {mode === 'device' ? (
+          <label className="flex items-center justify-between gap-3 text-sm text-gray-900 dark:text-white">
+            <span className="font-semibold">CCF % from device</span>
+            <input type="number" min={0} max={100} step="0.1" inputMode="decimal"
+              value={devicePercent ?? ''}
+              onChange={(e) => onDevicePercent?.(e.target.value === '' ? null : Math.max(0, Math.min(100, Number(e.target.value))))}
+              className="min-h-[56px] w-28 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 text-2xl font-bold text-right" />
+          </label>
+        ) : (
+        <>
         <div className="flex items-baseline justify-between flex-wrap gap-2">
           <h3 className="font-semibold text-gray-900 dark:text-white">Chest compression fraction (calculated)</h3>
           <div className="text-sm text-gray-600 dark:text-gray-300">
@@ -75,13 +108,15 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
             ROSC
           </button>
         </div>
-        {finished && (
+        </>
+        )}
+        {mode === 'timer' && finished && (
           <button type="button" onClick={() => setExpanded((x) => !x)}
             className="min-h-[44px] w-full text-sm underline text-gray-600 dark:text-gray-300">
             {expanded ? 'Hide timeline' : 'Show timeline and pause tags'}
           </button>
         )}
-        {finished && expanded && (
+        {mode === 'timer' && finished && expanded && (
         <div className="space-y-3 max-h-[50vh] overflow-y-auto border-t border-gray-200 dark:border-gray-700 pt-2">
           {s.longestPause ? (
             <p className="text-gray-900 dark:text-white">
