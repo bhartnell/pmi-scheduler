@@ -19,6 +19,44 @@
 
 ### Major additions
 
+**`components/wiki/WikiArticleLink.tsx`** (2026-09-22) — Small reusable
+inline link from a feature page to its Help Wiki article (Task Handoff
+Queue "[WIKI v1] Build the in-app help wiki shell"). Embedded on
+`app/labs/schedule/[id]/page.tsx`, `app/admin/lab-templates/page.tsx`, and
+`app/academics/students/import/page.tsx`. The wiki itself lives at
+`/help/wiki` + `/help/wiki/[slug]`, backed by `lib/wiki.ts` (server-only,
+reads `content/wiki/*.md` via `gray-matter`/`marked`) and the client-safe
+`lib/wiki-constants.ts` / `lib/wiki-search.ts`. Content is markdown files
+in the repo — no CMS, no database table, reviewable in a normal PR. See
+`content/wiki/*.md` for the article template (What this is for / When
+you'd do this / Before you start / Steps / What good looks like / When it
+goes wrong / Related) and ship-with-empty-content warning: v1 intentionally
+ships with only 3 real articles rather than scaffolding placeholders.
+
+**`components/osce/StudentOsceResultsCard.tsx`** and
+**`components/osce/CohortOsceResultsCard.tsx`** (2026-09-14) — Surface OSCE
+assessment results (previously siloed inside the OSCE module) into the
+instructor-facing student/cohort views (Task Handoff Queue "Surface OSCE
+results in the instructor views"). `StudentOsceResultsCard` renders on
+`app/academics/students/[id]/page.tsx`'s Overview tab (top of the card
+stack — the OSCE is the clinical capstone); `CohortOsceResultsCard` renders
+on `app/academics/cohorts/[id]/page.tsx` as a per-student readiness rollup.
+Both are read-only and back onto the new `GET /api/osce/student-results` /
+`GET /api/osce/cohort-results` routes, which share grading math with the
+existing admin `/api/osce/results` via the new `lib/osce-results.ts`.
+**Important caveat:** `osce_assessments.student_name` /
+`osce_student_schedule.student_name` are free text with no FK to `students`
+(confirmed live — even the Fall 2026 event, built via direct SQL, used free
+text). Matching to a real student is done live/read-only at display time
+(`lib/osce-student-match.ts`, cohort-scoped to limit surname collisions) —
+deliberately **never written back to the database**, since an inferred name
+match is not a verified fact (Data Integrity Operating Rules). Exact
+full-name matches render normally; ambiguous surname-only matches (e.g. a
+shared surname within a cohort) still render, but flagged "Unconfirmed
+match" so the instructor viewing that student's own page can eyeball it.
+Whether to add a real `student_id` column and a verified-linking UI is an
+open decision handed back to Ben on the ticket rather than guessed at.
+
 **`components/students/WithdrawModal.tsx`** (2026-07-10) — Confirm-and-reason
 modal for withdrawing a student (`students.status = 'withdrawn'`), preserve-only
 and reversible via the existing Re-enroll flow. Mirrors `GraduationModal.tsx`'s
@@ -108,6 +146,9 @@ removed) — every instructor is always listed, with `availabilitySuffix`
 tagging conflicts/no-availability inline so the coordinator can still
 override, mirroring `AvailableInstructorsSection`'s sidebar language.
 
+### ACLS skills capture
+- `components/AclsSkillsPanel.tsx` — (UNUSED since 2026-10-02: removed from ACLS hub per Ben; left in place) pass/fail/remediated attestation per student for Airway Management, Adult BLS, Peds BLS; writes `pals_skill_completions` (cert_course='acls'). Used on `/labs/acls-hub`.
+
 ### Library / utilities
 
 **`lib/scenario-export.ts`** — Pure converters for Export JSON / Update
@@ -157,6 +198,7 @@ auto-sync flow.
   post-lab debrief workflow.
 - `components/lab-day/ScenarioPickerModal.tsx` — searchable scenario
   picker reused across station edit + checkoff flows.
+- `components/grading/DualPaneGrading.tsx` — shared side-by-side grading layout (scenario pane | scoring pane, each scrolls independently on >= lg; tab toggle below). Lifted from the OSCE scoring view. Has an A-/A+ sheet-size control (CSS zoom 70-150%, localStorage `pmi.gradingScale`). Used by `/labs/adv-cert/grade`; to be applied to standard/NREMT/PALS/OSCE.
 - `components/grading/ScenarioReferencePanel.tsx` — read-only scenario
   reference panel on the grading page (so the grader can see scenario
   details without leaving the page).
@@ -198,6 +240,8 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 
 
 ## Components
+
+- `components/StatTile.tsx` (2026-10-01): headline-number tile using the /labs hub card look (white rounded-xl, shadow-sm, optional icon square, 3xl number). Props: label, value, tone, icon, iconClass. Used on the ACLS hub.
 
 ### Layout & Page Structure
 
@@ -396,6 +440,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 |-----------|------|-------|-------------|
 | `NotificationBell` | `components/NotificationBell.tsx` | _(none)_ | Notification bell icon with unread count badge and dropdown list. |
 | `Toast` / `ToastProvider` | `components/Toast.tsx` | _(provider: `{ children }`)_ | Toast notification system. Exports `useToast` hook and `ToastProvider` context provider. |
+| `FloatingDock` | `components/FloatingDock.tsx` | `children` | Sole owner of the persistent bottom-right overlay corner (Quick Actions FAB, Role Preview, Feedback stack in flow). Add new persistent floating controls as children here, never with their own `fixed bottom-*/right-*`. |
 | `FeedbackButton` | `components/FeedbackButton.tsx` | _(none)_ | Floating feedback button with modal form for bugs, feature requests, and general feedback. |
 
 ### Onboarding
@@ -576,3 +621,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 - **Barrel exports**: Subdirectories use `index.ts` files for clean imports (e.g., `components/ui/index.ts`, `components/dashboard/widgets/index.ts`).
 - **Shared type files**: Feature-specific types are colocated in `types.ts` files within component subdirectories (e.g., `components/grading/types.ts`, `components/lab-day/types.ts`).
 - **Dark mode**: All components support dark mode via Tailwind `dark:` variants, toggled by `next-themes`.
+
+## Layout
+
+- `components/layout/RegionShell.tsx` — `RegionShell` / `RegionGrid` / `Region`: full-width, viewport-height multi-region page shell (2x2 on lg+, stacked below); each region scrolls internally. Used by `/labs/acls-hub`; PALS hub to adopt. (Last updated: 2026-10-01)

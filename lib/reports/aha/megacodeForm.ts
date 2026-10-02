@@ -12,8 +12,10 @@
  */
 import type { MegacodeReport, MegacodeReportRow, MegacodeAttempt } from '@/lib/reports/aha/megacode';
 import { chainToVariant } from '@/lib/reports/aha/megacode';
+import { signatureFaceStack } from '@/lib/reports/aha/signature';
+import { SIGNATURE_FONT_FACE_CSS } from '@/lib/reports/aha/signatureFont';
 
-export interface SignoffInstructor { name: string; ahaNumber: string | null; signatureData: string | null; signatureKind: string | null; }
+export interface SignoffInstructor { name: string; ahaNumber: string | null; signatureData: string | null; signatureKind: string | null; signatureText?: string | null; signatureFace?: string | null; }
 
 interface FormItem { text: string; dataIndex: number; fill?: string } // fill = numeric fill-in (default passing value), not a checkbox
 interface FormSection { key: string; heading: string; items: FormItem[]; isCprGrid?: boolean; }
@@ -186,7 +188,8 @@ function renderSignoff(row: MegacodeReportRow & { instructor?: SignoffInstructor
   const ins = row.instructor ?? null;
   let sig = `<u>${blank}</u>`;
   if (ins) {
-    if (ins.signatureData) sig = `<img class="sig" src="${ins.signatureData}" alt="signature" />`;
+    if (ins.signatureKind === 'typed' && ins.signatureText) sig = `<span class="sigscript" style="font-family:${signatureFaceStack(ins.signatureFace)}">${esc(ins.signatureText)}</span>`;
+    else if (ins.signatureData) sig = `<img class="sig" src="${ins.signatureData}" alt="signature" />`;
     else sig = `<span class="sigscript">${esc(ins.name)}</span>`;
   }
   const initials = ins ? esc(ins.name) : '<u>&nbsp;&nbsp;&nbsp;</u>';
@@ -196,6 +199,7 @@ function renderSignoff(row: MegacodeReportRow & { instructor?: SignoffInstructor
 }
 
 const STYLE = `
+  ${SIGNATURE_FONT_FACE_CSS}
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; padding: 0; }
   .toolbar { position: sticky; top: 0; background: #f3f4f6; border-bottom: 1px solid #ccc; padding: 8px 12px; }
@@ -223,7 +227,7 @@ const STYLE = `
   .pn.on { background: #dcfce7; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .signoff { font-size: 11px; margin-top: 10px; }
   .sig { height: 36px; vertical-align: middle; }
-  .sigscript { font-family: 'Brush Script MT', 'Segoe Script', cursive; font-size: 22px; padding: 0 8px; }
+  .sigscript { font-family: 'PMI Script', 'Brush Script MT', 'Segoe Script', cursive; font-size: 22px; padding: 0 8px; }
   .flag { font-size: 11px; color: #b45309; margin: 2px 0; }
   .srcnote { font-size: 10px; color: #666; font-style: italic; margin: 0 0 4px; }
   .na-foot { font-size: 10px; color: #777; margin-top: 6px; }

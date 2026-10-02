@@ -61,7 +61,7 @@ export async function GET(
     // Fetch existing attendance records for this lab day
     const { data: attendanceRecords, error: attendanceError } = await supabase
       .from('lab_day_attendance')
-      .select('student_id, status, notes, marked_by, marked_at')
+      .select('student_id, status, notes, marked_by, updated_at')
       .eq('lab_day_id', labDayId);
 
     if (attendanceError) {
@@ -90,7 +90,7 @@ export async function GET(
       status: string;
       notes: string | null;
       marked_by: string;
-      marked_at: string;
+      updated_at: string;
     }>();
     for (const record of attendanceRecords || []) {
       attendanceMap.set(record.student_id, record);
@@ -108,7 +108,7 @@ export async function GET(
         status: record?.status || null,
         notes: record?.notes || null,
         marked_by: record?.marked_by || null,
-        marked_at: record?.marked_at || null,
+        marked_at: record?.updated_at || null,
       };
     });
 
@@ -193,7 +193,6 @@ export async function PUT(
           status,
           notes: notes || null,
           marked_by: session.user.email,
-          marked_at: now,
           updated_at: now,
         },
         { onConflict: 'lab_day_id,student_id' }
@@ -271,7 +270,6 @@ export async function POST(
         status: r.status,
         notes: r.notes || null,
         marked_by: markedBy,
-        marked_at: now,
         updated_at: now,
       }));
 

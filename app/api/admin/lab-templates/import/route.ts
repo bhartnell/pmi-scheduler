@@ -2,6 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
+// Canonicalizes a scenario title for exact-match lookup: collapses
+// em/en-dash variants to a plain hyphen and normalizes whitespace.
+// This is NOT fuzzy matching — dash glyphs are typographically
+// interchangeable in these titles, so treating "—"/"–" as "-" still
+// only links a station when the underlying text is identical.
+// Without this, "Acute CVA — Suspected LVO" (em dash, common in
+// hand-authored template JSON) never matches "Acute CVA - Suspected
+// LVO" (hyphen, the scenarios table's convention), so exact
+// scenario_id resolution silently fails on nothing but punctuation.
+function normalizeScenarioTitle(title: string): string {
+  return title
+    .trim()
+    .toLowerCase()
+    .replace(/[‒–—―−]/g, '-')
+    .replace(/\s+/g, ' ');
+}
+
 // ---------------------------------------------------------------------------
 // Type definitions for import JSON.
 //
@@ -293,7 +310,7 @@ export async function POST(request: NextRequest) {
     {
       const { data: allScenarios } = await supabase.from('scenarios').select('id, title');
       for (const s of allScenarios || []) {
-        if (s.title) scenarioIdByTitle.set(s.title.trim().toLowerCase(), s.id);
+        if (s.title) scenarioIdByTitle.set(normalizeScenarioTitle(s.title), s.id);
       }
     }
 
@@ -392,7 +409,7 @@ export async function POST(request: NextRequest) {
             station_name: s.station_name || null,
             skills: s.skills && s.skills.length > 0 ? s.skills : null,
             scenario_id: s.scenario_title
-              ? scenarioIdByTitle.get(String(s.scenario_title).trim().toLowerCase()) || null
+              ? scenarioIdByTitle.get(normalizeScenarioTitle(String(s.scenario_title))) || null
               : null,
             scenario_title: s.scenario_title || null,
             difficulty: s.difficulty || null,

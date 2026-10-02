@@ -78,6 +78,8 @@ export async function PUT(
       max_observers_per_block,
       status,
       event_pin,
+      cohort_id,
+      minutes_per_student,
     } = body;
 
     // Build update object with only provided fields
@@ -93,6 +95,8 @@ export async function PUT(
     if (max_observers_per_block !== undefined) updates.max_observers_per_block = max_observers_per_block;
     if (status !== undefined) updates.status = status;
     if (event_pin !== undefined) updates.event_pin = event_pin?.trim() || null;
+    if (cohort_id !== undefined) updates.cohort_id = cohort_id || null;
+    if (minutes_per_student !== undefined) updates.minutes_per_student = minutes_per_student;
 
     const supabase = getSupabaseAdmin();
 

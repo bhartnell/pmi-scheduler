@@ -158,17 +158,27 @@ export async function saveAttempt(
 
   // 4. Per-segment results, then per-criterion results keyed off each result id.
   for (const seg of input.segment_results || []) {
-    const { data: segRow, error: segErr } = await supabase
+    const segInsert = {
+      attempt_id: attempt.id,
+      scenario_segment_id: seg.scenario_segment_id,
+      result: seg.result ?? null,
+      comments: seg.comments ?? null,
+    };
+    let { data: segRow, error: segErr } = await supabase
       .from('adv_cert_segment_results')
-      .insert({
-        attempt_id: attempt.id,
-        scenario_segment_id: seg.scenario_segment_id,
-        result: seg.result ?? null,
-        comments: seg.comments ?? null,
-      })
+      .insert({ ...segInsert, completion_source: seg.completion_source ?? null })
       .select('id')
       .single();
-    if (segErr) throw segErr;
+    // completion_source is additive: if the migration hasn't been applied yet
+    // (undefined column), save without it rather than failing grading.
+    if (segErr && /completion_source/i.test(segErr.message || '')) {
+      ({ data: segRow, error: segErr } = await supabase
+        .from('adv_cert_segment_results')
+        .insert(segInsert)
+        .select('id')
+        .single());
+    }
+    if (segErr || !segRow) throw segErr;
 
     if (seg.criteria?.length) {
       const { error: critErr } = await supabase.from('adv_cert_criterion_results').insert(

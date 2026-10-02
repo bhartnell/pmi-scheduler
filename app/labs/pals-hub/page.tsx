@@ -63,6 +63,18 @@ interface CalEvent {
 // schedule should only ever show what's actually happening on a PALS day.
 const isNotCancelled = (e: CalEvent) => e.status !== 'cancelled';
 
+// Sections are displayed in time order. section_number is an identifier
+// (referenced by pmi_schedule_blocks.linked_section_number), NOT a sort key.
+const bySectionTime = (
+  a: { start_time: string | null; section_number: number | null },
+  b: { start_time: string | null; section_number: number | null },
+) => {
+  if (a.start_time && b.start_time && a.start_time !== b.start_time) return a.start_time.localeCompare(b.start_time);
+  if (a.start_time && !b.start_time) return -1;
+  if (!a.start_time && b.start_time) return 1;
+  return (a.section_number ?? 1) - (b.section_number ?? 1);
+};
+
 const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : '');
 const prettyDate = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }); } catch { return d; } };
 
@@ -87,6 +99,8 @@ function PalsHubPageContent() {
   const searchParams = useSearchParams();
 
   const [cohort, setCohort] = useState<any>(null);
+  const [courseOptions, setCourseOptions] = useState<{ id: string; label: string; dates: string[] }[]>([]);
+  const cohortIdParam = searchParams.get('cohortId');
   const [dates, setDates] = useState<string[]>([]);
   const [labDays, setLabDays] = useState<LabDay[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -109,7 +123,7 @@ function PalsHubPageContent() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const hubRes = await fetch('/api/adv-cert/pals-hub');
+      const hubRes = await fetch(cohortIdParam ? `/api/adv-cert/pals-hub?cohortId=${encodeURIComponent(cohortIdParam)}` : '/api/adv-cert/pals-hub');
       const hub = await hubRes.json();
       if (hub.success) {
         setCohort(hub.cohort);
@@ -142,9 +156,27 @@ function PalsHubPageContent() {
         }
       }
     } catch { /* non-blocking */ } finally { setLoading(false); }
-  }, []);
+  }, [cohortIdParam]);
 
   useEffect(() => { if (status === 'authenticated') load(); }, [load, status]);
+
+  // Course picker: every cohort running this course (same source as the AHA Hub).
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/adv-cert/aha-hub')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.success) return;
+        setCourseOptions((d.courses?.pals || [])
+          .filter((c: any) => c.cohort?.id)
+          .map((c: any) => ({
+            id: c.cohort.id,
+            label: `${c.cohort.program?.abbreviation || ''} G${c.cohort.cohort_number ?? ''}`.trim(),
+            dates: c.dates || [],
+          })));
+      })
+      .catch(() => {});
+  }, [status]);
 
   // Instructor picker (Task Handoff Queue: "PALS HUB POLISH") — reference-only
   // display, pulled from the same lab_users list the rest of lab management
@@ -341,6 +373,25 @@ function PalsHubPageContent() {
               </button>
             </div>
           </div>
+          {/* Course selector — choose which cohort's PALS course to view */}
+          {courseOptions.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Course:</span>
+              {courseOptions.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/labs/pals-hub?cohortId=${c.id}`}
+                  className={`px-3 py-1.5 min-h-[36px] inline-flex items-center rounded-md text-sm border ${
+                    cohort?.id === c.id
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {c.label}{c.dates.length ? ` · ${c.dates[0]}` : ''}
+                </Link>
+              ))}
+            </div>
+          )}
           {/* Day selector */}
           {dates.length > 1 && (
             <div className="flex gap-1 mb-4">
@@ -367,7 +418,7 @@ function PalsHubPageContent() {
               <p className="text-sm mb-2">{dates.map(prettyDate).join('   ·   ')}</p>
               {dates.map((date, di) => {
                 const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-                const daySections = visibleLabDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
+                const daySections = visibleLabDays.filter(d => d.date === date).sort(bySectionTime);
                 return (
                   <div key={date} style={{ breakBefore: di > 0 ? 'page' : 'auto' }}>
                     <h2 className="text-base font-bold mt-3 mb-1">Day {di + 1} — {prettyDate(date)}</h2>
@@ -436,7 +487,7 @@ function PalsHubPageContent() {
                 <Stat label="NR" value={stats.nr} tone="text-red-600 dark:text-red-400" />
                 <Stat label="Practice attempts" value={stats.practiceAttemptsCount} />
               </div>
-              <p className="mt-1 text-[11px] text-gray-400">Testing (AHA rule): PASS 2 of 3, satisfiable as team lead OR a team member — this does not require 2 TL turns (that requirement is practice-only, see below).</p>
+              <p className="mt-1 text-[11px] text-gray-400">Testing (AHA rule): PASS 2 of 3, satisfiable as team lead or as a team member. It does not require 2 team-lead turns (that applies to practice only, see below).</p>
             </section>
 
             {/* PRACTICE TEAM-LEAD COVERAGE — AHA 2025 Module 6 Lesson 12: every
@@ -467,7 +518,7 @@ function PalsHubPageContent() {
                     </span>
                   ))}
                 </div>
-                <p className="mt-1 text-[11px] text-red-700 dark:text-red-300">With 12 practice cases and one TL turn each, a group over 6 students cannot mathematically give every member 2 TL turns — add practice cases or resize the group.</p>
+                <p className="mt-1 text-[11px] text-red-700 dark:text-red-300">With 12 practice cases and one TL turn each, a group over 6 students cannot give every member 2 team-lead turns. Add practice cases or resize the group.</p>
               </section>
             )}
 
@@ -484,7 +535,7 @@ function PalsHubPageContent() {
                     </span>
                   ))}
                 </div>
-                <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">AHA goal: every student leads a PRACTICE case at least twice by the end of the course (regardless of PASS/NR — this tracks the opportunity, not the outcome).</p>
+                <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">AHA goal: every student leads a PRACTICE case at least twice by the end of the course (regardless of PASS or NR; this tracks the opportunity, not the outcome).</p>
               </section>
             )}
 
@@ -534,7 +585,7 @@ function PalsHubPageContent() {
             {/* Per day: schedule + sections */}
             {visibleDates.map((date) => {
               const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-              const daySections = visibleLabDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
+              const daySections = visibleLabDays.filter(d => d.date === date).sort(bySectionTime);
               return (
                 <section key={date} style={{ breakInside: 'avoid' }}>
                   <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">

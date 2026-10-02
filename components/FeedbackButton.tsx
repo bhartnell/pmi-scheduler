@@ -179,8 +179,8 @@ export default function FeedbackButton() {
       {/* Floating Button */}
       <button
         onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 z-[60] flex items-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all hover:shadow-xl print:hidden ${
-          isGradingView ? 'left-4' : 'right-4'
+        className={`flex items-center gap-2 px-4 min-h-[44px] bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all hover:shadow-xl print:hidden ${
+          isGradingView ? 'fixed bottom-6 left-4 z-[60]' : ''
         }`}
         aria-label="Submit Feedback"
       >

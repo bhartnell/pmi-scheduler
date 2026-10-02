@@ -342,7 +342,9 @@ export default function StationCards({
                 </>
               )}
               <Link
-                href={isAdvCertMegacode
+                href={station.scenario?.cert_tier === 'learning_station'
+                  ? `/labs/adv-cert/learning-station?labDayId=${labDayId}&stationId=${station.id}`
+                  : isAdvCertMegacode
                   ? certCourse === 'pals'
                     ? `/labs/pals/grade?labDayId=${labDayId}&stationId=${station.id}`
                     : `/labs/adv-cert/grade?labDayId=${labDayId}&stationId=${station.id}`

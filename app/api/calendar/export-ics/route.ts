@@ -224,7 +224,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(errData, { status: unifiedRes.status });
     }
 
-    const { events } = (await unifiedRes.json()) as { events: UnifiedEvent[] };
+    const { events: allEvents } = (await unifiedRes.json()) as { events: UnifiedEvent[] };
+    // Cancelled blocks aren't happening — keep them out of the export.
+    const events = allEvents.filter((e) => e.status !== 'cancelled');
 
     // Build ICS
     const icsLines: string[] = [

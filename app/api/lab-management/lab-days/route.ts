@@ -328,6 +328,24 @@ export async function POST(request: NextRequest) {
       console.error('[lab-days POST] opt-in notify error', e);
     }
 
+    // On-change calendar autosync (2026-09-12): a brand-new lab day
+    // previously got NO calendar coverage until someone clicked the
+    // admin "Sync All" button — instructors' default-lab events simply
+    // didn't exist until then. Scoped to just this lab day (not a full
+    // reconcile) so it stays fast; awaited (not fire-and-forget — an
+    // unawaited promise here would get killed when the response
+    // returns, per the 2026-07-06 finding that cost station-assignment
+    // sync its first launch). Best-effort: a Google hiccup never fails
+    // the lab-day save itself. (PALS days are created via the separate
+    // AHA course generator, not this route — its own sync hook lives
+    // in lib/aha-course-generator.ts.)
+    try {
+      const { syncGeneralLabDefaults } = await import('@/lib/general-lab-sync');
+      await syncGeneralLabDefaults(supabase, { labDayId: labDay.id });
+    } catch (e) {
+      console.error('[lab-days POST] calendar autosync error', e);
+    }
+
     return NextResponse.json({ success: true, labDay });
   } catch (error) {
     console.error('Error creating lab day:', error);

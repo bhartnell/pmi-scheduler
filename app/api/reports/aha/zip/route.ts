@@ -49,8 +49,8 @@ export async function GET(request: NextRequest) {
     let instructor: SignoffInstructor | null = null;
     if (instructorId) {
       const { data } = await supabase.from('lab_users')
-        .select('name, aha_instructor_number, signature_data, signature_kind').eq('id', instructorId).single();
-      if (data) instructor = { name: data.name, ahaNumber: data.aha_instructor_number, signatureData: data.signature_data, signatureKind: data.signature_kind };
+        .select('name, aha_instructor_number, signature_data, signature_kind, signature_text, signature_face').eq('id', instructorId).single();
+      if (data) instructor = { name: data.name, ahaNumber: data.aha_instructor_number, signatureData: data.signature_data, signatureKind: data.signature_kind, signatureText: data.signature_text, signatureFace: data.signature_face };
     }
 
     const { data: cohort } = await supabase.from('cohorts').select('cohort_number').eq('id', cohortId).single();

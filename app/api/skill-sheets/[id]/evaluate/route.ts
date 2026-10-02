@@ -213,6 +213,18 @@ export async function POST(
 
     const resolvedResult = isInProgress ? (result || 'pass') : result;
 
+    // A critical-criteria failure can never be saved as a pass on a
+    // finalized evaluation. The client (SkillSheetPanel) already hard-blocks
+    // this on final submit; this mirrors that rule server-side so it can't
+    // be bypassed by a direct API call. Draft (in_progress) saves are exempt
+    // since the examiner may still be mid-evaluation.
+    if (!isInProgress && critical_fail === true && resolvedResult === 'pass') {
+      return NextResponse.json(
+        { success: false, error: 'A critical-failure evaluation cannot be saved as a pass' },
+        { status: 400 }
+      );
+    }
+
     // Auto-detect retake: if client says is_retake OR if a prior completed
     // fail exists for the same student + skill + lab_day, this is a retake.
     // This ensures retakes are tagged regardless of whether the submission
@@ -432,6 +444,15 @@ async function handleTeamEvaluation({
         : 'pending';
 
   const resolvedResult = isInProgress ? ((result as string) || 'pass') : result;
+
+  // Mirror the individual-path guard: a critical-criteria failure can never
+  // be saved as a pass on a finalized evaluation.
+  if (!isInProgress && critical_fail === true && resolvedResult === 'pass') {
+    return NextResponse.json(
+      { success: false, error: 'A critical-failure evaluation cannot be saved as a pass' },
+      { status: 400 }
+    );
+  }
 
   const evaluations: Array<Record<string, unknown>> = [];
 

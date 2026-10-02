@@ -88,6 +88,7 @@ export async function GET(request: NextRequest) {
           .select(`
             id, date, start_time, end_time, block_type, title, course_name, color,
             content_notes, status, linked_lab_day_id, linked_section_number,
+            instructor_id, additional_instructor_id, actual_start_time,
             room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(id, name),
             program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
               id, label,
@@ -118,6 +119,13 @@ export async function GET(request: NextRequest) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const ps = block.program_schedule as any;
             const cohort = ps?.cohort;
+            // PostgREST's embedded-resource .eq() above does not drop parent rows
+            // (no !inner), so other cohorts' blocks (e.g. the EMT Lecture on an ACLS
+            // day) leak through with a null embed. Enforce the cohort scope here.
+            // Display scope only: availability/conflict detection reads blocks
+            // via find-conflicts/find-slots, not this cohort-scoped feed.
+            if (cohortId && cohort?.id !== cohortId) continue;
+
             const progAbbr = cohort?.program?.abbreviation;
             const program = mapProgramAbbr(progAbbr);
 
@@ -178,6 +186,10 @@ export async function GET(request: NextRequest) {
               metadata: {
                 block_type: block.block_type,
                 program_label: ps?.label,
+                instructor_id: block.instructor_id ?? null,
+                additional_instructor_id: block.additional_instructor_id ?? null,
+                actual_start_time: (block.actual_start_time as string | null) ?? null,
+                linked_section_number: (block.linked_section_number as number | null) ?? null,
               },
             });
           }
@@ -355,7 +367,7 @@ export async function GET(request: NextRequest) {
         let query = supabase
           .from('clinical_site_visits')
           .select(`
-            id, visit_date, start_time, end_time, status, notes,
+            id, visit_date, visit_time, comments,
             site:clinical_sites(id, name, abbreviation),
             cohort:cohorts(id, cohort_number, program:programs(id, name, abbreviation)),
             visitor:lab_users(id, name)
@@ -392,8 +404,8 @@ export async function GET(request: NextRequest) {
               source: 'clinical',
               title: `Clinical: ${site?.name || site?.abbreviation || 'Site Visit'}`,
               date: v.visit_date,
-              start_time: v.start_time || '06:00:00',
-              end_time: v.end_time || '18:00:00',
+              start_time: v.visit_time || '06:00:00',
+              end_time: v.visit_time || '18:00:00',
               program,
               color: PROGRAM_COLORS.clinical,
               cohort_number: cohort?.cohort_number,
@@ -403,7 +415,7 @@ export async function GET(request: NextRequest) {
               event_type: 'clinical',
               metadata: {
                 site_name: site?.name,
-                status: v.status,
+                comments: v.comments,
               },
             });
           }

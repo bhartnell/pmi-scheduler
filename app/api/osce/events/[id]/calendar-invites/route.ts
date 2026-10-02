@@ -118,7 +118,7 @@ export async function POST(
         // Get observers for this block
         const { data: observerBlocks } = await supabase
           .from('osce_observer_blocks')
-          .select('observer_id, osce_observers(id, name, email)')
+          .select('observer_id, osce_observers(id, name, email, contact_email)')
           .eq('block_id', block.id);
 
         if (!observerBlocks || observerBlocks.length === 0) {
@@ -139,7 +139,7 @@ export async function POST(
         const attendees = filteredBlocks.map((ob) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const obs = ob.osce_observers as any;
-          return { email: obs.email, displayName: obs.name };
+          return { email: obs.contact_email || obs.email, displayName: obs.name };
         }).filter((a) => a.email);
 
         if (attendees.length === 0) {
@@ -226,7 +226,7 @@ export async function POST(
             const allObserverAttendees = observerBlocks.map((ob) => {
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const obs = ob.osce_observers as any;
-              return { email: obs.email, displayName: obs.name };
+              return { email: obs.contact_email || obs.email, displayName: obs.name };
             }).filter((a) => a.email);
 
             const patchRes = await fetch(
@@ -255,7 +255,7 @@ export async function POST(
           const allObserverAttendees = observerBlocks.map((ob) => {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const obs = ob.osce_observers as any;
-            return { email: obs.email, displayName: obs.name };
+            return { email: obs.contact_email || obs.email, displayName: obs.name };
           }).filter((a) => a.email);
 
           const createRes = await fetch(
@@ -319,6 +319,12 @@ export async function POST(
             status: 'sent',
             attendees_count: action === 'send_observer' ? filteredBlocks.length : observerBlocks.length,
           });
+        } else {
+          // Updating an existing calendar event failed (Google API error on the
+          // GET/PATCH/PUT above) — record it instead of silently dropping the
+          // block from the results the admin sees.
+          console.error(`[osce-cal] Failed to update existing calendar event for block ${block.id}`);
+          results.push({ block_id: block.id, label: block.label, status: 'error', error: 'Failed to update existing calendar event' });
         }
       } catch (blockError) {
         console.error(`[osce-cal] Error processing block ${block.id}:`, blockError);

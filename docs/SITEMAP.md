@@ -1,5 +1,23 @@
 # PMI EMS Scheduler — Site Map
-> Refreshed 2026-07-15 (PALS hub findability fix: home page's main-nav card and `/calendar` toolbar button repointed from `/labs/acls-hub` to `/labs/aha-hub` so PALS is reachable the same way ACLS always was; `/labs/acls-hub` gained a back-link to `/labs/aha-hub`).
+
+> **See also:** `BUG_LOG.md` (repo root) — generated snapshot of the 🐞 Bug
+> & Fix Log (Notion, Agent Ops Hub); query it (or Notion) for the relevant
+> Area before diagnosing a reported problem — see the Known-Issue Check
+> section of `CLAUDE.md`. Regenerate with `node scripts/export-bug-log.js`.
+
+> **See also:** 🗂️ Feature Register (Notion, Agent Ops Hub) — the
+> authoritative, evidence-based record of every feature's routes and exact
+> nav reachability (main nav / admin hub / drill-down / URL-only), with
+> Ben's keep/tuck-away/archive decisions. This file is a narrative
+> companion and can drift; the register is what cleanup decisions are
+> made from. `/admin/tools` (added 2026-09-19) is the guaranteed,
+> always-linked home for every feature the register marks "Tucked away."
+
+> Refreshed 2026-09-22 (Help Wiki v1: `/help/wiki` + `/help/wiki/[slug]` added — markdown-file-backed task how-tos, organized by "Running the program" / "Using the site", searchable across title+body, with role tags and a reusable `WikiArticleLink` embedded on `/labs/schedule/[id]`, `/admin/lab-templates`, and `/academics/students/import`. Entry point: new banner card on `/help`. Ships with 3 real articles verified against the live codebase (not click-tested — no OAuth-capable dev session in this environment); no CMS/DB in v1, content is `content/wiki/*.md`.)
+> Refreshed 2026-09-19 (`/admin/tools` — Admin Tools page added: guaranteed home for every "Tucked away" Feature Register entry, seeded with Instructor Onboarding, OSCE Admin, and the Report Generator; linked from `/admin/settings`. Root-caused why `/onboarding` was unreachable for admins/mentors: the only in-app link was the home-dashboard widget, gated on the viewer having their *own* active onboarding assignment — Ben is a mentor, not an instructor being onboarded, so it never showed for him. Fixed by giving `/onboarding` an unconditional entry point on the new page rather than changing the dashboard gate.)
+> Refreshed 2026-09-04 (CoAEMSP Clinical/Field Visit Log export: new "CoAEMSP Log" button on `/clinical/site-visits` (cohort filter required), backed by new `/api/clinical/site-visits/export-coaemsp` route — one accreditation-format .docx per cohort.)
+> Previously refreshed 2026-09-01 (OSCE invite+links stage: `/admin/osce-tokens` now linked from the Admin hub — was previously direct-URL-only; corrected the stale `/osce-evaluator-signup` redirect entry — it's a live page, not a redirect. See OSCE section below.)
+> Previously refreshed 2026-07-15 (PALS hub findability fix: home page's main-nav card and `/calendar` toolbar button repointed from `/labs/acls-hub` to `/labs/aha-hub` so PALS is reachable the same way ACLS always was; `/labs/acls-hub` gained a back-link to `/labs/aha-hub`).
 > Previously refreshed 2026-07-15 (PALS Hub Build Plan Phases 5-6: AHA 2025 reference agenda display + Section A/B/C/D/E certification template seed + skills/attestation station styling on `/labs/pals-hub`).
 > Previously refreshed 2026-07-14 (PALS Hub Build Plan: corrected practice TL threshold to ≥2 + oversized-group warning, station direct-links on both AHA hubs, calendar "Open Hub" deep-link with `?date=`).
 > Previously refreshed 2026-07-14 (`/labs/pals-hub` — PALS Hub, mirrors ACLS Hub — added).
@@ -136,10 +154,14 @@ Two doors — labeled to keep directors out of the student dead-end:
 | Path | Component | Role |
 |------|-----------|------|
 | `/` | `app/page.tsx` | any authenticated |
+| `/attendance` | quick, phone-first roll call over existing `checklists`/`checklist_attendance` (field trips / facility tours); entry point is the UserMenu dropdown, not a hub card, per Ben's no-clutter request | instructor+ (API-enforced) |
 | `/calendar` | unified calendar | instructor+ |
-| `/help` | help hub | any |
+| `/help` | help hub (FAQ, shortcuts, role guides) — now also cards out to the Help Wiki | any |
+| `/help/wiki` | Help Wiki index — task how-tos, searchable, grouped into "Running the program" / "Using the site" | any |
+| `/help/wiki/[slug]` | Individual wiki article | any |
 | `/notifications` | inbox | any |
-| `/onboarding` | post-signup onboarding | pending → student |
+| `/onboarding` | **Stale entry corrected 2026-09-19** — this is Instructor Onboarding (mentor/mentee template + task-progress tracking for new instructors), not a post-signup student flow. Reachable only via the home-dashboard widget, itself gated to the viewer's *own* active assignment — an admin/mentor with no assignment of their own has no in-app path in. Guaranteed entry point added at `/admin/tools`. | any authenticated (assignment/admin-gated) |
+| `/admin/tools` | Admin Tools — guaranteed, always-linked home for every Feature Register row Ben has marked "Tucked away" (seeded 2026-09-19 with Instructor Onboarding, OSCE Admin, Report Generator); grouped by Area, driven by `lib/tucked-away-features.ts` | admin+ |
 | `/request-access` | external access request | unauth |
 | `/resources` | resource hub | any |
 | `/resources/medications` | medication reference | any |
@@ -225,6 +247,7 @@ Canonical home for lab day operations. 40 pages.
 | `/labs` | Hub (formerly `/lab-management`) |
 | `/labs/aha-hub` | **AHA Hub** (instructor+, Phase 1 of the AHA HUB + ACLS REPEATABLE build, 2026-07-13) — top-level, read-only landing page listing every cohort's ACLS and PALS courses (day count, date range, testing-day count per cohort), plus an admin-only "Assign AHA Course to a Cohort" entry point that links to `/admin/aha-courses` (the AHA Course Generator). Purely additive — does not replace `/labs/acls-hub`, `/labs/pals-hub`, or `/labs/pals/grade`. Surfaces the `cert_course=NULL` template gap (flagged, not fixed here) if a course has zero `lab_day_templates`. Backed by `/api/adv-cert/aha-hub`. Linked from the Labs hub (AHA Hub tile), the home page's main nav grid ("AHA Hub" card, instructor+ — repointed here 2026-07-15 from a direct `/labs/acls-hub` shortcut so PALS is reachable the same way ACLS always was), and the `/calendar` toolbar's "AHA Hub" button. |
 | `/labs/acls-hub` | ACLS Hub — read-only aggregator for the full ACLS event (Day 1/Day 2 schedule, lab sections with direct station links, two-day/all-section coordinator stats, by-instructor, print). Supports `?date=YYYY-MM-DD` deep-link (pre-selects that day's tab — used by the calendar's per-event "Open ACLS Hub" button). Linked from `/labs/aha-hub`; links back to `/calendar` and out to `/labs/aha-hub` ("AHA Hub (ACLS + PALS)", added 2026-07-15 for parity with the PALS Hub's back-link). |
+| `/labs/acls-hub/board` | ACLS Board (instructor+, 2026-10-02) — Ben's sandbox layout built as a new route beside the current hub (rollback = current hub): 12-column board of Overview (fraction tiles scoped to Both days/Day 1/Day 2), Schedule (time engine, Plan/Run modes, Actual/delta, Park, drag-reorder, instructor dropdown on every planner row), Stations (4-across tiles, Grade/Track, room+instructor open EditStationModal) and Student progress (group cards + roster table, attendance is the only editable field). Linked from `/labs/acls-hub` ("Board view (new)"). |
 | `/labs/pals-hub` | **PALS Hub** (instructor+, 2026-07-14, PALS Hub Build Plan — `docs/pals/`; Phase 5-6 content population 2026-07-15) — read-only aggregator for the full PALS event, mirrors `/labs/acls-hub`'s shape: Day 1/Day 2 schedule, lab sections with direct station links (Ben-built via the UI, never auto-created here), **practice** team-lead coverage per student (AHA 2025 Module 6 Lesson 12: ≥2 TL turns required in practice, not testing; warns when a group exceeds 6 — zero slack at 6×12 practice cases), testing stats (PASS/NR, satisfied as TL or team member — separate from the practice TL count), by-instructor, print. Supports `?date=YYYY-MM-DD` deep-link. **Phase 5 additions:** a collapsible, read-only "AHA 2025 reference agenda" per day (`lib/pals-day-structure.ts`, transcribed from `docs/pals/PALS_2025_Day_Structure.md` §1-2 — NOT the live class schedule, which comes from `pmi_schedule_blocks`) including the verbatim Day-1 ~17:30 overflow warning; station cards for `station_type='skills'` (Section A learning stations) now render a non-clickable "Attestation" badge instead of linking into the PASS/NR grading flow. Links out to `/labs/pals/grade` for actual grading — doesn't replace it. Backed by `/api/adv-cert/pals-hub` (now also returns `station_type`). Linked from the Labs hub (PALS Hub tile), `/labs/aha-hub`, and the calendar's "Open PALS Hub" button on PALS-tagged lab-day events. |
 | `/labs/schedule` | Lab day list |
 | `/labs/schedule/[id]` | Lab day details — primary lab-day view |
@@ -237,6 +260,7 @@ Canonical home for lab day operations. 40 pages.
 | `/labs/schedule/new` | New lab day |
 | `/labs/grade/station/[id]` | Grading page — has **Export JSON**, **Update from JSON**, no-email-on-file warning toast. For `station_type='skill_drill'` early-returns a dedicated `SkillDrillStationView` (no rubric / Platinum / submit — just SkillDrillReference cards + an observations textarea persisted to localStorage). |
 | `/labs/adv-cert/grade` | **Advanced-Cert (ACLS/PALS) megacode grading** (instructor+). Pick course → testing day → group → team-lead + members → drawn scenario; renders the scenario's ordered segments + criteria checklist, per-segment pass/fail, instructor-set overall group pass/fail. Saves to `adv_cert_test_attempts` (+ attempt_students / segment_results / criterion_results) with a client-minted `client_uuid` for offline-readiness, and writes a `team_lead_log` row for the test team-lead. Backed by `/api/adv-cert/*`. Linked from the Labs hub (Megacode Grading tile). |
+| `/labs/adv-cert/learning-station` | **ACLS learning-station tracker** (instructor+). Unofficial/unscored: Pass or Watch per student per station + optional note; Watch shows on the ACLS hub for that lab day. Stored in `acls_learning_marks` only (never a certification table). Reached from the lab-day station Grade button and ACLS hub station tiles when the case is `cert_tier = learning_station`. |
 | `/labs/pals/grade` | **PALS testing checklist grading** (instructor+, Checkpoint C — 2026-07-13). Own structure, NOT the ACLS segment chain: testing day (`cert_course='pals'`) → group → team-lead (graded student) + members → PALS scenario (gated on `narrative_status='complete'`); renders the case's OCR'd AHA narrative card (`PalsCaseCard`) + its pathophysiology checklist's flat Critical Performance Steps with a three-state (checked/not_checked/na) toggle per step, verbatim scripted `instructor_prompt`, `is_critical` flagging. Result (PASS/NR) is computed client-side from the AHA rule (all in-scope steps checked) rather than instructor-picked. Supports `retest_of` linkage (open-NR picker) and shows the server-computed 30-day `remediation_due_at` clock. **Offline-hardened**: in-progress form auto-persists to `localStorage` (survives reload) and a failed save queues locally for auto-sync on reconnect (`lib/pals-offline.ts`) — the piece the ACLS station never built beyond the `client_uuid` dedup key. Saves to `pals_test_attempts` (+ attempt_students / criterion_results). Backed by `/api/pals/*`. Linked from the Labs hub (PALS Testing Grading tile) and from a PALS-tagged station's Grade button. |
 | `/labs/scenarios` | Scenario library (with checkbox multi-select + **Export Selected as JSON**) |
 | `/labs/scenarios/[id]` | Scenario editor (with **Export JSON** + **Update from JSON** buttons) |
@@ -279,7 +303,7 @@ Canonical home for lab day operations. 40 pages.
 | `/clinical/preceptors` | Preceptor directory |
 | `/clinical/ride-alongs` + `/availability` + `/shifts` | Ride-along scheduling |
 | `/clinical/rotation-scheduler` | Rotation scheduler |
-| `/clinical/site-visits`, `/clinical/site-visit-settings` | Site visit admin |
+| `/clinical/site-visits`, `/clinical/site-visit-settings` | Site visit admin. "CoAEMSP Log" button (cohort filter required) exports the official CoAEMSP Clinical/Field Visit Log as one .docx per cohort via `/api/clinical/site-visits/export-coaemsp`. |
 | `/clinical/summative-evaluations` + `/[id]/grade` | Summative evals |
 
 ## Reports
@@ -296,12 +320,13 @@ on 2026-05-23 (now linked from the hub's new "Cohort Progress" section).
 
 ## Scheduling
 
-15 pages.
+16 pages.
 
 | Path | Notes |
 |------|-------|
 | `/scheduling` | Hub |
 | `/scheduling/availability` + `/all` | Per-instructor + cohort availability |
+| `/scheduling/unavailability` | Self-edit day/week blocks + recurring (open-ended/date-bounded) unavailability rules — overrides the full-timer default-available rule in the staffing picker. Lead_instructor+ (matches the write gate on its CRUD routes). |
 | `/scheduling/planner` → redirects to `/academics/planner` |
 | `/scheduling/polls` + `/create` | Polls |
 | `/scheduling/reports` | Scheduling reports |
@@ -313,7 +338,7 @@ on 2026-05-23 (now linked from the hub's new "Cohort Progress" section).
 
 ## Student
 
-Student-facing portal. 11 pages.
+Student-facing portal. 12 pages.
 
 | Path | Notes |
 |------|-------|
@@ -326,6 +351,7 @@ Student-facing portal. 11 pages.
 | `/student/my-progress` | Progress dashboard |
 | `/student/peer-eval` | Peer eval workflow |
 | `/student/profile` | Profile |
+| `/student/skill-evaluations` | Skill evaluation results list (standard labs; NREMT/cert hard-excluded) — nav-linked "Skill Results" |
 | `/student/skill-evaluations/[id]` | Eval detail |
 | `/student/skill-sheets` | Skill sheets |
 
@@ -381,10 +407,13 @@ Case study system. 10 pages.
 | Path | Notes |
 |------|-------|
 | `/osce`, `/osce/[slug]` | Public OSCE landing |
-| `/osce-evaluator-signup` → `/osce/spring-2026` (redirect) |
+| `/osce-evaluator-signup` | Public self-serve observer registration form (picks time blocks, writes `osce_observers`). NOT a redirect — corrected 2026-09-01; previous entry here was stale. Still hardcoded to "Spring 2026" copy/dates in the JSX rather than reading the selected event, flagged separately as a Repeatability-Rule gap for a future pass. |
 | `/osce-scenario`, `/osce-scenario/[letter]` | Scenario library |
-| `/osce-scoring/{enter,dashboard,[assessmentId]}` | Scoring workflow |
-| `/admin/osce-events`, `/admin/osce-tokens`, `/admin/osce-observers`, `/admin/osce-results` | Admin |
+| `/osce-scoring/{enter,dashboard,[assessmentId]}` | Scoring workflow. `/osce-scoring/enter` accepts either the event PIN + name-select flow, or a `?token=` guest-token link (see `/admin/osce-tokens`) |
+| `/admin/osce-events` | Admin — create/manage OSCE events, observers, time blocks, results (per event) |
+| `/admin/osce-tokens` | Admin — generate per-evaluator guest-token links scoped to one event and email invites to external evaluators (chiefs/agency/clinical leadership). Now linked from the Admin hub (2026-09-01); previously reachable only by direct URL. |
+| `/admin/osce-observers` | Redirect stub → most recent event's `/admin/osce-events/[id]` (Observers tab) |
+| `/admin/osce-results` | Admin — evaluator scores/results across events |
 
 ## Settings, Auth, Misc
 

@@ -1,18 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { AHA_CREDENTIALS, SIGNATURE_FACES, LEGACY_SIGNATURE_FACES } from '@/lib/reports/aha/signature';
 
 /**
  * Current user's own AHA instructor credentials (for the AHA Results Export
  * signature line + per-form instructor selection). Self-service: reads/writes
  * only the authenticated user's lab_users row. Additive fields only.
  *
- * GET   → { name, aha_instructor_number, signature_data, signature_kind }
+ * GET   → { name, aha_instructor_number, signature_*, aha_credentials }
  * PATCH  Body: any of { aha_instructor_number, signature_data, signature_kind }
  *        signature_data must be an image data URL (drawn/uploaded) or null.
  */
 
-const SIG_KINDS = ['drawn', 'uploaded', 'auto'] as const;
+const SIG_KINDS = ['drawn', 'uploaded', 'auto', 'typed'] as const;
+const COLS = 'id, name, aha_instructor_number, signature_data, signature_kind, signature_text, signature_face, aha_credentials';
 const MAX_SIG_LEN = 600_000; // ~600KB data URL ceiling
 
 export async function GET() {
@@ -22,7 +24,7 @@ export async function GET() {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('lab_users')
-    .select('id, name, aha_instructor_number, signature_data, signature_kind')
+    .select(COLS)
     .eq('id', user.id)
     .single();
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -65,6 +67,27 @@ export async function PATCH(request: NextRequest) {
     }
     patch.signature_data = v ?? null;
   }
+  if ('signature_text' in body) {
+    const v = body.signature_text;
+    if (v !== null && (typeof v !== 'string' || v.length > 80)) {
+      return NextResponse.json({ success: false, error: 'signature_text must be a string up to 80 chars or null' }, { status: 400 });
+    }
+    patch.signature_text = typeof v === 'string' ? v.trim() || null : null;
+  }
+  if ('signature_face' in body) {
+    const v = body.signature_face;
+    if (v !== null && (typeof v !== 'string' || !(v in SIGNATURE_FACES || (LEGACY_SIGNATURE_FACES as readonly string[]).includes(v)))) {
+      return NextResponse.json({ success: false, error: `signature_face must be one of ${Object.keys(SIGNATURE_FACES).join(', ')} or null` }, { status: 400 });
+    }
+    patch.signature_face = v ?? null;
+  }
+  if ('aha_credentials' in body) {
+    const v = body.aha_credentials;
+    if (v !== null && (!Array.isArray(v) || v.some((x) => !(AHA_CREDENTIALS as readonly string[]).includes(x as string)))) {
+      return NextResponse.json({ success: false, error: `aha_credentials must be an array of ${AHA_CREDENTIALS.join(', ')}` }, { status: 400 });
+    }
+    patch.aha_credentials = v && (v as string[]).length ? v : null;
+  }
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ success: false, error: 'no editable fields in body' }, { status: 400 });
   }
@@ -74,7 +97,7 @@ export async function PATCH(request: NextRequest) {
     .from('lab_users')
     .update(patch)
     .eq('id', user.id)
-    .select('id, name, aha_instructor_number, signature_data, signature_kind')
+    .select(COLS)
     .single();
   if (error) return NextResponse.json({ success: false, error: error.message }, { status: 500 });
   return NextResponse.json({ success: true, profile: data });

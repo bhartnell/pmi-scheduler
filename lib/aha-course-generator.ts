@@ -32,6 +32,7 @@ export interface AhaTemplateStationPlan {
   scenario_title: string | null;
   notes: string | null;
   metadata: Record<string, unknown> | null;
+  skill_sheet_id: string | null;
 }
 
 export interface AhaTemplateDayPlan {
@@ -136,7 +137,7 @@ export async function configureExistingCohortDay(
     .from('lab_day_templates')
     .select(
       `id, name, cert_course, is_adv_cert_testing, lab_mode, section_label,
-       stations:lab_template_stations(id, sort_order, station_type, station_name, scenario_id, scenario_title, notes, metadata)`
+       stations:lab_template_stations(id, sort_order, station_type, station_name, scenario_id, scenario_title, notes, metadata, skill_sheet_id)`
     )
     .eq('id', templateId)
     .maybeSingle();
@@ -188,6 +189,7 @@ export async function configureExistingCohortDay(
         scenario_title: ts.scenario_title || null,
         notes: ts.notes || null,
         metadata: ts.metadata || null,
+        skill_sheet_id: ts.skill_sheet_id || null,
       });
       continue;
     }
@@ -238,6 +240,7 @@ export async function configureExistingCohortDay(
         custom_title: s.custom_title,
         station_notes: s.notes,
         metadata: s.metadata || {},
+        skill_sheet_id: s.skill_sheet_id,
       }))
     );
     if (error) errors.push(`Station create: ${error.message}`);
@@ -280,7 +283,7 @@ export async function generateAhaCourseForCohort(
     .from('lab_day_templates')
     .select(
       `id, name, day_number, section_number, section_label, is_adv_cert_testing, lab_mode,
-       stations:lab_template_stations(id, sort_order, station_type, station_name, scenario_id, scenario_title, notes, metadata)`
+       stations:lab_template_stations(id, sort_order, station_type, station_name, scenario_id, scenario_title, notes, metadata, skill_sheet_id)`
     )
     .eq('category', 'certification')
     .eq('cert_course', certCourse)
@@ -331,6 +334,7 @@ export async function generateAhaCourseForCohort(
         scenario_title: s.scenario_title || null,
         notes: s.notes || null,
         metadata: s.metadata || null,
+        skill_sheet_id: s.skill_sheet_id || null,
       }));
 
     const dayPlan: AhaTemplateDayPlan = {
@@ -395,12 +399,37 @@ export async function generateAhaCourseForCohort(
         custom_title: s.custom_title,
         station_notes: s.notes,
         metadata: s.metadata || {},
+        skill_sheet_id: s.skill_sheet_id,
       }));
       const { error: stationsError } = await supabase.from('lab_stations').insert(stationRows);
       if (stationsError) {
         errors.push(`${dayPlan.title} stations: ${stationsError.message}`);
       }
     }
+  }
+
+  // On-change calendar autosync (2026-09-12): AHA days previously got no
+  // calendar coverage until someone ran the admin "Sync All" — neither the
+  // general-lab-default event (ACLS days) nor the PALS scheduled day-block
+  // (PALS days) was ever wired to a save path. Scoped per created lab day
+  // (not a full reconcile) so generating a whole course's worth of days
+  // doesn't pay for re-scanning every upcoming lab day each time. Awaited +
+  // best-effort: a Google hiccup never fails the generation.
+  try {
+    const { syncGeneralLabDefaults } = await import('@/lib/general-lab-sync');
+    const { syncPalsDayEvents } = await import('@/lib/pals-all-day-sync');
+    for (const dayPlan of plan) {
+      if (!dayPlan.created_lab_day_id) continue;
+      // syncGeneralLabDefaults itself skips/removes general_lab for PALS
+      // days (see lib/general-lab-sync.ts isPalsOrArchived) — safe to call
+      // unconditionally for both ACLS and PALS days.
+      await syncGeneralLabDefaults(supabase, { labDayId: dayPlan.created_lab_day_id });
+      if (certCourse === 'pals') {
+        await syncPalsDayEvents(supabase, { labDayId: dayPlan.created_lab_day_id });
+      }
+    }
+  } catch (e) {
+    console.error('[aha-course-generator] calendar autosync error', e);
   }
 
   return {

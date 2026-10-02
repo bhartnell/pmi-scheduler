@@ -31,8 +31,11 @@ import {
   Star,
   User,
   Megaphone,
+  ShieldAlert,
 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { findMinimumPoints } from '@/lib/nremt-instructions';
+import { canEditScoreSheets } from '@/lib/permissions';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -113,6 +116,14 @@ interface ExistingEvaluation {
   attempt_number: number;
   created_at: string;
   evaluator: { id: string; name: string } | null;
+  critical_fail?: boolean | null;
+  critical_fail_notes?: string | null;
+  /** Director-correction audit fields — set only when a score sheet has been
+   *  corrected in place via PATCH. Never rendered on print/email output. */
+  edited_by?: string | null;
+  edited_at?: string | null;
+  edit_reason?: string | null;
+  edited_by_user?: { id: string; name: string } | null;
 }
 
 interface StudentInfo {
@@ -257,6 +268,47 @@ function effectivePossiblePoints(step: Step): number {
   return step.possible_points || 1;
 }
 
+/** Build the serializable step_marks payload from the panel's working state.
+ *  Shared by the normal save path (handleSave) and the director-correction
+ *  save path (handleDirectorSave) so both write the exact same shape. */
+function buildStepMarksPayload(
+  sheet: SkillSheet | null,
+  stepMarks: Record<number, StepMark>,
+  subItemMarks: Record<number, boolean[]>,
+  subItemNotes: Record<number, string>
+): Record<string, unknown> {
+  const isMultiPoint = sheet ? hasMultiPointScoring(sheet.steps) : false;
+  const stepMarksToSave: Record<string, unknown> = {};
+  if (isMultiPoint && sheet) {
+    for (const step of sheet.steps) {
+      const mark = stepMarks[step.step_number];
+      const subs = subItemMarks[step.step_number];
+      if (step.sub_items && step.sub_items.length > 0 && subs) {
+        const pts = subs.filter(Boolean).length;
+        const effPossible = effectivePossiblePoints(step);
+        const noteText = subItemNotes[step.step_number]?.trim() || undefined;
+        stepMarksToSave[String(step.step_number)] = {
+          completed: pts === effPossible,
+          sub_items: subs,
+          points: pts,
+          ...(noteText ? { sub_item_notes: noteText } : {}),
+        };
+      } else if (mark) {
+        const effPossible = effectivePossiblePoints(step);
+        stepMarksToSave[String(step.step_number)] = {
+          completed: mark === 'pass',
+          points: mark === 'pass' ? effPossible : 0,
+        };
+      }
+    }
+  } else {
+    for (const [key, val] of Object.entries(stepMarks)) {
+      if (val) stepMarksToSave[key] = val;
+    }
+  }
+  return stepMarksToSave;
+}
+
 /** Coerce any critical-failure shape to a display string. Some rows store
  *  strings; others may store { description, ... } or { step_number, status }
  *  objects. Returning a string prevents React render error #31. */
@@ -382,6 +434,12 @@ export default function SkillSheetPanel({
   isRetake = false,
   originalEvaluationId,
 }: SkillSheetPanelProps) {
+  // Director-level score-sheet editing gate. See lib/permissions.ts —
+  // canEditScoreSheets is a deliberate narrow email allowlist (not a role),
+  // so this stays hidden for every role tier that isn't on that list.
+  const { data: session } = useSession();
+  const canCorrectScoreSheets = canEditScoreSheets(session?.user?.email);
+
   const [sheet, setSheet] = useState<SkillSheet | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -470,11 +528,25 @@ export default function SkillSheetPanel({
   const [teamSearchQuery, setTeamSearchQuery] = useState('');
   const [teamCompletionResults, setTeamCompletionResults] = useState<TeamEvalResult[] | null>(null);
 
-  // NREMT threshold warning modal state
-  const [showThresholdWarning, setShowThresholdWarning] = useState(false);
+  // NREMT hard-block modal state. (The old "Score Below NREMT Minimum" /
+  // "Override — Mark as Pass" soft-warning modal + its pendingSaveRef were
+  // removed per Ben's ticket — a below-minimum Pass is no longer overridable
+  // from this panel. The critical-fail hard block below has no override and
+  // stays untouched.)
   const [showCriticalFailBlock, setShowCriticalFailBlock] = useState(false);
   const [showMissingExaminerNotesBlock, setShowMissingExaminerNotesBlock] = useState(false);
-  const pendingSaveRef = useRef<{ emailPref: EmailPreference; saveStatus: 'complete' | 'in_progress' } | null>(null);
+
+  // Director score-sheet correction state — in-place PATCH edit of an
+  // already-submitted evaluation, as opposed to the normal "Edit" flow
+  // (handleEditEval) which loads old marks but saves as a NEW attempt.
+  // Gated by canCorrectScoreSheets; see lib/permissions.ts.
+  const [directorEditMode, setDirectorEditMode] = useState(false);
+  const [directorEditEvalId, setDirectorEditEvalId] = useState<string | null>(null);
+  const [directorEditAttemptNumber, setDirectorEditAttemptNumber] = useState<number | null>(null);
+  const [directorCriticalFail, setDirectorCriticalFail] = useState(false);
+  const [directorCriticalFailNotes, setDirectorCriticalFailNotes] = useState('');
+  const [directorEditReason, setDirectorEditReason] = useState('');
+  const [savingDirectorEdit, setSavingDirectorEdit] = useState(false);
 
   // ─── Data Fetching ──────────────────────────────────────────────────────
 
@@ -649,7 +721,6 @@ export default function SkillSheetPanel({
     setResult('pass');
     setEvaluationTouched(false);
     setCollapsedPhases(new Set());
-    setShowThresholdWarning(false);
     setShowCriticalFailBlock(false);
   };
 
@@ -680,35 +751,7 @@ export default function SkillSheetPanel({
     // Build step_marks as a serializable object
     // New format for multi-point steps: { "1": { "completed": true, "sub_items": [true, false, true], "points": 2 } }
     // Old format for simple steps: { "1": "pass" }
-    const isMultiPoint = sheet ? hasMultiPointScoring(sheet.steps) : false;
-    const stepMarksToSave: Record<string, unknown> = {};
-    if (isMultiPoint && sheet) {
-      for (const step of sheet.steps) {
-        const mark = stepMarks[step.step_number];
-        const subs = subItemMarks[step.step_number];
-        if (step.sub_items && step.sub_items.length > 0 && subs) {
-          const pts = subs.filter(Boolean).length;
-          const effPossible = effectivePossiblePoints(step);
-          const noteText = subItemNotes[step.step_number]?.trim() || undefined;
-          stepMarksToSave[String(step.step_number)] = {
-            completed: pts === effPossible,
-            sub_items: subs,
-            points: pts,
-            ...(noteText ? { sub_item_notes: noteText } : {}),
-          };
-        } else if (mark) {
-          const effPossible = effectivePossiblePoints(step);
-          stepMarksToSave[String(step.step_number)] = {
-            completed: mark === 'pass',
-            points: mark === 'pass' ? effPossible : 0,
-          };
-        }
-      }
-    } else {
-      for (const [key, val] of Object.entries(stepMarks)) {
-        if (val) stepMarksToSave[key] = val;
-      }
-    }
+    const stepMarksToSave = buildStepMarksPayload(sheet, stepMarks, subItemMarks, subItemNotes);
 
     // Build step details with sequence numbers (formative mode)
     const stepDetails = mode === 'formative' && sheet ? sheet.steps.map(s => ({
@@ -963,6 +1006,84 @@ export default function SkillSheetPanel({
     setEvalViewMode('new');
   };
 
+  // ─── Director Score-Sheet Correction ───────────────────────────────────
+  // Distinct from handleEditEval above: this loads the same marks into the
+  // form (reusing handleEditEval) but SAVES IN PLACE via PATCH instead of
+  // creating a new attempt. Gated by canCorrectScoreSheets — see
+  // lib/permissions.ts (canEditScoreSheets, a narrow email allowlist).
+  const handleDirectorCorrect = (evalItem: ExistingEvaluation) => {
+    handleEditEval(evalItem);
+    setDirectorEditMode(true);
+    setDirectorEditEvalId(evalItem.id);
+    setDirectorEditAttemptNumber(evalItem.attempt_number || 1);
+    setDirectorCriticalFail(!!evalItem.critical_fail);
+    setDirectorCriticalFailNotes(evalItem.critical_fail_notes || '');
+    setDirectorEditReason('');
+  };
+
+  const handleCancelDirectorEdit = () => {
+    setDirectorEditMode(false);
+    setDirectorEditEvalId(null);
+    setDirectorEditAttemptNumber(null);
+    setDirectorCriticalFail(false);
+    setDirectorCriticalFailNotes('');
+    setDirectorEditReason('');
+    resetForm();
+    setEvalViewMode('existing');
+  };
+
+  const handleDirectorSave = async () => {
+    if (!directorEditEvalId) return;
+
+    if (!directorEditReason.trim()) {
+      showToast('A reason is required to correct a score sheet', 'error');
+      return;
+    }
+
+    // Same hard rule as normal grading: cannot save Pass with a critical
+    // failure recorded. Reuses the existing critical-fail block modal.
+    if (directorCriticalFail && result === 'pass') {
+      setShowCriticalFailBlock(true);
+      return;
+    }
+
+    const stepMarksToSave = buildStepMarksPayload(sheet, stepMarks, subItemMarks, subItemNotes);
+
+    setSavingDirectorEdit(true);
+    try {
+      const res = await fetch(`/api/skill-sheets/${sheetId}/evaluations`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          evaluation_id: directorEditEvalId,
+          step_marks: Object.keys(stepMarksToSave).length > 0 ? stepMarksToSave : null,
+          result,
+          critical_fail: directorCriticalFail,
+          critical_fail_notes: directorCriticalFail ? (directorCriticalFailNotes.trim() || null) : null,
+          edit_reason: directorEditReason.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.evaluation) {
+        showToast('Score sheet corrected', 'success');
+        setExistingEvals(prev => prev.map(e => (e.id === directorEditEvalId ? { ...e, ...data.evaluation } : e)));
+        setDirectorEditMode(false);
+        setDirectorEditEvalId(null);
+        setDirectorEditAttemptNumber(null);
+        setDirectorCriticalFail(false);
+        setDirectorCriticalFailNotes('');
+        setDirectorEditReason('');
+        resetForm();
+        setEvalViewMode('existing');
+      } else {
+        showToast(data.error || 'Failed to correct score sheet', 'error');
+      }
+    } catch {
+      showToast('Failed to correct score sheet', 'error');
+    }
+    setSavingDirectorEdit(false);
+  };
+
   const handleNewAttempt = () => {
     resetForm();
     // On NREMT day, "new attempt" must stay in final/NREMT mode — it
@@ -1166,30 +1287,15 @@ export default function SkillSheetPanel({
         return;
       }
 
-      // Warn: below minimum + pass
-      if (sheet && result === 'pass') {
-        const minPts = findMinimumPoints(sheet.skill_name);
-        if (minPts !== null) {
-          const earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
-          if (earned < minPts) {
-            pendingSaveRef.current = { emailPref, saveStatus };
-            setShowThresholdWarning(true);
-            return;
-          }
-        }
-      }
+      // NOTE: the old "Score Below NREMT Minimum" soft-warning + "Override —
+      // Mark as Pass" modal that lived here has been removed per Ben's
+      // ticket. A below-minimum score can still be marked Pass by the
+      // examiner directly (Result buttons), but there is no longer a
+      // separate override modal in the way — the below-minimum banner
+      // shown next to the Result buttons still communicates the shortfall.
     }
 
     doSave(emailPref, saveStatus);
-  };
-
-  // Confirm override from threshold warning modal
-  const confirmThresholdOverride = () => {
-    setShowThresholdWarning(false);
-    if (pendingSaveRef.current) {
-      doSave(pendingSaveRef.current.emailPref, pendingSaveRef.current.saveStatus);
-      pendingSaveRef.current = null;
-    }
   };
 
   // Can save? For individual mode: needs studentId. For team mode: needs 2+ members.
@@ -1649,49 +1755,12 @@ export default function SkillSheetPanel({
     </>
   );
 
-  // ─── NREMT Threshold Warning Modals ─────────────────────────────────────
+  // ─── NREMT Hard-Block Modals ─────────────────────────────────────────────
+  // (The "Score Below NREMT Minimum" soft-warning modal with the "Override —
+  // Mark as Pass" button was removed per Ben's ticket. The critical-fail
+  // hard block below has no override and is untouched.)
   const nremtThresholdModals = (
     <>
-      {/* Threshold warning — below minimum but examiner wants to pass */}
-      {showThresholdWarning && sheet && (() => {
-        const earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
-        const total = getTotalPossiblePoints(sheet.steps);
-        const minPts = findMinimumPoints(sheet.skill_name);
-        return (
-          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">
-              <div className="flex items-start gap-3">
-                <AlertTriangle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Score Below NREMT Minimum</h3>
-                  <div className="mt-2 space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                    <p>This student scored <strong>{earned}/{total}</strong> points.</p>
-                    <p>The NREMT minimum is <strong>{minPts}</strong> points.</p>
-                  </div>
-                  <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">
-                    Are you sure you want to mark this as Pass?
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3 justify-end">
-                <button
-                  onClick={() => { setShowThresholdWarning(false); pendingSaveRef.current = null; }}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmThresholdOverride}
-                  className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700"
-                >
-                  Override — Mark as Pass
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
-
       {/* Critical fail block — cannot pass with critical failure */}
       {showCriticalFailBlock && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
@@ -1979,6 +2048,8 @@ export default function SkillSheetPanel({
                   sendingResultsId={sendingResultsId}
                   sentResultsIds={sentResultsIds}
                   sendErrorId={sendErrorId}
+                  canCorrect={canCorrectScoreSheets}
+                  onDirectorCorrect={handleDirectorCorrect}
                 />
               )}
 
@@ -2179,8 +2250,104 @@ export default function SkillSheetPanel({
                 </div>
               )}
 
+              {/* Director Correction Panel — replaces the normal save actions
+                  when a director is correcting an already-submitted score
+                  sheet in place (PATCH to /evaluations, NOT a new attempt
+                  via POST /evaluate). Gated by canCorrectScoreSheets. */}
+              {directorEditMode && (
+                <div className="bg-amber-50 dark:bg-amber-900/10 rounded-lg border-2 border-amber-300 dark:border-amber-700 p-3 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                        Correcting Attempt {directorEditAttemptNumber || 1} — Director Correction
+                      </h3>
+                      <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                        This saves in place and overwrites the existing score sheet. It does not create a new attempt.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Result</label>
+                    <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+                      {([
+                        { key: 'pass' as const, label: 'Pass', color: 'bg-green-600' },
+                        { key: 'fail' as const, label: 'Fail', color: 'bg-red-600' },
+                        { key: 'remediation' as const, label: 'Remediation', color: 'bg-amber-600' },
+                      ]).map(({ key, label, color }) => (
+                        <button
+                          key={key}
+                          onClick={() => setResult(key)}
+                          className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                            result === key ? `${color} text-white` : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          } ${key !== 'pass' ? 'border-l border-gray-300 dark:border-gray-600' : ''}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="director-critical-fail"
+                      type="checkbox"
+                      checked={directorCriticalFail}
+                      onChange={e => setDirectorCriticalFail(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500"
+                    />
+                    <label htmlFor="director-critical-fail" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      Critical Fail
+                    </label>
+                  </div>
+                  {directorCriticalFail && (
+                    <textarea
+                      value={directorCriticalFailNotes}
+                      onChange={e => setDirectorCriticalFailNotes(e.target.value)}
+                      placeholder="Critical fail notes..."
+                      rows={2}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    />
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Reason for correction <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={directorEditReason}
+                      onChange={e => setDirectorEditReason(e.target.value)}
+                      placeholder="Why is this score sheet being corrected?"
+                      rows={2}
+                      className={`w-full border rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                        !directorEditReason.trim() ? 'border-amber-300 dark:border-amber-600' : 'border-gray-300 dark:border-gray-600'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleDirectorSave}
+                      disabled={savingDirectorEdit || !directorEditReason.trim()}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                    >
+                      {savingDirectorEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
+                      Save Correction
+                    </button>
+                    <button
+                      onClick={handleCancelDirectorEdit}
+                      disabled={savingDirectorEdit}
+                      className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Formative action area */}
-              {mode === 'formative' && (
+              {mode === 'formative' && !directorEditMode && (
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Quick Notes</h3>
                   <textarea
@@ -2250,7 +2417,7 @@ export default function SkillSheetPanel({
               )}
 
               {/* Final competency action area */}
-              {mode === 'final' && (
+              {mode === 'final' && !directorEditMode && (
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3 lg:p-4">
                   <div>
                     <label className={`block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1 ${isNremtTesting ? 'lg:text-sm lg:mb-2' : ''}`}>Result</label>
@@ -2536,6 +2703,8 @@ export default function SkillSheetPanel({
                   sendingResultsId={sendingResultsId}
                   sentResultsIds={sentResultsIds}
                   sendErrorId={sendErrorId}
+                  canCorrect={canCorrectScoreSheets}
+                  onDirectorCorrect={handleDirectorCorrect}
                 />
               )}
 
@@ -2736,8 +2905,104 @@ export default function SkillSheetPanel({
                 </div>
               )}
 
+              {/* Director Correction Panel — replaces the normal save actions
+                  when a director is correcting an already-submitted score
+                  sheet in place (PATCH to /evaluations, NOT a new attempt
+                  via POST /evaluate). Gated by canCorrectScoreSheets. */}
+              {directorEditMode && (
+                <div className="bg-amber-50 dark:bg-amber-900/10 rounded-lg border-2 border-amber-300 dark:border-amber-700 p-3 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
+                        Correcting Attempt {directorEditAttemptNumber || 1} — Director Correction
+                      </h3>
+                      <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
+                        This saves in place and overwrites the existing score sheet. It does not create a new attempt.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">Result</label>
+                    <div className="inline-flex rounded-lg border border-gray-300 dark:border-gray-600 overflow-hidden">
+                      {([
+                        { key: 'pass' as const, label: 'Pass', color: 'bg-green-600' },
+                        { key: 'fail' as const, label: 'Fail', color: 'bg-red-600' },
+                        { key: 'remediation' as const, label: 'Remediation', color: 'bg-amber-600' },
+                      ]).map(({ key, label, color }) => (
+                        <button
+                          key={key}
+                          onClick={() => setResult(key)}
+                          className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                            result === key ? `${color} text-white` : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                          } ${key !== 'pass' ? 'border-l border-gray-300 dark:border-gray-600' : ''}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="director-critical-fail"
+                      type="checkbox"
+                      checked={directorCriticalFail}
+                      onChange={e => setDirectorCriticalFail(e.target.checked)}
+                      className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-red-600 focus:ring-red-500"
+                    />
+                    <label htmlFor="director-critical-fail" className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      Critical Fail
+                    </label>
+                  </div>
+                  {directorCriticalFail && (
+                    <textarea
+                      value={directorCriticalFailNotes}
+                      onChange={e => setDirectorCriticalFailNotes(e.target.value)}
+                      placeholder="Critical fail notes..."
+                      rows={2}
+                      className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    />
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                      Reason for correction <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      value={directorEditReason}
+                      onChange={e => setDirectorEditReason(e.target.value)}
+                      placeholder="Why is this score sheet being corrected?"
+                      rows={2}
+                      className={`w-full border rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none focus:ring-2 focus:ring-amber-500 focus:border-amber-500 ${
+                        !directorEditReason.trim() ? 'border-amber-300 dark:border-amber-600' : 'border-gray-300 dark:border-gray-600'
+                      }`}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleDirectorSave}
+                      disabled={savingDirectorEdit || !directorEditReason.trim()}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                    >
+                      {savingDirectorEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <ShieldAlert className="w-4 h-4" />}
+                      Save Correction
+                    </button>
+                    <button
+                      onClick={handleCancelDirectorEdit}
+                      disabled={savingDirectorEdit}
+                      className="px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Formative action area */}
-              {mode === 'formative' && (
+              {mode === 'formative' && !directorEditMode && (
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Quick Notes</h3>
                   <textarea
@@ -2807,7 +3072,7 @@ export default function SkillSheetPanel({
               )}
 
               {/* Final competency action area */}
-              {mode === 'final' && (
+              {mode === 'final' && !directorEditMode && (
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-3">
                   {/* Result */}
                   <div>
@@ -3302,6 +3567,8 @@ function ExistingEvalSummary({
   sendingResultsId,
   sentResultsIds,
   sendErrorId,
+  canCorrect = false,
+  onDirectorCorrect,
 }: {
   evaluations: ExistingEvaluation[];
   expandedId: string | null;
@@ -3318,6 +3585,11 @@ function ExistingEvalSummary({
   sendingResultsId: string | null;
   sentResultsIds: Set<string>;
   sendErrorId: string | null;
+  /** Director-only: shows a separate "Correct Score Sheet" action that saves
+   *  in place via PATCH instead of creating a new attempt. See
+   *  canEditScoreSheets in lib/permissions.ts. */
+  canCorrect?: boolean;
+  onDirectorCorrect?: (evalItem: ExistingEvaluation) => void;
 }) {
   const completedEvals = evaluations.filter(e => e.status === 'complete');
   const totalSteps = sheet.steps.length;
@@ -3416,6 +3688,17 @@ function ExistingEvalSummary({
                   Email: {ev.email_status === 'do_not_send' ? 'Do not send' : ev.email_status}
                 </span>
               )}
+              {/* Director-correction audit note — admin/director view ONLY.
+                  Never rendered on print/email output (those templates don't
+                  select edited_by/edited_at/edit_reason). */}
+              {ev.edited_by && ev.edited_at && (
+                <p className="mt-1 text-[9px] italic text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                  <ShieldAlert className="w-2.5 h-2.5 flex-shrink-0" />
+                  Corrected by {ev.edited_by_user?.name || 'a director'} on{' '}
+                  {new Date(ev.edited_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {ev.edit_reason ? ` — ${ev.edit_reason}` : ''}
+                </p>
+              )}
             </div>
 
             {/* Action buttons */}
@@ -3465,6 +3748,19 @@ function ExistingEvalSummary({
                       Delete
                     </span>
                   </button>
+                  {/* Director-only: corrects this evaluation IN PLACE via PATCH
+                      (distinct from "Edit" above, which saves as a new attempt). */}
+                  {canCorrect && onDirectorCorrect && (
+                    <button
+                      onClick={() => onDirectorCorrect(ev)}
+                      className="px-2 py-1 border border-amber-300 dark:border-amber-600 rounded text-[10px] font-medium text-amber-700 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20"
+                    >
+                      <span className="flex items-center gap-1">
+                        <ShieldAlert className="w-3 h-3" />
+                        Correct Score Sheet
+                      </span>
+                    </button>
+                  )}
                   {/* Send Results button — shown when email not yet sent */}
                   {labDayId && ev.email_status && ev.email_status !== 'sent' && ev.email_status !== 'do_not_send' && !sentResultsIds.has(ev.id) && (
                     <button

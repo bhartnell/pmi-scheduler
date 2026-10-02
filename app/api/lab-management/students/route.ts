@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import type { VolunteerTokenResult } from '@/lib/api-auth';
+import { createEnrollmentForNewStudent } from '@/lib/student-enrollment';
 
 export async function GET(request: NextRequest) {
   const auth = await requireAuthOrVolunteerToken(request, 'instructor');
@@ -137,6 +138,13 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) throw error;
+
+    if (body.cohort_id) {
+      await createEnrollmentForNewStudent(supabase, {
+        studentId: data.id,
+        cohortId: body.cohort_id,
+      });
+    }
 
     return NextResponse.json({ success: true, student: data });
   } catch (error) {

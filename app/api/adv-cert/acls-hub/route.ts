@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
         .select(`
           id, lab_day_id, station_number, custom_title, room, instructor_name, instructor_id,
           rotation_minutes, num_rotations, station_notes,
-          scenario:scenarios(id, title, case_code)
+          scenario:scenarios(id, title, case_code, cert_tier)
         `)
         .in('lab_day_id', labDayIds)
         .order('station_number', { ascending: true });
@@ -134,11 +134,24 @@ export async function GET(request: NextRequest) {
           id, lab_day_id, lab_group_id, overall_result, comments, started_at,
           team_lead:students!adv_cert_test_attempts_team_lead_id_fkey(id, first_name, last_name),
           scenario:scenarios!adv_cert_test_attempts_scenario_id_fkey(id, name:title, case_code),
-          students:adv_cert_attempt_students(student_id)
+          students:adv_cert_attempt_students(student_id),
+          segment_results:adv_cert_segment_results(result)
         `)
         .in('lab_day_id', labDayIds)
         .order('started_at', { ascending: false });
-      attempts = att || [];
+      // Record-completeness flag: computed read-only from existing rows
+      // (nothing written). INCOMPLETE = overall set but a segment unmarked;
+      // CONTRADICTORY = overall pass with a failed segment.
+      attempts = (att || []).map((a: any) => {
+        const segs: { result: string | null }[] = a.segment_results || [];
+        const { segment_results: _drop, ...rest } = a;
+        const unmarked = segs.filter((s) => s.result == null).length;
+        const failedSegs = segs.filter((s) => s.result === 'fail').length;
+        const record_flags: string[] = [];
+        if (a.overall_result && unmarked > 0) record_flags.push('incomplete');
+        if (a.overall_result === 'pass' && failedSegs > 0) record_flags.push('contradictory');
+        return { ...rest, record_flags, segments_unmarked: unmarked, segments_total: segs.length };
+      });
     }
 
     const cohort = (labDays[0] as any)?.cohort ?? null;

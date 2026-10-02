@@ -43,6 +43,9 @@ import { isRtOnlyInstructor } from '@/lib/rt-only-instructors';
  * Sources checked, in order:
  *   1. instructor_availability (explicit submissions, must cover
  *      slot fully — start_time <= slot.start AND end_time >= slot.end)
+ *   1b. instructor_unavailability / recurring_unavailability_templates
+ *      (explicit unavailability blocks — the override that beats the
+ *      full-timer "available by default" rule; see below)
  *   2. pmi_block_instructors → pmi_schedule_blocks (class teaching)
  *   3. lab_stations on the same date (other lab_day = conflict;
  *      same lab_day = same_day_stations badge, not a conflict)
@@ -79,7 +82,7 @@ export async function GET(request: NextRequest) {
     // instructors and shouldn't appear on this list (records kept for ACLS).
     const { data: rawInstructors } = await supabase
       .from('lab_users')
-      .select('id, name, email, is_part_time')
+      .select('id, name, email, is_part_time, paramedic_lab_default')
       .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin'])
       .eq('is_active', true)
       .order('name');
@@ -93,6 +96,7 @@ export async function GET(request: NextRequest) {
     const instructorMap = new Map<string, {
       id: string; name: string; email: string;
       is_part_time: boolean;
+      paramedic_lab_default: boolean;
       available: boolean;
       group: Group;
       has_explicit_availability: boolean;
@@ -108,6 +112,7 @@ export async function GET(request: NextRequest) {
         name: instr.name,
         email: instr.email,
         is_part_time: !!instr.is_part_time,
+        paramedic_lab_default: instr.paramedic_lab_default !== false,
         available: true,
         group: 'no_availability',         // upgraded below as evidence comes in
         has_explicit_availability: false,
@@ -147,6 +152,77 @@ export async function GET(request: NextRequest) {
     const timesOverlap = (aStart: string, aEnd: string, bStart: string, bEnd: string): boolean => {
       return aStart < bEnd && aEnd > bStart;
     };
+
+    // 1b. Explicit unavailability — the override that BEATS the
+    // full-timer "available by default" rule (0a only adds positive
+    // signal; full-timers don't submit availability rows at all, so
+    // there was previously no way to mark one unavailable — deleting
+    // instructor_availability rows does nothing, since full-timers
+    // never depended on them). Two sources, both additive/dormant
+    // until something writes to them (Task Handoff Queue, Josh
+    // Lomonaco + [AVAILABILITY SYSTEM], Ben GO 2026-08-07):
+    //   - instructor_unavailability: specific date/range blocks.
+    //   - recurring_unavailability_templates: weekly/biweekly patterns.
+    //     Open-ended ones (end_date IS NULL) are read directly here
+    //     rather than relying on expansion, since there's no bound to
+    //     expand to (see /api/scheduling/recurring-unavailability).
+    try {
+      const { data: unavailBlocks } = await supabase
+        .from('instructor_unavailability')
+        .select('instructor_id, start_date, end_date, start_time, end_time, is_all_day, reason')
+        .lte('start_date', date)
+        .gte('end_date', date);
+      for (const block of unavailBlocks ?? []) {
+        const entry = instructorMap.get(block.instructor_id);
+        if (!entry) continue;
+        if (!block.is_all_day && block.start_time && block.end_time
+          && !timesOverlap(block.start_time, block.end_time, startTime, endTime)) {
+          continue;
+        }
+        entry.available = false;
+        entry.conflicts.push({
+          source: 'unavailable',
+          title: block.reason || 'Marked unavailable',
+          start_time: block.is_all_day ? startTime : (block.start_time || startTime),
+          end_time: block.is_all_day ? endTime : (block.end_time || endTime),
+        });
+      }
+    } catch {
+      // instructor_unavailability table absent — skip silently.
+    }
+
+    try {
+      const { data: recurringUnavail } = await supabase
+        .from('recurring_unavailability_templates')
+        .select('instructor_id, weekdays, start_date, end_date, start_time, end_time, is_all_day, frequency, reason')
+        .eq('is_active', true)
+        .lte('start_date', date)
+        .or(`end_date.is.null,end_date.gte.${date}`);
+      for (const tpl of recurringUnavail ?? []) {
+        const entry = instructorMap.get(tpl.instructor_id);
+        if (!entry) continue;
+        if (!Array.isArray(tpl.weekdays) || !tpl.weekdays.includes(dayOfWeek)) continue;
+        if (tpl.frequency === 'biweekly') {
+          const start = new Date(tpl.start_date + 'T12:00:00');
+          const target = new Date(date + 'T12:00:00');
+          const weekOf = Math.floor((target.getTime() - start.getTime()) / (7 * 86_400_000));
+          if (weekOf % 2 !== 0) continue;
+        }
+        if (!tpl.is_all_day && tpl.start_time && tpl.end_time
+          && !timesOverlap(tpl.start_time, tpl.end_time, startTime, endTime)) {
+          continue;
+        }
+        entry.available = false;
+        entry.conflicts.push({
+          source: 'unavailable',
+          title: tpl.reason || 'Recurring unavailability',
+          start_time: tpl.is_all_day ? startTime : (tpl.start_time || startTime),
+          end_time: tpl.is_all_day ? endTime : (tpl.end_time || endTime),
+        });
+      }
+    } catch {
+      // recurring_unavailability_templates table absent — skip silently.
+    }
 
     // 2. Check pmi_schedule_blocks conflicts
     // Get blocks that are on this date (date-based) or on this day_of_week (recurring)
@@ -419,7 +495,9 @@ export async function GET(request: NextRequest) {
       } else if (v.is_volunteer) {
         v.group = 'volunteer';
       } else if (!v.is_part_time) {
-        v.group = 'available';
+        // RT/other-program full-timers (paramedic_lab_default = false) stay
+        // assignable but are not default-available for paramedic labs.
+        v.group = v.paramedic_lab_default ? 'available' : 'no_availability';
       } else if (v.has_explicit_availability) {
         v.group = 'available';
       } else {

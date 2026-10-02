@@ -57,10 +57,6 @@
       "schedule": "0 9 * * *"
     },
     {
-      "path": "/api/cron/affiliation-expiry",
-      "schedule": "0 14 * * *"
-    },
-    {
       "path": "/api/cron/site-visit-reminders",
       "schedule": "0 15 * * *"
     },
@@ -87,6 +83,10 @@
     {
       "path": "/api/cron/generate-open-lab-sessions",
       "schedule": "0 6 * * 0"
+    },
+    {
+      "path": "/api/cron/extend-availability-window",
+      "schedule": "0 9 * * 1"
     }
   ]
 }

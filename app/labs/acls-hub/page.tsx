@@ -16,14 +16,28 @@
  * surfaces remain the fallback.
  */
 
+import StatTile from '@/components/StatTile';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
+import { RegionShell, RegionGrid, Region } from '@/components/layout/RegionShell';
 import Link from 'next/link';
 import {
   ArrowLeft, Loader2, RefreshCw, Printer, CheckCircle2, XCircle, Clock,
   Users, UserCheck, MapPin, CalendarDays, Layers, GraduationCap,
 } from 'lucide-react';
+
+// Sections are displayed in time order. section_number is an identifier
+// (referenced by pmi_schedule_blocks.linked_section_number), NOT a sort key.
+const bySectionTime = (
+  a: { start_time: string | null; section_number: number | null },
+  b: { start_time: string | null; section_number: number | null },
+) => {
+  if (a.start_time && b.start_time && a.start_time !== b.start_time) return a.start_time.localeCompare(b.start_time);
+  if (a.start_time && !b.start_time) return -1;
+  if (!a.start_time && b.start_time) return 1;
+  return (a.section_number ?? 1) - (b.section_number ?? 1);
+};
 
 interface Member { id: string; first_name: string; last_name: string }
 interface Group { id: string; name: string; members: Member[] }
@@ -41,14 +55,25 @@ interface Attempt {
   id: string; lab_day_id: string; lab_group_id: string; overall_result: string;
   started_at: string; team_lead?: { id: string; first_name: string; last_name: string } | null;
   scenario?: { id: string; name: string; case_code: string | null } | null;
+  record_flags?: string[]; segments_unmarked?: number; segments_total?: number;
 }
 interface CalEvent {
   id: string; title: string; date: string; start_time: string | null; end_time: string | null;
   event_type: string; instructor_names?: string[]; room?: string; linked_url?: string; status?: string;
+  source?: string; linked_id?: string; linked_lab_day_id?: string; content_notes?: string;
+  metadata?: { actual_start_time?: string | null; instructor_id?: string | null; additional_instructor_id?: string | null; linked_section_number?: number | null };
 }
+interface InstructorOpt { id: string; name: string }
 
 const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : '');
 const sname = (s?: { first_name: string; last_name: string } | null) => (s ? `${s.first_name} ${s.last_name}` : '—');
+const toMin = (t?: string | null) => (t ? parseInt(t.slice(0, 2), 10) * 60 + parseInt(t.slice(3, 5), 10) : null);
+const fromMin = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
+// Signed minutes actual runs against planned (positive = behind schedule).
+const deltaMin = (planned?: string | null, actual?: string | null) => {
+  const p = toMin(planned), a = toMin(actual);
+  return p === null || a === null ? null : a - p;
+};
 const prettyDate = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }); } catch { return d; } };
 
 const TYPE_COLOR: Record<string, string> = {
@@ -63,13 +88,22 @@ function AclsHubPageContent() {
   const searchParams = useSearchParams();
 
   const [cohort, setCohort] = useState<any>(null);
+  const [courseOptions, setCourseOptions] = useState<{ id: string; label: string; dates: string[] }[]>([]);
+  const cohortIdParam = searchParams.get('cohortId');
   const [dates, setDates] = useState<string[]>([]);
   const [labDays, setLabDays] = useState<LabDay[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  // Unofficial learning-station 'Watch' marks (own table, day-scoped, never certification data).
+  const [watchMarks, setWatchMarks] = useState<{ lab_day_id: string; student_id: string; mark: string }[]>([]);
+  // Present/absent per lab day (existing lab_day_attendance); absent students leave the denominators.
+  const [absentByLabDay, setAbsentByLabDay] = useState<Record<string, string[]>>({});
   const [activeDate, setActiveDate] = useState<string>('all');
+  const [instructorOpts, setInstructorOpts] = useState<InstructorOpt[]>([]);
+  const [savingBlock, setSavingBlock] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/signin'); }, [status, router]);
 
@@ -83,13 +117,19 @@ function AclsHubPageContent() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const hubRes = await fetch('/api/adv-cert/acls-hub');
+      const hubRes = await fetch(cohortIdParam ? `/api/adv-cert/acls-hub?cohortId=${encodeURIComponent(cohortIdParam)}` : '/api/adv-cert/acls-hub');
       const hub = await hubRes.json();
       if (hub.success) {
         setCohort(hub.cohort);
         setDates(hub.dates || []);
         setLabDays(hub.labDays || []);
         setGroups(hub.groups || []);
+        Promise.all((hub.labDays || []).map((ld: { id: string }) => fetch(`/api/adv-cert/learning-marks?labDayId=${ld.id}`).then(r => r.json()).catch(() => null)))
+          .then(rs => setWatchMarks(rs.flatMap((r: { success?: boolean; marks?: { lab_day_id: string; student_id: string; mark: string }[] } | null) => (r?.success ? r.marks || [] : []))))
+          .catch(() => setWatchMarks([]));
+        Promise.all((hub.labDays || []).map((ld: { id: string }) => fetch(`/api/lab-management/lab-days/${ld.id}/attendance`).then(r => r.json()).then((r: { students?: { student_id: string; status: string | null }[] }) => [ld.id, (r.students || []).filter(x => x.status === 'absent').map(x => x.student_id)] as [string, string[]]).catch(() => [ld.id, []] as [string, string[]])))
+          .then(entries => setAbsentByLabDay(Object.fromEntries(entries)))
+          .catch(() => setAbsentByLabDay({}));
         setAttempts(hub.attempts || []);
         // Schedule (didactic + labs) from the unified aggregator.
         if (hub.cohort?.id && (hub.dates || []).length) {
@@ -97,15 +137,83 @@ function AclsHubPageContent() {
           const end = hub.dates[hub.dates.length - 1];
           const uRes = await fetch(`/api/calendar/unified?cohort_id=${hub.cohort.id}&start=${start}&end=${end}&include=classes,labs,exams`);
           const u = await uRes.json();
-          setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date)));
+          setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date) && e.status !== 'cancelled'));
         } else {
           setEvents([]);
         }
       }
     } catch { /* non-blocking */ } finally { setLoading(false); }
-  }, []);
+  }, [cohortIdParam]);
 
   useEffect(() => { if (status === 'authenticated') load(); }, [load, status]);
+
+  // Course picker: every cohort running this course (same source as the AHA Hub).
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/adv-cert/aha-hub')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.success) return;
+        setCourseOptions((d.courses?.acls || [])
+          .filter((c: any) => c.cohort?.id)
+          .map((c: any) => ({
+            id: c.cohort.id,
+            label: `${c.cohort.program?.abbreviation || ''} G${c.cohort.cohort_number ?? ''}`.trim(),
+            dates: c.dates || [],
+          })));
+      })
+      .catch(() => {});
+  }, [status]);
+
+  // Standard instructor list — same source the lab-day station dropdown uses.
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    fetch('/api/lab-management/instructors')
+      .then((r) => r.json())
+      .then((d) => { if (d.success) setInstructorOpts(d.instructors || []); })
+      .catch(() => {});
+  }, [status]);
+
+  // Persist one schedule-block field (instructor / co-instructor / note) via the
+  // existing planner block PUT, then mirror it into local state. 'this' mode:
+  // edits this one dated block only, never a recurring series.
+  const saveBlock = useCallback(async (e: CalEvent, patch: Record<string, string | null>) => {
+    if (!e.linked_id) return;
+    setSavingBlock(e.id);
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/scheduling/planner/blocks/${e.linked_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...patch, update_mode: 'this' }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
+      setEvents((prev) => prev.map((x) => {
+        if (x.id !== e.id) return x;
+        const next: CalEvent = { ...x, metadata: { ...x.metadata } };
+        if ('instructor_id' in patch) next.metadata!.instructor_id = patch.instructor_id || null;
+        if ('additional_instructor_id' in patch) next.metadata!.additional_instructor_id = patch.additional_instructor_id || null;
+        if ('content_notes' in patch) next.content_notes = patch.content_notes || undefined;
+        if ('start_time' in patch && patch.start_time) next.start_time = patch.start_time;
+        if ('end_time' in patch && patch.end_time) next.end_time = patch.end_time;
+        if ('actual_start_time' in patch) next.metadata!.actual_start_time = patch.actual_start_time || null;
+        return next;
+      }));
+    } catch (err) {
+      setSaveError(`Could not save "${e.title}": ${err instanceof Error ? err.message : 'unknown error'}`);
+    } finally {
+      setSavingBlock(null);
+    }
+  }, []);
+
+  // Names for a schedule row: legacy many-to-many names + the direct-FK slots
+  // this hub now edits (so the print sheet and read-only rows show them too).
+  const rowInstructorNames = useCallback((e: CalEvent) => {
+    const direct = [e.metadata?.instructor_id, e.metadata?.additional_instructor_id]
+      .map((id) => instructorOpts.find((i) => i.id === id)?.name)
+      .filter(Boolean) as string[];
+    return [...new Set([...direct, ...(e.instructor_names || [])])];
+  }, [instructorOpts]);
 
   const visibleDates = activeDate === 'all' ? dates : dates.filter(d => d === activeDate);
 
@@ -135,6 +243,49 @@ function AclsHubPageContent() {
     [attempts, megacodeLabDayIds]
   );
 
+  const [recordFilter, setRecordFilter] = useState<'all' | 'incomplete' | 'contradictory'>('all');
+  const flaggedAttempts = useMemo(
+    () => megAttempts.filter(a => (a.record_flags || []).length > 0),
+    [megAttempts]
+  );
+  const incompleteCount = flaggedAttempts.filter(a => a.record_flags!.includes('incomplete')).length;
+  const contradictoryCount = flaggedAttempts.filter(a => a.record_flags!.includes('contradictory')).length;
+  const shownFlagged = flaggedAttempts.filter(a => recordFilter === 'all' || a.record_flags!.includes(recordFilter));
+
+  // A student is absent for the view when marked absent on every visible lab day of the selected
+  // day(s). Toggling writes to all lab days of ONE selected day (needs a day selected).
+  const absentIds = useMemo(() => {
+    const days = visibleLabDays.filter(d => activeDate === 'all' || d.date === activeDate);
+    if (!days.length) return new Set<string>();
+    const sets = days.map(d => new Set(absentByLabDay[d.id] || []));
+    return new Set([...sets[0]].filter(id => sets.every(st => st.has(id))));
+  }, [visibleLabDays, activeDate, absentByLabDay]);
+  const [absentError, setAbsentError] = useState<string | null>(null);
+  const toggleAbsent = useCallback(async (studentId: string) => {
+    if (activeDate === 'all') return;
+    const days = visibleLabDays.filter(d => d.date === activeDate);
+    const makeAbsent = !absentIds.has(studentId);
+    setAbsentError(null);
+    try {
+      const results = await Promise.all(days.map(d => fetch(`/api/lab-management/lab-days/${d.id}/attendance`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_id: studentId, status: makeAbsent ? 'absent' : 'present' }),
+      })));
+      if (results.some(r => !r.ok)) throw new Error('save failed');
+      setAbsentByLabDay(prev => {
+        const next = { ...prev };
+        for (const d of days) {
+          const cur = new Set(next[d.id] || []);
+          if (makeAbsent) cur.add(studentId); else cur.delete(studentId);
+          next[d.id] = [...cur];
+        }
+        return next;
+      });
+    } catch {
+      setAbsentError('Could not save attendance. Refresh and try again.');
+    }
+  }, [activeDate, visibleLabDays, absentIds]);
+
   const stats = useMemo(() => {
     const passed = megAttempts.filter(a => a.overall_result === 'pass').length;
     const failed = megAttempts.filter(a => a.overall_result === 'fail').length;
@@ -148,7 +299,7 @@ function AclsHubPageContent() {
     const failedTLIds = new Set(
       megAttempts.filter(a => a.overall_result === 'fail').map(a => a.team_lead?.id).filter(Boolean) as string[]
     );
-    const allStudents = groups.flatMap(g => g.members);
+    const allStudents = groups.flatMap(g => g.members).filter(s => !absentIds.has(s.id));
     const passedTLCount = allStudents.filter(s => passedTLIds.has(s.id)).length;
     // Failure/not-yet marker: who has NOT passed megacode as TL.
     const notPassed = allStudents
@@ -160,7 +311,7 @@ function AclsHubPageContent() {
       passedTLIds, totalStudents: allStudents.length, passedTLCount, notPassed,
       sections, labDaysCount: visibleLabDays.length, totalAttempts: megAttempts.length,
     };
-  }, [megAttempts, groups, visibleLabDays]);
+  }, [megAttempts, groups, visibleLabDays, absentIds]);
 
   const attemptsByGroup = useMemo(() => {
     const m = new Map<string, Attempt[]>();
@@ -189,21 +340,80 @@ function AclsHubPageContent() {
     return [...m.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [visibleLabDays]);
 
+  // One lab section (its station cards + attempt tally). Nested under its
+  // schedule row when linked; standalone when no schedule row matches.
+  // BLS / Airway are schedule rows only (Ben 2026-10-02): time + instructors,
+  // no station tiles, Open/Assign/Tracker, or capture. The AHA PDF print shows
+  // completion. Display-only: the lab_days sections and stations stay in place.
+  const isSkillsRow = (d: LabDay) => /\b(airway|bls)\b/i.test(`${d.section_label || ''} ${d.title || ''}`);
+  const renderSection = (d: LabDay) => {
+    if (isSkillsRow(d)) {
+      const names = [...new Set(d.stations.map(st => st.instructor_name?.trim()).filter(Boolean))];
+      return (
+        <div key={d.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-700 dark:text-gray-200">
+          <Clock className="w-4 h-4 text-gray-400" />
+          <span className="font-medium">{d.section_label || d.title}</span>
+          <span className="text-xs text-gray-400">{hhmm(d.start_time)}–{hhmm(d.end_time)}</span>
+          {names.length > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{names.join(', ')}</span>}
+        </div>
+      );
+    }
+    const isSection = (d.section_number ?? 1) > 1;
+    const dAttempts = attempts.filter(a => a.lab_day_id === d.id);
+    return (
+      <div key={d.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2">
+            {isSection ? <Layers className="w-4 h-4 text-indigo-500" /> : <Clock className="w-4 h-4 text-gray-400" />}
+            {d.section_label || d.title || 'Lab'}
+            <span className="text-xs text-gray-400">{hhmm(d.start_time)}–{hhmm(d.end_time)} · {d.stations.length} stations{d.is_adv_cert_testing ? ' · scored' : ''}</span>
+          </div>
+          <div className="flex items-center gap-2 print:hidden">
+            <Link href={`/labs/schedule/${d.id}`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Open</Link>
+            <Link href={`/labs/schedule/${d.id}/edit`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Assign</Link>
+            <Link href={`/labs/schedule/${d.id}/acls-coordinator`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Tracker</Link>
+          </div>
+        </div>
+        {(() => {
+          const ids = [...new Set(watchMarks.filter(m => m.mark === 'watch' && m.lab_day_id === d.id).map(m => m.student_id))];
+          if (!ids.length) return null;
+          const nm = (id: string) => { for (const g of groups) { const m = g.members.find(x => x.id === id); if (m) return `${m.first_name} ${m.last_name}`; } return 'Student'; };
+          return <div className="mt-2 text-xs rounded border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 px-2 py-1">Watch today: {ids.map(nm).join(', ')}</div>;
+        })()}
+        {/* Stations */}
+        {d.stations.length > 0 && (
+          <div className="mt-2 grid grid-cols-2 max-sm:grid-cols-1 gap-1.5">
+            {d.stations.map(st => (
+              <Link
+                key={st.id}
+                href={(st.scenario as { cert_tier?: string | null } | null)?.cert_tier === 'learning_station' ? `/labs/adv-cert/learning-station?labDayId=${d.id}&stationId=${st.id}` : `/labs/adv-cert/grade?labDayId=${d.id}&stationId=${st.id}`}
+                className="block text-xs border border-gray-100 dark:border-gray-700 rounded p-1.5 hover:border-red-300 dark:hover:border-red-700 hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors"
+              >
+                <div className="font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-gray-400" />#{st.station_number} {st.room || ''}
+                </div>
+                <div className="text-gray-500 dark:text-gray-400">{st.scenario?.case_code || st.scenario?.title || st.custom_title || '—'}</div>
+                <div className="text-gray-400">{st.instructor_name || '— unassigned —'}</div>
+              </Link>
+            ))}
+          </div>
+        )}
+        {dAttempts.length > 0 && (
+          <div className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+            {dAttempts.filter(a => a.overall_result === 'pass').length} pass · {dAttempts.filter(a => a.overall_result === 'fail').length} fail recorded here
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (status === 'loading') return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
   if (!session) return null;
-
-  const Stat = ({ label, value, tone }: { label: string; value: React.ReactNode; tone?: string }) => (
-    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
-      <div className={`text-xl font-bold ${tone || 'text-gray-900 dark:text-white'}`}>{value}</div>
-      <div className="text-[11px] text-gray-500 dark:text-gray-400">{label}</div>
-    </div>
-  );
 
   const cohortLabel = cohort ? `${cohort.program?.abbreviation || ''} G${cohort.cohort_number ?? ''}`.trim() : '';
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-5xl mx-auto px-4 py-5">
+    <RegionShell header={<>
         {/* Controls (hidden on print) */}
         <div className="print:hidden">
           <div className="flex items-center gap-3 mb-3">
@@ -213,6 +423,9 @@ function AclsHubPageContent() {
             <Link href="/labs/aha-hub" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">
               AHA Hub (ACLS + PALS)
             </Link>
+            <Link href={cohortIdParam ? `/labs/acls-hub/board?cohortId=${encodeURIComponent(cohortIdParam)}` : '/labs/acls-hub/board'} className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400">
+              Board view (new)
+            </Link>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
@@ -220,7 +433,7 @@ function AclsHubPageContent() {
                 <GraduationCap className="w-6 h-6 text-red-600" /> ACLS Hub
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''} — full event, one place (read-only)
+                {cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''} — full event, one place
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -232,6 +445,25 @@ function AclsHubPageContent() {
               </button>
             </div>
           </div>
+          {/* Course selector — choose which cohort's ACLS course to view */}
+          {courseOptions.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="text-xs text-gray-500 dark:text-gray-400">Course:</span>
+              {courseOptions.map((c) => (
+                <Link
+                  key={c.id}
+                  href={`/labs/acls-hub?cohortId=${c.id}`}
+                  className={`px-3 py-1.5 min-h-[36px] inline-flex items-center rounded-md text-sm border ${
+                    cohort?.id === c.id
+                      ? 'bg-emerald-600 text-white border-emerald-600'
+                      : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {c.label}{c.dates.length ? ` · ${c.dates[0]}` : ''}
+                </Link>
+              ))}
+            </div>
+          )}
           {/* Day selector */}
           {dates.length > 1 && (
             <div className="flex gap-1 mb-4">
@@ -242,6 +474,11 @@ function AclsHubPageContent() {
             </div>
           )}
         </div>
+
+        {saveError && (
+          <div role="alert" className="print:hidden mb-3 rounded-md border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-3 py-2 text-sm text-red-700 dark:text-red-300">{saveError}</div>
+        )}
+    </>}>
 
         {/* ── PRINT-ONLY SCHEDULE SHEET — clean instructor handout (the rest of
             the hub dashboard is hidden on print). Shows BOTH days regardless of
@@ -260,7 +497,7 @@ function AclsHubPageContent() {
               <p className="text-sm mb-2">{dates.map(prettyDate).join('   ·   ')}</p>
               {dates.map((date, di) => {
                 const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-                const daySections = visibleLabDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
+                const daySections = visibleLabDays.filter(d => d.date === date).sort(bySectionTime);
                 return (
                   <div key={date} style={{ breakBefore: di > 0 ? 'page' : 'auto' }}>
                     <h2 className="text-base font-bold mt-3 mb-1">Day {di + 1} — {prettyDate(date)}</h2>
@@ -273,7 +510,7 @@ function AclsHubPageContent() {
                             <tr key={e.id}>
                               <td>{hhmm(e.start_time)}–{hhmm(e.end_time)}</td>
                               <td>{e.title}</td>
-                              <td>{[e.room, (e.instructor_names || []).join(', ')].filter(Boolean).join(' · ')}</td>
+                              <td>{[e.room, rowInstructorNames(e).join(', '), e.content_notes].filter(Boolean).join(' · ')}</td>
                             </tr>
                           ))}
                       </tbody>
@@ -315,125 +552,218 @@ function AclsHubPageContent() {
             No ACLS event found. (Looks for lab days tagged <code>cert_course=acls</code>.)
           </div>
         ) : (
-          <div className="space-y-6 print:hidden">
-            {/* Megacode coordinator stats — practice + testing, both days */}
+          <RegionGrid>
+            {/* ── Region 1: Overview ── */}
+            <Region title="Overview — megacode TL stats" icon={<UserCheck className="w-4 h-4" />}>
             <section>
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">
-                <UserCheck className="w-4 h-4" /> Megacode TL stats — practice + testing, both days
-              </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                <Stat label="Megacode lab days" value={megacodeLabDayIds.size} />
-                <Stat label="Groups" value={stats.totalGroups} />
-                <Stat label="Megacode attempts" value={stats.totalAttempts} />
-                <Stat label="Passed" value={stats.passed} tone="text-green-600 dark:text-green-400" />
-                <Stat label="Failed" value={stats.failed} tone="text-red-600 dark:text-red-400" />
-                <Stat label="Passed as TL" value={`${stats.passedTLCount}/${stats.totalStudents}`} tone={stats.passedTLCount === stats.totalStudents && stats.totalStudents > 0 ? 'text-green-600 dark:text-green-400' : undefined} />
+              <div className="grid grid-cols-3 max-lg:grid-cols-2 gap-3">
+                <StatTile label="Megacode lab days" value={visibleLabDays.filter(d => megacodeLabDayIds.has(d.id) && visibleDates.includes(d.date)).length} />
+                <StatTile label="Groups" value={stats.totalGroups} />
+                <StatTile label="Megacode attempts" value={stats.totalAttempts} />
+                <StatTile label="Passed" value={stats.passed} tone="text-green-600 dark:text-green-400" />
+                <StatTile label="Failed" value={stats.failed} tone="text-red-600 dark:text-red-400" />
+                <StatTile label="Passed as TL" value={`${stats.passedTLCount}/${stats.totalStudents}`} tone={stats.passedTLCount === stats.totalStudents && stats.totalStudents > 0 ? 'text-green-600 dark:text-green-400' : undefined} />
               </div>
-              <p className="mt-1 text-[11px] text-gray-400">MEGACODE ONLY (practice — now testing-graded — + final testing). A TL pass in practice counts toward the AHA team-lead distinction. Other ACLS scenarios (brady/tachy, cardiac-arrest learning) are tracked in the semester/course overview, not here.</p>
+              <p className="mt-1 text-[11px] text-gray-400">Megacode attempts only (practice and final testing). A team-lead pass in practice counts toward the AHA team-lead distinction.</p>
             </section>
+
+            {/* RECORD CHECK — read-only detection of incomplete / contradictory score records */}
+            {flaggedAttempts.length > 0 && (
+              <section style={{ breakInside: 'avoid' }} className="bg-orange-50 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-800 rounded-xl p-4">
+                <h2 className="text-base font-semibold text-orange-900 dark:text-orange-100 mb-1">Record check</h2>
+                <p className="text-[11px] text-orange-800 dark:text-orange-200 mb-2">
+                  Detection only. Nothing here changes a score. Incomplete = overall result set but a section unmarked. Contradictory = overall pass with a failed section.
+                </p>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {([['all', `All flagged (${flaggedAttempts.length})`], ['incomplete', `Incomplete (${incompleteCount})`], ['contradictory', `Contradictory (${contradictoryCount})`]] as const).map(([k, label]) => (
+                    <button key={k} onClick={() => setRecordFilter(k)}
+                      className={`min-h-[44px] px-3 rounded-lg text-xs border ${recordFilter === k ? 'bg-orange-600 text-white border-orange-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-1">
+                  {shownFlagged.map(a => (
+                    <div key={a.id} className="flex flex-wrap items-center gap-2 text-xs bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+                      <span className="font-medium text-gray-800 dark:text-gray-100">
+                        {a.team_lead ? `${a.team_lead.last_name}, ${a.team_lead.first_name}` : 'No team lead'}
+                      </span>
+                      <span className="text-gray-500">{a.scenario?.case_code || a.scenario?.name || ''}</span>
+                      <span className="text-gray-500">overall: {a.overall_result}</span>
+                      {a.record_flags!.includes('incomplete') && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
+                          INCOMPLETE ({a.segments_unmarked}/{a.segments_total} unmarked)
+                        </span>
+                      )}
+                      {a.record_flags!.includes('contradictory') && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200">CONTRADICTORY</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* FAILURE MARKER — who hasn't passed megacode as TL yet */}
             {stats.notPassed.length > 0 && (
-              <section style={{ breakInside: 'avoid' }} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-800 rounded-lg p-3">
-                <h2 className="text-sm font-semibold text-amber-800 dark:text-amber-200 mb-1 flex items-center gap-1">
+              <section style={{ breakInside: 'avoid' }} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-800 rounded-xl p-4">
+                <h2 className="text-base font-semibold text-amber-900 dark:text-amber-100 mb-2 flex items-center gap-1">
                   <XCircle className="w-4 h-4" /> Not yet passed megacode as TL — {stats.notPassed.length} of {stats.totalStudents}
                 </h2>
                 <div className="flex flex-wrap gap-1.5">
                   {stats.notPassed.map(s => (
-                    <span key={s.id} className={`text-[11px] px-2 py-0.5 rounded-full ${s.failed ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
+                    <span key={s.id} className={`text-sm font-medium px-3 py-1 rounded-full ${s.failed ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
                       {s.last_name}, {s.first_name}{s.failed ? ' — failed' : ' — not yet'}
                     </span>
                   ))}
                 </div>
-                <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-300">Red = attempted &amp; failed a megacode as TL; gray = hasn&apos;t led a passing megacode yet. AHA goal: every student passes ≥1 megacode as team-lead.</p>
+                <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">Red = failed a megacode as team lead; gray = has not yet led a passing megacode. Goal: every student passes at least one megacode as team lead.</p>
               </section>
             )}
+            </Region>
 
-            {/* Per day: schedule + sections */}
+            {/* ── Region 2: Schedule (agenda rows) ── */}
+            <Region title="Schedule and stations" icon={<CalendarDays className="w-4 h-4" />} className="lg:row-span-2">
             {visibleDates.map((date) => {
               const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
-              const daySections = visibleLabDays.filter(d => d.date === date).sort((a, b) => (a.section_number ?? 1) - (b.section_number ?? 1));
+              const daySections = visibleLabDays.filter(d => d.date === date).sort(bySectionTime);
+              // Join each lab row to its section: explicit FK first, then the
+              // block's linked_section_number (default 1) against the lab day's
+              // section_number. Each section nests under at most one row.
+              const claimed = new Set<string>();
+              const sectionFor = new Map<string, LabDay>();
+              // Narrowest block claims first: an all-day container (e.g. 'ACLS (Day 1
+              // of 2)') can carry the same section/lab-day link as the real lab block
+              // inside it and must not steal that section's stations.
+              const spanOf = (e: CalEvent) => (toMin(e.end_time) ?? 0) - (toMin(e.start_time) ?? 0);
+              const claimOrder = [...dayEvents].sort((a, b) => spanOf(a) - spanOf(b));
+              for (const e of claimOrder) {
+                if (e.event_type !== 'lab') continue;
+                const d = daySections.find(x => !claimed.has(x.id) && (
+                  e.linked_lab_day_id ? x.id === e.linked_lab_day_id
+                    : (x.section_number ?? 1) === (e.metadata?.linked_section_number ?? 1)
+                ));
+                if (d) { claimed.add(d.id); sectionFor.set(e.id, d); }
+              }
+              const unmatched = daySections.filter(d => !claimed.has(d.id));
               return (
                 <section key={date} style={{ breakInside: 'avoid' }}>
-                  <h2 className="text-base font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
                     <CalendarDays className="w-4 h-4 text-red-600" /> Day {dates.indexOf(date) + 1} — {prettyDate(date)}
-                  </h2>
+                  </h3>
 
                   {/* Schedule (didactic + labs together) */}
-                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 mb-3">
+                  <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-100 dark:divide-gray-700 ">
                     {dayEvents.length === 0 ? (
                       <div className="p-3 text-xs text-gray-400">No schedule blocks found for this day.</div>
-                    ) : dayEvents.map(e => (
-                      <div key={e.id} className="flex items-center gap-3 px-3 py-1.5 text-sm">
-                        <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${TYPE_COLOR[e.event_type] || TYPE_COLOR.class}`}>{e.event_type}</span>
-                        <span className="text-gray-800 dark:text-gray-100 flex-1">{e.title}</span>
-                        {e.room && <span className="text-xs text-gray-400 hidden sm:inline">{e.room}</span>}
-                        {e.instructor_names && e.instructor_names.length > 0 && <span className="text-xs text-gray-400 hidden md:inline">{e.instructor_names.join(', ')}</span>}
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Lab sections for the day */}
-                  <div className="space-y-2">
-                    {daySections.map(d => {
-                      const isSection = (d.section_number ?? 1) > 1;
-                      const dAttempts = attempts.filter(a => a.lab_day_id === d.id);
+                    ) : dayEvents.map(e => {
+                      const editable = e.source === 'planner' && !!e.linked_id;
+                      const names = e.instructor_names || [];
+                      const nested = sectionFor.get(e.id);
                       return (
-                        <div key={d.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
-                          <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2">
-                              {isSection ? <Layers className="w-4 h-4 text-indigo-500" /> : <Clock className="w-4 h-4 text-gray-400" />}
-                              {d.section_label || d.title || 'Lab'}
-                              <span className="text-xs text-gray-400">{hhmm(d.start_time)}–{hhmm(d.end_time)} · {d.stations.length} stations{d.is_adv_cert_testing ? ' · scored' : ''}</span>
-                            </div>
-                            <div className="flex items-center gap-2 print:hidden">
-                              <Link href={`/labs/schedule/${d.id}`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Open</Link>
-                              <Link href={`/labs/schedule/${d.id}/edit`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Assign</Link>
-                              <Link href={`/labs/schedule/${d.id}/acls-coordinator`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Tracker</Link>
-                            </div>
-                          </div>
-                          {/* Stations */}
-                          {d.stations.length > 0 && (
-                            <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-1.5">
-                              {d.stations.map(st => (
-                                <Link
-                                  key={st.id}
-                                  href={`/labs/adv-cert/grade?labDayId=${d.id}&stationId=${st.id}`}
-                                  className="block text-xs border border-gray-100 dark:border-gray-700 rounded p-1.5 hover:border-red-300 dark:hover:border-red-700 hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors"
+                        <div key={e.id}>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 text-sm">
+                          {editable ? (() => {
+                            const actual = e.metadata?.actual_start_time;
+                            const delta = deltaMin(e.start_time, actual);
+                            const dur = (toMin(e.end_time) ?? 0) - (toMin(e.start_time) ?? 0);
+                            const busy = savingBlock === e.id;
+                            const timeCls = 'text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1';
+                            return (
+                              <span className="flex flex-wrap items-center gap-2 shrink-0">
+                                <label className="text-[10px] text-gray-400 flex items-center gap-1">Plan
+                                  <input type="time" aria-label={`Planned start for ${e.title}`} key={`p-${e.id}-${e.start_time}`} defaultValue={hhmm(e.start_time)} disabled={busy}
+                                    onBlur={(ev) => {
+                                      const v = ev.target.value; if (!v || v === hhmm(e.start_time)) return;
+                                      const shifted = fromMin((toMin(v) ?? 0) + Math.max(dur, 0));
+                                      saveBlock(e, { start_time: `${v}:00`, end_time: shifted });
+                                    }} className={`${timeCls} w-24`} /></label>
+                                <label className="text-[10px] text-gray-400 flex items-center gap-1">Min
+                                  <input type="number" min={1} step={5} aria-label={`Duration in minutes for ${e.title}`} key={`d-${e.id}-${e.end_time}`} defaultValue={dur > 0 ? dur : ''} disabled={busy}
+                                    onBlur={(ev) => {
+                                      const n = parseInt(ev.target.value, 10);
+                                      if (!n || n < 1 || n === dur || toMin(e.start_time) === null) return;
+                                      saveBlock(e, { end_time: fromMin((toMin(e.start_time) as number) + n) });
+                                    }} className={`${timeCls} w-16`} /></label>
+                                <label className="text-xs font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-1">Actual
+                                  <input type="time" aria-label={`Actual start for ${e.title}`} key={`a-${e.id}-${actual}`} defaultValue={hhmm(actual)} disabled={busy}
+                                    onBlur={(ev) => {
+                                      const v = ev.target.value;
+                                      if (v === hhmm(actual)) return;
+                                      saveBlock(e, { actual_start_time: v ? `${v}:00` : null });
+                                    }} className={`${timeCls} w-28 font-semibold`} /></label>
+                                {delta !== null && (
+                                  <span className={`text-xs font-semibold ${delta > 0 ? 'text-red-600 dark:text-red-400' : delta < 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}`}>
+                                    {delta === 0 ? 'on time' : delta > 0 ? `${delta} min behind` : `${-delta} min ahead`}
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          })() : (
+                            <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
+                          )}
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${TYPE_COLOR[e.event_type] || TYPE_COLOR.class}`}>{e.event_type}</span>
+                          <span className="text-gray-800 dark:text-gray-100 flex-1 min-w-[12rem]">{e.title}</span>
+                          {e.room && <span className="text-xs text-gray-400">{e.room}</span>}
+                          {editable ? (
+                            <>
+                              {[
+                                { field: 'instructor_id', label: 'Instructor', value: e.metadata?.instructor_id },
+                                { field: 'additional_instructor_id', label: 'Co-instructor', value: e.metadata?.additional_instructor_id },
+                              ].map(f => (
+                                <select
+                                  key={f.field}
+                                  aria-label={`${f.label} for ${e.title}`}
+                                  value={f.value || ''}
+                                  disabled={savingBlock === e.id}
+                                  onChange={(ev) => saveBlock(e, { [f.field]: ev.target.value || null })}
+                                  className="text-xs min-h-[36px] w-40 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1"
                                 >
-                                  <div className="font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
-                                    <MapPin className="w-3 h-3 text-gray-400" />#{st.station_number} {st.room || ''}
-                                  </div>
-                                  <div className="text-gray-500 dark:text-gray-400">{st.scenario?.case_code || st.scenario?.title || st.custom_title || '—'}</div>
-                                  <div className="text-gray-400">{st.instructor_name || '— unassigned —'}</div>
-                                </Link>
+                                  <option value="">{f.label}: —</option>
+                                  {instructorOpts.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                                </select>
                               ))}
-                            </div>
+                              <input
+                                type="text"
+                                aria-label={`Note for ${e.title}`}
+                                placeholder="Note"
+                                defaultValue={e.content_notes || ''}
+                                disabled={savingBlock === e.id}
+                                onBlur={(ev) => { if (ev.target.value !== (e.content_notes || '')) saveBlock(e, { content_notes: ev.target.value || null }); }}
+                                className="text-xs min-h-[36px] w-56 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-2"
+                              />
+                              {savingBlock === e.id && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />}
+                            </>
+                          ) : (
+                            names.length > 0 && <span className="text-xs text-gray-400">{names.join(', ')}</span>
                           )}
-                          {dAttempts.length > 0 && (
-                            <div className="mt-1.5 text-[11px] text-gray-500 dark:text-gray-400">
-                              {dAttempts.filter(a => a.overall_result === 'pass').length} pass · {dAttempts.filter(a => a.overall_result === 'fail').length} fail recorded here
-                            </div>
-                          )}
+                        </div>
+                        {nested && <div className="px-3 pb-2 pl-6">{renderSection(nested)}</div>}
                         </div>
                       );
                     })}
                   </div>
+                  {/* Lab sections with no matching schedule row (nothing is hidden) */}
+                  {unmatched.length > 0 && <div className="mt-2 space-y-2">{unmatched.map(renderSection)}</div>}
                 </section>
               );
             })}
+            </Region>
 
+
+            {/* ── Region 4: Student progress ── */}
+            <Region title="Student progress" icon={<Users className="w-4 h-4" />}>
             {/* Per-group MEGACODE team-lead coverage (whole event) */}
             <section style={{ breakInside: 'avoid' }}>
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Users className="w-4 h-4" /> Groups — megacode TL coverage (practice + testing)</h2>
+              {absentError && <div role="alert" className="mb-2 text-xs text-red-700 dark:text-red-300">{absentError}</div>}
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">Groups — megacode TL coverage (practice + testing)</h3>
               <div className="space-y-2">
                 {groups.map(g => {
                   const gAttempts = attemptsByGroup.get(g.id) || [];
                   return (
                     <div key={g.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
                       <div className="flex items-center justify-between">
-                        <div className="font-medium text-gray-800 dark:text-gray-100">{g.name} <span className="text-xs text-gray-400">({g.members.length})</span></div>
+                        <div className="font-medium text-gray-800 dark:text-gray-100">{g.name} <span className="text-xs text-gray-400">({g.members.filter(m => !absentIds.has(m.id)).length}{g.members.some(m => absentIds.has(m.id)) ? `/${g.members.length}` : ''})</span></div>
                         <div className="text-xs inline-flex items-center gap-1">
                           {gAttempts.map(a => a.overall_result === 'pass'
                             ? <CheckCircle2 key={a.id} className="w-4 h-4 text-green-500" />
@@ -444,9 +774,18 @@ function AclsHubPageContent() {
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {g.members.map(m => {
                           const led = stats.passedTLIds.has(m.id);
+                          const absent = absentIds.has(m.id);
+                          const dayMarks = watchMarks.filter(k => k.student_id === m.id && visibleLabDays.some(d => d.id === k.lab_day_id && (activeDate === 'all' || d.date === activeDate)));
+                          const passN = dayMarks.filter(k => k.mark === 'pass').length;
+                          const watchN = dayMarks.filter(k => k.mark === 'watch').length;
                           return (
-                            <span key={m.id} className={`text-[10px] px-1.5 py-0.5 rounded-full ${led ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
-                              {led ? '✓ ' : ''}{m.last_name}
+                            <span key={m.id} className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full ${absent ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 line-through' : led ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
+                              {led && !absent ? '✓ ' : ''}{m.last_name}
+                              {!absent && passN > 0 && <span title="Learning-station passes" className="no-underline text-green-700 dark:text-green-300">{passN} Pass</span>}
+                              {!absent && watchN > 0 && <span title="Learning-station watch marks" className="no-underline text-amber-700 dark:text-amber-300">{watchN} Watch</span>}
+                              <button type="button" onClick={() => toggleAbsent(m.id)} disabled={activeDate === 'all'}
+                                title={activeDate === 'all' ? 'Select Day 1 or Day 2 to mark absent' : absent ? 'Mark present' : 'Mark absent'}
+                                className="print:hidden px-1 rounded border border-gray-300 dark:border-gray-600 no-underline disabled:opacity-40">{absent ? 'Absent' : 'Present'}</button>
                             </span>
                           );
                         })}
@@ -478,10 +817,10 @@ function AclsHubPageContent() {
                 <p className="mt-1 text-[11px] text-gray-400">From station instructor labels. Assign via each section&apos;s Edit page (which also syncs to Google Calendar).</p>
               </section>
             )}
-          </div>
+            </Region>
+          </RegionGrid>
         )}
-      </div>
-    </div>
+    </RegionShell>
   );
 }
 

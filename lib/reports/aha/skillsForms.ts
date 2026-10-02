@@ -14,6 +14,8 @@
  */
 import type { RosterStudent } from '@/lib/reports/roster';
 import type { SignoffInstructor } from '@/lib/reports/aha/megacodeForm';
+import { signatureFaceStack } from '@/lib/reports/aha/signature';
+import { SIGNATURE_FONT_FACE_CSS } from '@/lib/reports/aha/signatureFont';
 
 interface Step { text: string; subs?: string[] }
 interface Section { heading: string; note?: string; steps: Step[]; notes?: string[] }
@@ -125,7 +127,8 @@ function fmtDate(d: string | null | undefined): string {
 
 function signoff(ins: SignoffInstructor | null, dateStr: string): string {
   let sig = '<u>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</u>';
-  if (ins) sig = ins.signatureData ? `<img class="sig" src="${ins.signatureData}" alt="signature" />` : `<span class="sigscript">${esc(ins.name)}</span>`;
+  if (ins && ins.signatureKind === 'typed' && ins.signatureText) sig = `<span class="sigscript" style="font-family:${signatureFaceStack(ins.signatureFace)}">${esc(ins.signatureText)}</span>`;
+  else if (ins) sig = ins.signatureData ? `<img class="sig" src="${ins.signatureData}" alt="signature" />` : `<span class="sigscript">${esc(ins.name)}</span>`;
   const initials = ins ? esc(ins.name) : '<u>&nbsp;&nbsp;</u>';
   const num = ins?.ahaNumber ? esc(ins.ahaNumber) : '<u>&nbsp;&nbsp;&nbsp;</u>';
   const date = dateStr ? esc(dateStr) : '<u>&nbsp;&nbsp;&nbsp;</u>';
@@ -160,6 +163,7 @@ export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStuden
 }
 
 const STYLE = `
+  ${SIGNATURE_FONT_FACE_CSS}
   * { box-sizing: border-box; } body { font-family: Arial, Helvetica, sans-serif; color:#111; margin:0; }
   .toolbar { position:sticky; top:0; background:#f3f4f6; border-bottom:1px solid #ccc; padding:8px 12px; }
   .toolbar button { font-size:13px; padding:6px 14px; cursor:pointer; }
@@ -180,7 +184,7 @@ const STYLE = `
   .pn.on { background:#dcfce7; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
   .autocap { font-size:10px; color:#777; font-style:italic; margin:6px 0; }
   .signoff { font-size:11px; margin-top:8px; } .sig { height:34px; vertical-align:middle; }
-  .sigscript { font-family:'Brush Script MT','Segoe Script',cursive; font-size:22px; padding:0 8px; }
+  .sigscript { font-family:'PMI Script','Brush Script MT','Segoe Script',cursive; font-size:22px; padding:0 8px; }
   @media print { .toolbar { display:none; } }
 `;
 

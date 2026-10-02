@@ -183,7 +183,6 @@ export async function POST(
         status: 'present',
         notes: 'Self check-in',
         marked_by: 'self-checkin',
-        marked_at: now,
         updated_at: now,
       },
       { onConflict: 'lab_day_id,student_id' }

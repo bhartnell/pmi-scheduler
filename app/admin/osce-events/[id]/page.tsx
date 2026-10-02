@@ -54,6 +54,8 @@ interface OsceEvent {
   updated_at: string;
   observer_count: number;
   block_count: number;
+  cohort_id: string | null;
+  minutes_per_student: number;
 }
 
 interface ObserverBlock {
@@ -72,6 +74,7 @@ interface Observer {
   title: string;
   agency: string;
   email: string;
+  contact_email: string | null;
   phone: string | null;
   role: string | null;
   agency_preference: boolean;
@@ -347,7 +350,7 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
       {activeTab === 'schedule' && <ScheduleTab eventId={eventId} />}
       {activeTab === 'agencies' && <AgenciesTab eventId={eventId} />}
       {activeTab === 'blocks' && <TimeBlocksTab eventId={eventId} event={event} onRefresh={fetchEvent} />}
-      {activeTab === 'students' && <StudentsTab eventId={eventId} />}
+      {activeTab === 'students' && <StudentsTab eventId={eventId} event={event} />}
       {activeTab === 'results' && <ResultsTab eventId={eventId} />}
       {activeTab === 'settings' && <SettingsTab event={event} onRefresh={fetchEvent} />}
     </div>
@@ -370,9 +373,15 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
   const [testLoading, setTestLoading] = useState(false);
   const [clearTestLoading, setClearTestLoading] = useState(false);
   const [clearTestConfirm, setClearTestConfirm] = useState(false);
+  const [inviteStatus, setInviteStatus] = useState<Record<string, Record<string, string | null>>>({});
+  const [calendarConnected, setCalendarConnected] = useState<boolean | null>(null);
+  const [sendingInvites, setSendingInvites] = useState(false);
+  const [sendingObserverId, setSendingObserverId] = useState<string | null>(null);
+  const [inviteResult, setInviteResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [confirmSendAll, setConfirmSendAll] = useState(false);
 
   const emptyObserverForm = {
-    name: '', title: '', agency: '', email: '', phone: '', role: '',
+    name: '', title: '', agency: '', email: '', contact_email: '', phone: '', role: '',
     block_ids: [] as string[], agency_preference: false, agency_preference_note: '',
   };
   const [observerForm, setObserverForm] = useState(emptyObserverForm);
@@ -400,10 +409,63 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
     } catch { /* ignore */ }
   }, [eventId]);
 
+  const fetchInviteStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/osce/events/${eventId}/calendar-invites`);
+      if (res.ok) {
+        const data = await res.json();
+        setInviteStatus(data.invite_status || {});
+        setCalendarConnected(!!data.calendar_connected);
+      }
+    } catch { /* ignore */ }
+  }, [eventId]);
+
   useEffect(() => {
     fetchObservers();
     fetchTimeBlocks();
-  }, [fetchObservers, fetchTimeBlocks]);
+    fetchInviteStatus();
+  }, [fetchObservers, fetchTimeBlocks, fetchInviteStatus]);
+
+  const observerInviteSent = (observerId: string) => {
+    const blocks = inviteStatus[observerId];
+    if (!blocks) return false;
+    return Object.values(blocks).some((v) => !!v);
+  };
+
+  const handleSendInvites = async (opts: { action: 'send_all' } | { action: 'send_observer'; observerId: string }) => {
+    if (opts.action === 'send_all') {
+      setSendingInvites(true);
+    } else {
+      setSendingObserverId(opts.observerId);
+    }
+    setInviteResult(null);
+    try {
+      const res = await fetch(`/api/osce/events/${eventId}/calendar-invites`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(
+          opts.action === 'send_all'
+            ? { action: 'send_all' }
+            : { action: 'send_observer', observer_id: opts.observerId }
+        ),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setInviteResult({ type: 'success', message: data.message || 'Invites sent.' });
+        fetchInviteStatus();
+      } else if (data.needs_calendar) {
+        setCalendarConnected(false);
+        setInviteResult({ type: 'error', message: data.error || 'Google Calendar not connected.' });
+      } else {
+        setInviteResult({ type: 'error', message: data.error || 'Failed to send invites.' });
+      }
+    } catch {
+      setInviteResult({ type: 'error', message: 'Network error sending invites.' });
+    }
+    setSendingInvites(false);
+    setSendingObserverId(null);
+    setConfirmSendAll(false);
+  };
 
   const handleDelete = async (observerId: string) => {
     try {
@@ -430,6 +492,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
             title: observerForm.title,
             agency: observerForm.agency,
             email: observerForm.email,
+            contact_email: observerForm.contact_email || null,
             phone: observerForm.phone || null,
             role: observerForm.role || null,
             block_ids: observerForm.block_ids,
@@ -452,6 +515,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
             title: observerForm.title,
             agency: observerForm.agency,
             email: observerForm.email,
+            contact_email: observerForm.contact_email || null,
             phone: observerForm.phone || null,
             role: observerForm.role || null,
             block_ids: observerForm.block_ids,
@@ -484,6 +548,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
       title: obs.title,
       agency: obs.agency,
       email: obs.email,
+      contact_email: obs.contact_email || '',
       phone: obs.phone || '',
       role: obs.role || '',
       block_ids: obs.blocks.map(b => b.block_id),
@@ -643,6 +708,12 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
               <input type="email" value={observerForm.email} onChange={e => setObserverForm(p => ({ ...p, email: e.target.value }))}
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" required />
             </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Correspondence email (optional)</label>
+              <input type="email" value={observerForm.contact_email} onChange={e => setObserverForm(p => ({ ...p, contact_email: e.target.value }))}
+                placeholder="Invites go here instead of login email"
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -776,16 +847,62 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
           <Download className="w-4 h-4" />
           Export CSV
         </a>
-        <button
-          disabled
-          className="inline-flex items-center gap-2 px-4 py-2 bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 rounded-lg text-sm font-medium cursor-not-allowed"
-          title="Coming soon"
-        >
-          <Send className="w-4 h-4" />
-          Send Calendar Invites
-          <span className="text-xs">(Coming soon)</span>
-        </button>
+        {confirmSendAll ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-amber-700 dark:text-amber-300 max-w-[220px]">
+              Send Google Calendar invites to all {observers.length} observer{observers.length !== 1 ? 's' : ''} now?
+            </span>
+            <button
+              onClick={() => handleSendInvites({ action: 'send_all' })}
+              disabled={sendingInvites}
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium disabled:opacity-50"
+            >
+              {sendingInvites ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+              Confirm Send
+            </button>
+            <button
+              onClick={() => setConfirmSendAll(false)}
+              disabled={sendingInvites}
+              className="px-3 py-1.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmSendAll(true)}
+            disabled={observers.length === 0 || calendarConnected === false}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            title={
+              calendarConnected === false
+                ? 'Connect Google Calendar in Settings first'
+                : observers.length === 0
+                ? 'Add observers first'
+                : 'Send Google Calendar invites to all observers'
+            }
+          >
+            <Send className="w-4 h-4" />
+            Send Calendar Invites
+          </button>
+        )}
       </div>
+
+      {calendarConnected === false && (
+        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-2 text-sm text-amber-700 dark:text-amber-300">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          Google Calendar isn&apos;t connected for your account, so invites can&apos;t send yet. Connect it in Settings, then come back here.
+        </div>
+      )}
+      {inviteResult && (
+        <div className={`mb-4 p-3 rounded-lg flex items-center gap-2 text-sm ${
+          inviteResult.type === 'success'
+            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+        }`}>
+          {inviteResult.type === 'success' ? <Check className="w-4 h-4 shrink-0" /> : <AlertTriangle className="w-4 h-4 shrink-0" />}
+          {inviteResult.message}
+        </div>
+      )}
 
       {/* Test mode section (only for draft events) */}
       {event.status === 'draft' && (
@@ -841,7 +958,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-900">
             <tr>
-              {['Name', 'Title', 'Agency', 'Email', 'Phone', 'Role', 'Blocks', 'Registered', ''].map(h => (
+              {['Name', 'Title', 'Agency', 'Email', 'Phone', 'Role', 'Blocks', 'Invited', 'Registered', ''].map(h => (
                 <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -878,9 +995,27 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
                       {o.blocks.length === 0 && <span className="text-xs text-gray-400">None</span>}
                     </div>
                   </td>
+                  <td className="px-4 py-3 text-sm whitespace-nowrap">
+                    {observerInviteSent(o.id) ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-400">
+                        <Check className="w-3.5 h-3.5" /> Sent
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">Not sent</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{new Date(o.created_at).toLocaleDateString()}</td>
                   <td className="px-4 py-3 text-sm">
                     <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleSendInvites({ action: 'send_observer', observerId: o.id })}
+                        disabled={sendingObserverId === o.id || o.blocks.length === 0 || calendarConnected === false}
+                        className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                        title={observerInviteSent(o.id) ? 'Resend calendar invite' : 'Send calendar invite'}
+                        aria-label="Send calendar invite"
+                      >
+                        {sendingObserverId === o.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      </button>
                       <button onClick={() => openEditModal(o)} className="p-1 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded" title="Edit observer" aria-label="Edit observer">
                         <Edit3 className="w-4 h-4" />
                       </button>
@@ -900,7 +1035,7 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
                 </tr>
                 {expandedId === o.id && (
                   <tr>
-                    <td colSpan={9} className="px-4 py-3 bg-gray-50 dark:bg-gray-900">
+                    <td colSpan={10} className="px-4 py-3 bg-gray-50 dark:bg-gray-900">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div><span className="font-medium text-gray-500 dark:text-gray-400">Phone:</span> <span className="text-gray-900 dark:text-white">{o.phone || 'N/A'}</span></div>
                         <div><span className="font-medium text-gray-500 dark:text-gray-400">Role:</span> <span className="text-gray-900 dark:text-white">{o.role || 'N/A'}</span></div>
@@ -928,10 +1063,81 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
         )}
       </div>
 
+      {/* Walk-up evaluators (self-registered on event day, not pre-invited) */}
+      <WalkupEvaluatorsPanel eventId={eventId} />
+
       {/* Modals */}
       {showAddModal && renderObserverModal(false)}
       {showEditModal && renderObserverModal(true)}
     </>
+  );
+}
+
+// Reconciliation list of evaluators who self-registered via the "not on this
+// list" walk-up path on event day (app/osce-scoring/enter), rather than
+// pre-registering through the observer signup form.
+function WalkupEvaluatorsPanel({ eventId }: { eventId: string }) {
+  interface WalkupEvaluator {
+    id: string;
+    name: string;
+    agency: string;
+    role: string | null;
+    created_at: string;
+  }
+
+  const [walkups, setWalkups] = useState<WalkupEvaluator[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/osce/walkup-evaluators?event_id=${eventId}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (!cancelled) setWalkups(data.walkups || []);
+        }
+      } catch { /* ignore */ }
+      if (!cancelled) setLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [eventId]);
+
+  if (loading || walkups.length === 0) return null;
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center gap-2 mb-2">
+        <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+          Walk-up Evaluators ({walkups.length})
+        </h3>
+      </div>
+      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
+        Self-registered on event day via the &quot;not on this list&quot; option — not pre-invited.
+      </p>
+      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-gray-50 dark:bg-gray-900">
+            <tr>
+              {['Name', 'Agency', 'Role', 'Registered'].map(h => (
+                <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            {walkups.map(w => (
+              <tr key={w.id}>
+                <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap">{w.name}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{w.agency}</td>
+                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300 whitespace-nowrap">{w.role || '--'}</td>
+                <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">{new Date(w.created_at).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
   );
 }
 
@@ -1537,7 +1743,176 @@ function TimeBlocksTab({ eventId, event, onRefresh }: { eventId: string; event: 
 // TAB 5: Students
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function StudentsTab({ eventId }: { eventId: string }) {
+const ALL_SCENARIOS = ['A', 'B', 'C', 'D', 'E', 'F'];
+
+/**
+ * Cohort roster auto-populate + capacity-based distribution + assessment
+ * generation — replaces the manual direct-SQL setup the Fall 2026 event
+ * needed (Task Handoff Queue "OSCE event creation in the UI — make it
+ * repeatable per cohort"). Shown only before a schedule has been generated;
+ * see app/api/osce/events/[id]/generate-roster for the one-shot guard.
+ */
+function RosterSetupPanel({ eventId, event, onGenerated }: { eventId: string; event: OsceEvent; onGenerated: () => void }) {
+  const [day1, setDay1] = useState<string[]>([]);
+  const [day2, setDay2] = useState<string[]>([]);
+  const [savingScenarios, setSavingScenarios] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [confirmGenerate, setConfirmGenerate] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/osce/events/${eventId}/day-scenarios`);
+        const data = await res.json();
+        if (data.success) {
+          setDay1(data.day1 || []);
+          setDay2(data.day2 || []);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [eventId]);
+
+  const overlap = day1.filter(s => day2.includes(s));
+
+  const toggle = (day: 1 | 2, scenario: string) => {
+    const [list, setList] = day === 1 ? [day1, setDay1] : [day2, setDay2];
+    setList(list.includes(scenario) ? list.filter(s => s !== scenario) : [...list, scenario]);
+  };
+
+  const saveScenarios = async () => {
+    setSavingScenarios(true);
+    try {
+      await fetch(`/api/osce/events/${eventId}/day-scenarios`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ day1, day2 }),
+      });
+    } catch { /* ignore */ }
+    setSavingScenarios(false);
+  };
+
+  const handleGenerate = async () => {
+    setGenerating(true);
+    setResult(null);
+    try {
+      await saveScenarios();
+      const res = await fetch(`/api/osce/events/${eventId}/generate-roster`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setResult({ type: 'success', message: `Scheduled ${data.studentsScheduled} students across ${data.blocksUsed} blocks and created ${data.assessmentsCreated} assessments.` });
+        onGenerated();
+      } else {
+        setResult({ type: 'error', message: data.error || 'Failed to generate roster' });
+      }
+    } catch {
+      setResult({ type: 'error', message: 'Network error' });
+    }
+    setGenerating(false);
+    setConfirmGenerate(false);
+  };
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6 space-y-5">
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Generate Roster &amp; Assessments</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Auto-populates this event&apos;s cohort roster into the time blocks below (even split, respecting each
+          block&apos;s capacity — {event.minutes_per_student} min/student, set in Settings), and creates the matching
+          scored assessments. One-shot: run once per event.
+        </p>
+        {!event.cohort_id && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2 flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5" /> Set a cohort for this event in the Settings tab first.
+          </p>
+        )}
+      </div>
+
+      {[1, 2].map(day => (
+        <div key={day}>
+          <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Day {day} Scenarios</label>
+          <div className="flex flex-wrap gap-2">
+            {ALL_SCENARIOS.map(s => {
+              const selected = (day === 1 ? day1 : day2).includes(s);
+              const isOverlap = overlap.includes(s);
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => toggle(day as 1 | 2, s)}
+                  className={`w-9 h-9 rounded-lg text-sm font-bold border transition-colors ${
+                    selected
+                      ? isOverlap
+                        ? 'bg-amber-100 border-amber-400 text-amber-800 dark:bg-amber-900/40 dark:border-amber-600 dark:text-amber-300'
+                        : 'bg-blue-600 border-blue-600 text-white'
+                      : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300'
+                  }`}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {overlap.length > 0 && (
+        <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
+          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+          Scenario{overlap.length !== 1 ? 's' : ''} {overlap.join(', ')} assigned to both days — a student on Day 1 could
+          brief a Day 2 student on it. Confirm this is intentional before generating.
+        </div>
+      )}
+
+      {result && (
+        <div className={`text-sm rounded-lg px-3 py-2 ${
+          result.type === 'success'
+            ? 'bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300'
+            : 'bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300'
+        }`}>
+          {result.message}
+        </div>
+      )}
+
+      <div className="flex items-center gap-3">
+        <button
+          onClick={saveScenarios}
+          disabled={savingScenarios}
+          className="px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50"
+        >
+          {savingScenarios ? 'Saving...' : 'Save Scenario Assignment'}
+        </button>
+        {confirmGenerate ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-600 dark:text-gray-300">Generate now? This can&apos;t be re-run without clearing the schedule first.</span>
+            <button
+              onClick={handleGenerate}
+              disabled={generating || !event.cohort_id || (day1.length === 0 && day2.length === 0)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs font-medium disabled:opacity-50"
+            >
+              {generating ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Zap className="w-3.5 h-3.5" />}
+              Confirm Generate
+            </button>
+            <button onClick={() => setConfirmGenerate(false)} disabled={generating} className="px-3 py-1.5 bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-xs">
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmGenerate(true)}
+            disabled={!event.cohort_id}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Zap className="w-4 h-4" />
+            Generate Roster &amp; Assessments
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) {
   const [schedule, setSchedule] = useState<ScheduleBlock[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -1591,7 +1966,7 @@ function StudentsTab({ eventId }: { eventId: string }) {
   const blocksWithStudents = schedule.filter(b => b.students.length > 0);
 
   if (blocksWithStudents.length === 0) {
-    return <div className="p-8 text-center text-gray-500 dark:text-gray-400">No students assigned to time blocks yet.</div>;
+    return <RosterSetupPanel eventId={eventId} event={event} onGenerated={fetchSchedule} />;
   }
 
   return (
@@ -1884,6 +2259,13 @@ function ResultsTab({ eventId }: { eventId: string }) {
 // TAB 7: Settings
 // ═══════════════════════════════════════════════════════════════════════════════
 
+interface SettingsCohort {
+  id: string;
+  cohort_number: number;
+  status?: 'active' | 'graduated';
+  program?: { abbreviation: string | null } | null;
+}
+
 function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => void }) {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -1897,6 +2279,8 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
     max_observers_per_block: event.max_observers_per_block,
     status: event.status,
     event_pin: event.event_pin || '',
+    cohort_id: event.cohort_id || '',
+    minutes_per_student: event.minutes_per_student,
   });
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -1904,6 +2288,17 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [cohorts, setCohorts] = useState<SettingsCohort[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch('/api/cohorts');
+        const data = await res.json();
+        if (data.success) setCohorts((data.cohorts || []).filter((c: SettingsCohort) => c.status !== 'graduated'));
+      } catch { /* ignore */ }
+    })();
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
@@ -1924,6 +2319,8 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
           max_observers_per_block: form.max_observers_per_block,
           status: form.status,
           event_pin: form.event_pin.trim() || null,
+          cohort_id: form.cohort_id || null,
+          minutes_per_student: form.minutes_per_student,
         }),
       });
       if (!res.ok) {
@@ -2033,6 +2430,28 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
                 <option value="closed">Closed</option>
                 <option value="archived">Archived</option>
               </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cohort</label>
+              <select value={form.cohort_id} onChange={e => setForm(p => ({ ...p, cohort_id: e.target.value }))}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                <option value="">-- Not set --</option>
+                {cohorts.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.program?.abbreviation || 'Cohort'} {c.cohort_number}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Required to auto-populate the roster from the Students tab.</p>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Minutes Per Student</label>
+              <input type="number" min={5} max={120} value={form.minutes_per_student} onChange={e => setForm(p => ({ ...p, minutes_per_student: parseInt(e.target.value) || 32 }))}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Capacity default used to derive slots per time block (block length ÷ this).</p>
             </div>
           </div>
 

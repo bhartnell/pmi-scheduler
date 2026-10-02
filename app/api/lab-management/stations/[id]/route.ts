@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { notifyInstructorAssigned } from '@/lib/notifications';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { resolveRoomId } from '@/lib/lab-rooms';
 import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import type { VolunteerTokenResult } from '@/lib/api-auth';
 
@@ -71,6 +72,12 @@ export async function GET(
           assessment_c,
           assessment_d,
           assessment_e,
+          assessment_x_action,
+          assessment_a_action,
+          assessment_b_action,
+          assessment_c_action,
+          assessment_d_action,
+          assessment_e_action,
           sample_history,
           opqrst,
           initial_vitals,
@@ -148,7 +155,10 @@ export async function PATCH(
     if (body.custom_title !== undefined) updateData.custom_title = body.custom_title;
     if (body.instructor_name !== undefined) updateData.instructor_name = body.instructor_name;
     if (body.instructor_email !== undefined) updateData.instructor_email = body.instructor_email;
-    if (body.room !== undefined) updateData.room = body.room;
+    if (body.room !== undefined) {
+      updateData.room = body.room;
+      updateData.room_id = await resolveRoomId(supabase, body.room);
+    }
     if (body.notes !== undefined) updateData.notes = body.notes;
     if (body.station_number !== undefined) updateData.station_number = body.station_number;
     if (body.rotation_minutes !== undefined) updateData.rotation_minutes = body.rotation_minutes;

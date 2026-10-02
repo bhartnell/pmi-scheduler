@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatCohortNumber } from '@/lib/format-cohort';
 import {
@@ -72,6 +72,7 @@ import LabDayCheckInSection from '@/components/lab-day/LabDayCheckInSection';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import AvailableInstructorsSection from '@/components/lab-day/AvailableInstructorsSection';
 import ScenarioRoleModal from '@/components/lab-day/ScenarioRoleModal';
+import { WikiArticleLink } from '@/components/wiki/WikiArticleLink';
 import ScenarioPickerModal from '@/components/lab-day/ScenarioPickerModal';
 import DuplicateModals from '@/components/lab-day/DuplicateModals';
 import LabDayPrintView from '@/components/lab-day/LabDayPrintView';
@@ -154,6 +155,13 @@ export default function LabDayPage() {
     return best;
   })();
   const isCheckoffDay = !!checkoffDetection;
+  // Tracker open state. `isCheckoffDay` flips true late (station skill
+  // sheets load async), which used to re-render <details open={false}> and
+  // collapse a tracker the user was already looking at ("disappears after
+  // ~10s"). Latch the first-render default and only change on user toggle.
+  const [trackerOpen, setTrackerOpen] = useState<boolean | null>(null);
+  const trackerDefaultOpenRef = useRef<boolean | null>(null);
+  if (trackerDefaultOpenRef.current === null && labDay) trackerDefaultOpenRef.current = !isCheckoffDay;
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [showNextWeekConfirm, setShowNextWeekConfirm] = useState(false);
   const [showBulkDuplicateModal, setShowBulkDuplicateModal] = useState(false);
@@ -221,7 +229,7 @@ export default function LabDayPage() {
       const [labDayRes, instructorsRes, locationsRes, rolesRes] = await Promise.all([
         fetch(`/api/lab-management/lab-days/${labDayId}`),
         fetch('/api/lab-management/instructors'),
-        fetch('/api/lab-management/locations?type=room'),
+        fetch('/api/lab-management/locations?type=lab_rooms'),
         fetch(`/api/lab-management/lab-day-roles?lab_day_id=${labDayId}`)
       ]);
       const labDayData = await labDayRes.json();
@@ -559,6 +567,10 @@ export default function LabDayPage() {
 
       <LabDayHeader labDay={labDay} labDayId={labDayId} showDuplicateDropdown={showDuplicateDropdown} onSetShowDuplicateDropdown={setShowDuplicateDropdown} onOpenTimer={() => setShowTimer(true)} onPrint={() => handlePrint(labDay, labDayRoles, cohortStudents)} onDownloadPDF={() => handleDownloadPDF(labDay)} onExportCalendar={() => handleExportCalendar(labDay, labDayRoles)} onPrintRoster={() => handlePrintRoster(labDay, cohortStudents)} onCSVExport={() => handleCSVExport(labDayId, labDay.date, toast)} onOpenDuplicateModal={() => { setShowDuplicateModal(true); setShowDuplicateDropdown(false); }} onOpenNextWeekConfirm={() => { setShowDuplicateDropdown(false); setShowNextWeekConfirm(true); }} onOpenBulkDuplicateModal={() => { setShowDuplicateDropdown(false); setShowBulkDuplicateModal(true); }} formatDate={formatDate} formatTime={formatTime} />
 
+      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 flex justify-end print:hidden">
+        <WikiArticleLink slug="run-a-lab-day" label="Help: Running a lab day" />
+      </div>
+
       <main className={`max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6${showRosterPrint ? ' print:hidden' : ''}`}>
         {labDay.is_nremt_testing && (
           <div className="bg-red-600 text-white text-center py-2 font-bold rounded-lg mb-4">
@@ -857,7 +869,8 @@ export default function LabDayPage() {
         {labMode === 'individual_testing' && (
           <details
             className="mt-6 print:hidden group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700"
-            open={!isCheckoffDay}
+            open={trackerOpen ?? trackerDefaultOpenRef.current ?? !isCheckoffDay}
+            onToggle={(e) => setTrackerOpen((e.currentTarget as HTMLDetailsElement).open)}
           >
             <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-t-lg flex items-center justify-between">
               <span>Individual Testing Tracker</span>

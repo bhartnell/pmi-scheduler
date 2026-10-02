@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       .from('equipment_maintenance')
       .select(`
         *,
-        equipment:equipment_item_id (id, name, category, location, condition)
+        equipment:equipment_item_id (id, name, condition, category:category_id(name), location:location_id(name))
       `)
       .order('scheduled_date', { ascending: false })
       .order('created_at', { ascending: false });
@@ -77,9 +77,34 @@ export async function GET(request: NextRequest) {
       .eq('status', 'scheduled')
       .lt('scheduled_date', today);
 
+    // Flatten the joined category/location names back to plain strings
+    // to match the existing API contract (equipment.category / equipment.location).
+    type JoinedEquipment = {
+      id: string;
+      name: string;
+      condition: string | null;
+      category: { name: string } | null;
+      location: { name: string } | null;
+    };
+    const records = (data ?? []).map((record) => {
+      const equipment = record.equipment as unknown as JoinedEquipment | null;
+      return {
+        ...record,
+        equipment: equipment
+          ? {
+              id: equipment.id,
+              name: equipment.name,
+              condition: equipment.condition,
+              category: equipment.category?.name ?? null,
+              location: equipment.location?.name ?? null,
+            }
+          : null,
+      };
+    });
+
     return NextResponse.json({
       success: true,
-      records: data ?? [],
+      records,
       overdueCount: overdueCount ?? 0,
     });
   } catch (error: unknown) {
@@ -129,15 +154,22 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Verify the equipment exists
+    // Verify against `equipment_items` — the table equipment_maintenance's FK
+    // (equipment_maintenance_equipment_item_id_fkey) actually references. The
+    // picker (GET /api/admin/equipment) lists the flat `equipment` table, so an
+    // id from it is rejected here instead of failing the FK or attaching to a
+    // wrong asset. Canonical-table decision pending (Task Handoff Queue).
     const { data: equipment, error: equipError } = await supabase
-      .from('equipment')
-      .select('id, name')
+      .from('equipment_items')
+      .select('id')
       .eq('id', equipment_item_id)
       .single();
 
     if (equipError || !equipment) {
-      return NextResponse.json({ error: 'Equipment not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Equipment item not found. Maintenance records can only be logged against tracked equipment items.' },
+        { status: 404 }
+      );
     }
 
     const record = {
@@ -161,17 +193,8 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
-    // If completing maintenance, update the equipment's last_maintenance and next_maintenance fields
-    if (body.status === 'completed' && body.completed_date) {
-      await supabase
-        .from('equipment')
-        .update({
-          last_maintenance: body.completed_date,
-          next_maintenance: body.next_due_date ?? null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', equipment_item_id);
-    }
+    // NOTE: last/next_maintenance sync to `equipment` removed — that table is not
+    // the FK target, so the sync could write to an unrelated asset.
 
     return NextResponse.json({ success: true, record: data }, { status: 201 });
   } catch (error: unknown) {

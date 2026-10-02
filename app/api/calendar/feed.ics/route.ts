@@ -236,6 +236,7 @@ export async function GET(request: NextRequest) {
       .lte('date', endDate)
       .eq('cohort.is_active', true)
       .eq('cohort.is_archived', false)
+      .eq('is_archived', false)
       .order('date');
     if (labsErr) throw labsErr;
     const labs = (labsData as unknown as LabDayRow[]) || [];
@@ -345,12 +346,12 @@ export async function GET(request: NextRequest) {
     try {
       const { data: visits } = await supabase
         .from('clinical_site_visits')
-        .select(`id, visit_date, start_time, end_time, site:clinical_sites(name, abbreviation), cohort:cohorts(cohort_number, program:programs(abbreviation))`)
+        .select(`id, visit_date, visit_time, site:clinical_sites(name, abbreviation), cohort:cohorts(cohort_number, program:programs(abbreviation))`)
         .gte('visit_date', startDate).lte('visit_date', endDate).order('visit_date');
-      for (const v of (visits as unknown as { id: string; visit_date: string; start_time: string | null; end_time: string | null; site: { name: string | null; abbreviation: string | null } | null; cohort: { cohort_number: number | null; program: { abbreviation: string | null } | null } | null }[]) || []) {
+      for (const v of (visits as unknown as { id: string; visit_date: string; visit_time: string | null; site: { name: string | null; abbreviation: string | null } | null; cohort: { cohort_number: number | null; program: { abbreviation: string | null } | null } | null }[]) || []) {
         if (!v.visit_date) continue;
         const cl = cohortAbbrLabel(v.cohort);
-        icsLines.push(...buildVEVENT({ uid: `clinical-${v.id}`, title: `Clinical: ${v.site?.name || v.site?.abbreviation || 'Site Visit'}${cl ? ` — ${cl}` : ''}`, date: v.visit_date, start_time: v.start_time || '06:00:00', end_time: v.end_time || '18:00:00' }));
+        icsLines.push(...buildVEVENT({ uid: `clinical-${v.id}`, title: `Clinical: ${v.site?.name || v.site?.abbreviation || 'Site Visit'}${cl ? ` — ${cl}` : ''}`, date: v.visit_date, start_time: v.visit_time || '06:00:00', end_time: v.visit_time || '18:00:00' }));
         extraEmitted++;
       }
     } catch (e) { console.error('[feed.ics] clinical', e); }

@@ -30,6 +30,7 @@ import {
   FolderOpen,
   ClipboardCheck,
   Calendar,
+  Award,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { isStudent } from '@/lib/permissions';
@@ -99,6 +100,7 @@ export default function StudentLayout({
     { href: '/student/my-progress', label: 'My Progress', icon: TrendingUp },
     { href: '/student/completions', label: 'Stations', icon: CheckSquare },
     { href: '/student/skill-sheets', label: 'Skill Sheets', icon: ClipboardCheck },
+    { href: '/student/skill-evaluations', label: 'Skill Results', icon: Award },
     { href: '/student/ekg', label: 'EKG Progress', icon: Activity },
     { href: '/student/scenarios', label: 'Scenarios', icon: BookOpen },
     { href: '/cases', label: 'Case Studies', icon: BookOpenCheck },

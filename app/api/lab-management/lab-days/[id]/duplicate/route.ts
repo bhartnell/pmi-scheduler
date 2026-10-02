@@ -94,6 +94,7 @@ export async function POST(
       station_number: s.station_number,
       station_type: s.station_type,
       scenario_id: s.scenario_id,
+      metadata: s.metadata,
       skill_name: s.skill_name,
       custom_title: s.custom_title,
       skill_sheet_url: s.skill_sheet_url,

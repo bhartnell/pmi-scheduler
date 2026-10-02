@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import InlineTimerWidget from '@/components/InlineTimerWidget';
 import Breadcrumbs from '@/components/Breadcrumbs';
-import { ArrowLeft } from 'lucide-react';
 import type { LabDay } from './types';
 
 interface LabDayHeaderProps {
@@ -67,13 +66,6 @@ export default function LabDayHeader({
               entityTitle={labDay.title || `${labDay.cohort.program.abbreviation} Group ${formatCohortNumber(labDay.cohort.cohort_number)}`}
               className="mb-1"
             />
-            <Link
-              href="/labs/schedule"
-              className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 mb-1"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Schedule
-            </Link>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
               {formatDate(labDay.date)}
             </h1>

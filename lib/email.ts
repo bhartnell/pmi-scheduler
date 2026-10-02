@@ -36,6 +36,7 @@ export type EmailTemplate =
   | 'lab_reminder'
   | 'skill_evaluation'
   | 'scenario_feedback'
+  | 'osce_invite'
   | 'general';
 
 interface EmailData {
@@ -302,6 +303,58 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
       </p>
       <p style="color: #9ca3af; margin: 8px 0 0 0; font-size: 12px; font-style: italic;">
         — PMI Paramedic Program
+      </p>
+    `
+  }),
+
+  osce_invite: (data) => ({
+    subject: `[PMI] OSCE Evaluator Invitation — ${data.eventTitle}`,
+    html: `
+      <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 20px;">
+        You're Invited to Evaluate at Our Clinical Capstone
+      </h2>
+      <p style="color: #374151; margin: 0 0 16px 0; font-size: 16px; line-height: 1.5;">
+        Dear ${data.evaluatorName},
+      </p>
+      <p style="color: #374151; margin: 0 0 16px 0; font-size: 14px; line-height: 1.6;">
+        On behalf of the Pima Medical Institute Paramedic Program, we would be honored
+        to have you join us as an external evaluator for our upcoming Objective
+        Structured Clinical Examination (OSCE) — the summative capstone assessment for
+        our graduating paramedic cohort.
+      </p>
+
+      <div style="background-color: #f3f4f6; border-radius: 8px; padding: 16px; margin: 16px 0;">
+        <h3 style="color: #111827; margin: 0 0 8px 0; font-size: 18px;">${data.eventTitle}</h3>
+        ${data.eventSubtitle ? `<p style="color: #6b7280; margin: 0 0 8px 0; font-size: 13px;">${data.eventSubtitle}</p>` : ''}
+        <p style="color: #374151; margin: 0; font-size: 14px;">
+          <strong>Dates:</strong> ${data.eventDates}<br>
+          ${data.eventLocation ? `<strong>Location:</strong> ${data.eventLocation}<br>` : ''}
+          ${data.roleLabel ? `<strong>Role:</strong> ${data.roleLabel}` : ''}
+        </p>
+      </div>
+
+      <p style="color: #374151; margin: 0 0 8px 0; font-size: 14px; line-height: 1.6;">
+        Use the button below at any time to enter your personal evaluator access —
+        no separate login or account is required.
+      </p>
+
+      ${emailButton('Access Your Evaluator Link', String(data.inviteLink))}
+
+      ${data.eventPin ? `
+        <p style="color: #6b7280; margin: 16px 0 0 0; font-size: 12px; line-height: 1.5;">
+          If the button above doesn't work, visit
+          <a href="${APP_URL}/osce-scoring/enter" style="color: #2563eb;">${APP_URL}/osce-scoring/enter</a>
+          and enter event code <strong>${data.eventPin}</strong>, then select your name from the list.
+        </p>
+      ` : ''}
+
+      <p style="color: #374151; margin: 20px 0 0 0; font-size: 14px; line-height: 1.6;">
+        Thank you for supporting the next generation of paramedics. Please don't
+        hesitate to reach out with any questions.
+      </p>
+      <p style="color: #6b7280; margin: 16px 0 0 0; font-size: 13px;">
+        Benjamin Hartnell &mdash; Lead Paramedic Instructor &amp; Clinical Director<br>
+        Pima Medical Institute Paramedic Program
       </p>
     `
   }),
@@ -650,6 +703,43 @@ export async function sendEmail(emailData: EmailData): Promise<{ success: boolea
     });
     return { success: false, error: errMsg };
   }
+}
+
+/**
+ * Send an OSCE evaluator invitation email — the INVITE + LINKS step of the
+ * external-evaluator flow. Carries the evaluator's unique guest-token link
+ * (`/osce-scoring/enter?token=...`) plus the event PIN as a fallback entry
+ * path. Not subject to the NREMT/student-blackout guards (recipients are
+ * external evaluators, never @my.pmi.edu students).
+ */
+export async function sendOsceInviteEmail(
+  toEmail: string,
+  data: {
+    evaluatorName: string;
+    eventTitle: string;
+    eventSubtitle?: string | null;
+    eventDates: string;
+    eventLocation?: string | null;
+    eventPin?: string | null;
+    roleLabel?: string | null;
+    inviteLink: string;
+  }
+) {
+  return sendEmail({
+    to: toEmail,
+    subject: `[PMI] OSCE Evaluator Invitation — ${data.eventTitle}`,
+    template: 'osce_invite',
+    data: {
+      evaluatorName: data.evaluatorName,
+      eventTitle: data.eventTitle,
+      eventSubtitle: data.eventSubtitle ?? undefined,
+      eventDates: data.eventDates,
+      eventLocation: data.eventLocation ?? undefined,
+      eventPin: data.eventPin ?? undefined,
+      roleLabel: data.roleLabel ?? undefined,
+      inviteLink: data.inviteLink,
+    },
+  });
 }
 
 /**

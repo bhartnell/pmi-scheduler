@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { canAccessAdmin, hasMinRole } from '@/lib/permissions';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { WikiArticleLink } from '@/components/wiki/WikiArticleLink';
 import { PageLoader } from '@/components/ui';
 import { useToast } from '@/components/Toast';
 import type { CurrentUser } from '@/types';
@@ -1169,6 +1170,7 @@ export default function LabTemplatesPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              <WikiArticleLink slug="build-a-lab-day-from-a-template" label="Help: Building from a template" />
               <ThemeToggle />
               {isAdmin && (
                 <button

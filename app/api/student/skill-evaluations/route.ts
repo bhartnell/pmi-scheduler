@@ -7,7 +7,9 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  * GET /api/student/skill-evaluations
  *
  * Returns the student's skill evaluation history.
- * Only shows evaluations where email_status != 'do_not_send'.
+ * Students only see rows where visibility_to_student = true AND the skill
+ * sheet is not an NREMT/cert-exam sheet (those are Portal/SNHD-delivered,
+ * never shown in-app — hard-excluded regardless of visibility_to_student).
  * Access: student role (scoped to requesting student) OR instructor role (with ?student_id=).
  */
 export async function GET(request: NextRequest) {
@@ -60,8 +62,8 @@ export async function GET(request: NextRequest) {
     let query = supabase
       .from('student_skill_evaluations')
       .select(`
-        id, evaluation_type, result, notes, flagged_items, step_marks, email_status, created_at,
-        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source),
+        id, evaluation_type, result, notes, flagged_items, step_marks, email_status, visibility_to_student, created_at,
+        skill_sheet:skill_sheets!student_skill_evaluations_skill_sheet_id_fkey(id, skill_name, source, is_nremt),
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name),
         lab_day:lab_days!student_skill_evaluations_lab_day_id_fkey(id, date, title)
       `)
@@ -73,19 +75,24 @@ export async function GET(request: NextRequest) {
       query = query.eq('id', queryEvaluationId);
     }
 
-    // Students only see evaluations that were shared with them
-    if (labUser.role === 'student') {
-      query = query.neq('email_status', 'do_not_send');
-    }
-
-    const { data: evaluations, error: evalsError } = await query;
+    const { data: rawEvaluations, error: evalsError } = await query;
 
     if (evalsError) {
       console.error('Error fetching evaluations:', evalsError);
       return NextResponse.json({ success: false, error: 'Failed to fetch evaluations' }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, evaluations: evaluations || [] });
+    // Students only see rows explicitly marked visible AND never NREMT/cert
+    // rows (hard-excluded here regardless of visibility_to_student, per Ben
+    // 2026-08-07 — those results are Portal/SNHD-delivered, never in-app).
+    const evaluations = labUser.role === 'student'
+      ? (rawEvaluations || []).filter((evaluation) => {
+          const skillSheet = Array.isArray(evaluation.skill_sheet) ? evaluation.skill_sheet[0] : evaluation.skill_sheet;
+          return evaluation.visibility_to_student === true && skillSheet?.is_nremt !== true;
+        })
+      : (rawEvaluations || []);
+
+    return NextResponse.json({ success: true, evaluations });
   } catch (error) {
     console.error('Error in student skill evaluations:', error);
     return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });

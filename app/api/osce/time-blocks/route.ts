@@ -2,15 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Helper: resolve the most recent open/closed event as default
-async function getDefaultEventId(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<string | null> {
+async function getDefaultEvent(supabase: ReturnType<typeof getSupabaseAdmin>) {
   const { data } = await supabase
     .from('osce_events')
-    .select('id')
+    .select('*')
     .in('status', ['open', 'closed'])
     .order('start_date', { ascending: false })
     .limit(1)
     .single();
-  return data?.id || null;
+  return data || null;
 }
 
 // PUBLIC: No auth required — list all time blocks with observer counts (backward compat — defaults to most recent event)
@@ -18,8 +18,12 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
 
-    // Resolve event_id from query param or default to most recent open event
-    const eventId = request.nextUrl.searchParams.get('event_id') || await getDefaultEventId(supabase);
+    // Resolve event from query param or default to most recent open/closed event
+    const eventIdParam = request.nextUrl.searchParams.get('event_id');
+    const event = eventIdParam
+      ? (await supabase.from('osce_events').select('*').eq('id', eventIdParam).single()).data
+      : await getDefaultEvent(supabase);
+    const eventId = event?.id || eventIdParam || null;
 
     // Get all time blocks ordered by sort_order, filtered by event
     let query = supabase
@@ -72,7 +76,21 @@ export async function GET(request: NextRequest) {
       observer_count: countMap[block.id] || 0,
     }));
 
-    return NextResponse.json({ blocks: blocksWithCounts });
+    return NextResponse.json({
+      blocks: blocksWithCounts,
+      event: event
+        ? {
+            id: event.id,
+            title: event.title,
+            subtitle: event.subtitle,
+            description: event.description,
+            location: event.location,
+            start_date: event.start_date,
+            end_date: event.end_date,
+            max_observers_per_block: event.max_observers_per_block,
+          }
+        : null,
+    });
   } catch (error) {
     console.error('Error fetching time blocks:', error);
     return NextResponse.json(

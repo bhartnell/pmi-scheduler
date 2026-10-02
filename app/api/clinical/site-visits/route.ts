@@ -181,7 +181,8 @@ export async function POST(request: NextRequest) {
       throw visitError;
     }
 
-    // If specific students were selected, add them
+    // Intentionally skipped when entire_class is true: the roster is implied by
+    // cohort_id, not enumerated per-student. See DATABASE_SCHEMA.md.
     if (body.student_ids && Array.isArray(body.student_ids) && body.student_ids.length > 0 && !body.entire_class) {
       const studentInserts = body.student_ids.map((studentId: string) => ({
         visit_id: visit.id,

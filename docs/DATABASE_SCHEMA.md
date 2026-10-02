@@ -4,10 +4,21 @@
 > Reconciled to live database -- June 8, 2026 (see "Schema Reconciliation Additions")
 > Check constraints re-verified against live -- June 10, 2026 (all 146 documented CHECK definitions normalized to exact pg_get_constraintdef output; 4 had real value-list drift)
 > Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
+> Last updated: 2026-10-01 -- `lab_users.signature_face` now 'script' (embedded Dancing Script); legacy 'classic'/'formal'/'casual' still valid, render as script (no schema change)
+> Last updated: 2026-09-29 -- added `scenarios.assessment_{x..e}_action` (Scenario Format v2); `phases` jsonb gains optional keys changes/triggers/modifiers/branch
 > Last updated: 2026-07-12 -- added `lab_days.is_archived` (migration `20260712_lab_days_is_archived.sql`, archive-not-delete flag excluding rows from the general lab schedule + ACLS hub list views)
 > Last updated: 2026-07-24 -- added `lab_template_stations.skill_sheet_id` (migration `20260724_lab_template_stations_skill_sheet_id.sql`, see `lab_template_stations` below)
 > Last updated: 2026-08-15 -- added `checklist_attendance.marked_at` / `.marked_by` (migration `20260815_checklist_attendance_marked_by.sql`, fixes prod PGRST204 on attendance save, see `checklist_attendance` below)
+> Last updated: 2026-09-15 -- documented which `lab_days.is_archived` consumers filter on it (calendar feed + station-instructor sync now do; ID-scoped routes and the unified calendar still don't -- BUG-7)
 > Last updated: 2026-08-28 -- RLS hardening Tiers 0-1 (migrations `20260828_tier0_backup_tables_enable_rls.sql`, `20260828_tier1_policy_exists_tables_enable_rls.sql`): enabled RLS on the 46 `_backup_*` archival tables (no policies -- service-role-only) and on `equipment`/`feedback_reports`/`onboarding_assignments` (existing policies now enforced). No column/table shape changes. See Task Handoff Queue `[SECURITY - advisors, NEEDS BEN]` for the full tiered plan and remaining Tiers 2-3.
+> Last updated: 2026-09-01 -- Tier 0b (migration `20260901_tier0b_new_backup_tables_enable_rls.sql`, PR #83): enabled RLS on 11 more dated `_backup_*` restore-point tables created 08-28..09-01 that had missed the original Tier 0 pass. No column/table shape changes.
+> Last updated: 2026-09-01 -- Tier 3 critical item (migration `20260901_tier3_revoke_anon_execute_admin_rpcs.sql`, PR #84): revoked the implicit `PUBLIC` `EXECUTE` grant (inherited by `anon`/`authenticated`) on 7 SECURITY DEFINER functions with zero anon/authenticated callers anywhere in the app -- `get_all_users()`, `create_notification(...)` (both overloads), `update_library_item_status()`, `delete_station_admin()`, `promote_student_to_program()`, `pmi_link_block_on_lab_day_insert()`, `pmi_link_lab_day_on_block_publish()`. `service_role`'s separate grant is untouched. **Correction, same day:** PR #84's migration actually reads `REVOKE EXECUTE ... FROM anon, authenticated`, which is a no-op against a PUBLIC-only grant -- it did not itself close anything. `20260901_fix_tier3_revoke_used_ineffective_role_list.sql` adds the working `REVOKE ... FROM PUBLIC` form (already live since applied directly via Supabase MCP in parallel) so the tracked migration history matches the actually-secure state. Also same day, PR #86 (migration `20260901_critical_revoke_anon_execute_security_definer.sql`) closed the remaining 6 flagged functions -- `is_superadmin`, `is_access_admin`, `has_ops_access`, `is_inventory_admin`, `is_print_operator` (revoked from `anon` only, `authenticated` retained since they gate live `TO {public}` RLS policies on ~35 tables) and `has_pmi_ops_role` (revoked fully, confirmed unused by any policy) -- all 14 originally-flagged anon-executable SECURITY DEFINER functions are now closed. Still undocumented/untouched: `moi_check_key`/`moi_set_station`/`moi_station_progress` (schema drift -- created directly against production outside any tracked migration; a shared-key kiosk/PIN auth flow, not an oversight -- flagged to Ben on the Task Handoff Queue item). No column/table shape changes.
+> Last updated: 2026-09-01 -- Tier 2 (migration `20260901_tier2_live_tables_enable_rls.sql`): enabled RLS (no policy -- service-role-only) on the 49 live tables flagged `rls_disabled_in_public`. Repo-wide grep of every table confirmed 100% of live read/write paths go through `getSupabaseAdmin()` (service_role); this app never uses Supabase Auth anywhere, so `authenticated` is unreachable through the app regardless, and the app's small set of anon-key client components touch none of these 49 tables. No column/table shape changes. `rls_disabled_in_public` now 0 -- Tier 2 complete. See CHANGELOG.md for the full 49-table list.
+> Last updated: 2026-09-01 -- OSCE invite+links stage (migration `20260901_osce_guest_token_invites.sql`): added `email`, `agency`, `invited_at`, `invite_send_count`, `invite_last_error` to `osce_guest_tokens` so a token can carry the evaluator's email and track whether an invite was actually sent. See `osce_guest_tokens` below.
+> Last updated: 2026-09-04 -- S3 lab template set applied to G14 (migration `20260904_s3_lab_apply_g14.sql`, Task Handoff Queue "S3 lab model"): generated G14's 15 Semester-3 `lab_days` from Ben's pre-existing S3 `lab_day_templates` set and linked them to the 15 already-published `pmi_schedule_blocks`. Corrected `lab_stations.drill_ids` type (doc said `text[]`, live DB is `uuid[]`). Fixed `POST /api/admin/lab-templates/apply` to actually copy `lab_mode`/`is_adv_cert_testing`/`cert_course`/`section_number`/`section_label` from template to generated `lab_days` (previously silently dropped). See `lab_day_templates` below for full detail.
+> Last updated: 2026-09-14 -- new table `osce_walkup_evaluators` (migration `20260914_osce_walkup_evaluators.sql`, Task Handoff Queue "OSCE walk-up evaluator login"): self-reported evaluators who show up on event day without being pre-invited. See `osce_walkup_evaluators` below.
+> Last updated: 2026-09-14 -- repeatable OSCE creation flow (migration `20260914_osce_repeatable_setup.sql`, Task Handoff Queue "OSCE event creation in the UI — make it repeatable per cohort"): added `osce_events.cohort_id` (FK -> cohorts) + `osce_events.minutes_per_student` (capacity default, 32), and new table `osce_day_scenarios` (per-day A-F scenario assignment). See both below.
+> Last updated: 2026-09-14 -- G15 ACLS regeneration (migration `20260914_g15_acls_regen.sql`, Task Handoff Queue "G15's ACLS days were generated from the SUPERSEDED March placeholder template"): no column/table shape changes. See `lab_day_templates` below for full detail.
 
 ## Summary
 
@@ -90,8 +101,11 @@
 | lvfr_platoon | text | YES |  |  |
 | aha_instructor_number | text | YES |  | AHA instructor # for the AHA Results Export signature line |
 | signature_data | text | YES |  | PNG data URL of drawn/uploaded signature; NULL when signature_kind='auto' |
-| signature_kind | text | YES |  | 'drawn' \| 'uploaded' \| 'auto' (script-font name fallback) |
-| paramedic_lab_default | boolean | NO | true | Whether this instructor is included in paramedic-lab default-available classification. FALSE for RT/other-program full-timers who are assignable but not default-available (Ben 2026-08-07): `chooshmand@`, `dridgell@`, `madams@`, `tkankoski@`, `tmate@`. Added migration `20260807_instructor_unavailability.sql`. Not yet read by any endpoint — see instructor-availability picker wiring checkpoint (Task Handoff Queue, [AVAILABILITY SYSTEM]). |
+| signature_kind | text | YES |  | 'drawn' \| 'uploaded' \| 'auto' (script-font name fallback) \| 'typed' (signature_text + signature_face) |
+| signature_text | text | YES |  | Typed-signature string (kind='typed'). Migration `20260929_lab_users_aha_credentials.sql` |
+| signature_face | text | YES |  | Typed-signature face key (`lib/reports/aha/signature.ts`) |
+| aha_credentials | ARRAY | YES |  | AHA credential level(s): AHA Faculty / ACLS Instructor / PALS Instructor (orthogonal to app role) |
+| paramedic_lab_default | boolean | NO | true | Whether this instructor is included in paramedic-lab default-available classification. FALSE for RT/other-program full-timers who are assignable but not default-available (Ben 2026-08-07): `chooshmand@`, `dridgell@`, `madams@`, `tkankoski@`, `tmate@`. Added migration `20260807_instructor_unavailability.sql`. **Still not read by any endpoint** — replacing the hardcoded `lib/rt-only-instructors.ts` full-hide with this column is separate, not-yet-scheduled follow-up work (out of scope for the 2026-09-12 picker wiring, which only wired the `instructor_unavailability`/`recurring_unavailability_templates` override). |
 
 **Foreign Keys:**
 - `department_id` -> `departments.id` (`lab_users_department_id_fkey`)
@@ -1546,6 +1560,14 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | is_retake | boolean | YES | false |  |
 | original_evaluation_id | uuid | YES |  | FK -> student_skill_evaluations.id |
 | cert_level | text | YES |  |  |
+| lab_station_id | uuid | YES |  | Physical station attempt happened at (occupancy/retest tracking); plain uuid, not FK-constrained |
+| scenario_id | uuid | YES |  | Scenario run for this attempt, when digitally assigned; plain uuid, not FK-constrained |
+| scenario_run | text | YES |  | Free-text scenario record (paper-friendly) |
+| edited_by | uuid | YES |  |  |
+| edited_at | timestamptz | YES |  |  |
+| edit_prior | jsonb | YES |  | Prior result/critical_fail/critical_fail_notes/step_marks, written by director in-place correction (PATCH evaluations) |
+| edit_reason | text | YES |  |  |
+| visibility_to_student | boolean | NO | true | In-app student visibility, decoupled from email_status (delivery-only). NREMT/cert rows (skill_sheets.is_nremt=true) are additionally hard-excluded at read time regardless of this flag. |
 
 **Foreign Keys:**
 - `lab_day_id` -> `lab_days.id` (`student_skill_evaluations_lab_day_id_fkey`)
@@ -1703,7 +1725,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | section_number | integer | NO | 1 | Multiple lab sections per (date, cohort); part of UNIQUE(date, cohort_id, section_number) |
 | section_label | text | YES |  | Optional display label for the section |
 | suppress_student_emails | boolean | NO | false | When true, suppress ALL student-facing notifications (email + in-app) on this date (AHA/ACLS days); checked date-wide in lib/email + lib/notifications |
-| is_archived | boolean | NO | false | Archive-not-delete flag (migration `20260712_lab_days_is_archived.sql`); excluded from the general lab schedule (`/api/lab-management/lab-days`) and ACLS hub (`/api/adv-cert/acls-hub`) list queries |
+| is_archived | boolean | NO | false | Archive-not-delete flag (migration `20260712_lab_days_is_archived.sql`); excluded from the general lab schedule (`/api/lab-management/lab-days`) and ACLS hub (`/api/adv-cert/acls-hub`) list queries, the Google Calendar `.ics` feed (`/api/calendar/feed.ics`), the general-lab-default calendar sync (`lib/general-lab-sync.ts`), and the station-instructor calendar push (`/api/lab-management/station-instructors`, 2026-09-15). NOT yet checked by the single lab-day fetch (`/api/lab-management/lab-days/[id]`), grading-context, or timer-display routes (ID/token-scoped, not reachable via a filtered list today) or by the in-app unified calendar (`/api/calendar/unified`, which currently relies on a section-number heuristic that happens to also exclude archived section-1 monoliths) — see BUG-7 in the Bug & Fix Log. |
 
 **Foreign Keys:**
 - `created_by` -> `lab_users.id` (`lab_days_created_by_fkey`)
@@ -1759,6 +1781,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | instructor_name | text | YES |  |  |
 | instructor_email | text | YES |  |  |
 | room | text | YES |  |  |
+| room_id | uuid | YES |  | FK -> pmi_rooms.id (canonical location; `room` text kept for legacy/unmapped values) |
 | rotation_minutes | integer | YES | 30 |  |
 | num_rotations | integer | YES | 4 |  |
 | station_type | text | YES | 'scenario'::text |  |
@@ -1767,7 +1790,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | instructions_url | text | YES |  |  |
 | station_notes | text | YES |  |  |
 | metadata | jsonb | YES |  |  |
-| drill_ids | text[] | YES | '{}'::uuid[] |  |
+| drill_ids | uuid[] | YES | '{}'::uuid[] | FK-ish array -> skill_drills.id (not a DB-enforced FK, app-managed). Corrected from text[] 2026-09-04 — live DB is uuid[], doc previously said text[] (Schema-First Rule). |
 | skill_sheet_id | uuid | YES |  | FK -> skill_sheets.id |
 | is_retake_station | boolean | YES | false |  |
 | debrief_minutes | integer | YES |  | Per-station debrief phase preset (migration `20260716_lab_stations_debrief_minutes.sql`); read by LabTimer.tsx as the default `debrief_seconds` when initializing a fresh timer for the lab day, falling back to the runtime 300s (5 min) default when unset |
@@ -1849,6 +1872,12 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | assessment_c | text | YES |  |  |
 | assessment_d | text | YES |  |  |
 | assessment_e | text | YES |  |  |
+| assessment_x_action | text | YES |  | v2 expected learner action for X (migration `20260929_scenario_v2_assessment_actions.sql`) |
+| assessment_a_action | text | YES |  | v2 expected learner action for A (migration `20260929_scenario_v2_assessment_actions.sql`) |
+| assessment_b_action | text | YES |  | v2 expected learner action for B (migration `20260929_scenario_v2_assessment_actions.sql`) |
+| assessment_c_action | text | YES |  | v2 expected learner action for C (migration `20260929_scenario_v2_assessment_actions.sql`) |
+| assessment_d_action | text | YES |  | v2 expected learner action for D (migration `20260929_scenario_v2_assessment_actions.sql`) |
+| assessment_e_action | text | YES |  | v2 expected learner action for E (migration `20260929_scenario_v2_assessment_actions.sql`) |
 | avpu | text | YES |  |  |
 | initial_vitals | jsonb | YES |  | Vitals: { bp, pulse, hr, resp, rr, spo2, etco2, temp, glucose, blood_glucose, gcs, gcs_total, gcs_e, gcs_v, gcs_m, pupils, skin, loc, pain, ekg_rhythm, twelve_lead_notes, lung_sounds, lung_notes, jvd, edema, capillary_refill, pulse_quality, notes, other_findings[] } |
 | sample_history | jsonb | YES |  | SAMPLE: { signs_symptoms, allergies, medications, past_history, last_oral_intake, events } |
@@ -2343,6 +2372,10 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 
 **PALS certification template — Section A/B/C/D/E (PALS Hub Build Plan Phase 5, 2026-07-15):** migration `20260715_pals_certification_template_seed.sql` seeds 5 new `category='certification', cert_course='pals'` rows (`created_by='claude-code-task-handoff-queue:pals-hub-build-plan-phase5'`) transcribing `docs/pals/PALS_2025_Day_Structure.md` sections 1-4: Day 1 §2 "Section A — Learning Stations" (3 `skills` stations, NOT graded — attestation only), §3 "Section B — Case Scenario Practice" (4 `scenario` stations); Day 2 §2 "Section C" / §3 "Section D" (4 practice stations each); Day 2 §4 "Section E — Case Scenario Testing" (`is_adv_cert_testing=true`, `lab_mode='individual_testing'`, 3 round-slots locked to `PALS_TEST_CASE_07/09/13` — matches G14's live 7/17 testing day exactly). Sections B/C/D stations are deliberately left `scenario_id=NULL` ("case TBD") — the source doc locks WHICH 12 cases make up the practice pool (`pals_scenario_seed.json.program_practice_selection`) but not which 4 run in B vs C vs D; inventing that split would be fabricated scheduling data, so each station's `metadata`/`notes` carries the full locked pool instead and the instructor assigns per station via the normal Edit/Assign UI. Pure additive INSERT — does NOT touch G14's live `lab_days` (`6aec40f8-...` 7/16, `e319dc4b-...` 7/17) or the 2 pre-existing `cert_course='pals'` flat stub templates (`e980c3e6-...` Day 1/12-station, `07501712-...` Day 2/3-station) those G14 days link to via `source_template_id` — both left completely alone. **Flagged for Ben, not resolved:** once this 5-section template is ready to become the live PALS generation path for a future cohort, the 2 old flat stubs need `cert_course` set to `NULL` (mirroring the ACLS precedent above) so `generateAhaCourseForCohort`'s `cert_course='pals'` query picks up only the new template, not both (which would double-create a future cohort's PALS days) — this is a switch-over decision on rows Ben authored directly, not done autonomously here. **Grading-model gap also flagged, not fixed:** `PALS_2025_Day_Structure.md` requires practice (Sections B/C/D) graded formative with a 0-4 team-leader rubric and NO PASS/NR, but `pals_test_attempts.result` is `NOT NULL CHECK (result IN ('PASS','NR'))` with no rubric column, and `/labs/pals/grade` forces every attempt (practice or testing) through the same PASS/NR flow — `pals_test_attempts` has 0 rows in production (low write risk) but fixing this rewrites live grading-page behavior days before G14's actual PALS course (7/16-7/17), so it's escalated to Ben rather than rushed through. Verified live via MCP `execute_sql`/`apply_migration` (no `.env.local` in-repo; also stood up a local `.env.local` — gitignored, removed after use — against the same live Supabase project + a locally-minted NextAuth session for `bhartnell@pmi.edu` to load-test `/labs/pals-hub` end-to-end in a real browser): 5 templates × 18 `lab_template_stations` rows created; G14's 2 `lab_days` rows and their 15 `lab_stations` confirmed byte-for-byte unchanged before/after.
 
+**G15 ACLS regeneration (Task Handoff Queue "G15's ACLS days were generated from the SUPERSEDED March placeholder template", 2026-09-14):** migration `20260914_g15_acls_regen.sql` fixed G15's (PM 15.0, cohort `856bcf1d-...`) two ACLS `lab_days` (2026-10-05/06), which had been created — before the sectioned generator existed — from the March 2026 flat stub templates (`b0b27a24-...` Day 1 hand-made, `3b12db4b-...` Day 2), not the 2026-07-13 sectioned ones. **Root cause was not the generator** (`generateAhaCourseForCohort` filters `cert_course='acls'`, and both stubs already had `cert_course=NULL`, so it could never select them) — it was that the two stubs stayed named identically to the real course and unflagged, so they remained pickable from the generic per-day "apply template" flow. Archived (not deleted — `is_archived=true` + `[ARCHIVED] ... (superseded)` title/section_label, mirroring G14's own Day-2 §1 stub row, which already carries this exact pattern) the 2 stale G15 rows after confirming live that every `lab_day_id`-keyed table (attempts, attendance, signups, roles, timer state, equipment, debriefs, ratings, calendar events) was empty for both. Inserted G15's real 7 sections (Day 1 §2-5, Day 2 §2-4, 23 `lab_stations`) exactly as `generateAhaCourseForCohort` would. Re-linked the 2 whole-day `pmi_schedule_blocks` calendar rows (previously pointing at the stale section-1 rows) to each day's first real section (`linked_section_number=2`) — the section-aware calendar trigger (`20260617_calendar_link_triggers_section.sql`) could not do this itself, since it only fills a `NULL` `linked_lab_day_id` and matches on an exact `linked_section_number`, and there's no longer a single section representing a whole day; flagged to Ben in case a different section is preferred. **Root-cause fix — renamed 4 orphaned March-era stub templates** (`[SUPERSEDED] ... (use sectioned templates)` + `review_notes` + `requires_review=true`) so they read as superseded in generic pickers: the 2 ACLS ones above, plus (same footgun, still live) the 2 PALS flat stubs (`e980c3e6-...`/`07501712-...`) already flagged 2026-07-15 above — rename only, their `cert_course='pals'` switch-over remains Ben's call and was NOT made here (still double-creates alongside the sectioned PALS templates for a future cohort until he approves nulling it — relevant before G15's own Nov PALS course). Also fixed a real gap in `lib/aha-course-generator.ts` (both `generateAhaCourseForCohort` and `configureExistingCohortDay`) that never selected/copied `lab_template_stations.skill_sheet_id` onto generated `lab_stations` — same class of bug as the `apply` route fix above; no station on the ACLS templates has one set, so this regeneration's actual output is unaffected. Backup: `_backup_lab_days_g15_aclsregen_20260914`, `_backup_lab_stations_g15_aclsregen_20260914`, `_backup_pmi_schedule_blocks_g15_aclsregen_20260914`. Verified live via MCP `execute_sql` (dry-run in a rolled-back transaction first) / `apply_migration` (no `.env.local` in this session); G14's 9 ACLS `lab_days` confirmed byte-for-byte unchanged before/after.
+
+**S3 lab template set applied to G14 (Task Handoff Queue "S3 lab model", 2026-09-04):** migration `20260904_s3_lab_apply_g14.sql` generated G14's 15 Semester-3 `lab_days` (one per week 1-15, dated to match the cohort's 15 already-published, already-re-parented recurring Friday 11:30-13:00 `pmi_schedule_blocks` on `program_schedule_id='86992083-...'`) from the `program='paramedic', semester=3` template set Ben authored directly 2026-03-02 (`created_by='bhartnell@pmi.edu'`) — that template set already existed complete (15 templates, weeks 1-15, `category='skills_lab'`) but had never been applied/generated for any cohort. Also copied each template's `lab_template_stations` (51 rows total) onto the new `lab_days`, linking `station_type='skill_drill'` stations' `drill_ids` to the matching `skill_drills` rows by `metadata.station_id` (or, for the pooled "drill-card-rotation" stations, each `metadata.available_stations[].station_id`) — 2 pool entries (`dynamic-cardiology`, `static-cardiology`) and 1 single-station reference (`megacode-minicode`, Week 8) have no matching `skill_drills` row yet and were correctly left unlinked rather than fabricated. `lab_mode`: only the Week 14 "OSCE Review Board" template was flipped to `lab_mode='individual_testing'` (a single complex scenario + structured oral board, one student at a time — matches the existing ACLS/PALS one-at-a-time testing precedent); the other 14 weeks keep `lab_mode=NULL` (defaults to `group_rotations`), matching their real warmup/briefing/main-content/debrief day structure as authored — the task's framing (short ~5 min individual drop-in stations) doesn't uniformly describe the actual authored content, so `individual_testing` was not blanket-applied; flagged for Ben whether any other specific week should also switch. Finally linked all 15 `pmi_schedule_blocks` rows via `linked_lab_day_id` and set their `title` from the generated `lab_day.title` (explicitly permitted by the task: "derive from the template content"); `instructor_id` was left untouched/NULL (not derivable from the template). Backup: `_backup_pmi_schedule_blocks_s3lab_20260904` snapshots the 15 blocks' pre-migration state. Pure additive INSERT + narrow, PK-scoped UPDATE on previously-NULL columns — no existing G14 data (other-semester `lab_days`, other blocks) touched. Also fixed a real gap in `POST /api/admin/lab-templates/apply/route.ts` (the generic template-application route, used for S1/S2/etc.) that silently dropped `lab_mode`/`is_adv_cert_testing`/`cert_course`/`section_number`/`section_label` when generating `lab_days` from a template — those columns exist on `lab_day_templates` specifically to be "copied onto the generated lab_days" (per this table's own column notes below) but the route never selected or inserted them. Backward-compatible: existing templates have these fields NULL/false already, so behavior for every other program/semester is unchanged; this only unblocks templates (like the S3 Week 14 one) that actually set a non-default value. Applied via Supabase MCP `apply_migration` (no `.env.local` in this session).
+
 **RLS Policies:**
 - `templates_delete` (DELETE, permissive, roles: {public})
 - `templates_insert` (INSERT, permissive, roles: {public})
@@ -2640,6 +2673,9 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 **Indexes:**
 - `idx_lab_timer_state_lab_day_id`: `CREATE INDEX idx_lab_timer_state_lab_day_id ON public.lab_timer_state USING btree (lab_day_id)`
 - `lab_timer_state_lab_day_id_key`: `CREATE UNIQUE INDEX lab_timer_state_lab_day_id_key ON public.lab_timer_state USING btree (lab_day_id)`
+
+**Triggers:**
+- `lab_timer_state_updated_at` (2026-09-14): `BEFORE UPDATE` → `update_updated_at_column()`. Added because `updated_at` had a `now()` default but was never touched by the PATCH route's UPDATE statements, so it stayed frozen at row-creation time no matter how many times the row changed (`version` climbing while `updated_at === created_at`).
 
 **RLS Policies:**
 - `Service can manage timer state` (ALL, permissive, roles: {public})
@@ -3392,7 +3428,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | visit_date | date | NO |  |  |
 | visit_time | time without time zone | YES |  |  |
 | cohort_id | uuid | YES |  |  |
-| entire_class | boolean | YES | false |  |
+| entire_class | boolean | YES | false | When true, individual `clinical_visit_students` rows are deliberately NOT written — the roster is implied by `cohort_id`. Confirmed intentional 2026-09-03 (Task Handoff Queue audit): create/update/GET/export paths all treat `entire_class=true` as "skip per-student rows," consistently. |
 | comments | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
 | updated_at | timestamptz | YES | now() |  |
@@ -3866,7 +3902,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 
 #### `instructor_unavailability`
 
-Added 2026-08-07 (Task Handoff Queue, [AVAILABILITY SYSTEM] + Josh Lomonaco tasks). `instructor_availability`/`recurring_availability_templates` store POSITIVE availability only — there was no way to mark a full-timer unavailable that beats the "full-time = default available" rule in `app/api/lab-management/instructor-availability`. Schema-only as of this commit; not yet read by any endpoint (dormant/empty until the picker-wiring checkpoint).
+Added 2026-08-07 (Task Handoff Queue, [AVAILABILITY SYSTEM] + Josh Lomonaco tasks). `instructor_availability`/`recurring_availability_templates` store POSITIVE availability only — there was no way to mark a full-timer unavailable that beats the "full-time = default available" rule in `app/api/lab-management/instructor-availability`. Wired into that picker as of 2026-09-12 (Task Handoff Queue, [AVAILABILITY SYSTEM]) — app code only, no new migration. Self-edit UI shipped the same day at `/scheduling/unavailability` (lead_instructor+, matching the CRUD routes' write gate) — day/week blocks + recurring rules (open-ended or date-bounded).
 
 | Column | Type | Nullable | Default | Notes |
 |--------|------|----------|---------|-------|
@@ -4317,6 +4353,11 @@ Sibling of `recurring_availability_templates`, but `end_date` is nullable to sup
 | updated_at | timestamptz | YES | now() |  |
 | event_pin | text | YES | 'OSCE2026'::text |  |
 | checklist_state | jsonb | YES | '{}'::jsonb |  |
+| cohort_id | uuid | YES |  | FK -> cohorts.id. Added 2026-09-14 for the repeatable creation-flow (roster auto-populate). Nullable — older events predating this column have no cohort link. |
+| minutes_per_student | integer | NO | 32 | Added 2026-09-14. Editable capacity default the roster-generation flow uses to derive per-block student capacity (block duration ÷ this value). See `osce_day_scenarios` below for the companion per-day scenario assignment. |
+
+**Foreign Keys:**
+- `cohort_id` -> `cohorts.id` (`osce_events_cohort_id_fkey`)
 
 **Unique Constraints:**
 - `osce_events_slug_key`: (slug)
@@ -4328,9 +4369,39 @@ Sibling of `recurring_availability_templates`, but `end_date` is nullable to sup
 - `idx_osce_events_slug`: `CREATE INDEX idx_osce_events_slug ON public.osce_events USING btree (slug)`
 - `idx_osce_events_status`: `CREATE INDEX idx_osce_events_status ON public.osce_events USING btree (status)`
 - `osce_events_slug_key`: `CREATE UNIQUE INDEX osce_events_slug_key ON public.osce_events USING btree (slug)`
+- `idx_osce_events_cohort`: `CREATE INDEX idx_osce_events_cohort ON public.osce_events USING btree (cohort_id)`
 
 **RLS Policies:**
 - `osce_events_service_role` (ALL, permissive, roles: {public})
+
+#### `osce_day_scenarios`
+
+Added 2026-09-14 (migration `20260914_osce_repeatable_setup.sql`). Which of
+scenarios A-F run on Day 1 vs Day 2 of an event — drives the roster
+generation flow's per-student scenario assignment and lets the creation UI
+warn when a scenario is assigned to both days (an exam-security concern
+when the two days aren't consecutive; see `app/admin/osce-events/[id]`
+Students tab).
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| event_id | uuid | NO |  | FK -> osce_events.id, ON DELETE CASCADE |
+| day_number | integer | NO |  | `CHECK (day_number IN (1, 2))` |
+| scenario | text | NO |  | `CHECK (scenario IN ('A','B','C','D','E','F'))` |
+| created_at | timestamptz | YES | now() |  |
+
+**Foreign Keys:**
+- `event_id` -> `osce_events.id` (`osce_day_scenarios_event_id_fkey`)
+
+**Unique Constraints:**
+- `osce_day_scenarios_event_id_day_number_scenario_key`: (event_id, day_number, scenario)
+
+**Indexes:**
+- `idx_osce_day_scenarios_event`: `CREATE INDEX idx_osce_day_scenarios_event ON public.osce_day_scenarios USING btree (event_id)`
+
+**RLS Policies:**
+- `osce_day_scenarios_all` (ALL, permissive, roles: {public})
 
 #### `osce_time_blocks`
 
@@ -4364,13 +4435,14 @@ Sibling of `recurring_availability_templates`, but `end_date` is nullable to sup
 | name | text | NO |  |  |
 | title | text | NO |  |  |
 | agency | text | NO |  |  |
-| email | text | NO |  |  |
+| email | text | NO |  | identity/login address |
 | phone | text | YES |  |  |
 | role | text | YES |  |  |
 | agency_preference | boolean | YES | false |  |
 | agency_preference_note | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
 | event_id | uuid | NO |  |  |
+| contact_email | text | YES |  | correspondence address; invites use COALESCE(contact_email, email) (migration 20261001) |
 
 **Foreign Keys:**
 - `event_id` -> `osce_events.id` (`osce_observers_event_id_fkey`)
@@ -9944,6 +10016,7 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 | is_active | boolean | YES | true |  |
 | display_order | integer | YES | 0 |  |
 | created_at | timestamp with time zone | YES | now() |  |
+| is_lab_location | boolean | NO | false | Canonical lab-station picker members (Classroom 1 (EMT), Classroom 2 (Paramedic), Lab Room 1 (Big), Lab Room 2 (Small), Ambulance, Common Area, Outside, Other). The Hospital retired via is_active=false. |
 
 **Check Constraints:**
 - `pmi_rooms_room_type_check`: `((room_type = ANY (ARRAY['classroom'::text, 'lab'::text, 'computer_lab'::text, 'commons'::text, 'other'::text])))`
@@ -10561,10 +10634,18 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 | valid_from | timestamp with time zone | YES | now() |  |
 | valid_until | timestamp with time zone | YES | (now() + '24:00:00'::interval) |  |
 | created_at | timestamp with time zone | YES | now() |  |
-| event_id | uuid | YES |  | FK -> osce_events.id |
+| event_id | uuid | YES |  | FK -> osce_events.id — defaults to the most recent open/closed event when a caller omits it (`resolveDefaultEventId` in `app/api/osce/guest-tokens/route.ts`, PR #90 + 2026-09-01 pass) |
+| email | text | YES |  | Added `20260901_osce_guest_token_invites.sql` — the evaluator's email, needed to actually send them their invite link |
+| agency | text | YES |  | Added `20260901_osce_guest_token_invites.sql` — display/context only |
+| invited_at | timestamptz | YES |  | Added `20260901_osce_guest_token_invites.sql` — set when an invite email has been sent at least once |
+| invite_send_count | integer | NO | 0 | Added `20260901_osce_guest_token_invites.sql` |
+| invite_last_error | text | YES |  | Added `20260901_osce_guest_token_invites.sql` — error from the most recent failed send attempt |
 
 **Foreign Keys:**
 - `event_id` -> `osce_events.id` (osce_guest_tokens_event_id_fkey)
+
+**Indexes (added 2026-09-01):**
+- `idx_osce_guest_tokens_email`: `CREATE INDEX idx_osce_guest_tokens_email ON public.osce_guest_tokens USING btree (email)`
 
 **Check Constraints:**
 - `osce_guest_tokens_evaluator_role_check`: `((evaluator_role = ANY (ARRAY['md'::text, 'faculty'::text, 'agency'::text])))`
@@ -10578,6 +10659,38 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 **RLS Policies:**
 - `osce_guest_tokens_all` (ALL, PERMISSIVE, roles: {public})
 - `osce_guest_tokens_select` (SELECT, PERMISSIVE, roles: {public})
+
+#### `osce_walkup_evaluators`
+
+Added `20260914_osce_walkup_evaluators.sql` (Task Handoff Queue "OSCE walk-up
+evaluator login"). Self-reported evaluators who show up on event day without
+being pre-invited (no closed roster, no email, no token, no OAuth — Ben's
+explicit direction) via the "not on this list" option on
+`app/osce-scoring/enter`. Deliberately a separate table from `osce_observers`
+rather than a new column there: `osce_observers` requires NOT NULL UNIQUE
+`email` and ties rows to time-block reservations, neither of which applies to
+someone who walks in unannounced. `/api/osce/validate-pin` merges rows from
+this table into its evaluator list (by name) so a walk-up can re-select
+themselves on a repeat visit instead of re-registering.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| event_id | uuid | NO |  | FK -> osce_events.id |
+| name | text | NO |  |  |
+| agency | text | NO |  |  |
+| role | text | YES |  | CHECK IN ('md','faculty','agency') |
+| created_at | timestamptz | YES | now() |  |
+
+**Foreign Keys:**
+- `event_id` -> `osce_events.id` (ON DELETE CASCADE)
+
+**Indexes:**
+- `idx_osce_walkup_evaluators_event`
+
+**RLS Policies:**
+- `osce_walkup_evaluators_public_insert` (INSERT, PERMISSIVE, roles: {public})
+- `osce_walkup_evaluators_service_all` (ALL, PERMISSIVE, roles: {public})
 
 #### `osce_scenarios`
 
@@ -11613,6 +11726,7 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 | scenario_segment_id | uuid | NO |  | FK -> adv_cert_scenario_segments.id |
 | result | text | YES |  |  |
 | comments | text | YES |  |  |
+| completion_source | text | YES |  | observed / bulk_confirmed / inferred_at_export; NULL = legacy or unmarked (added 2026-10-03) |
 
 **Foreign Keys:**
 - `attempt_id` -> `adv_cert_test_attempts.id` (adv_cert_segment_results_attempt_id_fkey)
@@ -11751,3 +11865,13 @@ were phantom testing-bank rows (`category='TBD'`, `narrative_status='not_indexed
 0 references anywhere) — the real 2025 AHA testing bank is 14 cards, not 16 (pages
 137+ in the source scan are the Team Dynamics Debriefing Tool and ECG strips, not
 case cards). Archived via `is_active=false` (not deleted, per Archive-don't-delete).
+
+
+**2026-10-02 (ACLS UI 4/6):** `pmi_schedule_blocks.actual_start_time` (`time`, nullable) added — what really started, entered on the ACLS hub; planned stays in `start_time`, duration = `end_time - start_time`. Migration `20261002_schedule_block_actual_start.sql`, applied via MCP.
+
+
+### `acls_learning_marks` (added 2026-10-02)
+Unofficial ACLS learning-station tracker. Not a certification record.
+- `id` uuid PK; `lab_day_id` -> lab_days; `station_id` -> lab_stations; `student_id` -> students (all ON DELETE CASCADE)
+- `mark` text CHECK in ('pass','watch'); `note` text; `marked_by` text; `created_at`, `updated_at` timestamptz
+- UNIQUE (station_id, student_id); index on lab_day_id; RLS enabled, no policies (service-role API only)

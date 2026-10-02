@@ -503,10 +503,25 @@ const SCHEDULE: Record<number, RawBlock[]> = {
 //      response `backup` field).
 // This does not change the hardcoded-data source — that's the separate
 // post-launch planner consolidation.
+//
+// DISARMED (2026-10-01): the hardcoded COURSE_DAYS below is ~3 months stale and
+// the live LVFR AEMT course (2026-07-14 .. 2026-09-17) has finished, so an
+// upsert would overwrite the record of a completed class. The route now
+// refuses unconditionally. Set RESEED_DISABLED to false only after the
+// schedule source is replaced by a cohort-scoped builder.
+const RESEED_DISABLED = true;
+
 export async function POST(request: Request) {
   const auth = await requireAuth();
   if (auth instanceof NextResponse) return auth;
   const { user } = auth;
+
+  if (RESEED_DISABLED) {
+    return NextResponse.json(
+      { error: 'Reseed is disabled: its hardcoded schedule is stale and would overwrite lvfr_aemt_course_days.' },
+      { status: 410 }
+    );
+  }
 
   if (!hasMinRole(user.role, 'admin')) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 });

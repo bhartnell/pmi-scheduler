@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import Link from 'next/link';
+import { WikiArticleLink } from '@/components/wiki/WikiArticleLink';
 import {
   ChevronRight,
   Upload,
@@ -698,13 +699,16 @@ function ImportStudentsContent() {
           </div>
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Import Students</h1>
-            <button
-              onClick={downloadTemplate}
-              className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-            >
-              <Download className="w-4 h-4" />
-              Download CSV Template
-            </button>
+            <div className="flex items-center gap-2">
+              <WikiArticleLink slug="add-students-and-check-enrollment" label="Help: Enrollment" />
+              <button
+                onClick={downloadTemplate}
+                className="flex items-center gap-2 px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+              >
+                <Download className="w-4 h-4" />
+                Download CSV Template
+              </button>
+            </div>
           </div>
         </div>
       </div>

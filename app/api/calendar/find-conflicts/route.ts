@@ -53,7 +53,9 @@ export async function POST(request: NextRequest) {
     }
 
     const calData = await calRes.json();
-    const events: CalendarEvent[] = calData.events || [];
+    // Cancelled blocks aren't happening — they must not count as busy time.
+    const events: CalendarEvent[] = ((calData.events || []) as (CalendarEvent & { status?: string })[])
+      .filter((e) => e.status !== 'cancelled');
 
     const conflicts = findConflicts(events, constraints);
 

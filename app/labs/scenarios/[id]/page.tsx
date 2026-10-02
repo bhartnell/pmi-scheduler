@@ -93,6 +93,9 @@ interface Phase {
   presentation_notes: string;
   expected_actions: string;
   instructor_cues: string[];   // instructor-facing coaching, distinct from expected_actions
+  // v2 phase keys (changes/triggers/modifiers/branch) — not yet editable here; carried
+  // through untouched so saving from this editor never drops them.
+  v2?: Record<string, unknown>;
   display_order: number;
   // OPQRST (for phases where symptom assessment changes)
   onset: string;               // O
@@ -148,6 +151,10 @@ interface Scenario {
   assessment_x: string;  // X - Hemorrhage
   assessment_a: string;  // A - Airway
   assessment_e: string;  // E - Expose/Environment
+  // v2: expected learner action beside each finding
+  assessment_x_action: string;
+  assessment_a_action: string;
+  assessment_e_action: string;
   general_impression: string;  // Sick / Not Sick
 
   // SAMPLE History (scenario-level)
@@ -319,6 +326,9 @@ const normalizeLoadedPhase = (raw: unknown, i: number): Phase => {
     expected_actions: expected,
     instructor_cues: cues,
     display_order: i,
+    v2: Object.fromEntries(
+      ['changes', 'triggers', 'modifiers', 'branch'].filter((k) => p[k] !== undefined && p[k] !== null).map((k) => [k, p[k]])
+    ),
     onset: str('onset'), provocation: str('provocation'), quality: str('quality'),
     radiation: str('radiation'), severity: str('severity'), time_onset: str('time_onset'),
     general_impression: str('general_impression'),
@@ -851,6 +861,9 @@ export default function ScenarioEditorPage() {
     assessment_x: '',
     assessment_a: '',
     assessment_e: '',
+    assessment_x_action: '',
+    assessment_a_action: '',
+    assessment_e_action: '',
     general_impression: '',
     // SAMPLE History
     sample_history: {
@@ -941,6 +954,9 @@ export default function ScenarioEditorPage() {
           assessment_x: s.assessment_x || '',
           assessment_a: s.assessment_a || '',
           assessment_e: s.assessment_e || '',
+          assessment_x_action: s.assessment_x_action || '',
+          assessment_a_action: s.assessment_a_action || '',
+          assessment_e_action: s.assessment_e_action || '',
           general_impression: s.general_impression || '',
           // SAMPLE History
           sample_history: s.sample_history || {
@@ -1452,14 +1468,18 @@ export default function ScenarioEditorPage() {
         assessment_x: scenario.assessment_x,
         assessment_a: scenario.assessment_a,
         assessment_e: scenario.assessment_e,
+        assessment_x_action: scenario.assessment_x_action?.trim() || null,
+        assessment_a_action: scenario.assessment_a_action?.trim() || null,
+        assessment_e_action: scenario.assessment_e_action?.trim() || null,
         general_impression: scenario.general_impression,
         // SAMPLE History
         sample_history: scenario.sample_history,
         // OPQRST
         opqrst: scenario.opqrst,
         // Drop blank instructor-cue lines (the textarea keeps them while editing).
-        phases: scenario.phases.map(p => ({
+        phases: scenario.phases.map(({ v2, ...p }) => ({
           ...p,
+          ...(v2 || {}),
           instructor_cues: Array.isArray(p.instructor_cues) ? p.instructor_cues.map(c => c.trim()).filter(Boolean) : [],
         })),
         critical_actions: scenario.critical_actions.map(a => a.description),
@@ -2833,6 +2853,16 @@ export default function ScenarioEditorPage() {
                   />
                 </div>
                 <div>
+                  <label className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">X - Expected Action</label>
+                  <input
+                    type="text"
+                    value={scenario.assessment_x_action}
+                    onChange={(e) => setScenario({ ...scenario, assessment_x_action: e.target.value })}
+                    placeholder="What the learner should do about this finding"
+                    className="w-full px-3 py-2 border border-emerald-300 dark:border-emerald-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
                   <label className="text-xs text-orange-600 dark:text-orange-400 font-medium">A - Airway Status</label>
                   <input
                     type="text"
@@ -2843,6 +2873,16 @@ export default function ScenarioEditorPage() {
                   />
                 </div>
                 <div>
+                  <label className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">A - Expected Action</label>
+                  <input
+                    type="text"
+                    value={scenario.assessment_a_action}
+                    onChange={(e) => setScenario({ ...scenario, assessment_a_action: e.target.value })}
+                    placeholder="What the learner should do about this finding"
+                    className="w-full px-3 py-2 border border-emerald-300 dark:border-emerald-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
                   <label className="text-xs text-orange-600 dark:text-orange-400 font-medium">E - Expose/Environment</label>
                   <input
                     type="text"
@@ -2850,6 +2890,16 @@ export default function ScenarioEditorPage() {
                     onChange={(e) => setScenario({ ...scenario, assessment_e: e.target.value })}
                     placeholder="No trauma, rashes, environmental concerns"
                     className="w-full px-3 py-2 border border-orange-300 dark:border-orange-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-emerald-700 dark:text-emerald-400 font-medium">E - Expected Action</label>
+                  <input
+                    type="text"
+                    value={scenario.assessment_e_action}
+                    onChange={(e) => setScenario({ ...scenario, assessment_e_action: e.target.value })}
+                    placeholder="What the learner should do about this finding"
+                    className="w-full px-3 py-2 border border-emerald-300 dark:border-emerald-700 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                   />
                 </div>
                 <div>

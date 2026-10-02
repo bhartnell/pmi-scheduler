@@ -141,6 +141,12 @@ export async function POST(request: NextRequest) {
       // Primary Assessment (XABCDE)
       assessment_x: body.assessment_x || null,
       assessment_a: body.assessment_a || null,
+      assessment_x_action: body.assessment_x_action || null,
+      assessment_a_action: body.assessment_a_action || null,
+      assessment_b_action: body.assessment_b_action || null,
+      assessment_c_action: body.assessment_c_action || null,
+      assessment_d_action: body.assessment_d_action || null,
+      assessment_e_action: body.assessment_e_action || null,
       assessment_b: body.assessment_b || null,
       assessment_c: body.assessment_c || null,
       assessment_d: body.assessment_d || null,

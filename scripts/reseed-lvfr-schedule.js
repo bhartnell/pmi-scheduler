@@ -37,6 +37,11 @@ try {
   // .env.local may not exist
 }
 
+// DISARMED (2026-10-01): hardcoded schedule is stale and the live LVFR AEMT
+// course has finished; running this would overwrite lvfr_aemt_course_days.
+console.error('reseed-lvfr-schedule.js is disabled (stale hardcoded schedule; would overwrite a completed course). Exiting without changes.');
+process.exit(1);
+
 const isDirect = process.argv.includes('--direct');
 const isConfirmed = process.argv.includes('--confirm');
 

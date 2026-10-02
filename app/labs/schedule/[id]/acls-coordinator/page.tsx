@@ -15,7 +15,10 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, RefreshCw, CheckCircle2, XCircle, Clock, Users, UserCheck, MapPin, Printer } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, CheckCircle2, XCircle, Clock, Users, UserCheck, MapPin, Printer, Pencil } from 'lucide-react';
+import EditStationModal from '@/components/lab-day/EditStationModal';
+import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
+import type { LabDay, Station as LabStation, Instructor, InstructorAvailabilityEntry } from '@/components/lab-day/types';
 
 interface Student { id: string; first_name: string; last_name: string; status?: string | null }
 interface Group { id: string; name: string; members: Student[] }
@@ -44,6 +47,14 @@ export default function AclsCoordinatorPage() {
   const [autoRefreshSec, setAutoRefreshSec] = useState(0); // 0 = off
   const [lastRefreshed, setLastRefreshed] = useState<string | null>(null);
 
+  // Station editing reuses the normal lab-day EditStationModal (room picker +
+  // instructor dropdown over the standard instructor list, same save path).
+  const [fullLabDay, setFullLabDay] = useState<LabDay | null>(null);
+  const [instructors, setInstructors] = useState<Instructor[]>([]);
+  const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
+  const [instructorAvailability, setInstructorAvailability] = useState<InstructorAvailabilityEntry[]>([]);
+  const [editingStation, setEditingStation] = useState<LabStation | null>(null);
+
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/signin'); }, [status, router]);
 
   const load = useCallback(async () => {
@@ -56,6 +67,19 @@ export default function AclsCoordinatorPage() {
       ]);
       const ctx = await ctxRes.json();
       const att = await attRes.json();
+      try {
+        const [ldRes, instRes, locRes] = await Promise.all([
+          fetch(`/api/lab-management/lab-days/${labDayId}`),
+          fetch('/api/lab-management/instructors'),
+          fetch('/api/lab-management/locations?type=lab_rooms'),
+        ]);
+        const ld = await ldRes.json();
+        const inst = await instRes.json();
+        const loc = await locRes.json();
+        if (ld.success) setFullLabDay(ld.labDay);
+        if (inst.success) setInstructors(inst.instructors || []);
+        if (loc.success) setLocations(loc.locations || []);
+      } catch { /* editing unavailable; read-only view still works */ }
       if (ctx.success) { setDay(ctx.day); setGroups(ctx.groups || []); setStations(ctx.stations || []); }
       if (att.success) setAttempts(att.attempts || []);
       setLastRefreshed(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
@@ -70,6 +94,26 @@ export default function AclsCoordinatorPage() {
     const t = setInterval(() => load(), autoRefreshSec * 1000);
     return () => clearInterval(t);
   }, [autoRefreshSec, status, load]);
+
+  const calEmails = useMemo(() => {
+    const emails = new Set<string>();
+    fullLabDay?.stations?.forEach(st => { if (st.instructor_email) emails.add(st.instructor_email.toLowerCase()); });
+    instructors.forEach(i => { if (i.email) emails.add(i.email.toLowerCase()); });
+    return Array.from(emails);
+  }, [fullLabDay, instructors]);
+  const { availability: calendarAvailability } = useCalendarAvailability(
+    fullLabDay?.date || null, calEmails,
+    fullLabDay?.start_time?.substring(0, 5) || '08:00', fullLabDay?.end_time?.substring(0, 5) || '17:00'
+  );
+  useEffect(() => {
+    if (!fullLabDay?.date || !fullLabDay?.id) return;
+    const labStart = fullLabDay.start_time || '08:00:00';
+    const labEnd = fullLabDay.end_time || '17:00:00';
+    fetch(`/api/lab-management/instructor-availability?date=${fullLabDay.date}&start_time=${labStart}&end_time=${labEnd}&lab_day_id=${fullLabDay.id}`)
+      .then(res => res.json())
+      .then(data => { if (data.success) setInstructorAvailability(data.instructors || []); })
+      .catch(() => {});
+  }, [fullLabDay?.date, fullLabDay?.id, fullLabDay?.start_time, fullLabDay?.end_time]);
 
   // Attempts indexed by group.
   const attemptsByGroup = useMemo(() => {
@@ -228,6 +272,15 @@ export default function AclsCoordinatorPage() {
                       <div className="font-medium text-gray-800 dark:text-gray-100">#{st.station_number} {st.room || st.custom_title || ''}</div>
                       {st.station_notes && <div className="text-gray-400">{st.station_notes}</div>}
                       <div className="text-gray-500 dark:text-gray-400 mt-0.5">{st.instructor_name || '— unassigned —'}</div>
+                      {(() => {
+                        const full = fullLabDay?.stations?.find(x => x.id === st.id);
+                        return full ? (
+                          <button type="button" onClick={() => setEditingStation(full)}
+                            className="mt-1.5 inline-flex items-center gap-1 min-h-[32px] px-2 text-blue-600 dark:text-blue-400 hover:underline print:hidden">
+                            <Pencil className="w-3 h-3" /> Edit room / instructor
+                          </button>
+                        ) : null;
+                      })()}
                     </div>
                   ))}
                 </div>
@@ -283,6 +336,19 @@ export default function AclsCoordinatorPage() {
         )}
         </div>
       </div>
+      {editingStation && fullLabDay && (
+        <EditStationModal
+          station={editingStation}
+          labDay={fullLabDay}
+          instructors={instructors}
+          locations={locations}
+          calendarAvailability={calendarAvailability}
+          instructorAvailability={instructorAvailability}
+          session={session}
+          onClose={() => setEditingStation(null)}
+          onSaved={() => { setEditingStation(null); load(); }}
+        />
+      )}
     </div>
   );
 }

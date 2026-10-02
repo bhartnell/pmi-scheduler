@@ -184,6 +184,52 @@ Action: send Ben a concise go/no-go request with:
 Do not send raw SQL or implementation details — send the decision, not the relay.
 Do not proceed until confirmed.
 
+### Asking Ben: plain English, one decision at a time (HARD REQUIREMENT)
+
+Added 2026-10-01 (Ben: "I am rubberstamping because I don't know what it
+means"; a technical format buries the real items). Applies to every card
+assigned to Benjamin and every notification sent to him.
+
+**The test:** could a paramedic program director who has never seen the
+codebase answer this correctly using only what they know about how the
+program runs? If no, it does not go to Ben: Code decides it, or it is tagged
+Reversible-Judgment for Claude AI to translate or investigate.
+
+**The shape, every time:**
+- **What is happening** - 1-2 plain sentences (what Ben, an instructor or a
+  student would notice). No file, table, column, route, PR or migration names.
+- **What I need** - one question, in his vocabulary.
+- **Options** - 2 to 4, numbered, each a consequence a person can picture; one
+  marked recommended with a half-line reason; include do-nothing when real.
+- **If you do nothing** - what happens and by when. If nothing, don't send it.
+
+He must be able to answer with a single number. If an option can't be written
+without technical names, it is not his decision. Technical detail goes in full
+on the card, not in what Ben is handed. Standard US keyboard characters only
+(no em dashes).
+
+**One decision per message / per card / per sweep run.** Lists die silently.
+Several asks = separate asks, in priority order; the next goes out only after
+the first is answered or has gone cold. A sweep that finds four sends the most
+time-critical and cards the rest. Narrow exception: decisions on the same
+deadline may batch (max three) if the message names the one to answer if he
+answers nothing else and what it unblocks. Never bury a decision in a status
+report.
+
+**No good options? Say so.** Don't invent a menu. Use: "No clean options" in
+the first line, what is happening, why there is no good answer, what I would do
+and its cost (or "no recommendation"), what I need. Not an escape hatch for an
+untranslated question.
+
+**Our duties:** an unanswered ask returns in the same words plus one line (how
+long open, what it blocks). Raised twice unanswered -> don't raise a third time
+the same way; re-examine (never his, or deadline passed and do-nothing won) and
+close it. Anything he answers is acted on and closed the same day. Self-check:
+a run of blanket approvals means the format has failed.
+
+(`AGENT_OPERATING_FRAMEWORK.md` is not in this repo; add this section there
+too where that file lives.)
+
 ### Empty-scan logging
 
 Scheduled runs that find nothing actionable (queue empty, no errors, no change from
@@ -431,6 +477,16 @@ After:  cohort:cohorts!students_cohort_id_fkey(id, cohort_number)
   are **escalate-to-Ben** and must snapshot first (`--backup`, see Migration
   Reversibility). This is the companion to the reversibility gate.
 
+## Reuse-Before-Building Rule (HARD REQUIREMENT)
+
+Before building any feature, ask in order: (1) do we have an established way
+to do this? (2) does it work? (3) could it work with modification? Only if all
+are no, build new. Specialized views (e.g. ACLS day) reuse the existing
+tables, components, and save paths (e.g. `EditStationModal` for station
+room/instructor) — never a second picker, save path, or parallel table. If an
+existing component genuinely can't be reused, report the specific reason on
+the task card before building anything new.
+
 ## Repeatability / Build-Modular Rule (HARD REQUIREMENT)
 
 **Before building any webapp feature, run a REPEATABILITY CHECK:**
@@ -551,6 +607,59 @@ half lets the doc rot. (This is the companion to the Documentation
 Update Rule below — the read-first and update-always halves are the
 same loop.)
 
+## Known-Issue Check (HARD REQUIREMENT)
+
+**Before forming any hypothesis about a reported problem, check history
+first.** On 2026-09-14 a timer bug was investigated from scratch; a later
+cross-reference of `feedback_reports` found 30+ prior reports of the same
+area between Feb and Jul 2026, including a July fix that had correctly
+identified the root cause (poll-only discovery) and then patched the
+symptom instead. Three fix attempts had already failed to hold, and none
+of it was visible at the start — discovery was repeated from zero and
+nearly reached a wrong conclusion. This is also succession infrastructure:
+the history has to survive without depending on Ben's memory.
+
+### Before diagnosing, in order
+
+1. Query the 🐞 Bug & Fix Log (Notion, Agent Ops Hub) filtered to the
+   relevant Area. `BUG_LOG.md` at the repo root is a generated snapshot
+   of the same log if Notion access isn't available (see Deliverable 2
+   note below).
+2. Query `feedback_reports` — search `description`, `page_url`, **and**
+   `resolution_notes`. Resolution notes are where past root causes and
+   file paths live.
+3. Read what prior fixes actually did; commit hashes and file paths
+   there are the fastest route into the code.
+
+### Acting on what you find
+
+| Finding | Action |
+|---|---|
+| Prior entry `Outcome = Recurred` / `Partially held` | The earlier fix did not hold. Read it, **do not repeat it**, escalate toward a structural fix. |
+| Prior fix names files or commits | **Start there.** Do not rediscover the surface. |
+| Several entries in one Area with `Fix Type = Config / tuning` | Signal the real fix is **Architectural**. Say so rather than tuning again. |
+| Prior entry closed with empty/vague notes | Treat as unknown, not fixed. Re-verify. |
+| No match | Enter discovery, and state that the check ran and came back empty. |
+
+Never open a new unconnected bug for something already in the log — link
+it and set the prior entry to `Recurred`.
+
+### Closing record (non-negotiable)
+
+Every shipped fix writes a Bug & Fix Log row with: Fix Type, the mechanism
+in one or two sentences, commit hash and file paths, and a **Verify By**
+date. A fix with no named mechanism is not closed. (Two historical timer
+reports were marked resolved with empty or commit-less notes; neither can
+now be evaluated and one may still be live.)
+
+`Status` ≠ `Outcome`. `Status = Done` means it shipped. `Outcome = Held`
+may only be set after the Verify By date is checked against live
+behaviour. Default on close is **Not yet verified**.
+
+`feedback_reports` stays the raw intake — do not migrate it into the Bug
+Log. The Bug Log is the curated, verified layer; the check above queries
+both.
+
 ## Documentation Update Rule (HARD REQUIREMENT)
 
 After every commit that adds, removes, or significantly changes
@@ -592,6 +701,12 @@ doc lag the live database.
 - Key IDs, table names, or configuration change
 - Team, cohort, or environment information changes
 - New companion doc is added
+
+**`BUG_LOG.md`** (repo root) — generated snapshot of the 🐞 Bug & Fix
+Log (Notion, Agent Ops Hub); Notion is the working source, this is the
+copy that travels with the code. Regenerate with
+`node scripts/export-bug-log.js` whenever the Bug & Fix Log changes
+(folds into the existing scheduled routine — do not hand-edit it).
 
 **`docs/CHANGELOG.md`** — update with EVERY commit. Format:
 ```

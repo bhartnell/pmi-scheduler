@@ -46,6 +46,7 @@ interface SyncStats {
   needsReauthCount: number;
   totalEvents: number;
   eventsByType: Record<string, number>;
+  lastSyncedByType: Record<string, string>;
 }
 
 interface SyncLogEntry {
@@ -79,6 +80,22 @@ function fmtDateTime(iso: string | null): string {
 function fmtDuration(ms: number): string {
   if (ms < 1000) return `${ms}ms`;
   return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function daysAgo(iso: string): number {
+  return Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
+}
+
+// Source types are considered stale past 3 days (roughly one missed
+// daily cron cycle) and critically stale past 14 days, since that's
+// long enough to mean a sync path has silently stopped producing
+// events rather than just being between runs.
+function staleness(iso: string | undefined): 'fresh' | 'stale' | 'critical' | 'never' {
+  if (!iso) return 'never';
+  const age = daysAgo(iso);
+  if (age > 14) return 'critical';
+  if (age > 3) return 'stale';
+  return 'fresh';
 }
 
 // ─── Sub-components ─────────────────────────────────────────────────────────
@@ -654,6 +671,86 @@ export default function CalendarSyncPage() {
                 {cleaningUp ? 'Scanning…' : 'Clean up duplicates'}
               </button>
             </div>
+
+            {/* ── Sync Freshness by Type ──────────────────────────────────
+                Surfaces the last time each event source_type actually
+                produced a new calendar event. A source that's gone
+                stale (or never synced) is easy to miss in the raw
+                totals above — e.g. a source that's only ever created
+                by a manual admin action can silently stop for months
+                with the aggregate counts still looking fine. */}
+            {stats && Object.keys(stats.eventsByType).length > 0 && (
+              <section>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  Sync Freshness by Type
+                </h2>
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Source Type
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Events
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Last Created
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {Object.entries(stats.eventsByType)
+                          .sort(([, a], [, b]) => b - a)
+                          .map(([type, count]) => {
+                            const lastCreated = stats.lastSyncedByType?.[type];
+                            const state = staleness(lastCreated);
+                            const badge = {
+                              fresh: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+                              stale: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+                              critical: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+                              never: 'bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400',
+                            }[state];
+                            const label = {
+                              fresh: 'Fresh',
+                              stale: 'Stale',
+                              critical: 'Stopped syncing',
+                              never: 'Never',
+                            }[state];
+                            return (
+                              <tr key={type} className="hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white whitespace-nowrap font-mono">
+                                  {type}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900 dark:text-white whitespace-nowrap">
+                                  {count.toLocaleString()}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 whitespace-nowrap">
+                                  {lastCreated
+                                    ? `${fmtDateTime(lastCreated)} (${daysAgo(lastCreated)}d ago)`
+                                    : '--'}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <span
+                                    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${badge}`}
+                                  >
+                                    {label}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            )}
 
             {/* ── Filter Tabs ────────────────────────────────────────────── */}
             <div className="flex items-center gap-1 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-1">

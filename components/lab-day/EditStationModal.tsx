@@ -1459,10 +1459,17 @@ export default function EditStationModal({
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Room / Location</label>
             <select value={editForm.room} onChange={(e) => setEditForm(prev => ({ ...prev, room: e.target.value }))} className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700">
               <option value="">Select room...</option>
+              {/* Keep a legacy/retired value visible (e.g. a past "Hospital") instead of blanking it */}
+              {editForm.room && !locations.some(loc => loc.name === editForm.room) && (
+                <option value={editForm.room}>{editForm.room} (legacy)</option>
+              )}
               {locations.map(loc => (
                 <option key={loc.id} value={loc.name}>{loc.name}</option>
               ))}
             </select>
+            {editForm.room === 'Other' && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Put the actual location in the Notes field below.</p>
+            )}
           </div>
 
           {/* Rotation timing (per-station) */}

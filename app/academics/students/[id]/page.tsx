@@ -7,6 +7,7 @@ import TransferCohortModal, { type TransferMode } from '@/components/students/Tr
 import CohortHistorySection, { type CohortHistoryHandle } from '@/components/students/CohortHistorySection';
 import GraduationModal from '@/components/students/GraduationModal';
 import WithdrawModal from '@/components/students/WithdrawModal';
+import StudentOsceResultsCard from '@/components/osce/StudentOsceResultsCard';
 import Link from 'next/link';
 import {
   ChevronRight,
@@ -42,7 +43,7 @@ import {
   Phone,
 } from 'lucide-react';
 import Barcode from 'react-barcode';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { canManageStudentRoster, hasMinRole, type Role } from '@/lib/permissions';
 import StudentCommunications from '@/components/StudentCommunications';
 import AttendanceAlertBanner from '@/components/AttendanceAlertBanner';
@@ -828,13 +829,6 @@ export default function StudentDetailPage() {
             entityTitle={`${student.first_name} ${student.last_name}`}
             className="mb-1"
           />
-          <Link
-            href="/academics/students"
-            className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 mt-1"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back to Students
-          </Link>
         </div>
       </div>
 
@@ -1704,6 +1698,9 @@ export default function StudentDetailPage() {
 
         {/* Overview Tab Sections */}
         {activeTab === 'overview' && <>
+
+        {/* OSCE Results Section (clinical capstone — surfaced outside the OSCE module) */}
+        <StudentOsceResultsCard studentId={studentId} />
 
         {/* EMS Background Section */}
         {(student.prior_cert_level || student.years_ems_experience || student.prior_work_setting || student.prior_employer) && (
