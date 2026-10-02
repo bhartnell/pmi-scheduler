@@ -16,7 +16,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, Play, Eye, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 import type { LabDay as FullLabDay, Station as FullStation, Instructor, InstructorAvailabilityEntry } from '@/components/lab-day/types';
@@ -27,7 +27,7 @@ interface Station {
   id: string; lab_day_id: string; station_number: number; custom_title: string | null;
   room: string | null; instructor_name: string | null; station_notes: string | null;
   rotation_minutes?: number | null;
-  scenario?: { id: string; title: string; case_code: string | null; cert_tier?: string | null } | null;
+  scenario?: { id: string; title: string; case_code: string | null; cert_tier?: string | null; category?: string | null } | null;
 }
 interface LabDay {
   id: string; date: string; section_number: number | null; section_label: string | null;
@@ -129,7 +129,8 @@ function BoardContent() {
   const [savingBlock, setSavingBlock] = useState<string | null>(null);
   const [absentError, setAbsentError] = useState<string | null>(null);
 
-  const [runMode, setRunMode] = useState(false);
+  // One view: actual times, park and reorder are always available (no Plan/Run modes).
+  const runMode = true;
   const [regions, setRegions] = useState<RegionCfg[]>(DEFAULT_REGIONS);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(() => new Date());
@@ -231,6 +232,20 @@ function BoardContent() {
   const visibleDates = activeDate === 'all' ? dates : dates.filter(d => d === activeDate);
   const dayNo = (d: string) => dates.indexOf(d) + 1;
 
+  // The all-day "ACLS (Day N of N)" block is the day header, not an event: it must not take a row,
+  // a duration, or enter the clock. Detected as a block that fully encloses 2+ other blocks that day.
+  const containerIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const d of dates) {
+      const day = events.filter(e => e.date === d && e.start_time && e.end_time);
+      for (const e of day) {
+        const inside = day.filter(o => o.id !== e.id && toMin(o.start_time) >= toMin(e.start_time) && toMin(o.end_time) <= toMin(e.end_time)
+          && !(toMin(o.start_time) === toMin(e.start_time) && toMin(o.end_time) === toMin(e.end_time)));
+        if (inside.length >= 2) ids.add(e.id);
+      }
+    }
+    return ids;
+  }, [events, dates]);
   // Join each lab row to its section (narrowest block claims first), per day.
   const sectionForEvent = useMemo(() => {
     const map = new Map<string, LabDay>();
@@ -240,13 +255,13 @@ function BoardContent() {
       const claimed = new Set<string>();
       const span = (e: CalEvent) => toMin(e.end_time) - toMin(e.start_time);
       for (const e of [...dayEvents].sort((a, b) => span(a) - span(b))) {
-        if (e.event_type !== 'lab') continue;
+        if (e.event_type !== 'lab' || containerIds.has(e.id)) continue;
         const d = secs.find(x => !claimed.has(x.id) && (e.linked_lab_day_id ? x.id === e.linked_lab_day_id : (x.section_number ?? 1) === (e.metadata?.linked_section_number ?? 1)));
         if (d) { claimed.add(d.id); map.set(e.id, d); }
       }
     }
     return map;
-  }, [events, visibleLabDays, dates]);
+  }, [events, visibleLabDays, dates, containerIds]);
   const eventForSection = useMemo(() => {
     const m = new Map<string, string>();
     sectionForEvent.forEach((d, eid) => m.set(d.id, eid));
@@ -256,7 +271,7 @@ function BoardContent() {
   // ── Time engine: order + duration, not fixed start times ──
   const eventById = useMemo(() => new Map(events.map(e => [e.id, e])), [events]);
   const baseOrder = useCallback((date: string) =>
-    events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '') || a.id.localeCompare(b.id)).map(e => e.id), [events]);
+    events.filter(e => e.date === date && !containerIds.has(e.id)).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '') || a.id.localeCompare(b.id)).map(e => e.id), [events, containerIds]);
   const orderFor = useCallback((date: string) => {
     const base = baseOrder(date);
     const saved = orderByDay[date];
@@ -271,7 +286,7 @@ function BoardContent() {
     for (const d of dates) {
       const ord = orderFor(d);
       const live = ord.filter(i => !parked.has(i)); const park = ord.filter(i => parked.has(i));
-      const firstStart = events.filter(e => e.date === d).map(e => toMin(e.start_time)).sort((a, b) => a - b)[0] ?? 0;
+      const firstStart = events.filter(e => e.date === d && !containerIds.has(e.id)).map(e => toMin(e.start_time)).sort((a, b) => a - b)[0] ?? 0;
       let clock = firstStart, shift = 0;
       for (const i of live) {
         const act = eventById.get(i)?.metadata?.actual_start_time;
@@ -284,7 +299,7 @@ function BoardContent() {
       ends[d] = clock;
     }
     return { rows: out, ends };
-  }, [dates, orderFor, parked, events, eventById, DUR]);
+  }, [dates, orderFor, parked, events, eventById, DUR, containerIds]);
 
   const moveRow = (date: string, id: string, beforeId: string | null) => {
     const ord = orderFor(date).filter(i => i !== id);
@@ -328,7 +343,7 @@ function BoardContent() {
   const nowMin = now.getHours() * 60 + now.getMinutes();
   const isDone = useCallback((date: string, endMin: number) => date < todayStr || (date === todayStr && endMin <= nowMin), [todayStr, nowMin]);
   const overview = useMemo(() => {
-    const scoped = events.filter(e => visibleDates.includes(e.date) && !layout.rows[e.id]?.parked);
+    const scoped = events.filter(e => visibleDates.includes(e.date) && !containerIds.has(e.id) && !layout.rows[e.id]?.parked);
     const endOf = (e: CalEvent) => (layout.rows[e.id]?.at ?? toMin(e.start_time)) + DUR(e.id);
     const cls = scoped.filter(e => e.event_type !== 'lab');
     const lab = scoped.filter(e => e.event_type === 'lab');
@@ -353,7 +368,19 @@ function BoardContent() {
       failed: scopedAttempts.filter(a => a.overall_result === 'fail').length,
       scopedAttempts,
     };
-  }, [events, visibleDates, layout, DUR, sectionForEvent, isDone, todayStr, nowMin, attempts, visibleLabDays, groups, absentIds]);
+  }, [events, visibleDates, containerIds, layout, DUR, sectionForEvent, isDone, todayStr, nowMin, attempts, visibleLabDays, groups, absentIds]);
+
+  // In-place room / instructor change on a station tile (same PATCH the editor uses, only those fields).
+  const saveStation = useCallback(async (st: Station, patch: { room?: string | null; instructor_name?: string | null; instructor_email?: string | null }) => {
+    setSaveError(null);
+    try {
+      const res = await fetch(`/api/lab-management/stations/${st.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(patch) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) throw new Error(data.error || `HTTP ${res.status}`);
+      setLabDays(prev => prev.map(d => d.id !== st.lab_day_id ? d : { ...d, stations: d.stations.map(x => x.id !== st.id ? x : {
+        ...x, ...('room' in patch ? { room: patch.room ?? null } : {}), ...('instructor_name' in patch ? { instructor_name: patch.instructor_name ?? null } : {}) }) }));
+    } catch (err) { setSaveError(`Could not save station ${st.station_number}: ${err instanceof Error ? err.message : 'unknown error'}`); }
+  }, []);
 
   // ── Station editing: open the existing EditStationModal for one station ──
   const openEditor = async (labDayId: string, stationId: string) => {
@@ -457,10 +484,11 @@ function BoardContent() {
 
   // Station tiles for one lab section. nested = true when shown under its schedule row (Stations region removed).
   const renderStationTiles = (d: LabDay) => (
-    <div className="grid grid-cols-4 max-xl:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-2">
+    <div className="grid grid-cols-4 max-xl:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-2 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/40 p-2.5 my-3">
       {d.stations.map(st => {
         const learning = st.scenario?.cert_tier === 'learning_station';
-        const caseName = st.scenario?.case_code || st.scenario?.title || st.custom_title || '—';
+        const caseName = st.scenario?.title ? `${st.scenario.case_code ? `${st.scenario.case_code.replace(/^CASE_/i, 'Case ').replace(/_/g, ' ')} - ` : ''}${st.scenario.title}` : st.scenario?.case_code || st.custom_title || '—';
+        const category = st.scenario?.category;
         const tag = learning ? 'learning' : d.is_adv_cert_testing ? 'megacode' : 'station';
         const mins = st.rotation_minutes ?? d.rotation_duration;
         const href = learning ? `/labs/adv-cert/learning-station?labDayId=${d.id}&stationId=${st.id}` : `/labs/adv-cert/grade?labDayId=${d.id}&stationId=${st.id}`;
@@ -470,19 +498,29 @@ function BoardContent() {
               <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Station {st.station_number}</span>
               <span className="text-[10px] lowercase px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300">{tag}</span>
             </div>
+            {category && <span className="self-start text-[10px] lowercase px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">{category}</span>}
             <div className="text-sm font-medium text-gray-900 dark:text-white leading-snug">{caseName}</div>
             <div className="text-[11px] text-gray-500 dark:text-gray-400">{[mins ? `${mins} min` : null, st.station_notes].filter(Boolean).join(' · ') || ' '}</div>
-            <button type="button" onClick={() => openEditor(d.id, st.id)} aria-label={`Room for station ${st.station_number}`}
-              className="text-left text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 px-2 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700">
-              <span className="truncate">{st.room || 'Room: —'}</span><ChevronDown className="w-3 h-3 text-gray-400 shrink-0" />
-            </button>
-            <button type="button" onClick={() => openEditor(d.id, st.id)} aria-label={`Instructor for station ${st.station_number}`}
-              className="text-left text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 px-2 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700">
-              <span className="truncate">{st.instructor_name || 'Instructor: —'}</span><ChevronDown className="w-3 h-3 text-gray-400 shrink-0" />
-            </button>
+            <select aria-label={`Room for station ${st.station_number}`} value={st.room || ''}
+              onChange={ev => saveStation(st, { room: ev.target.value || null })}
+              className="text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1">
+              <option value="">Room: —</option>
+              {st.room && !locations.some(l => l.name === st.room) && <option value={st.room}>{st.room}</option>}
+              {locations.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
+            </select>
+            <select aria-label={`Instructor for station ${st.station_number}`} value={st.instructor_name || ''}
+              onChange={ev => { const i = fullInstructors.find(x => x.name === ev.target.value); saveStation(st, { instructor_name: i?.name || null, instructor_email: i?.email || null }); }}
+              className="text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1">
+              <option value="">Instructor: —</option>
+              {st.instructor_name && !fullInstructors.some(i => i.name === st.instructor_name) && <option value={st.instructor_name}>{st.instructor_name}</option>}
+              {fullInstructors.map(i => <option key={i.id} value={i.name}>{i.name}</option>)}
+            </select>
+            <div className="flex items-center justify-between gap-2">
+            <button type="button" onClick={() => openEditor(d.id, st.id)} className="text-[11px] px-2 min-h-[28px] rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">Edit station</button>
             <Link href={href} className="self-end text-[11px] px-2 min-h-[28px] inline-flex items-center rounded border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20">
-              {learning ? 'Track' : 'Grade'}
+              Grade
             </Link>
+            </div>
           </div>
         );
       })}
@@ -570,7 +608,7 @@ function BoardContent() {
               <div className="text-xs font-semibold text-gray-700 dark:text-gray-200 mb-1">{g.name}</div>
               <div className="flex flex-wrap gap-1">
                 {g.members.map(m => (
-                  <span key={m.id} className={`text-[11px] px-1.5 py-0.5 rounded-full ${absentIds.has(m.id) ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 line-through' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'}`}>{m.last_name}</span>
+                  <span key={m.id} className={`text-[11px] px-1.5 py-0.5 rounded-full ${absentIds.has(m.id) ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 line-through decoration-2 opacity-60' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200'}`}>{m.last_name}</span>
                 ))}
               </div>
             </div>
@@ -633,10 +671,6 @@ function BoardContent() {
               <p className="text-sm text-gray-500 dark:text-gray-400">{cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''}</p>
             </div>
             <div className="flex items-center gap-2">
-              <div className="inline-flex rounded-md border border-gray-300 dark:border-gray-600 overflow-hidden">
-                <button onClick={() => setRunMode(false)} className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm ${!runMode ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900' : ''}`}><Eye className="w-3.5 h-3.5" /> Plan</button>
-                <button onClick={() => setRunMode(true)} className={`inline-flex items-center gap-1 px-3 py-1.5 text-sm ${runMode ? 'bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900' : ''}`}><Play className="w-3.5 h-3.5" /> Run</button>
-              </div>
               <button onClick={load} disabled={loading} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh</button>
               <button onClick={() => window.print()} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"><Printer className="w-3.5 h-3.5" /> Print</button>
             </div>
