@@ -10,6 +10,8 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+
+(pending) | feat(acls-hub): /labs/acls-hub/board — sandbox-layout Board view (overview fractions, time-engine schedule, station tiles, roster progress); link from current hub
 PENDING | fix(acls-hub): narrowest block claims a section first (all-day container no longer steals stations); drop 'no instructor assigned' on BLS/Airway rows; scope Megacode lab-days tile to selected day
 
 a8ad351 | feat(acls-hub): present/absent toggle per student (existing lab_day_attendance; absent leaves counts, struck through) + learning-station Pass/Watch marks on the student panel
