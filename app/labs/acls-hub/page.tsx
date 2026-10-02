@@ -55,6 +55,7 @@ interface Attempt {
   id: string; lab_day_id: string; lab_group_id: string; overall_result: string;
   started_at: string; team_lead?: { id: string; first_name: string; last_name: string } | null;
   scenario?: { id: string; name: string; case_code: string | null } | null;
+  record_flags?: string[]; segments_unmarked?: number; segments_total?: number;
 }
 interface CalEvent {
   id: string; title: string; date: string; start_time: string | null; end_time: string | null;
@@ -231,6 +232,15 @@ function AclsHubPageContent() {
     () => attempts.filter(a => megacodeLabDayIds.has(a.lab_day_id)),
     [attempts, megacodeLabDayIds]
   );
+
+  const [recordFilter, setRecordFilter] = useState<'all' | 'incomplete' | 'contradictory'>('all');
+  const flaggedAttempts = useMemo(
+    () => megAttempts.filter(a => (a.record_flags || []).length > 0),
+    [megAttempts]
+  );
+  const incompleteCount = flaggedAttempts.filter(a => a.record_flags!.includes('incomplete')).length;
+  const contradictoryCount = flaggedAttempts.filter(a => a.record_flags!.includes('contradictory')).length;
+  const shownFlagged = flaggedAttempts.filter(a => recordFilter === 'all' || a.record_flags!.includes(recordFilter));
 
   const stats = useMemo(() => {
     const passed = megAttempts.filter(a => a.overall_result === 'pass').length;
@@ -503,6 +513,43 @@ function AclsHubPageContent() {
               </div>
               <p className="mt-1 text-[11px] text-gray-400">Megacode attempts only (practice and final testing). A team-lead pass in practice counts toward the AHA team-lead distinction.</p>
             </section>
+
+            {/* RECORD CHECK — read-only detection of incomplete / contradictory score records */}
+            {flaggedAttempts.length > 0 && (
+              <section style={{ breakInside: 'avoid' }} className="bg-orange-50 dark:bg-orange-900/20 border border-orange-300 dark:border-orange-800 rounded-xl p-4">
+                <h2 className="text-base font-semibold text-orange-900 dark:text-orange-100 mb-1">Record check</h2>
+                <p className="text-[11px] text-orange-800 dark:text-orange-200 mb-2">
+                  Detection only. Nothing here changes a score. Incomplete = overall result set but a section unmarked. Contradictory = overall pass with a failed section.
+                </p>
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {([['all', `All flagged (${flaggedAttempts.length})`], ['incomplete', `Incomplete (${incompleteCount})`], ['contradictory', `Contradictory (${contradictoryCount})`]] as const).map(([k, label]) => (
+                    <button key={k} onClick={() => setRecordFilter(k)}
+                      className={`min-h-[44px] px-3 rounded-lg text-xs border ${recordFilter === k ? 'bg-orange-600 text-white border-orange-600' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-1">
+                  {shownFlagged.map(a => (
+                    <div key={a.id} className="flex flex-wrap items-center gap-2 text-xs bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2">
+                      <span className="font-medium text-gray-800 dark:text-gray-100">
+                        {a.team_lead ? `${a.team_lead.last_name}, ${a.team_lead.first_name}` : 'No team lead'}
+                      </span>
+                      <span className="text-gray-500">{a.scenario?.case_code || a.scenario?.name || ''}</span>
+                      <span className="text-gray-500">overall: {a.overall_result}</span>
+                      {a.record_flags!.includes('incomplete') && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200">
+                          INCOMPLETE ({a.segments_unmarked}/{a.segments_total} unmarked)
+                        </span>
+                      )}
+                      {a.record_flags!.includes('contradictory') && (
+                        <span className="px-1.5 py-0.5 rounded-full bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-200">CONTRADICTORY</span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {/* FAILURE MARKER — who hasn't passed megacode as TL yet */}
             {stats.notPassed.length > 0 && (
