@@ -11675,6 +11675,7 @@ themselves on a repeat visit instead of re-registering.
 | comments | text | YES |  |  |
 | client_uuid | uuid | YES |  |  |
 | synced_at | timestamp with time zone | YES |  |  |
+| ccf | jsonb | YES |  | CCF record (seconds, percent, source, intervals, original); migration 20261002 |
 | created_at | timestamp with time zone | NO | now() |  |
 | updated_at | timestamp with time zone | NO | now() |  |
 

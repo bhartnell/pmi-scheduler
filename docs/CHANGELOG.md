@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+(pending) | feat(ccf): wire CcfTimer + editable CCF fields into megacode grading; adv_cert_test_attempts.ccf jsonb (additive, save tolerant if unmigrated)
 
 this-commit | fix(grading): grading returns to the page it was opened from (returnTo; ACLS board -> Grade/Track -> back to board)
 

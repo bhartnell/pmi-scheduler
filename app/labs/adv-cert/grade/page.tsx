@@ -8,6 +8,8 @@ import { ArrowLeft, CheckCircle2, XCircle, Loader2, Save, Crown } from 'lucide-r
 import { useToast } from '@/components/Toast';
 import ScenarioFullDisplay from '@/components/scenario/ScenarioFullDisplay';
 import DualPaneGrading from '@/components/grading/DualPaneGrading';
+import CcfTimer from '@/components/grading/CcfTimer';
+import { CcfRecord, applyEdit } from '@/lib/ccf';
 import { safeReturnTo, withReturnTo } from '@/lib/return-to';
 import type { AdvCertScenario, CertCourse } from '@/types/adv-cert';
 
@@ -55,6 +57,9 @@ export default function AdvCertGradePage() {
   // Manual pass/fail at the bottom is an OVERRIDE of the autoscore (empty = use the score).
   const [overrideResult, setOverrideResult] = useState<'pass' | 'fail' | ''>('');
   const [overallComments, setOverallComments] = useState('');
+  // CCF: filled by the timer or typed by hand; always editable, never required to save.
+  const [ccf, setCcf] = useState<CcfRecord | null>(null);
+  const [ccfKey, setCcfKey] = useState(0);
 
   const [loadingScenario, setLoadingScenario] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -185,6 +190,16 @@ export default function AdvCertGradePage() {
   function resetGrading() {
     setCriteriaMet({}); setSegResult({}); setSegComments({});
     setOverrideResult(''); setOverallComments('');
+    setCcf(null); setCcfKey((k) => k + 1);
+  }
+
+  // Edit CCF times or percent; the timer's original value is kept with who/when.
+  function editCcf(edit: { compression_seconds?: number; arrest_seconds?: number; percent?: number }) {
+    const base: CcfRecord = ccf ?? { compression_seconds: 0, arrest_seconds: 0, percent: null, source: 'entered', intervals: [] };
+    const next = applyEdit(base, edit, session?.user?.email || 'unknown', new Date().toISOString());
+    // Nothing was calculated before, so there is no original to preserve.
+    if (!ccf) next.original = null;
+    setCcf(next);
   }
 
   const selectedGroup = useMemo(() => groups.find((g) => g.id === groupId), [groups, groupId]);
@@ -252,6 +267,7 @@ export default function AdvCertGradePage() {
       student_ids: Array.from(new Set([teamLeadId, ...memberIds])),
       segment_results,
       // offline-readiness: stable idempotency key minted client-side
+      ccf,
       client_uuid: typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : null,
     };
 
@@ -265,6 +281,7 @@ export default function AdvCertGradePage() {
       const data = await res.json();
       if (data.success) {
         toast.success(`Saved — ${String(finalOverall).toUpperCase()}${data.teamLeadLogWritten ? ' (team-lead logged)' : ''}`);
+        if (data.ccfDropped) toast.error('Result saved, but the CCF value could not be stored yet. Note it separately.');
         // Ready for the NEXT student at the SAME station: clear only the score
         // sheet + the per-student selection (team lead / members). KEEP the day,
         // group, station, and scenario context so the grader isn't bounced back
@@ -543,6 +560,34 @@ export default function AdvCertGradePage() {
                 }`}>
                 <XCircle className="w-4 h-4" /> Fail
               </button>
+            </div>
+            <div className="mb-3 space-y-3">
+              <CcfTimer key={ccfKey} onChange={(rec) => setCcf((prev) => (rec ? (prev?.source === 'entered' && prev.original ? { ...prev, intervals: rec.intervals } : rec) : prev && prev.source === 'calculated' ? null : prev))} />
+              <div className="rounded-md border border-gray-200 dark:border-gray-700 p-3">
+                <div className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  Chest compression fraction {ccf ? `(${ccf.source})` : '(optional)'}
+                </div>
+                <div className="grid grid-cols-3 gap-3 max-sm:grid-cols-1 text-sm">
+                  <label className="flex flex-col gap-1">On chest (seconds)
+                    <input type="number" min={0} inputMode="numeric" value={ccf?.compression_seconds ?? ''}
+                      onChange={(e) => editCcf({ compression_seconds: Math.max(0, Number(e.target.value) || 0) })}
+                      className="min-h-[44px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2" />
+                  </label>
+                  <label className="flex flex-col gap-1">Arrest (seconds)
+                    <input type="number" min={0} inputMode="numeric" value={ccf?.arrest_seconds ?? ''}
+                      onChange={(e) => editCcf({ arrest_seconds: Math.max(0, Number(e.target.value) || 0) })}
+                      className="min-h-[44px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2" />
+                  </label>
+                  <label className="flex flex-col gap-1">CCF % (&gt;80% on the AHA form)
+                    <input type="number" min={0} max={100} step="0.1" inputMode="decimal" value={ccf?.percent ?? ''}
+                      onChange={(e) => editCcf({ percent: Number(e.target.value) })}
+                      className="min-h-[44px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2" />
+                  </label>
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Editing the times recalculates the percent. Fix a missed button press here; the timer&apos;s original value is kept. Leave blank to save without CCF.
+                </p>
+              </div>
             </div>
             <textarea placeholder="Overall comments (optional)" rows={2}
               value={overallComments} onChange={(e) => setOverallComments(e.target.value)}

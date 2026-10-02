@@ -97,6 +97,8 @@ export interface SaveAttemptResult {
   attempt: AdvCertTestAttempt;
   deduped: boolean; // true when an existing client_uuid attempt was returned
   teamLeadLogWritten: boolean;
+  /** true when a CCF value was supplied but could not be stored (column not migrated yet). */
+  ccfDropped?: boolean;
 }
 
 /**
@@ -128,24 +130,37 @@ export async function saveAttempt(
   }
 
   // 2. Parent attempt.
-  const { data: attempt, error: aErr } = await supabase
+  const attemptInsert = {
+    lab_day_id: input.lab_day_id,
+    lab_station_id: input.lab_station_id || null,
+    lab_group_id: input.lab_group_id,
+    scenario_id: input.scenario_id,
+    team_lead_id: input.team_lead_id || null,
+    grader_id: graderId,
+    cert_course: course,
+    overall_result: input.overall_result,
+    comments: input.comments || null,
+    client_uuid: input.client_uuid || null,
+    synced_at: input.client_uuid ? new Date().toISOString() : null,
+  };
+  let ccfDropped = false;
+  let { data: attempt, error: aErr } = await supabase
     .from('adv_cert_test_attempts')
-    .insert({
-      lab_day_id: input.lab_day_id,
-      lab_station_id: input.lab_station_id || null,
-      lab_group_id: input.lab_group_id,
-      scenario_id: input.scenario_id,
-      team_lead_id: input.team_lead_id || null,
-      grader_id: graderId,
-      cert_course: course,
-      overall_result: input.overall_result,
-      comments: input.comments || null,
-      client_uuid: input.client_uuid || null,
-      synced_at: input.client_uuid ? new Date().toISOString() : null,
-    })
+    .insert(input.ccf ? { ...attemptInsert, ccf: input.ccf } : attemptInsert)
     .select('*')
     .single();
-  if (aErr) throw aErr;
+  // ccf is additive: if the column isn't migrated yet, save the attempt without it
+  // (never block a rotation) and tell the caller so the instructor can note the value.
+  if (aErr && input.ccf && /ccf/i.test(aErr.message || '')) {
+    console.warn('adv_cert_test_attempts.ccf column missing; saving attempt without CCF');
+    ccfDropped = true;
+    ({ data: attempt, error: aErr } = await supabase
+      .from('adv_cert_test_attempts')
+      .insert(attemptInsert)
+      .select('*')
+      .single());
+  }
+  if (aErr || !attempt) throw aErr;
 
   // 3. Tested students.
   const uniqueStudents = Array.from(new Set(input.student_ids || []));
@@ -220,7 +235,7 @@ export async function saveAttempt(
     }
   }
 
-  return { attempt: attempt as AdvCertTestAttempt, deduped: false, teamLeadLogWritten };
+  return { attempt: attempt as AdvCertTestAttempt, deduped: false, teamLeadLogWritten, ccfDropped };
 }
 
 /** Attempts for a lab day (drives the later filter/report view + grading-day status). */
