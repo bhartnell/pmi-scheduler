@@ -60,12 +60,19 @@ interface CalEvent {
   id: string; title: string; date: string; start_time: string | null; end_time: string | null;
   event_type: string; instructor_names?: string[]; room?: string; linked_url?: string; status?: string;
   source?: string; linked_id?: string; linked_lab_day_id?: string; content_notes?: string;
-  metadata?: { instructor_id?: string | null; additional_instructor_id?: string | null; linked_section_number?: number | null };
+  metadata?: { actual_start_time?: string | null; instructor_id?: string | null; additional_instructor_id?: string | null; linked_section_number?: number | null };
 }
 interface InstructorOpt { id: string; name: string }
 
 const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : '');
 const sname = (s?: { first_name: string; last_name: string } | null) => (s ? `${s.first_name} ${s.last_name}` : '—');
+const toMin = (t?: string | null) => (t ? parseInt(t.slice(0, 2), 10) * 60 + parseInt(t.slice(3, 5), 10) : null);
+const fromMin = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
+// Signed minutes actual runs against planned (positive = behind schedule).
+const deltaMin = (planned?: string | null, actual?: string | null) => {
+  const p = toMin(planned), a = toMin(actual);
+  return p === null || a === null ? null : a - p;
+};
 const prettyDate = (d: string) => { try { return new Date(d + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' }); } catch { return d; } };
 
 const TYPE_COLOR: Record<string, string> = {
@@ -176,6 +183,9 @@ function AclsHubPageContent() {
         if ('instructor_id' in patch) next.metadata!.instructor_id = patch.instructor_id || null;
         if ('additional_instructor_id' in patch) next.metadata!.additional_instructor_id = patch.additional_instructor_id || null;
         if ('content_notes' in patch) next.content_notes = patch.content_notes || undefined;
+        if ('start_time' in patch && patch.start_time) next.start_time = patch.start_time;
+        if ('end_time' in patch && patch.end_time) next.end_time = patch.end_time;
+        if ('actual_start_time' in patch) next.metadata!.actual_start_time = patch.actual_start_time || null;
         return next;
       }));
     } catch (err) {
@@ -548,7 +558,45 @@ function AclsHubPageContent() {
                       return (
                         <div key={e.id}>
                         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 text-sm">
-                          <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
+                          {editable ? (() => {
+                            const actual = e.metadata?.actual_start_time;
+                            const delta = deltaMin(e.start_time, actual);
+                            const dur = (toMin(e.end_time) ?? 0) - (toMin(e.start_time) ?? 0);
+                            const busy = savingBlock === e.id;
+                            const timeCls = 'text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1';
+                            return (
+                              <span className="flex flex-wrap items-center gap-2 shrink-0">
+                                <label className="text-[10px] text-gray-400 flex items-center gap-1">Plan
+                                  <input type="time" aria-label={`Planned start for ${e.title}`} key={`p-${e.id}-${e.start_time}`} defaultValue={hhmm(e.start_time)} disabled={busy}
+                                    onBlur={(ev) => {
+                                      const v = ev.target.value; if (!v || v === hhmm(e.start_time)) return;
+                                      const shifted = fromMin((toMin(v) ?? 0) + Math.max(dur, 0));
+                                      saveBlock(e, { start_time: `${v}:00`, end_time: shifted });
+                                    }} className={`${timeCls} w-24`} /></label>
+                                <label className="text-[10px] text-gray-400 flex items-center gap-1">Min
+                                  <input type="number" min={1} step={5} aria-label={`Duration in minutes for ${e.title}`} key={`d-${e.id}-${e.end_time}`} defaultValue={dur > 0 ? dur : ''} disabled={busy}
+                                    onBlur={(ev) => {
+                                      const n = parseInt(ev.target.value, 10);
+                                      if (!n || n < 1 || n === dur || toMin(e.start_time) === null) return;
+                                      saveBlock(e, { end_time: fromMin((toMin(e.start_time) as number) + n) });
+                                    }} className={`${timeCls} w-16`} /></label>
+                                <label className="text-xs font-semibold text-gray-700 dark:text-gray-200 flex items-center gap-1">Actual
+                                  <input type="time" aria-label={`Actual start for ${e.title}`} key={`a-${e.id}-${actual}`} defaultValue={hhmm(actual)} disabled={busy}
+                                    onBlur={(ev) => {
+                                      const v = ev.target.value;
+                                      if (v === hhmm(actual)) return;
+                                      saveBlock(e, { actual_start_time: v ? `${v}:00` : null });
+                                    }} className={`${timeCls} w-28 font-semibold`} /></label>
+                                {delta !== null && (
+                                  <span className={`text-xs font-semibold ${delta > 0 ? 'text-red-600 dark:text-red-400' : delta < 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}`}>
+                                    {delta === 0 ? 'on time' : delta > 0 ? `${delta} min behind` : `${-delta} min ahead`}
+                                  </span>
+                                )}
+                              </span>
+                            );
+                          })() : (
+                            <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
+                          )}
                           <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${TYPE_COLOR[e.event_type] || TYPE_COLOR.class}`}>{e.event_type}</span>
                           <span className="text-gray-800 dark:text-gray-100 flex-1 min-w-[12rem]">{e.title}</span>
                           {e.room && <span className="text-xs text-gray-400">{e.room}</span>}
