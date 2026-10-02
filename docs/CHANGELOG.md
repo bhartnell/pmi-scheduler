@@ -15,6 +15,8 @@ this-commit | fix(grading): grading returns to the page it was opened from (retu
 
 2026-10-03
 
+- (this commit) | ACLS board: day container is a header not a timed row, in-place station room/instructor dropdowns, case titles + category, one view (Plan/Run removed), station-group separation, Grade label
+
 (pending) | feat(ccf): CCF calculator lib + CcfTimer component + debrief view (unwired, no schema)
 PENDING | feat(acls): megacode autoscore on grade page (blank section = miss), manual pass/fail kept as override with one combined warn dialog; no stored results recomputed
 PENDING | feat(acls): non-blocking incomplete-record prompt at megacode save, adv_cert_segment_results.completion_source (additive, applied), resolve-at-export check on AHA export (/api/adv-cert/record-flags)

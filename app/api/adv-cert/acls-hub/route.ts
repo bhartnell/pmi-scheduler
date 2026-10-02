@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
         .select(`
           id, lab_day_id, station_number, custom_title, room, instructor_name, instructor_id,
           rotation_minutes, num_rotations, station_notes,
-          scenario:scenarios(id, title, case_code, cert_tier)
+          scenario:scenarios(id, title, case_code, cert_tier, category)
         `)
         .in('lab_day_id', labDayIds)
         .order('station_number', { ascending: true });
