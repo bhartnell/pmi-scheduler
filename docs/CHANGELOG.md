@@ -10,6 +10,8 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+
+(pending) | feat(acls-board): Print now outputs the selected day(s) schedule handout (times, instructors, stations), one page per day; replaces the pointer sentence
 (pending) | feat(ccf): wire CcfTimer + editable CCF fields into megacode grading; adv_cert_test_attempts.ccf jsonb (additive, save tolerant if unmigrated)
 
 (pending) | feat(grading): megacode sheet gets adjustable Sheet size (A-/A+, shared key with dual-pane) via new components/grading/SheetScale

@@ -15,7 +15,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { withReturnTo } from '@/lib/return-to';
-import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef, Suspense, Fragment } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
 import EditStationModal from '@/components/lab-day/EditStationModal';
@@ -726,7 +726,68 @@ function BoardContent() {
             ))}
           </div>
         )}
-        <div className="hidden print:block text-sm">Use the current ACLS Hub print for the instructor handout (/labs/acls-hub).</div>
+        {/* ── PRINT-ONLY HANDOUT: the selected day(s) schedule only, from the same computed
+            times the screen shows. One page per day. Presentation only; nothing here writes. ── */}
+        {cohort && (
+          <div className="hidden print:block text-black acls-board-print">
+            <style>{`@media print {
+              @page { margin: 0.5in; size: letter portrait; }
+              html, body { background: #fff !important; }
+              .acls-board-print table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+              .acls-board-print th, .acls-board-print td { border: 1px solid #000; padding: 4px 8px; text-align: left; vertical-align: top; font-size: 12pt; line-height: 1.3; }
+              .acls-board-print th { background: #e5e5e5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: 700; }
+            }`}</style>
+            {visibleDates.map((date, di) => {
+              const ids = orderFor(date).filter(id => !layout.rows[id]?.parked);
+              const startAt = ids.length ? (layout.rows[ids[0]]?.at ?? 0) : 0;
+              return (
+                <div key={date} style={{ breakBefore: di > 0 ? 'page' : 'auto' }}>
+                  <h1 className="text-2xl font-bold">ACLS Schedule — {cohortLabel}</h1>
+                  <h2 className="text-lg font-bold mb-1">Day {dayNo(date)} — {prettyDate(date)} · {fmt(startAt)}–{fmt(layout.ends[date] ?? 0)}</h2>
+                  <table>
+                    <thead><tr><th style={{ width: '120px' }}>Time</th><th>Lesson / Activity</th><th style={{ width: '200px' }}>Instructor</th></tr></thead>
+                    <tbody>
+                      {ids.map(id => {
+                        const e = eventById.get(id); if (!e) return null;
+                        const at = layout.rows[id]?.at ?? toMin(e.start_time);
+                        const sec = sectionForEvent.get(id);
+                        return (
+                          <Fragment key={id}>
+                            <tr style={{ breakInside: 'avoid' }}>
+                              <td>{fmt(at)}–{fmt(at + DUR(id))}</td>
+                              <td><strong>{e.title}</strong>{e.room ? ` · ${e.room}` : ''}</td>
+                              <td>{rowNames(e).join(', ')}</td>
+                            </tr>
+                            {sec && sec.stations.length > 0 && (
+                              <tr style={{ breakInside: 'avoid' }}>
+                                <td />
+                                <td colSpan={2}>
+                                  <table style={{ marginBottom: 0 }}>
+                                    <thead><tr><th style={{ width: '40px' }}>#</th><th style={{ width: '140px' }}>Room</th><th>Case / Skill</th><th style={{ width: '180px' }}>Instructor</th></tr></thead>
+                                    <tbody>
+                                      {sec.stations.map(st => (
+                                        <tr key={st.id}>
+                                          <td>{st.station_number}</td>
+                                          <td>{st.room || ''}</td>
+                                          <td>{st.scenario?.case_code || st.scenario?.title || st.custom_title || ''}</td>
+                                          <td>{st.instructor_name || ''}</td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </td>
+                              </tr>
+                            )}
+                          </Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {attemptPicker && (
