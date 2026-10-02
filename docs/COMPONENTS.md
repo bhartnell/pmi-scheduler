@@ -147,7 +147,7 @@ tagging conflicts/no-availability inline so the coordinator can still
 override, mirroring `AvailableInstructorsSection`'s sidebar language.
 
 ### ACLS skills capture
-- `components/AclsSkillsPanel.tsx` — pass/fail/remediated attestation per student for Airway Management, Adult BLS, Peds BLS; writes `pals_skill_completions` (cert_course='acls'). Used on `/labs/acls-hub`.
+- `components/AclsSkillsPanel.tsx` — (UNUSED since 2026-10-02: removed from ACLS hub per Ben; left in place) pass/fail/remediated attestation per student for Airway Management, Adult BLS, Peds BLS; writes `pals_skill_completions` (cert_course='acls'). Used on `/labs/acls-hub`.
 
 ### Library / utilities
 
