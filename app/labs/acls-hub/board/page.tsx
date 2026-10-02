@@ -17,8 +17,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { withReturnTo } from '@/lib/return-to';
 import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { Timer, Monitor, ArrowLeft, Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
 import EditStationModal from '@/components/lab-day/EditStationModal';
+import InlineTimerWidget from '@/components/InlineTimerWidget';
+import LabTimer from '@/components/LabTimer';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 import type { LabDay as FullLabDay, Station as FullStation, Instructor, InstructorAvailabilityEntry } from '@/components/lab-day/types';
 
@@ -133,6 +135,7 @@ function BoardContent() {
   const runMode = true;
   const [regions, setRegions] = useState<RegionCfg[]>(DEFAULT_REGIONS);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
+  const [timerDayId, setTimerDayId] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(() => new Date());
   // Run-mode order and parked rows are per-viewer working state for the day.
   const [orderByDay, setOrderByDay] = useState<Record<string, string[]>>({});
@@ -588,6 +591,12 @@ function BoardContent() {
                 <div className="flex items-baseline gap-2 mb-1.5">
                   <h4 className="text-sm font-semibold text-gray-800 dark:text-gray-100">{d.section_label || d.title || 'Lab'}</h4>
                   <span className="text-xs text-gray-500 dark:text-gray-400">{d.num_rotations ?? d.stations.length} rotations</span>
+                  {/* Existing lab-day rotation timer (one per section's lab_day row); no new implementation. */}
+                  <div className="ml-auto flex items-center gap-2" onClick={ev => ev.stopPropagation()}>
+                    <InlineTimerWidget labDayId={d.id} onOpenFullTimer={() => setTimerDayId(d.id)} />
+                    <button onClick={() => setTimerDayId(d.id)} className="inline-flex items-center gap-1 px-3 min-h-[44px] bg-green-600 text-white rounded-lg hover:bg-green-700 text-xs"><Timer className="w-4 h-4" />Timer</button>
+                    <button onClick={() => window.open(`/timer-display/live/${d.id}`, '_blank')} title="Open full-screen timer display" className="inline-flex items-center gap-1 px-3 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-xs"><Monitor className="w-4 h-4" />Display</button>
+                  </div>
                 </div>
                 <div onClick={ev => ev.stopPropagation()}>{renderStationTiles(d)}</div>
               </div>
@@ -810,6 +819,13 @@ function BoardContent() {
           </div>
         </div>
       )}
+
+      {timerDayId && (() => {
+        const td = labDays.find(x => x.id === timerDayId);
+        if (!td) return null;
+        const preset = (td.stations as (Station & { debrief_minutes?: number | null })[]).find(x => x.debrief_minutes != null)?.debrief_minutes;
+        return <LabTimer labDayId={td.id} numRotations={td.num_rotations ?? td.stations.length} rotationMinutes={td.rotation_duration ?? 15} onClose={() => setTimerDayId(null)} isController={true} defaultDebriefSeconds={preset != null ? preset * 60 : undefined} />;
+      })()}
 
       {editing && (
         <EditStationModal
