@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-10-02
+
+- pending | Lab timer GET: drop HTTP cache (no-store) so a cached stale response cannot override realtime state (grade-station timer bounce). Code-only; shared-hook consolidation (BUG-13) still open.
+
 ## 2026-10-01
 
 - pending | ACLS UI 3/6: reusable components/StatTile (site tile look, larger type) applied to ACLS hub megacode stats + not-yet-passed chips; legible at 75% zoom

@@ -57,15 +57,9 @@ export async function GET(request: NextRequest) {
       isStale = labDate < today;
     }
 
-    // Cache-Control: timer state is the same for any instructor
-    // looking at this lab day. `private` keeps it browser-only (so
-    // unauthenticated users can't read it from a shared cache), and
-    // max-age=2 lets the SAME browser dedupe rapid-fire polls
-    // (multiple components on the same page can all be polling
-    // the timer; cache absorbs the duplicates). stale-while-revalidate
-    // means a request 2-5s after the cached value gets served the
-    // stale copy instantly while a fresh fetch happens in the
-    // background — the user sees zero latency on the duplicate hit.
+    // No HTTP caching: a cached (stale) timer response can be applied by the
+    // client after a newer realtime update and makes the display jump.
+    // Same header as /timer/active.
     const res = NextResponse.json({
       success: true,
       timer: data || null,
@@ -73,7 +67,7 @@ export async function GET(request: NextRequest) {
       isStale,
       serverTime: new Date().toISOString()
     });
-    res.headers.set('Cache-Control', 'private, max-age=2, stale-while-revalidate=3');
+    res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res;
   } catch (error) {
     console.error('Error fetching timer state:', error);
