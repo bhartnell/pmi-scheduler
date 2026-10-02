@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 ## 2026-10-02
+PENDING | fix(lab-day): Individual Testing Tracker no longer auto-collapses when checkoff detection loads late (latched default open state)
 549fb1d | fix(lab-timer): timer GET no-store (drop max-age/SWR cache that let stale state overwrite fresh; grade-station jump regression)
 
 ## 2026-10-01
