@@ -123,14 +123,68 @@ export async function PUT(
 
     const supabase = getSupabaseAdmin();
 
-    const { data, error } = await supabase
-      .from('pmi_semesters')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
+    let data: unknown = null;
+    if (Object.keys(updates).length > 0) {
+      const { data: updated, error } = await supabase
+        .from('pmi_semesters')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      data = updated;
+    } else {
+      const { data: existing, error } = await supabase
+        .from('pmi_semesters')
+        .select('*')
+        .eq('id', id)
+        .single();
+      if (error) throw error;
+      data = existing;
+    }
 
-    if (error) throw error;
+    // Per-cohort manual start/stop windows — the mechanism a cohort
+    // that runs off the standard calendar (or bridges two semesters
+    // by a week or two) uses instead of pinning individual blocks to
+    // a specific_date. Upserts rely on the (cohort_id, semester_id)
+    // unique constraint, so setting a window twice for the same
+    // cohort+semester just updates it. The resolver in
+    // lib/planner-semester.ts reads this table first on every block
+    // create/update, so this takes effect immediately — no need to
+    // touch existing blocks.
+    let overridesUpserted = 0;
+    let overrideUpsertError: string | null = null;
+    if (
+      Array.isArray(body.upsert_cohort_overrides) &&
+      body.upsert_cohort_overrides.length > 0
+    ) {
+      const rows = body.upsert_cohort_overrides
+        .filter(
+          (o: Record<string, unknown>) =>
+            o && typeof o.cohort_id === 'string' &&
+            typeof o.start_date === 'string' &&
+            typeof o.end_date === 'string'
+        )
+        .map((o: Record<string, unknown>) => ({
+          cohort_id: o.cohort_id,
+          semester_id: id,
+          start_date: o.start_date,
+          end_date: o.end_date,
+          notes: typeof o.notes === 'string' ? o.notes : null,
+          updated_at: new Date().toISOString(),
+        }));
+      if (rows.length > 0) {
+        const { data: upserted, error: uErr } = await supabase
+          .from('cohort_semester_overrides')
+          .upsert(rows, { onConflict: 'cohort_id,semester_id', count: 'exact' })
+          .select('id');
+        if (uErr) {
+          overrideUpsertError = uErr.message;
+        } else {
+          overridesUpserted = upserted?.length ?? 0;
+        }
+      }
+    }
 
     // Optional cascade to cohorts: when the operator changes a
     // semester window AND wants previously-overridden cohorts to
@@ -159,7 +213,22 @@ export async function PUT(
       overridesDeleted = count ?? 0;
     }
 
-    return NextResponse.json({ semester: data, overrides_deleted: overridesDeleted });
+    if (overrideUpsertError) {
+      return NextResponse.json(
+        {
+          semester: data,
+          overrides_deleted: overridesDeleted,
+          override_upsert_error: overrideUpsertError,
+        },
+        { status: 207 } // multi-status — semester saved, window upsert partially failed
+      );
+    }
+
+    return NextResponse.json({
+      semester: data,
+      overrides_deleted: overridesDeleted,
+      overrides_upserted: overridesUpserted,
+    });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     console.error('Update semester error:', err);
