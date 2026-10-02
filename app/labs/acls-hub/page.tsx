@@ -22,7 +22,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import { RegionShell, RegionGrid, Region } from '@/components/layout/RegionShell';
 import Link from 'next/link';
-import AclsSkillsPanel from '@/components/AclsSkillsPanel';
 import {
   ArrowLeft, Loader2, RefreshCw, Printer, CheckCircle2, XCircle, Clock,
   Users, UserCheck, MapPin, CalendarDays, Layers, GraduationCap,
@@ -279,7 +278,22 @@ function AclsHubPageContent() {
 
   // One lab section (its station cards + attempt tally). Nested under its
   // schedule row when linked; standalone when no schedule row matches.
+  // BLS / Airway are schedule rows only (Ben 2026-10-02): time + instructors,
+  // no station tiles, Open/Assign/Tracker, or capture. The AHA PDF print shows
+  // completion. Display-only: the lab_days sections and stations stay in place.
+  const isSkillsRow = (d: LabDay) => /\b(airway|bls)\b/i.test(`${d.section_label || ''} ${d.title || ''}`);
   const renderSection = (d: LabDay) => {
+    if (isSkillsRow(d)) {
+      const names = [...new Set(d.stations.map(st => st.instructor_name?.trim()).filter(Boolean))];
+      return (
+        <div key={d.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-700 dark:text-gray-200">
+          <Clock className="w-4 h-4 text-gray-400" />
+          <span className="font-medium">{d.section_label || d.title}</span>
+          <span className="text-xs text-gray-400">{hhmm(d.start_time)}–{hhmm(d.end_time)}</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">{names.length ? names.join(', ') : '— no instructor assigned —'}</span>
+        </div>
+      );
+    }
     const isSection = (d.section_number ?? 1) > 1;
     const dAttempts = attempts.filter(a => a.lab_day_id === d.id);
     return (
@@ -618,8 +632,6 @@ function AclsHubPageContent() {
                 })}
               </div>
             </section>
-
-            <AclsSkillsPanel groups={groups} />
 
             {/* By instructor */}
             {byInstructor.length > 0 && (
