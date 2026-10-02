@@ -105,6 +105,8 @@ export interface SaveAttemptInput {
   segment_results: AdvCertSegmentResultInput[];
   /** Offline idempotency key — set on the tablet, deduped server-side. */
   client_uuid?: string | null;
+  /** Chest compression fraction record (timer-calculated or entered). Optional; never required to save. */
+  ccf?: import('@/lib/ccf').CcfRecord | null;
 }
 
 export interface AdvCertTestAttempt {
@@ -121,5 +123,6 @@ export interface AdvCertTestAttempt {
   comments: string | null;
   client_uuid: string | null;
   synced_at: string | null;
+  ccf?: import('@/lib/ccf').CcfRecord | null;
   created_at: string;
 }
