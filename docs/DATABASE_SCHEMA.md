@@ -11867,3 +11867,11 @@ case cards). Archived via `is_active=false` (not deleted, per Archive-don't-dele
 
 
 **2026-10-02 (ACLS UI 4/6):** `pmi_schedule_blocks.actual_start_time` (`time`, nullable) added — what really started, entered on the ACLS hub; planned stays in `start_time`, duration = `end_time - start_time`. Migration `20261002_schedule_block_actual_start.sql`, applied via MCP.
+
+
+## ACLS learning-station marks (added 2026-10-02, migration `20260902_acls_learning_marks.sql` - NOT YET APPLIED to production)
+
+`acls_learning_marks` - unofficial, unscored, day-scoped Pass/Watch mark per student per ACLS learning station. Deliberately NOT a certification table.
+Columns: id, lab_day_id (FK lab_days), station_id (FK lab_stations), student_id (FK students), mark ('pass'|'watch'), note, marked_by (FK lab_users), created_at, updated_at. UNIQUE(station_id, student_id). RLS: service role only.
+
+Last updated: 2026-10-02

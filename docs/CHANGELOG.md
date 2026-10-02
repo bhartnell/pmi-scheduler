@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+- (pending hash) | ACLS MON 5/5: learning-station Pass/Watch tracker (`/labs/acls-learning/[stationId]`, `acls_learning_marks`, Grade button routing, hub Watch list). Migration NOT yet applied.
 
 35172cf5 | feat(acls-hub): read-only INCOMPLETE / CONTRADICTORY record check badge + filter on megacode attempts (detection only, no schema, save path untouched)
 

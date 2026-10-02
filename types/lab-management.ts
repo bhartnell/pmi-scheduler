@@ -126,6 +126,8 @@ export interface ScenarioPhase {
 export interface Scenario {
   id: string;
   title: string;
+  /** ACLS/PALS cert tier (e.g. 'learning_station'); routes the Grade button. */
+  cert_tier?: string | null;
   
   // Program Applicability
   applicable_programs: string[];

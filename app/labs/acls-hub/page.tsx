@@ -24,7 +24,7 @@ import { RegionShell, RegionGrid, Region } from '@/components/layout/RegionShell
 import Link from 'next/link';
 import {
   ArrowLeft, Loader2, RefreshCw, Printer, CheckCircle2, XCircle, Clock,
-  Users, UserCheck, MapPin, CalendarDays, Layers, GraduationCap,
+  Users, UserCheck, MapPin, CalendarDays, Layers, GraduationCap, Eye,
 } from 'lucide-react';
 
 // Sections are displayed in time order. section_number is an identifier
@@ -95,6 +95,8 @@ function AclsHubPageContent() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [events, setEvents] = useState<CalEvent[]>([]);
+  // Unofficial learning-station "Watch" marks (acls_learning_marks); day-scoped, never scored.
+  const [watchMarks, setWatchMarks] = useState<{ id: string; lab_day_id: string; mark: string; note: string | null; student: { first_name: string; last_name: string } | null; station: { station_number: number; custom_title: string | null } | null }[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeDate, setActiveDate] = useState<string>('all');
   const [instructorOpts, setInstructorOpts] = useState<InstructorOpt[]>([]);
@@ -121,6 +123,13 @@ function AclsHubPageContent() {
         setLabDays(hub.labDays || []);
         setGroups(hub.groups || []);
         setAttempts(hub.attempts || []);
+        const ldIds = (hub.labDays || []).map((d: { id: string }) => d.id).join(',');
+        if (ldIds) {
+          fetch(`/api/acls-learning-marks?labDayIds=${ldIds}`)
+            .then(r => r.json())
+            .then(m => { if (m.success) setWatchMarks((m.marks || []).filter((x: { mark: string }) => x.mark === 'watch')); })
+            .catch(() => {});
+        }
         // Schedule (didactic + labs) from the unified aggregator.
         if (hub.cohort?.id && (hub.dates || []).length) {
           const start = hub.dates[0];
@@ -565,6 +574,23 @@ function AclsHubPageContent() {
                   ))}
                 </div>
                 <p className="mt-2 text-xs text-amber-800 dark:text-amber-200">Red = failed a megacode as team lead; gray = has not yet led a passing megacode. Goal: every student passes at least one megacode as team lead.</p>
+              </section>
+            )}
+            {watchMarks.length > 0 && (
+              <section className="mt-3 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
+                <h3 className="flex items-center gap-1 text-sm font-semibold text-amber-900 dark:text-amber-200"><Eye className="w-4 h-4" /> Watch list (learning stations)</h3>
+                <ul className="mt-1 space-y-0.5 text-sm text-amber-900 dark:text-amber-100">
+                  {watchMarks
+                    .filter(w => activeDate === 'all' || labDays.find(d => d.id === w.lab_day_id)?.date === activeDate)
+                    .map(w => (
+                      <li key={w.id}>
+                        {w.student ? `${w.student.last_name}, ${w.student.first_name}` : 'Student'}
+                        {w.station ? ` (Station ${w.station.station_number}${w.station.custom_title ? ` - ${w.station.custom_title}` : ''})` : ''}
+                        {w.note ? `: ${w.note}` : ''}
+                      </li>
+                    ))}
+                </ul>
+                <p className="mt-1 text-[11px] text-amber-800 dark:text-amber-300">Unofficial. Not scored and not part of any certification record.</p>
               </section>
             )}
             </Region>
