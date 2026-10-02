@@ -7,6 +7,8 @@
 // save path yet (see the wiring card); it never blocks a rotation.
 
 import { useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { DOCK_PAGE_SLOT_ID } from '@/components/FloatingDock';
 import {
   CcfEvent, CcfRecord, DEFAULT_PAUSE_THRESHOLD_SECONDS, fmtClock, longPauses, summarize, toRecord,
 } from '@/lib/ccf';
@@ -22,6 +24,9 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
   const [events, setEvents] = useState<CcfEvent[]>([]);
   const [now, setNow] = useState(() => Date.now());
   const [labels, setLabels] = useState<Record<number, string>>({});
+  const [expanded, setExpanded] = useState(false);
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => { setSlot(document.getElementById(DOCK_PAGE_SLOT_ID)); }, []);
 
   const live = events.length > 0 && summarize(events, now).active;
   useEffect(() => {
@@ -47,11 +52,8 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
   const long = longPauses(s.intervals, pauseThresholdSeconds);
   const total = s.arrestSeconds || 1;
 
-  return (
-    <>
-      {/* Control strip only is pinned (sticky within the scrolling grading pane, not an overlay);
-          the debrief block below scrolls normally. */}
-      <div className="sticky top-0 bottom-0 z-10 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 space-y-2 shadow-md">
+  const dockPanel = (
+      <div className="w-[28rem] max-w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-3 space-y-2 shadow-xl">
         <div className="flex items-baseline justify-between flex-wrap gap-2">
           <h3 className="font-semibold text-gray-900 dark:text-white">Chest compression fraction (calculated)</h3>
           <div className="text-sm text-gray-600 dark:text-gray-300">
@@ -73,11 +75,14 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
             ROSC
           </button>
         </div>
-      </div>
-      <p className="text-xs text-gray-500">Only time between Pulseless and ROSC counts. Pressing Pulseless again after ROSC starts a second arrest window; the fractions are summed.</p>
-
-      {finished && (
-        <div className="space-y-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-4">
+        {finished && (
+          <button type="button" onClick={() => setExpanded((x) => !x)}
+            className="min-h-[44px] w-full text-sm underline text-gray-600 dark:text-gray-300">
+            {expanded ? 'Hide timeline' : 'Show timeline and pause tags'}
+          </button>
+        )}
+        {finished && expanded && (
+        <div className="space-y-3 max-h-[50vh] overflow-y-auto border-t border-gray-200 dark:border-gray-700 pt-2">
           {s.longestPause ? (
             <p className="text-gray-900 dark:text-white">
               Longest time off the chest: <strong>{fmtClock((s.longestPause.end - s.longestPause.start) / 1000)}</strong>{' '}
@@ -112,7 +117,17 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
           </ol>
           <button type="button" onClick={reset} className="min-h-[44px] px-3 text-sm underline text-gray-600 dark:text-gray-300">Clear timer</button>
         </div>
-      )}
+        )}
+      </div>
+  );
+
+  return (
+    <>
+      {/* Pinned via the shared FloatingDock slot (fixed overlay, owned by the dock) so it stays
+          on screen however the page scrolls. Falls back to inline until the dock mounts. */}
+      {slot ? createPortal(dockPanel, slot) : dockPanel}
+      <p className="text-xs text-gray-500">Only time between Pulseless and ROSC counts. Pressing Pulseless again after ROSC starts a second arrest window; the fractions are summed.</p>
+
     </>
   );
 }
