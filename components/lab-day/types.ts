@@ -55,6 +55,7 @@ export interface Station {
     title: string;
     category: string;
     difficulty: string;
+    cert_tier?: string | null;
   };
   skill_name: string | null;
   custom_title: string | null;

@@ -430,12 +430,12 @@ export default function AdvCertGradePage() {
 
           {scenario.grading_model && scenario.grading_model !== 'adv_cert_checklist' && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm text-blue-800 dark:text-blue-300">
-              This is a learning station case and is graded on the station form, not the megacode checklist.{' '}
+              This is a learning station case. It uses the ACLS learning tracker (Pass / Watch), not the megacode checklist.{' '}
               <Link
-                href={stationId ? `/labs/grade/station/${stationId}` : '/labs'}
+                href={stationId ? `/labs/adv-cert/learning-station?labDayId=${labDayId}&stationId=${stationId}` : '/labs'}
                 className="font-medium underline"
               >
-                {stationId ? 'Open the station grading form' : 'Go to Labs to grade from the lab day station'}
+                {stationId ? 'Open the learning tracker' : 'Go to Labs to open it from the lab day station'}
               </Link>
             </div>
           )}

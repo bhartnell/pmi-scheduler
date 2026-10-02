@@ -53,7 +53,7 @@ export async function GET(
           station_notes,
           metadata,
           drill_ids,
-          scenario:scenarios(id, title, category, difficulty)
+          scenario:scenarios(id, title, category, difficulty, cert_tier)
         )
       `)
       .eq('id', id)
@@ -110,7 +110,7 @@ export async function GET(
               station_notes,
               metadata,
               drill_ids,
-              scenario:scenarios(id, title, category, difficulty)
+              scenario:scenarios(id, title, category, difficulty, cert_tier)
             )
           `)
           .eq('id', id)

@@ -11867,3 +11867,10 @@ case cards). Archived via `is_active=false` (not deleted, per Archive-don't-dele
 
 
 **2026-10-02 (ACLS UI 4/6):** `pmi_schedule_blocks.actual_start_time` (`time`, nullable) added — what really started, entered on the ACLS hub; planned stays in `start_time`, duration = `end_time - start_time`. Migration `20261002_schedule_block_actual_start.sql`, applied via MCP.
+
+
+### `acls_learning_marks` (added 2026-10-02)
+Unofficial ACLS learning-station tracker. Not a certification record.
+- `id` uuid PK; `lab_day_id` -> lab_days; `station_id` -> lab_stations; `student_id` -> students (all ON DELETE CASCADE)
+- `mark` text CHECK in ('pass','watch'); `note` text; `marked_by` text; `created_at`, `updated_at` timestamptz
+- UNIQUE (station_id, student_id); index on lab_day_id; RLS enabled, no policies (service-role API only)
