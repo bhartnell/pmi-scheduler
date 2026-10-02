@@ -1565,7 +1565,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | scenario_run | text | YES |  | Free-text scenario record (paper-friendly) |
 | edited_by | uuid | YES |  |  |
 | edited_at | timestamptz | YES |  |  |
-| edit_prior | jsonb | YES |  |  |
+| edit_prior | jsonb | YES |  | Prior result/critical_fail/critical_fail_notes/step_marks, written by director in-place correction (PATCH evaluations) |
 | edit_reason | text | YES |  |  |
 | visibility_to_student | boolean | NO | true | In-app student visibility, decoupled from email_status (delivery-only). NREMT/cert rows (skill_sheets.is_nremt=true) are additionally hard-excluded at read time regardless of this flag. |
 
