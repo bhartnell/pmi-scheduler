@@ -96,6 +96,8 @@ function AclsHubPageContent() {
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [events, setEvents] = useState<CalEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  // Unofficial learning-station 'Watch' marks (own table, day-scoped, never certification data).
+  const [watchMarks, setWatchMarks] = useState<{ lab_day_id: string; student_id: string; mark: string }[]>([]);
   const [activeDate, setActiveDate] = useState<string>('all');
   const [instructorOpts, setInstructorOpts] = useState<InstructorOpt[]>([]);
   const [savingBlock, setSavingBlock] = useState<string | null>(null);
@@ -120,6 +122,9 @@ function AclsHubPageContent() {
         setDates(hub.dates || []);
         setLabDays(hub.labDays || []);
         setGroups(hub.groups || []);
+        Promise.all((hub.labDays || []).map((ld: { id: string }) => fetch(`/api/adv-cert/learning-marks?labDayId=${ld.id}`).then(r => r.json()).catch(() => null)))
+          .then(rs => setWatchMarks(rs.flatMap((r: { success?: boolean; marks?: { lab_day_id: string; student_id: string; mark: string }[] } | null) => (r?.success ? r.marks || [] : [])).filter(m => m.mark === 'watch')))
+          .catch(() => setWatchMarks([]));
         setAttempts(hub.attempts || []);
         // Schedule (didactic + labs) from the unified aggregator.
         if (hub.cohort?.id && (hub.dates || []).length) {
@@ -330,13 +335,19 @@ function AclsHubPageContent() {
             <Link href={`/labs/schedule/${d.id}/acls-coordinator`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Tracker</Link>
           </div>
         </div>
+        {(() => {
+          const ids = [...new Set(watchMarks.filter(m => m.lab_day_id === d.id).map(m => m.student_id))];
+          if (!ids.length) return null;
+          const nm = (id: string) => { for (const g of groups) { const m = g.members.find(x => x.id === id); if (m) return `${m.first_name} ${m.last_name}`; } return 'Student'; };
+          return <div className="mt-2 text-xs rounded border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 px-2 py-1">Watch today: {ids.map(nm).join(', ')}</div>;
+        })()}
         {/* Stations */}
         {d.stations.length > 0 && (
           <div className="mt-2 grid grid-cols-2 max-sm:grid-cols-1 gap-1.5">
             {d.stations.map(st => (
               <Link
                 key={st.id}
-                href={`/labs/adv-cert/grade?labDayId=${d.id}&stationId=${st.id}`}
+                href={(st.scenario as { cert_tier?: string | null } | null)?.cert_tier === 'learning_station' ? `/labs/adv-cert/learning-station?labDayId=${d.id}&stationId=${st.id}` : `/labs/adv-cert/grade?labDayId=${d.id}&stationId=${st.id}`}
                 className="block text-xs border border-gray-100 dark:border-gray-700 rounded p-1.5 hover:border-red-300 dark:hover:border-red-700 hover:bg-red-50/50 dark:hover:bg-red-900/10 transition-colors"
               >
                 <div className="font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
