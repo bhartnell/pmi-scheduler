@@ -10,6 +10,8 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+
+pending | ACLS Board: per-section Rotation timer button opens the existing LabTimer (keyed to the section lab_day; no new timer)
 pending | feat(acls-board): Board is the ACLS hub — /labs/acls-hub redirects to /labs/acls-hub/board, old hub kept unrouted in _legacy, all links/breadcrumbs repointed, Board back goes to AHA Hub
 
 pending | ACLS Board: remove per-region width controls (and ignore saved widths); layout now fixed full-width per region

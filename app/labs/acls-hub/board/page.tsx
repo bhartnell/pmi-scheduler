@@ -17,7 +17,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { withReturnTo } from '@/lib/return-to';
 import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, ChevronUp, ChevronDown, ChevronRight, Timer } from 'lucide-react';
+import LabTimer from '@/components/LabTimer';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 import type { LabDay as FullLabDay, Station as FullStation, Instructor, InstructorAvailabilityEntry } from '@/components/lab-day/types';
@@ -141,6 +142,7 @@ function BoardContent() {
   const [attemptPicker, setAttemptPicker] = useState<{ studentId: string; list: Attempt[] } | null>(null);
 
   // EditStationModal wiring (same data the coordinator page feeds it).
+  const [timerFor, setTimerFor] = useState<LabDay | null>(null);
   const [editing, setEditing] = useState<{ station: FullStation; labDay: FullLabDay } | null>(null);
   const [fullInstructors, setFullInstructors] = useState<Instructor[]>([]);
   const [locations, setLocations] = useState<{ id: string; name: string }[]>([]);
@@ -493,6 +495,12 @@ function BoardContent() {
 
   // Station tiles for one lab section. nested = true when shown under its schedule row (Stations region removed).
   const renderStationTiles = (d: LabDay) => (
+    <>
+    <div className="flex items-center justify-end mt-3">
+      <button type="button" onClick={() => setTimerFor(d)} className="inline-flex items-center gap-1.5 text-xs font-medium px-3 min-h-[36px] rounded border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20">
+        <Timer className="w-4 h-4" /> Rotation timer — {d.section_label || d.title || 'section'}
+      </button>
+    </div>
     <div className="grid grid-cols-4 max-xl:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-2 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/40 p-2.5 my-3">
       {d.stations.map(st => {
         const learning = st.scenario?.cert_tier === 'learning_station';
@@ -535,6 +543,7 @@ function BoardContent() {
         );
       })}
     </div>
+    </>
   );
 
   const stationsOn = regions.find(r => r.id === 'stations')?.on !== false;
@@ -811,6 +820,9 @@ function BoardContent() {
         </div>
       )}
 
+      {timerFor && (
+        <LabTimer labDayId={timerFor.id} numRotations={timerFor.num_rotations || timerFor.stations.length || 1} rotationMinutes={timerFor.rotation_duration || 10} onClose={() => setTimerFor(null)} isController={true} />
+      )}
       {editing && (
         <EditStationModal
           station={editing.station}
