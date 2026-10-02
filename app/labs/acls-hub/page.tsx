@@ -262,8 +262,9 @@ function AclsHubPageContent() {
   }, [visibleLabDays, activeDate, absentByLabDay]);
   const [absentError, setAbsentError] = useState<string | null>(null);
   const toggleAbsent = useCallback(async (studentId: string) => {
-    if (activeDate === 'all') return;
-    const days = visibleLabDays.filter(d => d.date === activeDate);
+    // "Both days" view marks/clears the student on every visible day; a single day only that day.
+    const days = visibleLabDays.filter(d => activeDate === 'all' || d.date === activeDate);
+    if (!days.length) return;
     const makeAbsent = !absentIds.has(studentId);
     setAbsentError(null);
     try {
@@ -783,9 +784,9 @@ function AclsHubPageContent() {
                               {led && !absent ? '✓ ' : ''}{m.last_name}
                               {!absent && passN > 0 && <span title="Learning-station passes" className="no-underline text-green-700 dark:text-green-300">{passN} Pass</span>}
                               {!absent && watchN > 0 && <span title="Learning-station watch marks" className="no-underline text-amber-700 dark:text-amber-300">{watchN} Watch</span>}
-                              <button type="button" onClick={() => toggleAbsent(m.id)} disabled={activeDate === 'all'}
-                                title={activeDate === 'all' ? 'Select Day 1 or Day 2 to mark absent' : absent ? 'Mark present' : 'Mark absent'}
-                                className="print:hidden px-1 rounded border border-gray-300 dark:border-gray-600 no-underline disabled:opacity-40">{absent ? 'Absent' : 'Present'}</button>
+                              <button type="button" onClick={() => toggleAbsent(m.id)}
+                                title={`${absent ? 'Mark here' : 'Mark absent'}${activeDate === 'all' ? ' (both days)' : ''}`}
+                                className={`print:hidden px-1.5 rounded border no-underline ${absent ? 'border-red-400 text-red-600 dark:text-red-300' : 'border-gray-300 dark:border-gray-600'}`}>{absent ? 'Absent' : 'Here'}</button>
                             </span>
                           );
                         })}
