@@ -63,6 +63,12 @@ export default function StationCards({
   onOpenRoleModal,
   onOpenScenarioPicker,
 }: StationCardsProps) {
+  // ACLS learning-station cases open the unofficial Pass/Watch tracker, never
+  // the generic lab form or the megacode checklist (one entry point per station;
+  // the app picks the surface from the case).
+  const isAclsLearning = (station: { scenario?: { cert_tier?: string | null } | null }) =>
+    station.scenario?.cert_tier === 'learning_station' && certCourse !== 'pals';
+
   if (stations.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-12 text-center">
@@ -342,15 +348,17 @@ export default function StationCards({
                 </>
               )}
               <Link
-                href={isAdvCertMegacode
+                href={isAclsLearning(station)
+                  ? `/labs/acls-learning/${station.id}`
+                  : isAdvCertMegacode
                   ? certCourse === 'pals'
                     ? `/labs/pals/grade?labDayId=${labDayId}&stationId=${station.id}`
                     : `/labs/adv-cert/grade?labDayId=${labDayId}&stationId=${station.id}`
                   : `/labs/grade/station/${station.id}`}
-                className={`flex-1 min-w-[100px] inline-flex items-center justify-center gap-2 px-3 py-2 text-sm text-white rounded-lg ${isAdvCertMegacode ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
+                className={`flex-1 min-w-[100px] inline-flex items-center justify-center gap-2 px-3 py-2 text-sm text-white rounded-lg ${isAclsLearning(station) ? 'bg-amber-600 hover:bg-amber-700' : isAdvCertMegacode ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
               >
                 <ClipboardCheck className="w-4 h-4" />
-                {isAdvCertMegacode ? (certCourse === 'pals' ? 'Grade (PALS)' : 'Grade (ACLS)') : 'Grade'}
+                {isAclsLearning(station) ? 'Track (ACLS)' : isAdvCertMegacode ? (certCourse === 'pals' ? 'Grade (PALS)' : 'Grade (ACLS)') : 'Grade'}
               </Link>
             </div>
           </div>

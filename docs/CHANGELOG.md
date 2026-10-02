@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+- (pending hash) | ACLS MON 5/5: learning-station Pass/Watch tracker (`/labs/acls-learning/[stationId]`, `acls_learning_marks`, Grade button routing, hub Watch list). Migration NOT yet applied.
 
 feat(acls-hub): ACLS UI 4/6 adjustable time section (planned start, duration, actual start, signed delta); additive column `pmi_schedule_blocks.actual_start_time` (migration `20261002_schedule_block_actual_start.sql`, applied)
 
