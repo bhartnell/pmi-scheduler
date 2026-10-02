@@ -14,6 +14,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { withReturnTo } from '@/lib/return-to';
 import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, Play, Eye, ChevronUp, ChevronDown, ChevronRight } from 'lucide-react';
@@ -463,7 +464,8 @@ function BoardContent() {
         const caseName = st.scenario?.case_code || st.scenario?.title || st.custom_title || '—';
         const tag = learning ? 'learning' : d.is_adv_cert_testing ? 'megacode' : 'station';
         const mins = st.rotation_minutes ?? d.rotation_duration;
-        const href = learning ? `/labs/adv-cert/learning-station?labDayId=${d.id}&stationId=${st.id}` : `/labs/adv-cert/grade?labDayId=${d.id}&stationId=${st.id}`;
+        const qs = searchParams.toString();
+        const href = withReturnTo(learning ? `/labs/adv-cert/learning-station?labDayId=${d.id}&stationId=${st.id}` : `/labs/adv-cert/grade?labDayId=${d.id}&stationId=${st.id}`, `/labs/acls-hub/board${qs ? `?${qs}` : ''}`);
         return (
           <div key={st.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 flex flex-col gap-1.5">
             <div className="flex items-center justify-between">

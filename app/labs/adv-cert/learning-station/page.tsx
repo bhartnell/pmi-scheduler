@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { safeReturnTo } from '@/lib/return-to';
 import { ArrowLeft, Eye, CheckCircle2, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 
@@ -22,6 +23,7 @@ export default function AclsLearningStationPage() {
   const toast = useToast();
 
   const [labDayId, setLabDayId] = useState('');
+  const [returnTo, setReturnTo] = useState<string | null>(null);
   const [stationId, setStationId] = useState('');
   const [groups, setGroups] = useState<GroupOpt[]>([]);
   const [stations, setStations] = useState<StationOpt[]>([]);
@@ -38,6 +40,7 @@ export default function AclsLearningStationPage() {
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
     setLabDayId(p.get('labDayId') || '');
+    setReturnTo(safeReturnTo(p.get('returnTo')));
     setStationId(p.get('stationId') || '');
   }, []);
 
@@ -109,8 +112,8 @@ export default function AclsLearningStationPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 max-sm:p-3">
-      <Link href={labDayId ? `/labs/schedule/${labDayId}` : '/labs/acls-hub'} className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:underline mb-3">
-        <ArrowLeft className="w-4 h-4" /> Back to lab day
+      <Link href={returnTo || (labDayId ? `/labs/schedule/${labDayId}` : '/labs/acls-hub')} className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:underline mb-3">
+        <ArrowLeft className="w-4 h-4" /> {returnTo ? 'Back' : 'Back to lab day'}
       </Link>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ACLS Learning Station Tracker</h1>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">

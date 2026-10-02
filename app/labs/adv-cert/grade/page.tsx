@@ -8,6 +8,7 @@ import { ArrowLeft, CheckCircle2, XCircle, Loader2, Save, Crown } from 'lucide-r
 import { useToast } from '@/components/Toast';
 import ScenarioFullDisplay from '@/components/scenario/ScenarioFullDisplay';
 import DualPaneGrading from '@/components/grading/DualPaneGrading';
+import { safeReturnTo, withReturnTo } from '@/lib/return-to';
 import type { AdvCertScenario, CertCourse } from '@/types/adv-cert';
 
 interface DayOpt {
@@ -60,6 +61,7 @@ export default function AdvCertGradePage() {
   // Preselect from URL (the lab-day station "Grade (ACLS)" button links here with
   // ?labDayId=&stationId=). Read once on mount; window avoids a Suspense boundary.
   const [urlStationId, setUrlStationId] = useState('');
+  const [returnTo, setReturnTo] = useState<string | null>(null);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/auth/signin');
@@ -68,6 +70,7 @@ export default function AdvCertGradePage() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const p = new URLSearchParams(window.location.search);
+    setReturnTo(safeReturnTo(p.get('returnTo')));
     const ld = p.get('labDayId');
     const st = p.get('stationId');
     if (ld) setLabDayId(ld);
@@ -287,8 +290,8 @@ export default function AdvCertGradePage() {
 
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6">
-      <Link href={labDayId ? `/labs/schedule/${labDayId}` : '/labs'} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-4">
-        <ArrowLeft className="w-4 h-4" /> {labDayId ? 'Back to Lab Day' : 'Back to Labs'}
+      <Link href={returnTo || (labDayId ? `/labs/schedule/${labDayId}` : '/labs')} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-4">
+        <ArrowLeft className="w-4 h-4" /> {returnTo ? 'Back' : labDayId ? 'Back to Lab Day' : 'Back to Labs'}
       </Link>
 
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Advanced-Cert Megacode Grading</h1>
@@ -462,7 +465,7 @@ export default function AdvCertGradePage() {
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm text-blue-800 dark:text-blue-300">
               This is a learning station case. It uses the ACLS learning tracker (Pass / Watch), not the megacode checklist.{' '}
               <Link
-                href={stationId ? `/labs/adv-cert/learning-station?labDayId=${labDayId}&stationId=${stationId}` : '/labs'}
+                href={stationId ? (returnTo ? withReturnTo(`/labs/adv-cert/learning-station?labDayId=${labDayId}&stationId=${stationId}`, returnTo) : `/labs/adv-cert/learning-station?labDayId=${labDayId}&stationId=${stationId}`) : '/labs'}
                 className="font-medium underline"
               >
                 {stationId ? 'Open the learning tracker' : 'Go to Labs to open it from the lab day station'}

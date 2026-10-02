@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+2026-10-02
+
+this-commit | fix(grading): grading returns to the page it was opened from (returnTo; ACLS board -> Grade/Track -> back to board)
+
 2026-10-03
 
 (pending) | feat(ccf): CCF calculator lib + CcfTimer component + debrief view (unwired, no schema)
