@@ -52,7 +52,6 @@ interface InstructorOpt { id: string; name: string }
 
 type RegionId = 'overview' | 'schedule' | 'stations' | 'progress';
 interface RegionCfg { id: RegionId; t: string; span: number; on: boolean }
-const SPANS = [3, 4, 6, 8, 12];
 // Ben's own arrangement: stations below the schedule, student progress beside it.
 const DEFAULT_REGIONS: RegionCfg[] = [
   { id: 'overview', t: 'Overview', span: 12, on: true },
@@ -156,7 +155,7 @@ function BoardContent() {
     try {
       const parsed = JSON.parse(saved) as RegionCfg[];
       if (Array.isArray(parsed) && parsed.length === 4 && parsed.every(r => DEFAULT_REGIONS.some(d => d.id === r.id))) {
-        setRegions(parsed.map(r => ({ ...DEFAULT_REGIONS.find(d => d.id === r.id)!, span: SPANS.concat([5, 7]).includes(r.span) ? r.span : 12, on: r.on !== false })));
+        setRegions(parsed.map(r => ({ ...DEFAULT_REGIONS.find(d => d.id === r.id)!, span: 12, on: r.on !== false })));
       }
     } catch { /* ignore */ }
   }, []);
@@ -711,9 +710,6 @@ function BoardContent() {
                   <span className="px-0.5">{r.t}</span>
                   <button aria-label={`Move ${r.t} earlier`} disabled={i === 0} onClick={() => { const n = [...regions]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; updateRegions(n); }} className="disabled:opacity-30"><ChevronUp className="w-3 h-3" /></button>
                   <button aria-label={`Move ${r.t} later`} disabled={i === regions.length - 1} onClick={() => { const n = [...regions]; [n[i + 1], n[i]] = [n[i], n[i + 1]]; updateRegions(n); }} className="disabled:opacity-30"><ChevronDown className="w-3 h-3" /></button>
-                  <select aria-label={`${r.t} width`} value={r.span} onChange={ev => updateRegions(regions.map(x => x.id === r.id ? { ...x, span: Number(ev.target.value) } : x))} className="text-[11px] bg-transparent">
-                    {[...new Set([...SPANS, r.span])].sort((a, b) => a - b).map(s => <option key={s} value={s}>{s}/12</option>)}
-                  </select>
                 </span>
               ))}
             </div>
