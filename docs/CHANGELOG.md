@@ -10,6 +10,9 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+pending | fix(ccf-timer): render control strip in FloatingDock page slot (fixed overlay) instead of position:sticky; timeline/pause tags collapse behind a toggle
+pending | feat(ccf-timer): Timer/Device mode switch (remembered); device mode = collapsed CCF % field saved as source "device"
+
 
 pending | fix(grading): megacode sheet + learning-station tracker use full desktop width (drop max-w container; dual pane auto-fills, manual A-/A+ kept)
 

@@ -203,6 +203,17 @@ export default function AdvCertGradePage() {
     setCcf(next);
   }
 
+  // Percent read off Laerdal Session Viewer: a transcribed device reading, kept distinct from
+  // 'entered' (untraceable) and 'calculated' (timer). No seconds are invented for it.
+  function setDevicePercent(percent: number | null) {
+    if (percent === null) { setCcf(null); return; }
+    setCcf({
+      compression_seconds: 0, arrest_seconds: 0, percent: Math.round(percent * 10) / 10,
+      source: 'device', intervals: [], original: null,
+      edited_by: session?.user?.email || 'unknown', edited_at: new Date().toISOString(),
+    });
+  }
+
   const selectedGroup = useMemo(() => groups.find((g) => g.id === groupId), [groups, groupId]);
   const groupMembers = selectedGroup?.members || [];
 
@@ -564,7 +575,7 @@ export default function AdvCertGradePage() {
               </button>
             </div>
             <div className="mb-3 space-y-3">
-              <CcfTimer key={ccfKey} onChange={(rec) => setCcf((prev) => (rec ? (prev?.source === 'entered' && prev.original ? { ...prev, intervals: rec.intervals } : rec) : prev && prev.source === 'calculated' ? null : prev))} />
+              <CcfTimer key={ccfKey} percent={ccf?.percent ?? null} onDevicePercent={setDevicePercent} onChange={(rec) => setCcf((prev) => (rec ? (prev?.source === 'entered' && prev.original ? { ...prev, intervals: rec.intervals } : rec) : prev && prev.source === 'calculated' ? null : prev))} />
               <div className="rounded-md border border-gray-200 dark:border-gray-700 p-3">
                 <div className="text-sm font-medium text-gray-900 dark:text-white mb-2">
                   Chest compression fraction {ccf ? `(${ccf.source})` : '(optional)'}
