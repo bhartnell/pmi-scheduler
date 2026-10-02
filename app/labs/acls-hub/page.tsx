@@ -423,6 +423,9 @@ function AclsHubPageContent() {
             <Link href="/labs/aha-hub" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">
               AHA Hub (ACLS + PALS)
             </Link>
+            <Link href={cohortIdParam ? `/labs/acls-hub/board?cohortId=${encodeURIComponent(cohortIdParam)}` : '/labs/acls-hub/board'} className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400">
+              Board view (new)
+            </Link>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
