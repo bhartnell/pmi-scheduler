@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-02
+pending | feat(acls-board): Board is the ACLS hub — /labs/acls-hub redirects to /labs/acls-hub/board, old hub kept unrouted in _legacy, all links/breadcrumbs repointed, Board back goes to AHA Hub
 
 pending | ACLS Board: remove per-region width controls (and ignore saved widths); layout now fixed full-width per region
 pending | fix(ccf-timer): render control strip in FloatingDock page slot (fixed overlay) instead of position:sticky; timeline/pause tags collapse behind a toggle

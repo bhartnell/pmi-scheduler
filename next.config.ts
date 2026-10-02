@@ -95,6 +95,10 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       // --- Existing redirects (updated destinations) ---
+      // ACLS Board is the ACLS hub. Old hub component is kept (unrouted) at
+      // app/labs/acls-hub/_legacy for one-commit restore. Query string
+      // (cohortId, date) is preserved by Next on redirect.
+      { source: '/labs/acls-hub', destination: '/labs/acls-hub/board', permanent: false },
       // Cohort hub consolidation: /lab-management/cohorts duplicated
       // /academics/cohorts and split user mental model. Academics is
       // the canonical hub (where "Update from Template", student

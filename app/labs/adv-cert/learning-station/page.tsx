@@ -112,7 +112,7 @@ export default function AclsLearningStationPage() {
 
   return (
     <div className="w-full max-w-none mx-auto p-6 max-sm:p-3">
-      <Link href={returnTo || (labDayId ? `/labs/schedule/${labDayId}` : '/labs/acls-hub')} className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:underline mb-3">
+      <Link href={returnTo || (labDayId ? `/labs/schedule/${labDayId}` : '/labs/acls-hub/board')} className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:underline mb-3">
         <ArrowLeft className="w-4 h-4" /> {returnTo ? 'Back' : 'Back to lab day'}
       </Link>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ACLS Learning Station Tracker</h1>

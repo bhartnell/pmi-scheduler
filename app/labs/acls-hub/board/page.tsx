@@ -672,8 +672,7 @@ function BoardContent() {
       <div className="w-full px-4 py-3">
         <div className="print:hidden">
           <div className="flex items-center gap-3 mb-3">
-            <Link href="/labs/acls-hub" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400"><ArrowLeft className="w-4 h-4" /> ACLS Hub</Link>
-            <Link href="/labs/aha-hub" className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">AHA Hub (ACLS + PALS)</Link>
+            <Link href="/labs/aha-hub" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400"><ArrowLeft className="w-4 h-4" /> AHA Hub (ACLS + PALS)</Link>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
