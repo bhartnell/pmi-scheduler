@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-03
+PENDING | feat(acls): megacode autoscore on grade page (blank section = miss), manual pass/fail kept as override with one combined warn dialog; no stored results recomputed
 PENDING | feat(acls): non-blocking incomplete-record prompt at megacode save, adv_cert_segment_results.completion_source (additive, applied), resolve-at-export check on AHA export (/api/adv-cert/record-flags)
 
 2026-10-02
