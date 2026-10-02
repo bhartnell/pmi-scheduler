@@ -98,6 +98,8 @@ function AclsHubPageContent() {
   const [loading, setLoading] = useState(true);
   // Unofficial learning-station 'Watch' marks (own table, day-scoped, never certification data).
   const [watchMarks, setWatchMarks] = useState<{ lab_day_id: string; student_id: string; mark: string }[]>([]);
+  // Present/absent per lab day (existing lab_day_attendance); absent students leave the denominators.
+  const [absentByLabDay, setAbsentByLabDay] = useState<Record<string, string[]>>({});
   const [activeDate, setActiveDate] = useState<string>('all');
   const [instructorOpts, setInstructorOpts] = useState<InstructorOpt[]>([]);
   const [savingBlock, setSavingBlock] = useState<string | null>(null);
@@ -123,8 +125,11 @@ function AclsHubPageContent() {
         setLabDays(hub.labDays || []);
         setGroups(hub.groups || []);
         Promise.all((hub.labDays || []).map((ld: { id: string }) => fetch(`/api/adv-cert/learning-marks?labDayId=${ld.id}`).then(r => r.json()).catch(() => null)))
-          .then(rs => setWatchMarks(rs.flatMap((r: { success?: boolean; marks?: { lab_day_id: string; student_id: string; mark: string }[] } | null) => (r?.success ? r.marks || [] : [])).filter(m => m.mark === 'watch')))
+          .then(rs => setWatchMarks(rs.flatMap((r: { success?: boolean; marks?: { lab_day_id: string; student_id: string; mark: string }[] } | null) => (r?.success ? r.marks || [] : []))))
           .catch(() => setWatchMarks([]));
+        Promise.all((hub.labDays || []).map((ld: { id: string }) => fetch(`/api/lab-management/lab-days/${ld.id}/attendance`).then(r => r.json()).then((r: { students?: { student_id: string; status: string | null }[] }) => [ld.id, (r.students || []).filter(x => x.status === 'absent').map(x => x.student_id)] as [string, string[]]).catch(() => [ld.id, []] as [string, string[]])))
+          .then(entries => setAbsentByLabDay(Object.fromEntries(entries)))
+          .catch(() => setAbsentByLabDay({}));
         setAttempts(hub.attempts || []);
         // Schedule (didactic + labs) from the unified aggregator.
         if (hub.cohort?.id && (hub.dates || []).length) {
@@ -247,6 +252,40 @@ function AclsHubPageContent() {
   const contradictoryCount = flaggedAttempts.filter(a => a.record_flags!.includes('contradictory')).length;
   const shownFlagged = flaggedAttempts.filter(a => recordFilter === 'all' || a.record_flags!.includes(recordFilter));
 
+  // A student is absent for the view when marked absent on every visible lab day of the selected
+  // day(s). Toggling writes to all lab days of ONE selected day (needs a day selected).
+  const absentIds = useMemo(() => {
+    const days = visibleLabDays.filter(d => activeDate === 'all' || d.date === activeDate);
+    if (!days.length) return new Set<string>();
+    const sets = days.map(d => new Set(absentByLabDay[d.id] || []));
+    return new Set([...sets[0]].filter(id => sets.every(st => st.has(id))));
+  }, [visibleLabDays, activeDate, absentByLabDay]);
+  const [absentError, setAbsentError] = useState<string | null>(null);
+  const toggleAbsent = useCallback(async (studentId: string) => {
+    if (activeDate === 'all') return;
+    const days = visibleLabDays.filter(d => d.date === activeDate);
+    const makeAbsent = !absentIds.has(studentId);
+    setAbsentError(null);
+    try {
+      const results = await Promise.all(days.map(d => fetch(`/api/lab-management/lab-days/${d.id}/attendance`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_id: studentId, status: makeAbsent ? 'absent' : 'present' }),
+      })));
+      if (results.some(r => !r.ok)) throw new Error('save failed');
+      setAbsentByLabDay(prev => {
+        const next = { ...prev };
+        for (const d of days) {
+          const cur = new Set(next[d.id] || []);
+          if (makeAbsent) cur.add(studentId); else cur.delete(studentId);
+          next[d.id] = [...cur];
+        }
+        return next;
+      });
+    } catch {
+      setAbsentError('Could not save attendance. Refresh and try again.');
+    }
+  }, [activeDate, visibleLabDays, absentIds]);
+
   const stats = useMemo(() => {
     const passed = megAttempts.filter(a => a.overall_result === 'pass').length;
     const failed = megAttempts.filter(a => a.overall_result === 'fail').length;
@@ -260,7 +299,7 @@ function AclsHubPageContent() {
     const failedTLIds = new Set(
       megAttempts.filter(a => a.overall_result === 'fail').map(a => a.team_lead?.id).filter(Boolean) as string[]
     );
-    const allStudents = groups.flatMap(g => g.members);
+    const allStudents = groups.flatMap(g => g.members).filter(s => !absentIds.has(s.id));
     const passedTLCount = allStudents.filter(s => passedTLIds.has(s.id)).length;
     // Failure/not-yet marker: who has NOT passed megacode as TL.
     const notPassed = allStudents
@@ -272,7 +311,7 @@ function AclsHubPageContent() {
       passedTLIds, totalStudents: allStudents.length, passedTLCount, notPassed,
       sections, labDaysCount: visibleLabDays.length, totalAttempts: megAttempts.length,
     };
-  }, [megAttempts, groups, visibleLabDays]);
+  }, [megAttempts, groups, visibleLabDays, absentIds]);
 
   const attemptsByGroup = useMemo(() => {
     const m = new Map<string, Attempt[]>();
@@ -336,7 +375,7 @@ function AclsHubPageContent() {
           </div>
         </div>
         {(() => {
-          const ids = [...new Set(watchMarks.filter(m => m.lab_day_id === d.id).map(m => m.student_id))];
+          const ids = [...new Set(watchMarks.filter(m => m.mark === 'watch' && m.lab_day_id === d.id).map(m => m.student_id))];
           if (!ids.length) return null;
           const nm = (id: string) => { for (const g of groups) { const m = g.members.find(x => x.id === id); if (m) return `${m.first_name} ${m.last_name}`; } return 'Student'; };
           return <div className="mt-2 text-xs rounded border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-300 px-2 py-1">Watch today: {ids.map(nm).join(', ')}</div>;
@@ -713,6 +752,7 @@ function AclsHubPageContent() {
             <Region title="Student progress" icon={<Users className="w-4 h-4" />}>
             {/* Per-group MEGACODE team-lead coverage (whole event) */}
             <section style={{ breakInside: 'avoid' }}>
+              {absentError && <div role="alert" className="mb-2 text-xs text-red-700 dark:text-red-300">{absentError}</div>}
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">Groups — megacode TL coverage (practice + testing)</h3>
               <div className="space-y-2">
                 {groups.map(g => {
@@ -720,7 +760,7 @@ function AclsHubPageContent() {
                   return (
                     <div key={g.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
                       <div className="flex items-center justify-between">
-                        <div className="font-medium text-gray-800 dark:text-gray-100">{g.name} <span className="text-xs text-gray-400">({g.members.length})</span></div>
+                        <div className="font-medium text-gray-800 dark:text-gray-100">{g.name} <span className="text-xs text-gray-400">({g.members.filter(m => !absentIds.has(m.id)).length}{g.members.some(m => absentIds.has(m.id)) ? `/${g.members.length}` : ''})</span></div>
                         <div className="text-xs inline-flex items-center gap-1">
                           {gAttempts.map(a => a.overall_result === 'pass'
                             ? <CheckCircle2 key={a.id} className="w-4 h-4 text-green-500" />
@@ -731,9 +771,18 @@ function AclsHubPageContent() {
                       <div className="mt-1.5 flex flex-wrap gap-1">
                         {g.members.map(m => {
                           const led = stats.passedTLIds.has(m.id);
+                          const absent = absentIds.has(m.id);
+                          const dayMarks = watchMarks.filter(k => k.student_id === m.id && visibleLabDays.some(d => d.id === k.lab_day_id && (activeDate === 'all' || d.date === activeDate)));
+                          const passN = dayMarks.filter(k => k.mark === 'pass').length;
+                          const watchN = dayMarks.filter(k => k.mark === 'watch').length;
                           return (
-                            <span key={m.id} className={`text-[10px] px-1.5 py-0.5 rounded-full ${led ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
-                              {led ? '✓ ' : ''}{m.last_name}
+                            <span key={m.id} className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full ${absent ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 line-through' : led ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
+                              {led && !absent ? '✓ ' : ''}{m.last_name}
+                              {!absent && passN > 0 && <span title="Learning-station passes" className="no-underline text-green-700 dark:text-green-300">{passN} Pass</span>}
+                              {!absent && watchN > 0 && <span title="Learning-station watch marks" className="no-underline text-amber-700 dark:text-amber-300">{watchN} Watch</span>}
+                              <button type="button" onClick={() => toggleAbsent(m.id)} disabled={activeDate === 'all'}
+                                title={activeDate === 'all' ? 'Select Day 1 or Day 2 to mark absent' : absent ? 'Mark present' : 'Mark absent'}
+                                className="print:hidden px-1 rounded border border-gray-300 dark:border-gray-600 no-underline disabled:opacity-40">{absent ? 'Absent' : 'Present'}</button>
                             </span>
                           );
                         })}
