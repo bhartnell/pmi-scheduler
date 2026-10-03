@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ---
 
+pending | feat(calendar): day-level lab event on the shared calendar (one event per cohort+date, instructors as guests, sections/stations in body), dry-run default + LAB_DAY_EVENT_SYNC flag, additive source_type migration; existing per-instructor events untouched (CALENDAR Child A)
 pending | feat(team-lead): per-course practice/testing team-lead progress vs AHA thresholds, legacy rows reported unclassified (DECOUPLE 3/4)
 pending | fix(team-lead): adv-cert + PALS write course/phase/result directly, no station required, dropped team_lead_log rows now logged (DECOUPLE 2/4)
 pending | feat(ccf-timer): own draggable floating panel (position remembered), collapsible to the percent field alone, out of the bottom-right dock
