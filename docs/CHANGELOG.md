@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ---
 
+pending | feat(team-lead): per-course practice/testing team-lead progress vs AHA thresholds, legacy rows reported unclassified (DECOUPLE 3/4)
 pending | fix(team-lead): adv-cert + PALS write course/phase/result directly, no station required, dropped team_lead_log rows now logged (DECOUPLE 2/4)
 pending | feat(ccf-timer): own draggable floating panel (position remembered), collapsible to the percent field alone, out of the bottom-right dock
 2026-10-02

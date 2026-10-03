@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { summarizeTeamLeads } from '@/lib/team-lead-requirements';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole, isSuperadmin, canManageStudentRoster } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
@@ -54,6 +55,11 @@ export async function GET(
       .select('*', { count: 'exact', head: true })
       .eq('student_id', id);
 
+    const { data: tlRows } = await supabase
+      .from('team_lead_log')
+      .select('course, phase, result')
+      .eq('student_id', id);
+
     const { data: lastTL } = await supabase
       .from('team_lead_log')
       .select('date')
@@ -67,6 +73,7 @@ export async function GET(
       student: {
         ...data,
         team_lead_count: teamLeadCount || 0,
+        team_lead_progress: summarizeTeamLeads(tlRows || []),
         last_team_lead_date: lastTL?.date || null
       }
     });

@@ -491,6 +491,9 @@ export function sanitizeStudentForRole(student: StudentRecord, userRole: Role | 
     if (student.team_lead_count !== undefined) {
       sanitized.team_lead_count = student.team_lead_count;
     }
+    if (student.team_lead_progress !== undefined) {
+      sanitized.team_lead_progress = student.team_lead_progress;
+    }
     if (student.last_team_lead_date !== undefined) {
       sanitized.last_team_lead_date = student.last_team_lead_date;
     }

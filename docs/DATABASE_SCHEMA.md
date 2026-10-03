@@ -2907,13 +2907,18 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | id | uuid | NO | uuid_generate_v4() | PK |
 | student_id | uuid | NO |  |  |
 | cohort_id | uuid | NO |  |  |
-| lab_day_id | uuid | NO |  |  |
-| lab_station_id | uuid | NO |  |  |
+| lab_day_id | uuid | YES |  | verified live 2026-10-03 |
+| lab_station_id | uuid | YES |  | verified live 2026-10-03 |
 | scenario_id | uuid | YES |  |  |
 | date | date | NO |  |  |
 | scenario_assessment_id | uuid | YES |  |  |
 | notes | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
+| course | text | YES |  | 'ACLS' / 'PALS'; NULL on 102 pre-DECOUPLE rows (not backfilled) |
+| phase | text | YES |  | 'practice' / 'testing' |
+| result | text | YES |  | 'pass' / 'fail' |
+
+Measure: `lib/team-lead-requirements.ts` (practice ACLS >=3, PALS >=2; testing passed >=1).
 
 **Foreign Keys:**
 - `scenario_assessment_id` -> `scenario_assessments.id` (`team_lead_log_scenario_assessment_id_fkey`)
