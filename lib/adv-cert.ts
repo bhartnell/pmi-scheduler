@@ -207,31 +207,47 @@ export async function saveAttempt(
     }
   }
 
-  // 5. Best-effort team_lead_log row (confirmed wiring). Requires NOT-NULL
-  //    cohort_id/lab_day_id/lab_station_id/date — derive cohort_id + date from
-  //    the lab day; skip cleanly if station context is absent.
+  // 5. team_lead_log row. course/phase/result are written directly (not encoded
+  //    into notes); no station is required — cohort + date come from the lab day.
+  //    Grading never fails on this row, but a dropped row is LOGGED loudly: it
+  //    backs an academic requirement and must never vanish silently.
   let teamLeadLogWritten = false;
-  if (input.team_lead_id && input.lab_station_id) {
+  if (input.team_lead_id) {
     try {
-      const { data: day } = await supabase
+      const { data: day, error: dayErr } = await supabase
         .from('lab_days')
         .select('id, cohort_id, date')
         .eq('id', input.lab_day_id)
         .single();
-      if (day?.cohort_id && day?.date) {
+      if (dayErr || !day?.cohort_id || !day?.date) {
+        console.error('[team_lead_log] DROPPED (adv-cert): no cohort/date for lab day', {
+          attempt_id: attempt.id, lab_day_id: input.lab_day_id, student_id: input.team_lead_id, error: dayErr?.message,
+        });
+      } else {
         const { error: tlErr } = await supabase.from('team_lead_log').insert({
           student_id: input.team_lead_id,
           cohort_id: day.cohort_id,
           lab_day_id: input.lab_day_id,
-          lab_station_id: input.lab_station_id,
+          lab_station_id: input.lab_station_id || null,
           scenario_id: input.scenario_id,
           date: day.date,
+          course: course.toUpperCase(),
+          phase: 'testing',
+          result: String(input.overall_result).toLowerCase(),
           notes: `Advanced-cert (${course.toUpperCase()}) megacode test — ${input.overall_result.toUpperCase()}`,
         });
-        if (!tlErr) teamLeadLogWritten = true;
+        if (tlErr) {
+          console.error('[team_lead_log] DROPPED (adv-cert): insert failed', {
+            attempt_id: attempt.id, student_id: input.team_lead_id, error: tlErr.message,
+          });
+        } else {
+          teamLeadLogWritten = true;
+        }
       }
-    } catch {
-      // non-fatal — grading must not fail because the log row didn't land
+    } catch (e) {
+      console.error('[team_lead_log] DROPPED (adv-cert): unexpected error', {
+        attempt_id: attempt.id, student_id: input.team_lead_id, error: e instanceof Error ? e.message : String(e),
+      });
     }
   }
 
