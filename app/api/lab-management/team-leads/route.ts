@@ -171,6 +171,10 @@ export async function POST(request: NextRequest) {
         scenario_id: body.scenario_id || null,
         date: body.date,
         notes: body.notes || null,
+        // Optional classification; omitted stays null (never inferred).
+        course: ['ACLS', 'PALS'].includes(body.course) ? body.course : null,
+        phase: ['practice', 'testing'].includes(body.phase) ? body.phase : null,
+        result: ['pass', 'fail'].includes(body.result) ? body.result : null,
       })
       .select()
       .single();

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { summarizeTeamLeads, type TeamLeadLogRow } from '@/lib/team-lead-requirements';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
@@ -71,17 +72,20 @@ export async function GET(request: NextRequest) {
     if (studentIds.length > 0) {
       const { data: tlCounts } = await supabase
         .from('team_lead_log')
-        .select('student_id')
+        .select('student_id, course, phase, result')
         .in('student_id', studentIds);
 
       const countMap: Record<string, number> = {};
+      const rowsByStudent: Record<string, TeamLeadLogRow[]> = {};
       tlCounts?.forEach((tl) => {
         countMap[tl.student_id] = (countMap[tl.student_id] || 0) + 1;
+        (rowsByStudent[tl.student_id] ||= []).push(tl);
       });
 
       const studentsWithCounts = data.map((student) => ({
         ...student,
-        team_lead_count: countMap[student.id] || 0
+        team_lead_count: countMap[student.id] || 0,
+        team_lead_progress: summarizeTeamLeads(rowsByStudent[student.id] || []),
       }));
 
       return NextResponse.json({ success: true, students: studentsWithCounts, pagination: { limit, offset, total: count || 0 } });

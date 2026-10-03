@@ -1,5 +1,6 @@
 ﻿'use client';
 
+import type { TeamLeadProgress } from '@/lib/team-lead-requirements';
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useRef } from 'react';
@@ -61,6 +62,7 @@ interface Student {
   notes: string | null;
   created_at: string;
   team_lead_count: number;
+  team_lead_progress?: TeamLeadProgress;
   last_team_lead_date: string | null;
   prior_cert_level: string | null;
   years_ems_experience: number | null;
@@ -1257,6 +1259,28 @@ export default function StudentDetailPage() {
             </div>
             <div className="text-2xl font-bold text-gray-900 dark:text-white">{student.team_lead_count}</div>
             <div className="text-xs text-gray-500 dark:text-gray-400">assignments</div>
+            {student.team_lead_progress && (
+              <div className="mt-2 space-y-0.5 text-xs text-gray-600 dark:text-gray-300">
+                {(['ACLS', 'PALS'] as const).map((course) => {
+                  const c = student.team_lead_progress![course];
+                  return (
+                    <div key={course}>
+                      <span className="font-medium">{course}</span>{' '}
+                      <span className={c.practice.met ? 'text-green-600 dark:text-green-400' : ''}>
+                        practice {c.practice.count}/{c.practice.required}
+                      </span>
+                      {' · '}
+                      <span className={c.testing.met ? 'text-green-600 dark:text-green-400' : ''}>
+                        testing {c.testing.passed > 0 ? 'passed' : c.testing.attempts > 0 ? 'not passed' : 'none'}
+                      </span>
+                    </div>
+                  );
+                })}
+                {student.team_lead_progress.unclassified > 0 && (
+                  <div className="text-gray-400">{student.team_lead_progress.unclassified} earlier, unclassified</div>
+                )}
+              </div>
+            )}
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
             <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
