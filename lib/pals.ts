@@ -178,31 +178,45 @@ export async function saveTestAttempt(
     if (crErr) throw crErr;
   }
 
-  // Best-effort team_lead_log row (mirrors lib/adv-cert.ts). Requires the
-  // NOT-NULL cohort_id/date derived from the lab day; skip cleanly if absent.
+  // team_lead_log row (mirrors lib/adv-cert.ts). course/phase/result are written
+  // directly; no station is required — cohort + date come from the lab day.
+  // Grading never fails on this row, but a dropped row is logged loudly.
   let teamLeadLogWritten = false;
-  if (input.lab_station_id) {
-    try {
-      const { data: day } = await supabase
-        .from('lab_days')
-        .select('id, cohort_id, date')
-        .eq('id', input.lab_day_id)
-        .single();
-      if (day?.cohort_id && day?.date) {
-        const { error: tlErr } = await supabase.from('team_lead_log').insert({
-          student_id: input.student_id,
-          cohort_id: day.cohort_id,
-          lab_day_id: input.lab_day_id,
-          lab_station_id: input.lab_station_id,
-          scenario_id: input.scenario_id || null,
-          date: day.date,
-          notes: `PALS testing checklist — ${input.result}`,
+  try {
+    const { data: day, error: dayErr } = await supabase
+      .from('lab_days')
+      .select('id, cohort_id, date')
+      .eq('id', input.lab_day_id)
+      .single();
+    if (dayErr || !day?.cohort_id || !day?.date) {
+      console.error('[team_lead_log] DROPPED (pals): no cohort/date for lab day', {
+        attempt_id: attempt.id, lab_day_id: input.lab_day_id, student_id: input.student_id, error: dayErr?.message,
+      });
+    } else {
+      const { error: tlErr } = await supabase.from('team_lead_log').insert({
+        student_id: input.student_id,
+        cohort_id: day.cohort_id,
+        lab_day_id: input.lab_day_id,
+        lab_station_id: input.lab_station_id || null,
+        scenario_id: input.scenario_id || null,
+        date: day.date,
+        course: 'PALS',
+        phase: 'testing',
+        result: input.result === 'PASS' ? 'pass' : 'fail',
+        notes: `PALS testing checklist — ${input.result}`,
+      });
+      if (tlErr) {
+        console.error('[team_lead_log] DROPPED (pals): insert failed', {
+          attempt_id: attempt.id, student_id: input.student_id, error: tlErr.message,
         });
-        if (!tlErr) teamLeadLogWritten = true;
+      } else {
+        teamLeadLogWritten = true;
       }
-    } catch {
-      // non-fatal — grading must not fail because the log row didn't land
     }
+  } catch (e) {
+    console.error('[team_lead_log] DROPPED (pals): unexpected error', {
+      attempt_id: attempt.id, student_id: input.student_id, error: e instanceof Error ? e.message : String(e),
+    });
   }
 
   return { attempt: attempt as PalsTestAttempt, deduped: false, teamLeadLogWritten };
