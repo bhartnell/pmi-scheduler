@@ -507,7 +507,8 @@ function BoardContent() {
         const caseName = st.scenario?.title ? `${st.scenario.case_code ? `${st.scenario.case_code.replace(/^CASE_/i, 'Case ').replace(/_/g, ' ')} - ` : ''}${st.scenario.title}` : st.scenario?.case_code || st.custom_title || '—';
         const category = st.scenario?.category;
         const tag = learning ? 'learning' : d.is_adv_cert_testing ? 'megacode' : 'station';
-        const mins = st.rotation_minutes ?? d.rotation_duration;
+        // Day-level value is what the rotation timer reads; station-level is a uniform generator default (30x4) that disagrees.
+        const mins = d.rotation_duration ?? st.rotation_minutes;
         const qs = searchParams.toString();
         const href = withReturnTo(learning ? `/labs/adv-cert/learning-station?labDayId=${d.id}&stationId=${st.id}` : `/labs/adv-cert/grade?labDayId=${d.id}&stationId=${st.id}`, `/labs/acls-hub/board${qs ? `?${qs}` : ''}`);
         return (
