@@ -1131,7 +1131,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                               : 'Lab Day'
                             )}
                             {' • '}
-                            {labDay.num_rotations} rotations × {String(labDay.stations[0]?.rotation_minutes || labDay.num_rotations)} min
+                            {labDay.num_rotations} rotations × {String(labDay.rotation_duration || labDay.stations[0]?.rotation_minutes || labDay.num_rotations)} min
                             {labDay.priority_reason && labDay.priority_flag && labDay.priority_flag !== 'normal' && (
                               <span className="italic"> · {labDay.priority_reason}</span>
                             )}
