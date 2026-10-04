@@ -110,6 +110,28 @@ export async function planLabDayEvent(
     supabase.from('lab_day_roles').select('lab_day_id, instructor_id, role').in('lab_day_id', labDayIds),
   ]);
   const stationRows = stations ?? [];
+
+  // The day's own instructors live on the linked schedule block (Ben's
+  // settled unit: the instructor is on the DAY). Station fields supplement.
+  const { data: blocks } = await supabase
+    .from('pmi_schedule_blocks')
+    .select('id, linked_lab_day_id, instructor_id, additional_instructor_id')
+    .in('linked_lab_day_id', labDayIds);
+  const blockIds = (blocks ?? []).map(b => b.id as string);
+  const { data: blockInstructors } = blockIds.length
+    ? await supabase.from('pmi_block_instructors').select('schedule_block_id, instructor_id').in('schedule_block_id', blockIds)
+    : { data: [] as { schedule_block_id: string; instructor_id: string }[] };
+  const dayInstructorIds = (labDayId: string): string[] => {
+    const ids = new Set<string>();
+    for (const b of blocks ?? []) {
+      if (b.linked_lab_day_id !== labDayId) continue;
+      if (b.instructor_id) ids.add(b.instructor_id);
+      if (b.additional_instructor_id) ids.add(b.additional_instructor_id);
+      for (const bi of blockInstructors ?? []) if (bi.schedule_block_id === b.id) ids.add(bi.instructor_id);
+    }
+    return [...ids];
+  };
+
   const stationIds = stationRows.map(s => s.id as string);
 
   const { data: stationInstructors } = stationIds.length
@@ -123,6 +145,7 @@ export async function planLabDayEvent(
   const scenarioTitle = new Map((scenarios ?? []).map(s => [s.id, s.title]));
 
   const userIds = new Set<string>();
+  for (const id of labDayIds.flatMap(dayInstructorIds)) userIds.add(id);
   for (const s of stationRows) {
     if (s.instructor_id) userIds.add(s.instructor_id);
     if (s.additional_instructor_id) userIds.add(s.additional_instructor_id);
@@ -161,6 +184,8 @@ export async function planLabDayEvent(
     const range = sec.start_time && sec.end_time ? `${hm(sec.start_time)}–${hm(sec.end_time)}` : 'time TBD';
     const label = sec.section_label || sec.title || `Section ${sec.section_number}`;
     lines.push('', `${range}  ${label}`);
+    const secDay = dayInstructorIds(sec.id);
+    if (secDay.length) lines.push(`  Instructors: ${secDay.map(nameOf).join(', ')}`);
     const secRoles = (roles ?? []).filter(r => r.lab_day_id === sec.id && r.instructor_id);
     if (secRoles.length) {
       lines.push(`  Roles: ${secRoles.map(r => `${nameOf(r.instructor_id!)} (${r.role.replace('_', ' ')})`).join(', ')}`);
