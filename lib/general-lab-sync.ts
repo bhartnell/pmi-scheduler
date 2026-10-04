@@ -33,8 +33,8 @@ import { syncGeneralLabDefault, removeGeneralLabDefault } from '@/lib/google-cal
 export async function syncGeneralLabDefaults(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   opts: { targetEmail?: string; labDayId?: string } = {},
-): Promise<{ created: number; removed: number; skipped: number; instructors: number; labDays: number }> {
-  const counts = { created: 0, removed: 0, skipped: 0, instructors: 0, labDays: 0 };
+): Promise<{ created: number; removed: number; skipped: number; instructors: number; labDays: number; already: number; failed: number }> {
+  const counts = { created: 0, removed: 0, skipped: 0, instructors: 0, labDays: 0, already: 0, failed: 0 };
   const today = new Date().toISOString().split('T')[0];
 
   // 1. Active paramedic-tagged, calendar-connected instructors.
@@ -127,7 +127,7 @@ export async function syncGeneralLabDefaults(
         await removeGeneralLabDefault({ userEmail: email, labDayId: ld.id as string });
         counts.skipped++;
       } else {
-        await syncGeneralLabDefault({
+        const result = await syncGeneralLabDefault({
           userEmail: email,
           labDayId: ld.id as string,
           labDayTitle: (ld.title as string) || 'Lab Day',
@@ -137,7 +137,13 @@ export async function syncGeneralLabDefaults(
           cohortLabel,
           program: program?.abbreviation || undefined,
         });
-        counts.created++;
+        // Count what actually happened: the sync has silent no-op paths
+        // (preference off, no token, create/store failure), so counting
+        // every call as "created" made Sync All report events that were
+        // never made.
+        if (result === 'created') counts.created++;
+        else if (result === 'exists') counts.already++;
+        else counts.failed++;
       }
       // Pace Google API calls a touch (quota is per-user).
       await new Promise((r) => setTimeout(r, 120));

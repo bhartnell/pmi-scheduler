@@ -444,7 +444,7 @@ export async function POST(request: NextRequest) {
     // 6. General-lab-default (Option B + precedence): every active paramedic-tagged
     //    instructor gets a general-lab event on every upcoming paramedic lab day
     //    they don't already have a station/role for. Idempotent.
-    let generalLab = { created: 0, removed: 0, skipped: 0, instructors: 0, labDays: 0 };
+    let generalLab = { created: 0, removed: 0, skipped: 0, instructors: 0, labDays: 0, already: 0, failed: 0 };
     try {
       const { syncGeneralLabDefaults } = await import('@/lib/general-lab-sync');
       generalLab = await syncGeneralLabDefaults(supabase, targetEmail ? { targetEmail } : {});
@@ -479,13 +479,15 @@ export async function POST(request: NextRequest) {
       general_lab_created: generalLab.created,
       general_lab_removed: generalLab.removed,
       general_lab_skipped: generalLab.skipped,
+      general_lab_already_present: generalLab.already,
+      general_lab_failed: generalLab.failed,
       pals_day_created: palsDay.created,
       pals_all_day_removed: palsDay.removed,
       users_touched: usersTouched.size,
       message:
         `Bulk sync complete: ${synced} events created, ${seriesSynced} class series ` +
         `created, ${seriesUpdated} series updated, ${lvfrSynced} LVFR events created, ` +
-        `${generalLab.created} general-lab events created, ${generalLab.removed} general-lab removed, ` +
+        `${generalLab.created} general-lab events created (${generalLab.already} already present, ${generalLab.failed} not created), ${generalLab.removed} general-lab removed, ` +
         `${palsDay.created} PALS day-blocks created, ${palsDay.removed} old PALS all-day removed, ` +
         `${failed + seriesFailed + lvfrFailed} failed, ${skipped + lvfrSkipped} skipped`,
     });

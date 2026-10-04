@@ -516,15 +516,21 @@ interface GeneralLabParams {
  * lib/general-lab-sync.ts for the precedence pass that decides WHEN to call
  * this vs. removeGeneralLabDefault (class overrides > station/role replaces).
  */
-export async function syncGeneralLabDefault(params: GeneralLabParams): Promise<void> {
+/** What syncGeneralLabDefault actually did — callers count 'created' only. */
+export type GeneralLabSyncResult = 'created' | 'exists' | 'pref_off' | 'no_token' | 'failed';
+
+export async function syncGeneralLabDefault(params: GeneralLabParams): Promise<GeneralLabSyncResult> {
   try {
-    if (!(await shouldSyncForUser(params.userEmail, 'sync_lab_assignments'))) return;
+    if (!(await shouldSyncForUser(params.userEmail, 'sync_lab_assignments'))) return 'pref_off';
 
     const existing = await getEventMapping(params.userEmail, 'general_lab', params.labDayId);
-    if (existing) return;
+    if (existing) return 'exists';
 
     const accessToken = await getAccessTokenForUser(params.userEmail);
-    if (!accessToken) return;
+    if (!accessToken) {
+      console.warn(`[gcal] General-lab sync: no usable access token for ${params.userEmail}; nothing created for lab_day ${params.labDayId}`);
+      return 'no_token';
+    }
 
     const { startDateTime, endDateTime } = buildDateTimes(
       params.labDayDate,
@@ -560,10 +566,14 @@ export async function syncGeneralLabDefault(params: GeneralLabParams): Promise<v
         console.error(
           `[gcal] General-lab mapping store failed for lab_day ${params.labDayId}; rolled back the Google event to prevent duplicates`
         );
+        return 'failed';
       }
+      return 'created';
     }
+    return 'failed';
   } catch (err) {
     console.error('[gcal] Error syncing general-lab default:', err);
+    return 'failed';
   }
 }
 

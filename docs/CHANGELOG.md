@@ -63,6 +63,10 @@ fe2245f | ACLS learning-station tracker (Pass/Watch, own table acls_learning_mar
 feat(acls-hub): ACLS UI 4/6 adjustable time section (planned start, duration, actual start, signed delta); additive column `pmi_schedule_blocks.actual_start_time` (migration `20261002_schedule_block_actual_start.sql`, applied)
 
 c827127 | feat(acls-hub): BLS/Airway become plain schedule rows (time + instructors); skills capture panel removed from hub (display-only; sections/stations/data untouched)
+## 2026-10-04
+
+pending | fix(calendar): general-lab sync reports what it actually did; Sync All no longer counts silent no-ops as created
+
 ## 2026-10-02
 654b4c1 | fix(lab-day): Individual Testing Tracker no longer auto-collapses when checkoff detection loads late (latched default open state)
 549fb1d | fix(lab-timer): timer GET no-store (drop max-age/SWR cache that let stale state overwrite fresh; grade-station jump regression)
