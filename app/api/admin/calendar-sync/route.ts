@@ -444,7 +444,7 @@ export async function POST(request: NextRequest) {
     // 6. General-lab-default (Option B + precedence): every active paramedic-tagged
     //    instructor gets a general-lab event on every upcoming paramedic lab day
     //    they don't already have a station/role for. Idempotent.
-    let generalLab = { created: 0, removed: 0, skipped: 0, instructors: 0, labDays: 0 };
+    let generalLab = { created: 0, removed: 0, skipped: 0, failed: 0, instructors: 0, labDays: 0 };
     try {
       const { syncGeneralLabDefaults } = await import('@/lib/general-lab-sync');
       generalLab = await syncGeneralLabDefaults(supabase, targetEmail ? { targetEmail } : {});

@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 
+pending | fix(calendar): syncGeneralLabDefault now returns what it did (created/skipped/failed) and Sync All counts that instead of counting every call as "created"; diagnosis: 10/05-10/06 cert days were bulk-inserted outside the on-save hook paths
 2026-10-04
 pending | fix(acls-timing): board station cards and lab schedule list show the day-level rotation length (what the timer reads) instead of the uniform station-level 30x4 default; display only, no data change
 pending | fix(calendar): day-level lab event resolves instructors from the linked schedule block (pmi_schedule_blocks + pmi_block_instructors), station fields supplement (CALENDAR Child A follow-up)
