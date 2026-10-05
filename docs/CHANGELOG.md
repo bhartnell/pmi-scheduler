@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 2026-10-05
 
+(pending) | fix(aha): PALS exports labelled PALS (packet/zip filenames, skills-form program line); PALS hub Open -> PALS grading
+
 9e93768 | fix(supabase): getSupabaseAdmin throws if SUPABASE_SERVICE_ROLE_KEY unset (no silent anon fallback)
 
 b9c0d3a | fix(overlay): FloatingDock rides above bottom timer banners via --bottom-banner-h; bulk-operations/compliance/external-access toasts moved to top-right (CSS/layout only)

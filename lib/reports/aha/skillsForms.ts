@@ -21,6 +21,14 @@ interface Step { text: string; subs?: string[] }
 interface Section { heading: string; note?: string; steps: Step[]; notes?: string[] }
 export interface SkillsForm { id: string; program: string; title: string; scenarios?: string[]; sections: Section[] }
 
+const ACLS_PROGRAM = 'Advanced Cardiovascular Life Support';
+const PALS_PROGRAM = 'Pediatric Advanced Life Support';
+
+/** Course-label the program line of a form declared under ACLS. Labelling only; content is unchanged. */
+export function skillsFormForCourse(form: SkillsForm, course: 'acls' | 'pals'): SkillsForm {
+  return course === 'pals' && form.program === ACLS_PROGRAM ? { ...form, program: PALS_PROGRAM } : form;
+}
+
 export const AIRWAY_FORM: SkillsForm = {
   id: 'airway', program: 'Advanced Cardiovascular Life Support',
   title: 'Airway Management Skills Testing Checklist',
