@@ -548,8 +548,8 @@ function BoardContent() {
         const caseName = st.scenario?.title ? `${st.scenario.case_code ? `${st.scenario.case_code.replace(/^CASE_/i, 'Case ').replace(/_/g, ' ')} - ` : ''}${st.scenario.title}` : st.scenario?.case_code || st.custom_title || '—';
         const category = st.scenario?.category;
         const tag = learning ? 'learning' : d.is_adv_cert_testing ? 'megacode' : 'station';
-        // Day-level value is what the rotation timer reads; station-level is a uniform generator default (30x4) that disagrees.
-        const mins = d.rotation_duration ?? st.rotation_minutes;
+        // Single contract: lab_days.rotation_duration is authoritative (the timer reads it); lab_stations.rotation_minutes is only a mirror and is never shown.
+        const mins = d.rotation_duration;
         const qs = searchParams.toString();
         const href = withReturnTo(learning ? `/labs/adv-cert/learning-station?labDayId=${d.id}&stationId=${st.id}` : `/labs/adv-cert/grade?labDayId=${d.id}&stationId=${st.id}`, `/labs/acls-hub/board${qs ? `?${qs}` : ''}`);
         return (
@@ -677,9 +677,9 @@ function BoardContent() {
         </div>
         <div className="min-w-0 overflow-x-auto">
           {absentError && <div role="alert" className="mb-2 text-xs text-red-700 dark:text-red-300">{absentError}</div>}
-          <table className="w-full text-sm whitespace-nowrap">
+          <table className="w-full text-sm">
             <thead><tr className="text-left text-[11px] uppercase text-gray-500 dark:text-gray-400">
-              <th className="py-1 pr-2">Student</th><th className="py-1 pr-2">Grp</th><th className="py-1 pr-2">Attend</th><th className="py-1">Megacode result</th>
+              <th className="py-1 pr-2">Student</th><th className="py-1 pr-2 whitespace-nowrap">Grp</th><th className="py-1 pr-2 whitespace-nowrap">Attend</th><th className="py-1 whitespace-nowrap">Megacode result</th>
             </tr></thead>
             <tbody>
               {rows.map(({ m, g }) => {
@@ -690,15 +690,15 @@ function BoardContent() {
                     <td className={`py-1 pr-2 ${absent ? 'text-gray-400 line-through' : 'text-gray-800 dark:text-gray-100'}`}>{fullName(m)}
                       {!absent && watchN(m.id) > 0 && <span title="Learning-station watch marks (Pass/Watch tracker)" className="ml-2 no-underline"><Chip state="watch" /> <span className="text-[11px] text-amber-700 dark:text-amber-300">{watchN(m.id)}</span></span>}
                     </td>
-                    <td className="py-1 pr-2 text-xs text-gray-500">{g.name.replace(/^group\s*/i, '')}</td>
-                    <td className="py-1 pr-2">
+                    <td className="py-1 pr-2 text-xs text-gray-500 whitespace-nowrap">{g.name.replace(/^group\s*/i, '')}</td>
+                    <td className="py-1 pr-2 whitespace-nowrap">
                       <button type="button" onClick={() => toggleAbsent(m.id)}
                         title={`${absent ? 'Mark here' : 'Mark absent'}${activeDate === 'all' ? ' (both days)' : ''}`}
                         className={`text-xs px-2 min-h-[32px] rounded border ${absent ? 'border-gray-400 text-gray-500' : 'border-emerald-500 text-emerald-700 dark:text-emerald-300'}`}>
                         {absent ? 'Absent' : 'Here'}
                       </button>
                     </td>
-                    <td className="py-1">
+                    <td className="py-1 whitespace-nowrap">
                       {r.list.length === 0 ? <Chip state="none" /> : (
                         <button type="button" onClick={() => (r.list.length === 1 ? openRecord(r.list[0]) : setAttemptPicker({ studentId: m.id, list: r.list }))} aria-label={`Open grading record for ${fullName(m)}`}>
                           <Chip state={r.state} />
