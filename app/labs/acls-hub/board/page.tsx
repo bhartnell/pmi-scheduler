@@ -311,27 +311,38 @@ function BoardContent() {
   }, [dates, orderFor, parked, events, eventById, DUR, containerIds]);
 
   const moveRow = (date: string, id: string, beforeId: string | null) => {
-    const ord = orderFor(date).filter(i => i !== id);
+    const oldOrd = orderFor(date);
+    const ord = oldOrd.filter(i => i !== id);
     const idx = beforeId ? ord.indexOf(beforeId) : ord.length;
     ord.splice(idx < 0 ? ord.length : idx, 0, id);
     setOrderByDay(p => ({ ...p, [date]: ord }));
-    persistOrder(date, ord);
+    persistOrder(date, oldOrd, ord);
   };
-  // Moving a block moves the real schedule: re-time the live (non-parked) sequence back-to-back from the
-  // day's first slot and write start/end for every block whose slot changed ('this' = that dated block only).
-  const persistOrder = (date: string, ord: string[]) => {
+  // Moving a block moves the real schedule, forward-only: blocks before the first changed position keep their
+  // times (they already happened), blocks after the last changed position are untouched (the moved window keeps
+  // its overall span), and only the window in between is re-timed. The gaps between positions are preserved,
+  // so a deliberate break is never packed away. 'this' = that dated block only.
+  const persistOrder = (date: string, oldOrd: string[], ord: string[]) => {
+    const oldLive = oldOrd.filter(i => !parked.has(i));
     const live = ord.filter(i => !parked.has(i));
-    const firstSlot = Math.min(...live.map(i => toMin(eventById.get(i)?.start_time)).filter(n => n > 0), Infinity);
-    if (!isFinite(firstSlot)) return;
+    if (oldLive.length !== live.length) return;
+    let lo = 0; while (lo < live.length && live[lo] === oldLive[lo]) lo++;
+    let hi = live.length - 1; while (hi > lo && live[hi] === oldLive[hi]) hi--;
+    if (lo >= live.length) return;
+    const slots = oldLive.slice(lo, hi + 1).map(i => ({ s: toMin(eventById.get(i)?.start_time), e: toMin(eventById.get(i)?.end_time) }));
+    if (slots.some(x => !x.s)) return;
+    const gaps = slots.slice(0, -1).map((x, j) => Math.max(slots[j + 1].s - x.e, 0));
     const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
-    let clock = firstSlot;
+    let clock = slots[0].s;
     const changes: { e: CalEvent; start: string; end: string }[] = [];
-    for (const i of live) {
-      const e = eventById.get(i); if (!e || !e.linked_id) { clock += DUR(i); continue; }
-      const start = fmt(clock), end = fmt(clock + DUR(i));
-      if (hhmm(e.start_time) !== hhmm(start) ) changes.push({ e, start, end });
-      clock += DUR(i);
-    }
+    live.slice(lo, hi + 1).forEach((i, j) => {
+      const e = eventById.get(i);
+      if (e && e.linked_id) {
+        const start = fmt(clock), end = fmt(clock + DUR(i));
+        if (hhmm(e.start_time) !== hhmm(start)) changes.push({ e, start, end });
+      }
+      clock += DUR(i) + (gaps[j] ?? 0);
+    });
     if (!changes.length) return;
     const prev = new Map(changes.map(c => [c.e.id, { s: c.e.start_time, en: c.e.end_time }]));
     setEvents(p => p.map(x => { const c = changes.find(k => k.e.id === x.id); return c ? { ...x, start_time: c.start, end_time: c.end } : x; }));

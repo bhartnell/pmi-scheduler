@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ---
 
+(pending) | fix(acls-board): block move is forward-only (LIVE-BOARD 2/5): re-times only the moved window, preserves gaps, later blocks untouched
 2026-10-05
 (pending) | fix(acls-board): moving a block now writes start/end to the schedule for everyone instead of local-only order (live defect)
 (this commit) | feat(learning-station): rotation timer + dual-pane case on the tracker page
