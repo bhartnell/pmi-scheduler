@@ -135,7 +135,15 @@ function signoff(ins: SignoffInstructor | null, dateStr: string): string {
   return `<p class="signoff">Instructor ${sig} &nbsp; Initials ${initials} &nbsp; Instructor Number ${num} &nbsp; Date ${date}</p>`;
 }
 
-export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStudent, ins: SignoffInstructor | null, courseDate?: string | null): string {
+const ACLS_PROGRAM = 'Advanced Cardiovascular Life Support';
+const PALS_PROGRAM = 'Pediatric Advanced Life Support';
+
+/** Program label for a sheet: forms declared under ACLS carry the PALS label on a PALS export. */
+function programLabel(form: SkillsForm, course: 'acls' | 'pals'): string {
+  return course === 'pals' && form.program === ACLS_PROGRAM ? PALS_PROGRAM : form.program;
+}
+
+export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStudent, ins: SignoffInstructor | null, courseDate?: string | null, course: 'acls' | 'pals' = 'acls'): string {
   const name = `${student.lastName}, ${student.firstName}`;
   const dateStr = fmtDate(courseDate); // skills sheets stamp the cohort's course date
   const sections = form.sections.map((sec) => {
@@ -150,7 +158,7 @@ export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStuden
   }).join('');
   const scen = form.scenarios?.length ? `<div class="scen">${form.scenarios.map((s) => `<p>${esc(s)}</p>`).join('')}</div>` : '';
   return `<section class="form">
-    <p class="prog">${esc(form.program)}</p>
+    <p class="prog">${esc(programLabel(form, course))}</p>
     <h2>${esc(form.title)}</h2>
     <p class="hdr">Student Name <u>${esc(name)}</u> &nbsp;&nbsp; Date of Test <u>${dateStr ? esc(dateStr) : '&nbsp;&nbsp;&nbsp;&nbsp;'}</u></p>
     ${scen}
@@ -191,8 +199,8 @@ const STYLE = `
 /** The skills form CSS — exported so the per-student packet can merge it. */
 export const SKILLS_CSS = STYLE;
 
-export function renderSkillsDocument(form: SkillsForm, students: RosterStudent[], opts: { autoPrint?: boolean; instructor?: SignoffInstructor | null; courseDate?: string | null } = {}): string {
-  const sheets = students.map((s) => renderSkillsStudentSheet(form, s, opts.instructor ?? null, opts.courseDate)).join('\n');
+export function renderSkillsDocument(form: SkillsForm, students: RosterStudent[], opts: { autoPrint?: boolean; instructor?: SignoffInstructor | null; courseDate?: string | null; course?: 'acls' | 'pals' } = {}): string {
+  const sheets = students.map((s) => renderSkillsStudentSheet(form, s, opts.instructor ?? null, opts.courseDate, opts.course)).join('\n');
   const printScript = opts.autoPrint ? '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),350));</script>' : '';
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(form.title)}</title><style>${STYLE}</style></head>
 <body><div class="toolbar"><button onclick="window.print()">🖨 Print / Save as PDF</button> &nbsp; ${form.title} · ${students.length} student(s)</div>

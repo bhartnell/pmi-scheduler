@@ -23,7 +23,7 @@ export const maxDuration = 180;
  *   ?cohortId=…            required
  *   &grouping=student      (default) one combined PDF per student
  *                          (megacode + airway + adult BLS + infant CPR),
- *                          named LastName_FirstName_ACLS_Results.pdf
+ *                          named LastName_FirstName_<COURSE>_Results.pdf
  *   &grouping=section      one PDF per form type (all students), for AHA records
  *   &instructorId=…        sign-off instructor (name/AHA#/signature)
  *   &course=acls|pals
@@ -66,8 +66,8 @@ export async function GET(request: NextRequest) {
       for (const row of report.rows) {
         if (!row.best) continue; // skip excused / no scorable attempt — no student file
         docs.push({
-          filename: packetFilename(row.student.lastName, row.student.firstName),
-          html: composeStudentPacketHTML(row, instructor, courseDate),
+          filename: packetFilename(row.student.lastName, row.student.firstName, course),
+          html: composeStudentPacketHTML(row, instructor, courseDate, course),
         });
       }
     } else {
@@ -75,9 +75,9 @@ export async function GET(request: NextRequest) {
       const students: RosterStudent[] = report.rows.map((r) => r.student);
       if (instructor) for (const r of report.rows) (r as { instructor?: SignoffInstructor }).instructor = instructor;
       docs.push({ filename: 'Megacode_Testing_AllStudents.pdf', html: renderMegacodeDocument(report) });
-      docs.push({ filename: 'Airway_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.airway, students, { instructor, courseDate }) });
-      docs.push({ filename: 'Adult_BLS_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.adult_bls, students, { instructor, courseDate }) });
-      docs.push({ filename: 'Infant_CPR_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.infant_cpr, students, { instructor, courseDate }) });
+      docs.push({ filename: 'Airway_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.airway, students, { instructor, courseDate, course }) });
+      docs.push({ filename: 'Adult_BLS_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.adult_bls, students, { instructor, courseDate, course }) });
+      docs.push({ filename: 'Infant_CPR_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.infant_cpr, students, { instructor, courseDate, course }) });
     }
     if (docs.length === 0) return NextResponse.json({ success: false, error: 'nothing to export (no eligible students)' }, { status: 404 });
 
@@ -103,8 +103,8 @@ export async function GET(request: NextRequest) {
     browser = null;
 
     const zipFilename = grouping === 'student'
-      ? `ACLS_${cohortLabel}_StudentResults.zip`
-      : `ACLS_${cohortLabel}_BySection.zip`;
+      ? `${course.toUpperCase()}_${cohortLabel}_StudentResults.zip`
+      : `${course.toUpperCase()}_${cohortLabel}_BySection.zip`;
     const zipArrayBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 
     return new Response(zipArrayBuffer, {

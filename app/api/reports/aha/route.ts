@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
   if (SKILLS_FORMS[template]) {
     const students = await fetchScopeStudents(scope);
     const courseDate = await fetchCourseDate(scope, course);
-    const html = renderSkillsDocument(SKILLS_FORMS[template], students, { autoPrint, instructor, courseDate });
+    const html = renderSkillsDocument(SKILLS_FORMS[template], students, { autoPrint, instructor, courseDate, course });
     return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 
