@@ -24,6 +24,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import Link from 'next/link';
+import { withReturnTo } from '@/lib/return-to';
 import {
   ArrowLeft, Loader2, RefreshCw, Printer, CheckCircle2, XCircle, Clock,
   Users, UserCheck, MapPin, CalendarDays, Layers, Stethoscope, ClipboardCheck,
@@ -97,6 +98,7 @@ function PalsHubPageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const hubReturnPath = `/labs/pals-hub${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
 
   const [cohort, setCohort] = useState<any>(null);
   const [courseOptions, setCourseOptions] = useState<{ id: string; label: string; dates: string[] }[]>([]);
@@ -674,7 +676,7 @@ function PalsHubPageContent() {
                               <span className="text-xs text-gray-400">{hhmm(d.start_time)}–{hhmm(d.end_time)} · {d.stations.length} stations{d.is_adv_cert_testing ? ' · testing' : ''}</span>
                             </div>
                             <div className="flex items-center gap-2 print:hidden">
-                              <Link href={`/labs/schedule/${d.id}`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Open</Link>
+                              <Link href={withReturnTo(`/labs/pals/grade?labDayId=${d.id}`, hubReturnPath)} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Open</Link>
                               <Link href={`/labs/schedule/${d.id}/edit`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Assign</Link>
                               {d.is_adv_cert_testing && (
                                 <Link href={`/labs/pals/grade?labDayId=${d.id}`} className="text-xs px-2 py-1 rounded border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/20">Grade</Link>
