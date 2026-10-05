@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+## 2026-10-05
+
+pending | fix(timer): 10-min rotations default to a 4-min debrief marker (was hardcoded 5)
+
 
 (pending) | fix(workload): instructor-workload + availability read lab_days.rotation_duration/num_rotations first, station mirror as fallback (no backfill)
 (pending) | fix(lab-stations): every lab_stations update now sets updated_at so it records edits, not just insert time (AUDIT HYGIENE)

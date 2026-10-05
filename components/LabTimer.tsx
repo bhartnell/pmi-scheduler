@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { defaultDebriefSecondsFor } from '@/lib/timer-defaults';
 import {
   Play,
   Pause,
@@ -333,7 +334,7 @@ export default function LabTimer({
         body: JSON.stringify({
           labDayId,
           durationSeconds: totalSeconds,
-          debriefSeconds: defaultDebriefSeconds || 300,
+          debriefSeconds: defaultDebriefSeconds || defaultDebriefSecondsFor(rotationMinutes),
           mode: 'countdown'
         })
       });
@@ -346,7 +347,7 @@ export default function LabTimer({
     } catch (error) {
       console.error('Error initializing timer:', error);
     }
-  }, [labDayId, totalSeconds, defaultDebriefSeconds]);
+  }, [labDayId, totalSeconds, defaultDebriefSeconds, rotationMinutes]);
 
   // End lab - completely clear timer state
   const endLab = useCallback(async () => {

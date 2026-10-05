@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
         paused_at: null,
         elapsed_when_paused: 0,
         duration_seconds: durationSeconds,
-        debrief_seconds: debriefSeconds || 300,
+        debrief_seconds: debriefSeconds || (durationSeconds === 600 ? 240 : 300),
         mode: mode || 'countdown',
         rotation_acknowledged: true,  // Start acknowledged
         version: 0
