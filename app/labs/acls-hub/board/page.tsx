@@ -317,19 +317,28 @@ function BoardContent() {
     setOrderByDay(p => ({ ...p, [date]: ord }));
     persistOrder(date, ord);
   };
-  // Moving a block moves the real schedule: re-time the live (non-parked) sequence back-to-back from the
-  // day's first slot and write start/end for every block whose slot changed ('this' = that dated block only).
+  // Moving a block moves the real schedule, FORWARD ONLY: blocks before the first position that changed keep
+  // their times (they already happened). From that anchor on, the new sequence is laid into the same slots:
+  // the anchor keeps its original start, each following block starts when the previous one ends plus the gap
+  // that sat at that position before the move, so deliberate gaps (breaks) survive. 'this' = that dated block only.
   const persistOrder = (date: string, ord: string[]) => {
     const live = ord.filter(i => !parked.has(i));
-    const firstSlot = Math.min(...live.map(i => toMin(eventById.get(i)?.start_time)).filter(n => n > 0), Infinity);
-    if (!isFinite(firstSlot)) return;
+    const before = baseOrder(date).filter(i => !parked.has(i)).filter(i => live.includes(i));
+    const first = live.findIndex((id, k) => id !== before[k]);
+    if (first < 0) return;
     const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
-    let clock = firstSlot;
+    const gapAt = (k: number) => k === 0 ? 0 : Math.max(toMin(eventById.get(before[k])?.start_time) - toMin(eventById.get(before[k - 1])?.end_time), 0);
+    let clock = toMin(eventById.get(before[first])?.start_time);
+    if (!clock) return;
     const changes: { e: CalEvent; start: string; end: string }[] = [];
-    for (const i of live) {
-      const e = eventById.get(i); if (!e || !e.linked_id) { clock += DUR(i); continue; }
-      const start = fmt(clock), end = fmt(clock + DUR(i));
-      if (hhmm(e.start_time) !== hhmm(start) ) changes.push({ e, start, end });
+    for (let k = first; k < live.length; k++) {
+      if (k > first) clock += gapAt(k);
+      const i = live[k];
+      const e = eventById.get(i);
+      if (e && e.linked_id) {
+        const start = fmt(clock), end = fmt(clock + DUR(i));
+        if (hhmm(e.start_time) !== hhmm(start)) changes.push({ e, start, end });
+      }
       clock += DUR(i);
     }
     if (!changes.length) return;
