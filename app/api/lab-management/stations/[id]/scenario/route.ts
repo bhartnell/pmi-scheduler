@@ -43,7 +43,7 @@ export async function POST(
 
     const { data: updated, error: updateError } = await supabase
       .from('lab_stations')
-      .update({ metadata: mergedMetadata })
+      .update({ metadata: mergedMetadata, updated_at: new Date().toISOString() })
       .eq('id', id)
       .select('*')
       .single();
