@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ---
 
+(pending) | fix(scenario-audit): count only non-empty expected_actions; scenario print tolerates string or array expected_actions (MEGACODE AUDIT code half)
 (pending) | fix(ccf-timer): panel defaults to expanded and renders via portal so drag clamps to the viewport
 2026-10-05
 (this commit) | fix(acls-board): block move cascades forward only from the first changed slot and keeps gaps (LIVE-BOARD 2/5); replaces whole-day re-pack

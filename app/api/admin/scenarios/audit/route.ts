@@ -157,8 +157,14 @@ export async function GET() {
           }
         }
 
+        // Count per scenario (any phase with a NON-EMPTY expected_actions).
+        // An empty array is truthy in JS, so test content, not presence.
         for (const p of phases) {
-          if (p && typeof p === 'object' && p.expected_actions) {
+          const ea = p && typeof p === 'object' ? p.expected_actions : null;
+          const hasActions = Array.isArray(ea)
+            ? ea.some((a: unknown) => typeof a === 'string' && a.trim() !== '')
+            : typeof ea === 'string' && ea.trim() !== '';
+          if (hasActions) {
             phaseAnalysis.phases_with_expected_actions++;
             break;
           }
