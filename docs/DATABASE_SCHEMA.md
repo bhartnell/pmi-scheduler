@@ -10096,6 +10096,26 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 - `Authenticated users can read pmi_schedule_blocks` (SELECT, PERMISSIVE, roles: {authenticated})
 - `Service role bypass for pmi_schedule_blocks` (ALL, PERMISSIVE, roles: {service_role})
 
+#### `schedule_block_exceptions`
+
+Per-instance exception against a recurring schedule block (EVENT-EDIT 1/5, migration `20261005_schedule_block_exceptions.sql`, applied 2026-10-05). Additive; nothing reads it yet (editor = 3/5, sync = 2/5). A block with no row here behaves as before.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| recurring_group_id | uuid | NO |  | Series key = `pmi_schedule_blocks.recurring_group_id` |
+| instance_date | date | NO |  | The series member this exception applies to |
+| program_schedule_id | uuid | YES |  | FK -> pmi_program_schedules.id (ON DELETE CASCADE); cohort scoping |
+| overrides | jsonb | NO | '{}' | Only the differing fields, keyed by `pmi_schedule_blocks` column name |
+| is_cancelled | boolean | NO | false | Instance does not happen |
+| note | text | YES |  |  |
+| created_by | text | YES |  |  |
+| created_at | timestamptz | NO | now() |  |
+| updated_at | timestamptz | NO | now() |  |
+
+**Constraints/Indexes:** `UNIQUE (recurring_group_id, instance_date)`; `idx_sbe_group`; `idx_sbe_program_schedule`.
+**RLS:** authenticated SELECT; service_role ALL.
+
 #### `pmi_semesters`
 
 | Column | Type | Nullable | Default | Notes |
