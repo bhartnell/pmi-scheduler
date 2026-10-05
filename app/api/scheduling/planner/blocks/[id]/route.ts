@@ -254,13 +254,39 @@ export async function PUT(
       if (fetchError) throw fetchError;
 
       if (targetBlock?.recurring_group_id) {
-        // For batch updates, strip per-instance fields that should NOT propagate
-        // (each block has its own unique date, day_of_week, and week_number)
+        // For batch updates, propagate only fields that are shared across a
+        // series. Per-instance fields (date, day_of_week, week_number,
+        // specific_date) never propagate. In 'all' mode the content fields
+        // (title, start_time, end_time, content_notes, ...) also stay
+        // per-instance: live series hold distinct weekly titles and per-day
+        // times, and broadcasting the open instance's values erased them.
+        // The clicked block itself still receives the full update below.
+        const ALL_MODE_SHARED_FIELDS = [
+          'updated_at',
+          'room_id',
+          'block_type',
+          'color',
+          'course_name',
+          'program_schedule_id',
+          'is_recurring',
+          'semester_id',
+          'instructor_id',
+          'additional_instructor_id',
+        ];
         const batchUpdates = { ...updates };
         delete batchUpdates.date;
         delete batchUpdates.day_of_week;
         delete batchUpdates.week_number;
         delete batchUpdates.specific_date;
+        const skippedFields: string[] = [];
+        if (update_mode === 'all') {
+          for (const key of Object.keys(batchUpdates)) {
+            if (!ALL_MODE_SHARED_FIELDS.includes(key)) {
+              skippedFields.push(key);
+              delete batchUpdates[key];
+            }
+          }
+        }
 
         // For 'all' mode: update ALL blocks with this recurring_group_id (all days, all weeks)
         // For 'this_and_future': update same day_of_week blocks from this date forward
@@ -279,6 +305,16 @@ export async function PUT(
 
         const { data: batchResult, error: batchError } = await batchQuery.select('id');
         if (batchError) throw batchError;
+
+        // 'all' mode skipped per-instance fields for the rest of the series;
+        // still apply the full edit to the instance the user actually opened.
+        if (update_mode === 'all' && skippedFields.length > 0) {
+          const { error: selfError } = await supabase
+            .from('pmi_schedule_blocks')
+            .update(updates)
+            .eq('id', id);
+          if (selfError) throw selfError;
+        }
 
         const updatedCount = batchResult?.length || 0;
         const updatedBlockIds = (batchResult || []).map((b: { id: string }) => b.id);
@@ -305,7 +341,7 @@ export async function PUT(
           void fireInstructorAutoSync(supabase, preInstructorState, updatedBlock);
         }
 
-        return NextResponse.json({ block: updatedBlock, batch_updated: true, updated_count: updatedCount });
+        return NextResponse.json({ block: updatedBlock, batch_updated: true, updated_count: updatedCount, per_instance_fields_not_propagated: skippedFields });
       }
     }
 

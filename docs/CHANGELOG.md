@@ -12,6 +12,8 @@ Format: `commit-hash | brief description`
 2026-10-05
 (this commit) | feat(learning-station): rotation timer + dual-pane case on the tracker page
 
+pending | fix(planner): update_mode=all no longer overwrites per-instance title/times/notes across a series (EVENT-EDIT 5/5 guard)
+
 pending | fix(acls-board): default region order = overview, student progress left of schedule, stations bottom (saved layout key bumped to v2)
 
 pending | fix(aha-export): packet filename, packet title and zip name carry the course (PALS exports no longer labelled ACLS); skills-form program strings intentionally untouched (ACLS source content)
