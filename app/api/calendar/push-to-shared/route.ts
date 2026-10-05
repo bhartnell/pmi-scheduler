@@ -5,7 +5,10 @@ import { hasMinRole } from '@/lib/permissions';
 import { getAccessTokenForUser } from '@/lib/google-calendar';
 import {
   buildRRULE,
+  buildRecurrence,
+  buildTimePatch,
   createSharedCalendarEvent,
+  partitionSeriesRows,
   patchSharedCalendarEvent,
 } from '@/lib/google-shared-calendar';
 
@@ -23,6 +26,10 @@ import {
  * account at "make changes" or higher. Per the spec all instructors
  * have edit access, so any connected admin / lead can drive this.
  *
+ * Rows that differ from their series baseline (modal title / times /
+ * notes / instructors / type) are emitted as single override events
+ * keyed on block_id and left out of the series dates.
+ *
  * Idempotent: looks up existing mappings in shared_calendar_events
  * keyed by recurring_group_id (or block_id for one-offs). If a
  * mapping exists, patches the event's attendees / summary; if not,
@@ -33,6 +40,7 @@ import {
  *   program_id?: string,        // optional cohort-program filter
  *   cohort_id?: string,         // optional single-cohort filter
  *   include_drafts?: boolean,   // default false
+ *   dry_run?: boolean,          // plan only: no Google or DB writes
  * }
  *
  * Returns: counts + per-series outcome list for the UI to display.
@@ -76,6 +84,7 @@ export async function POST(request: NextRequest) {
     program_id?: string;
     cohort_id?: string;
     include_drafts?: boolean;
+    dry_run?: boolean;
   };
   try {
     body = await request.json();
@@ -207,7 +216,51 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Push each group sequentially (small N — typically < 60 series
+  // Partition each group into the series baseline (modal values) and
+  // divergent rows (edited one-offs). Divergent rows leave the series
+  // date list and are emitted as single events keyed on block_id, so
+  // no date is ever carried by both the series and an override.
+  type Job = {
+    key: string;
+    rows: BlockRow[];
+    // block_id of the row when this job is a single (one-off / override) event
+    blockId?: string;
+    isOverride: boolean;
+  };
+  const jobs: Job[] = [];
+  for (const [key, list] of groups.entries()) {
+    list.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+    if (key.startsWith('block:')) {
+      jobs.push({ key, rows: list, blockId: list[0].id, isOverride: false });
+      continue;
+    }
+    const { conforming, divergent } = partitionSeriesRows(list);
+    jobs.push({ key, rows: conforming, isOverride: false });
+    for (const d of divergent) {
+      jobs.push({ key: `block:${d.id}`, rows: [d], blockId: d.id, isOverride: true });
+    }
+  }
+
+  // Mappings for override events (block-keyed) not covered above.
+  const overrideIds = jobs
+    .filter(j => j.isOverride && j.blockId && !existingMap.has(j.key))
+    .map(j => j.blockId as string);
+  if (overrideIds.length > 0) {
+    const { data } = await supabase
+      .from('shared_calendar_events')
+      .select('id, block_id, google_event_id, instructor_id')
+      .eq('google_calendar_id', calendarId)
+      .in('block_id', overrideIds);
+    for (const r of data ?? []) {
+      existingMap.set(`block:${r.block_id}`, {
+        id: r.id,
+        google_event_id: r.google_event_id,
+        instructor_id: r.instructor_id,
+      });
+    }
+  }
+
+  // Push each job sequentially (small N — typically < 60 series
   // per semester) with a 200ms gap to stay well under Google's
   // calendar quota. Track outcomes per-series so the UI can show
   // "EMS 121 Pharmacology — created" / "— updated" / "— skipped".
@@ -215,10 +268,11 @@ export async function POST(request: NextRequest) {
   let updated = 0;
   let skipped = 0;
   let failed = 0;
-  const outcomes: Array<{ key: string; label: string; status: string; google_event_id?: string; error?: string }> = [];
+  const outcomes: Array<{ key: string; label: string; status: string; google_event_id?: string; error?: string; override?: boolean; dates?: number }> = [];
 
-  for (const [key, list] of groups.entries()) {
-    list.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+  for (const { key, rows: list, isOverride } of jobs) {
+    // Event fields come from the baseline row (earliest conforming row
+    // of the series, or the single row of an override / one-off).
     const first = list[0];
     const ps = Array.isArray(first.program_schedule) ? first.program_schedule[0] : first.program_schedule;
     const cohort = ps?.cohort && (Array.isArray(ps.cohort) ? ps.cohort[0] : ps.cohort);
@@ -246,16 +300,33 @@ export async function POST(request: NextRequest) {
       attendeeEmails.push(emailById.get(first.additional_instructor_id)!);
     }
 
+    // Series dates come from conforming rows only; for a group whose
+    // dates no longer form a clean weekly cadence buildRRULE emits an
+    // explicit RDATE list, so a divergent date is never produced by
+    // the rule and no EXDATE is needed.
     const dates = list.map(b => b.date as string);
     const { rrule, rdates } = buildRRULE(dates);
+    const isSeries = !key.startsWith('block:');
+
+    if (body.dry_run) {
+      skipped++;
+      outcomes.push({
+        key,
+        label: summary,
+        status: 'dry_run',
+        override: isOverride,
+        dates: dates.length,
+      });
+      continue;
+    }
 
     await new Promise(r => setTimeout(r, 200));
 
     const existing = existingMap.get(key);
     if (existing) {
-      // Update existing series — patch summary + attendees so
-      // instructor changes propagate. Description/time updates
-      // also flow through.
+      // Update existing event — summary, description, attendees, plus
+      // start/end and (for series) recurrence so time changes and
+      // extended / shortened series reach Google.
       const ok = await patchSharedCalendarEvent({
         calendarId,
         accessToken,
@@ -264,11 +335,16 @@ export async function POST(request: NextRequest) {
           summary,
           description,
           attendees: attendeeEmails.map(email => ({ email })),
+          ...buildTimePatch(first.date as string, first.start_time as string, first.end_time as string),
+          ...(isSeries
+            ? { recurrence: buildRecurrence(rrule, rdates, first.start_time as string) }
+            : {}),
+          colorId: first.block_type === 'lab' ? '9' : '7',
         },
       });
       if (ok) {
         updated++;
-        outcomes.push({ key, label: summary, status: 'updated', google_event_id: existing.google_event_id });
+        outcomes.push({ key, label: summary, status: 'updated', google_event_id: existing.google_event_id, override: isOverride });
         await supabase
           .from('shared_calendar_events')
           .update({
@@ -280,7 +356,7 @@ export async function POST(request: NextRequest) {
           .eq('id', existing.id);
       } else {
         failed++;
-        outcomes.push({ key, label: summary, status: 'failed', error: 'Google PATCH failed' });
+        outcomes.push({ key, label: summary, status: 'failed', error: 'Google PATCH failed', override: isOverride });
         await supabase
           .from('shared_calendar_events')
           .update({
@@ -308,11 +384,11 @@ export async function POST(request: NextRequest) {
     });
     if ('error' in result) {
       failed++;
-      outcomes.push({ key, label: summary, status: 'failed', error: result.error });
+      outcomes.push({ key, label: summary, status: 'failed', error: result.error, override: isOverride });
       continue;
     }
     created++;
-    outcomes.push({ key, label: summary, status: 'created', google_event_id: result.id });
+    outcomes.push({ key, label: summary, status: 'created', google_event_id: result.id, override: isOverride });
 
     // Persist mapping. recurring_group_id vs block_id pick decided
     // by the original key prefix.
@@ -335,7 +411,9 @@ export async function POST(request: NextRequest) {
     success: true,
     semester_id: body.semester_id,
     calendar_id: calendarId,
+    dry_run: !!body.dry_run,
     series_count: groups.size,
+    event_count: jobs.length,
     created,
     updated,
     skipped,
