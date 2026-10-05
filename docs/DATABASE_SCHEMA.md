@@ -10096,6 +10096,24 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 - `Authenticated users can read pmi_schedule_blocks` (SELECT, PERMISSIVE, roles: {authenticated})
 - `Service role bypass for pmi_schedule_blocks` (ALL, PERMISSIVE, roles: {service_role})
 
+#### `pmi_schedule_block_exceptions`
+
+Per-instance override of a recurring schedule block (EVENT-EDIT 1/5). Additive; nothing reads it yet. Cohort-scoped via `program_schedule_id`.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| recurring_group_id | uuid | NO |  | Series = `pmi_schedule_blocks.recurring_group_id` |
+| instance_date | date | NO |  | Occurrence overridden |
+| program_schedule_id | uuid | YES |  | FK -> pmi_program_schedules.id |
+| overrides | jsonb | NO | '{}' | Only fields that differ from the series |
+| is_cancelled | boolean | NO | false | Skip this occurrence |
+| reason | text | YES |  |  |
+| created_by | uuid | YES |  | FK -> lab_users.id |
+| created_at / updated_at | timestamptz | NO | now() |  |
+
+**Constraints:** UNIQUE (`recurring_group_id`, `instance_date`). **RLS:** authenticated SELECT; service_role ALL. (Migration `20261005_schedule_block_exceptions.sql` is written but NOT yet applied to production.)
+
 #### `pmi_semesters`
 
 | Column | Type | Nullable | Default | Notes |
