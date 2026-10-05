@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { Play, RotateCcw, SkipForward, Clock } from 'lucide-react';
+import { useBottomBannerOffset } from '@/hooks/useBottomBannerOffset';
 import { findInstructionEntry, isMultiPart } from '@/lib/nremt-instructions';
 
 // Time limits in minutes per station. This is a FALLBACK only, used when a
@@ -161,6 +162,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
   const [dualStatus, setDualStatus] = useState<TimerStatus>('ready');
 
   // Refs for intervals and alert tracking
+  const bannerRef = useBottomBannerOffset();
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const oneMinAlertFired = useRef(false);
   const expiredAlertFired = useRef(false);
@@ -375,7 +377,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
     if (stickyBottom) {
       const bgColor = isExpired ? 'bg-red-900' : isRunning ? (phaseRemaining <= 30 ? 'bg-red-800' : phaseRemaining <= 120 ? 'bg-yellow-700' : 'bg-gray-900') : 'bg-gray-900';
       return (
-        <div className={`fixed bottom-0 left-0 right-0 z-50 ${bgColor} text-white shadow-lg ${isExpired ? 'animate-pulse' : ''}`}>
+        <div ref={bannerRef} className={`fixed bottom-0 left-0 right-0 z-50 ${bgColor} text-white shadow-lg ${isExpired ? 'animate-pulse' : ''}`}>
           {isRunning && (
             <div className="h-1 bg-black/20">
               <div
@@ -544,7 +546,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
   if (stickyBottom) {
     const bgColor = isExpired ? 'bg-red-900' : isRunning ? (remaining <= 30 ? 'bg-red-800' : remaining <= 120 ? 'bg-yellow-700' : 'bg-gray-900') : 'bg-gray-900';
     return (
-      <div className={`fixed bottom-0 left-0 right-0 z-50 ${bgColor} text-white shadow-lg ${isExpired ? 'animate-pulse' : ''}`}>
+      <div ref={bannerRef} className={`fixed bottom-0 left-0 right-0 z-50 ${bgColor} text-white shadow-lg ${isExpired ? 'animate-pulse' : ''}`}>
         {isRunning && (
           <div className="h-1 bg-black/20">
             <div

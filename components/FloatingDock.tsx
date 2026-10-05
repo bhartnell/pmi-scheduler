@@ -24,7 +24,7 @@ export const DOCK_PAGE_SLOT_ID = 'floating-dock-page-slot';
 export default function FloatingDock({ children }: { children: ReactNode }) {
   return (
     <div
-      className="fixed bottom-4 right-4 max-sm:bottom-3 max-sm:right-3 z-[60] flex flex-col items-end gap-3 pointer-events-none [&>*]:pointer-events-auto print:hidden"
+      className="fixed bottom-[calc(1rem+var(--bottom-banner-h,0px))] right-4 max-sm:bottom-[calc(0.75rem+var(--bottom-banner-h,0px))] max-sm:right-3 z-[60] flex flex-col items-end gap-3 pointer-events-none [&>*]:pointer-events-auto print:hidden"
     >
       <div id={DOCK_PAGE_SLOT_ID} className="flex flex-col items-end gap-3 max-w-[calc(100vw-1.5rem)]" />
       {children}
