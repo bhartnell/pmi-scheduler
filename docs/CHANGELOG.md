@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-05
+- pending | fix(calendar): shared push publishes divergent instances as own events (modal baseline) and PATCH now sends start/end/recurrence (EVENT-EDIT 2/5)
 (this commit) | feat(learning-station): rotation timer + dual-pane case on the tracker page
 
 pending | fix(planner): update_mode=all no longer overwrites per-instance title/times/notes across a series (EVENT-EDIT 5/5 guard)

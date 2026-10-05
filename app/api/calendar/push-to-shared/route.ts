@@ -5,6 +5,7 @@ import { hasMinRole } from '@/lib/permissions';
 import { getAccessTokenForUser } from '@/lib/google-calendar';
 import {
   buildRRULE,
+  buildSchedulePatch,
   createSharedCalendarEvent,
   patchSharedCalendarEvent,
 } from '@/lib/google-shared-calendar';
@@ -217,8 +218,53 @@ export async function POST(request: NextRequest) {
   let failed = 0;
   const outcomes: Array<{ key: string; label: string; status: string; google_event_id?: string; error?: string }> = [];
 
+  // A block "conforms" when it matches the series' modal values. Rows that
+  // diverge (own title/time/notes/instructors) are published as their own
+  // events and left out of the series so they never appear twice.
+  const sig = (b: BlockRow) =>
+    [b.title ?? b.course_name ?? '', b.start_time, b.end_time, b.content_notes ?? '',
+     b.instructor_id ?? '', b.additional_instructor_id ?? '', b.block_type ?? ''].join('|');
+
+  type Unit = { key: string; rows: BlockRow[] };
+  const units: Unit[] = [];
   for (const [key, list] of groups.entries()) {
     list.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
+    if (key.startsWith('block:') || list.length === 1) {
+      units.push({ key, rows: list });
+      continue;
+    }
+    const counts = new Map<string, number>();
+    for (const r of list) counts.set(sig(r), (counts.get(sig(r)) ?? 0) + 1);
+    // Ties resolve to the earliest-dated row's signature (Map keeps insertion order).
+    let modal = sig(list[0]);
+    for (const [k, n] of counts) if (n > counts.get(modal)!) modal = k;
+    const conforming = list.filter(r => sig(r) === modal);
+    units.push({ key, rows: conforming });
+    for (const r of list) {
+      if (sig(r) !== modal) units.push({ key: `block:${r.id}`, rows: [r] });
+    }
+  }
+
+  // Divergent rows introduced above need their existing mappings too.
+  const missingBlockIds = units
+    .filter(u => u.key.startsWith('block:') && !existingMap.has(u.key))
+    .map(u => u.key.slice(6));
+  if (missingBlockIds.length > 0) {
+    const { data } = await supabase
+      .from('shared_calendar_events')
+      .select('id, block_id, google_event_id, instructor_id')
+      .eq('google_calendar_id', calendarId)
+      .in('block_id', missingBlockIds);
+    for (const r of data ?? []) {
+      existingMap.set(`block:${r.block_id}`, {
+        id: r.id,
+        google_event_id: r.google_event_id,
+        instructor_id: r.instructor_id,
+      });
+    }
+  }
+
+  for (const { key, rows: list } of units) {
     const first = list[0];
     const ps = Array.isArray(first.program_schedule) ? first.program_schedule[0] : first.program_schedule;
     const cohort = ps?.cohort && (Array.isArray(ps.cohort) ? ps.cohort[0] : ps.cohort);
@@ -253,9 +299,8 @@ export async function POST(request: NextRequest) {
 
     const existing = existingMap.get(key);
     if (existing) {
-      // Update existing series — patch summary + attendees so
-      // instructor changes propagate. Description/time updates
-      // also flow through.
+      // Update existing series — summary, attendees, AND start/end/recurrence
+      // so time changes and extended/shortened series reach Google.
       const ok = await patchSharedCalendarEvent({
         calendarId,
         accessToken,
@@ -264,6 +309,13 @@ export async function POST(request: NextRequest) {
           summary,
           description,
           attendees: attendeeEmails.map(email => ({ email })),
+          ...buildSchedulePatch({
+            startDate: first.date as string,
+            startTime: first.start_time as string,
+            endTime: first.end_time as string,
+            rrule,
+            rdates,
+          }),
         },
       });
       if (ok) {
@@ -335,7 +387,7 @@ export async function POST(request: NextRequest) {
     success: true,
     semester_id: body.semester_id,
     calendar_id: calendarId,
-    series_count: groups.size,
+    series_count: units.length,
     created,
     updated,
     skipped,

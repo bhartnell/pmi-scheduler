@@ -73,6 +73,44 @@ export function buildRRULE(dates: string[]): { rrule?: string; rdates?: string[]
 
 // ─── Google Calendar API wrappers ──────────────────────────────────
 
+/**
+ * Build the Google `recurrence` array (RRULE and/or RDATE lines) for a
+ * series. Shared by create and patch so both emit identical rules.
+ */
+export function buildRecurrence(
+  rrule: string | undefined,
+  rdates: string[] | undefined,
+  startTime: string
+): string[] {
+  const recurrence: string[] = [];
+  if (rrule) recurrence.push(rrule);
+  if (rdates && rdates.length > 0) {
+    // Format: RDATE;TZID=America/Phoenix:YYYYMMDDTHHMMSS,YYYYMMDDTHHMMSS,...
+    const compactTime = startTime.replace(/:/g, '').slice(0, 6);
+    const datePart = rdates.map(d => `${d.replace(/-/g, '')}T${compactTime}`).join(',');
+    recurrence.push(`RDATE;TZID=${TIMEZONE}:${datePart}`);
+  }
+  return recurrence;
+}
+
+/** Start/end/recurrence fields for a PATCH so time and date changes reach Google. */
+export function buildSchedulePatch(params: {
+  startDate: string;
+  startTime: string;
+  endTime: string;
+  rrule?: string;
+  rdates?: string[];
+}): Record<string, unknown> {
+  const recurrence = buildRecurrence(params.rrule, params.rdates, params.startTime);
+  return {
+    start: { dateTime: `${params.startDate}T${params.startTime}`, timeZone: TIMEZONE },
+    end: { dateTime: `${params.startDate}T${params.endTime}`, timeZone: TIMEZONE },
+    // null clears a previous recurrence when the series collapsed to one date.
+    recurrence: recurrence.length ? recurrence : null,
+  };
+}
+
+
 interface PushEventParams {
   calendarId: string;
   accessToken: string;
@@ -91,16 +129,7 @@ interface PushEventParams {
 export async function createSharedCalendarEvent(
   params: PushEventParams
 ): Promise<{ id: string; htmlLink?: string } | { error: string }> {
-  const recurrence: string[] = [];
-  if (params.rrule) recurrence.push(params.rrule);
-  if (params.rdates && params.rdates.length > 0) {
-    // Format: RDATE;TZID=America/Phoenix:YYYYMMDDTHHMMSS,YYYYMMDDTHHMMSS,...
-    const compactTime = params.startTime.replace(/:/g, '').slice(0, 6);
-    const datePart = params.rdates
-      .map(d => `${d.replace(/-/g, '')}T${compactTime}`)
-      .join(',');
-    recurrence.push(`RDATE;TZID=${TIMEZONE}:${datePart}`);
-  }
+  const recurrence = buildRecurrence(params.rrule, params.rdates, params.startTime);
   const body: Record<string, unknown> = {
     summary: params.summary,
     description: params.description,
