@@ -9,8 +9,14 @@ Format: `commit-hash | brief description`
 
 ---
 
+(pending) | fix(ccf-timer): panel defaults to expanded and renders via portal so drag clamps to the viewport
 2026-10-05
 (pending) | fix(acls-board): parked state persists on the block (is_parked); forward-only cascade keeps gaps, reorder carries gaps positionally (LIVE-BOARD 4/5, 2/5)
+
+- (this commit) | fix(grading): phase expected_actions (string[] in v2) render as a list on the grading sheet instead of running together
+
+(pending) | fix(acls-board): moving a block now writes start/end to the schedule for everyone instead of local-only order (live defect)
+(pending) | fix(acls-board): station cards show lab_days.rotation_duration only, no lab_stations fallback (LIVE-BOARD 5/5)
 (pending) | fix(acls-board): moving a block now writes start/end to the schedule for everyone instead of local-only order (live defect)
 (this commit) | feat(learning-station): rotation timer + dual-pane case on the tracker page
 
