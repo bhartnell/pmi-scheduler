@@ -154,7 +154,8 @@ export async function POST(request: NextRequest) {
         .from('lab_stations')
         .update({
           instructor_name: userName || userEmail.split('@')[0],
-          instructor_email: userEmail
+          instructor_email: userEmail,
+          updated_at: new Date().toISOString()
         })
         .eq('id', stationId);
     }
