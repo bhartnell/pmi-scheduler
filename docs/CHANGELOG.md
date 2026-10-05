@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-05
+(this commit) | fix(acls-board): block move cascades forward only from the first changed slot and keeps gaps (LIVE-BOARD 2/5); replaces whole-day re-pack
 (pending) | fix(acls-board): moving a block now writes start/end to the schedule for everyone instead of local-only order (live defect)
 (this commit) | feat(learning-station): rotation timer + dual-pane case on the tracker page
 
