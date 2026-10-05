@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ---
 
+(pending) | fix(timer): new timers default debrief to 240s for rotations of 10 min or less (was a fixed 300s); explicit presets unchanged
 
 (pending) | fix(workload): instructor-workload + availability read lab_days.rotation_duration/num_rotations first, station mirror as fallback (no backfill)
 (pending) | fix(lab-stations): every lab_stations update now sets updated_at so it records edits, not just insert time (AUDIT HYGIENE)

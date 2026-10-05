@@ -160,7 +160,9 @@ export async function POST(request: NextRequest) {
         paused_at: null,
         elapsed_when_paused: 0,
         duration_seconds: durationSeconds,
-        debrief_seconds: debriefSeconds || 300,
+        // No explicit preset: debrief is the last 4 min of a 10-min (or shorter)
+        // rotation (6 case + 4 debrief), the last 5 min of longer ones.
+        debrief_seconds: debriefSeconds || (durationSeconds <= 600 ? 240 : 300),
         mode: mode || 'countdown',
         rotation_acknowledged: true,  // Start acknowledged
         version: 0
