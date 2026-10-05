@@ -53,11 +53,11 @@ interface InstructorOpt { id: string; name: string }
 
 type RegionId = 'overview' | 'schedule' | 'stations' | 'progress';
 interface RegionCfg { id: RegionId; t: string; span: number; on: boolean }
-// Ben's own arrangement: stations below the schedule, student progress beside it.
+// Ben's arrangement (2026-10-05): overview on top, student progress LEFT of the schedule, stations across the bottom.
 const DEFAULT_REGIONS: RegionCfg[] = [
   { id: 'overview', t: 'Overview', span: 12, on: true },
-  { id: 'schedule', t: 'Schedule', span: 12, on: true },
-  { id: 'progress', t: 'Student progress', span: 12, on: true },
+  { id: 'progress', t: 'Student progress', span: 6, on: true },
+  { id: 'schedule', t: 'Schedule', span: 6, on: true },
   { id: 'stations', t: 'Stations', span: 12, on: true },
 ];
 const SPAN_CLASS: Record<number, string> = {
@@ -152,16 +152,16 @@ function BoardContent() {
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(t); }, []);
 
   useEffect(() => {
-    const saved = lsGet('aclsBoard.regions');
+    const saved = lsGet('aclsBoard.regions.v2');
     if (!saved) return;
     try {
       const parsed = JSON.parse(saved) as RegionCfg[];
       if (Array.isArray(parsed) && parsed.length === 4 && parsed.every(r => DEFAULT_REGIONS.some(d => d.id === r.id))) {
-        setRegions(parsed.map(r => ({ ...DEFAULT_REGIONS.find(d => d.id === r.id)!, span: 12, on: r.on !== false })));
+        setRegions(parsed.map(r => ({ ...DEFAULT_REGIONS.find(d => d.id === r.id)!, on: r.on !== false })));
       }
     } catch { /* ignore */ }
   }, []);
-  const updateRegions = (next: RegionCfg[]) => { setRegions(next); lsSet('aclsBoard.regions', JSON.stringify(next)); };
+  const updateRegions = (next: RegionCfg[]) => { setRegions(next); lsSet('aclsBoard.regions.v2', JSON.stringify(next)); };
 
   const load = useCallback(async () => {
     setLoading(true);
