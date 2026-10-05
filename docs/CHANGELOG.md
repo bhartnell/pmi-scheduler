@@ -10,6 +10,8 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-05
+
+pending | fix(learning-station): tracker rotation counter reads the day's num_rotations like the ACLS board
 (pending) | fix(acls-board): moving a block now writes start/end to the schedule for everyone instead of local-only order (live defect)
 (this commit) | feat(learning-station): rotation timer + dual-pane case on the tracker page
 

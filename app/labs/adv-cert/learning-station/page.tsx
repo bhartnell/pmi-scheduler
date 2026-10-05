@@ -30,6 +30,7 @@ export default function AclsLearningStationPage() {
   const [stationId, setStationId] = useState('');
   const [groups, setGroups] = useState<GroupOpt[]>([]);
   const [stations, setStations] = useState<StationOpt[]>([]);
+  const [numRotations, setNumRotations] = useState<number | null>(null);
   const [caseTitle, setCaseTitle] = useState('');
   const [fullScenario, setFullScenario] = useState<any>(null);
   const [marks, setMarks] = useState<Mark[]>([]);
@@ -55,7 +56,7 @@ export default function AclsLearningStationPage() {
         fetch(`/api/adv-cert/grading-context?labDayId=${labDayId}`).then((r) => r.json()),
         fetch(`/api/adv-cert/learning-marks?labDayId=${labDayId}`).then((r) => r.json()),
       ]);
-      if (ctx.success) { setGroups(ctx.groups || []); setStations(ctx.stations || []); }
+      if (ctx.success) { setGroups(ctx.groups || []); setStations(ctx.stations || []); setNumRotations(ctx.day?.num_rotations ?? null); }
       if (mk.success) {
         setMarks(mk.marks || []);
         setNotes((prev) => {
@@ -122,7 +123,7 @@ export default function AclsLearningStationPage() {
           stationId={stationId || undefined}
           userEmail={session?.user?.email || undefined}
           userName={session?.user?.name || undefined}
-          numRotations={stations.length || 4}
+          numRotations={numRotations || stations.length || 1}
         />
       )}
       <Link href={returnTo || (labDayId ? `/labs/schedule/${labDayId}` : '/labs/acls-hub/board')} className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:underline mb-3">
