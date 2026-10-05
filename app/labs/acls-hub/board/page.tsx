@@ -47,7 +47,7 @@ interface CalEvent {
   id: string; title: string; date: string; start_time: string | null; end_time: string | null;
   event_type: string; instructor_names?: string[]; room?: string; status?: string;
   source?: string; linked_id?: string; linked_lab_day_id?: string; content_notes?: string;
-  metadata?: { actual_start_time?: string | null; instructor_id?: string | null; additional_instructor_id?: string | null; linked_section_number?: number | null };
+  metadata?: { is_parked?: boolean; actual_start_time?: string | null; instructor_id?: string | null; additional_instructor_id?: string | null; linked_section_number?: number | null };
 }
 interface InstructorOpt { id: string; name: string }
 
@@ -135,9 +135,8 @@ function BoardContent() {
   const [regions, setRegions] = useState<RegionCfg[]>(DEFAULT_REGIONS);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(() => new Date());
-  // Run-mode order and parked rows are per-viewer working state for the day.
+  // Transient drag order (cleared once the move is saved to the schedule).
   const [orderByDay, setOrderByDay] = useState<Record<string, string[]>>({});
-  const [parked, setParked] = useState<Set<string>>(new Set());
   const dragId = useRef<string | null>(null);
   const [attemptPicker, setAttemptPicker] = useState<{ studentId: string; list: Attempt[] } | null>(null);
 
@@ -279,14 +278,16 @@ function BoardContent() {
 
   // ── Time engine: order + duration, not fixed start times ──
   const eventById = useMemo(() => new Map(events.map(e => [e.id, e])), [events]);
+  // Parked state lives on the block row (is_parked), so it survives refresh and is the same for everyone.
+  const parked = useMemo(() => new Set(events.filter(e => e.metadata?.is_parked).map(e => e.id)), [events]);
   const baseOrder = useCallback((date: string) =>
     events.filter(e => e.date === date && !containerIds.has(e.id)).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '') || a.id.localeCompare(b.id)).map(e => e.id), [events, containerIds]);
   const orderFor = useCallback((date: string) => {
     const base = baseOrder(date);
     const saved = orderByDay[date];
-    if (!saved) return base;
-    return [...saved.filter(i => base.includes(i)), ...base.filter(i => !saved.includes(i))];
-  }, [baseOrder, orderByDay]);
+    const ord = saved ? [...saved.filter(i => base.includes(i)), ...base.filter(i => !saved.includes(i))] : base;
+    return [...ord.filter(i => !parked.has(i)), ...ord.filter(i => parked.has(i))]; // parked rows sit at the bottom
+  }, [baseOrder, orderByDay, parked]);
   const DUR = useCallback((id: string) => Math.max(toMin(eventById.get(id)?.end_time) - toMin(eventById.get(id)?.start_time), 5), [eventById]);
 
   const layout = useMemo(() => {
@@ -296,12 +297,15 @@ function BoardContent() {
       const ord = orderFor(d);
       const live = ord.filter(i => !parked.has(i)); const park = ord.filter(i => parked.has(i));
       const firstStart = events.filter(e => e.date === d && !containerIds.has(e.id)).map(e => toMin(e.start_time)).sort((a, b) => a - b)[0] ?? 0;
-      let clock = firstStart, shift = 0;
+      // Forward-only cascade: a block's actual start sets a shift that carries to every LATER block; earlier
+      // blocks keep their times, and each block keeps its own scheduled start so deliberate gaps survive.
+      let shift = 0, clock = firstStart;
       for (const i of live) {
+        const sched = toMin(eventById.get(i)?.start_time);
         const act = eventById.get(i)?.metadata?.actual_start_time;
-        if (act) { shift = toMin(act) - clock; clock = toMin(act); }
-        out[i] = { at: clock, delta: shift, parked: false };
-        clock += DUR(i);
+        if (act) shift = toMin(act) - sched;
+        out[i] = { at: sched + shift, delta: shift, parked: false };
+        clock = Math.max(clock, sched + shift + DUR(i));
       }
       let pc = clock;
       for (const i of park) { out[i] = { at: pc, delta: 0, parked: true }; pc += DUR(i); }
@@ -317,21 +321,24 @@ function BoardContent() {
     setOrderByDay(p => ({ ...p, [date]: ord }));
     persistOrder(date, ord);
   };
-  // Moving a block moves the real schedule: re-time the live (non-parked) sequence back-to-back from the
-  // day's first slot and write start/end for every block whose slot changed ('this' = that dated block only).
+  // Moving a block moves the real schedule: re-time the live (non-parked) sequence from the
+  // day's first slot, carrying each positional gap over, and write start/end for every block whose slot changed ('this' = that dated block only).
   const persistOrder = (date: string, ord: string[]) => {
     const live = ord.filter(i => !parked.has(i));
     const firstSlot = Math.min(...live.map(i => toMin(eventById.get(i)?.start_time)).filter(n => n > 0), Infinity);
     if (!isFinite(firstSlot)) return;
     const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
+    // Gaps stay where they were: the k-th gap between consecutive blocks is carried over positionally.
+    const gaps = baseOrder(date).filter(i => !parked.has(i)).map((i, k, arr) => k + 1 < arr.length
+      ? Math.max(toMin(eventById.get(arr[k + 1])?.start_time) - toMin(eventById.get(i)?.end_time), 0) : 0);
     let clock = firstSlot;
     const changes: { e: CalEvent; start: string; end: string }[] = [];
-    for (const i of live) {
-      const e = eventById.get(i); if (!e || !e.linked_id) { clock += DUR(i); continue; }
+    live.forEach((i, k) => {
+      const e = eventById.get(i);
       const start = fmt(clock), end = fmt(clock + DUR(i));
-      if (hhmm(e.start_time) !== hhmm(start) ) changes.push({ e, start, end });
-      clock += DUR(i);
-    }
+      if (e && e.linked_id && hhmm(e.start_time) !== hhmm(start)) changes.push({ e, start, end });
+      clock += DUR(i) + (gaps[k] ?? 0);
+    });
     if (!changes.length) return;
     const prev = new Map(changes.map(c => [c.e.id, { s: c.e.start_time, en: c.e.end_time }]));
     setEvents(p => p.map(x => { const c = changes.find(k => k.e.id === x.id); return c ? { ...x, start_time: c.start, end_time: c.end } : x; }));
@@ -346,11 +353,19 @@ function BoardContent() {
     });
   };
   const parkRow = (date: string, id: string) => {
-    setParked(p => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-    if (!parked.has(id)) { // parking is a local view state: reorder for display only, never re-time the real schedule
-      const ord = orderFor(date).filter(i => i !== id); ord.push(id);
-      setOrderByDay(p => ({ ...p, [date]: ord }));
-    }
+    const e = eventById.get(id); if (!e) return;
+    const next = !parked.has(id);
+    // Parking is persisted on the block (is_parked) only; it never re-times the real schedule.
+    setEvents(p => p.map(x => x.id === id ? { ...x, metadata: { ...x.metadata, is_parked: next } } : x));
+    setSaveError(null);
+    if (!e.linked_id) return;
+    fetch(`/api/scheduling/planner/blocks/${e.linked_id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_parked: next, update_mode: 'this' }),
+    }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); }).catch(err => {
+      setEvents(p => p.map(x => x.id === id ? { ...x, metadata: { ...x.metadata, is_parked: !next } } : x));
+      setSaveError(`Could not save parking for "${e.title}" (put back): ${err instanceof Error ? err.message : 'unknown error'}`);
+    });
   };
 
   // ── Attendance (only editable field in Student progress) ──
