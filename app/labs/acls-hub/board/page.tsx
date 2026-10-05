@@ -425,6 +425,25 @@ function BoardContent() {
     } catch (err) { setSaveError(`Could not save station ${st.station_number}: ${err instanceof Error ? err.message : 'unknown error'}`); }
   }, []);
 
+  // Station reorder: swap station_number with the neighbour via the same PATCH the editor uses. Only the two rows the user moves are written; both writes must land or the first is undone.
+  const moveStation = useCallback(async (labDayId: string, stationId: string, dir: -1 | 1) => {
+    const day = labDays.find(x => x.id === labDayId); if (!day) return;
+    const sorted = [...day.stations].sort((a, b) => a.station_number - b.station_number);
+    const i = sorted.findIndex(x => x.id === stationId); const a = sorted[i], b = sorted[i + dir];
+    if (!a || !b) return;
+    setSaveError(null);
+    const patchNum = async (id: string, n: number) => {
+      const res = await fetch(`/api/lab-management/stations/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ station_number: n }) });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) throw new Error(data.error || `HTTP ${res.status}`);
+    };
+    try {
+      await patchNum(a.id, b.station_number);
+      try { await patchNum(b.id, a.station_number); } catch (e) { await patchNum(a.id, a.station_number).catch(() => {}); throw e; }
+      setLabDays(prev => prev.map(d => d.id !== labDayId ? d : { ...d, stations: d.stations.map(x => x.id === a.id ? { ...x, station_number: b.station_number } : x.id === b.id ? { ...x, station_number: a.station_number } : x) }));
+    } catch (err) { setSaveError(`Could not reorder station ${a.station_number}: ${err instanceof Error ? err.message : 'unknown error'}`); }
+  }, [labDays]);
+
   // ── Station editing: open the existing EditStationModal for one station ──
   const openEditor = async (labDayId: string, stationId: string) => {
     try {
@@ -534,7 +553,7 @@ function BoardContent() {
       </button>
     </div>
     <div className="grid grid-cols-4 max-xl:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-2 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/40 p-2.5 my-3">
-      {d.stations.map(st => {
+      {[...d.stations].sort((x, y) => x.station_number - y.station_number).map((st, idx, arr) => {
         const learning = st.scenario?.cert_tier === 'learning_station';
         const caseName = st.scenario?.title ? `${st.scenario.case_code ? `${st.scenario.case_code.replace(/^CASE_/i, 'Case ').replace(/_/g, ' ')} - ` : ''}${st.scenario.title}` : st.scenario?.case_code || st.custom_title || '—';
         const category = st.scenario?.category;
@@ -547,6 +566,10 @@ function BoardContent() {
           <div key={st.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">Station {st.station_number}</span>
+              <span className="inline-flex gap-0.5">
+                <button type="button" aria-label={`Move station ${st.station_number} earlier`} disabled={idx === 0} onClick={() => moveStation(d.id, st.id, -1)} className="min-h-[28px] min-w-[28px] text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 disabled:opacity-30">←</button>
+                <button type="button" aria-label={`Move station ${st.station_number} later`} disabled={idx === arr.length - 1} onClick={() => moveStation(d.id, st.id, 1)} className="min-h-[28px] min-w-[28px] text-xs rounded border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300 disabled:opacity-30">→</button>
+              </span>
               <span className="text-[10px] lowercase px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300">{tag}</span>
             </div>
             {category && <span className="self-start text-[10px] lowercase px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">{category}</span>}
