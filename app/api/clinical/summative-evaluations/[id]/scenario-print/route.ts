@@ -379,12 +379,18 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
                   <strong>Presentation:</strong> ${phase.presentation || phase.presentation_notes}
                 </div>
               ` : ''}
-              ${phase.expected_actions?.length ? `
+              ${(() => {
+                // expected_actions may be string[] (cert_course) or a newline-joined string (import routes)
+                const ea: unknown = phase.expected_actions;
+                const items: string[] = (Array.isArray(ea) ? ea : typeof ea === 'string' ? ea.split(/\r?\n/) : [])
+                  .filter((a: unknown): a is string => typeof a === 'string' && a.trim() !== '');
+                return items.length ? `
                 <div class="phase-actions">
                   <strong>Expected Actions:</strong>
-                  <ul>${phase.expected_actions.map((a: string) => `<li>${a}</li>`).join('')}</ul>
+                  <ul>${items.map((a) => `<li>${a}</li>`).join('')}</ul>
                 </div>
-              ` : ''}
+              ` : '';
+              })()}
               ${phase.instructor_cues || phase.cues ? `
                 <div class="phase-cues">
                   <strong>Instructor Cues:</strong> <em>${phase.instructor_cues || phase.cues}</em>
