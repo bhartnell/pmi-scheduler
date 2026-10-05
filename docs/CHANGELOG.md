@@ -11,6 +11,7 @@ Format: `commit-hash | brief description`
 
 2026-10-05
 
+pending | fix(pals-hub): Open now routes to PALS grading (/labs/pals/grade) instead of the generic lab-day view
 PENDING | EVENT-EDIT 1/5: additive pmi_schedule_block_exceptions table (storage only)
 
 9e93768 | fix(supabase): getSupabaseAdmin throws if SUPABASE_SERVICE_ROLE_KEY unset (no silent anon fallback)
