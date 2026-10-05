@@ -45,6 +45,9 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
     try {
       const c = localStorage.getItem(COLLAPSED_KEY);
       if (c !== null) setCollapsedState(c === '1');
+      // Phone width: the open panel cannot clear the bottom-right dock from the default
+      // position, so start collapsed until the user chooses otherwise (not persisted).
+      else if (window.innerWidth < 640) setCollapsedState(true);
       const p = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
       if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) setPos(p);
     } catch { /* storage unavailable */ }
