@@ -26,7 +26,7 @@ export async function PATCH(request: NextRequest) {
     // Update the station's scenario
     const { data, error } = await supabase
       .from('lab_stations')
-      .update({ scenario_id: scenario_id || null })
+      .update({ scenario_id: scenario_id || null, updated_at: new Date().toISOString() })
       .eq('id', station_id)
       .select('*')
       .single();
