@@ -7,6 +7,7 @@
 // Aid, never an authority: the parent owns the CCF value and may edit it freely;
 // this component only reports a calculated record via onChange. It never blocks a rotation.
 
+import { createPortal } from 'react-dom';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import {
@@ -38,7 +39,7 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
   // timer state, which lives in `events`. Default position (null) is bottom-left, clear of the
   // bottom-right dock and of the scoring sections.
   const panelRef = useRef<HTMLDivElement>(null);
-  const [collapsed, setCollapsedState] = useState(true);
+  const [collapsed, setCollapsedState] = useState(false);
   const [pos, setPos] = useState<Pos | null>(null);
   useEffect(() => {
     try {
@@ -138,8 +139,12 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
     </label>
   );
 
-  return (
-    <>
+  // Portal to <body> so `fixed` is always relative to the viewport (a transformed ancestor would
+  // otherwise bound the panel to its column and leave the right edge unreachable).
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const panel = (
       <div ref={panelRef} role="region" aria-label="Chest compression fraction"
         style={pos ? { left: pos.x, top: pos.y } : { left: 12, bottom: 12 }}
         className={`fixed z-40 max-w-[calc(100vw-1.5rem)] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 space-y-2 shadow-xl ${collapsed ? 'w-[17rem]' : 'w-[28rem]'}`}>
@@ -212,6 +217,11 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
           </>
         )}
       </div>
+  );
+
+  return (
+    <>
+      {mounted ? createPortal(panel, document.body) : null}
       <p className="text-xs text-gray-500">Only time between Pulseless and ROSC counts. Pressing Pulseless again after ROSC starts a second arrest window; the fractions are summed.</p>
     </>
   );

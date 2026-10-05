@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ---
 
+(pending) | fix(ccf-timer): panel defaults to expanded and renders via portal so drag clamps to the viewport
 2026-10-05
 (pending) | fix(acls-board): moving a block now writes start/end to the schedule for everyone instead of local-only order (live defect)
 (this commit) | feat(learning-station): rotation timer + dual-pane case on the tracker page
