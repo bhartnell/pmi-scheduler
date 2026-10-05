@@ -12,6 +12,8 @@ Format: `commit-hash | brief description`
 2026-10-05
 
 - (this commit) | fix(grading): phase expected_actions (string[] in v2) render as a list on the grading sheet instead of running together (megacode audit, code side)(pending) | fix(acls-board): moving a block now writes start/end to the schedule for everyone instead of local-only order (live defect)
+(pending) | fix(acls-board): station cards show lab_days.rotation_duration only, no lab_stations fallback (LIVE-BOARD 5/5)
+(pending) | fix(acls-board): moving a block now writes start/end to the schedule for everyone instead of local-only order (live defect)
 (this commit) | feat(learning-station): rotation timer + dual-pane case on the tracker page
 
 pending | fix(planner): update_mode=all no longer overwrites per-instance title/times/notes across a series (EVENT-EDIT 5/5 guard)
