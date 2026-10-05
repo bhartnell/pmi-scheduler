@@ -504,7 +504,7 @@ export default function ComplianceDashboardPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium ${
+        <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium ${
           toast.type === 'success'
             ? 'bg-green-600 text-white'
             : 'bg-red-600 text-white'

@@ -5,6 +5,7 @@ import { Clock, Wifi, WifiOff, Volume2, VolumeX, AlertTriangle, CheckCircle, Cir
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
 import { formatTime } from '@/lib/utils';
+import { useBottomBannerOffset } from '@/hooks/useBottomBannerOffset';
 import { getSupabase } from '@/lib/supabase';
 
 interface TimerBannerProps {
@@ -42,6 +43,7 @@ export default function TimerBanner({
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [showDebriefAlert, setShowDebriefAlert] = useState(false);
   const [showRotateAlert, setShowRotateAlert] = useState(false);
+  const bannerRef = useBottomBannerOffset();
   const lastAlertRotationRef = useRef(0);
   const debriefAlertShownRef = useRef(false);
   const [isReady, setIsReady] = useState(false);
@@ -480,7 +482,7 @@ export default function TimerBanner({
   // Show waiting state if timer hasn't started
   if (hasNotStarted || !timerState) {
     return (
-      <div className={`fixed bottom-0 left-0 right-0 z-50 shadow-lg ${isConnected ? 'bg-gray-800' : 'bg-red-900'} text-white`}>
+      <div ref={bannerRef} className={`fixed bottom-0 left-0 right-0 z-50 shadow-lg ${isConnected ? 'bg-gray-800' : 'bg-red-900'} text-white`}>
         <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between flex-wrap gap-3">
             {/* Left: Waiting message */}
@@ -557,7 +559,7 @@ export default function TimerBanner({
 
   // Active timer display
   return (
-    <div className={`fixed bottom-0 left-0 right-0 z-50 ${getBannerStyle()} text-white shadow-lg transition-colors duration-300`}>
+    <div ref={bannerRef} className={`fixed bottom-0 left-0 right-0 z-50 ${getBannerStyle()} text-white shadow-lg transition-colors duration-300`}>
       {/* Progress bar */}
       {isRunning && (
         <div className="h-1 bg-black/20">
