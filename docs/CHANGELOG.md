@@ -9,6 +9,10 @@ Format: `commit-hash | brief description`
 
 ---
 
+2026-10-05
+
+9e93768 | fix(supabase): getSupabaseAdmin throws if SUPABASE_SERVICE_ROLE_KEY unset (no silent anon fallback)
+
 b9c0d3a | fix(overlay): FloatingDock rides above bottom timer banners via --bottom-banner-h; bulk-operations/compliance/external-access toasts moved to top-right (CSS/layout only)
 
 pending | fix(calendar): syncGeneralLabDefault now returns what it did (created/skipped/failed) and Sync All counts that instead of counting every call as "created"; diagnosis: 10/05-10/06 cert days were bulk-inserted outside the on-save hook paths
