@@ -11,6 +11,7 @@ Format: `commit-hash | brief description`
 
 
 (pending) | fix(workload): instructor-workload + availability read lab_days.rotation_duration/num_rotations first, station mirror as fallback (no backfill)
+(pending) | fix(lab-stations): every lab_stations update now sets updated_at so it records edits, not just insert time (AUDIT HYGIENE)
 (pending) | fix(scenario-audit): count only non-empty expected_actions; scenario print tolerates string or array expected_actions (MEGACODE AUDIT code half)
 (pending) | fix(ccf-timer): panel defaults to expanded and renders via portal so drag clamps to the viewport
 2026-10-05
