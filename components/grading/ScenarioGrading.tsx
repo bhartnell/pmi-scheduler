@@ -77,7 +77,16 @@ function CollapsiblePhase({
   if (!phase) return null;
 
   const v = phase.vitals || {};
-  const expectedActions = phase.expected_actions || (phase.expected_interventions ? toArray(phase.expected_interventions).join(', ') : '');
+  // expected_actions is string[] in v2; legacy rows store one string (newline-split).
+  // expected_interventions is the older fallback. Never render an array as a bare child
+  // (items would run together with no separator).
+  const rawExpected: unknown = phase.expected_actions;
+  const actionsFromPhase: string[] = (Array.isArray(rawExpected) ? rawExpected : typeof rawExpected === 'string' ? rawExpected.split(/\r?\n/) : [])
+    .map((a: unknown) => (typeof a === 'string' ? a : a == null ? '' : JSON.stringify(a)).trim())
+    .filter((a: string) => a !== '');
+  const expectedActions: string[] = actionsFromPhase.length > 0
+    ? actionsFromPhase
+    : phase.expected_interventions ? toArray(phase.expected_interventions).filter(Boolean) : [];
 
   // Scene info
   const hasSceneInfo = phase.scene_safety || phase.mechanism_injury || phase.nature_illness || phase.resources_needed || phase.environmental_concerns;
@@ -326,12 +335,16 @@ function CollapsiblePhase({
             )}
 
             {/* Expected Interventions */}
-            {expectedActions && (
+            {expectedActions.length > 0 && (
               <div className="space-y-1.5">
                 <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider border-b border-indigo-200 dark:border-indigo-800 pb-1">
                   Expected Interventions
                 </div>
-                <p className="text-xs text-gray-700 dark:text-gray-300 pl-2">{expectedActions}</p>
+                <ul className="text-xs text-gray-700 dark:text-gray-300 pl-2 list-disc list-inside">
+                  {expectedActions.map((action, aIdx) => (
+                    <li key={aIdx}>{action}</li>
+                  ))}
+                </ul>
               </div>
             )}
 
