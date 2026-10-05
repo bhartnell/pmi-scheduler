@@ -38,7 +38,7 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
   // timer state, which lives in `events`. Default position (null) is bottom-left, clear of the
   // bottom-right dock and of the scoring sections.
   const panelRef = useRef<HTMLDivElement>(null);
-  const [collapsed, setCollapsedState] = useState(true);
+  const [collapsed, setCollapsedState] = useState(false);
   const [pos, setPos] = useState<Pos | null>(null);
   useEffect(() => {
     try {
