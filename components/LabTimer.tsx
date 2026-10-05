@@ -333,7 +333,7 @@ export default function LabTimer({
         body: JSON.stringify({
           labDayId,
           durationSeconds: totalSeconds,
-          debriefSeconds: defaultDebriefSeconds || 300,
+          debriefSeconds: defaultDebriefSeconds, // server derives the default from rotation length
           mode: 'countdown'
         })
       });
