@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ---
 
+(pending) | fix(ccf-timer): panel defaults to expanded and renders via portal so drag clamps to the viewport
 2026-10-05
 
 - (this commit) | fix(grading): phase expected_actions (string[] in v2) render as a list on the grading sheet instead of running together
