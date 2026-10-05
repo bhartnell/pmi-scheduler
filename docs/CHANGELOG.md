@@ -11,6 +11,7 @@ Format: `commit-hash | brief description`
 
 2026-10-05
 
+pending | fix(aha-export): packet filename, packet title and zip name carry the course (PALS exports no longer labelled ACLS); skills-form program strings intentionally untouched (ACLS source content)
 pending | fix(pals-hub): Open now routes to PALS grading (/labs/pals/grade) instead of the generic lab-day view
 PENDING | EVENT-EDIT 1/5: additive pmi_schedule_block_exceptions table (storage only)
 
