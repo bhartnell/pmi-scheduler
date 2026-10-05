@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-05
+- pending | feat(schedule): pmi_schedule_block_exceptions table for single-instance overrides (EVENT-EDIT 1/5, additive, unread)
 
 9e93768 | fix(supabase): getSupabaseAdmin throws if SUPABASE_SERVICE_ROLE_KEY unset (no silent anon fallback)
 
