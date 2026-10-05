@@ -193,7 +193,7 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
   try {
     const { data: labDays } = await supabase
       .from('lab_days')
-      .select('id, date, start_time, end_time')
+      .select('id, date, start_time, end_time, rotation_duration, num_rotations')
       .gte('date', weekStartStr)
       .lte('date', weekEndStr);
 
@@ -215,6 +215,9 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
         const labDayMap = new Map<string, { date: string; start_time: string | null; end_time: string | null }>();
         for (const ld of labDays) labDayMap.set(ld.id, { date: ld.date, start_time: ld.start_time, end_time: ld.end_time });
 
+        const labDayRotMap = new Map<string, { rotation_duration: number | null; num_rotations: number | null }>();
+        for (const ld of labDays) labDayRotMap.set(ld.id, { rotation_duration: ld.rotation_duration, num_rotations: ld.num_rotations });
+
         // Accumulate station hours per lab_day
         const labDayStationHours = new Map<string, number>();
         const assignedLabDayIds = new Set<string>();
@@ -223,8 +226,10 @@ async function getWeekDetail(semesterId: string, instructorId: string, weekNumbe
           const station = stations.find(s => s.id === a.station_id);
           if (!station) continue;
           assignedLabDayIds.add(station.lab_day_id);
-          const rotMinutes = station.rotation_minutes || 30;
-          const numRotations = station.num_rotations || 1;
+          // lab_days is authoritative; lab_stations.rotation_minutes is a stale-prone mirror
+          const dayRot = labDayRotMap.get(station.lab_day_id);
+          const rotMinutes = dayRot?.rotation_duration || station.rotation_minutes || 30;
+          const numRotations = dayRot?.num_rotations || station.num_rotations || 1;
           const sHours = (rotMinutes * numRotations) / 60;
           labDayStationHours.set(station.lab_day_id, (labDayStationHours.get(station.lab_day_id) || 0) + sHours);
         }
@@ -471,7 +476,7 @@ export async function POST(request: NextRequest) {
     // ── Lab station hours ──
     const { data: labDays } = await supabase
       .from('lab_days')
-      .select('id, date, start_time, end_time')
+      .select('id, date, start_time, end_time, rotation_duration, num_rotations')
       .gte('date', semester.start_date)
       .lte('date', semester.end_date);
 
@@ -499,9 +504,11 @@ export async function POST(request: NextRequest) {
         // Build lab day lookup maps
         const labDayDateMap = new Map<string, string>();
         const labDayTimeMap = new Map<string, { start_time: string | null; end_time: string | null }>();
+        const labDayRotMap = new Map<string, { rotation_duration: number | null; num_rotations: number | null }>();
         for (const ld of labDays) {
           labDayDateMap.set(ld.id, ld.date);
           labDayTimeMap.set(ld.id, { start_time: ld.start_time, end_time: ld.end_time });
+          labDayRotMap.set(ld.id, { rotation_duration: ld.rotation_duration, num_rotations: ld.num_rotations });
         }
 
         // Track hours per instructor per lab_day to dedup across multiple stations
@@ -520,8 +527,10 @@ export async function POST(request: NextRequest) {
           if (weekNum < 1 || weekNum > totalWeeks) continue;
 
           // Calculate station hours from rotation data
-          const rotMinutes = station.rotation_minutes || 30;
-          const numRotations = station.num_rotations || 1;
+          // lab_days is authoritative; lab_stations.rotation_minutes is a stale-prone mirror
+          const dayRot = labDayRotMap.get(station.lab_day_id);
+          const rotMinutes = dayRot?.rotation_duration || station.rotation_minutes || 30;
+          const numRotations = dayRot?.num_rotations || station.num_rotations || 1;
           const stationHours = (rotMinutes * numRotations) / 60;
 
           // Accumulate per instructor per lab day
