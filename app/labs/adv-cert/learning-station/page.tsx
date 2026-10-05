@@ -7,6 +7,9 @@ import Link from 'next/link';
 import { safeReturnTo } from '@/lib/return-to';
 import { ArrowLeft, Eye, CheckCircle2, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
+import TimerBanner from '@/components/TimerBanner';
+import DualPaneGrading from '@/components/grading/DualPaneGrading';
+import ScenarioFullDisplay from '@/components/scenario/ScenarioFullDisplay';
 
 interface StudentOpt { id: string; first_name: string; last_name: string }
 interface GroupOpt { id: string; name: string; members: StudentOpt[] }
@@ -28,6 +31,7 @@ export default function AclsLearningStationPage() {
   const [groups, setGroups] = useState<GroupOpt[]>([]);
   const [stations, setStations] = useState<StationOpt[]>([]);
   const [caseTitle, setCaseTitle] = useState('');
+  const [fullScenario, setFullScenario] = useState<any>(null);
   const [marks, setMarks] = useState<Mark[]>([]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [savingId, setSavingId] = useState('');
@@ -72,11 +76,11 @@ export default function AclsLearningStationPage() {
   const station = stations.find((s) => s.id === stationId);
 
   useEffect(() => {
-    if (!station?.scenario_id) { setCaseTitle(''); return; }
+    if (!station?.scenario_id) { setCaseTitle(''); setFullScenario(null); return; }
     fetch(`/api/lab-management/scenarios/${station.scenario_id}`)
       .then((r) => r.json())
-      .then((d) => { const s = d?.scenario ?? d; setCaseTitle(s ? `${s.case_code ? s.case_code + ' - ' : ''}${s.title || ''}` : ''); })
-      .catch(() => setCaseTitle(''));
+      .then((d) => { const s = d?.scenario ?? d; setFullScenario(s || null); setCaseTitle(s ? `${s.case_code ? s.case_code + ' - ' : ''}${s.title || ''}` : ''); })
+      .catch(() => { setCaseTitle(''); setFullScenario(null); });
   }, [station?.scenario_id]);
 
   const markFor = (studentId: string) => marks.find((m) => m.station_id === stationId && m.student_id === studentId);
@@ -112,6 +116,15 @@ export default function AclsLearningStationPage() {
 
   return (
     <div className="w-full max-w-none mx-auto p-6 max-sm:p-3">
+      {labDayId && (
+        <TimerBanner
+          labDayId={labDayId}
+          stationId={stationId || undefined}
+          userEmail={session?.user?.email || undefined}
+          userName={session?.user?.name || undefined}
+          numRotations={stations.length || 4}
+        />
+      )}
       <Link href={returnTo || (labDayId ? `/labs/schedule/${labDayId}` : '/labs/acls-hub/board')} className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:underline mb-3">
         <ArrowLeft className="w-4 h-4" /> {returnTo ? 'Back' : 'Back to lab day'}
       </Link>
@@ -134,7 +147,21 @@ export default function AclsLearningStationPage() {
               <span className="font-medium">Watch today:</span> {Array.from(new Set(watchElsewhere.map((m) => nameOf(m.student_id)))).join(', ')}
             </div>
           )}
-          <div className="grid grid-cols-2 max-md:grid-cols-1 gap-4">
+          <DualPaneGrading
+            scenarioLabel="Case"
+            scoringLabel="Pass / Watch"
+            scenario={
+              fullScenario ? (
+                <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+                  <ScenarioFullDisplay scenario={fullScenario} hideEmpty />
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">No case is assigned to this station.</p>
+              )
+            }
+            scoring={
+              <div>
+          <div className="grid grid-cols-1 gap-4">
             {groups.map((g) => (
               <div key={g.id} className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
                 <h2 className="font-semibold text-gray-900 dark:text-white mb-2">{g.name}</h2>
@@ -172,6 +199,9 @@ export default function AclsLearningStationPage() {
               </div>
             ))}
           </div>
+              </div>
+            }
+          />
         </>
       )}
     </div>

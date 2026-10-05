@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-05
+(this commit) | feat(learning-station): rotation timer + dual-pane case on the tracker page
 
 pending | fix(acls-board): default region order = overview, student progress left of schedule, stations bottom (saved layout key bumped to v2)
 
