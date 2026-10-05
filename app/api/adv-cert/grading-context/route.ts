@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     // Full context for one day.
     const { data: day, error: dErr } = await supabase
       .from('lab_days')
-      .select('id, date, cohort_id, is_adv_cert_testing, cert_course, cohort:cohorts(id, cohort_number)')
+      .select('id, date, cohort_id, is_adv_cert_testing, cert_course, num_rotations, cohort:cohorts(id, cohort_number)')
       .eq('id', labDayId)
       .single();
     if (dErr || !day) {
