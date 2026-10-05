@@ -49,7 +49,7 @@ export default function OnboardingTourWrapper() {
     return () => {
       cancelled = true;
     };
-  }, [session, status]);
+  }, [session?.user?.email, status]);
 
   // Don't render until authenticated and we have user data, and on an eligible page
   if (status !== 'authenticated' || !currentUser || !shouldShowTour(pathname)) {
