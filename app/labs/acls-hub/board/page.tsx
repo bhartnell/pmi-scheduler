@@ -315,10 +315,42 @@ function BoardContent() {
     const idx = beforeId ? ord.indexOf(beforeId) : ord.length;
     ord.splice(idx < 0 ? ord.length : idx, 0, id);
     setOrderByDay(p => ({ ...p, [date]: ord }));
+    persistOrder(date, ord);
+  };
+  // Moving a block moves the real schedule: re-time the live (non-parked) sequence back-to-back from the
+  // day's first slot and write start/end for every block whose slot changed ('this' = that dated block only).
+  const persistOrder = (date: string, ord: string[]) => {
+    const live = ord.filter(i => !parked.has(i));
+    const firstSlot = Math.min(...live.map(i => toMin(eventById.get(i)?.start_time)).filter(n => n > 0), Infinity);
+    if (!isFinite(firstSlot)) return;
+    const fmt = (m: number) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
+    let clock = firstSlot;
+    const changes: { e: CalEvent; start: string; end: string }[] = [];
+    for (const i of live) {
+      const e = eventById.get(i); if (!e || !e.linked_id) { clock += DUR(i); continue; }
+      const start = fmt(clock), end = fmt(clock + DUR(i));
+      if (hhmm(e.start_time) !== hhmm(start) ) changes.push({ e, start, end });
+      clock += DUR(i);
+    }
+    if (!changes.length) return;
+    const prev = new Map(changes.map(c => [c.e.id, { s: c.e.start_time, en: c.e.end_time }]));
+    setEvents(p => p.map(x => { const c = changes.find(k => k.e.id === x.id); return c ? { ...x, start_time: c.start, end_time: c.end } : x; }));
+    setOrderByDay(p => { const n = { ...p }; delete n[date]; return n; });
+    setSaveError(null);
+    Promise.all(changes.map(c => fetch(`/api/scheduling/planner/blocks/${c.e.linked_id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ start_time: c.start, end_time: c.end, update_mode: 'this' }),
+    }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); }))).catch(err => {
+      setEvents(p => p.map(x => { const o = prev.get(x.id); return o ? { ...x, start_time: o.s, end_time: o.en } : x; }));
+      setSaveError(`Could not save the new order (put back): ${err instanceof Error ? err.message : 'unknown error'}`);
+    });
   };
   const parkRow = (date: string, id: string) => {
     setParked(p => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-    if (!parked.has(id)) moveRow(date, id, null);
+    if (!parked.has(id)) { // parking is a local view state: reorder for display only, never re-time the real schedule
+      const ord = orderFor(date).filter(i => i !== id); ord.push(id);
+      setOrderByDay(p => ({ ...p, [date]: ord }));
+    }
   };
 
   // ── Attendance (only editable field in Student progress) ──
