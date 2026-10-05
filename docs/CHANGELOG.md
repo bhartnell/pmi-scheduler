@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ---
 
+(pending) | fix(ccf-timer): at phone width (<640px) the CCF panel starts collapsed when no saved preference, so it clears the bottom-right dock
+
 (pending) | fix(session-polling): ActivityTracker, OnboardingTour, OnboardingTourWrapper depend on session email not the session object, so me/tour/log stop re-firing on every session refetch
 (pending) | fix(timer): new timers default debrief to 240s for rotations of 10 min or less (was a fixed 300s); explicit presets unchanged
 
