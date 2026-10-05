@@ -24,10 +24,14 @@ export function getSupabase(): SupabaseClient {
  * @returns Supabase client with admin privileges
  */
 export function getSupabaseAdmin(): SupabaseClient {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  // No silent fallback to the anon key: against RLS-enabled zero-policy tables
+  // that turns every admin query into an empty result ("no data") instead of an
+  // error, which is indistinguishable from the data being gone.
+  if (!serviceRoleKey) {
+    throw new Error('getSupabaseAdmin: SUPABASE_SERVICE_ROLE_KEY is not set');
+  }
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey);
 }
 
 // Legacy export - proxies to the singleton getSupabase() so we never end up
