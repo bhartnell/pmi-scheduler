@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-05
+(pending) | fix(acls-board): parked state persists on the block (is_parked); forward-only cascade keeps gaps, reorder carries gaps positionally (LIVE-BOARD 4/5, 2/5)
 (pending) | fix(acls-board): moving a block now writes start/end to the schedule for everyone instead of local-only order (live defect)
 (this commit) | feat(learning-station): rotation timer + dual-pane case on the tracker page
 
