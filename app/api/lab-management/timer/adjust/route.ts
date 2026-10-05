@@ -143,7 +143,7 @@ export async function PATCH(request: NextRequest) {
       // read lab_stations.rotation_minutes. Keep them all aligned.
       const { error: stError } = await supabase
         .from('lab_stations')
-        .update({ rotation_minutes: newMinutes })
+        .update({ rotation_minutes: newMinutes, updated_at: new Date().toISOString() })
         .eq('lab_day_id', lab_day_id);
       if (stError) {
         console.warn(
