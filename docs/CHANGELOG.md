@@ -11,7 +11,8 @@ Format: `commit-hash | brief description`
 
 (pending) | fix(ccf-timer): panel defaults to expanded and renders via portal so drag clamps to the viewport
 2026-10-05
-(pending) | fix(acls-board): parked state persists on the block (is_parked); forward-only cascade keeps gaps, reorder carries gaps positionally (LIVE-BOARD 4/5, 2/5)
+(pending) | fix(acls-board): parked state persists on the block (is_parked); (LIVE-BOARD 4/5)
+(this commit) | fix(acls-board): block move cascades forward only from the first changed slot and keeps gaps (LIVE-BOARD 2/5); replaces whole-day re-pack
 
 - (this commit) | fix(grading): phase expected_actions (string[] in v2) render as a list on the grading sheet instead of running together
 
