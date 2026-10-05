@@ -19,7 +19,7 @@ export function ActivityTracker() {
       }).catch(() => {}); // fire and forget
     }, 2000);
     return () => clearTimeout(timer);
-  }, [pathname, session]);
+  }, [pathname, session?.user?.email]);
 
   return null;
 }

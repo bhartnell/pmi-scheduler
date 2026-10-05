@@ -541,7 +541,7 @@ export default function OnboardingTour({
       .catch(() => {
         setLoading(false);
       });
-  }, [session, startImmediate]);
+  }, [session?.user?.email, startImmediate]);
 
   const markComplete = useCallback(async (step?: number) => {
     try {
