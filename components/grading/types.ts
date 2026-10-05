@@ -115,7 +115,7 @@ export interface ScenarioPhase {
   };
   presentation_notes?: string;
   expected_interventions?: string[];
-  expected_actions?: string;
+  expected_actions?: string | string[];
   instructor_cues?: string[] | string;
 }
 
