@@ -47,7 +47,7 @@ interface CalEvent {
   id: string; title: string; date: string; start_time: string | null; end_time: string | null;
   event_type: string; instructor_names?: string[]; room?: string; status?: string;
   source?: string; linked_id?: string; linked_lab_day_id?: string; content_notes?: string;
-  metadata?: { actual_start_time?: string | null; instructor_id?: string | null; additional_instructor_id?: string | null; linked_section_number?: number | null };
+  metadata?: { is_parked?: boolean; actual_start_time?: string | null; instructor_id?: string | null; additional_instructor_id?: string | null; linked_section_number?: number | null };
 }
 interface InstructorOpt { id: string; name: string }
 
@@ -135,9 +135,8 @@ function BoardContent() {
   const [regions, setRegions] = useState<RegionCfg[]>(DEFAULT_REGIONS);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   const [now, setNow] = useState<Date>(() => new Date());
-  // Run-mode order and parked rows are per-viewer working state for the day.
+  // Transient drag order (cleared once the move is saved to the schedule).
   const [orderByDay, setOrderByDay] = useState<Record<string, string[]>>({});
-  const [parked, setParked] = useState<Set<string>>(new Set());
   const dragId = useRef<string | null>(null);
   const [attemptPicker, setAttemptPicker] = useState<{ studentId: string; list: Attempt[] } | null>(null);
 
@@ -279,14 +278,16 @@ function BoardContent() {
 
   // ── Time engine: order + duration, not fixed start times ──
   const eventById = useMemo(() => new Map(events.map(e => [e.id, e])), [events]);
+  // Parked state lives on the block row (is_parked), so it survives refresh and is the same for everyone.
+  const parked = useMemo(() => new Set(events.filter(e => e.metadata?.is_parked).map(e => e.id)), [events]);
   const baseOrder = useCallback((date: string) =>
     events.filter(e => e.date === date && !containerIds.has(e.id)).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '') || a.id.localeCompare(b.id)).map(e => e.id), [events, containerIds]);
   const orderFor = useCallback((date: string) => {
     const base = baseOrder(date);
     const saved = orderByDay[date];
-    if (!saved) return base;
-    return [...saved.filter(i => base.includes(i)), ...base.filter(i => !saved.includes(i))];
-  }, [baseOrder, orderByDay]);
+    const ord = saved ? [...saved.filter(i => base.includes(i)), ...base.filter(i => !saved.includes(i))] : base;
+    return [...ord.filter(i => !parked.has(i)), ...ord.filter(i => parked.has(i))]; // parked rows sit at the bottom
+  }, [baseOrder, orderByDay, parked]);
   const DUR = useCallback((id: string) => Math.max(toMin(eventById.get(id)?.end_time) - toMin(eventById.get(id)?.start_time), 5), [eventById]);
 
   const layout = useMemo(() => {
@@ -355,11 +356,19 @@ function BoardContent() {
     });
   };
   const parkRow = (date: string, id: string) => {
-    setParked(p => { const n = new Set(p); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-    if (!parked.has(id)) { // parking is a local view state: reorder for display only, never re-time the real schedule
-      const ord = orderFor(date).filter(i => i !== id); ord.push(id);
-      setOrderByDay(p => ({ ...p, [date]: ord }));
-    }
+    const e = eventById.get(id); if (!e) return;
+    const next = !parked.has(id);
+    // Parking is persisted on the block (is_parked) only; it never re-times the real schedule.
+    setEvents(p => p.map(x => x.id === id ? { ...x, metadata: { ...x.metadata, is_parked: next } } : x));
+    setSaveError(null);
+    if (!e.linked_id) return;
+    fetch(`/api/scheduling/planner/blocks/${e.linked_id}`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_parked: next, update_mode: 'this' }),
+    }).then(r => { if (!r.ok) throw new Error(`HTTP ${r.status}`); }).catch(err => {
+      setEvents(p => p.map(x => x.id === id ? { ...x, metadata: { ...x.metadata, is_parked: !next } } : x));
+      setSaveError(`Could not save parking for "${e.title}" (put back): ${err instanceof Error ? err.message : 'unknown error'}`);
+    });
   };
 
   // ── Attendance (only editable field in Student progress) ──
