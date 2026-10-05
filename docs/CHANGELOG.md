@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ---
 
 2026-10-05
+(pending) | fix: learning-station "of N" reads the lab day num_rotations (matches board); ACLS board roster no longer scrolls sideways; CCF panel defaults expanded
 (pending) | fix(acls-board): moving a block now writes start/end to the schedule for everyone instead of local-only order (live defect)
 (this commit) | feat(learning-station): rotation timer + dual-pane case on the tracker page
 

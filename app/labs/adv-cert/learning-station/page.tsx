@@ -26,6 +26,7 @@ export default function AclsLearningStationPage() {
   const toast = useToast();
 
   const [labDayId, setLabDayId] = useState('');
+  const [numRotations, setNumRotations] = useState<number | null>(null);
   const [returnTo, setReturnTo] = useState<string | null>(null);
   const [stationId, setStationId] = useState('');
   const [groups, setGroups] = useState<GroupOpt[]>([]);
