@@ -551,7 +551,7 @@ export default function LabTimer({
   }, [labDayId, fetchTimerState]);
 
   // Removed 2026-05-20: a previous "sync local prop → server" effect
-  // here pushed `totalSeconds` (derived from the lab_day.rotation_minutes
+  // here pushed `totalSeconds` (derived from the lab_day.rotation_duration
   // prop) back to the server every time the polled timer state diverged.
   // With two devices controlling the same lab, Device A would change
   // rotation length to 20 min via the explicit Set Duration UI (which

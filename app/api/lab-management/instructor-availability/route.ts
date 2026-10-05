@@ -277,7 +277,7 @@ export async function GET(request: NextRequest) {
     // 3. Check lab station assignments (other lab days on same date)
     const { data: labDaysOnDate } = await supabase
       .from('lab_days')
-      .select('id')
+      .select('id, rotation_duration')
       .eq('date', date);
 
     if (labDaysOnDate && labDaysOnDate.length > 0) {
@@ -294,7 +294,9 @@ export async function GET(request: NextRequest) {
 
       for (const station of (stationsOnDate || [])) {
         const isSameLabDay = station.lab_day_id === labDayId;
-        const stationHours = (station.rotation_minutes || 120) / 60;
+        // lab_days.rotation_duration is authoritative; station value is a stale-prone mirror
+        const dayRot = labDaysOnDate.find(ld => ld.id === station.lab_day_id)?.rotation_duration;
+        const stationHours = (dayRot || station.rotation_minutes || 120) / 60;
 
         for (const si of (station.station_instructors || [])) {
           // Find instructor by user_id or email
