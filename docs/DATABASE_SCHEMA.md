@@ -10034,6 +10034,24 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 - `Authenticated users can read pmi_rooms` (SELECT, PERMISSIVE, roles: {authenticated})
 - `Service role bypass for pmi_rooms` (ALL, PERMISSIVE, roles: {service_role})
 
+#### `pmi_schedule_block_exceptions`
+
+Per-instance override of a recurring schedule block (EVENT-EDIT 1/5; storage only, no UI/sync yet). Added 2026-10-05.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| recurring_group_id | uuid | NO |  | series key (pmi_schedule_blocks.recurring_group_id) |
+| program_schedule_id | uuid | YES |  | FK -> pmi_program_schedules.id (cohort scope) |
+| instance_date | date | NO |  | UNIQUE with recurring_group_id |
+| overrides | jsonb | NO | '{}' | only the fields that differ |
+| is_cancelled | boolean | NO | false |  |
+| note | text | YES |  |  |
+| created_by | uuid | YES |  | FK -> lab_users.id |
+| created_at / updated_at | timestamptz | NO | now() |  |
+
+RLS enabled, no policies (service role only).
+
 #### `pmi_schedule_blocks`
 
 | Column | Type | Nullable | Default | Notes |

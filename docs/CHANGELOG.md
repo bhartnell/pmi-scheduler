@@ -11,6 +11,8 @@ Format: `commit-hash | brief description`
 
 2026-10-05
 
+PENDING | EVENT-EDIT 1/5: additive pmi_schedule_block_exceptions table (storage only)
+
 9e93768 | fix(supabase): getSupabaseAdmin throws if SUPABASE_SERVICE_ROLE_KEY unset (no silent anon fallback)
 
 b9c0d3a | fix(overlay): FloatingDock rides above bottom timer banners via --bottom-banner-h; bulk-operations/compliance/external-access toasts moved to top-right (CSS/layout only)
