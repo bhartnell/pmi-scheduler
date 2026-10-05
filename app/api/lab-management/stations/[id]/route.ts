@@ -148,7 +148,7 @@ export async function PATCH(
     const body = await request.json();
 
     // Build update object with only provided fields
-    const updateData: any = {};
+    const updateData: any = { updated_at: new Date().toISOString() };
 
     if (body.station_type !== undefined) updateData.station_type = body.station_type;
     if (body.scenario_id !== undefined) updateData.scenario_id = body.scenario_id;

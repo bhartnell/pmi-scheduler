@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ---
 
+(pending) | fix(lab_stations): set updated_at on all seven station update paths so the column records real edits (AUDIT HYGIENE)
+
 (pending) | fix(scenario-audit): count only non-empty expected_actions; scenario print tolerates string or array expected_actions (MEGACODE AUDIT code half)
 (pending) | fix(ccf-timer): panel defaults to expanded and renders via portal so drag clamps to the viewport
 2026-10-05

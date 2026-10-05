@@ -309,7 +309,7 @@ export async function PATCH(
           // station picker, edit modal — read this column directly).
           const { error: stationMirrorError } = await supabase
             .from('lab_stations')
-            .update({ rotation_minutes: newMinutes })
+            .update({ rotation_minutes: newMinutes, updated_at: new Date().toISOString() })
             .eq('lab_day_id', id);
           if (stationMirrorError) {
             console.warn(
