@@ -71,6 +71,87 @@ export function buildRRULE(dates: string[]): { rrule?: string; rdates?: string[]
   return { rdates: sorted.slice(1) };
 }
 
+// ─── Series baseline / divergent-row partition ─────────────────────
+
+/** Fields of a schedule block that show up on the Google event. */
+export interface SeriesBlockFields {
+  id: string;
+  date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+  title: string | null;
+  course_name: string | null;
+  content_notes: string | null;
+  instructor_id: string | null;
+  additional_instructor_id: string | null;
+  block_type: string | null;
+}
+
+const norm = (v: string | null | undefined) => (v ?? '').trim();
+
+function fieldValues(b: SeriesBlockFields): string[] {
+  return [
+    norm(b.title || b.course_name),
+    norm(b.start_time),
+    norm(b.end_time),
+    norm(b.content_notes),
+    norm(b.instructor_id),
+    norm(b.additional_instructor_id),
+    norm(b.block_type),
+  ];
+}
+
+/**
+ * Split a recurring group's rows into the rows that conform to the
+ * series baseline and the rows that diverge from it (edited
+ * one-offs). The baseline is the MODAL value of each significant
+ * field (ties go to the earliest-dated row), not the earliest row's
+ * values — so one edited first week no longer re-titles the series.
+ *
+ * Rows must already be sorted by date. Divergent rows must be
+ * emitted as their own single events (keyed on block_id) and left
+ * out of the series date list, otherwise the date appears twice.
+ */
+export function partitionSeriesRows<T extends SeriesBlockFields>(
+  rows: T[]
+): { baseline: T; conforming: T[]; divergent: T[] } {
+  const fieldCount = fieldValues(rows[0]).length;
+  const modal: string[] = [];
+  for (let f = 0; f < fieldCount; f++) {
+    const counts = new Map<string, number>();
+    let best = fieldValues(rows[0])[f];
+    let bestN = 0;
+    for (const r of rows) {
+      const v = fieldValues(r)[f];
+      const n = (counts.get(v) ?? 0) + 1;
+      counts.set(v, n);
+      if (n > bestN) {
+        best = v;
+        bestN = n;
+      }
+    }
+    modal.push(best);
+  }
+  const conforming: T[] = [];
+  const divergent: T[] = [];
+  for (const r of rows) {
+    const v = fieldValues(r);
+    (v.every((x, i) => x === modal[i]) ? conforming : divergent).push(r);
+  }
+  // Baseline row = earliest conforming row. If no row matches the
+  // per-field modes exactly (modes come from different rows), fall
+  // back to the first row as baseline and the rest as divergent.
+  if (conforming.length === 0) {
+    const [first, ...rest] = rows;
+    return {
+      baseline: first,
+      conforming: [first],
+      divergent: rest,
+    };
+  }
+  return { baseline: conforming[0], conforming, divergent };
+}
+
 // ─── Google Calendar API wrappers ──────────────────────────────────
 
 interface PushEventParams {
@@ -88,19 +169,37 @@ interface PushEventParams {
   colorId?: string;
 }
 
-export async function createSharedCalendarEvent(
-  params: PushEventParams
-): Promise<{ id: string; htmlLink?: string } | { error: string }> {
+/** RRULE / RDATE lines for a Google event's `recurrence` array. */
+export function buildRecurrence(
+  rrule: string | undefined,
+  rdates: string[] | undefined,
+  startTime: string
+): string[] {
   const recurrence: string[] = [];
-  if (params.rrule) recurrence.push(params.rrule);
-  if (params.rdates && params.rdates.length > 0) {
+  if (rrule) recurrence.push(rrule);
+  if (rdates && rdates.length > 0) {
     // Format: RDATE;TZID=America/Phoenix:YYYYMMDDTHHMMSS,YYYYMMDDTHHMMSS,...
-    const compactTime = params.startTime.replace(/:/g, '').slice(0, 6);
-    const datePart = params.rdates
+    const compactTime = startTime.replace(/:/g, '').slice(0, 6);
+    const datePart = rdates
       .map(d => `${d.replace(/-/g, '')}T${compactTime}`)
       .join(',');
     recurrence.push(`RDATE;TZID=${TIMEZONE}:${datePart}`);
   }
+  return recurrence;
+}
+
+/** PATCH fragment carrying start/end so time changes reach Google. */
+export function buildTimePatch(startDate: string, startTime: string, endTime: string) {
+  return {
+    start: { dateTime: `${startDate}T${startTime}`, timeZone: TIMEZONE },
+    end: { dateTime: `${startDate}T${endTime}`, timeZone: TIMEZONE },
+  };
+}
+
+export async function createSharedCalendarEvent(
+  params: PushEventParams
+): Promise<{ id: string; htmlLink?: string } | { error: string }> {
+  const recurrence = buildRecurrence(params.rrule, params.rdates, params.startTime);
   const body: Record<string, unknown> = {
     summary: params.summary,
     description: params.description,
