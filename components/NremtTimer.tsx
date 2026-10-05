@@ -375,7 +375,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
     if (stickyBottom) {
       const bgColor = isExpired ? 'bg-red-900' : isRunning ? (phaseRemaining <= 30 ? 'bg-red-800' : phaseRemaining <= 120 ? 'bg-yellow-700' : 'bg-gray-900') : 'bg-gray-900';
       return (
-        <div className={`fixed bottom-0 left-0 right-0 z-50 ${bgColor} text-white shadow-lg ${isExpired ? 'animate-pulse' : ''}`}>
+        <div data-bottom-banner className={`fixed bottom-0 left-0 right-0 z-50 ${bgColor} text-white shadow-lg ${isExpired ? 'animate-pulse' : ''}`}>
           {isRunning && (
             <div className="h-1 bg-black/20">
               <div
@@ -544,7 +544,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
   if (stickyBottom) {
     const bgColor = isExpired ? 'bg-red-900' : isRunning ? (remaining <= 30 ? 'bg-red-800' : remaining <= 120 ? 'bg-yellow-700' : 'bg-gray-900') : 'bg-gray-900';
     return (
-      <div className={`fixed bottom-0 left-0 right-0 z-50 ${bgColor} text-white shadow-lg ${isExpired ? 'animate-pulse' : ''}`}>
+      <div data-bottom-banner className={`fixed bottom-0 left-0 right-0 z-50 ${bgColor} text-white shadow-lg ${isExpired ? 'animate-pulse' : ''}`}>
         {isRunning && (
           <div className="h-1 bg-black/20">
             <div

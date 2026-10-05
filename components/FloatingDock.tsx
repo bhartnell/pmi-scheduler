@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 
 /**
  * FloatingDock - the ONE owner of the persistent bottom-right overlay corner.
@@ -21,9 +21,42 @@ import type { ReactNode } from 'react';
  */
 export const DOCK_PAGE_SLOT_ID = 'floating-dock-page-slot';
 
+const BANNER_SELECTOR = '[data-bottom-banner]';
+
+/** Height of the tallest full-width bottom banner (timers mark themselves data-bottom-banner), so the dock rides above it. */
+function useBottomBannerHeight() {
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    const measure = () => {
+      let max = 0;
+      document.querySelectorAll<HTMLElement>(BANNER_SELECTOR).forEach((el) => {
+        max = Math.max(max, el.offsetHeight);
+      });
+      setHeight(max);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    const watch = () => document.querySelectorAll(BANNER_SELECTOR).forEach((el) => ro.observe(el));
+    watch();
+    const mo = new MutationObserver(() => {
+      ro.disconnect();
+      watch();
+      measure();
+    });
+    mo.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      ro.disconnect();
+      mo.disconnect();
+    };
+  }, []);
+  return height;
+}
+
 export default function FloatingDock({ children }: { children: ReactNode }) {
+  const bannerHeight = useBottomBannerHeight();
   return (
     <div
+      style={bannerHeight ? { marginBottom: bannerHeight } : undefined}
       className="fixed bottom-4 right-4 max-sm:bottom-3 max-sm:right-3 z-[60] flex flex-col items-end gap-3 pointer-events-none [&>*]:pointer-events-auto print:hidden"
     >
       <div id={DOCK_PAGE_SLOT_ID} className="flex flex-col items-end gap-3 max-w-[calc(100vw-1.5rem)]" />

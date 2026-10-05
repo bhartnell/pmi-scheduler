@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ---
 
+pending | fix(overlay): admin toasts (bulk-operations, compliance, external-access) moved to top-right; FloatingDock rides above bottom timer banners via data-bottom-banner height measurement; CSS/layout only
 
 pending | fix(calendar): syncGeneralLabDefault now returns what it did (created/skipped/failed) and Sync All counts that instead of counting every call as "created"; diagnosis: 10/05-10/06 cert days were bulk-inserted outside the on-save hook paths
 2026-10-04
