@@ -10112,7 +10112,7 @@ Per-instance override of a recurring schedule block (EVENT-EDIT 1/5). Additive; 
 | created_by | uuid | YES |  | FK -> lab_users.id |
 | created_at / updated_at | timestamptz | NO | now() |  |
 
-**Constraints:** UNIQUE (`recurring_group_id`, `instance_date`). **RLS:** authenticated SELECT; service_role ALL. (Migration `20261005_schedule_block_exceptions.sql` is written but NOT yet applied to production.)
+**Constraints:** UNIQUE (`recurring_group_id`, `instance_date`). **RLS:** authenticated SELECT; service_role ALL. (Migration `20261005_schedule_block_exceptions.sql` applied to production 2026-10-05.)
 
 #### `pmi_semesters`
 
