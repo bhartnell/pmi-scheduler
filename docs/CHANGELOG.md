@@ -8,6 +8,8 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 ---
+(pending) | fix(timer): debrief_seconds 0 now means "off" (|| 300 -> ?? 300 at 11 read sites); new timers on is_adv_cert_testing days default to no debrief marker
+
 
 (pending) | fix(ccf-timer): at phone width (<640px) the CCF panel starts collapsed when no saved preference, so it clears the bottom-right dock
 

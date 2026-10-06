@@ -339,7 +339,7 @@ export default function TimerBanner({
         setDisplaySeconds(remaining);
 
         // Check for alerts
-        const debriefTime = timerState.debrief_seconds || 300;
+        const debriefTime = timerState.debrief_seconds ?? 300;
 
         // Debrief alert (5 min warning)
         if (remaining <= debriefTime && remaining > 0 && !debriefAlertShownRef.current && timerState.status === 'running') {
@@ -366,7 +366,8 @@ export default function TimerBanner({
         setDisplaySeconds(Math.min(elapsed, duration));
 
         // Count-up alerts
-        const debriefTime = duration - (timerState.debrief_seconds || 300);
+        const debriefSecs = timerState.debrief_seconds ?? 300;
+        const debriefTime = debriefSecs > 0 ? duration - debriefSecs : Infinity;
 
         if (elapsed >= debriefTime && !debriefAlertShownRef.current && timerState.status === 'running') {
           setShowDebriefAlert(true);

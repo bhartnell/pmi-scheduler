@@ -462,7 +462,7 @@ export default function TimerDisplayPage() {
   const isTimeUp = timer?.mode === 'countdown' && currentTime <= 0 && timer?.status === 'running';
   const needsRotation = !timer?.rotation_acknowledged;
   const showRotateFlash = isTimeUp || needsRotation;
-  const isDebrief = timer?.mode === 'countdown' && currentTime > 0 && currentTime <= (timer?.debrief_seconds || 300) && timer?.status === 'running';
+  const isDebrief = timer?.mode === 'countdown' && currentTime > 0 && currentTime <= (timer?.debrief_seconds ?? 300) && timer?.status === 'running';
 
   // ─── Shared control buttons ───────────────────────────────────────────────────
   const ControlButtons = () => (
