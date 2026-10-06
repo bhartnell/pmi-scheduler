@@ -23,6 +23,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { hasMinRole, type Role } from '@/lib/permissions';
+import DockPortal from '@/components/DockPortal';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
@@ -537,15 +538,15 @@ export default function SmcAdminPage() {
 
       {/* Toast */}
       {toast && (
-        <div
-          className={`fixed bottom-4 right-4 z-50 px-4 py-2 rounded-lg shadow-lg text-sm font-medium ${
+        <DockPortal><div
+          className={`px-4 py-2 rounded-lg shadow-lg text-sm font-medium ${
             toast.kind === 'ok'
               ? 'bg-green-600 text-white'
               : 'bg-red-600 text-white'
           }`}
         >
           {toast.msg}
-        </div>
+        </div></DockPortal>
       )}
     </div>
   );

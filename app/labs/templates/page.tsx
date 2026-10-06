@@ -23,6 +23,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import DockPortal from '@/components/DockPortal';
 
 interface TemplateData {
   stations: Array<{
@@ -502,7 +503,7 @@ export default function LabDayTemplatesPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white ${
+        <DockPortal><div className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white ${
           toastType === 'success' ? 'bg-green-600' : 'bg-red-600'
         }`}>
           {toastType === 'success' ? (
@@ -511,7 +512,7 @@ export default function LabDayTemplatesPage() {
             <AlertCircle className="w-4 h-4 flex-shrink-0" />
           )}
           <span className="text-sm font-medium">{toast}</span>
-        </div>
+        </div></DockPortal>
       )}
 
       {/* Delete Confirmation Modal */}

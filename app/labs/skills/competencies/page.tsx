@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import LabHeader from '@/components/LabHeader';
 import { hasMinRole } from '@/lib/permissions';
+import DockPortal from '@/components/DockPortal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -750,7 +751,7 @@ export default function SkillCompetenciesPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${
+        <DockPortal><div className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${
           toastType === 'success' ? 'bg-green-600' : 'bg-red-600'
         }`}>
           {toastType === 'success' ? (
@@ -759,7 +760,7 @@ export default function SkillCompetenciesPage() {
             <AlertCircle className="w-4 h-4" />
           )}
           {toast}
-        </div>
+        </div></DockPortal>
       )}
     </div>
   );

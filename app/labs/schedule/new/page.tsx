@@ -39,6 +39,7 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import DockPortal from '@/components/DockPortal';
 
 interface LabDayTemplate {
   id: string;
@@ -1240,10 +1241,10 @@ function NewLabDayPageContent() {
 
         {/* Toast notification */}
         {templateToast && (
-          <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom-2">
+          <DockPortal><div className="flex items-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg shadow-lg animate-in fade-in slide-in-from-bottom-2">
             <CheckCircle className="w-4 h-4 flex-shrink-0" />
             <span className="text-sm font-medium">{templateToast}</span>
-          </div>
+          </div></DockPortal>
         )}
 
         {/* Basic Info */}

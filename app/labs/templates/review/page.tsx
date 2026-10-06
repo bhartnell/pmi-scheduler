@@ -15,6 +15,7 @@ import {
   X,
   Search,
 } from 'lucide-react';
+import DockPortal from '@/components/DockPortal';
 
 // ── Types ───────────────────────────────────────────────────────────────
 
@@ -493,12 +494,12 @@ export default function TemplateReviewListPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white ${
+        <DockPortal><div className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white ${
           toastType === 'success' ? 'bg-green-600' : 'bg-red-600'
         }`}>
           {toastType === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
           <span className="text-sm font-medium">{toast}</span>
-        </div>
+        </div></DockPortal>
       )}
     </div>
   );

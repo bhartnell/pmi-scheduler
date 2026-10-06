@@ -27,6 +27,7 @@ import {
   FolderDown,
 } from 'lucide-react';
 import { downloadStudentPDF } from '@/lib/nremtExport';
+import DockPortal from '@/components/DockPortal';
 
 /* ─── Interfaces ──────────────────────────────────────────────── */
 
@@ -553,9 +554,9 @@ export default function SkillResultsPage() {
 
         {/* Toast notification */}
         {toastMessage && (
-          <div className="fixed bottom-6 right-6 z-50 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-5 py-3 rounded-lg shadow-lg text-sm font-medium animate-in slide-in-from-bottom-4">
+          <DockPortal><div className="bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-5 py-3 rounded-lg shadow-lg text-sm font-medium animate-in slide-in-from-bottom-4">
             {toastMessage}
-          </div>
+          </div></DockPortal>
         )}
       </div>
     </div>
@@ -1160,9 +1161,9 @@ function IndividualStudentTab({
 
       {/* Per-eval toast */}
       {toastMsg && (
-        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-5 py-3 rounded-lg shadow-lg text-sm font-medium">
+        <DockPortal><div className="bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 px-5 py-3 rounded-lg shadow-lg text-sm font-medium">
           {toastMsg}
-        </div>
+        </div></DockPortal>
       )}
     </div>
   );

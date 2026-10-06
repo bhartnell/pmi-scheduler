@@ -22,6 +22,7 @@ import {
 import { canEditLVFR, isAgencyRole } from '@/lib/permissions';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { PageLoader } from '@/components/ui';
+import DockPortal from '@/components/DockPortal';
 
 // ── Types ──────────────────────────────────────────────────────────────
 
@@ -603,11 +604,11 @@ export default function LVFRGradesPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg text-sm font-medium ${
+        <DockPortal><div className={`px-4 py-3 rounded-lg shadow-lg text-sm font-medium ${
           toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
         }`}>
           {toast.message}
-        </div>
+        </div></DockPortal>
       )}
     </div>
   );
