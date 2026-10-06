@@ -54,7 +54,8 @@ export default function GlobalTimerBanner() {
     heartbeatMs: 60000,
     onResponse: handleResponse,
   });
-  const displaySeconds = hookSeconds ?? 0;
+  // null = no trustworthy reading: show --:-- rather than coercing to 0.
+  const displaySeconds = hookSeconds;
 
   // A realtime row for a different lab day than the one we have a name for:
   // fetch the active timer's labDay info.
@@ -87,6 +88,7 @@ export default function GlobalTimerBanner() {
       return 'bg-green-600';
     }
     if (timer.status === 'paused') return 'bg-blue-600';
+    if (displaySeconds === null) return 'bg-gray-600';
     const remaining = timer.mode === 'countdown'
       ? displaySeconds
       : (timer.duration_seconds - displaySeconds);
@@ -97,7 +99,7 @@ export default function GlobalTimerBanner() {
   };
 
   // Auto-dismiss when countdown reaches 0
-  const isTimeUp = timer?.mode === 'countdown' && displaySeconds <= 0 && timer?.status === 'running';
+  const isTimeUp = timer?.mode === 'countdown' && displaySeconds !== null && displaySeconds <= 0 && timer?.status === 'running';
 
   // Don't render if not on a timer-relevant page or if page has its own timer component
   if (!isTimerRelevantPage || hasOwnTimerComponent) {
@@ -114,7 +116,7 @@ export default function GlobalTimerBanner() {
   return (
     <div
       role="status"
-      aria-label={`Lab timer: Rotation ${timer.rotation_number}, ${formatTime(displaySeconds)} ${isPaused ? 'paused' : timer.mode === 'countdown' ? 'remaining' : 'elapsed'}`}
+      aria-label={`Lab timer: Rotation ${timer.rotation_number}, ${displaySeconds === null ? '--:--' : formatTime(displaySeconds)} ${isPaused ? 'paused' : timer.mode === 'countdown' ? 'remaining' : 'elapsed'}`}
       className={`fixed top-0 left-0 right-0 z-[100] ${getBannerColor()} text-white shadow-lg transition-colors duration-300 print:hidden`}
       style={{ height: `${BANNER_HEIGHT}px` }}
     >
@@ -139,7 +141,7 @@ export default function GlobalTimerBanner() {
               <Play className="w-4 h-4" aria-hidden="true" />
             )}
             <span className="font-mono font-bold text-lg sm:text-xl">
-              {formatTime(displaySeconds)}
+              {displaySeconds === null ? '--:--' : formatTime(displaySeconds)}
             </span>
             <span className="text-sm text-white/70 hidden sm:inline">
               {isPaused ? 'paused' : timer.mode === 'countdown' ? 'remaining' : 'elapsed'}
