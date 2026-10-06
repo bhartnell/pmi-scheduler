@@ -59,3 +59,7 @@ test('paused uses elapsed_when_paused; countup counts up', () => {
   const c = applyRealtimeRow(INITIAL_SNAPSHOT, row({ mode: 'countup' }));
   assert.equal(computeDisplaySeconds(c, NOW), 60);
 });
+test('running row with no started_at yields null, never base duration', () => {
+  const s = applyRealtimeRow(INITIAL_SNAPSHOT, row({ started_at: null }));
+  assert.equal(computeDisplaySeconds(s, NOW), null);
+});
