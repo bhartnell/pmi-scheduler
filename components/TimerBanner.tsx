@@ -3,10 +3,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Clock, Wifi, WifiOff, Volume2, VolumeX, AlertTriangle, CheckCircle, Circle, X } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
+import { useLabTimerState } from '@/hooks/useLabTimerState';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
 import { formatTime } from '@/lib/utils';
 import { useBottomBannerOffset } from '@/hooks/useBottomBannerOffset';
-import { getSupabase } from '@/lib/supabase';
 
 interface TimerBannerProps {
   labDayId: string;
@@ -30,6 +30,9 @@ interface TimerState {
   updated_at: string;
 }
 
+// How long the "START DEBRIEF" flash stays up after the debrief mark is crossed.
+const DEBRIEF_FLASH_SECONDS = 5;
+
 export default function TimerBanner({
   labDayId,
   stationId,
@@ -37,41 +40,21 @@ export default function TimerBanner({
   userName,
   numRotations = 4
 }: TimerBannerProps) {
-  const [timerState, setTimerState] = useState<TimerState | null>(null);
-  const [displaySeconds, setDisplaySeconds] = useState(0);
   const [isConnected, setIsConnected] = useState(true);
   const [soundEnabled, setSoundEnabled] = useState(true);
-  const [showDebriefAlert, setShowDebriefAlert] = useState(false);
-  const [showRotateAlert, setShowRotateAlert] = useState(false);
   const bannerRef = useBottomBannerOffset();
   const lastAlertRotationRef = useRef(0);
   const debriefAlertShownRef = useRef(false);
+  const lastBeepKeyRef = useRef('');
   const [isReady, setIsReady] = useState(false);
   const [settingReady, setSettingReady] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [isDismissed, setIsDismissed] = useState(false);
-  // Track whether we ever saw an active timer — if it disappears, lab ended
-  const hadTimerRef = useRef(false);
-  // Cross-device clock-skew correction (Task Handoff Queue "grading-view
-  // timer" ticket, Ben decision 2026-09-01: cross-user desync). Two
-  // instructors' devices can disagree on system clock by seconds to
-  // minutes; computing elapsed time from raw Date.now() means each
-  // device shows a DIFFERENT countdown for the same server-authoritative
-  // timer. The timer-display kiosk pages (app/timer-display/*) already
-  // solved this by comparing the API's serverTime to the client's
-  // Date.now() and applying the delta to every subsequent calculation —
-  // this mirrors that proven fix here.
-  const serverTimeOffsetRef = useRef(0);
-
-  const pollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const versionRef = useRef<number>(0);
-  // Sequencing guard for fetchTimerState (see comment on the function
-  // below) — tracks the highest request sequence number whose response
-  // has actually been applied to state, so a slower/older response that
-  // lands AFTER a newer one can be detected and discarded instead of
-  // rolling timerState backwards.
-  const requestSeqRef = useRef(0);
-  const appliedSeqRef = useRef(0);
+  // Hidden because the server says this timer is left over from a previous lab day.
+  const [staleHidden, setStaleHidden] = useState(false);
+  // Rotation the user dismissed the banner for (0 = no timer yet). A new rotation un-dismisses.
+  const [dismissedRotation, setDismissedRotation] = useState<number | null>(null);
+  // Rotation whose "time to rotate" alert the user has acknowledged.
+  const [ackedRotation, setAckedRotation] = useState<number | null>(null);
 
   // Load audio settings from localStorage
   const [audioSettings, setAudioSettings] = useState<Partial<TimerAudioSettings>>(() =>
@@ -95,6 +78,8 @@ export default function TimerBanner({
   };
 
   const { playBeeps, playFiveMinWarning, playOneMinWarning, playRotationAlert } = useTimerAudio(effectiveSettings);
+  void playFiveMinWarning;
+  void playOneMinWarning;
 
   // Rotation end alert — 3 soft beeps + optional voice
   const playLoudAlert = useCallback(() => {
@@ -106,92 +91,32 @@ export default function TimerBanner({
     playBeeps(count);
   }, [playBeeps]);
 
-  // Fetch timer state from server with version tracking.
-  //
-  // This is called from TWO independent, uncoordinated triggers that can
-  // fire close together: the visibility poll below (5s while running) and
-  // the realtime postgres_changes handler further down, which re-fetches
-  // on EVERY UPDATE to this lab day's row — including ones made by OTHER
-  // instructors/controllers on other devices or from the standard lab
-  // view's LabTimer (e.g. someone rapid-firing +1/-1 adjustments re-fires
-  // the realtime handler here on every click). Neither call is cancelled
-  // or sequenced against the other, so with enough concurrent requests in
-  // flight, responses can land out of network order. Without a guard, a
-  // straggler response for an OLDER request can arrive AFTER a newer one
-  // and silently roll timerState back to a stale value — a concrete,
-  // code-level mechanism for the display "flickering between two values"
-  // that doesn't require any interval/subscription leak. requestSeqRef /
-  // appliedSeqRef below make applying a response idempotent-in-order:
-  // a response is only applied if no later-issued request has already
-  // applied its own result.
-  const fetchTimerState = useCallback(async () => {
-    const seq = ++requestSeqRef.current;
-    try {
-      const url = versionRef.current > 0
-        ? `/api/lab-management/timer?labDayId=${labDayId}&version=${versionRef.current}`
-        : `/api/lab-management/timer?labDayId=${labDayId}`;
-      const res = await fetch(url);
-      const data = await res.json();
-
-      // A newer fetchTimerState call already applied its response —
-      // this one is a straggler; discard instead of rolling state back.
-      if (seq < appliedSeqRef.current) return;
-      appliedSeqRef.current = seq;
-
-      // If not modified, skip state update to save re-renders
-      if (data.not_modified) {
-        setIsConnected(true);
-        setConnectionError(null);
-        if (data.serverTime) {
-          serverTimeOffsetRef.current = new Date(data.serverTime).getTime() - Date.now();
-        }
-        return;
-      }
-
-      if (data.success) {
-        setIsConnected(true);
-        setConnectionError(null);
-        if (data.version !== undefined) {
-          versionRef.current = data.version;
-        }
-        if (data.serverTime) {
-          serverTimeOffsetRef.current = new Date(data.serverTime).getTime() - Date.now();
-        }
-        if (data.timer) {
-          hadTimerRef.current = true;
-          // Stale guard: a timer left running/paused from a PREVIOUS lab
-          // day (forgotten End Lab) should not render as if it were live.
-          // The server already computes this (isStale = lab day's date is
-          // in the past); LabTimer already checks it (see its `checkStale`
-          // param) but TimerBanner never did — treat it the same way the
-          // "timer record gone" branch below already treats an ended lab:
-          // hide the banner instead of showing/ticking stale data.
-          if (data.isStale && data.timer.status !== 'stopped') {
-            setIsDismissed(true);
-            setTimerState(null);
-            return;
-          }
-          setTimerState(data.timer);
-          // Un-dismiss when a new timer appears
-          setIsDismissed(false);
-        } else {
-          // Timer record gone — if we previously had one, lab was ended
-          if (hadTimerRef.current) {
-            setIsDismissed(true);
-          }
-          setTimerState(null);
-        }
-      } else {
-        setIsConnected(false);
-        setConnectionError(data.error || 'API returned error');
-        console.error('Timer API error:', data.error);
-      }
-    } catch (error) {
-      console.error('Error fetching timer:', error);
+  // --- Timer state: ONE owner (hooks/useLabTimerState). No timer poll. Realtime
+  // gives instant start/stop discovery (this banner is the discovery surface on
+  // /labs/grade/*, where GlobalTimerBanner is hidden); recovery is re-fetch on
+  // realtime reconnect + visibility regain + a 60s safety net. ---
+  const handleTimerResponse = useCallback(({ status, body }: { status: number; body: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (status === 0 || !body || body.success === false) {
       setIsConnected(false);
-      setConnectionError((error as Error)?.message || 'Network error');
+      setConnectionError(body?.error || (status === 0 ? 'Network error' : 'API returned error'));
+      return;
     }
-  }, [labDayId]);
+    setIsConnected(true);
+    setConnectionError(null);
+    // A timer left running/paused from a PREVIOUS lab day (forgotten End Lab)
+    // must not render as live: the server computes isStale, hide the banner.
+    if (body.timer) setStaleHidden(!!body.isStale && body.timer.status !== 'stopped');
+  }, []);
+
+  const { timer: hookTimer, displaySeconds, applyTimer } = useLabTimerState({
+    url: `/api/lab-management/timer?labDayId=${labDayId}`,
+    labDayId,
+    enabled: !!labDayId,
+    heartbeatMs: 60000,
+    onResponse: handleTimerResponse,
+  });
+  void applyTimer;
+  const timerState = hookTimer as TimerState | null;
 
   // Fetch ready status
   const fetchReadyStatus = useCallback(async () => {
@@ -211,6 +136,9 @@ export default function TimerBanner({
       console.error('Error fetching ready status:', error);
     }
   }, [labDayId, stationId]);
+
+  // Ready status is not timer state; it keeps its own light poll (fetches on mount too).
+  useVisibilityPolling(fetchReadyStatus, timerState?.status === 'running' ? 10000 : 30000);
 
   // Toggle ready status
   const toggleReady = async () => {
@@ -240,204 +168,81 @@ export default function TimerBanner({
     setSettingReady(false);
   };
 
-  // Determine poll interval.
-  //
-  //   • status='running' → 5s (active tier; client interpolates display
-  //     each second so 5s server polls are enough).
-  //   • status='paused'  → 15s (controller may resume; still relevant).
-  //   • status='stopped' → null (lab ended; explicit Stop leaves the
-  //     row in place. The hadTimerRef guard above auto-dismisses).
-  //   • !timerState       → 30s DISCOVERY POLL.
-  //
-  // 2026-05-28: !timerState used to return null. That tightening
-  // (commit f05b44eb) assumed TimerBanner always mounts AFTER a
-  // timer exists, which is true for the controller's own browser but
-  // FALSE for any instructor who opens /labs/grade/station/[id] on a
-  // separate device while the lab is already running. With null
-  // polling, the grade page never discovered the running timer and
-  // the banner never appeared.
-  //
-  // GlobalTimerBanner already does 60s discovery on idle, but it's
-  // explicitly hidden on /labs/grade/* (see GlobalTimerBanner.tsx
-  // hasOwnTimerComponent gate) on the assumption that TimerBanner
-  // here is doing its own discovery. So the discovery responsibility
-  // legitimately belongs here. 30s on grading pages (vs 60s on
-  // GlobalTimerBanner) since this is the active grading surface and
-  // sub-minute discovery matters more than the background heartbeat.
-  const getPollInterval = () => {
-    if (!timerState) return 30000;
-    if (timerState.status === 'stopped') return null;
-    if (timerState.status === 'paused') return 15000;
-    return 5000;
-  };
+  const currentRotation = timerState?.rotation_number || 1;
+  const isRunning = timerState?.status === 'running';
+  const isPaused = timerState?.status === 'paused';
+  const isStopped = !timerState || timerState.status === 'stopped';
+  const hasNotStarted = isStopped && (!timerState?.started_at);
+  const isDismissed = staleHidden || dismissedRotation === (timerState?.rotation_number ?? 0);
 
-  // Combined polling with visibility awareness
-  const pollCombined = useCallback(async () => {
-    await Promise.all([fetchTimerState(), fetchReadyStatus()]);
-  }, [fetchTimerState, fetchReadyStatus]);
+  // null = nothing to show (idle/stopped). Never rendered as 0:00 or base duration.
+  const duration = timerState?.duration_seconds ?? 0;
+  const shownSeconds = displaySeconds === null
+    ? null
+    : timerState?.mode === 'countup' ? Math.min(displaySeconds, duration) : displaySeconds;
+  const remainingSeconds = displaySeconds === null || !timerState
+    ? null
+    : timerState.mode === 'countdown' ? displaySeconds : duration - Math.min(displaySeconds, duration);
 
-  useVisibilityPolling(pollCombined, getPollInterval());
-
-  // Realtime discovery: instant "timer started" for this lab day instead of
-  // waiting on the 30s discovery poll above (see the 2026-05-28 comment on
-  // getPollInterval — this is the exact gap PR #9's GlobalTimerBanner
-  // realtime fix didn't close, since GlobalTimerBanner is deliberately
-  // disabled on /labs/grade/* pages and TimerBanner does its own discovery).
-  // Additive alongside the existing poll, which stays as the fallback.
-  useEffect(() => {
-    if (!labDayId) return;
-
-    const supabase = getSupabase();
-    const channel = supabase
-      .channel(`timer-banner-${labDayId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'lab_timer_state', filter: `lab_day_id=eq.${labDayId}` },
-        () => { fetchTimerState(); }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [labDayId, fetchTimerState]);
-
-  // Calculate display time from timer state
-  useEffect(() => {
-    if (!timerState) return;
-
-    const calculateElapsed = () => {
-      if (timerState.status === 'stopped') {
-        return 0;
-      } else if (timerState.status === 'paused') {
-        return timerState.elapsed_when_paused || 0;
-      } else if (timerState.status === 'running' && timerState.started_at) {
-        const startTime = new Date(timerState.started_at).getTime();
-        const now = Date.now() + serverTimeOffsetRef.current;
-        // Sign-guard (Task Handoff Queue "rotation timer flicker" ticket,
-        // 2026-09-14): started_at can land ahead of this client's
-        // corrected clock (server clock skew, or a resume calculation
-        // landing a few ms in the future). A negative diff here used to
-        // flow unclamped into `duration - elapsed` below, which could
-        // render ABOVE the full duration on one tick and the correct
-        // decrementing value on the next as the offset/response timing
-        // varied — the observed flip-flop between a frozen full-duration
-        // "Running" render and a correctly counting one. Treat "hasn't
-        // started yet from this client's view" as elapsed=0 (full
-        // duration, neutral color) instead of a negative number.
-        return Math.max(0, Math.floor((now - startTime) / 1000));
-      }
-      return 0;
-    };
-
-    const updateDisplay = () => {
-      const elapsed = calculateElapsed();
-      const duration = timerState.duration_seconds;
-
-      if (timerState.mode === 'countdown') {
-        const remaining = Math.max(0, duration - elapsed);
-        setDisplaySeconds(remaining);
-
-        // Check for alerts
-        const debriefTime = timerState.debrief_seconds ?? 300;
-
-        // Debrief alert (5 min warning)
-        if (remaining <= debriefTime && remaining > 0 && !debriefAlertShownRef.current && timerState.status === 'running') {
-          setShowDebriefAlert(true);
-          debriefAlertShownRef.current = true;
-          playWarningBeep(2);
-          setTimeout(() => setShowDebriefAlert(false), 5000);
-        }
-
-        // Rotation end alert - LOUD
-        if (remaining <= 0 && timerState.status === 'running' && lastAlertRotationRef.current !== timerState.rotation_number) {
-          setShowRotateAlert(true);
-          lastAlertRotationRef.current = timerState.rotation_number;
-          playLoudAlert();
-        }
-
-        // Warning beeps at 60, 30, 10 seconds
-        if (timerState.status === 'running') {
-          if (remaining === 60) playWarningBeep(1);
-          if (remaining === 30) playWarningBeep(2);
-          if (remaining === 10) playWarningBeep(3);
-        }
-      } else {
-        setDisplaySeconds(Math.min(elapsed, duration));
-
-        // Count-up alerts
+  // Alert flags are derived from the displayed time, not stored, so nothing
+  // here needs a setState-in-effect.
+  // debrief_seconds = 0 means "off": the `> 0` guards below are what keep it off.
+  const debriefMark = timerState && isRunning && displaySeconds !== null
+    ? (() => {
         const debriefSecs = timerState.debrief_seconds ?? 300;
-        const debriefTime = debriefSecs > 0 ? duration - debriefSecs : Infinity;
+        if (!(debriefSecs > 0)) return false;
+        const into = timerState.mode === 'countdown'
+          ? debriefSecs - displaySeconds
+          : displaySeconds - (duration - debriefSecs);
+        const stillRunning = remainingSeconds !== null && remainingSeconds > 0;
+        return into >= 0 && into < DEBRIEF_FLASH_SECONDS && stillRunning;
+      })()
+    : false;
+  const rotateDue = !!timerState && isRunning && remainingSeconds !== null && remainingSeconds <= 0;
+  const showRotateAlert = rotateDue && ackedRotation !== timerState?.rotation_number;
+  const showDebriefAlert = debriefMark && !showRotateAlert;
 
-        if (elapsed >= debriefTime && !debriefAlertShownRef.current && timerState.status === 'running') {
-          setShowDebriefAlert(true);
-          debriefAlertShownRef.current = true;
-          playWarningBeep(2);
-          setTimeout(() => setShowDebriefAlert(false), 5000);
-        }
-
-        if (elapsed >= duration && timerState.status === 'running' && lastAlertRotationRef.current !== timerState.rotation_number) {
-          setShowRotateAlert(true);
-          lastAlertRotationRef.current = timerState.rotation_number;
-          playLoudAlert();
-        }
-      }
-    };
-
-    updateDisplay();
-
-    // Only run display timer when page is visible
-    let displayInterval: NodeJS.Timeout | null = setInterval(updateDisplay, 1000);
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        if (displayInterval) {
-          clearInterval(displayInterval);
-          displayInterval = null;
-        }
-      } else {
-        updateDisplay(); // Catch up immediately
-        displayInterval = setInterval(updateDisplay, 1000);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      if (displayInterval) clearInterval(displayInterval);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [timerState, playWarningBeep, playLoudAlert]);
-
-  // Reset alerts when rotation changes
+  // Sounds only (refs, no state): once per rotation / once per second value.
   useEffect(() => {
-    if (timerState?.status === 'stopped') {
-      setShowRotateAlert(false);
-      setShowDebriefAlert(false);
-    }
-  }, [timerState?.status]);
+    if (!timerState || staleHidden || !isRunning || remainingSeconds === null) return;
+    const key = `${timerState.rotation_number}:${remainingSeconds}`;
+    if (lastBeepKeyRef.current === key) return;
+    lastBeepKeyRef.current = key;
 
+    if (debriefMark && !debriefAlertShownRef.current) {
+      debriefAlertShownRef.current = true;
+      playWarningBeep(2);
+    }
+    if (remainingSeconds <= 0 && lastAlertRotationRef.current !== timerState.rotation_number) {
+      lastAlertRotationRef.current = timerState.rotation_number;
+      playLoudAlert();
+    }
+    if (timerState.mode === 'countdown') {
+      if (remainingSeconds === 60) playWarningBeep(1);
+      if (remainingSeconds === 30) playWarningBeep(2);
+      if (remainingSeconds === 10) playWarningBeep(3);
+    }
+  }, [timerState, staleHidden, isRunning, remainingSeconds, debriefMark, playWarningBeep, playLoudAlert]);
+
+  // New rotation: allow the debrief beep again.
   useEffect(() => {
     debriefAlertShownRef.current = false;
-    setShowRotateAlert(false);
   }, [timerState?.rotation_number]);
 
   // Calculate progress percentage
   const getProgress = () => {
-    if (!timerState) return 0;
-    const duration = timerState.duration_seconds;
+    if (!timerState || shownSeconds === null || !duration) return 0;
     if (timerState.mode === 'countdown') {
-      return ((duration - displaySeconds) / duration) * 100;
+      return ((duration - shownSeconds) / duration) * 100;
     }
-    return (displaySeconds / duration) * 100;
+    return (shownSeconds / duration) * 100;
   };
 
   // Get color based on time remaining
   const getTimeColor = () => {
-    if (!timerState || timerState.status === 'stopped') return 'text-white';
-    const remaining = timerState.mode === 'countdown' ? displaySeconds : (timerState.duration_seconds - displaySeconds);
-    if (remaining <= 60) return 'text-red-300'; // Last minute
-    if (remaining <= 300) return 'text-yellow-300'; // Last 5 minutes
+    if (!timerState || timerState.status === 'stopped' || remainingSeconds === null) return 'text-white';
+    if (remainingSeconds <= 60) return 'text-red-300'; // Last minute
+    if (remainingSeconds <= 300) return 'text-yellow-300'; // Last 5 minutes
     return 'text-white';
   };
 
@@ -450,14 +255,13 @@ export default function TimerBanner({
       return 'bg-yellow-500';
     }
 
-    if (!timerState || timerState.status === 'stopped') {
+    if (!timerState || timerState.status === 'stopped' || remainingSeconds === null) {
       return 'bg-gray-800';
     }
 
     // Color based on time remaining
-    const remaining = timerState.mode === 'countdown' ? displaySeconds : (timerState.duration_seconds - displaySeconds);
-    if (remaining <= 60) return 'bg-red-700'; // Last minute - red
-    if (remaining <= 300) return 'bg-yellow-600'; // Last 5 minutes - yellow
+    if (remainingSeconds <= 60) return 'bg-red-700'; // Last minute - red
+    if (remainingSeconds <= 300) return 'bg-yellow-600'; // Last 5 minutes - yellow
     return 'bg-green-700'; // Normal - green
   };
 
@@ -468,12 +272,6 @@ export default function TimerBanner({
     if (progress > 75) return 'bg-yellow-500';
     return 'bg-green-500';
   };
-
-  const currentRotation = timerState?.rotation_number || 1;
-  const isRunning = timerState?.status === 'running';
-  const isPaused = timerState?.status === 'paused';
-  const isStopped = !timerState || timerState.status === 'stopped';
-  const hasNotStarted = isStopped && (!timerState?.started_at);
 
   // Hide completely if dismissed (lab ended or user dismissed)
   if (isDismissed) {
@@ -545,7 +343,7 @@ export default function TimerBanner({
                 )}
               </div>
               <button
-                onClick={() => setIsDismissed(true)}
+                onClick={() => setDismissedRotation(timerState?.rotation_number ?? 0)}
                 className="p-1 hover:bg-white/20 rounded transition-colors text-gray-400 hover:text-white"
                 title="Dismiss timer banner"
               >
@@ -586,7 +384,7 @@ export default function TimerBanner({
           {/* Center: Large time display */}
           <div className="flex flex-col items-center">
             <span className={`text-4xl font-mono font-bold ${getTimeColor()}`}>
-              {formatTime(displaySeconds)}
+              {shownSeconds === null ? '--:--' : formatTime(shownSeconds)}
             </span>
             {showRotateAlert && (
               <div className="flex items-center gap-2 mt-1">
@@ -596,7 +394,7 @@ export default function TimerBanner({
                 </span>
                 <button
                   onClick={() => {
-                    setShowRotateAlert(false);
+                    setAckedRotation(timerState?.rotation_number ?? null);
                     // Also toggle ready if station context available
                     if (stationId && userEmail && !isReady) {
                       toggleReady();
@@ -608,7 +406,7 @@ export default function TimerBanner({
                 </button>
                 <button
                   onClick={() => {
-                    setShowRotateAlert(false);
+                    setAckedRotation(timerState?.rotation_number ?? null);
                   }}
                   className="px-3 py-1 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-medium transition-colors border border-white/30"
                 >
