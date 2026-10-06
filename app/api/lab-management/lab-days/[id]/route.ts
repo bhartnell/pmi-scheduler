@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole, isSuperadmin } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
 import { createDeletionRequestIfAbsent } from '@/lib/deletion-requests';
+import { logAuditEvent } from '@/lib/audit';
 
 export async function GET(
   request: NextRequest,
@@ -372,6 +373,37 @@ export async function DELETE(
       return NextResponse.json({ error: 'Lab day deletion requires superadmin approval via deletion requests' }, { status: 403 });
     }
 
+    // Data-safety guard: these child tables are ON DELETE CASCADE, so deleting the
+    // lab day would silently destroy student outcome records. Refuse if any exist,
+    // and fail closed if the check itself errors. Archive the lab day instead.
+    const outcomeTables = ['adv_cert_test_attempts', 'acls_learning_marks', 'lab_day_attendance', 'lab_day_checkoff_status'];
+    const blocking: Record<string, number> = {};
+    for (const table of outcomeTables) {
+      const { count, error: countError } = await supabase
+        .from(table)
+        .select('lab_day_id', { count: 'exact', head: true })
+        .eq('lab_day_id', id);
+      if (countError) {
+        console.error(`[lab-days DELETE] outcome check failed for ${table}; aborting delete:`, countError.message);
+        return NextResponse.json({ error: 'Could not verify the lab day has no student records. Delete aborted.' }, { status: 503 });
+      }
+      if (count && count > 0) blocking[table] = count;
+    }
+    if (Object.keys(blocking).length > 0) {
+      await logAuditEvent({
+        user: { id: user.id, email: session.user.email ?? undefined, role: callerUser.role },
+        action: 'delete', resourceType: 'lab_day', resourceId: id,
+        resourceDescription: 'Lab day delete REFUSED: outcome records exist',
+        metadata: { refused: true, blocking },
+      });
+      return NextResponse.json(
+        { error: 'This lab day has student records (attendance, checkoffs, or ACLS results) and cannot be deleted. Archive it instead.', blocking },
+        { status: 409 }
+      );
+    }
+
+    const { data: dayBefore } = await supabase.from('lab_days').select('title, date, cohort_id').eq('id', id).maybeSingle();
+
     // Fire-and-forget: delete all linked Google Calendar events BEFORE deleting the lab day
     try {
       const { deleteLabDayEvents } = await import('@/lib/google-calendar');
@@ -394,6 +426,13 @@ export async function DELETE(
       }
       throw error;
     }
+
+    await logAuditEvent({
+      user: { id: user.id, email: session.user.email ?? undefined, role: callerUser.role },
+      action: 'delete', resourceType: 'lab_day', resourceId: id,
+      resourceDescription: `Deleted lab day: ${dayBefore?.title || dayBefore?.date || id}`,
+      metadata: { lab_day: dayBefore ?? null },
+    });
 
     return NextResponse.json({ success: true });
   } catch (error) {

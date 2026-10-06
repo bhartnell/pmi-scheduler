@@ -7,6 +7,8 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+(pending) | fix(lab-days): DELETE refuses (409) when CASCADE outcome rows exist (attendance, checkoffs, ACLS attempts/marks), fails closed if the check errors, and writes audit_log for refusals and deletes; step 2 (FK change) still open
+---
 (pending) | fix(timer): computeDisplaySeconds returns null for a running row with no started_at instead of duration_seconds (base-duration flicker on all six surfaces); node --test case added
 ---
 (pending) | feat(timer): TIMER-SYNC 4/5 GlobalTimerBanner + InlineTimerWidget moved onto useLabTimerState; InlineTimerWidget gains realtime (had none) and loses its poll and copied calculateTime(); banner keeps only the 60s heartbeat; dismissal keyed to rotation number
