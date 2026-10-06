@@ -8,6 +8,7 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 ---
+(pending) | feat(timer): TIMER-SYNC 1/5 additive useLabTimerState hook + lib/lab-timer-state.ts (null/failed/duplicate/stopped responses never overwrite a ticking value; version sent at 0); tests/lab-timer-state.test.ts via `node --test`; nothing consumes it yet
 2026-10-06
 (pending) | fix(timer): POST write path uses ?? so an explicit debrief_seconds 0 is kept (was || defaultDebrief)
 1864f844 | feat(learning-station): group-grain flow (group, who led, Pass/Watch, submit); acls_learning_marks gains lab_group_id/team_lead_id/cert_course, student_id nullable (PR #270)
