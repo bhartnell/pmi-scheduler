@@ -135,7 +135,18 @@ function signoff(ins: SignoffInstructor | null, dateStr: string): string {
   return `<p class="signoff">Instructor ${sig} &nbsp; Initials ${initials} &nbsp; Instructor Number ${num} &nbsp; Date ${date}</p>`;
 }
 
-export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStudent, ins: SignoffInstructor | null, courseDate?: string | null): string {
+/** Program label printed on the sheets, per course (the form constants default to ACLS). */
+export const COURSE_PROGRAM_LABEL: Record<'acls' | 'pals', string> = {
+  acls: 'Advanced Cardiovascular Life Support',
+  pals: 'Pediatric Advanced Life Support',
+};
+
+/** Course-neutral forms (e.g. Infant CPR = 'Basic Life Support') keep their own label; ACLS-labelled ones follow the course. */
+export function programLabelFor(form: SkillsForm, course: 'acls' | 'pals' = 'acls'): string {
+  return form.program === COURSE_PROGRAM_LABEL.acls ? COURSE_PROGRAM_LABEL[course] : form.program;
+}
+
+export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStudent, ins: SignoffInstructor | null, courseDate?: string | null, course: 'acls' | 'pals' = 'acls'): string {
   const name = `${student.lastName}, ${student.firstName}`;
   const dateStr = fmtDate(courseDate); // skills sheets stamp the cohort's course date
   const sections = form.sections.map((sec) => {
@@ -150,7 +161,7 @@ export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStuden
   }).join('');
   const scen = form.scenarios?.length ? `<div class="scen">${form.scenarios.map((s) => `<p>${esc(s)}</p>`).join('')}</div>` : '';
   return `<section class="form">
-    <p class="prog">${esc(form.program)}</p>
+    <p class="prog">${esc(programLabelFor(form, course))}</p>
     <h2>${esc(form.title)}</h2>
     <p class="hdr">Student Name <u>${esc(name)}</u> &nbsp;&nbsp; Date of Test <u>${dateStr ? esc(dateStr) : '&nbsp;&nbsp;&nbsp;&nbsp;'}</u></p>
     ${scen}
@@ -191,8 +202,8 @@ const STYLE = `
 /** The skills form CSS — exported so the per-student packet can merge it. */
 export const SKILLS_CSS = STYLE;
 
-export function renderSkillsDocument(form: SkillsForm, students: RosterStudent[], opts: { autoPrint?: boolean; instructor?: SignoffInstructor | null; courseDate?: string | null } = {}): string {
-  const sheets = students.map((s) => renderSkillsStudentSheet(form, s, opts.instructor ?? null, opts.courseDate)).join('\n');
+export function renderSkillsDocument(form: SkillsForm, students: RosterStudent[], opts: { autoPrint?: boolean; instructor?: SignoffInstructor | null; courseDate?: string | null; course?: 'acls' | 'pals' } = {}): string {
+  const sheets = students.map((s) => renderSkillsStudentSheet(form, s, opts.instructor ?? null, opts.courseDate, opts.course)).join('\n');
   const printScript = opts.autoPrint ? '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),350));</script>' : '';
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(form.title)}</title><style>${STYLE}</style></head>
 <body><div class="toolbar"><button onclick="window.print()">🖨 Print / Save as PDF</button> &nbsp; ${form.title} · ${students.length} student(s)</div>
