@@ -526,6 +526,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 | `useStudents` | `hooks/useStudents.ts` | `useStudents(options?: UseStudentsOptions): { students, loading, error, refetch }` | Fetches students with cohort and search filters. |
 | `useTimerAudio` | `hooks/useTimerAudio.ts` | `useTimerAudio(settings?: Partial<TimerAudioSettings>): { play, stop, isPlaying }` | Timer audio playback management. Also exports `loadTimerAudioSettings`, `saveTimerAudioSettings`, `TimerAudioSettings`, `DEFAULT_TIMER_AUDIO_SETTINGS`. |
 | `useVisibilityPolling` | `hooks/useVisibilityPolling.ts` | `useVisibilityPolling(callback: () => void, intervalMs: number, enabled?: boolean): void` | Polls a callback at a set interval, pausing when the browser tab is hidden. |
+| `useLabTimerState` | `hooks/useLabTimerState.ts` | `useLabTimerState({ url, channelName, tickMs? }): { timer, displaySeconds, stopPolling, refetch }` | Single owner of lab timer state (fetch, realtime, server offset, recovery, one display computation). Pure logic in `lib/lab-timer-state.ts`. No consumers yet (TIMER-SYNC 1/5). |
 
 ---
 
