@@ -60,6 +60,16 @@ input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 1;
 }
 
+/* Native select popups ignore transparent backgrounds and render light in
+   dark mode; set color-scheme + an opaque option background app-wide. */
+.dark select,
+.dark select option,
+.dark select optgroup {
+  color-scheme: dark;
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
 .dark body {
   background: #0a0a0a;
   color: #ededed;
