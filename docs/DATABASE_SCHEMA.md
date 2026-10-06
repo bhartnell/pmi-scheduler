@@ -11896,6 +11896,9 @@ case cards). Archived via `is_active=false` (not deleted, per Archive-don't-dele
 
 ### `acls_learning_marks` (added 2026-10-02)
 Unofficial ACLS learning-station tracker. Not a certification record.
-- `id` uuid PK; `lab_day_id` -> lab_days; `station_id` -> lab_stations; `student_id` -> students (all ON DELETE CASCADE)
+- `id` uuid PK; `lab_day_id` -> lab_days; `station_id` -> lab_stations; `student_id` -> students, NOW NULLABLE (group rows have none)
+- Group grain (2026-10-06): `lab_group_id` -> lab_groups (nullable), `team_lead_id` -> students (nullable), `cert_course` text NOT NULL DEFAULT 'acls'
 - `mark` text CHECK in ('pass','watch'); `note` text; `marked_by` text; `created_at`, `updated_at` timestamptz
-- UNIQUE (station_id, student_id); index on lab_day_id; RLS enabled, no policies (service-role API only)
+- Uniqueness: partial unique (station_id, student_id) WHERE student_id IS NOT NULL; partial unique (station_id, lab_group_id) WHERE lab_group_id IS NOT NULL (old constraint dropped; PostgREST upsert cannot target these, API does update-or-insert)
+- Index on lab_day_id; RLS enabled, no policies (service-role API only). Snapshot: `_backup_acls_learning_marks_20261006_pre_group`
+- Last updated: 2026-10-06 (PR #270)
