@@ -764,6 +764,10 @@ export default function LabTimer({
   const isRunning = timerState?.status === 'running';
   const isPaused = timerState?.status === 'paused';
   const isStopped = !timerState || timerState.status === 'stopped';
+  // Idle (no row, or stopped): show the configured length so the instructor can
+  // confirm setup without pressing Start on the shared clock. Count-up idles at 0:00.
+  // Running rows with a null reading still render '--:--' (never a base duration).
+  const idleClockText = timerState?.mode === 'countup' ? formatTime(0) : formatTime(liveDurationSeconds);
 
   return (
     <div
@@ -1039,11 +1043,12 @@ export default function LabTimer({
         <div className={`text-8xl md:text-[12rem] font-mono font-bold tracking-wider ${
           showRotateAlert || showDebriefAlert ? 'opacity-50' : ''
         }`}>
-          {shownSeconds === null ? '--:--' : formatTime(shownSeconds)}
+          {shownSeconds !== null ? formatTime(shownSeconds) : isStopped ? idleClockText : '--:--'}
         </div>
 
         {/* Status indicator */}
         <div className="mt-4 text-xl opacity-60">
+          {!timerState && 'Not started'}
           {timerState?.status === 'running' && 'Running'}
           {timerState?.status === 'paused' && 'Paused'}
           {timerState?.status === 'stopped' && 'Stopped'}
@@ -1069,9 +1074,10 @@ export default function LabTimer({
         </div>
 
         {/* Adjustment Controls - Only show for controller when timer is active */}
-        {isController && timerState && !isStopped && (
+        {isController && timerState && (
           <div className="mt-8 w-full max-w-lg space-y-4">
-            {/* Quick Adjust Current Rotation */}
+            {/* Quick Adjust Current Rotation - needs a current rotation, so start-gated */}
+            {!isStopped && (
             <div className="bg-gray-800/80 rounded-xl p-4">
               <label className="block text-sm font-medium text-gray-400 uppercase tracking-wide mb-3">
                 Adjust Current Rotation
@@ -1116,8 +1122,9 @@ export default function LabTimer({
                 </button>
               </div>
             </div>
+            )}
 
-            {/* Rotation Duration */}
+            {/* Rotation Duration - configuration, readable/settable before start */}
             <div className="bg-gray-800/80 rounded-xl p-4">
               <label className="block text-sm font-medium text-gray-400 uppercase tracking-wide mb-1">
                 Rotation Length
@@ -1427,7 +1434,7 @@ export default function LabTimer({
           rotation STARTED at. */}
       <div className="p-4 border-t border-gray-700 text-center text-sm opacity-60">
         {Math.floor(liveDurationSeconds / 60)} minute rotations | {numRotations} total rotations
-        {timerState?.debrief_seconds ? ` | Debrief alert at ${Math.floor(timerState.debrief_seconds / 60)} min remaining` : ''}
+        {(timerState?.debrief_seconds ?? defaultDebriefSeconds ?? 300) > 0 ? ` | Debrief alert at ${Math.floor((timerState?.debrief_seconds ?? defaultDebriefSeconds ?? 300) / 60)} min remaining` : ''}
       </div>
 
       {/* CSS for adjustment flash */}
