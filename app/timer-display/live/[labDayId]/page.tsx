@@ -492,7 +492,7 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
   const isTimeUp = timer?.mode === 'countdown' && currentTime <= 0 && timer?.status === 'running';
   const needsRotation = timer ? !timer.rotation_acknowledged : false;
   const showRotateFlash = isTimeUp || (needsRotation && timer?.status === 'running' && currentTime <= 0);
-  const isDebrief = timer?.mode === 'countdown' && currentTime > 0 && currentTime <= (timer?.debrief_seconds || 300) && timer?.status === 'running';
+  const isDebrief = timer?.mode === 'countdown' && currentTime > 0 && currentTime <= (timer?.debrief_seconds ?? 300) && timer?.status === 'running';
 
   // Color transitions based on time remaining percentage
   const getTimeColorClass = () => {

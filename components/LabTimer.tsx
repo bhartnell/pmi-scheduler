@@ -594,7 +594,7 @@ export default function LabTimer({
         const remaining = Math.max(0, duration - elapsed);
         setDisplaySeconds(remaining);
 
-        const debriefTime = timerState.debrief_seconds || 300;
+        const debriefTime = timerState.debrief_seconds ?? 300;
 
         // Debrief alert
         if (remaining <= debriefTime && remaining > 0 && !debriefAlertShownRef.current && timerState.status === 'running') {
@@ -621,7 +621,8 @@ export default function LabTimer({
       } else {
         setDisplaySeconds(Math.min(elapsed, duration));
 
-        const debriefTime = duration - (timerState.debrief_seconds || 300);
+        const debriefSecs = timerState.debrief_seconds ?? 300;
+        const debriefTime = debriefSecs > 0 ? duration - debriefSecs : Infinity;
 
         if (elapsed >= debriefTime && !debriefAlertShownRef.current && timerState.status === 'running') {
           setShowDebriefAlert(true);
@@ -1352,12 +1353,12 @@ export default function LabTimer({
                       type="number"
                       min="0"
                       max={liveDurationSeconds - 60}
-                      value={timerState?.debrief_seconds || 300}
+                      value={timerState?.debrief_seconds ?? 300}
                       onChange={(e) => updateSettings({ debrief_seconds: parseInt(e.target.value) || 0 })}
                       className="w-24 px-3 py-2 bg-gray-700 rounded-lg text-white"
                     />
                     <span className="text-sm opacity-60">
-                      ({Math.floor((timerState?.debrief_seconds || 300) / 60)} min)
+                      ({Math.floor((timerState?.debrief_seconds ?? 300) / 60)} min)
                     </span>
                   </div>
                 </div>

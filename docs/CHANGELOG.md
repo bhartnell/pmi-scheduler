@@ -8,6 +8,8 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 ---
+(pending) | fix(timer): debrief_seconds 0 now means "off" (|| 300 -> ?? 300 at 11 read sites); new timers on is_adv_cert_testing days default to no debrief marker
+
 
 (pending) | fix(aha-export): skills sheets print the course program label (PALS export no longer prints "Advanced Cardiovascular Life Support" on Airway / Adult BLS sheets); course threaded through packet + standalone skills docs
 
