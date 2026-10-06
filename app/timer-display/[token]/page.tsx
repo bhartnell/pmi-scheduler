@@ -278,7 +278,9 @@ export default function TimerDisplayPage() {
     onResponse: handleTimerResponse,
   });
   const timer = hookTimer as TimerState | null;
-  // null = stopped / nothing to show. Never rendered as 0:00 or base duration.
+  // null = no reading. Digits render --:--; derived flags are gated on hasReading so a
+  // null reading can never look like 0:00 / TIME UP.
+  const hasReading = displaySeconds !== null;
   const currentTime = displaySeconds ?? 0;
 
   // ─── Audio thresholds, driven by the hook's remaining-time value ───
@@ -328,10 +330,10 @@ export default function TimerDisplayPage() {
   // ─── Helpers ─────────────────────────────────────────────────────────────────
 
   // Determine display state
-  const isTimeUp = timer?.mode === 'countdown' && currentTime <= 0 && timer?.status === 'running';
+  const isTimeUp = hasReading && timer?.mode === 'countdown' && currentTime <= 0 && timer?.status === 'running';
   const needsRotation = !timer?.rotation_acknowledged;
   const showRotateFlash = isTimeUp || needsRotation;
-  const isDebrief = timer?.mode === 'countdown' && currentTime > 0 && currentTime <= (timer?.debrief_seconds ?? 300) && timer?.status === 'running';
+  const isDebrief = hasReading && timer?.mode === 'countdown' && currentTime > 0 && currentTime <= (timer?.debrief_seconds ?? 300) && timer?.status === 'running';
 
   // ─── Shared control buttons ───────────────────────────────────────────────────
   const ControlButtons = () => (

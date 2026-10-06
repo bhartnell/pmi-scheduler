@@ -8,6 +8,9 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+2026-10-06
+
+(pending) | fix(timer): wall displays no longer flash red ROTATE / TIME UP on a null timer reading (timer-display token + live)
 (pending) | fix(dark-mode): app-wide opaque dark background + color-scheme for native select popups (Who led dropdown rendered light)
 ---
 (pending) | fix(timer): InlineTimerWidget + GlobalTimerBanner stop coercing null displaySeconds to 0 (false red TIME UP on lab-day header / vanishing banner); render --:-- like the other four surfaces

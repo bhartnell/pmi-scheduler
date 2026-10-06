@@ -248,7 +248,10 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
     onResponse: handleTimerResponse,
   });
   const timer = hookTimer as TimerState | null;
-  // null = stopped / nothing to show. Never rendered as 0:00 or base duration.
+  // null = no reading (stopped / not yet known). The digits render --:-- and every
+  // derived flag below (time-up, rotate flash, colors, progress) is gated on hasReading,
+  // so a null reading can never look like 0:00 / TIME UP.
+  const hasReading = displaySeconds !== null;
   const currentTime = displaySeconds ?? 0;
 
   // --- Timer Control Actions ---
@@ -363,17 +366,17 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
   }, [timer?.rotation_number]);
 
   // --- Derived State ---
-  const isTimeUp = timer?.mode === 'countdown' && currentTime <= 0 && timer?.status === 'running';
+  const isTimeUp = hasReading && timer?.mode === 'countdown' && currentTime <= 0 && timer?.status === 'running';
   const needsRotation = timer ? !timer.rotation_acknowledged : false;
-  const showRotateFlash = isTimeUp || (needsRotation && timer?.status === 'running' && currentTime <= 0);
-  const isDebrief = timer?.mode === 'countdown' && currentTime > 0 && currentTime <= (timer?.debrief_seconds ?? 300) && timer?.status === 'running';
+  const showRotateFlash = isTimeUp || (hasReading && needsRotation && timer?.status === 'running' && currentTime <= 0);
+  const isDebrief = hasReading && timer?.mode === 'countdown' && currentTime > 0 && currentTime <= (timer?.debrief_seconds ?? 300) && timer?.status === 'running';
 
   // Color transitions based on time remaining percentage
   const getTimeColorClass = () => {
     if (!timer || timer.status === 'stopped') return 'text-white';
     if (timer.status === 'paused') return 'text-blue-300';
     if (isDebrief) return 'text-black';
-    if (timer.mode === 'countdown') {
+    if (hasReading && timer.mode === 'countdown') {
       const pctRemaining = currentTime / timer.duration_seconds;
       if (pctRemaining > 0.5) return 'text-green-400';
       if (pctRemaining > 0.25) return 'text-yellow-400';
@@ -387,7 +390,7 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
     if (showRotateFlash) return 'bg-red-600 animate-pulse';
     if (isDebrief) return 'bg-yellow-600';
     if (timer?.status === 'paused') return 'bg-blue-900';
-    if (timer?.mode === 'countdown' && timer?.status === 'running') {
+    if (hasReading && timer?.mode === 'countdown' && timer?.status === 'running') {
       const pctRemaining = currentTime / timer.duration_seconds;
       if (pctRemaining <= 0.25) return 'bg-red-900/50';
       if (pctRemaining <= 0.5) return 'bg-yellow-900/30';
@@ -397,7 +400,7 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
 
   // Progress bar percentage
   const getProgress = () => {
-    if (!timer) return 0;
+    if (!timer || !hasReading) return 0;
     if (timer.mode === 'countdown') {
       return ((timer.duration_seconds - currentTime) / timer.duration_seconds) * 100;
     }
