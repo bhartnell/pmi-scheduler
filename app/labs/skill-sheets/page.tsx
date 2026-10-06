@@ -22,6 +22,7 @@ import {
 import { ThemeToggle } from '@/components/ThemeToggle';
 import NotificationBell from '@/components/NotificationBell';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import DockPortal from '@/components/DockPortal';
 
 interface SkillDocument {
   id: string;
@@ -634,7 +635,7 @@ export default function SkillSheetsPage() {
 
       {/* Toast */}
       {toast && (
-        <div className={`fixed bottom-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all ${
+        <DockPortal><div className={`flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all ${
           toastType === 'success' ? 'bg-green-600' : 'bg-red-600'
         }`}>
           {toastType === 'success' ? (
@@ -643,7 +644,7 @@ export default function SkillSheetsPage() {
             <AlertCircle className="w-4 h-4" />
           )}
           {toast}
-        </div>
+        </div></DockPortal>
       )}
     </div>
   );

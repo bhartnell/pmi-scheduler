@@ -10,6 +10,8 @@ Format: `commit-hash | brief description`
 
 2026-10-06
 
+(this commit) | fix(ui): page toasts + student "View Vitals" button render in FloatingDock page slot via new DockPortal (no more overlap/hiding behind Feedback button)
+
 (pending) | fix(timer): wall displays no longer flash red ROTATE / TIME UP on a null timer reading (timer-display token + live)
 (pending) | fix(timer): idle LabTimer shows full configured length, footer debrief line, and Rotation Length before Start
 
