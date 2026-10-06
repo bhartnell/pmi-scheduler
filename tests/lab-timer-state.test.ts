@@ -32,6 +32,10 @@ test('stopped row yields null, not duration', () => {
   const s = applyRealtimeRow(ticking(), row({ status: 'stopped', started_at: null, version: 4 }));
   assert.equal(computeDisplaySeconds(s, NOW), null);
 });
+test('running row with no started_at yields null, not base duration', () => {
+  const s = applyRealtimeRow(INITIAL_SNAPSHOT, row({ status: 'running', started_at: null, version: 1 }));
+  assert.equal(computeDisplaySeconds(s, NOW), null);
+});
 test('duplicate response returns same snapshot', () => {
   const s = ticking();
   const again = applyFetchResult(s, { body: { success: true, timer: row(), serverTime: new Date(NOW).toISOString() }, clientNowMs: NOW });
