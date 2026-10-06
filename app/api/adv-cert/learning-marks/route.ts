@@ -72,7 +72,7 @@ export async function PUT(request: NextRequest) {
 
   const supabase = getSupabaseAdmin();
 
-  // Course comes from the lab day's cohort program, not a hardcode.
+  // Lab day must exist; course defaults to acls, PALS callers pass certCourse.
   const { data: day } = await supabase.from('lab_days').select('id').eq('id', labDayId).maybeSingle();
   if (!day) return NextResponse.json({ success: false, error: 'lab day not found' }, { status: 404 });
   const certCourse = body.certCourse === 'pals' ? 'pals' : 'acls';
