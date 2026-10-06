@@ -114,7 +114,9 @@ export async function GET(request: NextRequest) {
         .in('lab_group_id', groupIds);
       for (const m of members || []) {
         const s: any = (m as any).student;
-        if (!s) continue;
+        // Withdrawn students leave the live roster/totals; their historical
+        // marks and attempt links are untouched (read-only filter).
+        if (!s || s.status === 'withdrawn') continue;
         (membersByGroup[(m as any).lab_group_id] ??= []).push(s);
       }
     }
