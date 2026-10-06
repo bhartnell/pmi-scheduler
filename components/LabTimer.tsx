@@ -29,9 +29,9 @@ import {
   Minus
 } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
+import { useLabTimerState } from '@/hooks/useLabTimerState';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
 import { formatTime } from '@/lib/utils';
-import { getSupabase } from '@/lib/supabase';
 
 interface LabTimerProps {
   labDayId: string;
@@ -88,8 +88,6 @@ export default function LabTimer({
   isController = true,
   defaultDebriefSeconds
 }: LabTimerProps) {
-  const [timerState, setTimerState] = useState<TimerState | null>(null);
-  const [displaySeconds, setDisplaySeconds] = useState(0);
   const [isConnected, setIsConnected] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -109,16 +107,6 @@ export default function LabTimer({
   // Track mount status so async fetch responses don't try to call
   // setState / onClose after the component has unmounted.
   const mountedRef = useRef(true);
-  // Cross-device clock-skew correction (Task Handoff Queue "grading-view
-  // timer" ticket, Ben decision 2026-09-01: cross-user desync). Two
-  // controllers' devices can disagree on system clock by seconds to
-  // minutes; computing elapsed time from raw Date.now() means each
-  // device shows a DIFFERENT countdown for the same server-authoritative
-  // timer. The timer-display kiosk pages (app/timer-display/*) already
-  // solved this by comparing the API's serverTime to the client's
-  // Date.now() and applying the delta to every subsequent calculation —
-  // this mirrors that proven fix here.
-  const serverTimeOffsetRef = useRef(0);
   const [readyStatuses, setReadyStatuses] = useState<ReadyStatus[]>([]);
   const [allStations, setAllStations] = useState<Station[]>([]);
   const [showStaleWarning, setShowStaleWarning] = useState(false);
@@ -139,20 +127,6 @@ export default function LabTimer({
   // Default to 15 minutes if rotationMinutes is not set
   const totalSeconds = (rotationMinutes || 15) * 60;
 
-  // Bug fix (feedback 1a31456e: "adjusting the timer... only adjusting the
-  // current rotation timer"). `totalSeconds` above is derived from the
-  // static `rotationMinutes` PROP — it's only correct at mount and never
-  // updates again, even though the server-authoritative
-  // `timerState.duration_seconds` changes whenever Rotation Length is
-  // adjusted (or the Lab Day edit page mirror lands — see
-  // app/api/lab-management/lab-days/[id]/route.ts). Progress bar / footer
-  // text below were still keyed off the stale prop, so after any duration
-  // change they kept showing the ORIGINAL length — reading as "it only
-  // changed the current countdown, not the actual rotation length."
-  // `liveDurationSeconds` is the display-time equivalent of `totalSeconds`:
-  // authoritative once a timer row exists, falling back to the prop only
-  // pre-init.
-  const liveDurationSeconds = timerState?.duration_seconds || totalSeconds;
 
   // Load audio settings from localStorage
   const [audioSettings, setAudioSettings] = useState<Partial<TimerAudioSettings>>(() =>
@@ -187,74 +161,70 @@ export default function LabTimer({
     playBeeps(count);
   }, [playBeeps]);
 
-  // Fetch timer state from server
-  // Returns the timer object (or null) so callers can use it without a second fetch
-  const fetchTimerState = useCallback(async (checkStale = false): Promise<TimerState | null> => {
-    try {
-      const res = await fetch(`/api/lab-management/timer?labDayId=${labDayId}`);
-      if (res.status === 401) {
-        setSessionExpired(true);
-        return null;
-      }
-      const data = await res.json();
-
-      // Server explicitly told us to stop polling
-      if (data?.stop_polling) {
-        setSessionExpired(true);
-        return null;
-      }
-
-      if (data.serverTime) {
-        serverTimeOffsetRef.current = new Date(data.serverTime).getTime() - Date.now();
-      }
-
-      if (data.success) {
-        setIsConnected(true);
-        if (data.timer) {
-          hadTimerRef.current = true;
-          setTimerState(data.timer);
-          // Show stale warning on initial load if timer is from a previous day
-          if (checkStale && data.isStale && data.timer.status !== 'stopped') {
-            setShowStaleWarning(true);
-          }
-          return data.timer;
-        }
-        // No timer row returned. Critically: also clear LOCAL state to
-        // null so the polling-existence-gate in getTimerPollInterval()
-        // (returns null when !timerState) actually fires. Without this
-        // setTimerState(null) call, a device that polls AFTER another
-        // device's End Lab would receive {timer: null} but keep its
-        // stale "running" timerState forever, polling every 5s
-        // indefinitely. This was the bug behind the May 27 12:15 PT
-        // lab where polling continued at ~16/min for minutes after
-        // End Lab was clicked.
-        if (hadTimerRef.current) {
-          // We previously had a timer and now it's gone → lab ended
-          // remotely. Close the modal automatically so the operator
-          // isn't staring at a frozen UI. The local endLab() call
-          // path already closes the modal; this branch handles the
-          // case where another device fired End Lab.
-          setTimerState(null);
-          if (mountedRef.current) onClose();
-        } else {
-          setTimerState(null);
-        }
-        // Log if table doesn't exist yet
-        if (data.tableExists === false) {
-          console.warn('Timer table not created - run migration: 20260123_lab_timer_state.sql');
-        }
-        return null;
-      } else {
-        setIsConnected(false);
-        console.error('Timer API error:', data.error);
-        return null;
-      }
-    } catch (error) {
-      console.error('Error fetching timer:', error);
-      setIsConnected(false);
-      return null;
+  // --- Timer state: ONE owner (hooks/useLabTimerState). No timer poll; realtime
+  // plus re-fetch on reconnect / visibility regain / a 60s safety net. ---
+  const firstResponseRef = useRef(true);
+  const handleTimerResponse = useCallback(({ status, body }: { status: number; body: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (status === 401 || body?.stop_polling) {
+      setSessionExpired(true);
+      return;
     }
-  }, [labDayId]);
+    if (status === 0 || !body || body.success === false) {
+      setIsConnected(false);
+      return;
+    }
+    setIsConnected(true);
+    const isFirst = firstResponseRef.current;
+    firstResponseRef.current = false;
+    if (body.timer) {
+      hadTimerRef.current = true;
+      // Show stale warning on initial load if timer is from a previous day
+      if (isFirst && body.isStale && body.timer.status !== 'stopped') {
+        setShowStaleWarning(true);
+      }
+    } else if (hadTimerRef.current) {
+      // We had a timer and the row is gone: lab ended remotely (another
+      // device's End Lab). Close instead of leaving a frozen modal.
+      if (mountedRef.current) onClose();
+    }
+    if (body.tableExists === false) {
+      console.warn('Timer table not created - run migration: 20260123_lab_timer_state.sql');
+    }
+  }, [onClose]);
+
+  const { timer: hookTimer, displaySeconds, applyTimer } = useLabTimerState({
+    url: `/api/lab-management/timer?labDayId=${labDayId}`,
+    labDayId,
+    enabled: !!labDayId && !sessionExpired,
+    heartbeatMs: 60000,
+    onResponse: handleTimerResponse,
+  });
+  const timerState = hookTimer as TimerState | null;
+  const timerDuration = timerState?.duration_seconds ?? 0;
+
+  // Bug fix (feedback 1a31456e: "adjusting the timer... only adjusting the
+  // current rotation timer"). `totalSeconds` above is derived from the
+  // static `rotationMinutes` PROP — it's only correct at mount and never
+  // updates again, even though the server-authoritative
+  // `timerState.duration_seconds` changes whenever Rotation Length is
+  // adjusted (or the Lab Day edit page mirror lands — see
+  // app/api/lab-management/lab-days/[id]/route.ts). Progress bar / footer
+  // text below were still keyed off the stale prop, so after any duration
+  // change they kept showing the ORIGINAL length — reading as "it only
+  // changed the current countdown, not the actual rotation length."
+  // `liveDurationSeconds` is the display-time equivalent of `totalSeconds`:
+  // authoritative once a timer row exists, falling back to the prop only
+  // pre-init.
+  // Rotation LENGTH label/progress denominator only. The countdown readout never
+  // falls back to this: idle renders '--:--' (TIMER-SYNC 3/5).
+  const liveDurationSeconds = timerState?.duration_seconds || totalSeconds;
+  // null = nothing to show (no timer / stopped). Never rendered as 0:00 or a base duration.
+  const shownSeconds = displaySeconds === null
+    ? null
+    : timerState?.mode === 'countup' ? Math.min(displaySeconds, timerDuration) : displaySeconds;
+  const remainingSeconds = displaySeconds === null || !timerState
+    ? null
+    : timerState.mode === 'countdown' ? displaySeconds : timerDuration - Math.min(displaySeconds, timerDuration);
 
   // Fetch ready statuses
   const fetchReadyStatuses = useCallback(async () => {
@@ -341,12 +311,12 @@ export default function LabTimer({
       const data = await res.json();
       if (data.success) {
         hadTimerRef.current = true;
-        setTimerState(data.timer);
+        applyTimer(data.timer);
       }
     } catch (error) {
       console.error('Error initializing timer:', error);
     }
-  }, [labDayId, totalSeconds, defaultDebriefSeconds]);
+  }, [labDayId, totalSeconds, defaultDebriefSeconds, applyTimer]);
 
   // End lab - completely clear timer state
   const endLab = useCallback(async () => {
@@ -363,7 +333,6 @@ export default function LabTimer({
       const data = await res.json();
       console.log('[LabTimer] endLab response:', data);
       if (data.success) {
-        setTimerState(null);
         setShowEndLabConfirm(false);
         setShowStaleWarning(false);
         // Reset local state
@@ -398,7 +367,7 @@ export default function LabTimer({
       const data = await res.json();
       if (data.success) {
         hadTimerRef.current = true;
-        setTimerState(data.timer);
+        applyTimer(data.timer);
         if (action === 'next' || action === 'reset' || action === 'stop') {
           setShowRotateAlert(false);
           setShowDebriefAlert(false);
@@ -410,7 +379,7 @@ export default function LabTimer({
     } catch (error) {
       console.error('[LabTimer] Error sending action:', action, error);
     }
-  }, [labDayId]);
+  }, [labDayId, applyTimer]);
 
   // Quick time adjustment (±N seconds for current rotation)
   const handleTimeAdjust = useCallback(async (action: 'add_time' | 'subtract_time', seconds: number = 60) => {
@@ -424,7 +393,7 @@ export default function LabTimer({
       const data = await res.json();
       if (data.success) {
         hadTimerRef.current = true;
-        setTimerState(data.timer);
+        applyTimer(data.timer);
         const mins = Math.floor(seconds / 60);
         const flashText = action === 'add_time' ? `+${mins}:00` : `-${mins}:00`;
         setAdjustmentFlash(flashText);
@@ -435,7 +404,7 @@ export default function LabTimer({
     } finally {
       setAdjustLoading(false);
     }
-  }, [labDayId]);
+  }, [labDayId, applyTimer]);
 
   // Set rotation duration (for current + remaining rotations)
   const handleSetDuration = useCallback(async (newDurationSeconds: number) => {
@@ -450,7 +419,7 @@ export default function LabTimer({
       const data = await res.json();
       if (data.success) {
         hadTimerRef.current = true;
-        setTimerState(data.timer);
+        applyTimer(data.timer);
         const newMins = Math.floor(newDurationSeconds / 60);
         const remaining = numRotations - (data.timer?.rotation_number || 1);
         setDurationChangeMsg(`Rotation length changed to ${newMins} min. ${remaining > 0 ? `${remaining} remaining rotation${remaining > 1 ? 's' : ''} will use the new length.` : ''}`);
@@ -461,7 +430,7 @@ export default function LabTimer({
     } finally {
       setAdjustLoading(false);
     }
-  }, [labDayId, numRotations]);
+  }, [labDayId, numRotations, applyTimer]);
 
   // Initialize on mount. ONE fetch to see if a timer record exists
   // for this lab day. NO auto-create — the previous behavior created
@@ -474,12 +443,11 @@ export default function LabTimer({
   useEffect(() => {
     mountedRef.current = true;
     const init = async () => {
-      await fetchTimerState(true); // Check for stale on initial load
       await fetchReadyStatuses();
     };
     init();
     return () => { mountedRef.current = false; };
-  }, [labDayId, fetchTimerState, fetchReadyStatuses]);
+  }, [labDayId, fetchReadyStatuses]);
 
   // Determine polling intervals.
   //   • No timer record → null (STOP polling). Created on Start.
@@ -497,14 +465,6 @@ export default function LabTimer({
   // was an attempt at "detect a restart" but the operator who
   // restarts is on this device and will see the change immediately
   // without a poll round-trip.
-  const getTimerPollInterval = () => {
-    if (sessionExpired) return null;
-    if (!timerState) return null;
-    if (timerState.status === 'stopped') return null;
-    if (timerState.status === 'paused') return 15000;
-    return 5000;
-  };
-
   const getReadyPollInterval = () => {
     if (sessionExpired) return null;
     if (!timerState) return null;
@@ -512,43 +472,8 @@ export default function LabTimer({
     return 10000;
   };
 
-  // Poll for updates with visibility awareness - timer state
-  // Wrap fetchTimerState to discard return value for useVisibilityPolling's void signature
-  const pollTimerState = useCallback(async () => { await fetchTimerState(); }, [fetchTimerState]);
-  useVisibilityPolling(pollTimerState, getTimerPollInterval(), { immediate: false });
-
   // Poll for updates with visibility awareness - ready statuses
   useVisibilityPolling(fetchReadyStatuses, getReadyPollInterval(), { immediate: false });
-
-  // Realtime discovery (feedback ef5f2975: "timers start at xx:49 not
-  // xx:59"). Root cause: this component only ever learned about a
-  // just-started timer on its NEXT poll tick — up to 5s late while
-  // running, but up to 15s late for the controller's own "no timer yet /
-  // stopped" tier (getTimerPollInterval returns null there, so really it
-  // waits for the mount fetch or a manual action). Any OTHER instructor
-  // watching this same lab day's LabTimer as a non-controller (isController
-  // = false) inherits that same lag, so the very first frame they see
-  // already shows several seconds of elapsed time — reads as "started
-  // 10 seconds behind." Same fix already proven for GlobalTimerBanner
-  // (20260701_lab_timer_state_realtime_rls.sql) and TimerBanner — additive
-  // alongside the existing poll, which stays as the fallback.
-  useEffect(() => {
-    if (!labDayId) return;
-
-    const supabase = getSupabase();
-    const channel = supabase
-      .channel(`lab-timer-${labDayId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'lab_timer_state', filter: `lab_day_id=eq.${labDayId}` },
-        () => { fetchTimerState(); }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [labDayId, fetchTimerState]);
 
   // Removed 2026-05-20: a previous "sync local prop → server" effect
   // here pushed `totalSeconds` (derived from the lab_day.rotation_duration
@@ -563,107 +488,45 @@ export default function LabTimer({
   // expected to be reconciled afterwards. Timer.duration_seconds is the
   // authoritative source of truth from then on.
 
-  // Calculate display time from timer state
+  // Alerts + sounds, driven by the hook's single remaining-time value.
+  // `lastBeepKeyRef` makes each (rotation, second) fire at most once even if
+  // the audio callbacks change identity between renders.
+  const lastBeepKeyRef = useRef('');
+  const runAlerts = useCallback(() => {
+    if (!timerState || timerState.status !== 'running' || remainingSeconds === null || displaySeconds === null) return;
+    const key = `${timerState.rotation_number}:${remainingSeconds}`;
+    if (lastBeepKeyRef.current === key) return;
+    lastBeepKeyRef.current = key;
+
+    // debrief_seconds = 0 means "off": the `> 0` guards are what keep it off.
+    const debriefSecs = timerState.debrief_seconds ?? 300;
+    const debriefReached = debriefSecs > 0 && remainingSeconds <= debriefSecs && remainingSeconds > 0;
+    if (debriefReached && !debriefAlertShownRef.current) {
+      setShowDebriefAlert(true);
+      debriefAlertShownRef.current = true;
+      playWarningBeep(2);
+      setTimeout(() => setShowDebriefAlert(false), 5000);
+    }
+
+    // Rotation end alert - LOUD
+    if (remainingSeconds <= 0 && lastAlertRotationRef.current !== timerState.rotation_number) {
+      setShowRotateAlert(true);
+      setRotateAlertStartTime(Date.now());
+      lastAlertRotationRef.current = timerState.rotation_number;
+      playLoudAlert();
+    }
+
+    // Warning beeps (countdown only)
+    if (timerState.mode === 'countdown') {
+      if (remainingSeconds === 60) playWarningBeep(1);
+      if (remainingSeconds === 30) playWarningBeep(2);
+      if (remainingSeconds === 10) playWarningBeep(3);
+    }
+  }, [timerState, remainingSeconds, displaySeconds, playWarningBeep, playLoudAlert]);
+
   useEffect(() => {
-    if (!timerState) return;
-
-    const calculateElapsed = () => {
-      if (timerState.status === 'stopped') {
-        return 0;
-      } else if (timerState.status === 'paused') {
-        return timerState.elapsed_when_paused || 0;
-      } else if (timerState.status === 'running' && timerState.started_at) {
-        const startTime = new Date(timerState.started_at).getTime();
-        const now = Date.now() + serverTimeOffsetRef.current;
-        // Sign-guard (Task Handoff Queue "rotation timer flicker" ticket,
-        // 2026-09-14, fixed on TimerBanner/GlobalTimerBanner): started_at
-        // can land ahead of this client's corrected clock. Clamp a
-        // negative diff to 0 (not-started-yet) instead of letting it flow
-        // unclamped into `duration - elapsed`, which could render above
-        // the full duration.
-        return Math.max(0, Math.floor((now - startTime) / 1000));
-      }
-      return 0;
-    };
-
-    const updateDisplay = () => {
-      const elapsed = calculateElapsed();
-      const duration = timerState.duration_seconds;
-
-      if (timerState.mode === 'countdown') {
-        const remaining = Math.max(0, duration - elapsed);
-        setDisplaySeconds(remaining);
-
-        const debriefTime = timerState.debrief_seconds ?? 300;
-
-        // Debrief alert
-        if (remaining <= debriefTime && remaining > 0 && !debriefAlertShownRef.current && timerState.status === 'running') {
-          setShowDebriefAlert(true);
-          debriefAlertShownRef.current = true;
-          playWarningBeep(2);
-          setTimeout(() => setShowDebriefAlert(false), 5000);
-        }
-
-        // Rotation end alert - LOUD
-        if (remaining <= 0 && timerState.status === 'running' && lastAlertRotationRef.current !== timerState.rotation_number) {
-          setShowRotateAlert(true);
-          setRotateAlertStartTime(Date.now());
-          lastAlertRotationRef.current = timerState.rotation_number;
-          playLoudAlert();
-        }
-
-        // Warning beeps
-        if (timerState.status === 'running') {
-          if (remaining === 60) playWarningBeep(1);
-          if (remaining === 30) playWarningBeep(2);
-          if (remaining === 10) playWarningBeep(3);
-        }
-      } else {
-        setDisplaySeconds(Math.min(elapsed, duration));
-
-        const debriefSecs = timerState.debrief_seconds ?? 300;
-        const debriefTime = debriefSecs > 0 ? duration - debriefSecs : Infinity;
-
-        if (elapsed >= debriefTime && !debriefAlertShownRef.current && timerState.status === 'running') {
-          setShowDebriefAlert(true);
-          debriefAlertShownRef.current = true;
-          playWarningBeep(2);
-          setTimeout(() => setShowDebriefAlert(false), 5000);
-        }
-
-        if (elapsed >= duration && timerState.status === 'running' && lastAlertRotationRef.current !== timerState.rotation_number) {
-          setShowRotateAlert(true);
-          setRotateAlertStartTime(Date.now());
-          lastAlertRotationRef.current = timerState.rotation_number;
-          playLoudAlert();
-        }
-      }
-    };
-
-    updateDisplay();
-
-    // Only run display timer when page is visible
-    let displayInterval: NodeJS.Timeout | null = setInterval(updateDisplay, 1000);
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        if (displayInterval) {
-          clearInterval(displayInterval);
-          displayInterval = null;
-        }
-      } else {
-        updateDisplay(); // Catch up immediately
-        displayInterval = setInterval(updateDisplay, 1000);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      if (displayInterval) clearInterval(displayInterval);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [timerState, playWarningBeep, playLoudAlert]);
+    runAlerts();
+  }, [runAlerts]);
 
   // Reset debrief alert shown flag when rotation changes
   useEffect(() => {
@@ -718,9 +581,11 @@ export default function LabTimer({
   // Progress percentage — uses liveDurationSeconds (see above), not the
   // static totalSeconds prop, so the bar reflects the CURRENT rotation
   // length after a duration adjustment instead of visually contradicting it.
-  const progress = timerState?.mode === 'countdown'
-    ? ((liveDurationSeconds - displaySeconds) / liveDurationSeconds) * 100
-    : (displaySeconds / liveDurationSeconds) * 100;
+  const progress = shownSeconds === null
+    ? 0
+    : timerState?.mode === 'countdown'
+      ? ((liveDurationSeconds - shownSeconds) / liveDurationSeconds) * 100
+      : (shownSeconds / liveDurationSeconds) * 100;
 
   // Ready status variables
   const readyCount = readyStatuses.filter(s => s.is_ready).length;
@@ -878,12 +743,12 @@ export default function LabTimer({
     if (showRotateAlert) return 'bg-red-600 animate-pulse';
     if (showDebriefAlert) return 'bg-yellow-500';
 
-    if (!timerState || timerState.status === 'stopped') {
+    if (!timerState || timerState.status === 'stopped' || remainingSeconds === null) {
       return 'bg-gray-900';
     }
 
     // Color based on time remaining
-    const remaining = timerState.mode === 'countdown' ? displaySeconds : (timerState.duration_seconds - displaySeconds);
+    const remaining = remainingSeconds;
     if (remaining <= 60) return 'bg-red-700';
     if (remaining <= 300) return 'bg-yellow-600';
     return 'bg-gray-900';
@@ -1174,7 +1039,7 @@ export default function LabTimer({
         <div className={`text-8xl md:text-[12rem] font-mono font-bold tracking-wider ${
           showRotateAlert || showDebriefAlert ? 'opacity-50' : ''
         }`}>
-          {formatTime(displaySeconds)}
+          {shownSeconds === null ? '--:--' : formatTime(shownSeconds)}
         </div>
 
         {/* Status indicator */}
@@ -1230,7 +1095,7 @@ export default function LabTimer({
                 </button>
                 <div className="px-4 py-2 rounded-lg bg-gray-700 min-w-[80px] text-center">
                   <span className="text-lg font-mono font-bold tabular-nums">
-                    {formatTime(displaySeconds)}
+                    {shownSeconds === null ? '--:--' : formatTime(shownSeconds)}
                   </span>
                 </div>
                 <button

@@ -31,7 +31,7 @@ interface Options {
  * server-time offset, reconnect/visibility recovery, and the single
  * remaining-time computation. Recovery re-fetches on reconnect and when the tab
  * becomes visible; it does NOT poll (see claude/lab-timer-architecture.md).
- * Consumers: the two wall displays (TIMER-SYNC 2/5).
+ * Consumers: the two wall displays (TIMER-SYNC 2/5), LabTimer and TimerBanner (3/5).
  */
 export function useLabTimerState({ url, labDayId, enabled = true, subscribe = true, heartbeatMs, onResponse }: Options) {
   const [snapshot, setSnapshot] = useState<LabTimerSnapshot>(INITIAL_SNAPSHOT);
@@ -74,7 +74,9 @@ export function useLabTimerState({ url, labDayId, enabled = true, subscribe = tr
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'lab_timer_state' },
-        (payload: { new: unknown }) => {
+        (payload: { new: unknown; eventType?: string }) => {
+          // A DELETE (End Lab) carries no new row; refetch so consumers can see the timer is gone.
+          if (payload.eventType === 'DELETE') { refetch(); return; }
           const row = payload.new as LabTimerRow | undefined;
           if (labDayId && row?.lab_day_id !== labDayId) return;
           commit(applyRealtimeRow(snapRef.current, row));

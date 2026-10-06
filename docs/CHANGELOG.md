@@ -8,6 +8,7 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 ---
+(pending) | feat(timer): TIMER-SYNC 3/5 grading-interface bars (components/LabTimer.tsx, components/TimerBanner.tsx) moved onto useLabTimerState; local calculateTime/poll/channel/clock-offset deleted; idle renders --:-- (no base-duration readout); hook now refetches on realtime DELETE so a remote End Lab is still detected
 (pending) | feat(timer): TIMER-SYNC 2/5 both wall displays (app/timer-display/[token], /live/[labDayId]) moved onto useLabTimerState; 5s adaptive timer poll and duplicated calculateTime() deleted; recovery = refetch on realtime (re)subscribe + visibility + 60s safety net; stopped renders --:--; hook gains subscribe/heartbeatMs/onResponse/applyTimer
 (pending) | feat(timer): TIMER-SYNC 1/5 additive useLabTimerState hook + lib/lab-timer-state.ts (null/failed/duplicate/stopped responses never overwrite a ticking value; version sent at 0); tests/lab-timer-state.test.ts via `node --test`; nothing consumes it yet
 2026-10-06
