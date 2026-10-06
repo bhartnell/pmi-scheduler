@@ -57,6 +57,8 @@ function offsetFrom(serverTime: string | undefined, clientNowMs: number, prev: n
 /** True when `incoming` carries nothing newer than `current`. */
 export function isStaleOrDuplicate(current: LabTimerRow | null, incoming: LabTimerRow): boolean {
   if (!current) return false;
+  // A different row id is a re-created timer (End Lab + Start resets version to 0): never stale.
+  if (current.id && incoming.id && current.id !== incoming.id) return false;
   if (current.lab_day_id !== incoming.lab_day_id) return false;
   if (current.rotation_number !== incoming.rotation_number) return false;
   const cv = current.version ?? 0;

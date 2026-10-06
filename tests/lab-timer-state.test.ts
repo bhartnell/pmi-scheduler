@@ -59,3 +59,8 @@ test('paused uses elapsed_when_paused; countup counts up', () => {
   const c = applyRealtimeRow(INITIAL_SNAPSHOT, row({ mode: 'countup' }));
   assert.equal(computeDisplaySeconds(c, NOW), 60);
 });
+test('re-created timer row (different id, version reset to 0) is accepted, not stale', () => {
+  const s = applyFetchResult(applyRealtimeRow(INITIAL_SNAPSHOT, row({ id: 'a', version: 9 })), { body: null, clientNowMs: NOW });
+  const next = applyRealtimeRow(s, row({ id: 'b', version: 0 }));
+  assert.equal(next.timer?.id, 'b');
+});
