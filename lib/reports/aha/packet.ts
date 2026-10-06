@@ -18,9 +18,9 @@ export function packetFilename(lastName: string, firstName: string, course: 'acl
 export function composeStudentPacketHTML(row: MegacodeReportRow, instructor: SignoffInstructor | null, courseDate?: string | null, course: 'acls' | 'pals' = 'acls'): string {
   const student = { id: row.student.id, firstName: row.student.firstName, lastName: row.student.lastName };
   const megacode = renderMegacodeStudentForm({ ...row, instructor });
-  const airway = renderSkillsStudentSheet(AIRWAY_FORM, student, instructor, courseDate);
-  const adultBls = renderSkillsStudentSheet(ADULT_BLS_FORM, student, instructor, courseDate);
-  const infant = renderSkillsStudentSheet(INFANT_CPR_FORM, student, instructor, courseDate);
+  const airway = renderSkillsStudentSheet(AIRWAY_FORM, student, instructor, courseDate, course);
+  const adultBls = renderSkillsStudentSheet(ADULT_BLS_FORM, student, instructor, courseDate, course);
+  const infant = renderSkillsStudentSheet(INFANT_CPR_FORM, student, instructor, courseDate, course);
   // Merge both stylesheets; last .form shouldn't force a trailing blank page.
   const css = `${MEGACODE_CSS}\n${SKILLS_CSS}\n.form:last-child{page-break-after:auto;}`;
   return `<!doctype html><html><head><meta charset="utf-8"><title>${packetFilename(row.student.lastName, row.student.firstName, course)}</title><style>${css}</style></head>

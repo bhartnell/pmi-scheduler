@@ -75,9 +75,9 @@ export async function GET(request: NextRequest) {
       const students: RosterStudent[] = report.rows.map((r) => r.student);
       if (instructor) for (const r of report.rows) (r as { instructor?: SignoffInstructor }).instructor = instructor;
       docs.push({ filename: 'Megacode_Testing_AllStudents.pdf', html: renderMegacodeDocument(report) });
-      docs.push({ filename: 'Airway_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.airway, students, { instructor, courseDate }) });
-      docs.push({ filename: 'Adult_BLS_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.adult_bls, students, { instructor, courseDate }) });
-      docs.push({ filename: 'Infant_CPR_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.infant_cpr, students, { instructor, courseDate }) });
+      docs.push({ filename: 'Airway_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.airway, students, { instructor, courseDate, course }) });
+      docs.push({ filename: 'Adult_BLS_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.adult_bls, students, { instructor, courseDate, course }) });
+      docs.push({ filename: 'Infant_CPR_Skills_AllStudents.pdf', html: renderSkillsDocument(SKILLS_FORMS.infant_cpr, students, { instructor, courseDate, course }) });
     }
     if (docs.length === 0) return NextResponse.json({ success: false, error: 'nothing to export (no eligible students)' }, { status: 404 });
 

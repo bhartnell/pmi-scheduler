@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ---
 
+(pending) | fix(aha-export): skills sheets print the course program label (PALS export no longer prints "Advanced Cardiovascular Life Support" on Airway / Adult BLS sheets); course threaded through packet + standalone skills docs
+
 (pending) | fix(ccf-timer): at phone width (<640px) the CCF panel starts collapsed when no saved preference, so it clears the bottom-right dock
 
 (pending) | fix(session-polling): ActivityTracker, OnboardingTour, OnboardingTourWrapper depend on session email not the session object, so me/tour/log stop re-firing on every session refetch
