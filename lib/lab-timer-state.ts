@@ -122,7 +122,10 @@ export function computeDisplaySeconds(snapshot: LabTimerSnapshot, clientNowMs: n
   let elapsed = 0;
   if (t.status === 'paused') {
     elapsed = t.elapsed_when_paused || 0;
-  } else if (t.started_at) {
+  } else {
+    // Running with no started_at is not a renderable state: showing
+    // duration_seconds would be the base-duration flicker. Same as the NaN guard.
+    if (!t.started_at) return null;
     const start = new Date(t.started_at).getTime();
     if (Number.isNaN(start)) return null;
     // Sign-guard: started_at ahead of the corrected clock clamps to 0 elapsed.
