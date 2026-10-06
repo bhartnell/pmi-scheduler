@@ -8,6 +8,8 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 ---
+2026-10-06
+(pending) | fix(timer): POST write path uses ?? so an explicit debrief_seconds 0 is kept (was || defaultDebrief)
 1864f844 | feat(learning-station): group-grain flow (group, who led, Pass/Watch, submit); acls_learning_marks gains lab_group_id/team_lead_id/cert_course, student_id nullable (PR #270)
 (pending) | fix(timer): debrief_seconds 0 now means "off" (|| 300 -> ?? 300 at 11 read sites); new timers on is_adv_cert_testing days default to no debrief marker
 
