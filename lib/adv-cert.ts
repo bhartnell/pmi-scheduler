@@ -270,3 +270,68 @@ export async function listAttemptsForDay(labDayId: string) {
   if (error) throw error;
   return data || [];
 }
+
+/**
+ * Read-only record of one scored megacode attempt: header, every segment with
+ * its comments, and every criterion met / not met. Nothing here writes.
+ * `is_critical` is passed through as stored (it is NULL on current data; callers must not treat NULL as false).
+ */
+export async function getAttemptRecord(attemptId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data: attempt, error } = await supabase
+    .from('adv_cert_test_attempts')
+    .select(
+      `id, lab_day_id, lab_group_id, cert_course, overall_result, started_at, comments, ccf,
+       team_lead:students!adv_cert_test_attempts_team_lead_id_fkey(id, first_name, last_name),
+       grader:lab_users!adv_cert_test_attempts_grader_id_fkey(id, name),
+       scenario:scenarios!adv_cert_test_attempts_scenario_id_fkey(id, name:title, case_code),
+       group:lab_groups!adv_cert_test_attempts_lab_group_id_fkey(id, name)`
+    )
+    .eq('id', attemptId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!attempt) return null;
+
+  const { data: members, error: mErr } = await supabase
+    .from('adv_cert_attempt_students')
+    .select('student:students!adv_cert_attempt_students_student_id_fkey(id, first_name, last_name)')
+    .eq('attempt_id', attemptId);
+  if (mErr) throw mErr;
+
+  const { data: segRows, error: sErr } = await supabase
+    .from('adv_cert_segment_results')
+    .select(
+      `id, result, comments, completion_source,
+       scenario_segment:adv_cert_scenario_segments!adv_cert_segment_results_scenario_segment_id_fkey(
+         sequence_order, segment:adv_cert_segments(name)
+       ),
+       criteria:adv_cert_criterion_results(
+         met,
+         criterion:adv_cert_segment_criteria!adv_cert_criterion_results_criterion_id_fkey(id, text, display_order, is_critical)
+       )`
+    )
+    .eq('attempt_id', attemptId);
+  if (sErr) throw sErr;
+
+  const segments = (segRows || [])
+    .map((r: any) => ({
+      id: r.id,
+      name: r.scenario_segment?.segment?.name ?? 'Segment',
+      sequence_order: r.scenario_segment?.sequence_order ?? 0,
+      result: r.result,
+      comments: r.comments,
+      completion_source: r.completion_source,
+      criteria: (r.criteria || [])
+        .map((c: any) => ({
+          id: c.criterion?.id,
+          text: c.criterion?.text ?? '',
+          display_order: c.criterion?.display_order ?? 0,
+          is_critical: c.criterion?.is_critical ?? null,
+          met: c.met,
+        }))
+        .sort((a: any, b: any) => a.display_order - b.display_order),
+    }))
+    .sort((a: any, b: any) => a.sequence_order - b.sequence_order);
+
+  return { attempt, students: (members || []).map((m: any) => m.student).filter(Boolean), segments };
+}
