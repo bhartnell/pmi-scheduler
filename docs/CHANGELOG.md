@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 (pending) | fix(data-safety): DELETE lab-days/[id] refuses (409) while attempts/learning marks/attendance/checkoffs exist, fails closed on count error, writes audit_log rows; FK CASCADE->SET NULL (step 2) still queued
 ---
+(pending) | fix(timer): computeDisplaySeconds returns null for a running row with no started_at instead of duration_seconds (base-duration flicker on all six surfaces); node --test case added
+---
 (pending) | feat(timer): TIMER-SYNC 4/5 GlobalTimerBanner + InlineTimerWidget moved onto useLabTimerState; InlineTimerWidget gains realtime (had none) and loses its poll and copied calculateTime(); banner keeps only the 60s heartbeat; dismissal keyed to rotation number
 ---
 (pending) | feat(timer): TIMER-SYNC 3/5 grading-interface bars (components/LabTimer.tsx, components/TimerBanner.tsx) moved onto useLabTimerState; local calculateTime/poll/channel/clock-offset deleted; idle renders --:-- (no base-duration readout); hook now refetches on realtime DELETE so a remote End Lab is still detected
