@@ -25,7 +25,9 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
     enabled: !paused,
   });
   const timerState = hookTimer as LabTimerRow | null;
-  const displaySeconds = hookSeconds ?? 0;
+  // null = no trustworthy reading (e.g. running with no started_at): render
+  // --:-- like the other surfaces instead of coercing to 0 (false TIME UP).
+  const displaySeconds = hookSeconds;
 
   // Format MM:SS
   const formatTime = (seconds: number): string => {
@@ -90,8 +92,9 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
 
   const isRunning = timerState.status === 'running';
   const isPaused = timerState.status === 'paused';
-  const isTimeUp = timerState.mode === 'countdown' && displaySeconds <= 0;
+  const isTimeUp = timerState.mode === 'countdown' && displaySeconds !== null && displaySeconds <= 0;
   const isDebrief = timerState.mode === 'countdown' &&
+    displaySeconds !== null &&
     displaySeconds > 0 &&
     displaySeconds <= (timerState.debrief_seconds ?? 300);
 
@@ -121,7 +124,7 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
 
       {/* Time display */}
       <span className={`text-lg font-mono font-bold tabular-nums ${getTimeColor()}`}>
-        {isTimeUp ? 'TIME UP' : formatTime(displaySeconds)}
+        {isTimeUp ? 'TIME UP' : displaySeconds === null ? '--:--' : formatTime(displaySeconds)}
       </span>
 
       {/* Adjustment flash */}

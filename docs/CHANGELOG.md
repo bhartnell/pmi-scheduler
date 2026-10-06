@@ -7,6 +7,8 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+(pending) | fix(timer): InlineTimerWidget + GlobalTimerBanner stop coercing null displaySeconds to 0 (false red TIME UP on lab-day header / vanishing banner); render --:-- like the other four surfaces
+---
 (pending) | fix(data-safety): DELETE lab-days/[id] refuses (409) while attempts/learning marks/attendance/checkoffs exist, fails closed on count error, writes audit_log rows; FK CASCADE->SET NULL (step 2) still queued
 ---
 (pending) | fix(timer): computeDisplaySeconds returns null for a running row with no started_at instead of duration_seconds (base-duration flicker on all six surfaces); node --test case added
