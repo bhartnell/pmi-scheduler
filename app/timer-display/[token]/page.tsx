@@ -3,10 +3,9 @@
 import { useParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Maximize2, Minimize2, Volume2, VolumeX, Smartphone } from 'lucide-react';
-import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
+import { useLabTimerState } from '@/hooks/useLabTimerState';
 import { formatTime } from '@/lib/utils';
-import { getSupabase } from '@/lib/supabase';
 
 interface TimerState {
   id: string;
@@ -46,11 +45,8 @@ export default function TimerDisplayPage() {
   const token = params.token as string;
 
   const [display, setDisplay] = useState<DisplayInfo | null>(null);
-  const [timer, setTimer] = useState<TimerState | null>(null);
   const [labDay, setLabDay] = useState<LabDayInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [serverTimeOffset, setServerTimeOffset] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [wakeLockActive, setWakeLockActive] = useState(false);
@@ -261,174 +257,47 @@ export default function TimerDisplayPage() {
     };
   }, [handleTouchStart, handleTouchEnd]);
 
-  // ─── Timer Polling ───────────────────────────────────────────────────────────
-  const fetchTimerStatus = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/timer-display/${token}`);
-      const data = await res.json();
+  // ─── Timer state: one owner (hooks/useLabTimerState). No timer poll; recovery
+  // is re-fetch on realtime reconnect + visibility regain + a 60s safety net. ───
+  // Public token display has no NextAuth session; realtime authenticates as
+  // `anon`, same as the other subscriptions on this table.
+  const handleTimerResponse = useCallback(({ status, body }: { status: number; body: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (status === 0) { setError('Connection error'); return; }
+    if (!body || body.success === false) { setError(body?.error || 'Failed to fetch timer status'); return; }
+    if (body.display) setDisplay(body.display);
+    if (body.labDay) setLabDay(body.labDay);
+    setError(null);
+    lastFetchRef.current = Date.now();
+  }, []);
 
-      if (!data.success) {
-        setError(data.error || 'Failed to fetch timer status');
-        return;
-      }
+  const { timer: hookTimer, displaySeconds } = useLabTimerState({
+    url: `/api/timer-display/${token}`,
+    labDayId: labDay?.id,
+    subscribe: !!labDay?.id, // lab day is only known after the first fetch
+    heartbeatMs: 60000,
+    onResponse: handleTimerResponse,
+  });
+  const timer = hookTimer as TimerState | null;
+  // null = stopped / nothing to show. Never rendered as 0:00 or base duration.
+  const currentTime = displaySeconds ?? 0;
 
-      setDisplay(data.display);
-      setTimer(data.timer);
-      setLabDay(data.labDay);
-      setError(null);
-
-      // Calculate server time offset
-      if (data.serverTime) {
-        const serverTime = new Date(data.serverTime).getTime();
-        const localTime = Date.now();
-        setServerTimeOffset(serverTime - localTime);
-      }
-
-      lastFetchRef.current = Date.now();
-    } catch (err) {
-      console.error('Error fetching timer status:', err);
-      setError('Connection error');
-    }
-  }, [token]);
-
-  // Adaptive poll interval. Tuned 2026-05-26 for the perf incident.
-  // Public token-gated display screen — keep responsive when timer
-  // is actively running but back off otherwise.
-  const getPollInterval = (): number => {
-    if (!display) return 5000;
-    if (!labDay) return 30000;
-    if (!timer || timer.status === 'stopped') return 15000; // was 10s
-    if (timer.status === 'paused') return 15000;            // was 10s
-    return 5000;                                            // running
-  };
-  useVisibilityPolling(fetchTimerStatus, getPollInterval());
-
-  // Realtime discovery (feedback ef5f2975: "timers start at xx:49 not
-  // xx:59"). This is a shared classroom/TV display screen — before this
-  // fix it only learned "the timer just started" on its next poll tick,
-  // and the !labDay tier above polls as slowly as every 30s. A candidate
-  // watching the screen at the moment the controller hits Start could see
-  // up to ~15-30s of already-elapsed time on the FIRST frame it renders,
-  // which reads as "the timer started already behind." Same fix already
-  // proven for GlobalTimerBanner / TimerBanner / LabTimer — additive
-  // alongside the existing poll (kept as the fallback). Public token
-  // display has no NextAuth session, so this authenticates as `anon`,
-  // same as the other realtime subscriptions on this table.
+  // ─── Audio thresholds, driven by the hook's remaining-time value ───
   useEffect(() => {
-    const labDayId = labDay?.id;
-    if (!labDayId) return;
-
-    const supabase = getSupabase();
-    const channel = supabase
-      .channel(`timer-display-${labDayId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'lab_timer_state', filter: `lab_day_id=eq.${labDayId}` },
-        () => { fetchTimerStatus(); }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [labDay?.id, fetchTimerStatus]);
-
-  // ─── Timer Display Calculation ───────────────────────────────────────────────
-  useEffect(() => {
-    if (!timer) {
-      setCurrentTime(0);
-      return;
+    if (!timer || timer.status !== 'running' || timer.mode !== 'countdown' || displaySeconds === null) return;
+    const t = displaySeconds;
+    if (t <= 0 && hasPlayedRotationAlertRef.current !== timer.rotation_number) {
+      hasPlayedRotationAlertRef.current = timer.rotation_number;
+      playRotationAlert();
     }
-
-    const calculateTime = () => {
-      if (timer.status === 'stopped') {
-        return timer.mode === 'countdown' ? timer.duration_seconds : 0;
-      }
-
-      if (timer.status === 'paused') {
-        return timer.mode === 'countdown'
-          ? timer.duration_seconds - timer.elapsed_when_paused
-          : timer.elapsed_when_paused;
-      }
-
-      // Running
-      if (timer.started_at) {
-        const now = Date.now() + serverTimeOffset;
-        const startTime = new Date(timer.started_at).getTime();
-        const elapsed = Math.floor((now - startTime) / 1000);
-
-        if (timer.mode === 'countdown') {
-          return Math.max(0, timer.duration_seconds - elapsed);
-        } else {
-          return elapsed;
-        }
-      }
-
-      return 0;
-    };
-
-    setCurrentTime(calculateTime());
-
-    // Update every second when running, pause when page is hidden
-    if (timer.status === 'running') {
-      let interval: NodeJS.Timeout | null = setInterval(() => {
-        const t = calculateTime();
-        setCurrentTime(t);
-
-        if (timer.mode === 'countdown') {
-          // Rotation alert — fires once per rotation when countdown hits zero
-          if (
-            t <= 0 &&
-            hasPlayedRotationAlertRef.current !== timer.rotation_number
-          ) {
-            hasPlayedRotationAlertRef.current = timer.rotation_number;
-            playRotationAlert();
-          }
-
-          // 5-minute warning — fires once per rotation when 300s remain
-          if (
-            t > 0 &&
-            t <= 300 &&
-            hasPlayedFiveMinRef.current !== timer.rotation_number
-          ) {
-            hasPlayedFiveMinRef.current = timer.rotation_number;
-            playFiveMinWarning();
-          }
-
-          // 1-minute warning — fires once per rotation when 60s remain
-          if (
-            t > 0 &&
-            t <= 60 &&
-            hasPlayedOneMinRef.current !== timer.rotation_number
-          ) {
-            hasPlayedOneMinRef.current = timer.rotation_number;
-            playOneMinWarning();
-          }
-        }
-      }, 1000);
-
-      const handleVisibility = () => {
-        if (document.hidden) {
-          if (interval) {
-            clearInterval(interval);
-            interval = null;
-          }
-        } else {
-          setCurrentTime(calculateTime()); // Catch up immediately
-          interval = setInterval(() => {
-            setCurrentTime(calculateTime());
-          }, 1000);
-        }
-      };
-
-      document.addEventListener('visibilitychange', handleVisibility);
-
-      return () => {
-        if (interval) clearInterval(interval);
-        document.removeEventListener('visibilitychange', handleVisibility);
-      };
+    if (t > 0 && t <= 300 && hasPlayedFiveMinRef.current !== timer.rotation_number) {
+      hasPlayedFiveMinRef.current = timer.rotation_number;
+      playFiveMinWarning();
     }
-  }, [timer, serverTimeOffset, playRotationAlert, playFiveMinWarning, playOneMinWarning]);
+    if (t > 0 && t <= 60 && hasPlayedOneMinRef.current !== timer.rotation_number) {
+      hasPlayedOneMinRef.current = timer.rotation_number;
+      playOneMinWarning();
+    }
+  }, [timer, displaySeconds, playRotationAlert, playFiveMinWarning, playOneMinWarning]);
 
   // Reset warning trackers when a new rotation starts
   useEffect(() => {
@@ -701,7 +570,7 @@ export default function TimerDisplayPage() {
               }`}
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
-              {formatTime(currentTime)}
+              {displaySeconds === null ? '--:--' : formatTime(currentTime)}
             </div>
 
             {/* Status Indicators */}

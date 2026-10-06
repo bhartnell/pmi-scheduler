@@ -17,6 +17,8 @@ export interface LabTimerRow {
   debrief_seconds?: number | null;
   mode: 'countdown' | 'countup';
   version?: number | null;
+  rotation_acknowledged?: boolean | null;
+  lab_day?: { title?: string | null; date?: string | null } | null;
   updated_at?: string | null;
 }
 

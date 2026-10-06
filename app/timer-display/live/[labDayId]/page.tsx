@@ -5,9 +5,9 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { Maximize2, Minimize2, Volume2, VolumeX, Smartphone, LogOut, CheckCircle, Circle, Settings, Play, Pause, Square, SkipForward, Plus, Minus, RotateCcw } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
+import { useLabTimerState } from '@/hooks/useLabTimerState';
 import { useTimerAudio, loadTimerAudioSettings, TimerAudioSettings, TIMER_AUDIO_STORAGE_KEY } from '@/hooks/useTimerAudio';
 import { formatTime } from '@/lib/utils';
-import { getSupabase } from '@/lib/supabase';
 
 interface TimerState {
   id: string;
@@ -49,11 +49,8 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
 
-  const [timer, setTimer] = useState<TimerState | null>(null);
   const [labDayTitle, setLabDayTitle] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [serverTimeOffset, setServerTimeOffset] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [wakeLockActive, setWakeLockActive] = useState(false);
@@ -69,7 +66,6 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const hideExitTimerRef = useRef<NodeJS.Timeout | null>(null);
   const controlPanelHideRef = useRef<NodeJS.Timeout | null>(null);
-  const versionRef = useRef<number>(0);
 
   // Track which rotation's warnings have fired
   const hasPlayedRotationAlertRef = useRef<number | null>(null);
@@ -232,6 +228,29 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
     };
   }, []);
 
+  // --- Timer state: one owner (hooks/useLabTimerState). No timer poll; recovery
+  // is re-fetch on realtime reconnect + visibility regain + a 60s safety net. ---
+  const handleTimerResponse = useCallback(({ status, body }: { status: number; body: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (status === 401) { setSessionExpired(true); return; }
+    if (status === 0) { setError('Connection error'); return; }
+    if (!body || body.success === false) { setError(body?.error || 'Failed to fetch timer status'); return; }
+    setError(null);
+    lastFetchRef.current = Date.now();
+    const ld = body.timer?.lab_day;
+    if (ld) setLabDayTitle(ld.title || (ld.date ? new Date(ld.date).toLocaleDateString() : ''));
+  }, []);
+
+  const { timer: hookTimer, displaySeconds, applyTimer } = useLabTimerState({
+    url: `/api/lab-management/timer?labDayId=${labDayId}`,
+    labDayId,
+    enabled: !!labDayId && !sessionExpired,
+    heartbeatMs: 60000,
+    onResponse: handleTimerResponse,
+  });
+  const timer = hookTimer as TimerState | null;
+  // null = stopped / nothing to show. Never rendered as 0:00 or base duration.
+  const currentTime = displaySeconds ?? 0;
+
   // --- Timer Control Actions ---
   const sendTimerAction = useCallback(async (action: string) => {
     setControlActionLoading(true);
@@ -244,14 +263,14 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
       });
       const data = await res.json();
       if (data.success) {
-        setTimer(data.timer);
+        applyTimer(data.timer);
       }
     } catch (err) {
       console.error('Error sending timer action:', err);
     } finally {
       setControlActionLoading(false);
     }
-  }, [labDayId, resetControlPanelHideTimer]);
+  }, [labDayId, resetControlPanelHideTimer, applyTimer]);
 
   const handleTimeAdjust = useCallback(async (action: 'add_time' | 'subtract_time') => {
     setControlActionLoading(true);
@@ -264,7 +283,7 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
       });
       const data = await res.json();
       if (data.success) {
-        setTimer(data.timer);
+        applyTimer(data.timer);
         // Show adjustment flash
         if (data.adjustment_applied || true) {
           const flashText = action === 'add_time' ? '+1:00' : '-1:00';
@@ -277,7 +296,7 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
     } finally {
       setControlActionLoading(false);
     }
-  }, [labDayId, resetControlPanelHideTimer]);
+  }, [labDayId, resetControlPanelHideTimer, applyTimer]);
 
   const handleStopWithConfirm = useCallback(() => {
     resetControlPanelHideTimer();
@@ -285,60 +304,6 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
       sendTimerAction('stop');
     }
   }, [sendTimerAction, resetControlPanelHideTimer]);
-
-  // --- Timer Polling with version tracking ---
-  const fetchTimerStatus = useCallback(async () => {
-    try {
-      const url = versionRef.current > 0
-        ? `/api/lab-management/timer?labDayId=${labDayId}&version=${versionRef.current}`
-        : `/api/lab-management/timer?labDayId=${labDayId}`;
-      const res = await fetch(url);
-      if (res.status === 401) {
-        setSessionExpired(true);
-        return;
-      }
-      const data = await res.json();
-
-      // If not modified, skip state update to save re-renders
-      if (data.not_modified) {
-        lastFetchRef.current = Date.now();
-        return;
-      }
-
-      if (!data.success) {
-        setError(data.error || 'Failed to fetch timer status');
-        return;
-      }
-
-      if (data.version !== undefined) {
-        versionRef.current = data.version;
-      }
-
-      if (data.timer) {
-        setTimer(data.timer);
-
-        // Get lab day title from the joined data
-        if (data.timer.lab_day) {
-          const ld = data.timer.lab_day;
-          setLabDayTitle(ld.title || new Date(ld.date).toLocaleDateString());
-        }
-      } else {
-        setTimer(null);
-      }
-      setError(null);
-
-      if (data.serverTime) {
-        const serverTime = new Date(data.serverTime).getTime();
-        const localTime = Date.now();
-        setServerTimeOffset(serverTime - localTime);
-      }
-
-      lastFetchRef.current = Date.now();
-    } catch (err) {
-      console.error('Error fetching timer status:', err);
-      setError('Connection error');
-    }
-  }, [labDayId]);
 
   // Fetch ready statuses
   const fetchReadyStatuses = useCallback(async () => {
@@ -358,119 +323,28 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
     }
   }, [labDayId]);
 
-  // Adaptive poll interval. Tuned 2026-05-26 perf incident.
-  const getTimerPollInterval = (): number | null => {
-    if (sessionExpired) return null;
-    if (!timer) return 15000;                       // was 10s
-    if (timer.status === 'stopped') return 15000;   // was 10s
-    if (timer.status === 'paused') return 15000;    // was 10s
-    return 5000;                                    // running
-  };
-  useVisibilityPolling(fetchTimerStatus, getTimerPollInterval());
-
   // Ready statuses only need polling when timer is actively running.
   // Bumped 5s → 10s.
   const readyPollInterval = sessionExpired ? null : (timer?.status === 'running' ? 10000 : null);
   useVisibilityPolling(fetchReadyStatuses, readyPollInterval);
 
-  // Realtime discovery (feedback ef5f2975: "timers start at xx:49 not
-  // xx:59"). This is the shared classroom/TV live display — before this
-  // fix it only learned "the timer just started" on its next poll tick
-  // (up to 15s away in the !timer tier). Same fix already proven for
-  // GlobalTimerBanner / TimerBanner / LabTimer — additive alongside the
-  // existing poll, which stays as the fallback.
+  // --- Audio thresholds, driven by the hook's remaining-time value ---
   useEffect(() => {
-    if (!labDayId || sessionExpired) return;
-
-    const supabase = getSupabase();
-    const channel = supabase
-      .channel(`timer-display-live-${labDayId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'lab_timer_state', filter: `lab_day_id=eq.${labDayId}` },
-        () => { fetchTimerStatus(); }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [labDayId, sessionExpired, fetchTimerStatus]);
-
-  // --- Timer Display Calculation ---
-  useEffect(() => {
-    if (!timer) {
-      setCurrentTime(0);
-      return;
+    if (!timer || timer.status !== 'running' || timer.mode !== 'countdown' || displaySeconds === null) return;
+    const t = displaySeconds;
+    if (t <= 0 && hasPlayedRotationAlertRef.current !== timer.rotation_number) {
+      hasPlayedRotationAlertRef.current = timer.rotation_number;
+      playRotationAlert();
     }
-
-    const calculateTime = () => {
-      if (timer.status === 'stopped') {
-        return timer.mode === 'countdown' ? timer.duration_seconds : 0;
-      }
-      if (timer.status === 'paused') {
-        return timer.mode === 'countdown'
-          ? timer.duration_seconds - timer.elapsed_when_paused
-          : timer.elapsed_when_paused;
-      }
-      // Running
-      if (timer.started_at) {
-        const now = Date.now() + serverTimeOffset;
-        const startTime = new Date(timer.started_at).getTime();
-        const elapsed = Math.floor((now - startTime) / 1000);
-        if (timer.mode === 'countdown') {
-          return Math.max(0, timer.duration_seconds - elapsed);
-        } else {
-          return elapsed;
-        }
-      }
-      return 0;
-    };
-
-    setCurrentTime(calculateTime());
-
-    if (timer.status === 'running') {
-      let interval: NodeJS.Timeout | null = setInterval(() => {
-        const t = calculateTime();
-        setCurrentTime(t);
-
-        if (timer.mode === 'countdown') {
-          if (t <= 0 && hasPlayedRotationAlertRef.current !== timer.rotation_number) {
-            hasPlayedRotationAlertRef.current = timer.rotation_number;
-            playRotationAlert();
-          }
-          if (t > 0 && t <= 300 && hasPlayedFiveMinRef.current !== timer.rotation_number) {
-            hasPlayedFiveMinRef.current = timer.rotation_number;
-            playFiveMinWarning();
-          }
-          if (t > 0 && t <= 60 && hasPlayedOneMinRef.current !== timer.rotation_number) {
-            hasPlayedOneMinRef.current = timer.rotation_number;
-            playOneMinWarning();
-          }
-        }
-      }, 1000);
-
-      const handleVisibility = () => {
-        if (document.hidden) {
-          if (interval) {
-            clearInterval(interval);
-            interval = null;
-          }
-        } else {
-          setCurrentTime(calculateTime());
-          interval = setInterval(() => {
-            setCurrentTime(calculateTime());
-          }, 1000);
-        }
-      };
-
-      document.addEventListener('visibilitychange', handleVisibility);
-      return () => {
-        if (interval) clearInterval(interval);
-        document.removeEventListener('visibilitychange', handleVisibility);
-      };
+    if (t > 0 && t <= 300 && hasPlayedFiveMinRef.current !== timer.rotation_number) {
+      hasPlayedFiveMinRef.current = timer.rotation_number;
+      playFiveMinWarning();
     }
-  }, [timer, serverTimeOffset, playRotationAlert, playFiveMinWarning, playOneMinWarning]);
+    if (t > 0 && t <= 60 && hasPlayedOneMinRef.current !== timer.rotation_number) {
+      hasPlayedOneMinRef.current = timer.rotation_number;
+      playOneMinWarning();
+    }
+  }, [timer, displaySeconds, playRotationAlert, playFiveMinWarning, playOneMinWarning]);
 
   // Reset warning trackers when rotation changes
   useEffect(() => {
@@ -688,7 +562,7 @@ export default function LiveTimerDisplayPage({ params }: { params: Promise<{ lab
               className={`font-black leading-none tracking-tight transition-colors duration-500 ${getTimeColorClass()} text-[7rem] sm:text-[9rem] md:text-[13rem] lg:text-[17rem]`}
               style={{ fontVariantNumeric: 'tabular-nums' }}
             >
-              {formatTime(currentTime)}
+              {displaySeconds === null ? '--:--' : formatTime(currentTime)}
             </div>
 
             {/* Status */}
