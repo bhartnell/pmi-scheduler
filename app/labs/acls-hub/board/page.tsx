@@ -689,7 +689,7 @@ function BoardContent() {
     return { list, state };
   };
   const watchN = (id: string) => watchMarks.filter(k => k.student_id === id && k.mark === 'watch' && visibleLabDays.some(d => d.id === k.lab_day_id && visibleDates.includes(d.date))).length;
-  const openRecord = (a: Attempt) => router.push(`/labs/schedule/${a.lab_day_id}/acls-coordinator`);
+  const openRecord = (a: Attempt) => router.push(`/labs/adv-cert/attempt/${a.id}`);
 
   const renderProgress = () => {
     const rows = groups.flatMap(g => g.members.map(m => ({ m, g })));
