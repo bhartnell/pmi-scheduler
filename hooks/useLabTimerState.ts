@@ -31,7 +31,7 @@ interface Options {
  * server-time offset, reconnect/visibility recovery, and the single
  * remaining-time computation. Recovery re-fetches on reconnect and when the tab
  * becomes visible; it does NOT poll (see claude/lab-timer-architecture.md).
- * Consumers: the two wall displays (TIMER-SYNC 2/5), LabTimer and TimerBanner (3/5).
+ * Consumers: the two wall displays (2/5), LabTimer and TimerBanner (3/5), GlobalTimerBanner and InlineTimerWidget (4/5).
  */
 export function useLabTimerState({ url, labDayId, enabled = true, subscribe = true, heartbeatMs, onResponse }: Options) {
   const [snapshot, setSnapshot] = useState<LabTimerSnapshot>(INITIAL_SNAPSHOT);

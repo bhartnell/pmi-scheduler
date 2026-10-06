@@ -1,122 +1,31 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { Timer, Pause, Play, ExternalLink, Minus, Plus, SkipForward } from 'lucide-react';
-import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
-
-interface TimerState {
-  id: string;
-  lab_day_id: string;
-  rotation_number: number;
-  status: 'running' | 'paused' | 'stopped';
-  started_at: string | null;
-  paused_at: string | null;
-  elapsed_when_paused: number;
-  duration_seconds: number;
-  debrief_seconds: number;
-  mode: 'countdown' | 'countup';
-}
+import { useLabTimerState } from '@/hooks/useLabTimerState';
+import type { LabTimerRow } from '@/lib/lab-timer-state';
 
 interface InlineTimerWidgetProps {
   labDayId: string;
   onOpenFullTimer: () => void;
-  /** When true, pauses all polling (e.g. when LabTimer modal is open) */
+  /** When true, stops listening/refetching (e.g. when LabTimer modal is open) */
   paused?: boolean;
 }
 
 export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = false }: InlineTimerWidgetProps) {
-  const [timerState, setTimerState] = useState<TimerState | null>(null);
-  const [displaySeconds, setDisplaySeconds] = useState(0);
-  const [serverTimeOffset, setServerTimeOffset] = useState(0);
   const [actionLoading, setActionLoading] = useState(false);
   const [adjustFlash, setAdjustFlash] = useState<string | null>(null);
-  const versionRef = useRef<number>(0);
 
-  // Fetch timer state for this lab day with version tracking
-  const fetchTimerState = useCallback(async () => {
-    try {
-      const url = versionRef.current > 0
-        ? `/api/lab-management/timer?labDayId=${labDayId}&version=${versionRef.current}`
-        : `/api/lab-management/timer?labDayId=${labDayId}`;
-      const res = await fetch(url);
-      const data = await res.json();
-
-      // If not modified, skip state update to save re-renders
-      if (data.not_modified) return;
-
-      if (data.success) {
-        if (data.version !== undefined) {
-          versionRef.current = data.version;
-        }
-        setTimerState(data.timer || null);
-        if (data.serverTime) {
-          const serverTime = new Date(data.serverTime).getTime();
-          setServerTimeOffset(serverTime - Date.now());
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching timer state:', error);
-    }
-  }, [labDayId]);
-
-  // Dynamic poll interval: 5s when timer active, 30s when idle, null when paused
-  const pollInterval = paused
-    ? null
-    : (timerState && timerState.status !== 'stopped' ? 5000 : 10000);
-  useVisibilityPolling(fetchTimerState, pollInterval);
-
-  // Calculate display time
-  useEffect(() => {
-    if (!timerState) {
-      setDisplaySeconds(0);
-      return;
-    }
-
-    const calculateTime = () => {
-      if (timerState.status === 'stopped') {
-        return timerState.mode === 'countdown' ? timerState.duration_seconds : 0;
-      }
-      if (timerState.status === 'paused') {
-        return timerState.mode === 'countdown'
-          ? timerState.duration_seconds - timerState.elapsed_when_paused
-          : timerState.elapsed_when_paused;
-      }
-      // Running
-      if (timerState.started_at) {
-        const now = Date.now() + serverTimeOffset;
-        const startTime = new Date(timerState.started_at).getTime();
-        const elapsed = Math.floor((now - startTime) / 1000);
-        if (timerState.mode === 'countdown') {
-          return Math.max(0, timerState.duration_seconds - elapsed);
-        }
-        return elapsed;
-      }
-      return 0;
-    };
-
-    setDisplaySeconds(calculateTime());
-
-    if (timerState.status !== 'running') return;
-
-    let interval: NodeJS.Timeout | null = setInterval(() => {
-      setDisplaySeconds(calculateTime());
-    }, 1000);
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        if (interval) { clearInterval(interval); interval = null; }
-      } else {
-        setDisplaySeconds(calculateTime());
-        interval = setInterval(() => setDisplaySeconds(calculateTime()), 1000);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibility);
-    return () => {
-      if (interval) clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [timerState, serverTimeOffset]);
+  // ONE owner of timer state (hooks/useLabTimerState): realtime + reconnect /
+  // visibility re-fetch, no poll. Control responses go through applyTimer so
+  // they obey the same version guard.
+  const { timer: hookTimer, displaySeconds: hookSeconds, applyTimer } = useLabTimerState({
+    url: `/api/lab-management/timer?labDayId=${labDayId}`,
+    labDayId,
+    enabled: !paused,
+  });
+  const timerState = hookTimer as LabTimerRow | null;
+  const displaySeconds = hookSeconds ?? 0;
 
   // Format MM:SS
   const formatTime = (seconds: number): string => {
@@ -141,14 +50,14 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
       });
       const data = await res.json();
       if (data.success) {
-        setTimerState(data.timer);
+        applyTimer(data.timer);
       }
     } catch (error) {
       console.error('Error sending timer action:', error);
     } finally {
       setActionLoading(false);
     }
-  }, [labDayId]);
+  }, [labDayId, applyTimer]);
 
   // Time adjustment (±N seconds)
   const handleTimeAdjust = useCallback(async (action: 'add_time' | 'subtract_time', seconds: number = 60) => {
@@ -161,7 +70,7 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
       });
       const data = await res.json();
       if (data.success) {
-        setTimerState(data.timer);
+        applyTimer(data.timer);
         const mins = Math.floor(seconds / 60);
         const flashText = action === 'add_time' ? `+${mins}m` : `-${mins}m`;
         setAdjustFlash(flashText);
@@ -172,7 +81,7 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
     } finally {
       setActionLoading(false);
     }
-  }, [labDayId]);
+  }, [labDayId, applyTimer]);
 
   // Don't show widget if no timer exists or it's stopped
   if (!timerState || timerState.status === 'stopped') {
