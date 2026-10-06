@@ -60,8 +60,8 @@ export function useLabTimerState({ url, labDayId, enabled = true }: Options) {
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'lab_timer_state' },
-        (payload: { new?: LabTimerRow }) => {
-          const row = payload.new;
+        (payload: { new: unknown }) => {
+          const row = payload.new as LabTimerRow | undefined;
           if (labDayId && row?.lab_day_id !== labDayId) return;
           commit(applyRealtimeRow(snapRef.current, row));
         }
