@@ -3,6 +3,17 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole, isSuperadmin } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
 import { createDeletionRequestIfAbsent } from '@/lib/deletion-requests';
+import { logAuditEvent } from '@/lib/audit';
+
+// Tables whose lab_day_id FK is ON DELETE CASCADE and which hold student
+// outcome records. Deleting a lab day silently destroys these rows, so the
+// DELETE handler refuses while any exist (archive the day instead).
+const OUTCOME_TABLES = [
+  'adv_cert_test_attempts',
+  'acls_learning_marks',
+  'lab_day_attendance',
+  'lab_day_checkoff_status',
+] as const;
 
 export async function GET(
   request: NextRequest,
@@ -371,6 +382,50 @@ export async function DELETE(
       });
       return NextResponse.json({ error: 'Lab day deletion requires superadmin approval via deletion requests' }, { status: 403 });
     }
+
+    // Data-safety guard: refuse when outcome-bearing children would CASCADE away.
+    // Fail closed: if a count cannot be read, do not delete.
+    const blocking: Record<string, number> = {};
+    for (const table of OUTCOME_TABLES) {
+      const { count, error: countError } = await supabase
+        .from(table)
+        .select('*', { count: 'exact', head: true })
+        .eq('lab_day_id', id);
+      if (countError) {
+        console.error(`[lab-days DELETE] could not check ${table}; refusing delete:`, countError.message);
+        return NextResponse.json(
+          { error: 'Could not verify this lab day has no student records. Delete aborted.' },
+          { status: 503 }
+        );
+      }
+      if (count && count > 0) blocking[table] = count;
+    }
+
+    if (Object.keys(blocking).length > 0) {
+      await logAuditEvent({
+        user: { id: user.id, email: session.user.email, role: callerUser.role },
+        action: 'access_denied',
+        resourceType: 'lab_day',
+        resourceId: id,
+        resourceDescription: 'Lab day delete refused: outcome records exist',
+        metadata: { blocking },
+      });
+      return NextResponse.json(
+        {
+          error: 'This lab day has student records (scores, attempts, attendance or checkoffs) and cannot be deleted. Archive it instead.',
+          blocking,
+        },
+        { status: 409 }
+      );
+    }
+
+    await logAuditEvent({
+      user: { id: user.id, email: session.user.email, role: callerUser.role },
+      action: 'delete',
+      resourceType: 'lab_day',
+      resourceId: id,
+      resourceDescription: 'Lab day deleted (no outcome records present)',
+    });
 
     // Fire-and-forget: delete all linked Google Calendar events BEFORE deleting the lab day
     try {
