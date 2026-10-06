@@ -184,7 +184,7 @@ export default function InlineTimerWidget({ labDayId, onOpenFullTimer, paused = 
   const isTimeUp = timerState.mode === 'countdown' && displaySeconds <= 0;
   const isDebrief = timerState.mode === 'countdown' &&
     displaySeconds > 0 &&
-    displaySeconds <= (timerState.debrief_seconds || 300);
+    displaySeconds <= (timerState.debrief_seconds ?? 300);
 
   // Color coding
   const getBgColor = () => {

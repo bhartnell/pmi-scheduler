@@ -111,6 +111,15 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Scored testing days (is_adv_cert_testing) get no debrief marker by default;
+    // 0 means "off" and the readers use ?? so it is honored.
+    const { data: dayRow } = await supabase
+      .from('lab_days')
+      .select('is_adv_cert_testing')
+      .eq('id', labDayId)
+      .maybeSingle();
+    const isTestingDay = !!dayRow?.is_adv_cert_testing;
+
     // Single active timer enforcement: stop ALL other running/paused timers
     // before starting a new one
     let stoppedTimerTitle: string | null = null;
@@ -162,7 +171,7 @@ export async function POST(request: NextRequest) {
         duration_seconds: durationSeconds,
         // No explicit preset: debrief is the last 4 min of a 10-min (or shorter)
         // rotation (6 case + 4 debrief), the last 5 min of longer ones.
-        debrief_seconds: debriefSeconds || (durationSeconds <= 600 ? 240 : 300),
+        debrief_seconds: debriefSeconds ?? (isTestingDay ? 0 : durationSeconds <= 600 ? 240 : 300),
         mode: mode || 'countdown',
         rotation_acknowledged: true,  // Start acknowledged
         version: 0

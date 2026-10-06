@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ---
 
+(pending) | fix(timer): debrief_seconds=0 now means off (?? not ||) at all readers; timer POST defaults debrief to 0 on is_adv_cert_testing lab days so scored megacode testing shows no debrief marker
+
 (pending) | fix(aha-export): skills sheets print the course program label (PALS export no longer prints "Advanced Cardiovascular Life Support" on Airway / Adult BLS sheets); course threaded through packet + standalone skills docs
 
 (pending) | fix(ccf-timer): at phone width (<640px) the CCF panel starts collapsed when no saved preference, so it clears the bottom-right dock
