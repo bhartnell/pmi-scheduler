@@ -1,24 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Clock, ChevronRight, Pause, Play } from 'lucide-react';
-import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
+import { useLabTimerState } from '@/hooks/useLabTimerState';
 import { formatTime } from '@/lib/utils';
-import { getSupabase } from '@/lib/supabase';
-
-interface TimerState {
-  id: string;
-  lab_day_id: string;
-  rotation_number: number;
-  status: 'running' | 'paused' | 'stopped';
-  started_at: string | null;
-  paused_at: string | null;
-  elapsed_when_paused: number;
-  duration_seconds: number;
-  mode: 'countdown' | 'countup';
-}
 
 interface LabDay {
   id: string;
@@ -30,24 +17,11 @@ const BANNER_HEIGHT = 44; // Height in pixels
 
 export default function GlobalTimerBanner() {
   const pathname = usePathname();
-  const [timer, setTimer] = useState<TimerState | null>(null);
   const [labDay, setLabDay] = useState<LabDay | null>(null);
-  const [displaySeconds, setDisplaySeconds] = useState(0);
-  const [isDismissed, setIsDismissed] = useState(false);
-  const [lastRotation, setLastRotation] = useState<number | null>(null);
+  // Dismissal is keyed to a rotation number: a new rotation un-dismisses by
+  // inequality, no effect needed.
+  const [dismissedRotation, setDismissedRotation] = useState<number | null>(null);
   const [sessionExpired, setSessionExpired] = useState(false);
-  const versionRef = useRef<number>(0);
-  // Cross-device clock-skew correction (Task Handoff Queue "grading-view
-  // timer" ticket, Ben decision 2026-09-01: cross-user desync). Two
-  // devices can disagree on system clock by seconds to minutes; computing
-  // elapsed time from raw Date.now() means each device shows a DIFFERENT
-  // countdown for the same server-authoritative timer. The timer-display
-  // kiosk pages (app/timer-display/*) already solved this by comparing
-  // the API's serverTime to the client's Date.now() and applying the
-  // delta to every subsequent calculation — this mirrors that proven fix
-  // here, since GlobalTimerBanner mounts on every authenticated page and
-  // is the most widely seen surface.
-  const serverTimeOffsetRef = useRef(0);
 
   // Show timer banner on all authenticated pages (not on login/auth/public pages)
   const isTimerRelevantPage = !pathname.startsWith('/auth') &&
@@ -56,125 +30,43 @@ export default function GlobalTimerBanner() {
     !pathname.startsWith('/volunteer-lab') &&
     !pathname.startsWith('/volunteer');
 
-  // Fetch active timer with version tracking
-  const fetchActiveTimer = useCallback(async () => {
-    try {
-      const url = versionRef.current > 0
-        ? `/api/lab-management/timer/active?version=${versionRef.current}`
-        : '/api/lab-management/timer/active';
-      const res = await fetch(url);
-
-      // Stop polling on 401 — session expired (prevents wasting Vercel invocations)
-      if (res.status === 401) {
-        setSessionExpired(true);
-        setTimer(null);
-        setLabDay(null);
-        return;
-      }
-
-      const data = await res.json();
-
-      // Server explicitly told us to stop polling (e.g., stale client with expired session)
-      if (data?.stop_polling) {
-        setSessionExpired(true);
-        setTimer(null);
-        setLabDay(null);
-        return;
-      }
-
-      if (data.serverTime) {
-        serverTimeOffsetRef.current = new Date(data.serverTime).getTime() - Date.now();
-      }
-
-      // If not modified, skip state update to save re-renders
-      if (data.not_modified) return;
-
-      if (data.success && data.timer) {
-        // Update version ref
-        if (data.version !== undefined) {
-          versionRef.current = data.version;
-        }
-        // Un-dismiss when rotation changes
-        if (lastRotation !== null && data.timer.rotation_number !== lastRotation) {
-          setIsDismissed(false);
-        }
-        setLastRotation(data.timer.rotation_number);
-        setTimer(data.timer);
-        setLabDay(data.labDay);
-      } else {
-        versionRef.current = 0;
-        setTimer(null);
-        setLabDay(null);
-        setLastRotation(null);
-        setIsDismissed(false); // Reset dismiss state when no active timer
-      }
-    } catch (error) {
-      console.error('Error fetching active timer:', error);
-    }
-  }, [lastRotation]);
-
   // Pages that already have their own dedicated timer component (LabTimer, TimerBanner)
   // GlobalTimerBanner should NOT render on these pages to avoid showing two timers
-  // that poll at different rates, which causes desync issues (Bug 6)
   const hasOwnTimerComponent = pathname.startsWith('/labs/schedule/') ||
     pathname.startsWith('/labs/grade/');
 
-  // Poll for active timer.
-  //
-  // GlobalTimerBanner's job is to surface a timer started elsewhere
-  // (e.g. instructor on /labs/schedule/X starts a rotation; instructor
-  // on /admin/users sees the banner appear). The "idle/no timer"
-  // branch USED to poll every 10s as a discovery channel — that's
-  // 6 hits/min × every authenticated page open × every user. The bulk
-  // of the May 26 lab's timer traffic was almost certainly this poll
-  // running on tabs that just happened to be open.
-  //
-  // 2026-05-26 perf: when no timer is active anywhere, poll every
-  // 60s instead of 10s. New-timer discovery is delayed by up to a
-  // minute, which is the right tradeoff against the constant
-  // background hammering. If a timer IS active, polling stays at
-  // 5s/10s to keep the banner fresh.
-  const getPollInterval = () => {
-    if (!isTimerRelevantPage || hasOwnTimerComponent || sessionExpired) return null;
-    if (timer?.status === 'running') return 5000;
-    if (timer?.status === 'paused') return 10000;
-    // No timer OR status='stopped' → 60s discovery poll. This is the
-    // ONLY surface still polling when nothing's active; needed so the
-    // banner appears when a controller on another device starts a
-    // timer mid-session. Local LabTimer + TimerBanner both stop
-    // entirely (return null) on no-timer / stopped — only this
-    // cross-page discovery channel keeps a low-rate heartbeat.
-    return 60000;
-  };
-  const pollInterval = getPollInterval();
-  useVisibilityPolling(fetchActiveTimer, pollInterval);
+  const handleResponse = useCallback(({ status, body }: { status: number; body: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    // Stop on 401 / stop_polling: session expired (prevents wasting Vercel invocations)
+    if (status === 401 || body?.stop_polling) {
+      setSessionExpired(true);
+      setLabDay(null);
+      return;
+    }
+    if (body?.success && body.labDay) setLabDay(body.labDay);
+  }, []);
 
-  // Realtime discovery: instant "timer started elsewhere" updates instead of
-  // waiting on the 60s discovery poll above. Deliberately additive, not a
-  // replacement — the poll above is UNCHANGED (still the 2026-05-26 fix) and
-  // stays as a safety net if the websocket drops or reconnects slowly. Any
-  // INSERT/UPDATE on lab_timer_state just re-runs the existing fetch so we
-  // reuse its parsing/version-tracking logic rather than duplicating it.
+  // ONE owner of timer state (hooks/useLabTimerState): realtime push plus
+  // re-fetch on reconnect/visibility. The only poll left is a 60s discovery
+  // heartbeat (hook clamps to >= 60s) as a safety net.
+  const { timer, displaySeconds: hookSeconds, refetch } = useLabTimerState({
+    url: '/api/lab-management/timer/active',
+    enabled: isTimerRelevantPage && !hasOwnTimerComponent && !sessionExpired,
+    heartbeatMs: 60000,
+    onResponse: handleResponse,
+  });
+  const displaySeconds = hookSeconds ?? 0;
+
+  // A realtime row for a different lab day than the one we have a name for:
+  // fetch the active timer's labDay info.
+  const labDayMismatch = !!timer && !!labDay && labDay.id !== timer.lab_day_id;
   useEffect(() => {
-    if (!isTimerRelevantPage || hasOwnTimerComponent || sessionExpired) return;
+    if (labDayMismatch) refetch();
+  }, [labDayMismatch, refetch]);
 
-    const supabase = getSupabase();
-    const channel = supabase
-      .channel('global-timer-banner')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'lab_timer_state' },
-        () => { fetchActiveTimer(); }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [isTimerRelevantPage, hasOwnTimerComponent, sessionExpired, fetchActiveTimer]);
+  const isDismissed = !!timer && dismissedRotation === timer.rotation_number;
 
   // Add/remove body class and padding when banner is visible
-  const isActive = timer && labDay && !isDismissed && timer.status !== 'stopped';
+  const isActive = !!(timer && labDay && !labDayMismatch && !isDismissed && timer.status !== 'stopped');
   useEffect(() => {
     if (isActive) {
       document.body.classList.add('has-timer-banner');
@@ -188,65 +80,6 @@ export default function GlobalTimerBanner() {
       document.body.style.paddingTop = '';
     };
   }, [isActive]);
-
-  // Calculate display time with visibility-aware updates
-  useEffect(() => {
-    if (!timer) return;
-
-    const calculateElapsed = () => {
-      if (timer.status === 'stopped') {
-        return 0;
-      } else if (timer.status === 'paused') {
-        return timer.elapsed_when_paused || 0;
-      } else if (timer.status === 'running' && timer.started_at) {
-        const startTime = new Date(timer.started_at).getTime();
-        const now = Date.now() + serverTimeOffsetRef.current;
-        // Sign-guard (Task Handoff Queue "rotation timer flicker" ticket,
-        // 2026-09-14, fixed on TimerBanner/LabTimer): started_at can land
-        // ahead of this client's corrected clock. Clamp a negative diff
-        // to 0 (not-started-yet) instead of letting it flow unclamped
-        // into `duration - elapsed`, which could render above the full
-        // duration.
-        return Math.max(0, Math.floor((now - startTime) / 1000));
-      }
-      return 0;
-    };
-
-    const updateDisplay = () => {
-      const elapsed = calculateElapsed();
-      const duration = timer.duration_seconds;
-
-      if (timer.mode === 'countdown') {
-        setDisplaySeconds(Math.max(0, duration - elapsed));
-      } else {
-        setDisplaySeconds(Math.min(elapsed, duration));
-      }
-    };
-
-    updateDisplay();
-
-    // Only run display timer when page is visible
-    let intervalId: NodeJS.Timeout | null = setInterval(updateDisplay, 1000);
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        if (intervalId) {
-          clearInterval(intervalId);
-          intervalId = null;
-        }
-      } else {
-        updateDisplay(); // Catch up immediately
-        intervalId = setInterval(updateDisplay, 1000);
-      }
-    };
-
-    document.addEventListener('visibilitychange', handleVisibility);
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
-      document.removeEventListener('visibilitychange', handleVisibility);
-    };
-  }, [timer]);
 
   // Get background color based on time remaining
   const getBannerColor = () => {
@@ -272,11 +105,10 @@ export default function GlobalTimerBanner() {
   }
 
   // Don't render if no active timer, user dismissed, timer is stopped, or time is up
-  if (!timer || !labDay || isDismissed || timer.status === 'stopped' || isTimeUp) {
+  if (!timer || !labDay || labDayMismatch || isDismissed || timer.status === 'stopped' || isTimeUp) {
     return null;
   }
 
-  const isRunning = timer.status === 'running';
   const isPaused = timer.status === 'paused';
 
   return (
@@ -325,7 +157,7 @@ export default function GlobalTimerBanner() {
               <ChevronRight className="w-4 h-4" aria-hidden="true" />
             </Link>
             <button
-              onClick={() => setIsDismissed(true)}
+              onClick={() => setDismissedRotation(timer.rotation_number)}
               aria-label="Dismiss timer banner"
               className="p-1 hover:bg-white/20 rounded transition-colors text-white/70 hover:text-white"
             >
