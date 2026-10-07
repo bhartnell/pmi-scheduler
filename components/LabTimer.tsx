@@ -277,7 +277,7 @@ export default function LabTimer({
   // Check for active timer conflict on a different lab day
   const checkActiveTimerConflict = useCallback(async (): Promise<boolean> => {
     try {
-      const res = await fetch('/api/lab-management/timer/active');
+      const res = await fetch('/api/lab-management/timer/active?readonly=1');
       const data = await res.json();
 
       if (data.success && data.timer && data.timer.lab_day_id !== labDayId && data.timer.status !== 'stopped') {

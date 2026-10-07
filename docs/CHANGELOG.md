@@ -8,6 +8,10 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+2026-10-07
+
+pending | fix(timer): GlobalTimerBanner and LabTimer conflict check read /timer/active?readonly=1 so a page view can no longer stop a live rotation
+
 2026-10-06
 
 - (pending) | fix(acls/pals-hub): exclude status=withdrawn students from hub group rosters/totals (Task Handoff Queue [ACLS HUB] withdrawn students). Read-only filter in `app/api/adv-cert/acls-hub` + `pals-hub`; marks/attempt links untouched. Still unfiltered (follow-up): `adv-cert/grading-context`, `pals/grading-context`, `lab-management/groups`.

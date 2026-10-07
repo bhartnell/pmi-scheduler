@@ -49,7 +49,7 @@ export default function GlobalTimerBanner() {
   // re-fetch on reconnect/visibility. The only poll left is a 60s discovery
   // heartbeat (hook clamps to >= 60s) as a safety net.
   const { timer, displaySeconds: hookSeconds, refetch } = useLabTimerState({
-    url: '/api/lab-management/timer/active',
+    url: '/api/lab-management/timer/active?readonly=1',
     enabled: isTimerRelevantPage && !hasOwnTimerComponent && !sessionExpired,
     heartbeatMs: 60000,
     onResponse: handleResponse,
