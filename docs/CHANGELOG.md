@@ -8,6 +8,8 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+pending | fix(acls-coordinator): relabel "Tested" tile to "Groups tested" showing x/y groups (no numbers changed)
+
 2026-10-07
 
 pending | fix(acls-coordinator): result rows link to the read-only attempt record; page widened to max-w-screen-2xl with 4-across group grid (max-xl 2, max-md 1)
