@@ -255,7 +255,7 @@ export default function AclsCoordinatorPage() {
             {/* Stats */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
               <Stat label="Groups" value={groups.length} />
-              <Stat label="Tested" value={stats.groupsTested} />
+              <Stat label="Groups tested" value={`${stats.groupsTested}/${groups.length}`} />
               <Stat label="Passed" value={stats.passed} tone="text-green-600 dark:text-green-400" />
               <Stat label="Failed" value={stats.failed} tone="text-red-600 dark:text-red-400" />
               <Stat label="Pending" value={stats.pending} tone="text-amber-600 dark:text-amber-400" />
