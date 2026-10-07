@@ -91,6 +91,7 @@ pending | feat(team-lead): per-course practice/testing team-lead progress vs AHA
 pending | fix(team-lead): adv-cert + PALS write course/phase/result directly, no station required, dropped team_lead_log rows now logged (DECOUPLE 2/4)
 pending | feat(ccf-timer): own draggable floating panel (position remembered), collapsible to the percent field alone, out of the bottom-right dock
 2026-10-02
+pending | feat(acls-board): Print opens a separate schedule-only handout document (own window, not the board with CSS hiding)
 
 pending | ACLS Board: per-section Rotation timer button opens the existing LabTimer (keyed to the section lab_day; no new timer)
 pending | feat(acls-board): Board is the ACLS hub — /labs/acls-hub redirects to /labs/acls-hub/board, old hub kept unrouted in _legacy, all links/breadcrumbs repointed, Board back goes to AHA Hub
