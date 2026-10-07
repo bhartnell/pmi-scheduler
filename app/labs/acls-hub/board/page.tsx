@@ -50,6 +50,10 @@ interface CalEvent {
   metadata?: { is_parked?: boolean; actual_start_time?: string | null; instructor_id?: string | null; additional_instructor_id?: string | null; linked_section_number?: number | null };
 }
 interface InstructorOpt { id: string; name: string }
+interface WatchMark {
+  id: string; lab_day_id: string; station_id: string; student_id: string | null; lab_group_id: string | null;
+  team_lead_id: string | null; mark: string; note: string | null; marked_by: string | null; updated_at: string | null;
+}
 
 type RegionId = 'overview' | 'schedule' | 'stations' | 'progress';
 interface RegionCfg { id: RegionId; t: string; span: number; on: boolean }
@@ -121,7 +125,8 @@ function BoardContent() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
   const [events, setEvents] = useState<CalEvent[]>([]);
-  const [watchMarks, setWatchMarks] = useState<{ lab_day_id: string; student_id: string; mark: string }[]>([]);
+  const [watchMarks, setWatchMarks] = useState<WatchMark[]>([]);
+  const [watchOpen, setWatchOpen] = useState<string | null>(null);
   const [absentByLabDay, setAbsentByLabDay] = useState<Record<string, string[]>>({});
   const [instructorOpts, setInstructorOpts] = useState<InstructorOpt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,9 +174,12 @@ function BoardContent() {
       if (!hub.success) return;
       setCohort(hub.cohort); setDates(hub.dates || []); setLabDays(hub.labDays || []);
       setGroups(hub.groups || []); setAttempts(hub.attempts || []);
-      Promise.all((hub.labDays || []).map((ld: { id: string }) => fetch(`/api/adv-cert/learning-marks?labDayId=${ld.id}`).then(r => r.json()).catch(() => null)))
-        .then(rs => setWatchMarks(rs.flatMap((r: { success?: boolean; marks?: { lab_day_id: string; student_id: string; mark: string }[] } | null) => (r?.success ? r.marks || [] : []))))
-        .catch(() => setWatchMarks([]));
+      // Cohort-and-course scoped, newest first: the watch list is consulted going into testing, not just for today.
+      if (hub.cohort?.id) {
+        fetch(`/api/adv-cert/learning-marks?cohortId=${encodeURIComponent(hub.cohort.id)}`).then(r => r.json())
+          .then((r: { success?: boolean; marks?: WatchMark[] }) => setWatchMarks(r?.success ? r.marks || [] : []))
+          .catch(() => setWatchMarks([]));
+      } else setWatchMarks([]);
       Promise.all((hub.labDays || []).map((ld: { id: string }) => fetch(`/api/lab-management/lab-days/${ld.id}/attendance`).then(r => r.json())
         .then((r: { students?: { student_id: string; status: string | null }[] }) => [ld.id, (r.students || []).filter(x => x.status === 'absent').map(x => x.student_id)] as [string, string[]])
         .catch(() => [ld.id, []] as [string, string[]])))
@@ -688,7 +696,32 @@ function BoardContent() {
     const state: 'pass' | 'watch' | 'fail' | 'none' = !best ? 'none' : best.overall_result === 'pass' ? 'pass' : best.overall_result === 'fail' ? 'fail' : 'watch';
     return { list, state };
   };
-  const watchN = (id: string) => watchMarks.filter(k => k.student_id === id && k.mark === 'watch' && visibleLabDays.some(d => d.id === k.lab_day_id && visibleDates.includes(d.date))).length;
+  // A student's watches: their own (legacy per-student rows) plus group rotations where they are the RECORDED lead.
+  // The lead is never inferred from note text, and a group watch with no lead is listed under the group only.
+  const watchFor = (id: string) => watchMarks.filter(k => k.mark === 'watch' && (k.student_id === id || (!k.student_id && k.team_lead_id === id)));
+  const watchN = (id: string) => watchFor(id).length;
+  const stationLabel = (stationId: string) => {
+    for (const d of labDays) {
+      const st = d.stations.find(x => x.id === stationId);
+      if (st) return `${prettyDate(d.date)} - Station ${st.station_number}${st.scenario?.case_code ? ` (${st.scenario.case_code})` : st.custom_title ? ` (${st.custom_title})` : ''}`;
+    }
+    return 'Station';
+  };
+  const watchSubjects = (() => {
+    const out: { key: string; label: string; marks: WatchMark[] }[] = [];
+    const add = (key: string, label: string, m: WatchMark) => {
+      const hit = out.find(o => o.key === key);
+      if (hit) hit.marks.push(m); else out.push({ key, label, marks: [m] });
+    };
+    const memberName = (id: string) => { for (const g of groups) { const m = g.members.find(x => x.id === id); if (m) return fullName(m); } return 'Student'; };
+    for (const k of watchMarks) {
+      if (k.mark !== 'watch') continue;
+      if (k.student_id) add(`s:${k.student_id}`, memberName(k.student_id), k);
+      else if (k.team_lead_id) add(`s:${k.team_lead_id}`, memberName(k.team_lead_id), k);
+      else add(`g:${k.lab_group_id}`, `${groups.find(g => g.id === k.lab_group_id)?.name || 'Group'} (no lead recorded)`, k);
+    }
+    return out;
+  })();
   const openRecord = (a: Attempt) => router.push(`/labs/adv-cert/attempt/${a.id}`);
 
   const renderProgress = () => {
@@ -707,6 +740,31 @@ function BoardContent() {
             </div>
           ))}
         </div>
+        {watchSubjects.length > 0 && (
+          <div className="rounded-lg border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-2">
+            <div className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-1">Learning-station watch list (whole course, newest first)</div>
+            <div className="flex flex-wrap gap-2">
+              {watchSubjects.map(w => (
+                <button key={w.key} type="button" onClick={() => setWatchOpen(watchOpen === w.key ? null : w.key)} aria-expanded={watchOpen === w.key}
+                  className="min-h-[36px] px-3 rounded-full text-xs border border-amber-400 dark:border-amber-600 text-amber-900 dark:text-amber-200 bg-white/60 dark:bg-gray-800">
+                  {w.label} <span className="font-semibold">x{w.marks.length}</span>
+                </button>
+              ))}
+            </div>
+            {watchOpen && watchSubjects.find(w => w.key === watchOpen) && (
+              <ul className="mt-2 space-y-1 text-xs text-gray-800 dark:text-gray-100">
+                {watchSubjects.find(w => w.key === watchOpen)!.marks.map(m => (
+                  <li key={m.id} className="rounded border border-amber-200 dark:border-amber-800 bg-white dark:bg-gray-800 px-2 py-1">
+                    <span className="font-medium">{stationLabel(m.station_id)}</span>
+                    {m.lab_group_id && !m.student_id ? ` - ${groups.find(g => g.id === m.lab_group_id)?.name || 'Group'} rotation` : ''}
+                    {m.note ? ` - ${m.note}` : ''}
+                    <span className="text-gray-500 dark:text-gray-400">{m.marked_by ? ` - ${m.marked_by}` : ''}{m.updated_at ? ` - ${new Date(m.updated_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : ''}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
         <div className="min-w-0 overflow-x-auto">
           {absentError && <div role="alert" className="mb-2 text-xs text-red-700 dark:text-red-300">{absentError}</div>}
           <table className="w-full text-sm">
