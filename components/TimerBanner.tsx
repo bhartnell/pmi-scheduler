@@ -108,7 +108,7 @@ export default function TimerBanner({
     if (body.timer) setStaleHidden(!!body.isStale && body.timer.status !== 'stopped');
   }, []);
 
-  const { timer: hookTimer, displaySeconds, applyTimer } = useLabTimerState({
+  const { timer: hookTimer, displaySeconds, applyTimer, hasFetched: hasOwnFetched } = useLabTimerState({
     url: `/api/lab-management/timer?labDayId=${labDayId}`,
     labDayId,
     enabled: !!labDayId,
@@ -117,6 +117,25 @@ export default function TimerBanner({
   });
   void applyTimer;
   const timerState = hookTimer as TimerState | null;
+
+  // Fallback: this station's own lab day has no live timer (e.g. the instructor started the
+  // clock from a different lab day). Show the active timer, read-only and explicitly labelled
+  // as another section's clock. `readonly=1` guarantees this GET never stops anything.
+  const [otherDayName, setOtherDayName] = useState<string | null>(null);
+  const ownLive = timerState?.status === 'running' || timerState?.status === 'paused';
+  const handleFallbackResponse = useCallback(({ body }: { status: number; body: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
+    if (body?.labDay) setOtherDayName(body.labDay.displayName || null);
+  }, []);
+  const { timer: fallbackRaw, displaySeconds: fallbackSeconds } = useLabTimerState({
+    url: '/api/lab-management/timer/active?readonly=1',
+    enabled: !!labDayId && hasOwnFetched && !ownLive,
+    heartbeatMs: 60000,
+    onResponse: handleFallbackResponse,
+  });
+  const fallbackTimer = !ownLive && fallbackRaw && fallbackRaw.lab_day_id !== labDayId
+    && (fallbackRaw.status === 'running' || fallbackRaw.status === 'paused')
+    ? (fallbackRaw as unknown as TimerState)
+    : null;
 
   // Fetch ready status
   const fetchReadyStatus = useCallback(async () => {
@@ -276,6 +295,34 @@ export default function TimerBanner({
   // Hide completely if dismissed (lab ended or user dismissed)
   if (isDismissed) {
     return null;
+  }
+
+  // Another lab day's clock is the one running: show it, labelled, instead of a blank wait.
+  if (fallbackTimer && fallbackSeconds !== null) {
+    const fbRemaining = fallbackTimer.mode === 'countdown'
+      ? fallbackSeconds
+      : fallbackTimer.duration_seconds - Math.min(fallbackSeconds, fallbackTimer.duration_seconds);
+    return (
+      <div ref={bannerRef} className="fixed bottom-0 left-0 right-0 z-50 bg-slate-700 text-white shadow-lg">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-3">
+            <Clock className="w-5 h-5" />
+            <div>
+              <div className="text-xs uppercase tracking-wide opacity-80">
+                Another section&apos;s clock{otherDayName ? `: ${otherDayName}` : ''}
+              </div>
+              <div className="text-sm opacity-80">
+                Rotation {fallbackTimer.rotation_number}{fallbackTimer.status === 'paused' ? ' (paused)' : ''}
+                {' - '}no timer is running for this lab day
+              </div>
+            </div>
+          </div>
+          <span className="text-4xl font-mono font-bold">
+            {fbRemaining <= 0 ? 'TIME UP' : formatTime(fbRemaining)}
+          </span>
+        </div>
+      </div>
+    );
   }
 
   // Show waiting state if timer hasn't started

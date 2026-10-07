@@ -7,6 +7,8 @@ import type { VolunteerTokenResult } from '@/lib/api-auth';
 // Enforces single active timer: if multiple found, keeps the most recent and stops others
 // Also cleans up stale timers that have been running for >24 hours
 // Supports ?version=N for efficient polling (returns not_modified when unchanged)
+// Supports ?readonly=1: pure read, skips the stale/extra-timer stop writes (used by
+// station screens that fall back to another lab day's clock; many can poll at once)
 // Supports volunteer lab tokens (scoped to their lab day)
 export async function GET(request: NextRequest) {
   const auth = await requireAuthOrVolunteerToken(request, 'instructor');
@@ -38,6 +40,7 @@ export async function GET(request: NextRequest) {
 
     // Version-based polling: if client sends version, check if any timer has changed
     const clientVersion = parseInt(request.nextUrl.searchParams.get('version') || '0');
+    const readOnly = request.nextUrl.searchParams.get('readonly') === '1';
 
     // Find timers that are currently running or paused (not stopped)
     // Volunteer tokens are scoped to their lab day only
@@ -90,7 +93,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Stop stale timers
-    if (staleTimerIds.length > 0) {
+    if (!readOnly && staleTimerIds.length > 0) {
       await supabase
         .from('lab_timer_state')
         .update({
@@ -119,7 +122,7 @@ export async function GET(request: NextRequest) {
     // If multiple non-stale timers are active, keep only the most recent one (first in array, sorted desc)
     const primaryTimer = nonStaleTimers[0];
 
-    if (nonStaleTimers.length > 1) {
+    if (!readOnly && nonStaleTimers.length > 1) {
       // Stop all but the most recent timer
       const extraTimerIds = nonStaleTimers.slice(1).map(t => t.lab_day_id);
       await supabase
