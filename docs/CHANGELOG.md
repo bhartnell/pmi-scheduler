@@ -10,6 +10,8 @@ Format: `commit-hash | brief description`
 
 2026-10-07
 
+pending | fix(acls-coordinator): result rows link to the read-only attempt record; page widened to max-w-screen-2xl with 4-across group grid (max-xl 2, max-md 1)
+
 pending | fix(timer): GlobalTimerBanner and LabTimer conflict check read /timer/active?readonly=1 so a page view can no longer stop a live rotation
 
 2026-10-06
