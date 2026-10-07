@@ -147,7 +147,7 @@ export default function AclsCoordinatorPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-5xl mx-auto px-4 py-5">
+      <div className="max-w-screen-2xl mx-auto px-4 py-5">
         <Link href={`/labs/schedule/${labDayId}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-3 print:hidden">
           <ArrowLeft className="w-4 h-4" /> Lab Day
         </Link>
@@ -290,7 +290,7 @@ export default function AclsCoordinatorPage() {
             {/* Groups: status + what's next */}
             <section>
               <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Users className="w-4 h-4" /> Groups — status & what&apos;s next</h2>
-              <div className="space-y-2">
+              <div className="grid grid-cols-4 max-xl:grid-cols-2 max-md:grid-cols-1 gap-2 items-start">
                 {groups.map(g => {
                   const gAttempts = attemptsByGroup.get(g.id) || [];
                   const tested = gAttempts.length > 0;
@@ -307,11 +307,11 @@ export default function AclsCoordinatorPage() {
                       {gAttempts.length > 0 && (
                         <div className="mt-1.5 space-y-1">
                           {gAttempts.map(a => (
-                            <div key={a.id} className="text-[11px] text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                            <Link key={a.id} href={`/labs/adv-cert/attempt/${a.id}`} className="text-[11px] text-gray-600 dark:text-gray-400 flex flex-wrap items-center gap-2 min-h-[44px] px-1 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50">
                               <span className={a.overall_result === 'pass' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{a.overall_result.toUpperCase()}</span>
                               <span>{a.scenario?.case_code ? `[${a.scenario.case_code}] ` : ''}{a.scenario?.name || 'scenario'}</span>
                               <span className="inline-flex items-center gap-0.5"><UserCheck className="w-3 h-3" /> TL: {sname(a.team_lead)}</span>
-                            </div>
+                            </Link>
                           ))}
                         </div>
                       )}
