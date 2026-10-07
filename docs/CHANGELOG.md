@@ -8,6 +8,8 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+pending | feat(acls-board): learning-station watch list is cohort-wide, counts group-grain marks via recorded team lead, clickable per-student entries
+
 pending | fix(acls-coordinator): relabel "Tested" tile to "Groups tested" showing x/y groups (no numbers changed)
 
 2026-10-07
