@@ -750,6 +750,36 @@ function BoardContent() {
 
   const body: Record<RegionId, () => React.ReactNode> = { overview: renderOverview, schedule: renderSchedule, stations: renderStations, progress: renderProgress };
 
+  // PRINT HANDOUT: a separate paper document (its own window, only the schedule), NOT the board with
+  // CSS hiding things. Built from the already-computed board times so paper matches the screen.
+  // Both days = one page per day. Presentation only; no data touched.
+  const printHandout = () => {
+    const esc = (v: unknown) => String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const caseText = (st: Station) => st.scenario?.title
+      ? `${st.scenario.case_code ? `${st.scenario.case_code.replace(/^CASE_/i, 'Case ').replace(/_/g, ' ')} - ` : ''}${st.scenario.title}`
+      : st.scenario?.case_code || st.custom_title || '';
+    const pages = visibleDates.map((date, di) => {
+      const rows = orderFor(date).filter(id => !layout.rows[id]?.parked);
+      const first = rows.length ? layout.rows[rows[0]]?.at : null;
+      const secs = visibleLabDays.filter(d => d.date === date && !skillsRow(d) && d.stations.length > 0)
+        .sort((a, b) => toMin(a.start_time) - toMin(b.start_time) || (a.section_number ?? 1) - (b.section_number ?? 1));
+      const body = rows.length === 0 ? '<tr><td colspan="4">No schedule blocks.</td></tr>' : rows.map(id => {
+        const e = eventById.get(id); const at = layout.rows[id]?.at;
+        if (!e || at == null) return '';
+        return `<tr><td class="t">${fmt(at)}&ndash;${fmt(at + DUR(id))}</td><td>${esc(e.title)}</td><td>${esc(rowNames(e).join(', '))}</td><td>${esc(e.content_notes)}</td></tr>`;
+      }).join('');
+      const stations = secs.length ? `<h3>Station plan</h3>${secs.map(s => `<div class="sec"><div class="sh">${esc(s.section_label || s.title || 'Lab')}${s.start_time ? ` &middot; ${hhmm(s.start_time)}&ndash;${hhmm(s.end_time)}` : ''}</div><table><thead><tr><th style="width:50px">#</th><th style="width:150px">Room</th><th>Case</th><th style="width:200px">Instructor</th></tr></thead><tbody>${s.stations.map(st => `<tr><td>${st.station_number}</td><td>${esc(st.room)}</td><td>${esc(caseText(st))}</td><td>${esc(st.instructor_name)}</td></tr>`).join('')}</tbody></table></div>`).join('')}` : '';
+      return `<section${di > 0 ? ' style="break-before:page"' : ''}><h1>ACLS Course Schedule &mdash; ${esc(cohortLabel)}</h1><h2>Day ${dayNo(date)} &mdash; ${esc(prettyDate(date))}${first != null ? ` &middot; ${fmt(first)}&ndash;${fmt(layout.ends[date])}` : ''}</h2><table><thead><tr><th style="width:150px">Time</th><th>Block</th><th style="width:200px">Instructor(s)</th><th style="width:180px">Note</th></tr></thead><tbody>${body}</tbody></table>${stations}</section>`;
+    }).join('');
+    const css = '@page{margin:0.5in;size:letter portrait}body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;margin:0}h1{font-size:22pt;margin:0 0 4px}h2{font-size:16pt;margin:0 0 10px}h3{font-size:14pt;margin:14px 0 4px}table{width:100%;border-collapse:collapse;margin-bottom:8px}th,td{border:1px solid #000;padding:6px 8px;text-align:left;vertical-align:top;font-size:14pt;line-height:1.3}th{border-bottom:2px solid #000;font-weight:700}tr{break-inside:avoid}.t{white-space:nowrap;font-weight:700}.sec{break-inside:avoid}.sh{font-size:13pt;font-weight:700;margin-top:6px}';
+    const w = window.open('', '_blank');
+    if (!w) { window.print(); return; }
+    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>ACLS Schedule ${esc(cohortLabel)}</title><style>${css}</style></head><body>${pages}</body></html>`);
+    w.document.close();
+    w.focus();
+    setTimeout(() => w.print(), 250);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="w-full px-4 py-3">
@@ -764,7 +794,7 @@ function BoardContent() {
             </div>
             <div className="flex items-center gap-2">
               <button onClick={load} disabled={loading} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh</button>
-              <button onClick={() => window.print()} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"><Printer className="w-3.5 h-3.5" /> Print</button>
+              <button onClick={printHandout} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"><Printer className="w-3.5 h-3.5" /> Print</button>
             </div>
           </div>
           {courseOptions.length > 1 && (
@@ -813,70 +843,6 @@ function BoardContent() {
             ))}
           </div>
         )}
-        {/* PRINT-ONLY HANDOUT: the selected day's schedule only (Both days = one page per day). Renders the
-            already-computed board times, so paper matches the screen. Presentation only; no data touched. */}
-        <div className="hidden print:block text-black acls-board-print">
-          <style>{`@media print {
-            @page { margin: 0.5in; size: letter portrait; }
-            html, body { background: #fff !important; }
-            .acls-board-print table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
-            .acls-board-print th, .acls-board-print td { border: 1px solid #000; padding: 4px 8px; text-align: left; vertical-align: top; font-size: 12pt; line-height: 1.3; }
-            .acls-board-print th { background: #e5e5e5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; font-weight: 700; }
-          }`}</style>
-          {cohort && visibleDates.map((date, di) => {
-            const rows = orderFor(date).filter(id => !layout.rows[id]?.parked);
-            const first = rows.length ? layout.rows[rows[0]]?.at : null;
-            const secs = visibleLabDays.filter(d => d.date === date && !skillsRow(d) && d.stations.length > 0)
-              .sort((a, b) => toMin(a.start_time) - toMin(b.start_time) || (a.section_number ?? 1) - (b.section_number ?? 1));
-            return (
-              <div key={date} style={{ breakBefore: di > 0 ? 'page' : 'auto' }}>
-                <h1 className="text-2xl font-bold">ACLS Course Schedule — {cohortLabel}</h1>
-                <h2 className="text-lg font-bold mb-1">Day {dayNo(date)} — {prettyDate(date)}{first != null ? ` · ${fmt(first)}–${fmt(layout.ends[date])}` : ''}</h2>
-                <table>
-                  <thead><tr><th style={{ width: '120px' }}>Time</th><th>Block</th><th style={{ width: '170px' }}>Instructor</th></tr></thead>
-                  <tbody>
-                    {rows.length === 0
-                      ? <tr><td colSpan={3}>No schedule blocks.</td></tr>
-                      : rows.map(id => {
-                        const e = eventById.get(id); const at = layout.rows[id]?.at;
-                        if (!e || at == null) return null;
-                        return (
-                          <tr key={id} style={{ breakInside: 'avoid' }}>
-                            <td>{fmt(at)}–{fmt(at + DUR(id))}</td>
-                            <td>{e.title}</td>
-                            <td>{rowNames(e).join(', ')}</td>
-                          </tr>
-                        );
-                      })}
-                  </tbody>
-                </table>
-                {secs.length > 0 && (
-                  <div>
-                    <h3 className="text-base font-bold mt-3 mb-1">Station plan</h3>
-                    {secs.map(s => (
-                      <div key={s.id} style={{ breakInside: 'avoid' }}>
-                        <div className="font-semibold">{s.section_label || s.title || 'Lab'}{s.start_time ? ` · ${hhmm(s.start_time)}–${hhmm(s.end_time)}` : ''}</div>
-                        <table>
-                          <thead><tr><th style={{ width: '40px' }}>#</th><th style={{ width: '130px' }}>Room</th><th>Case</th><th style={{ width: '170px' }}>Instructor</th></tr></thead>
-                          <tbody>
-                            {s.stations.map(st => (
-                              <tr key={st.id}>
-                                <td>{st.station_number}</td>
-                                <td>{st.room || ''}</td>
-                                <td>{st.scenario?.title ? `${st.scenario.case_code ? `${st.scenario.case_code.replace(/^CASE_/i, 'Case ').replace(/_/g, ' ')} - ` : ''}${st.scenario.title}` : st.scenario?.case_code || st.custom_title || ''}</td>
-                                <td>{st.instructor_name || ''}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
       </div>
 
       {attemptPicker && (
