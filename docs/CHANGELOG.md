@@ -10,6 +10,8 @@ Format: `commit-hash | brief description`
 
 2026-10-06
 
+- (pending) | fix(acls/pals-hub): exclude status=withdrawn students from hub group rosters/totals (Task Handoff Queue [ACLS HUB] withdrawn students). Read-only filter in `app/api/adv-cert/acls-hub` + `pals-hub`; marks/attempt links untouched. Still unfiltered (follow-up): `adv-cert/grading-context`, `pals/grading-context`, `lab-management/groups`.
+
 PENDING | ACLS board: Megacode result cell opens a read-only per-criterion attempt record (/labs/adv-cert/attempt/[id])
 
 (this commit) | fix(ui): page toasts + student "View Vitals" button render in FloatingDock page slot via new DockPortal (no more overlap/hiding behind Feedback button)
