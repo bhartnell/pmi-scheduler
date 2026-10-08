@@ -15,7 +15,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, RefreshCw, CheckCircle2, XCircle, Clock, Users, UserCheck, MapPin, Printer, Pencil } from 'lucide-react';
+import { ArrowLeft, Loader2, RefreshCw, CheckCircle2, XCircle, Clock, Users, UserCheck, MapPin, Printer, Pencil, FileArchive, Download } from 'lucide-react';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 import type { LabDay, Station as LabStation, Instructor, InstructorAvailabilityEntry } from '@/components/lab-day/types';
@@ -23,7 +23,7 @@ import type { LabDay, Station as LabStation, Instructor, InstructorAvailabilityE
 interface Student { id: string; first_name: string; last_name: string; status?: string | null }
 interface Group { id: string; name: string; members: Student[] }
 interface Station { id: string; station_number: number; instructor_name: string | null; room: string | null; custom_title: string | null; station_notes: string | null }
-interface Day { id: string; date: string; cert_course: string | null; is_adv_cert_testing: boolean; cohort?: { cohort_number: number } | null }
+interface Day { id: string; date: string; cohort_id?: string; cert_course: string | null; is_adv_cert_testing: boolean; cohort?: { cohort_number: number } | null }
 interface Attempt {
   id: string; lab_group_id: string; overall_result: string; comments: string | null; started_at: string;
   team_lead?: { id: string; first_name: string; last_name: string } | null;
@@ -183,6 +183,24 @@ export default function AclsCoordinatorPage() {
           </div>
         </div>
 
+        {day?.cohort_id && (() => {
+          const course = day.cert_course === 'pals' ? 'pals' : 'acls';
+          const q = (extra: string) => `cohortId=${day.cohort_id}&course=${course}${extra}`;
+          const btn = 'inline-flex items-center gap-1 min-h-[44px] px-3 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700';
+          return (
+            <section className="mb-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 print:hidden">
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Download className="w-4 h-4" /> Results export — whole cohort</h2>
+              <div className="flex flex-wrap items-center gap-2">
+                <a href={`/api/reports/aha?template=megacode&${q('&print=1')}`} target="_blank" rel="noreferrer" className={btn}><Printer className="w-4 h-4" /> Print megacode sheets</a>
+                <a href={`/api/reports/aha/zip?${q('&grouping=student')}`} className={btn}><FileArchive className="w-4 h-4" /> PDF zip (per student)</a>
+                <a href={`/api/reports/aha/zip?${q('&grouping=section')}`} className={btn}><FileArchive className="w-4 h-4" /> PDF zip (by section)</a>
+                <a href="/reports/aha" className="text-xs text-blue-600 dark:text-blue-400 hover:underline">More options (blank forms, sign-off instructor)</a>
+              </div>
+              <p className="text-[11px] text-gray-400 mt-1">The zip can take 30–60s to build. Per-student print links are on each group member below.</p>
+            </section>
+          );
+        })()}
+
         {/* Print-only team-lead tracking sheet — paper backup for the course (complements the Google-forms fallback). */}
         {day && (
           <div className="hidden print:block text-black">
@@ -320,9 +338,9 @@ export default function AclsCoordinatorPage() {
                         {g.members.map(m => {
                           const led = stats.ledStudentIds.has(m.id);
                           return (
-                            <span key={m.id} className={`text-[10px] px-1.5 py-0.5 rounded-full ${led ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
-                              {led ? '✓ ' : ''}{m.last_name}
-                            </span>
+                            <a key={m.id} href={`/api/reports/aha?template=megacode&studentId=${m.id}&course=${day?.cert_course === 'pals' ? 'pals' : 'acls'}&print=1`} target="_blank" rel="noreferrer" title={`Print ${m.first_name} ${m.last_name} results`} className={`text-[10px] px-1.5 py-0.5 rounded-full hover:underline ${led ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
+                              {led ? '✓ ' : ''}{m.first_name} {m.last_name}
+                            </a>
                           );
                         })}
                       </div>
