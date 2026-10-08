@@ -27,6 +27,7 @@ interface Student {
   status: string;
   agency: string | null;
   team_lead_count: number;
+  last_team_lead_date?: string | null;
   scrub_top_size: string | null;
   scrub_bottom_size: string | null;
   cohort?: {
@@ -338,9 +339,17 @@ function StudentsPageContent() {
                           {student.status}
                         </span>
                         {student.team_lead_count > 0 && (
-                          <span className="inline-flex items-center gap-0.5 text-xs text-yellow-600 dark:text-yellow-400">
+                          <span
+                            className="inline-flex items-center gap-0.5 text-xs text-yellow-600 dark:text-yellow-400"
+                            title={student.last_team_lead_date ? `Last team lead ${student.last_team_lead_date}` : undefined}
+                          >
                             <Star className="w-3 h-3" />
                             {student.team_lead_count}
+                            {student.last_team_lead_date && (
+                              <span className="ml-1 text-gray-500 dark:text-gray-400">
+                                last {new Date(student.last_team_lead_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
                           </span>
                         )}
                       </div>
