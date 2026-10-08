@@ -146,13 +146,14 @@ export function programLabelFor(form: SkillsForm, course: 'acls' | 'pals' = 'acl
   return form.program === COURSE_PROGRAM_LABEL.acls ? COURSE_PROGRAM_LABEL[course] : form.program;
 }
 
-export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStudent, ins: SignoffInstructor | null, courseDate?: string | null, course: 'acls' | 'pals' = 'acls'): string {
+export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStudent, ins: SignoffInstructor | null, courseDate?: string | null, course: 'acls' | 'pals' = 'acls', blank?: { groupName?: string | null }): string {
+  const isBlank = !!blank;
   const name = `${student.lastName}, ${student.firstName}`;
   const dateStr = fmtDate(courseDate); // skills sheets stamp the cohort's course date
   const sections = form.sections.map((sec) => {
     const steps = sec.steps.map((st) => {
       const subs = st.subs?.length ? `<div class="subs">${st.subs.map((s) => `• ${esc(s)}`).join('<br>')}</div>` : '';
-      return `<tr><td class="step">${esc(st.text)}${subs}</td><td class="chk"><span class="bx">✓</span></td></tr>`;
+      return `<tr><td class="step">${esc(st.text)}${subs}</td><td class="chk"><span class="bx">${isBlank ? '' : '✓'}</span></td></tr>`;
     }).join('');
     const notes = sec.notes?.length
       ? sec.notes.map((n) => `<tr class="noterow"><td colspan="2">${esc(n)}</td></tr>`).join('')
@@ -163,12 +164,12 @@ export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStuden
   return `<section class="form">
     <p class="prog">${esc(programLabelFor(form, course))}</p>
     <h2>${esc(form.title)}</h2>
-    <p class="hdr">Student Name <u>${esc(name)}</u> &nbsp;&nbsp; Date of Test <u>${dateStr ? esc(dateStr) : '&nbsp;&nbsp;&nbsp;&nbsp;'}</u></p>
+    <p class="hdr">Student Name <u>${esc(name)}</u> &nbsp;&nbsp; ${blank?.groupName ? `Group <u>${esc(blank.groupName)}</u> &nbsp;&nbsp; ` : ''}Date of Test <u>${dateStr ? esc(dateStr) : '&nbsp;&nbsp;&nbsp;&nbsp;'}</u></p>
     ${scen}
     <table class="ck"><thead><tr><th>Critical Performance Steps</th><th class="chk">Done<br>correctly</th></tr></thead><tbody>${sections}</tbody></table>
     <p class="stop">STOP TEST</p>
-    <p class="result"><span class="pn on"><span class="bx">✓</span> PASS</span><span class="pn"><span class="bx"></span> NR</span></p>
-    <p class="autocap">Auto-completed as PASS — documenting competency verified live during the course (these skills are not scored in-app; failures are handled live).</p>
+    <p class="result"><span class="pn ${isBlank ? '' : 'on'}"><span class="bx">${isBlank ? '' : '✓'}</span> PASS</span><span class="pn"><span class="bx"></span> NR</span></p>
+    ${isBlank ? '' : `<p class="autocap">Auto-completed as PASS — documenting competency verified live during the course (these skills are not scored in-app; failures are handled live).</p>`}
     ${signoff(ins, dateStr)}
   </section>`;
 }
@@ -202,8 +203,8 @@ const STYLE = `
 /** The skills form CSS — exported so the per-student packet can merge it. */
 export const SKILLS_CSS = STYLE;
 
-export function renderSkillsDocument(form: SkillsForm, students: RosterStudent[], opts: { autoPrint?: boolean; instructor?: SignoffInstructor | null; courseDate?: string | null; course?: 'acls' | 'pals' } = {}): string {
-  const sheets = students.map((s) => renderSkillsStudentSheet(form, s, opts.instructor ?? null, opts.courseDate, opts.course)).join('\n');
+export function renderSkillsDocument(form: SkillsForm, students: RosterStudent[], opts: { autoPrint?: boolean; instructor?: SignoffInstructor | null; courseDate?: string | null; course?: 'acls' | 'pals'; blank?: { groupName?: string | null } } = {}): string {
+  const sheets = students.map((s) => renderSkillsStudentSheet(form, s, opts.instructor ?? null, opts.courseDate, opts.course, opts.blank)).join('\n');
   const printScript = opts.autoPrint ? '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),350));</script>' : '';
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(form.title)}</title><style>${STYLE}</style></head>
 <body><div class="toolbar"><button onclick="window.print()">🖨 Print / Save as PDF</button> &nbsp; ${form.title} · ${students.length} student(s)</div>

@@ -5,6 +5,7 @@
  * the per-student ZIP. Merges the two form modules' CSS into one <head>.
  */
 import type { MegacodeReportRow } from '@/lib/reports/aha/megacode';
+import { exportRowsFor } from '@/lib/reports/aha/exportSheets';
 import { renderMegacodeStudentForm, MEGACODE_CSS, type SignoffInstructor } from '@/lib/reports/aha/megacodeForm';
 import { renderSkillsStudentSheet, SKILLS_CSS, AIRWAY_FORM, ADULT_BLS_FORM, INFANT_CPR_FORM } from '@/lib/reports/aha/skillsForms';
 
@@ -17,7 +18,7 @@ export function packetFilename(lastName: string, firstName: string, course: 'acl
 /** Combined HTML doc for one student (megacode + the 3 skills sheets). */
 export function composeStudentPacketHTML(row: MegacodeReportRow, instructor: SignoffInstructor | null, courseDate?: string | null, course: 'acls' | 'pals' = 'acls'): string {
   const student = { id: row.student.id, firstName: row.student.firstName, lastName: row.student.lastName };
-  const megacode = renderMegacodeStudentForm({ ...row, instructor });
+  const megacode = exportRowsFor(row).map((r) => renderMegacodeStudentForm({ ...r, instructor })).join('');
   const airway = renderSkillsStudentSheet(AIRWAY_FORM, student, instructor, courseDate, course);
   const adultBls = renderSkillsStudentSheet(ADULT_BLS_FORM, student, instructor, courseDate, course);
   const infant = renderSkillsStudentSheet(INFANT_CPR_FORM, student, instructor, courseDate, course);
