@@ -9,6 +9,7 @@ interface Student {
   status: string;
   agency: string | null;
   team_lead_count: number;
+  last_team_lead_date?: string | null;
   scrub_top_size: string | null;
   scrub_bottom_size: string | null;
   cohort?: {
