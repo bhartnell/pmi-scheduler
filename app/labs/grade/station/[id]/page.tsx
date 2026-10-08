@@ -793,20 +793,7 @@ export default function GradeStationPage() {
 
       const data = await res.json();
       if (data.success) {
-        if (!isSkillsStation && teamLeaderId) {
-          await fetch('/api/lab-management/team-leads', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              student_id: teamLeaderId,
-              lab_day_id: station?.lab_day?.id,
-              lab_station_id: stationId,
-              scenario_id: station?.scenario?.id,
-              date: station?.lab_day?.date,
-              notes: `Rotation ${rotationNumber}: ${satisfactoryCount}/8 S ratings`
-            })
-          });
-        }
+        // Team-lead ledger row is now written server-side by the assessments/scenario POST.
 
         setHasUnsavedChanges(false);
 
