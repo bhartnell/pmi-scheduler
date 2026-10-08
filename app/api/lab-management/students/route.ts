@@ -72,19 +72,24 @@ export async function GET(request: NextRequest) {
     if (studentIds.length > 0) {
       const { data: tlCounts } = await supabase
         .from('team_lead_log')
-        .select('student_id, course, phase, result')
+        .select('student_id, course, phase, result, date')
         .in('student_id', studentIds);
 
       const countMap: Record<string, number> = {};
+      const lastDateMap: Record<string, string> = {};
       const rowsByStudent: Record<string, TeamLeadLogRow[]> = {};
       tlCounts?.forEach((tl) => {
         countMap[tl.student_id] = (countMap[tl.student_id] || 0) + 1;
+        if (tl.date && (!lastDateMap[tl.student_id] || tl.date > lastDateMap[tl.student_id])) {
+          lastDateMap[tl.student_id] = tl.date;
+        }
         (rowsByStudent[tl.student_id] ||= []).push(tl);
       });
 
       const studentsWithCounts = data.map((student) => ({
         ...student,
         team_lead_count: countMap[student.id] || 0,
+        last_team_lead_date: lastDateMap[student.id] || null,
         team_lead_progress: summarizeTeamLeads(rowsByStudent[student.id] || []),
       }));
 

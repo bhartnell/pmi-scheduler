@@ -8,6 +8,8 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+pending | feat(students): list shows last team-lead date from team_lead_log (ledger read, not scenario_assessments)
+
 pending | feat(acls-board): learning-station watch list is cohort-wide, counts group-grain marks via recorded team lead, clickable per-student entries
 
 pending | fix(acls-coordinator): relabel "Tested" tile to "Groups tested" showing x/y groups (no numbers changed)
