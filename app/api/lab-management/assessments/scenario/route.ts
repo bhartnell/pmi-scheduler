@@ -134,6 +134,50 @@ export async function POST(request: NextRequest) {
 
     if (error) throw error;
 
+    // Team-lead ledger (team_lead_log): written HERE, server-side, so a closed tab
+    // or failed second request can no longer drop a lead (it used to be a
+    // client-side follow-up fetch from the grading page). Best-effort and
+    // idempotent per (student, lab day, station, rotation); never fails the save.
+    // Skills stations send no team_lead_id, so they never reach this.
+    if (data?.id && body.team_lead_id) {
+      try {
+        const rotationNote = `Rotation ${rotationNumber}:`;
+        const { data: existing } = await supabase
+          .from('team_lead_log')
+          .select('id')
+          .eq('student_id', body.team_lead_id)
+          .eq('lab_day_id', labDayId)
+          .eq('lab_station_id', labStationId)
+          .like('notes', `${rotationNote}%`)
+          .limit(1);
+        if (!existing || existing.length === 0) {
+          const [{ data: day }, { data: station }] = await Promise.all([
+            supabase.from('lab_days').select('date').eq('id', labDayId).single(),
+            supabase.from('lab_stations').select('scenario_id').eq('id', labStationId).single(),
+          ]);
+          if (!day?.date) {
+            console.error('[team_lead_log] DROPPED (scenario assessment): no date for lab day', { labDayId, studentId: body.team_lead_id });
+          } else {
+            const { error: tlErr } = await supabase.from('team_lead_log').insert({
+              student_id: body.team_lead_id,
+              cohort_id: cohortId,
+              lab_day_id: labDayId,
+              lab_station_id: labStationId,
+              scenario_id: station?.scenario_id ?? null,
+              date: day.date,
+              scenario_assessment_id: data.id,
+              notes: `${rotationNote} ${assessmentData.overall_score}/8 S ratings`,
+            });
+            if (tlErr) {
+              console.error('[team_lead_log] DROPPED (scenario assessment): insert failed', { code: tlErr.code, message: tlErr.message, studentId: body.team_lead_id, assessmentId: data.id });
+            }
+          }
+        }
+      } catch (tlEx) {
+        console.error('[team_lead_log] DROPPED (scenario assessment): unexpected error', { message: (tlEx as Error)?.message, assessmentId: data.id });
+      }
+    }
+
     // FERPA audit: log scenario assessment creation
     logAuditEvent({
       user: { id: user.id, email: user.email, role: user.role },
