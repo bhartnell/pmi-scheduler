@@ -24,6 +24,7 @@ export const maxDuration = 180;
  *   &grouping=student      (default) one combined PDF per student
  *                          (megacode + airway + adult BLS + infant CPR),
  *                          named LastName_FirstName_<ACLS|PALS>_Results.pdf
+ *   &labGroupId=…          optional, limit the export to one lab group's members
  *   &grouping=section      one PDF per form type (all students), for AHA records
  *   &instructorId=…        sign-off instructor (name/AHA#/signature)
  *   &course=acls|pals
@@ -57,6 +58,14 @@ export async function GET(request: NextRequest) {
     const cohortLabel = cohort?.cohort_number ? `Cohort${formatCohortNumber(cohort.cohort_number)}` : 'Cohort';
 
     const report = await fetchMegacodeReport({ kind: 'cohort', cohortId }, { course });
+    const labGroupId = p.get('labGroupId');
+    if (labGroupId) {
+      // Scope to one lab group; abort (never export the whole cohort) if the group can't be resolved.
+      const { data: members, error: memErr } = await supabase.from('lab_group_members').select('student_id').eq('lab_group_id', labGroupId);
+      if (memErr) return NextResponse.json({ success: false, error: 'could not read group members' }, { status: 500 });
+      const ids = new Set((members || []).map((m: { student_id: string }) => m.student_id));
+      report.rows = report.rows.filter((r) => ids.has(r.student.id));
+    }
     if (report.rows.length === 0) return NextResponse.json({ success: false, error: 'no students in cohort' }, { status: 404 });
     const courseDate = await fetchCourseDate({ kind: 'cohort', cohortId }, course); // skills-sheet date stamp
 
@@ -103,8 +112,8 @@ export async function GET(request: NextRequest) {
     browser = null;
 
     const zipFilename = grouping === 'student'
-      ? `${course.toUpperCase()}_${cohortLabel}_StudentResults.zip`
-      : `${course.toUpperCase()}_${cohortLabel}_BySection.zip`;
+      ? `${course.toUpperCase()}_${cohortLabel}${labGroupId ? '_Group' : ''}_StudentResults.zip`
+      : `${course.toUpperCase()}_${cohortLabel}${labGroupId ? '_Group' : ''}_BySection.zip`;
     const zipArrayBuffer = await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } });
 
     return new Response(zipArrayBuffer, {

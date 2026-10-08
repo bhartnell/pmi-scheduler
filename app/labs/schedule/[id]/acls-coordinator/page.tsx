@@ -151,6 +151,7 @@ export default function AclsCoordinatorPage() {
         <Link href={`/labs/schedule/${labDayId}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-3 print:hidden">
           <ArrowLeft className="w-4 h-4" /> Lab Day
         </Link>
+        <Link href="/labs/acls-hub" className="ml-3 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 hover:underline print:hidden">/ ACLS Hub</Link>
 
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4 print:hidden">
           <div>
@@ -316,6 +317,9 @@ export default function AclsCoordinatorPage() {
                     <div key={g.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3">
                       <div className="flex items-center justify-between">
                         <div className="font-medium text-gray-800 dark:text-gray-100">{g.name} <span className="text-xs text-gray-400">({g.members.length})</span></div>
+                        {day?.cohort_id && (
+                          <a href={`/api/reports/aha/zip?cohortId=${day.cohort_id}&course=${day.cert_course === 'pals' ? 'pals' : 'acls'}&labGroupId=${g.id}&grouping=student`} title={`PDF zip for ${g.name}`} className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 print:hidden"><FileArchive className="w-4 h-4" /></a>
+                        )}
                         {tested
                           ? <span className="text-xs inline-flex items-center gap-1">{gAttempts.map(a => a.overall_result === 'pass'
                               ? <CheckCircle2 key={a.id} className="w-4 h-4 text-green-500" />
