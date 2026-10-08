@@ -11,7 +11,8 @@
  * styled document (NREMT pattern).
  */
 import type { MegacodeReport, MegacodeReportRow, MegacodeAttempt } from '@/lib/reports/aha/megacode';
-import { chainToVariant } from '@/lib/reports/aha/megacode';
+import { chainToVariant, type AhaVariant } from '@/lib/reports/aha/megacode';
+import { exportRowsFor } from '@/lib/reports/aha/exportSheets';
 import { signatureFaceStack } from '@/lib/reports/aha/signature';
 import { SIGNATURE_FONT_FACE_CSS } from '@/lib/reports/aha/signatureFont';
 
@@ -104,11 +105,15 @@ function statusAt(attempt: MegacodeAttempt, algorithmType: string, dataIndex: nu
   return crit.met ? 'met' : 'notmet';
 }
 
-function renderSection(sec: FormSection, attempt: MegacodeAttempt): { html: string; needs: boolean } {
+function renderSection(sec: FormSection, attempt: MegacodeAttempt | null): { html: string; needs: boolean } {
   let needs = false;
   const rows = sec.items.map((it) => {
     // Numeric fill-in fields (official form has a write-in blank, not a checkbox):
     // render the passing default as an editable value, never a checkbox.
+    if (attempt === null) {
+      // Blank paper sheet: nothing pre-marked, write-in fields left empty.
+      return `<tr><td class="step">${esc(it.text)}</td><td class="chk">${it.fill !== undefined ? '<span class="fillval">&nbsp;</span>' : box(false)}</td></tr>`;
+    }
     if (it.fill !== undefined) {
       return `<tr><td class="step">${esc(it.text)}</td><td class="chk"><span class="fillval">${esc(it.fill)}</span></td></tr>`;
     }
@@ -240,7 +245,7 @@ export const MEGACODE_CSS = STYLE;
 
 /** Full self-contained HTML document (one megacode form per student). */
 export function renderMegacodeDocument(report: MegacodeReport, opts: { autoPrint?: boolean; title?: string } = {}): string {
-  const forms = report.rows.map((r) => renderMegacodeStudentForm(r)).join('\n');
+  const forms = report.rows.flatMap((r) => exportRowsFor(r)).map((r) => renderMegacodeStudentForm(r)).join('\n');
   const printScript = opts.autoPrint ? '<script>window.addEventListener("load",()=>setTimeout(()=>window.print(),350));</script>' : '';
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(opts.title ?? 'AHA Megacode Testing Checklists')}</title><style>${STYLE}</style></head>
 <body>
@@ -248,4 +253,33 @@ export function renderMegacodeDocument(report: MegacodeReport, opts: { autoPrint
   <div class="doc">${forms || '<p>No students in scope.</p>'}</div>
   ${printScript}
 </body></html>`;
+}
+
+
+/** One BLANK megacode sheet for a variant: names/group/date filled, nothing scored. For paper rounds transcribed later. */
+export function renderBlankMegacodeForm(student: { firstName: string; lastName: string } | null, variant: AhaVariant, opts: { dateStr?: string; groupName?: string | null } = {}): string {
+  const name = student ? `${student.lastName}, ${student.firstName}` : '';
+  const keys = ['team_leader', 'cpr_quality', ...variant.rhythms.filter((r) => SECTIONS[r]), 'pcac'];
+  const rows = keys.map((k) => renderSection(SECTIONS[k], null).html).join('');
+  return `<section class="form">
+    <h2>Megacode Testing Checklist: Scenarios ${esc(variant.code)}</h2>
+    <p class="sub">${esc(variant.label)}</p>
+    <p class="hdr">Student Name <u>${name ? esc(name) : blank}</u> &nbsp;&nbsp; ${opts.groupName ? `Group <u>${esc(opts.groupName)}</u> &nbsp;&nbsp; ` : ''}Date of Test <u>${opts.dateStr ? esc(opts.dateStr) : blank}</u></p>
+    <table class="ck">
+      <thead><tr><th>Critical Performance Steps</th><th class="chk">Done<br>correctly</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <p class="stop">STOP TEST</p>
+    <p class="result">Test Results — check PASS or NR:
+      <span class="pn">${box(false)} PASS</span> <span class="pn">${box(false)} NR</span>
+    </p>
+    ${renderSignoff({ student: { id: '', firstName: '', lastName: '' }, best: null, variant: null, allAttempts: [], flags: [] }, opts.dateStr ?? '')}
+  </section>`;
+}
+
+export function renderBlankMegacodeDocument(students: Array<{ firstName: string; lastName: string }>, variant: AhaVariant, opts: { dateStr?: string; groupName?: string | null } = {}): string {
+  const forms = (students.length ? students : [null]).map((s) => renderBlankMegacodeForm(s, variant, opts)).join('\n');
+  return `<!doctype html><html><head><meta charset="utf-8"><title>Blank Megacode Testing Checklists</title><style>${STYLE}</style></head>
+<body><div class="toolbar"><button onclick="window.print()">🖨 Print / Save as PDF</button> &nbsp; Blank megacode · ${esc(variant.code)} · ${students.length} student(s)</div>
+<div class="doc">${forms}</div></body></html>`;
 }

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type { ReportScope } from '@/lib/reports/engine';
-import { fetchMegacodeReport } from '@/lib/reports/aha/megacode';
-import { renderMegacodeDocument, type SignoffInstructor } from '@/lib/reports/aha/megacodeForm';
+import { fetchMegacodeReport, AHA_MEGACODE_VARIANTS } from '@/lib/reports/aha/megacode';
+import { renderMegacodeDocument, renderBlankMegacodeDocument, type SignoffInstructor } from '@/lib/reports/aha/megacodeForm';
 import { fetchScopeStudents, fetchCourseDate } from '@/lib/reports/roster';
 import { SKILLS_FORMS, renderSkillsDocument } from '@/lib/reports/aha/skillsForms';
 
@@ -36,6 +36,39 @@ export async function GET(request: NextRequest) {
   const scope: ReportScope = studentId
     ? { kind: 'student', studentId }
     : { kind: 'cohort', cohortId: cohortId! };
+
+  // BLANK forms for paper rounds: names/group/date filled, nothing scored.
+  // [&blank=1][&labGroupId=…][&date=YYYY-MM-DD][&variant=<code e.g. 2/5>] (megacode needs variant)
+  if (p.get('blank') === '1') {
+    const students = await fetchScopeStudents(scope);
+    let roster = students;
+    let groupName: string | null = null;
+    const labGroupId = p.get('labGroupId');
+    if (labGroupId) {
+      // Scope to one group; never fall back to the whole cohort if the group can't be resolved.
+      const sb = getSupabaseAdmin();
+      const { data: members, error: memErr } = await sb.from('lab_group_members').select('student_id').eq('lab_group_id', labGroupId);
+      if (memErr) return NextResponse.json({ success: false, error: 'could not read group members' }, { status: 500 });
+      const { data: grp } = await sb.from('lab_groups').select('name').eq('id', labGroupId).maybeSingle();
+      groupName = grp?.name ?? null;
+      const ids = new Set((members || []).map((m: { student_id: string }) => m.student_id));
+      roster = students.filter((s) => ids.has(s.id));
+    }
+    if (roster.length === 0) return NextResponse.json({ success: false, error: 'no students in scope' }, { status: 404 });
+    const rawDate = p.get('date');
+    const [yy, mm, dd] = (rawDate ?? '').split('-').map(Number);
+    const dateStr = yy ? `${mm}/${dd}/${yy}` : '';
+    if (template === 'megacode') {
+      const variant = Object.values(AHA_MEGACODE_VARIANTS).find((v) => v.code === p.get('variant'));
+      if (!variant) return NextResponse.json({ success: false, error: 'variant required for blank megacode (e.g. 2/5)' }, { status: 400 });
+      const html = renderBlankMegacodeDocument(roster, variant, { dateStr, groupName });
+      return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+    if (SKILLS_FORMS[template]) {
+      const html = renderSkillsDocument(SKILLS_FORMS[template], roster, { autoPrint, course, courseDate: rawDate, blank: { groupName } });
+      return new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+    }
+  }
 
   // optional sign-off instructor (must have AHA info to be meaningful)
   let instructor: SignoffInstructor | null = null;

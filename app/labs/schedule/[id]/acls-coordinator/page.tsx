@@ -40,6 +40,8 @@ export default function AclsCoordinatorPage() {
   const labDayId = params?.id as string;
 
   const [day, setDay] = useState<Day | null>(null);
+  const [blankGroup, setBlankGroup] = useState('');
+  const [blankVariant, setBlankVariant] = useState('2/5');
   const [groups, setGroups] = useState<Group[]>([]);
   const [stations, setStations] = useState<Station[]>([]);
   const [attempts, setAttempts] = useState<Attempt[]>([]);
@@ -196,6 +198,19 @@ export default function AclsCoordinatorPage() {
                 <a href={`/api/reports/aha/zip?${q('&grouping=student')}`} className={btn}><FileArchive className="w-4 h-4" /> PDF zip (per student)</a>
                 <a href={`/api/reports/aha/zip?${q('&grouping=section')}`} className={btn}><FileArchive className="w-4 h-4" /> PDF zip (by section)</a>
                 <a href="/reports/aha" className="text-xs text-blue-600 dark:text-blue-400 hover:underline">More options (blank forms, sign-off instructor)</a>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Blank forms (names, group and date filled; scoring blank) for:</span>
+                <select value={blankGroup} onChange={e => setBlankGroup(e.target.value)} className="min-h-[44px] px-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+                  <option value="">Whole cohort</option>
+                  {groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                </select>
+                <select value={blankVariant} onChange={e => setBlankVariant(e.target.value)} className="min-h-[44px] px-2 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800" title="Megacode scenario set">
+                  {['1/3/8', '2/5', '4/7/10', '6/11', '9', '12'].map(v => <option key={v} value={v}>Megacode {v}</option>)}
+                </select>
+                {[['megacode', 'Megacode'], ['airway', 'Airway'], ['adult_bls', 'Adult BLS'], ['infant_cpr', 'Infant CPR']].map(([t, label]) => (
+                  <a key={t} href={`/api/reports/aha?template=${t}&${q('&blank=1&print=1')}${blankGroup ? `&labGroupId=${blankGroup}` : ''}${day.date ? `&date=${String(day.date).slice(0, 10)}` : ''}${t === 'megacode' ? `&variant=${encodeURIComponent(blankVariant)}` : ''}`} target="_blank" rel="noreferrer" className={btn}><Printer className="w-4 h-4" /> Blank {label}</a>
+                ))}
               </div>
               <p className="text-[11px] text-gray-400 mt-1">The zip can take 30–60s to build. Per-student print links are on each group member below.</p>
             </section>

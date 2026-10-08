@@ -8,6 +8,7 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+pending | feat(aha-export): zero-pass students export ALL attempt sheets (was best fail only); blank megacode/skills forms pre-named per cohort/group (blank=1 on /api/reports/aha) + coordinator buttons; synthetic zero-pass test
 pending | feat(acls-coordinator): per-group PDF zip (labGroupId param on /api/reports/aha/zip) + ACLS Hub breadcrumb
 pending | feat(acls-coordinator): results export panel (cohort print, PDF zips by student/section) + per-student print links, wired to existing /api/reports/aha
 pending | feat(students): list shows last team-lead date from team_lead_log (ledger read, not scenario_assessments)
