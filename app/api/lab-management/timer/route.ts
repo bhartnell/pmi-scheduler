@@ -125,27 +125,32 @@ export async function POST(request: NextRequest) {
       const firstOther = otherTimers[0] as any;
       stoppedTimerTitle = firstOther?.lab_day?.title || null;
 
-      // Stop all other running/paused timers and increment their version
-      const otherLabDayIds = otherTimers.map((t) => t.lab_day_id);
-      try {
-        await supabase.rpc('increment_version_batch', { lab_day_ids: otherLabDayIds });
-      } catch {
-        // If RPC doesn't exist, fall back — the version bump is best-effort
-      }
-
-      const { error: stopError } = await supabase
+      // Stop all other running/paused timers and bump each row's version so
+      // clients polling with ?version= get a fresh row instead of not_modified.
+      // (The old increment_version_batch RPC never existed in the database.)
+      const { data: otherVersions } = await supabase
         .from('lab_timer_state')
-        .update({
-          status: 'stopped',
-          started_at: null,
-          paused_at: null,
-          elapsed_when_paused: 0
-        })
+        .select('lab_day_id, version')
         .in('status', ['running', 'paused'])
         .neq('lab_day_id', labDayId);
 
-      if (stopError) {
-        console.warn('Error stopping other timers:', stopError);
+      for (const other of otherVersions || []) {
+        const { error: stopError } = await supabase
+          .from('lab_timer_state')
+          .update({
+            status: 'stopped',
+            started_at: null,
+            paused_at: null,
+            elapsed_when_paused: 0,
+            version: (other.version || 0) + 1,
+            updated_at: new Date().toISOString()
+          })
+          .eq('lab_day_id', other.lab_day_id)
+          .in('status', ['running', 'paused']);
+
+        if (stopError) {
+          console.warn('Error stopping other timer:', other.lab_day_id, stopError);
+        }
       }
     }
 
