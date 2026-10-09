@@ -1,5 +1,6 @@
 'use client';
 
+import DockPortal from '@/components/DockPortal';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import {
   StickyNote,
@@ -293,14 +294,16 @@ export default function NremtStickyNotesPanel(
       </div>
 
       {/* Mobile floating button */}
+      <DockPortal>
       <button
         type="button"
         onClick={() => setMobileOpen(true)}
-        className="md:hidden fixed bottom-20 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg hover:bg-amber-600 active:bg-amber-700 transition-colors"
+        className="md:hidden flex h-14 w-14 items-center justify-center rounded-full bg-amber-500 text-white shadow-lg hover:bg-amber-600 active:bg-amber-700 transition-colors"
         aria-label="Open examiner notes"
       >
         <StickyNote className="h-6 w-6" />
       </button>
+      </DockPortal>
 
       {/* Mobile drawer backdrop */}
       {mobileOpen && (

@@ -8,6 +8,7 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+pending | fix(ui): examiner-notes mobile FAB now renders in FloatingDock slot (was own fixed bottom-20 right-6, overlapped dock)
 pending | fix(timer): starting a timer now bumps version on the timers it stops (replaces nonexistent increment_version_batch RPC) so other rooms stop showing a stopped clock
 pending | feat(aha-export): zero-pass students export ALL attempt sheets (was best fail only); blank megacode/skills forms pre-named per cohort/group (blank=1 on /api/reports/aha) + coordinator buttons; synthetic zero-pass test
 pending | feat(acls-coordinator): per-group PDF zip (labGroupId param on /api/reports/aha/zip) + ACLS Hub breadcrumb
