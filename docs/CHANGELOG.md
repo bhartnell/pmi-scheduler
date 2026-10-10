@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 
 2026-10-10
+(pending) | chore(security): migration record for security_invoker on definer views (already applied live)
 
 pending | chore(security): enable RLS (no policies) on six _backup_*_g15_20261006 snapshots (migration 20261010; rls_disabled_in_public ERROR 6 -> 0)
 pending | chore(security): pin search_path = public, pg_temp on the 38 public functions flagged function_search_path_mutable (migration 20261010, applied; lint count 38 -> 0)
