@@ -8,6 +8,9 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+2026-10-12
+(pending) | fix(ui): roster print panel renders via DockPortal so it no longer overlaps feedback/preview dock
+
 2026-10-10
 (pending) | chore(security): migration record for security_invoker on definer views (already applied live)
 

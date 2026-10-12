@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatCohortNumber } from '@/lib/format-cohort';
+import DockPortal from '@/components/DockPortal';
 import {
   Printer,
   X,
@@ -384,7 +385,8 @@ export default function LabDayPrintView({
 
       {/* Roster Print Controls */}
       {showRosterPrint && (
-        <div className="print:hidden fixed bottom-4 right-4 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-4 flex flex-col gap-3 w-72">
+        <DockPortal>
+        <div className="print:hidden bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-xl p-4 flex flex-col gap-3 w-72">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-gray-900 dark:text-white text-sm">Roster Print Options</span>
             <button onClick={() => onSetShowRosterPrint(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
@@ -403,6 +405,7 @@ export default function LabDayPrintView({
             Cancel
           </button>
         </div>
+        </DockPortal>
       )}
     </>
   );
