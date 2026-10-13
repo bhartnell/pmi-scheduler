@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 
 2026-10-13
+(pending) | fix(pals): attempts API rejects PASS unless >=1 in-scope step and all in-scope steps checked (all-N/A false PASS)
 (pending) | fix(timer): LabTimer no longer auto-closes on not_modified poll replies (only explicit timer:null closes)
 
 2026-10-12

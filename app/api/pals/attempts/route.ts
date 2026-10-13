@@ -54,6 +54,17 @@ export async function POST(request: NextRequest) {
     if (body.result !== 'PASS' && body.result !== 'NR') {
       return NextResponse.json({ success: false, error: 'result must be PASS or NR' }, { status: 400 });
     }
+    if (body.result === 'PASS') {
+      // PASS requires at least one in-scope (non-N/A) step and every in-scope step checked.
+      // Guards against an all-N/A sheet being recorded as a PASS.
+      const states = (body.criterion_results || []).map((c) => c.state).filter((s) => s !== 'na');
+      if (states.length === 0 || states.some((s) => s !== 'checked')) {
+        return NextResponse.json(
+          { success: false, error: 'PASS requires at least one in-scope step and every in-scope step checked' },
+          { status: 400 }
+        );
+      }
+    }
     if (body.result === 'NR' && !body.remediation_notes) {
       return NextResponse.json(
         { success: false, error: 'remediation_notes is required when result is NR' },
