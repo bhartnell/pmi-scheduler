@@ -182,7 +182,9 @@ export default function LabTimer({
       if (isFirst && body.isStale && body.timer.status !== 'stopped') {
         setShowStaleWarning(true);
       }
-    } else if (hadTimerRef.current) {
+    } else if (hadTimerRef.current && !body.not_modified && body.timer === null) {
+      // not_modified replies carry no `timer` key: that means "unchanged",
+      // not "gone". Only an explicit timer:null is the row being deleted.
       // We had a timer and the row is gone: lab ended remotely (another
       // device's End Lab). Close instead of leaving a frozen modal.
       if (mountedRef.current) onClose();
