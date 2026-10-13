@@ -8,6 +8,9 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+2026-10-13
+(pending) | fix(timer): LabTimer no longer auto-closes on not_modified poll replies (only explicit timer:null closes)
+
 2026-10-12
 (pending) | fix(ui): roster print panel renders via DockPortal so it no longer overlaps feedback/preview dock
 
