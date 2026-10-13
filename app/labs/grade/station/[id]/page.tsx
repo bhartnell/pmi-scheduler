@@ -76,7 +76,9 @@ export default function GradeStationPage() {
   const [criteriaRatings, setCriteriaRatings] = useState<CriteriaRating[]>([]);
   const [overallComments, setOverallComments] = useState('');
   const [scenarioNotes, setScenarioNotes] = useState('');
-  const [showScenarioDetails, setShowScenarioDetails] = useState(true);
+  const [showScenarioDetails, setShowScenarioDetails] = useState(
+    () => typeof window === 'undefined' || window.innerWidth >= 1024
+  );
 
   // Determine which criteria to use based on station type
   const isSkillsStation = station?.station_type === 'skills';
@@ -1375,7 +1377,9 @@ export default function GradeStationPage() {
           )}
         </main>
       ) : (
-      <main className="max-w-7xl mx-auto px-4 py-4 space-y-4 pb-20">
+      <main className="max-w-[1800px] mx-auto px-4 py-4 pb-20 grid grid-cols-[minmax(0,5fr)_minmax(0,6fr)] max-lg:grid-cols-1 gap-4 items-start">
+        {/* Left pane: scenario (sticky on wide screens; collapsible when stacked) */}
+        <div className="min-w-0 lg:sticky lg:top-2 lg:max-h-[calc(100vh-1rem)] lg:overflow-y-auto">
         {/* Scenario/Skills Station Info */}
         <ScenarioGrading
           station={station}
@@ -1390,7 +1394,10 @@ export default function GradeStationPage() {
           }}
           isNremtTesting={!!station?.lab_day?.is_nremt_testing}
         />
+        </div>
 
+        {/* Right pane: student selection + grading */}
+        <div className="min-w-0 space-y-4">
         {/* Student/Group Selection */}
         <StudentSelection
           isSkillsStation={isSkillsStation}
@@ -1588,6 +1595,7 @@ export default function GradeStationPage() {
             resultIsFail={criticalFail}
           />
         )}
+        </div>
       </main>
       )}
 
