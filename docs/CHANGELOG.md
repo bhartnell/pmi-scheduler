@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 
 2026-10-13
+(pending) | feat(labs): standard-lab grade station is now scenario-left / grading-right split pane (stacks on <lg, scenario collapsed by default when stacked)
 (pending) | fix(timer): LabTimer no longer auto-closes on not_modified poll replies (only explicit timer:null closes)
 
 2026-10-12
