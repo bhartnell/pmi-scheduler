@@ -139,6 +139,14 @@ need the long-form history.
 - Preview branches cause deployment confusion and delays
 - Single developer workflow doesn't need PR review gates
 
+### Vercel preview builds (cost control)
+
+`vercel.json` `ignoreCommand` skips builds for every branch except `main`
+(Build CPU hit $129 against a $20 credit from per-push `claude/*` previews).
+To get a preview for a specific push, put `[preview]` in that commit's message.
+Batch work: one squash merge per card, no push-per-commit on branches.
+Revert = delete the `ignoreCommand` line.
+
 ### Merge your own verified PRs (HARD REQUIREMENT)
 
 **Code merges its own verified PRs. Ben does NOT merge anything** — a PR left

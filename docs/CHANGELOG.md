@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 
 2026-10-16
+(pending) | chore(vercel): ignoreCommand skips preview builds for non-main branches unless commit message has [preview]
 (pending) | docs: add docs/MISSION.md (five jobs, principles, what the site is not) + CLAUDE.md mission-check pointer
 
 2026-10-13
