@@ -8,6 +8,9 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+2026-10-16
+(pending) | docs: add docs/MISSION.md (five jobs, principles, what the site is not) + CLAUDE.md mission-check pointer
+
 2026-10-13
 (pending) | fix(pals): attempts API rejects PASS unless >=1 in-scope step and all in-scope steps checked (all-N/A false PASS)
 (pending) | fix(timer): LabTimer no longer auto-closes on not_modified poll replies (only explicit timer:null closes)

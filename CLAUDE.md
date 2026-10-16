@@ -230,6 +230,10 @@ a run of blanket approvals means the format has failed.
 (`AGENT_OPERATING_FRAMEWORK.md` is not in this repo; add this section there
 too where that file lives.)
 
+### Mission check
+
+Before starting a card, check it fits one of the five jobs in `docs/MISSION.md`; if not, Blocked with note "mission check".
+
 ### Empty-scan logging
 
 Scheduled runs that find nothing actionable (queue empty, no errors, no change from
