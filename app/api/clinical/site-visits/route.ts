@@ -234,6 +234,7 @@ export async function POST(request: NextRequest) {
           cohortName,
           departments: completeVisit.departments || undefined,
           comments: completeVisit.comments || undefined,
+          studentCount: Array.isArray(completeVisit.students) ? completeVisit.students.length : undefined,
         }).catch(() => {});
       } catch {
         // Calendar sync is best-effort

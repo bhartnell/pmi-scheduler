@@ -1201,12 +1201,14 @@ interface SiteVisitSyncParams {
   cohortName?: string;
   departments?: string[];
   comments?: string;
+  /** Students selected for the visit; omitted/0 (e.g. whole class) falls back to 1. */
+  studentCount?: number;
 }
 
 /**
- * Default calendar block for a site visit: 15 min drive/walk + 15 min per
- * student. No student count is recorded yet, so this is the single-student
- * case (30 min). When student selection lands, pass the count here.
+ * Calendar block for a site visit: 15 min drive/walk + 15 min per student
+ * selected (clinical_visit_students). Whole-class visits have no per-student
+ * rows and are adjusted by hand on the event, so they use the 1-student default.
  */
 const SITE_VISIT_BASE_MINUTES = 15;
 const SITE_VISIT_PER_STUDENT_MINUTES = 15;
@@ -1229,7 +1231,7 @@ export async function syncSiteVisit(params: SiteVisitSyncParams): Promise<void> 
     if (!accessToken) return;
 
     const startTimeStr = params.visitTime || '09:00';
-    const endTimeStr = siteVisitEndTime(startTimeStr);
+    const endTimeStr = siteVisitEndTime(startTimeStr, params.studentCount);
 
     const { startDateTime, endDateTime } = buildDateTimes(
       params.visitDate,
@@ -1287,7 +1289,7 @@ export async function updateSiteVisit(params: SiteVisitSyncParams): Promise<void
     if (!accessToken) return;
 
     const startTimeStr = params.visitTime || '09:00';
-    const endTimeStr = siteVisitEndTime(startTimeStr);
+    const endTimeStr = siteVisitEndTime(startTimeStr, params.studentCount);
 
     const { startDateTime, endDateTime } = buildDateTimes(
       params.visitDate,
