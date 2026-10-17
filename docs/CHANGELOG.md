@@ -8,6 +8,9 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+2026-10-17
+(pending) | fix(clinical): site-visit calendar event length = 15 + 15 x selected students
+
 2026-10-16
 (pending) | chore(vercel): ignoreCommand skips preview builds for non-main branches unless commit message has [preview]
 (pending) | docs: add docs/MISSION.md (five jobs, principles, what the site is not) + CLAUDE.md mission-check pointer
