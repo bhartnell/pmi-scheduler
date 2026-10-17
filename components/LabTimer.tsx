@@ -638,17 +638,19 @@ export default function LabTimer({
     }
   }, [timerState, showRotateAlert, sendAction, totalStations, allReady, readyCount, checkActiveTimerConflict, isController, initializeTimer]);
 
-  const handleStop = useCallback(() => sendAction('stop'), [sendAction]);
+  const handleStop = useCallback(() => {
+    // Stop is the only way to end a rotation; confirm so it is never accidental.
+    if (timerState?.status === 'running' || timerState?.status === 'paused') {
+      if (!window.confirm('Stop the timer? This ends the running rotation for everyone.')) return;
+    }
+    sendAction('stop');
+  }, [timerState?.status, sendAction]);
   const handleReset = useCallback(() => sendAction('reset'), [sendAction]);
 
-  const handleClose = useCallback(async () => {
-    // If timer is running or paused when closing, stop it to prevent stale state
-    if (timerState?.status === 'running' || timerState?.status === 'paused') {
-      console.log('[LabTimer] handleClose: stopping timer before close, status:', timerState.status);
-      await sendAction('stop');
-    }
+  // Closing only hides the window; the clock keeps running. Stop is explicit (handleStop).
+  const handleClose = useCallback(() => {
     onClose();
-  }, [timerState?.status, sendAction, onClose]);
+  }, [onClose]);
 
   const handleNextRotation = useCallback(() => {
     if (timerState && timerState.rotation_number < numRotations) {
