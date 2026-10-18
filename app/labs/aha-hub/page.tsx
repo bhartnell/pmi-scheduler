@@ -11,6 +11,7 @@ import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import type { CurrentUser } from '@/types';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import PrintOriginalPdfButton from '@/components/PrintOriginalPdfButton';
 
 interface CourseCohort {
   cohort: { id: string; cohort_number: string | number; program: { abbreviation: string; name: string } | null } | null;
@@ -113,6 +114,77 @@ function CourseSection({
   );
 }
 
+function SourcePdfPanel() {
+  const [files, setFiles] = useState<{ code: string; updated_at: string | null }[]>([]);
+  const [code, setCode] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState('');
+
+  const load = () =>
+    fetch('/api/aha-source-pdfs').then((r) => r.json()).then((d) => d.success && setFiles(d.files)).catch(() => {});
+  useEffect(() => { load(); }, []);
+
+  async function upload() {
+    if (!code.trim() || !file) return;
+    setBusy(true);
+    setMsg('');
+    const form = new FormData();
+    form.append('code', code.trim());
+    form.append('file', file);
+    const res = await fetch('/api/aha-source-pdfs', { method: 'POST', body: form });
+    const d = await res.json().catch(() => ({}));
+    setBusy(false);
+    if (res.ok) {
+      setMsg(`Uploaded ${d.code}. Reload any open grading page to see its print button.`);
+      setCode('');
+      setFile(null);
+      load();
+    } else {
+      setMsg(d.error || 'Upload failed');
+    }
+  }
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
+      <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Original AHA PDFs</h2>
+      <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+        Upload the source PDF for a case or checklist, keyed by its case code. The &quot;Print original PDF&quot; button
+        appears on that case only after a PDF is uploaded. Uploading the same code again replaces the file.
+      </p>
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="Case code"
+          className="min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
+        />
+        <input type="file" accept="application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="text-sm text-gray-700 dark:text-gray-300" />
+        <button
+          onClick={upload}
+          disabled={busy || !code.trim() || !file}
+          className="min-h-[44px] px-4 rounded-lg bg-blue-600 text-white disabled:opacity-50"
+        >
+          {busy ? 'Uploading...' : 'Upload PDF'}
+        </button>
+      </div>
+      {msg && <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{msg}</p>}
+      {files.length === 0 ? (
+        <p className="text-sm text-gray-500 dark:text-gray-400">No PDFs uploaded yet.</p>
+      ) : (
+        <ul className="grid grid-cols-3 max-lg:grid-cols-2 max-sm:grid-cols-1 gap-2">
+          {files.map((f) => (
+            <li key={f.code} className="flex items-center justify-between gap-2 text-sm text-gray-900 dark:text-white">
+              <span className="truncate">{f.code}</span>
+              <PrintOriginalPdfButton code={f.code} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // AHA HUB + ACLS REPEATABLE — Phase 1 (Task Handoff Queue).
 //
@@ -201,6 +273,8 @@ export default function AhaHubPage() {
             <ExternalLink className="w-5 h-5 text-gray-400" />
           </Link>
         )}
+
+        {isAdmin && <SourcePdfPanel />}
 
         {!isInstructor ? (
           <p className="text-sm text-gray-500 dark:text-gray-400">You don&apos;t have access to view AHA course details.</p>

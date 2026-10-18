@@ -8,6 +8,9 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+2026-10-18
+(pending) | feat(aha): 'Print original PDF' button - private aha-source-pdfs bucket, signed-URL route, admin upload on AHA hub
+
 2026-10-17
 (pending) | fix(clinical): site-visit calendar event length = 15 + 15 x selected students
 

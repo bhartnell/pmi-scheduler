@@ -8,6 +8,7 @@ import { ArrowLeft, CheckCircle2, XCircle, Loader2, Save, WifiOff, RefreshCw, Cr
 import { useToast } from '@/components/Toast';
 import { useOffline } from '@/components/OfflineProvider';
 import PalsCaseCard, { type PalsCard } from '@/components/pals/PalsCaseCard';
+import PrintOriginalPdfButton from '@/components/PrintOriginalPdfButton';
 import {
   mintClientUuid, saveDraft, loadDraft, clearDraft,
   queueAttempt, flushQueue, queueLength,
@@ -464,6 +465,7 @@ export default function PalsGradePage() {
               <span className="text-base font-bold text-gray-900 dark:text-white">
                 {scenario.case_code ? `[${scenario.case_code}] ` : ''}{scenario.title}
               </span>
+              <PrintOriginalPdfButton code={scenario.case_code} className="ml-auto" />
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                 scenario.cert_tier === 'scenario_testing'
                   ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'

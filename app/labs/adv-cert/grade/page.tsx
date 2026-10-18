@@ -13,6 +13,7 @@ import CcfTimer from '@/components/grading/CcfTimer';
 import { CcfRecord, applyEdit } from '@/lib/ccf';
 import { safeReturnTo, withReturnTo } from '@/lib/return-to';
 import type { AdvCertScenario, CertCourse } from '@/types/adv-cert';
+import PrintOriginalPdfButton from '@/components/PrintOriginalPdfButton';
 
 interface DayOpt {
   id: string;
@@ -473,6 +474,7 @@ export default function AdvCertGradePage() {
               <span className="text-base font-bold text-gray-900 dark:text-white">
                 {scenario.case_code ? `[${scenario.case_code}] ` : ''}{scenario.name}
               </span>
+              <PrintOriginalPdfButton code={scenario.case_code} className="ml-auto" />
               <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
                 scenario.cert_tier === 'scenario_testing'
                   ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
