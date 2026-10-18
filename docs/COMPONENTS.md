@@ -146,6 +146,9 @@ removed) — every instructor is always listed, with `availabilitySuffix`
 tagging conflicts/no-availability inline so the coordinator can still
 override, mirroring `AvailableInstructorsSection`'s sidebar language.
 
+### PrintOriginalPdfButton (2026-10-18)
+`components/PrintOriginalPdfButton.tsx` - props `code`, `className`. Opens `/api/aha-source-pdfs/[code]` (signed URL to the original AHA PDF) in a new tab; renders nothing unless a PDF exists for the code. Used on adv-cert/PALS grade pages and the AHA hub upload panel.
+
 ### ACLS skills capture
 - `components/AclsSkillsPanel.tsx` — (UNUSED since 2026-10-02: removed from ACLS hub per Ben; left in place) pass/fail/remediated attestation per student for Airway Management, Adult BLS, Peds BLS; writes `pals_skill_completions` (cert_course='acls'). Used on `/labs/acls-hub`.
 
