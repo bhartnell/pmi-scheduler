@@ -3,7 +3,7 @@
 import { useSession, signIn, signOut } from 'next-auth/react';
 import { useEffect, useState, useCallback } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import Link from 'next/link';
+import { ParkAwareLink as Link } from '@/components/ModuleGuard';
 import {
   Calendar,
   ClipboardList,
