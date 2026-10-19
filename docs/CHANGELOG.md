@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-10-19
+
+megacode-export | AHA megacode export: best pass = fewest missed criteria, tie -> most recent (card 3f15cd1c)
+
 
 2026-10-19
 (pending) | fix(calendar): assigning/removing a block instructor via pmi_block_instructors now triggers the Google Calendar auto-sync
