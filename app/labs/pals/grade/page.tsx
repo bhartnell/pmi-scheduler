@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { safeReturnTo } from '@/lib/return-to';
 import { ArrowLeft, CheckCircle2, XCircle, Loader2, Save, WifiOff, RefreshCw, Crown } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useOffline } from '@/components/OfflineProvider';
@@ -48,6 +49,7 @@ export default function PalsGradePage() {
   const [scenarioOpts, setScenarioOpts] = useState<ScenarioOpt[]>([]);
 
   const [labDayId, setLabDayId] = useState('');
+  const [returnTo, setReturnTo] = useState<string | null>(null);
   const [groups, setGroups] = useState<GroupOpt[]>([]);
   const [stations, setStations] = useState<StationOpt[]>([]);
   const [groupId, setGroupId] = useState('');
@@ -84,6 +86,7 @@ export default function PalsGradePage() {
     const p = new URLSearchParams(window.location.search);
     const ld = p.get('labDayId');
     const st = p.get('stationId');
+    setReturnTo(safeReturnTo(p.get('returnTo')));
     if (ld) setLabDayId(ld);
     if (st) setUrlStationId(st);
   }, []);
@@ -314,7 +317,7 @@ export default function PalsGradePage() {
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
       <div className="flex items-center justify-between mb-4">
-        <Link href="/labs/pals-hub" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">
+        <Link href={returnTo || '/labs/pals-hub'} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">
           <ArrowLeft className="w-4 h-4" /> Back to PALS Hub
         </Link>
         {(pendingCount > 0 || !isOnline) && (
