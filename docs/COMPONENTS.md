@@ -583,7 +583,6 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 | File | Exports | Description |
 |------|---------|-------------|
 | `lib/achievements.ts` | `AchievementDefinition`, `ACHIEVEMENTS`, `getAchievementDefinition`, `checkAchievements` | Achievement/badge definitions and unlock logic for the case study gamification system. |
-| `lib/case-generation.ts` | `CaseBrief`, `GenerationResult`, `fetchPromptTemplate`, `generateSingleCase` | AI-powered case study generation using prompt templates. |
 | `lib/case-session-realtime.ts` | `broadcastSessionUpdate` | Real-time session update broadcasting for collaborative case sessions. |
 | `lib/case-validation.ts` | `ValidationError`, `validateCaseJson` | JSON schema validation for case study data structures. |
 

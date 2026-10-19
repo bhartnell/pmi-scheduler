@@ -77,7 +77,6 @@ const ROUTE_LABELS: Record<string, string> = {
   'cases/new': 'New Case',
   'cases/session': 'Session',
   'admin/cases': 'Cases',
-  'admin/cases/generate': 'Case Generation',
   'admin/external-access': 'External Access',
   'admin/ferpa-compliance': 'FERPA Compliance',
   'admin/compliance': 'Compliance',
