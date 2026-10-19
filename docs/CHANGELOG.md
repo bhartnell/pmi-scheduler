@@ -8,6 +8,9 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 
+2026-10-19
+(pending) | fix(calendar): assigning/removing a block instructor via pmi_block_instructors now triggers the Google Calendar auto-sync
+
 2026-10-18
 (pending) | feat(aha): 'Print original PDF' button - private aha-source-pdfs bucket, signed-URL route, admin upload on AHA hub
 
