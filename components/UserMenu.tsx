@@ -23,7 +23,7 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import Link from 'next/link';
+import { ParkAwareLink as Link } from '@/components/ModuleGuard';
 import { useSession, signOut } from 'next-auth/react';
 import {
   Settings as SettingsIcon,

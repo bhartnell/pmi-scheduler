@@ -2,14 +2,6 @@
   "ignoreCommand": "if [ \"$VERCEL_GIT_COMMIT_REF\" = \"main\" ]; then exit 1; fi; if echo \"$VERCEL_GIT_COMMIT_MESSAGE\" | grep -qiF '[preview]'; then exit 1; fi; exit 0",
   "crons": [
     {
-      "path": "/api/cron/daily-digest",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/weekly-digest",
-      "schedule": "0 6 * * 0"
-    },
-    {
       "path": "/api/cron/feedback-digest",
       "schedule": "0 7 * * 0"
     },
@@ -18,44 +10,16 @@
       "schedule": "0 6 * * 0"
     },
     {
-      "path": "/api/cron/scheduled-exports",
-      "schedule": "0 6 1 * *"
-    },
-    {
       "path": "/api/cron/availability-reminders",
       "schedule": "0 13 * * 1"
-    },
-    {
-      "path": "/api/cron/attendance-alerts",
-      "schedule": "0 14 * * *"
-    },
-    {
-      "path": "/api/cron/system-health",
-      "schedule": "0 * * * *"
     },
     {
       "path": "/api/cron/clinical-hours-reminder",
       "schedule": "0 9 * * 1"
     },
     {
-      "path": "/api/cron/compliance-expiry",
-      "schedule": "0 8 * * *"
-    },
-    {
       "path": "/api/cron/lab-reminder",
       "schedule": "0 17 * * *"
-    },
-    {
-      "path": "/api/cron/internship-milestones",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/cert-expiry",
-      "schedule": "0 8 * * 1"
-    },
-    {
-      "path": "/api/cron/cert-expiry-notifications",
-      "schedule": "0 9 * * *"
     },
     {
       "path": "/api/cron/site-visit-reminders",
@@ -66,28 +30,12 @@
       "schedule": "0 6 * * *"
     },
     {
-      "path": "/api/cron/lvfr-weekly-report",
-      "schedule": "0 8 * * 0"
-    },
-    {
-      "path": "/api/cron/compliance-reminders",
-      "schedule": "0 13 * * *"
-    },
-    {
-      "path": "/api/cron/debrief-reminder",
-      "schedule": "0 14 * * *"
-    },
-    {
       "path": "/api/cron/data-export",
       "schedule": "0 5 * * 0"
     },
     {
       "path": "/api/cron/generate-open-lab-sessions",
       "schedule": "0 6 * * 0"
-    },
-    {
-      "path": "/api/cron/extend-availability-window",
-      "schedule": "0 9 * * 1"
     }
   ]
 }
