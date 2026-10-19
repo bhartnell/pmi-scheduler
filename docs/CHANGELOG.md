@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-19
 
+lab-grade-dual-pane | Lab scenario station grader: case left / grading right via DualPaneGrading (layout only; skills + NREMT unchanged) (card 3fe5cd1c)
 megacode-export | AHA megacode export: best pass = fewest missed criteria, tie -> most recent (card 3f15cd1c)
 
 
