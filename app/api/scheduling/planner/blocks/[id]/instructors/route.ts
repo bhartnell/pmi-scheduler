@@ -2,6 +2,45 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { applyInstructorDiff } from '@/lib/calendar-auto-sync';
+
+/**
+ * Fire-and-forget calendar push after a join-table assignment change.
+ * The block PUT route only syncs when the parent row's instructor
+ * columns change, so edits made through pmi_block_instructors need
+ * the same diff (add -> sync, remove -> remove). Best-effort: never
+ * throws, never blocks the write.
+ */
+async function fireJoinAutoSync(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  blockId: string,
+  instructorId: string,
+  action: 'added' | 'removed'
+) {
+  try {
+    const [{ data: block }, { data: user }] = await Promise.all([
+      supabase.from('pmi_schedule_blocks').select('id, recurring_group_id').eq('id', blockId).maybeSingle(),
+      supabase.from('lab_users').select('email').eq('id', instructorId).maybeSingle(),
+    ]);
+    if (!block || !user?.email) return;
+    const email = (user.email as string).toLowerCase();
+    const results = await applyInstructorDiff({
+      recurringGroupId: block.recurring_group_id ?? null,
+      blockIdForOneOff: block.recurring_group_id ? null : block.id,
+      oldEmails: action === 'removed' ? new Set([email]) : new Set<string>(),
+      newEmails: action === 'added' ? new Set([email]) : new Set<string>(),
+    });
+    for (const r of results) {
+      if (r.result.status === 'failed') {
+        console.warn(`[block-instructors] auto-sync ${r.action} failed for ${r.email}:`, 'error' in r.result ? r.result.error : '');
+      } else {
+        console.log(`[block-instructors] auto-sync ${r.action} ${r.result.status} for ${r.email}`);
+      }
+    }
+  } catch (err) {
+    console.warn('[block-instructors] auto-sync error (non-fatal):', err);
+  }
+}
 
 export async function POST(
   request: NextRequest,
@@ -46,6 +85,8 @@ export async function POST(
       throw error;
     }
 
+    void fireJoinAutoSync(supabase, id, instructor_id, 'added');
+
     return NextResponse.json({ assignment: data });
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
@@ -84,6 +125,8 @@ export async function DELETE(
       .eq('instructor_id', instructor_id);
 
     if (error) throw error;
+
+    void fireJoinAutoSync(supabase, id, instructor_id, 'removed');
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
