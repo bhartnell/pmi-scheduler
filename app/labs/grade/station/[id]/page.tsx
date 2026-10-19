@@ -26,6 +26,7 @@ import GradingHeader from '@/components/grading/GradingHeader';
 import ScenarioGrading from '@/components/grading/ScenarioGrading';
 import EvaluationCriteria from '@/components/grading/EvaluationCriteria';
 import StudentSelection from '@/components/grading/StudentSelection';
+import DualPaneGrading from '@/components/grading/DualPaneGrading';
 import FlaggingPanel from '@/components/grading/FlaggingPanel';
 import ScenarioReferencePanel from '@/components/grading/ScenarioReferencePanel';
 
@@ -1071,6 +1072,210 @@ export default function GradeStationPage() {
     );
   }
 
+  // Scenario stations: case on the left, grading on the right (layout only; same state + handlers).
+  const useSplitGrading = !isSkillsStation && !station?.lab_day?.is_nremt_testing;
+  const scenarioPane = (
+    <>
+        {/* Scenario/Skills Station Info */}
+        <ScenarioGrading
+          station={station}
+          showScenarioDetails={showScenarioDetails}
+          onToggleScenarioDetails={() => setShowScenarioDetails(!showScenarioDetails)}
+          skillSheetIds={skillSheetIds}
+          onOpenSkillSheet={(sheetId) => setPanelSheetId(sheetId)}
+          scenarioNotes={scenarioNotes}
+          onScenarioNotesChange={(notes) => {
+            setScenarioNotes(notes);
+            triggerAutoSave();
+          }}
+          isNremtTesting={!!station?.lab_day?.is_nremt_testing}
+        />
+    </>
+  );
+  const scoringPane = (
+    <>
+        {/* Student/Group Selection */}
+        <StudentSelection
+          isSkillsStation={isSkillsStation}
+          isNremtTesting={!!station?.lab_day?.is_nremt_testing}
+          station={station}
+          allStudents={allStudents}
+          labGroups={labGroups}
+          selectedGroupId={selectedGroupId}
+          selectedStudentId={selectedStudentId}
+          teamLeaderId={teamLeaderId}
+          rotationNumber={rotationNumber}
+          onSetSelectedGroupId={setSelectedGroupId}
+          onSetSelectedStudentId={setSelectedStudentId}
+          onSetTeamLeaderId={setTeamLeaderId}
+          onSetRotationNumber={setRotationNumber}
+          triggerAutoSave={triggerAutoSave}
+          evaluatedStudents={evaluatedStudents}
+          inProgressStudents={inProgressStudents}
+        />
+
+        {/* Critical Actions — ONLY for scenario stations */}
+        {!isSkillsStation && scenario?.critical_actions && toArray(scenario.critical_actions).length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
+              <AlertTriangle className="w-5 h-5 text-red-500" />
+              Critical Actions
+            </h2>
+            <div className="space-y-2">
+              {toArray(scenario.critical_actions).map((action, index) => (
+                <label
+                  key={index}
+                  className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer ${
+                    criticalActions[`action-${index}`] ? 'bg-green-50 dark:bg-green-900/30' : 'bg-red-50 dark:bg-red-900/30'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={criticalActions[`action-${index}`] || false}
+                    onChange={(e) => {
+                      setCriticalActions(prev => ({
+                        ...prev,
+                        [`action-${index}`]: e.target.checked
+                      }));
+                      triggerAutoSave();
+                    }}
+                    className="mt-1 w-5 h-5"
+                  />
+                  <span className={`text-sm ${
+                    criticalActions[`action-${index}`] ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
+                  }`}>
+                    {action}
+                  </span>
+                  {criticalActions[`action-${index}`] ? (
+                    <CheckCircle className="w-5 h-5 text-green-500" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-500 ml-auto shrink-0" />
+                  )}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Evaluation Criteria — ONLY for scenario stations, NEVER for skill sheet stations */}
+        {!isSkillsStation && <EvaluationCriteria
+          activeCriteria={activeCriteria}
+          criteriaRatings={criteriaRatings}
+          isSkillsStation={isSkillsStation}
+          satisfactoryCount={satisfactoryCount}
+          needsImprovementCount={needsImprovementCount}
+          unsatisfactoryCount={unsatisfactoryCount}
+          allRated={allRated}
+          totalCriteria={totalCriteria}
+          skillsPass={skillsPass}
+          skillsNeedsPractice={skillsNeedsPractice}
+          phase1Pass={phase1Pass}
+          phase2Pass={phase2Pass}
+          onUpdateRating={updateRating}
+          onUpdateNotes={updateNotes}
+          onUpdateSubItems={updateSubItems}
+        />}
+
+        {/* Overall Comments — ONLY for scenario stations */}
+        {!isSkillsStation && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Overall Comments</h2>
+            <textarea
+              value={overallComments}
+              onChange={(e) => {
+                setOverallComments(e.target.value);
+                triggerAutoSave();
+              }}
+              placeholder="Additional comments, feedback, or observations..."
+              rows={4}
+              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+            />
+          </div>
+        )}
+
+        {/* Flagging Section — ONLY for scenario stations */}
+        {!isSkillsStation && (
+          <FlaggingPanel
+            issueLevel={issueLevel}
+            flagCategories={flagCategories}
+            onSetIssueLevel={setIssueLevel}
+            onSetFlagCategories={setFlagCategories}
+            triggerAutoSave={triggerAutoSave}
+          />
+        )}
+
+        {/* Debrief Points — ONLY for scenario stations */}
+        {!isSkillsStation && scenario?.debrief_points && toArray(scenario.debrief_points).length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+            <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Debrief Discussion Points</h2>
+            <ul className="space-y-2">
+              {toArray(scenario.debrief_points).map((point, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
+                  <span className="text-blue-500 dark:text-blue-400">•</span>
+                  {point}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Save Buttons (Bottom) — ONLY for scenario stations */}
+        {!isSkillsStation && (
+          <div className="sticky bottom-4 space-y-2">
+            {/* Finish Later */}
+            <button
+              onClick={() => handleSave('pending', 'in_progress')}
+              disabled={saving || !selectedGroupId}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg font-medium"
+            >
+              <Save className="w-5 h-5" />
+              Finish Later
+            </button>
+
+            {/* Primary save: Send Later */}
+            <button
+              onClick={() => handleSave('queued')}
+              disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
+              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg font-medium"
+            >
+              {saving ? (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              ) : (
+                <Save className="w-5 h-5" />
+              )}
+              {saving ? 'Saving...' : `Save — Send Later${selectedStudentName ? ` (${selectedStudentName})` : ''}`}
+            </button>
+
+            {/* Secondary options */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleSave('sent')}
+                disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow"
+              >
+                Save — Send Now
+              </button>
+              <button
+                onClick={() => handleSave('do_not_send')}
+                disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
+                className="flex items-center justify-center gap-1.5 px-3 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow bg-white dark:bg-gray-800"
+              >
+                Do Not Send
+              </button>
+            </div>
+
+            {(!selectedGroupId || !teamLeaderId || (strictNremt && !allRated)) && (
+              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                {!selectedGroupId ? 'Select a lab group' :
+                 !teamLeaderId ? 'Select a team leader' :
+                 `Rate all ${totalCriteria} criteria to save`}
+              </p>
+            )}
+          </div>
+        )}
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Timer Banner — FIX 4: Hidden on NREMT testing days (rotation timer irrelevant) */}
@@ -1376,199 +1581,18 @@ export default function GradeStationPage() {
         </main>
       ) : (
       <main className="max-w-7xl mx-auto px-4 py-4 space-y-4 pb-20">
-        {/* Scenario/Skills Station Info */}
-        <ScenarioGrading
-          station={station}
-          showScenarioDetails={showScenarioDetails}
-          onToggleScenarioDetails={() => setShowScenarioDetails(!showScenarioDetails)}
-          skillSheetIds={skillSheetIds}
-          onOpenSkillSheet={(sheetId) => setPanelSheetId(sheetId)}
-          scenarioNotes={scenarioNotes}
-          onScenarioNotesChange={(notes) => {
-            setScenarioNotes(notes);
-            triggerAutoSave();
-          }}
-          isNremtTesting={!!station?.lab_day?.is_nremt_testing}
-        />
-
-        {/* Student/Group Selection */}
-        <StudentSelection
-          isSkillsStation={isSkillsStation}
-          isNremtTesting={!!station?.lab_day?.is_nremt_testing}
-          station={station}
-          allStudents={allStudents}
-          labGroups={labGroups}
-          selectedGroupId={selectedGroupId}
-          selectedStudentId={selectedStudentId}
-          teamLeaderId={teamLeaderId}
-          rotationNumber={rotationNumber}
-          onSetSelectedGroupId={setSelectedGroupId}
-          onSetSelectedStudentId={setSelectedStudentId}
-          onSetTeamLeaderId={setTeamLeaderId}
-          onSetRotationNumber={setRotationNumber}
-          triggerAutoSave={triggerAutoSave}
-          evaluatedStudents={evaluatedStudents}
-          inProgressStudents={inProgressStudents}
-        />
-
-        {/* Critical Actions — ONLY for scenario stations */}
-        {!isSkillsStation && scenario?.critical_actions && toArray(scenario.critical_actions).length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <h2 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 mb-3">
-              <AlertTriangle className="w-5 h-5 text-red-500" />
-              Critical Actions
-            </h2>
-            <div className="space-y-2">
-              {toArray(scenario.critical_actions).map((action, index) => (
-                <label
-                  key={index}
-                  className={`flex items-start gap-3 p-3 rounded-lg cursor-pointer ${
-                    criticalActions[`action-${index}`] ? 'bg-green-50 dark:bg-green-900/30' : 'bg-red-50 dark:bg-red-900/30'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={criticalActions[`action-${index}`] || false}
-                    onChange={(e) => {
-                      setCriticalActions(prev => ({
-                        ...prev,
-                        [`action-${index}`]: e.target.checked
-                      }));
-                      triggerAutoSave();
-                    }}
-                    className="mt-1 w-5 h-5"
-                  />
-                  <span className={`text-sm ${
-                    criticalActions[`action-${index}`] ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'
-                  }`}>
-                    {action}
-                  </span>
-                  {criticalActions[`action-${index}`] ? (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-500 ml-auto shrink-0" />
-                  )}
-                </label>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Evaluation Criteria — ONLY for scenario stations, NEVER for skill sheet stations */}
-        {!isSkillsStation && <EvaluationCriteria
-          activeCriteria={activeCriteria}
-          criteriaRatings={criteriaRatings}
-          isSkillsStation={isSkillsStation}
-          satisfactoryCount={satisfactoryCount}
-          needsImprovementCount={needsImprovementCount}
-          unsatisfactoryCount={unsatisfactoryCount}
-          allRated={allRated}
-          totalCriteria={totalCriteria}
-          skillsPass={skillsPass}
-          skillsNeedsPractice={skillsNeedsPractice}
-          phase1Pass={phase1Pass}
-          phase2Pass={phase2Pass}
-          onUpdateRating={updateRating}
-          onUpdateNotes={updateNotes}
-          onUpdateSubItems={updateSubItems}
-        />}
-
-        {/* Overall Comments — ONLY for scenario stations */}
-        {!isSkillsStation && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Overall Comments</h2>
-            <textarea
-              value={overallComments}
-              onChange={(e) => {
-                setOverallComments(e.target.value);
-                triggerAutoSave();
-              }}
-              placeholder="Additional comments, feedback, or observations..."
-              rows={4}
-              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-            />
-          </div>
-        )}
-
-        {/* Flagging Section — ONLY for scenario stations */}
-        {!isSkillsStation && (
-          <FlaggingPanel
-            issueLevel={issueLevel}
-            flagCategories={flagCategories}
-            onSetIssueLevel={setIssueLevel}
-            onSetFlagCategories={setFlagCategories}
-            triggerAutoSave={triggerAutoSave}
+        {useSplitGrading ? (
+          <DualPaneGrading
+            scenario={scenarioPane}
+            scoring={<div className="space-y-4 pb-20">{scoringPane}</div>}
+            scenarioLabel="Scenario"
+            scoringLabel="Grading"
           />
-        )}
-
-        {/* Debrief Points — ONLY for scenario stations */}
-        {!isSkillsStation && scenario?.debrief_points && toArray(scenario.debrief_points).length > 0 && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Debrief Discussion Points</h2>
-            <ul className="space-y-2">
-              {toArray(scenario.debrief_points).map((point, index) => (
-                <li key={index} className="flex items-start gap-2 text-sm text-gray-700 dark:text-gray-300">
-                  <span className="text-blue-500 dark:text-blue-400">•</span>
-                  {point}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Save Buttons (Bottom) — ONLY for scenario stations */}
-        {!isSkillsStation && (
-          <div className="sticky bottom-4 space-y-2">
-            {/* Finish Later */}
-            <button
-              onClick={() => handleSave('pending', 'in_progress')}
-              disabled={saving || !selectedGroupId}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg font-medium"
-            >
-              <Save className="w-5 h-5" />
-              Finish Later
-            </button>
-
-            {/* Primary save: Send Later */}
-            <button
-              onClick={() => handleSave('queued')}
-              disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
-              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg font-medium"
-            >
-              {saving ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <Save className="w-5 h-5" />
-              )}
-              {saving ? 'Saving...' : `Save — Send Later${selectedStudentName ? ` (${selectedStudentName})` : ''}`}
-            </button>
-
-            {/* Secondary options */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => handleSave('sent')}
-                disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
-                className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow"
-              >
-                Save — Send Now
-              </button>
-              <button
-                onClick={() => handleSave('do_not_send')}
-                disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
-                className="flex items-center justify-center gap-1.5 px-3 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow bg-white dark:bg-gray-800"
-              >
-                Do Not Send
-              </button>
-            </div>
-
-            {(!selectedGroupId || !teamLeaderId || (strictNremt && !allRated)) && (
-              <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-                {!selectedGroupId ? 'Select a lab group' :
-                 !teamLeaderId ? 'Select a team leader' :
-                 `Rate all ${totalCriteria} criteria to save`}
-              </p>
-            )}
-          </div>
+        ) : (
+          <>
+            {scenarioPane}
+            <div className="space-y-4">{scoringPane}</div>
+          </>
         )}
         {/* NREMT Examiner Panel (non-embedded mode) */}
         {station?.lab_day?.is_nremt_testing && (
