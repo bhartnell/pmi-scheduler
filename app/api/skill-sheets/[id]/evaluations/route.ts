@@ -79,6 +79,7 @@ export async function GET(
         edited_at,
         edit_reason,
         edit_prior,
+        below_min_pass_reason,
         evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(id, name)
       `)
       .eq('skill_sheet_id', skillSheetId)

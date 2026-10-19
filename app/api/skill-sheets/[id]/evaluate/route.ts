@@ -68,6 +68,7 @@ export async function POST(
       status: evalStatus,
       critical_fail,
       critical_fail_notes,
+      below_min_pass_reason,
       // Team evaluation fields
       team_members,
       // Retake fields
@@ -277,6 +278,10 @@ export async function POST(
         status: isInProgress ? 'in_progress' : 'complete',
         critical_fail: critical_fail ?? false,
         critical_fail_notes: critical_fail_notes || null,
+        below_min_pass_reason:
+          !isInProgress && resolvedResult === 'pass' && typeof below_min_pass_reason === 'string' && below_min_pass_reason.trim()
+            ? below_min_pass_reason.trim().slice(0, 1000)
+            : null,
         is_retake: isRetake,
         original_evaluation_id: isRetake && resolvedOriginalEvalId ? resolvedOriginalEvalId : null,
       })

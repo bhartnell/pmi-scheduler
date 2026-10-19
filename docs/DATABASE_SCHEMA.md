@@ -1567,6 +1567,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | edited_at | timestamptz | YES |  |  |
 | edit_prior | jsonb | YES |  | Prior result/critical_fail/critical_fail_notes/step_marks, written by director in-place correction (PATCH evaluations) |
 | edit_reason | text | YES |  |  |
+| below_min_pass_reason | text | YES |  | Examiner reason for an NREMT Pass scored below the skill minimum (admin view only; added 2026-10-19) |
 | visibility_to_student | boolean | NO | true | In-app student visibility, decoupled from email_status (delivery-only). NREMT/cert rows (skill_sheets.is_nremt=true) are additionally hard-excluded at read time regardless of this flag. |
 
 **Foreign Keys:**
