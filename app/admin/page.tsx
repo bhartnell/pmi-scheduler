@@ -228,6 +228,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
       defaultExpanded: false,
       links: [
         {
+          href: '/admin/module-flags',
+          icon: Package,
+          title: 'Module Settings (Park)',
+          description: 'Park a section of the site behind a plain notice without deleting anything; unpark any time',
+          color: 'bg-gray-600',
+        },
+        {
           href: '/admin/equipment',
           icon: Package,
           title: 'Equipment Inventory',

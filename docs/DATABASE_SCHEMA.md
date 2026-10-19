@@ -9834,6 +9834,21 @@ blank reference sheet, not tracked here. (migration `20260629_lvfr_skill_class_c
 - `authenticated can read items` (SELECT, PERMISSIVE, roles: {authenticated})
 - `realtime anon can read items` (SELECT, PERMISSIVE, roles: {anon})
 
+### Module park flags (1 table)
+
+#### `module_flags`
+
+Last updated: 2026-10-19. RLS on, no policies (service role only). Key = route prefix; `enabled=false` means parked.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| key | text | NO |  | PK, route prefix e.g. `/attendance` |
+| enabled | boolean | NO | true | false = parked |
+| parked_at | timestamptz | YES |  |  |
+| note | text | YES |  | shown on parked page |
+| updated_by | text | YES |  |  |
+| updated_at | timestamptz | NO | now() |  |
+
 ### PMI Scheduling (Master Calendar) (9 tables)
 
 #### `pmi_academic_years`

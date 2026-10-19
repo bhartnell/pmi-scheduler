@@ -14,6 +14,7 @@ import RolePreviewBanner from '@/components/RolePreviewBanner';
 import RolePreviewSelector from '@/components/RolePreviewSelector';
 import UserMenu from '@/components/UserMenu';
 import FloatingDock from '@/components/FloatingDock';
+import ModuleGuard from '@/components/ModuleGuard';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -40,7 +41,7 @@ export default function RootLayout({
           <OfflineProvider>
             <RolePreviewBanner />
             <GlobalTimerBanner />
-            {children}
+            <ModuleGuard>{children}</ModuleGuard>
             <ActivityTracker />
             <OnboardingTourWrapper />
             <WhatsNewWrapper />
