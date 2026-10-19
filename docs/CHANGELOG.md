@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 
 2026-10-19
+(pending) | feat(trim 5/5): retire in-app AI scenario generator - generate-content, extract-demographics, cases/generate APIs, lib/case-generation, admin cases/generate + scenarios/cleanup pages moved to /archive/ai-scenario-generator (excluded from build); audit page AI modals and Pending Review tab removed; @anthropic-ai/sdk dropped. Ben to remove ANTHROPIC_API_KEY in Vercel.
 (pending) | feat(trim 1a): module_flags park mechanism - table, route guard in layout, /admin/module-flags page; nothing parked
 (pending) | fix(calendar): assigning/removing a block instructor via pmi_block_instructors now triggers the Google Calendar auto-sync
 
