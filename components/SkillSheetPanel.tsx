@@ -123,6 +123,8 @@ interface ExistingEvaluation {
   edited_by?: string | null;
   edited_at?: string | null;
   edit_reason?: string | null;
+  /** Reason an examiner passed a below-minimum NREMT score. Admin view only. */
+  below_min_pass_reason?: string | null;
   edited_by_user?: { id: string; name: string } | null;
 }
 
@@ -535,6 +537,12 @@ export default function SkillSheetPanel({
   // stays untouched.)
   const [showCriticalFailBlock, setShowCriticalFailBlock] = useState(false);
   const [showMissingExaminerNotesBlock, setShowMissingExaminerNotesBlock] = useState(false);
+  // Below-minimum Pass: soft block. The examiner must type a reason, which is
+  // stored with the evaluation (admin view only; never on print/export).
+  const [showBelowMinReason, setShowBelowMinReason] = useState(false);
+  const [belowMinReasonDraft, setBelowMinReasonDraft] = useState('');
+  const belowMinReasonRef = useRef<string | null>(null);
+  const pendingBelowMinSaveRef = useRef<{ emailPref: EmailPreference; saveStatus: 'complete' | 'in_progress' } | null>(null);
 
   // Director score-sheet correction state — in-place PATCH edit of an
   // already-submitted evaluation, as opposed to the normal "Edit" flow
@@ -782,6 +790,9 @@ export default function SkillSheetPanel({
           status: saveStatus,
           // FIX 3: Include critical fail data from NREMT examiner panel
           // Note: critical fail notes are now merged into examiner comments (single field)
+          ...(belowMinReasonRef.current && evaluationResult === 'pass' ? {
+            below_min_pass_reason: belowMinReasonRef.current,
+          } : {}),
           ...(isNremtTesting && criticalFail ? {
             critical_fail: true,
             critical_fail_notes: effectiveNotes.trim() || null,
@@ -874,6 +885,7 @@ export default function SkillSheetPanel({
       console.error('Failed to save evaluation:', err);
       showToast('Failed to save evaluation', 'error');
     }
+    belowMinReasonRef.current = null;
     setSaving(false);
   };
 
@@ -1287,12 +1299,18 @@ export default function SkillSheetPanel({
         return;
       }
 
-      // NOTE: the old "Score Below NREMT Minimum" soft-warning + "Override —
-      // Mark as Pass" modal that lived here has been removed per Ben's
-      // ticket. A below-minimum score can still be marked Pass by the
-      // examiner directly (Result buttons), but there is no longer a
-      // separate override modal in the way — the below-minimum banner
-      // shown next to the Result buttons still communicates the shortfall.
+      // Below-minimum Pass is a SOFT block: allowed only with a typed reason,
+      // stored on the evaluation (admin view only). Individual grading only.
+      if (gradeMode !== 'team' && result === 'pass' && sheet && !belowMinReasonRef.current) {
+        const minPts = findMinimumPoints(sheet.skill_name);
+        const earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
+        if (minPts !== null && earned < minPts) {
+          pendingBelowMinSaveRef.current = { emailPref, saveStatus };
+          setBelowMinReasonDraft('');
+          setShowBelowMinReason(true);
+          return;
+        }
+      }
     }
 
     doSave(emailPref, saveStatus);
@@ -1780,6 +1798,52 @@ export default function SkillSheetPanel({
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
               >
                 OK
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Below-minimum Pass — reason required, stored with the record */}
+      {showBelowMinReason && sheet && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Below NREMT Minimum</h3>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                  {getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks)} points scored, {findMinimumPoints(sheet.skill_name)} required.
+                  To record this as a Pass, enter a reason. It is saved with the record and visible to admins only.
+                </p>
+              </div>
+            </div>
+            <textarea
+              value={belowMinReasonDraft}
+              onChange={e => setBelowMinReasonDraft(e.target.value)}
+              rows={3}
+              placeholder="Reason for passing below the minimum..."
+              className="w-full border border-gray-300 dark:border-gray-600 rounded-lg px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm resize-none"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => { pendingBelowMinSaveRef.current = null; setShowBelowMinReason(false); }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!belowMinReasonDraft.trim()}
+                onClick={() => {
+                  const pending = pendingBelowMinSaveRef.current;
+                  belowMinReasonRef.current = belowMinReasonDraft.trim();
+                  pendingBelowMinSaveRef.current = null;
+                  setShowBelowMinReason(false);
+                  if (pending) doSave(pending.emailPref, pending.saveStatus);
+                }}
+                className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50"
+              >
+                Save as Pass
               </button>
             </div>
           </div>
@@ -3691,6 +3755,12 @@ function ExistingEvalSummary({
               {/* Director-correction audit note — admin/director view ONLY.
                   Never rendered on print/email output (those templates don't
                   select edited_by/edited_at/edit_reason). */}
+              {ev.below_min_pass_reason && (
+                <p className="mt-1 text-[9px] italic text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                  <ShieldAlert className="w-2.5 h-2.5 flex-shrink-0" />
+                  Passed below minimum — {ev.below_min_pass_reason}
+                </p>
+              )}
               {ev.edited_by && ev.edited_at && (
                 <p className="mt-1 text-[9px] italic text-amber-700 dark:text-amber-400 flex items-center gap-1">
                   <ShieldAlert className="w-2.5 h-2.5 flex-shrink-0" />
