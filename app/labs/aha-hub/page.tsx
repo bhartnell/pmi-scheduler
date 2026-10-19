@@ -12,6 +12,7 @@ import type { CurrentUser } from '@/types';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import PrintOriginalPdfButton from '@/components/PrintOriginalPdfButton';
+import { AHA_TEMPLATE_SLOTS, AHA_TEMPLATE_SLOT_CODES } from '@/lib/aha-source-pdfs';
 
 interface CourseCohort {
   cohort: { id: string; cohort_number: string | number; program: { abbreviation: string; name: string } | null } | null;
@@ -120,10 +121,24 @@ function SourcePdfPanel() {
   const [file, setFile] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [slotBusy, setSlotBusy] = useState<string | null>(null);
 
   const load = () =>
     fetch('/api/aha-source-pdfs').then((r) => r.json()).then((d) => d.success && setFiles(d.files)).catch(() => {});
   useEffect(() => { load(); }, []);
+
+  async function uploadSlot(slotCode: string, slotFile: File) {
+    setSlotBusy(slotCode);
+    setMsg('');
+    const form = new FormData();
+    form.append('code', slotCode);
+    form.append('file', slotFile);
+    const res = await fetch('/api/aha-source-pdfs', { method: 'POST', body: form });
+    const d = await res.json().catch(() => ({}));
+    setSlotBusy(null);
+    setMsg(res.ok ? `Uploaded ${slotCode}.` : d.error || 'Upload failed');
+    if (res.ok) load();
+  }
 
   async function upload() {
     if (!code.trim() || !file) return;
@@ -145,6 +160,8 @@ function SourcePdfPanel() {
     }
   }
 
+  const caseFiles = files.filter((f) => !AHA_TEMPLATE_SLOT_CODES.has(f.code));
+
   return (
     <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
       <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Original AHA PDFs</h2>
@@ -152,6 +169,56 @@ function SourcePdfPanel() {
         Upload the source PDF for a case or checklist, keyed by its case code. The &quot;Print original PDF&quot; button
         appears on that case only after a PDF is uploaded. Uploading the same code again replaces the file.
       </p>
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Official AHA 2025 templates</h3>
+      <div className="overflow-x-auto mb-6">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-700">
+              <th className="py-1.5 pr-4">Form</th>
+              <th className="py-1.5 pr-4">Code</th>
+              <th className="py-1.5 pr-4">Status</th>
+              <th className="py-1.5">Upload</th>
+            </tr>
+          </thead>
+          <tbody>
+            {AHA_TEMPLATE_SLOTS.map((slot) => {
+              const present = files.find((f) => f.code === slot.code);
+              return (
+                <tr key={slot.code} className="border-b border-gray-100 dark:border-gray-700/50">
+                  <td className="py-1.5 pr-4 text-gray-900 dark:text-white">{slot.title}</td>
+                  <td className="py-1.5 pr-4 text-gray-600 dark:text-gray-400">{slot.code}</td>
+                  <td className="py-1.5 pr-4">
+                    {present ? (
+                      <span className="text-green-700 dark:text-green-400">
+                        uploaded{present.updated_at ? ` ${new Date(present.updated_at).toLocaleDateString()}` : ''}
+                      </span>
+                    ) : (
+                      <span className="text-amber-700 dark:text-amber-300">missing</span>
+                    )}
+                  </td>
+                  <td className="py-1.5">
+                    <label className="inline-flex items-center justify-center min-h-[44px] px-4 rounded-lg bg-blue-600 text-white cursor-pointer">
+                      {slotBusy === slot.code ? 'Uploading...' : present ? 'Replace' : 'Upload'}
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        className="hidden"
+                        disabled={slotBusy !== null}
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          e.target.value = '';
+                          if (f) uploadSlot(slot.code, f);
+                        }}
+                      />
+                    </label>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Per-case source PDFs</h3>
       <div className="flex flex-wrap items-center gap-3 mb-4">
         <input
           value={code}
@@ -169,11 +236,11 @@ function SourcePdfPanel() {
         </button>
       </div>
       {msg && <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">{msg}</p>}
-      {files.length === 0 ? (
+      {caseFiles.length === 0 ? (
         <p className="text-sm text-gray-500 dark:text-gray-400">No PDFs uploaded yet.</p>
       ) : (
         <ul className="grid grid-cols-3 max-lg:grid-cols-2 max-sm:grid-cols-1 gap-2">
-          {files.map((f) => (
+          {caseFiles.map((f) => (
             <li key={f.code} className="flex items-center justify-between gap-2 text-sm text-gray-900 dark:text-white">
               <span className="truncate">{f.code}</span>
               <PrintOriginalPdfButton code={f.code} />
