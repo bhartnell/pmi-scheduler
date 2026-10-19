@@ -3,13 +3,21 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { findParkedFlag, type ModuleFlag } from '@/lib/module-flags';
+import { findParkedFlag, isHrefParked, type ModuleFlag } from '@/lib/module-flags';
 
 const ModuleFlagsContext = createContext<ModuleFlag[]>([]);
 
 /** Parked modules (empty until loaded, and on any error: fails open). */
 export function useParkedModules(): ModuleFlag[] {
   return useContext(ModuleFlagsContext);
+}
+
+/** Drop-in for next/link that renders nothing when its href points into a parked module. */
+export function ParkAwareLink(props: React.ComponentProps<typeof Link>) {
+  const flags = useParkedModules();
+  const href = typeof props.href === 'string' ? props.href : props.href.pathname ?? '';
+  if (href && isHrefParked(href, flags)) return null;
+  return <Link {...props} />;
 }
 
 export default function ModuleGuard({ children }: { children: React.ReactNode }) {
