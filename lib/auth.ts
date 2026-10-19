@@ -44,6 +44,21 @@ export const authOptions: NextAuthOptions = {
         token.refreshToken = account.refresh_token;
         token.accessTokenExpires = account.expires_at ? account.expires_at * 1000 : 0;
         token.provider = account.provider; // 'google' or 'azure-ad'
+
+        // Record the sign-in. Runs after the signIn callback, so first-time
+        // users already have a lab_users row. Best-effort: a failure here
+        // must never block or alter a sign-in.
+        if (token.email) {
+          try {
+            const { error } = await getSupabaseAdmin()
+              .from('lab_users')
+              .update({ last_login: new Date().toISOString() })
+              .ilike('email', token.email);
+            if (error) console.error('Error recording last_login:', error);
+          } catch (err) {
+            console.error('Error recording last_login:', err);
+          }
+        }
       }
       return token;
     },
