@@ -629,3 +629,6 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 ## Layout
 
 - `components/layout/RegionShell.tsx` — `RegionShell` / `RegionGrid` / `Region`: full-width, viewport-height multi-region page shell (2x2 on lg+, stacked below); each region scrolls internally. Used by `/labs/acls-hub`; PALS hub to adopt. (Last updated: 2026-10-01)
+
+### CertBoard (2026-10-19)
+`components/aha/CertBoard.tsx` — the ACLS Board, parameterised by `course` (`'acls' | 'pals'`). Rendered by `app/labs/acls-hub/board/page.tsx` and `app/labs/pals-hub/page.tsx`. Course config picks hub API, grading route, result labels/keys (ACLS `pass`/`fail`, PALS `PASS`/`NR`). Each lab section has a Coordinator link to `/labs/schedule/[id]/coordinator`.
