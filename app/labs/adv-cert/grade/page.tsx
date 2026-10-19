@@ -450,6 +450,7 @@ export default function AdvCertGradePage() {
 
       {scenario && !loadingScenario && (
         <DualPaneGrading
+            showScale
           scenarioLabel="Scenario"
           scoringLabel="Score Sheet"
           scenario={

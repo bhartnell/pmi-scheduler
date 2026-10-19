@@ -95,8 +95,8 @@ function CollapsiblePhase({
   const xabcde = {
     x: phase.hemorrhage_control || scenario.assessment_x || null,
     a: phase.airway || scenario.assessment_a || null,
-    b: phase.breathing || scenario.assessment_b || (v.rr || v.lung_sounds ? `RR ${v.rr || '—'}${v.lung_sounds ? `, ${v.lung_sounds}` : ''}` : null),
-    c: phase.circulation || scenario.assessment_c || (v.hr || v.skin ? `HR ${v.hr || '—'}${v.skin ? `, skin ${v.skin}` : ''}${v.pulse_quality ? `, pulse ${v.pulse_quality}` : ''}` : null),
+    b: phase.breathing || scenario.assessment_b || (v.rr || v.lung_sounds ? `RR ${v.rr || '-'}${v.lung_sounds ? `, ${v.lung_sounds}` : ''}` : null),
+    c: phase.circulation || scenario.assessment_c || (v.hr || v.skin ? `HR ${v.hr || '-'}${v.skin ? `, skin ${v.skin}` : ''}${v.pulse_quality ? `, pulse ${v.pulse_quality}` : ''}` : null),
     d: phase.disability || scenario.assessment_d || (v.loc || v.gcs || v.gcs_total || scenario.gcs || scenario.pupils ? `${v.loc || ''}${v.gcs || v.gcs_total || scenario.gcs ? ` GCS ${v.gcs || v.gcs_total || scenario.gcs}` : ''}${v.pupils || scenario.pupils ? `, pupils ${v.pupils || scenario.pupils}` : ''}`.trim() : null),
     e: phase.expose || scenario.assessment_e || null,
   };
@@ -271,15 +271,15 @@ function CollapsiblePhase({
                       <div key={letter} className="flex">
                         <span className="w-5 font-bold text-orange-600 dark:text-orange-400">{letter.toUpperCase()}</span>
                         <span className="text-gray-500 dark:text-gray-400 w-24">{labels[letter]}:</span>
-                        <span className={`flex-1 ${val ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{val || '—'}</span>
+                        <span className={`flex-1 ${val ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{val || '-'}</span>
                       </div>
                     );
                   })}
                 </div>
                 {/* AVPU & General Impression */}
                 <div className="flex gap-6 text-xs mt-1 pl-2 pt-1 border-t border-gray-100 dark:border-gray-700">
-                  <div><span className="font-medium text-gray-500 dark:text-gray-400">AVPU:</span> <span className={`font-medium ${avpu ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{avpu || '—'}</span></div>
-                  <div><span className="font-medium text-gray-500 dark:text-gray-400">Impression:</span> <span className={`font-medium ${generalImpression ? (generalImpression.toLowerCase().includes('sick') || generalImpression.toLowerCase().includes('critical') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400') : 'text-gray-400 dark:text-gray-500 italic'}`}>{generalImpression || '—'}</span></div>
+                  <div><span className="font-medium text-gray-500 dark:text-gray-400">AVPU:</span> <span className={`font-medium ${avpu ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{avpu || '-'}</span></div>
+                  <div><span className="font-medium text-gray-500 dark:text-gray-400">Impression:</span> <span className={`font-medium ${generalImpression ? (generalImpression.toLowerCase().includes('sick') || generalImpression.toLowerCase().includes('critical') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400') : 'text-gray-400 dark:text-gray-500 italic'}`}>{generalImpression || '-'}</span></div>
                 </div>
               </div>
             )}
@@ -302,7 +302,7 @@ function CollapsiblePhase({
                     <div key={item.letter} className="flex">
                       <span className="w-4 font-bold text-green-600 dark:text-green-400">{item.letter}</span>
                       <span className="text-gray-500 dark:text-gray-400 w-32">{item.label}:</span>
-                      <span className={`flex-1 ${item.value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{item.value || '—'}</span>
+                      <span className={`flex-1 ${item.value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{item.value || '-'}</span>
                     </div>
                   ))}
                 </div>
@@ -327,7 +327,7 @@ function CollapsiblePhase({
                     <div key={item.letter} className="flex">
                       <span className="w-4 font-bold text-purple-600 dark:text-purple-400">{item.letter}</span>
                       <span className="text-gray-500 dark:text-gray-400 w-32">{item.label}:</span>
-                      <span className={`flex-1 ${item.value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{item.value || '—'}</span>
+                      <span className={`flex-1 ${item.value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{item.value || '-'}</span>
                     </div>
                   ))}
                 </div>
@@ -729,14 +729,14 @@ function FallbackAssessmentStructure({ scenario }: { scenario: NonNullable<Stati
                     <div key={item.letter} className="flex">
                       <span className="w-5 font-bold text-orange-600 dark:text-orange-400">{item.letter}</span>
                       <span className="text-gray-500 dark:text-gray-400 w-24">{item.label}:</span>
-                      <span className={`flex-1 ${dVal ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{dVal || '—'}</span>
+                      <span className={`flex-1 ${dVal ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{dVal || '-'}</span>
                     </div>
                   );
                 })}
               </div>
               <div className="flex gap-6 text-xs mt-1 pl-2 pt-1 border-t border-gray-100 dark:border-gray-700">
-                <div><span className="font-medium text-gray-500 dark:text-gray-400">AVPU:</span> <span className={`font-medium ${scenario.avpu ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.avpu || '—'}</span></div>
-                <div><span className="font-medium text-gray-500 dark:text-gray-400">Impression:</span> <span className={`font-medium ${scenario.general_impression ? (scenario.general_impression.toLowerCase().includes('sick') || scenario.general_impression.toLowerCase().includes('critical') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400') : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.general_impression || '—'}</span></div>
+                <div><span className="font-medium text-gray-500 dark:text-gray-400">AVPU:</span> <span className={`font-medium ${scenario.avpu ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.avpu || '-'}</span></div>
+                <div><span className="font-medium text-gray-500 dark:text-gray-400">Impression:</span> <span className={`font-medium ${scenario.general_impression ? (scenario.general_impression.toLowerCase().includes('sick') || scenario.general_impression.toLowerCase().includes('critical') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400') : 'text-gray-400 dark:text-gray-500 italic'}`}>{scenario.general_impression || '-'}</span></div>
               </div>
             </div>
 
@@ -757,7 +757,7 @@ function FallbackAssessmentStructure({ scenario }: { scenario: NonNullable<Stati
                   <div key={item.letter} className="flex">
                     <span className="w-4 font-bold text-green-600 dark:text-green-400">{item.letter}</span>
                     <span className="text-gray-500 dark:text-gray-400 w-32">{item.label}:</span>
-                    <span className={`flex-1 ${item.value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{item.value || '—'}</span>
+                    <span className={`flex-1 ${item.value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{item.value || '-'}</span>
                   </div>
                 ))}
               </div>
@@ -781,7 +781,7 @@ function FallbackAssessmentStructure({ scenario }: { scenario: NonNullable<Stati
                     <div key={item.letter} className="flex">
                       <span className="w-4 font-bold text-purple-600 dark:text-purple-400">{item.letter}</span>
                       <span className="text-gray-500 dark:text-gray-400 w-32">{item.label}:</span>
-                      <span className={`flex-1 ${item.value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{item.value || '—'}</span>
+                      <span className={`flex-1 ${item.value ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 italic'}`}>{item.value || '-'}</span>
                     </div>
                   ))}
                 </div>
