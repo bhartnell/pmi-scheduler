@@ -17,12 +17,33 @@ interface DualPaneGradingProps {
   scoringLabel?: string;
   /** Height of the split area on wide screens. Defaults to viewport minus a header allowance. */
   heightClassName?: string;
+  /** Show the Sheet size A-/A+ control (zooms pane content only). Off by default. */
+  showScale?: boolean;
+  /** Width at which the two panes appear; below it the Scenario / Score tabs show. */
+  splitAt?: 'md' | 'lg';
 }
+
+const SPLIT_CLASSES = {
+  md: {
+    tabs: 'md:hidden',
+    row: 'flex flex-row max-md:flex-col gap-4',
+    pane: 'md:w-1/2 md:overflow-y-auto md:pr-1 min-h-0',
+    hidden: 'max-md:hidden',
+    height: 'md:h-[calc(100vh-9rem)]',
+  },
+  lg: {
+    tabs: 'lg:hidden',
+    row: 'flex flex-row max-lg:flex-col gap-4',
+    pane: 'lg:w-1/2 lg:overflow-y-auto lg:pr-1 min-h-0',
+    hidden: 'max-lg:hidden',
+    height: 'lg:h-[calc(100vh-9rem)]',
+  },
+} as const;
 
 /**
  * Reusable side-by-side grading layout: scenario on one side, scoring on the
  * other, each scrolling independently (same pattern as the OSCE scoring view).
- * Wide screens (>= lg) get two panes; smaller screens get a Scenario / Score
+ * Wide screens (>= splitAt) get two panes; smaller screens get a Scenario / Score
  * tab toggle so the evaluator never loses their place.
  */
 export default function DualPaneGrading({
@@ -30,8 +51,12 @@ export default function DualPaneGrading({
   scoring,
   scenarioLabel = 'Scenario',
   scoringLabel = 'Scoring',
-  heightClassName = 'lg:h-[calc(100vh-9rem)]',
+  heightClassName,
+  showScale = false,
+  splitAt = 'lg',
 }: DualPaneGradingProps) {
+  const sc = SPLIT_CLASSES[splitAt];
+  const heightClass = heightClassName ?? sc.height;
   const [tab, setTab] = useState<'scenario' | 'scoring'>('scoring');
   const [scale, setScale] = useState(100);
 
@@ -74,6 +99,7 @@ export default function DualPaneGrading({
 
   return (
     <div>
+      {showScale && (
       <div className="flex items-center justify-end gap-2 mb-2" role="group" aria-label="Sheet size">
         <span className="text-xs text-gray-500 dark:text-gray-400">Sheet size</span>
         <button type="button" className={scaleBtn} aria-label="Smaller" disabled={scale <= SCALE_MIN} onClick={() => updateScale(scale - SCALE_STEP)}>
@@ -86,20 +112,21 @@ export default function DualPaneGrading({
           A+
         </button>
       </div>
-      <div className="lg:hidden flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-lg mb-3">
+      )}
+      <div className={`${sc.tabs} flex border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-t-lg mb-3`}>
         {tabBtn('scenario', scenarioLabel)}
         {tabBtn('scoring', scoringLabel)}
       </div>
-      <div className={`flex flex-row max-lg:flex-col gap-4 ${heightClassName}`}>
+      <div className={`${sc.row} ${heightClass}`}>
         <section
           aria-label={scenarioLabel}
-          className={`lg:w-1/2 lg:overflow-y-auto lg:pr-1 min-h-0 ${tab === 'scenario' ? '' : 'max-lg:hidden'}`}
+          className={`${sc.pane} ${tab === 'scenario' ? '' : sc.hidden}`}
         >
           <div style={paneStyle}>{scenario}</div>
         </section>
         <section
           aria-label={scoringLabel}
-          className={`lg:w-1/2 lg:overflow-y-auto lg:pr-1 min-h-0 ${tab === 'scoring' ? '' : 'max-lg:hidden'}`}
+          className={`${sc.pane} ${tab === 'scoring' ? '' : sc.hidden}`}
         >
           <div style={paneStyle}>{scoring}</div>
         </section>

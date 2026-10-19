@@ -1243,7 +1243,7 @@ export default function GradeStationPage() {
               ) : (
                 <Save className="w-5 h-5" />
               )}
-              {saving ? 'Saving...' : `Save — Send Later${selectedStudentName ? ` (${selectedStudentName})` : ''}`}
+              {saving ? 'Saving...' : `Save and send later${selectedStudentName ? ` (${selectedStudentName})` : ''}`}
             </button>
 
             {/* Secondary options */}
@@ -1253,7 +1253,7 @@ export default function GradeStationPage() {
                 disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
                 className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow"
               >
-                Save — Send Now
+                Save and send now
               </button>
               <button
                 onClick={() => handleSave('do_not_send')}
@@ -1584,7 +1584,8 @@ export default function GradeStationPage() {
         {useSplitGrading ? (
           <DualPaneGrading
             scenario={scenarioPane}
-            scoring={<div className="space-y-4 pb-20">{scoringPane}</div>}
+            scoring={<div className="space-y-4 pb-64">{scoringPane}</div>}
+            splitAt="md"
             scenarioLabel="Scenario"
             scoringLabel="Grading"
           />
