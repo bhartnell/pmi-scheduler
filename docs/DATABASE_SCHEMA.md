@@ -5665,6 +5665,36 @@ Students tab).
 - `admins_manage_templates` (ALL, permissive, roles: {public})
 - `anyone_reads_active_templates` (SELECT, permissive, roles: {public})
 
+### FROZEN: tables that belong to Josh's inventory app
+
+> Last updated: 2026-10-19 (Task Handoff Queue "EQUIPMENT - decouple from Josh's inventory app"; read-only inventory, no data or schema change).
+
+**Rule:** no migration in this repo may alter, rename, re-policy, migrate or drop any table below. Josh's inventory app reads and writes them directly. The future drop happens only after Josh confirms his app no longer points at this database and has moved them to his own Supabase project. This site will only link out to his app (link goes in the Admin nav during TRIM 6/7; URL supplied by Ben).
+
+Counts and last write measured live 2026-10-19. "Our code" = any `.from()`/`rpc()` in `app/`, `lib/`, `components/`, `hooks/`, `scripts/`; no cron or page touches any of them beyond what is listed.
+
+| Table | Rows | Last write | Our code touches it? |
+|---|---|---|---|
+| supply_items | 304 | 2026-09-18 | No |
+| supply_categories | 1 | n/a | No |
+| supply_barcodes, supply_notifications, supply_transactions | 0 | never | No |
+| inventory_bins | 53 | 2026-04-20 | No |
+| inventory_rooms | 5 | 2026-01-30 | No |
+| inventory_locations | 2 | n/a | No |
+| inventory_bin_contents, inventory_bin_transactions, inventory_containers, inventory_positions | 0 | n/a | No |
+| bin_contents | 203 | 2026-04-20 | No |
+| custody_checkouts, custody_checkout_items | 0 | never | No |
+| filament_types | 12 | 2026-04-02 | No |
+| filament_purchases, filament_adjustments | 2, 1 | n/a | No |
+| equipment_categories | 11 | 2026-02-04 | No |
+| equipment_assignments | 0 | never | No |
+| equipment, equipment_checkouts, equipment_maintenance | 0 | never | Yes, only `app/api/admin/equipment/**` (admin/equipment rides the TRIM park/remove path) |
+| equipment_items | 0 (84 inserted then deleted) | April 2026 | Yes, only `app/api/admin/equipment/maintenance/route.ts` |
+
+**Not frozen (ours):** `lab_day_equipment` (22 rows), `lab_equipment_items`, `lab_equipment_tracking` are lab-day tables our code owns.
+
+**Needs Ben/Josh confirmation before being added to the frozen list** (same section of this doc, look inventory-adjacent, zero references from our code): `library_*` (4 tables), `print_*` / `printers` / `printer_*` (3D printing), `access_*` (door access control).
+
 ### Equipment & Inventory
 
 #### `equipment`
