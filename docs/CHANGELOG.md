@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 
 2026-10-19
+(pending) | feat(trim 1a): home tiles and user menu hide links into parked modules (ParkAwareLink in ModuleGuard)
 (pending) | feat(trim 1a): module_flags park mechanism - table, route guard in layout, /admin/module-flags page; nothing parked
 (pending) | fix(calendar): assigning/removing a block instructor via pmi_block_instructors now triggers the Google Calendar auto-sync
 
