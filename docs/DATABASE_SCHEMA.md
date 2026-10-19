@@ -9880,6 +9880,38 @@ Last updated: 2026-10-19. RLS on, no policies (service role only). Key = route p
 | updated_by | text | YES |  |  |
 | updated_at | timestamptz | NO | now() |  |
 
+### Pre-Internship Self-Assessment (2 tables)
+
+Last updated: 2026-10-19 (RAE R1/3). Both tables: RLS on, no policies (service role via `/api/preinternship/*` only). Soft-delete via `deleted_at`; the app never hard-deletes. Migration `20261019_preinternship_self_assessment.sql`.
+
+#### `preinternship_responses`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| user_id | uuid | NO |  | FK lab_users(id); UNIQUE; this is the "response id" exposed to the client |
+| cohort_id | uuid | YES |  | FK cohorts(id), from students.cohort_id by email at save time |
+| v | integer | NO | 1 | schema version |
+| name, cohort, email | text | YES |  | as submitted |
+| ratings, scenarios, reflections, prefs | jsonb | NO | '{}' | ids/option keys per content.js; reflections r1/r2 instructor-only |
+| ack | boolean | NO | false |  |
+| submitted_at | timestamptz | YES |  | set by the server |
+| locked | boolean | NO | false | set true when a review is saved; instructor unlock resets |
+| deleted_at | timestamptz | YES |  | soft delete |
+| created_at, updated_at | timestamptz | NO | now() |  |
+
+#### `preinternship_reviews`
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| record_key | text | NO |  | UNIQUE, `'r-' + response user_id` |
+| response_id | uuid | NO |  | FK preinternship_responses(id); UNIQUE |
+| instr, academic, summary | jsonb | NO | '{}' |  |
+| prepared_by | text | YES |  |  |
+| deleted_at | timestamptz | YES |  | soft delete |
+| created_at, updated_at | timestamptz | NO | now() |  |
+
 ### PMI Scheduling (Master Calendar) (9 tables)
 
 #### `pmi_academic_years`

@@ -14,6 +14,7 @@ megacode-export | AHA megacode export: best pass = fewest missed criteria, tie -
 
 2026-10-19
 (pending) | feat(pals P1b): /labs/pals-hub now renders the shared components/aha/CertBoard (course='pals'), same board as ACLS; old 838-line page archived to archive/pals-hub-page.tsx; Coordinator button per lab section on both boards.
+(pending) | feat(rae R1/3): pre-internship self-assessment storage - tables preinternship_responses/reviews (RLS, soft-delete), /api/preinternship/* implementing every storage-adapter method, server-side access rules in lib/preinternship.ts (student own-row only, instructor roles only for reviews, r1/r2 never in agency view, lock on review) + 13 negative/positive tests.
 (pending) | docs: FROZEN section in DATABASE_SCHEMA.md listing Josh-owned inventory/supply tables (read-only inventory, no data change)
 (pending) | feat(nremt): below-minimum Pass needs a typed reason (soft block), stored in student_skill_evaluations.below_min_pass_reason, admin view only; migration 20261019_below_minimum_pass_reason.
 (pending) | feat(aha forms A/3): named slots for the 8 official AHA 2025 templates on the AHA hub upload panel (lib/aha-source-pdfs.ts AHA_TEMPLATE_SLOTS); shows uploaded date or missing, Replace action; per-case free-code upload kept.
