@@ -6,9 +6,8 @@
  * grading vehicle), selects the best, and maps the rhythm chain to an official
  * AHA Megacode variant. Validated against G14 (see docs/AHA_EXPORT_SPEC.md §8a).
  *
- * Selection: best SCORE wins — PASS > FAIL, then most criteria met (no megacode
- * criteria are flagged is_critical today, so "most critical actions" == most met;
- * revisit if criticals get flagged). A testing attempt is used when present; a
+ * Selection: PASS > FAIL, then FEWEST missed criteria (recorded, not met), tie ->
+ * most recent attempt (Ben, 2026-10-14 triage). A testing attempt is used when present; a
  * passing practice attempt is equally valid. If the chosen attempt's chain has no
  * official AHA variant, it is FLAGGED for manual variant selection on the form —
  * the higher score is not discarded to chase a mappable one.
@@ -68,7 +67,10 @@ export function selectBest(attempts: MegacodeAttempt[]): { best: MegacodeAttempt
   if (attempts.length === 0) return { best: null, variant: null, flags: ['No scorable megacode attempt'] };
   const passes = attempts.filter((a) => a.result === 'pass');
   const pool = passes.length ? passes : attempts;
-  const best = [...pool].sort((a, b) => b.metCount - a.metCount)[0];
+  // Best = fewest missed criteria (recorded and not met); tie -> most recent attempt.
+  const missed = (a: MegacodeAttempt) => a.segments.reduce((n, sg) => n + sg.criteria.filter((c) => c.recorded && !c.met).length, 0);
+  const best = [...pool].sort((a, b) =>
+    missed(a) - missed(b) || (b.stationDate ?? '').localeCompare(a.stationDate ?? ''))[0];
   const variant = chainToVariant(best.chain);
   if (passes.length === 0) flags.push('No pass — best fail used for documentation');
   // A non-named chain is NOT a problem: AHA permits practice scenarios as testing
