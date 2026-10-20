@@ -69,6 +69,8 @@ import LabDayRolesSection from '@/components/lab-day/LabDayRolesSection';
 import LabDayCoverageSection from '@/components/lab-day/LabDayCoverageSection';
 import LabDaySkillSignoffs from '@/components/lab-day/LabDaySkillSignoffs';
 import LabDayCheckInSection from '@/components/lab-day/LabDayCheckInSection';
+import { useParkedModules } from '@/components/ModuleGuard';
+import { isSectionParked } from '@/lib/module-flags';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import AvailableInstructorsSection from '@/components/lab-day/AvailableInstructorsSection';
 import ScenarioRoleModal from '@/components/lab-day/ScenarioRoleModal';
@@ -81,6 +83,8 @@ import LabDayChat from '@/components/lab-day/LabDayChat';
 import SkillCoveragePanel from '@/components/lab-day/SkillCoveragePanel';
 
 export default function LabDayPage() {
+  const parkedFlags = useParkedModules();
+  const parked = (name: string) => isSectionParked(`/section/lab-day/${name}`, parkedFlags);
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
@@ -955,9 +959,9 @@ export default function LabDayPage() {
             <ChecklistSection labDayId={labDayId} />
           </aside>
         </div>
-        <EquipmentSection labDayId={labDayId} stations={labDay.stations} />
-        {userRole && hasMinRole(userRole, 'instructor') && <CostsSection labDayId={labDayId} cohortStudents={cohortStudents} />}
-        {labDay.cohort?.id && <LabDayCheckInSection labDay={labDay} labDayId={labDayId} onLabDayUpdate={setLabDay} />}
+        {!parked('equipment') && <EquipmentSection labDayId={labDayId} stations={labDay.stations} />}
+        {!parked('lab-costs') && userRole && hasMinRole(userRole, 'instructor') && <CostsSection labDayId={labDayId} cohortStudents={cohortStudents} />}
+        {!parked('self-check-in') && labDay.cohort?.id && <LabDayCheckInSection labDay={labDay} labDayId={labDayId} onLabDayUpdate={setLabDay} />}
         {/*
           Student Attendance, Performance, and Learning Style widgets
           are collapsed by default as of 2026-04-18 per feedback from
@@ -1012,7 +1016,7 @@ export default function LabDayPage() {
             </div>
           </div>
         )}
-        {userRole && hasMinRole(userRole, 'instructor') && cohortStudents.length > 0 && (
+        {!parked('performance-ratings') && userRole && hasMinRole(userRole, 'instructor') && cohortStudents.length > 0 && (
           <details className="mt-6 print:hidden group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-t-lg flex items-center justify-between">
               <span>Student Performance Ratings</span>
@@ -1023,7 +1027,7 @@ export default function LabDayPage() {
             </div>
           </details>
         )}
-        {userRole && hasMinRole(userRole, 'instructor') && labDay.cohort?.id && (
+        {!parked('learning-style') && userRole && hasMinRole(userRole, 'instructor') && labDay.cohort?.id && (
           <details className="mt-6 print:hidden group bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-t-lg flex items-center justify-between">
               <span>Learning Style Distribution</span>

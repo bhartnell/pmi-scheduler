@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ## 2026-10-20
 
 rae-r2-student-form | RAE R2/3: student Pre-Internship Self-Assessment page /student/self-assessment, To-do card on /student, cohort window gate (new preinternship_windows table, no rows = closed), content ported to lib/preinternship-content.ts; Rae's handoff files kept in /incoming (card 3fe5cd1c)
+lab-day-section-trim | Lab day page: Lab Costs, Equipment, Learning Style, Performance Ratings, Self Check-In parked via section flags /section/lab-day/* (migration 20261020, seeded enabled=false; fails open) (card 3ff5cd1c)
 em-dash-ui-remainder | Plain hyphens in the 5 remaining rendered lab day page strings (card 3ff5cd1c part 2)
 bell-action-only | Notification bell badge counts only unread action types (lab_assignment, task_assigned, shift_available); informational still listed (card 3ff5cd1c)
 lab-day-header-squeeze | Lab day page header: breadcrumb row, then title/date (no mid-phrase wrap) + Start Timer/Timer Display/Results, rest in More menu, 44px targets; calendar availability fetch times out at 15s; floating right rail no horizontal scrollbar (card 3ff5cd1c)
