@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-20
 
+bell-action-only | Notification bell badge counts only unread action types (lab_assignment, task_assigned, shift_available); informational still listed (card 3ff5cd1c)
 lab-day-header-squeeze | Lab day page header: breadcrumb row, then title/date (no mid-phrase wrap) + Start Timer/Timer Display/Results, rest in More menu, 44px targets; calendar availability fetch times out at 15s; floating right rail no horizontal scrollbar (card 3ff5cd1c)
 lab-grade-round3 | Station grader: full width (max-w-screen-2xl), save controls one non-sticky row, breadcrumb shows lab day title (card 3ff5cd1c)
 grader-dualpane-cleanup | DualPaneGrading: remove Sheet size control + SheetScale, default split at md, plain hyphen for code-joined dashes in grading UI (card 3fe5cd1c DualPaneGrading cleanup)

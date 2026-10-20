@@ -142,6 +142,14 @@ export type NotificationType =
 
 export type NotificationCategory = 'tasks' | 'labs' | 'scheduling' | 'feedback' | 'clinical' | 'system';
 
+// Types that need an action from the recipient. Only these drive the header bell badge;
+// everything else (reminders, digests, activity echoes) is still listed and stored.
+export const ACTION_NOTIFICATION_TYPES: NotificationType[] = [
+  'lab_assignment',
+  'task_assigned',
+  'shift_available',
+];
+
 // Map notification types to categories
 export const TYPE_TO_CATEGORY: Record<NotificationType, NotificationCategory> = {
   task_assigned: 'tasks',

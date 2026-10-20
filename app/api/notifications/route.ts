@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { ACTION_NOTIFICATION_TYPES } from '@/lib/notifications';
 
 // Default category preferences by role (same as preferences API and lib/notifications.ts)
 const ROLE_DEFAULTS: Record<string, Record<string, boolean>> = {
@@ -97,13 +98,14 @@ export async function GET(request: NextRequest) {
 
     if (error) throw error;
 
-    // Get unread count (excludes archived, respects category filters)
+    // Unread count drives the bell badge: only action types count (see ACTION_NOTIFICATION_TYPES)
     let countQuery = supabase
       .from('user_notifications')
       .select('*', { count: 'exact', head: true })
       .eq('user_email', session.user.email)
       .eq('is_read', false)
-      .eq('is_archived', false);
+      .eq('is_archived', false)
+      .in('type', ACTION_NOTIFICATION_TYPES);
 
     if (applyPrefs && enabledCategories.length > 0 && enabledCategories.length < 6) {
       countQuery = countQuery.in('category', enabledCategories);

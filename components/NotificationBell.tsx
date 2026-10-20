@@ -123,6 +123,9 @@ const TYPE_TO_CATEGORY: Record<string, string> = {
 
 const DROPDOWN_NOTIFICATION_LIMIT = 10;
 
+// Keep in sync with ACTION_NOTIFICATION_TYPES in lib/notifications.ts (server-only module)
+const ACTION_TYPES: string[] = ['lab_assignment', 'task_assigned', 'shift_available'];
+
 export default function NotificationBell() {
   const { data: session } = useSession();
   const router = useRouter();
@@ -264,10 +267,14 @@ export default function NotificationBell() {
         body: JSON.stringify({ id }),
       });
 
+      // The badge counts only action types, so only those decrement it
+      const target = notifications.find(n => n.id === id);
       setNotifications(prev =>
         prev.map(n => (n.id === id ? { ...n, is_read: true } : n))
       );
-      setUnreadCount(prev => Math.max(0, prev - 1));
+      if (target && !target.is_read && ACTION_TYPES.includes(target.type)) {
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
     } catch (error) {
       console.error('Failed to mark notification as read:', error);
     }
