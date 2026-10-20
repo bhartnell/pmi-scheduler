@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-20
 
+lab-day-section-trim | Lab day page: Lab Costs, Equipment, Learning Style, Performance Ratings, Self Check-In parked via section flags /section/lab-day/* (migration 20261020, seeded enabled=false; fails open) (card 3ff5cd1c)
 em-dash-ui-remainder | Plain hyphens in the 5 remaining rendered lab day page strings (card 3ff5cd1c part 2)
 
 bell-action-only | Notification bell badge counts only unread action types (lab_assignment, task_assigned, shift_available); informational still listed (card 3ff5cd1c)
