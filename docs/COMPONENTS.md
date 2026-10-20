@@ -33,6 +33,8 @@ you'd do this / Before you start / Steps / What good looks like / When it
 goes wrong / Related) and ship-with-empty-content warning: v1 intentionally
 ships with only 3 real articles rather than scaffolding placeholders.
 
+**`components/osce/CalendarSyncPanel.tsx`** (2026-10-21) — OSCE admin page: "Create calendar events" (blocks with no event) and "Send pending invites" (unstamped signups) buttons, plus per-block event-linked and per-registrant sent/pending/failed status with stored error text. Props: `eventId`, `refreshKey?`. Uses `/api/osce/events/[id]/calendar-sync`; logic in `lib/osce-calendar-admin.ts` (reuses `createOsceBlockEvent` and `inviteObserverToBlocks`).
+
 **`components/osce/AgencyPreferencesPanel.tsx`** (2026-10-21) — OSCE admin Observers tab: evaluators who asked for an agency/student, per-block matches against the event cohort, "awaiting scheduling" count. Props: `eventId`, `refreshKey?`. Read-only; fed by `/api/osce/events/[id]/agency-matches`.
 
 **`components/osce/StudentOsceResultsCard.tsx`** and

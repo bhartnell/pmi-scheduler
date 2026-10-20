@@ -179,3 +179,16 @@ export function addOsceGuest(opts: { accessToken: string; eventId: string; email
 export function removeOsceGuest(opts: { accessToken: string; eventId: string; email: string; fetchImpl?: typeof fetch }) {
   return patchAttendees({ ...opts, mode: 'remove', fetchImpl: opts.fetchImpl ?? fetch });
 }
+
+// ─── Admin helpers (OSCE CAL 4/4) ────────────────────────────────────
+
+/** "Clinical Capstone Fall 2026" + "Paramedic OSCE" -> "Clinical Capstone Fall 2026, Paramedic OSCE" */
+export function osceEventLabel(e: { title: string; subtitle?: string | null }): string {
+  return e.subtitle ? `${e.title}, ${e.subtitle}` : e.title;
+}
+
+/** Per-registrant block state for the admin panel: stamped = sent, error recorded = failed, else pending. */
+export function registrantState(row: { calendar_invite_sent_at: string | null; calendar_invite_error: string | null }): 'sent' | 'pending' | 'failed' {
+  if (row.calendar_invite_sent_at) return 'sent';
+  return row.calendar_invite_error ? 'failed' : 'pending';
+}

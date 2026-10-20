@@ -97,3 +97,16 @@ test('guest calls report errors instead of throwing, no retry', async () => {
   const boom = (async () => { throw new Error('down'); }) as typeof fetch;
   assert.equal((await removeOsceGuest({ accessToken: 't', eventId: 'ev1', email: 'a@x.org', fetchImpl: boom })).status, 'error');
 });
+
+import { osceEventLabel, registrantState } from '../lib/osce-calendar.ts';
+
+test('event label joins title and subtitle, tolerates no subtitle', () => {
+  assert.equal(osceEventLabel({ title: 'Clinical Capstone Fall 2026', subtitle: 'Paramedic OSCE' }), 'Clinical Capstone Fall 2026, Paramedic OSCE');
+  assert.equal(osceEventLabel({ title: 'Spring OSCE', subtitle: null }), 'Spring OSCE');
+});
+
+test('registrant state: stamp wins, then recorded error, else pending', () => {
+  assert.equal(registrantState({ calendar_invite_sent_at: '2026-10-21T00:00:00Z', calendar_invite_error: 'x' }), 'sent');
+  assert.equal(registrantState({ calendar_invite_sent_at: null, calendar_invite_error: 'Google 403' }), 'failed');
+  assert.equal(registrantState({ calendar_invite_sent_at: null, calendar_invite_error: null }), 'pending');
+});
