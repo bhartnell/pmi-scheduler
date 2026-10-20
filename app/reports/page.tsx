@@ -47,14 +47,7 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
         color: 'text-blue-600 dark:text-blue-400',
         bgColor: 'bg-blue-100 dark:bg-blue-900/30',
       },
-      {
-        title: 'Instructor Analytics',
-        description: 'Teaching hours, evaluation volume, and workload distribution per instructor.',
-        href: '/reports/instructor-analytics',
-        icon: Users,
-        color: 'text-green-600 dark:text-green-400',
-        bgColor: 'bg-green-100 dark:bg-green-900/30',
-      },
+      // Instructor Analytics - archived, hidden from nav (TRIM 3/5)
       {
         title: 'Student Progress',
         description: 'Attendance, skill completion, clinical hours, and at-risk identification by cohort.',
@@ -85,14 +78,7 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
   {
     heading: 'Existing Reports',
     reports: [
-      {
-        title: 'Attendance Report',
-        description: 'Detailed attendance records with status tracking per cohort.',
-        href: '/reports/attendance',
-        icon: Calendar,
-        color: 'text-cyan-600 dark:text-cyan-400',
-        bgColor: 'bg-cyan-100 dark:bg-cyan-900/30',
-      },
+      // Attendance Report - archived, hidden from nav (TRIM 3/5)
       {
         title: 'Scenario Analytics',
         description: 'Pass rates and difficulty calibration for all assessed scenarios.',
@@ -117,14 +103,7 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
         color: 'text-emerald-600 dark:text-emerald-400',
         bgColor: 'bg-emerald-100 dark:bg-emerald-900/30',
       },
-      {
-        title: 'Gradebook',
-        description: 'Student grades and assessment results.',
-        href: '/reports/gradebook',
-        icon: ClipboardList,
-        color: 'text-amber-600 dark:text-amber-400',
-        bgColor: 'bg-amber-100 dark:bg-amber-900/30',
-      },
+      // Gradebook - archived, hidden from nav (TRIM 3/5)
       {
         title: 'Cohort Comparison',
         description: 'Compare metrics across multiple cohorts.',
@@ -133,14 +112,7 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
         color: 'text-indigo-600 dark:text-indigo-400',
         bgColor: 'bg-indigo-100 dark:bg-indigo-900/30',
       },
-      {
-        title: 'Program Outcomes',
-        description: 'Program-level outcomes and completion metrics.',
-        href: '/reports/program-outcomes',
-        icon: FileBarChart,
-        color: 'text-pink-600 dark:text-pink-400',
-        bgColor: 'bg-pink-100 dark:bg-pink-900/30',
-      },
+      // Program Outcomes - archived, hidden from nav (TRIM 3/5)
     ],
   },
   // Operational reports — added during the 2026-05-06 navigation
@@ -158,14 +130,7 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
         color: 'text-sky-600 dark:text-sky-400',
         bgColor: 'bg-sky-100 dark:bg-sky-900/30',
       },
-      {
-        title: 'Lab Cost Report',
-        description: 'Per-lab-day instructor hours × hourly rate, equipment usage, and cohort cost breakdown.',
-        href: '/reports/lab-costs',
-        icon: DollarSign,
-        color: 'text-lime-600 dark:text-lime-400',
-        bgColor: 'bg-lime-100 dark:bg-lime-900/30',
-      },
+      // Lab Cost Report - archived, hidden from nav (TRIM 3/5)
       {
         title: 'Scenario Usage',
         description: 'How often each scenario is run across labs, with most-used and never-used identifiers.',
@@ -174,14 +139,7 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
         color: 'text-orange-600 dark:text-orange-400',
         bgColor: 'bg-orange-100 dark:bg-orange-900/30',
       },
-      {
-        title: 'Closeout Survey Results',
-        description: 'Aggregated student exit-survey responses per cohort with sentiment trends.',
-        href: '/reports/closeout-surveys',
-        icon: ClipboardSignature,
-        color: 'text-rose-600 dark:text-rose-400',
-        bgColor: 'bg-rose-100 dark:bg-rose-900/30',
-      },
+      // Closeout Survey Results - archived, hidden from nav (TRIM 3/5)
       {
         title: 'Custom Report Builder',
         description: 'Build ad-hoc tabular reports against any data source - pick columns, filters, and grouping.',

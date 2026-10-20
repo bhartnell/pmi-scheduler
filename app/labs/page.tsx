@@ -175,14 +175,7 @@ export default function LabsPage() {
       color: 'red',
       show: isInstructor,
     },
-    {
-      title: 'EKG Warmup',
-      description: 'EKG interpretation practice sessions',
-      href: '/labs/ekg-warmup',
-      icon: Activity,
-      color: 'rose',
-      show: isInstructor,
-    },
+    // EKG Warmup - archived, hidden from nav (TRIM 3/5)
     {
       title: 'Debrief Review',
       description: 'Post-lab debrief notes and feedback',

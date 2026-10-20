@@ -91,8 +91,7 @@ export default function CertExpiryWidget() {
     <WidgetCard
       title="Certification Alerts"
       icon={<Shield className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />}
-      viewAllLink="/instructor/certifications"
-      viewAllText="View All"
+      // viewAllLink removed (TRIM 3/5) — /instructor/certifications archived
       loading={loading}
     >
       {certifications.length === 0 ? (

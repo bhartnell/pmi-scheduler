@@ -288,24 +288,16 @@ export default function InstructorDashboard() {
                 <Award className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                 My Certifications
               </h2>
-              <Link
-                href="/instructor/certifications"
-                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center gap-1"
-              >
-                View All <ChevronRight className="w-4 h-4" />
-              </Link>
+              {/* "View All" / "Add Certification" links removed (TRIM 3/5) —
+                  /instructor/certifications archived; this card's data still
+                  comes from the shared /api/lab-management/certifications
+                  endpoint, which stays live. */}
             </div>
             <div className="p-4">
               {certifications.length === 0 ? (
                 <div className="text-center py-8">
                   <Award className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-3" />
                   <p className="text-gray-500 dark:text-gray-400">No certifications added yet</p>
-                  <Link
-                    href="/instructor/certifications/new"
-                    className="inline-flex items-center gap-2 mt-3 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
-                  >
-                    <Plus className="w-4 h-4" /> Add Certification
-                  </Link>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -408,34 +400,10 @@ export default function InstructorDashboard() {
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Quick Actions</h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <Link
-              href="/instructor/certifications/new"
-              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition"
-            >
-              <Plus className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm font-medium text-gray-900 dark:text-white">Add Certification</span>
-            </Link>
-            <Link
-              href="/instructor/ce"
-              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-purple-50 dark:bg-purple-900/30 hover:bg-purple-100 dark:hover:bg-purple-900/50 transition"
-            >
-              <BookOpen className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-              <span className="text-sm font-medium text-gray-900 dark:text-white">Log CE Hours</span>
-            </Link>
-            <Link
-              href="/instructor/teaching"
-              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-amber-50 dark:bg-amber-900/30 hover:bg-amber-100 dark:hover:bg-amber-900/50 transition"
-            >
-              <FileText className="w-8 h-8 text-amber-600 dark:text-amber-400" />
-              <span className="text-sm font-medium text-gray-900 dark:text-white">Teaching Log</span>
-            </Link>
-            <Link
-              href="/instructor/history"
-              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition"
-            >
-              <History className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-              <span className="text-sm font-medium text-gray-900 dark:text-white">Teaching History</span>
-            </Link>
+            {/* Add Certification, Log CE Hours, Teaching Log, Teaching
+                History tiles removed (TRIM 3/5) — their destination pages
+                (/instructor/certifications, /instructor/ce,
+                /instructor/teaching, /instructor/history) are archived. */}
             <Link
               href="/labs/scenarios"
               className="flex flex-col items-center gap-2 p-4 rounded-lg bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/50 transition"
@@ -443,13 +411,7 @@ export default function InstructorDashboard() {
               <Users className="w-8 h-8 text-green-600 dark:text-green-400" />
               <span className="text-sm font-medium text-gray-900 dark:text-white">View Scenarios</span>
             </Link>
-            <Link
-              href="/instructor/time-clock"
-              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition"
-            >
-              <Timer className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              <span className="text-sm font-medium text-gray-900 dark:text-white">Time Clock</span>
-            </Link>
+            {/* Time Clock tile removed (TRIM 3/5) — /instructor/time-clock archived. */}
             <Link
               href="/instructor/my-stats"
               className="flex flex-col items-center gap-2 p-4 rounded-lg bg-teal-50 dark:bg-teal-900/30 hover:bg-teal-100 dark:hover:bg-teal-900/50 transition"
@@ -457,13 +419,7 @@ export default function InstructorDashboard() {
               <BarChart3 className="w-8 h-8 text-teal-600 dark:text-teal-400" />
               <span className="text-sm font-medium text-gray-900 dark:text-white">My Stats</span>
             </Link>
-            <Link
-              href="/instructor/email-history"
-              className="flex flex-col items-center gap-2 p-4 rounded-lg bg-rose-50 dark:bg-rose-900/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition"
-            >
-              <Mail className="w-8 h-8 text-rose-600 dark:text-rose-400" />
-              <span className="text-sm font-medium text-gray-900 dark:text-white">Email History</span>
-            </Link>
+            {/* Email History tile removed (TRIM 3/5) — /instructor/email-history archived. */}
           </div>
         </div>
       </main>

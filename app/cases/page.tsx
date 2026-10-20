@@ -331,13 +331,7 @@ export default function CasesLibraryPage() {
               <Upload className="h-4 w-4" />
               Import JSON
             </button>
-            <Link
-              href="/cases/new"
-              className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Create New Case
-            </Link>
+            {/* Create New Case link removed (TRIM 3/5) — /cases/new archived */}
           </div>
         )}
       </div>
@@ -544,15 +538,7 @@ export default function CasesLibraryPage() {
               ? 'Create your first case study to get started.'
               : 'No cases are available in this category yet.'}
           </p>
-          {isInstructor && activeTab === 'my-cases' && (
-            <Link
-              href="/cases/new"
-              className="inline-flex items-center gap-2 mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              Create New Case
-            </Link>
-          )}
+          {/* Create New Case link removed (TRIM 3/5) — /cases/new archived */}
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

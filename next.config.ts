@@ -219,11 +219,7 @@ const nextConfig: NextConfig = {
         destination: '/labs/flags',
         permanent: true,
       },
-      {
-        source: '/lab-management/ekg-warmup',
-        destination: '/labs/ekg-warmup',
-        permanent: true,
-      },
+      // /lab-management/ekg-warmup redirect removed (TRIM 3/5) — /labs/ekg-warmup archived
       {
         source: '/lab-management/debrief-review',
         destination: '/labs/debrief-review',
@@ -261,26 +257,8 @@ const nextConfig: NextConfig = {
         destination: '/labs/seating/:path*',
         permanent: true,
       },
-      {
-        source: '/lab-management/mentorship',
-        destination: '/labs/mentorship',
-        permanent: true,
-      },
-      {
-        source: '/lab-management/mentorship/:path*',
-        destination: '/labs/mentorship/:path*',
-        permanent: true,
-      },
-      {
-        source: '/lab-management/peer-evals',
-        destination: '/labs/peer-evals',
-        permanent: true,
-      },
-      {
-        source: '/lab-management/peer-evals/:path*',
-        destination: '/labs/peer-evals/:path*',
-        permanent: true,
-      },
+      // /lab-management/mentorship and /lab-management/peer-evals redirects
+      // removed (TRIM 3/5) — /labs/mentorship and /labs/peer-evals archived
       {
         source: '/lab-management/protocol-tracking',
         destination: '/labs/protocol-tracking',
@@ -291,16 +269,8 @@ const nextConfig: NextConfig = {
         destination: '/labs/protocol-tracking/:path*',
         permanent: true,
       },
-      {
-        source: '/lab-management/my-certifications',
-        destination: '/labs/my-certifications',
-        permanent: true,
-      },
-      {
-        source: '/lab-management/my-certifications/:path*',
-        destination: '/labs/my-certifications/:path*',
-        permanent: true,
-      },
+      // /lab-management/my-certifications redirect removed (TRIM 3/5) —
+      // /labs/my-certifications archived
       {
         source: '/lab-management/skill-sheets',
         destination: '/academics/skill-sheets',
@@ -379,16 +349,8 @@ const nextConfig: NextConfig = {
         destination: '/admin/timer-displays/:path*',
         permanent: true,
       },
-      {
-        source: '/lab-management/admin/certifications',
-        destination: '/admin/certifications',
-        permanent: true,
-      },
-      {
-        source: '/lab-management/admin/certifications/:path*',
-        destination: '/admin/certifications/:path*',
-        permanent: true,
-      },
+      // /lab-management/admin/certifications redirect removed (TRIM 3/5) —
+      // /admin/certifications archived
 
       // --- Reports from lab-management ---
       {

@@ -24,10 +24,8 @@ import {
   Menu,
   X,
   UserCircle,
-  FileText,
   Users,
   CalendarCheck,
-  FolderOpen,
   ClipboardCheck,
   Calendar,
   Award,
@@ -111,8 +109,7 @@ export default function StudentLayout({
     { href: '/cases', label: 'Case Studies', icon: BookOpenCheck },
     { href: '/student/available-labs', label: 'Lab Sign-Ups', icon: CalendarCheck },
     { href: '/student/labs', label: 'Lab History', icon: Calendar },
-    { href: '/student/documents', label: 'Documents', icon: FolderOpen },
-    { href: '/student/attendance-appeals', label: 'Attendance Appeals', icon: FileText },
+    // Documents, Attendance Appeals - archived, hidden from nav (TRIM 3/5)
     { href: '/student/peer-eval', label: 'Peer Evals', icon: Users },
     { href: '/student/profile', label: 'My Profile', icon: UserCircle },
   ];

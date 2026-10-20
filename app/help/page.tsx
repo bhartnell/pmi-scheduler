@@ -135,13 +135,11 @@ const ADMIN_FEATURES: RoleFeature[] = [
   { feature: 'User Management', description: 'Create, edit, and assign roles to all users at /admin/users. Manage guest instructors at /admin/guests.' },
   { feature: 'Role Assignment', description: 'Promote users between guest, user, instructor, lead_instructor, admin, and superadmin roles at /admin/roles.' },
   { feature: 'System Settings', description: 'Superadmins can access /admin/settings for system-wide configuration, protected accounts, and data export.' },
-  { feature: 'Announcements', description: 'Post system-wide announcements at /admin/announcements that appear as banners on all user dashboards.' },
   { feature: 'Audit Log', description: 'Review sensitive system operations and user actions via the audit trail in admin settings.' },
   { feature: 'Reports', description: 'Access comprehensive reports for student progress, clinical hours, instructor workload, and lab analytics.' },
-  { feature: 'Certification Compliance', description: 'Track certification expiry for all instructors at /admin/certifications and view compliance at /admin/certifications/compliance.' },
-  { feature: 'Program Requirements', description: 'Configure program-wide requirements and pass thresholds at /admin/program-requirements.' },
   { feature: 'Access Requests', description: 'Approve or deny non-PMI instructor access requests at /admin/access-requests.' },
-  { feature: 'Email Templates', description: 'Customize system email notifications at /admin/email-templates.' },
+  // Announcements, Certification Compliance, Program Requirements, Email
+  // Templates rows removed (TRIM 3/5) — their admin pages are archived.
 ];
 
 const INSTRUCTOR_FEATURES: RoleFeature[] = [
@@ -151,12 +149,11 @@ const INSTRUCTOR_FEATURES: RoleFeature[] = [
   { feature: 'Seating & Groups', description: 'Manage group assignments and seating charts at /labs/seating. The system can auto-assign groups based on learning style preferences.' },
   { feature: 'Cohort Management', description: 'Create and manage student cohorts at /academics/cohorts. Archive cohorts when they graduate.' },
   { feature: 'Grading', description: 'Grade station performance for students at /labs/grade/station/[id]. Results feed into student progress reports.' },
-  { feature: 'Certifications', description: 'Track your personal certifications and CE hours at /instructor/certifications and /instructor/ce.' },
   { feature: 'Scheduling Polls', description: 'Create Doodle-style scheduling polls at /scheduler to find the best meeting time with students or preceptors.' },
   { feature: 'Part-Timer Scheduling', description: 'Set your availability and sign up for open shifts at /scheduling. Admins can view all availability at /scheduling/availability/all.' },
   { feature: 'Onboarding', description: 'Assign onboarding tracks to new instructors and monitor their progress at /onboarding.' },
   { feature: 'Tasks', description: 'Create, assign, and track tasks between instructors at /tasks. Tasks support comments, file attachments, and due dates.' },
-  { feature: 'EKG Warm-Up', description: 'Run an EKG rhythm identification exercise at /labs/ekg-warmup for student warm-up activities.' },
+  // Certifications, EKG Warm-Up rows removed (TRIM 3/5) — their pages are archived.
 ];
 
 const STUDENT_FEATURES: RoleFeature[] = [
@@ -166,7 +163,7 @@ const STUDENT_FEATURES: RoleFeature[] = [
   { feature: 'Completions', description: 'Review completed lab sessions, scenario grades, and attendance history at /student/completions.' },
   { feature: 'Scheduling Polls', description: 'Submit your availability for scheduling polls when an instructor sends you a poll link at /poll/[id].' },
   { feature: 'Onboarding', description: 'Complete assigned onboarding tasks and track your progress at /onboarding.' },
-  { feature: 'Certifications', description: 'View your current certifications at /labs/my-certifications.' },
+  // Certifications row removed (TRIM 3/5) — /labs/my-certifications archived.
 ];
 
 const FAQ_ITEMS: FaqItem[] = [

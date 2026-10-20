@@ -83,12 +83,13 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     label: 'Feedback',
     color: 'bg-pink-500',
   },
-  my_certs: {
-    href: '/labs/my-certifications',
-    icon: Award,
-    label: 'My Certs',
-    color: 'bg-yellow-500',
-  },
+  // my_certs - archived, hidden from nav (TRIM 3/5)
+  // my_certs: {
+  //   href: '/labs/my-certifications',
+  //   icon: Award,
+  //   label: 'My Certs',
+  //   color: 'bg-yellow-500',
+  // },
   // learning_styles - archived, hidden from nav
   // learning_styles: {
   //   href: '/labs/seating/learning-styles',
@@ -138,12 +139,13 @@ export const QUICK_LINK_DEFINITIONS: Record<string, {
     label: 'Tasks',
     color: 'bg-rose-500',
   },
-  ekg_warmup: {
-    href: '/labs/ekg-warmup',
-    icon: Activity,
-    label: 'EKG Warmup',
-    color: 'bg-red-600',
-  },
+  // ekg_warmup - archived, hidden from nav (TRIM 3/5)
+  // ekg_warmup: {
+  //   href: '/labs/ekg-warmup',
+  //   icon: Activity,
+  //   label: 'EKG Warmup',
+  //   color: 'bg-red-600',
+  // },
   case_studies: {
     href: '/cases',
     icon: BookOpenCheck,

@@ -1,7 +1,24 @@
 # PMI EMS Scheduler -- Dead Code Report
-> Last refreshed 2026-06-05. Original auto-generation 2026-03-08.
+> Last refreshed 2026-10-20. Original auto-generation 2026-03-08.
 
 ## What's Been Resolved Since March 2026
+
+### 2026-10-20 — TRIM 3/5: 43 CLEAN-REMOVE pages + their only-used-here API routes moved to archive/
+
+Per the TRIM 1b dependency/layout table, every page classified CLEAN-REMOVE
+(minus Ben's 4 hold-outs: `osce-evaluator-signup`, `admin/osce-tokens`,
+`cases/leaderboard`, `cases/session`) moved from `app/` to `archive/app/`
+via `git mv`, dropping them out of the Next.js build (routes live outside
+`app/` entirely, not just unlinked from nav) rather than deleting them —
+`archive/README.md` lists every move with the `git mv` back. 40 API route
+groups moved with their pages (56+ route files; a few — `admin/equipment`,
+`admin/database-tools` — were split so sibling routes still used elsewhere
+stayed live). `lib/tucked-away-features.ts` moved too since its only
+consumer, `/admin/tools`, is one of the archived pages. ~50 dangling
+hub/nav/widget links and 2 orphaned API callers (equipment-maintenance
+alert, substitute-request pending-count badge) fixed in the same change.
+No database/table changes. See `docs/SITEMAP.md` for the nav-reachability
+side of this (including the `/onboarding` entry-point replacement).
 
 ### 2026-06-27 — Dead scheduler pages deleted + unused imports / orphaned components removed
 
