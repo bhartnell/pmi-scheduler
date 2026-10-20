@@ -10,6 +10,8 @@
  */
 
 export const OSCE_CAL_TIMEZONE = 'America/Los_Angeles';
+/** Account whose primary calendar hosts the block events (must hold the 'events' scope). */
+export const OSCE_CAL_HOST_EMAIL = 'bhartnell@pmi.edu';
 export const OSCE_CAL_COLOR = '5'; // Banana, same as the admin invite route
 export const OSCE_DEFAULT_LOCATION =
   'PMI EMS Annex, 3365 E. Flamingo Rd., Suites 9 & 10, Las Vegas, NV 89121';
@@ -126,4 +128,54 @@ export async function createOsceBlockEvent(opts: {
   } catch (err) {
     return { status: 'error', error: err instanceof Error ? err.message : 'network error' };
   }
+}
+
+// ─── Guests (OSCE CAL 2/4) ───────────────────────────────────────────
+
+export type OsceGuestResult =
+  | { status: 'added' | 'already' | 'removed' | 'absent' }
+  | { status: 'error'; error: string };
+
+interface CalAttendee { email: string; displayName?: string; [k: string]: unknown }
+
+const sameEmail = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
+
+async function patchAttendees(opts: {
+  accessToken: string;
+  eventId: string;
+  email: string;
+  displayName?: string;
+  mode: 'add' | 'remove';
+  fetchImpl: typeof fetch;
+}): Promise<OsceGuestResult> {
+  const { accessToken, eventId, email, displayName, mode, fetchImpl } = opts;
+  const url = `${GOOGLE_CALENDAR_API}/calendars/primary/events/${encodeURIComponent(eventId)}`;
+  const headers = { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
+  try {
+    const getRes = await fetchImpl(url, { headers });
+    if (!getRes.ok) return { status: 'error', error: `Google ${getRes.status} reading event: ${(await getRes.text()).slice(0, 200)}` };
+    const ev = (await getRes.json()) as { attendees?: CalAttendee[] };
+    const current = ev.attendees ?? [];
+    const present = current.some((a) => a.email && sameEmail(a.email, email));
+    if (mode === 'add' && present) return { status: 'already' };
+    if (mode === 'remove' && !present) return { status: 'absent' };
+    const attendees = mode === 'add'
+      ? [...current, { email: email.trim(), ...(displayName ? { displayName } : {}) }]
+      : current.filter((a) => !(a.email && sameEmail(a.email, email)));
+    const res = await fetchImpl(`${url}?sendUpdates=all`, { method: 'PATCH', headers, body: JSON.stringify({ attendees }) });
+    if (!res.ok) return { status: 'error', error: `Google ${res.status} updating guests: ${(await res.text()).slice(0, 200)}` };
+    return { status: mode === 'add' ? 'added' : 'removed' };
+  } catch (err) {
+    return { status: 'error', error: err instanceof Error ? err.message : 'network error' };
+  }
+}
+
+/** Add one guest to a block event; Google emails the invite (sendUpdates=all). Never throws, no retry. */
+export function addOsceGuest(opts: { accessToken: string; eventId: string; email: string; displayName?: string; fetchImpl?: typeof fetch }) {
+  return patchAttendees({ ...opts, mode: 'add', fetchImpl: opts.fetchImpl ?? fetch });
+}
+
+/** Remove one guest from a block event (sendUpdates=all). Never throws, no retry. */
+export function removeOsceGuest(opts: { accessToken: string; eventId: string; email: string; fetchImpl?: typeof fetch }) {
+  return patchAttendees({ ...opts, mode: 'remove', fetchImpl: opts.fetchImpl ?? fetch });
 }

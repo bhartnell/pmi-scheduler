@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { removeObserverFromBlocks } from '@/lib/osce-invites';
 
 // GET - Admin: get single observer with blocks
 export async function GET(
@@ -165,6 +166,8 @@ export async function PUT(
 
       // Remove blocks
       if (toRemove.length > 0) {
+        // Take them off the calendar events first (needs the signup rows).
+        await removeObserverFromBlocks(supabase, { observerId, blockIds: toRemove });
         await supabase
           .from('osce_observer_blocks')
           .delete()
@@ -241,6 +244,9 @@ export async function DELETE(
         { status: 404 }
       );
     }
+
+    // Remove the guest from their calendar events before the signup rows go.
+    await removeObserverFromBlocks(supabase, { observerId });
 
     const { error } = await supabase
       .from('osce_observers')
