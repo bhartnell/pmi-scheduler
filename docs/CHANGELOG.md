@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-10-21
+
+trim-2-5 | TRIM 2/5: 15 route-prefix park flags (migration 20261021_trim_park_set.sql); labs/reports/scheduling hubs, student nav and two dashboard widgets use ParkAwareLink so parked links disappear
+
 ## 2026-10-20
 
 ccf-dock | GRADING: CCF timer docked inline in the ACLS grader scoring pane above segment 1, collapsible, drag/portal/position storage removed (card 3fe5cd1c item 3)
