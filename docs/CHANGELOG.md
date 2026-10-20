@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-10-20
+
+lab-grade-round3 | Station grader: full width (max-w-screen-2xl), save controls one non-sticky row, breadcrumb shows lab day title (card 3ff5cd1c)
+
 ## 2026-10-19
 
 lab-grade-followup-333 | Lab scenario grader: Sheet size control off by default (prop), two panes at md so browser zoom keeps both, scoring pane bottom padding clears the floating Save bar, em dashes removed from Save labels (card 3fe5cd1c)
