@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import SheetScale from '@/components/grading/SheetScale';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -293,7 +292,7 @@ export default function AdvCertGradePage() {
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Saved — ${String(finalOverall).toUpperCase()}${data.teamLeadLogWritten ? ' (team-lead logged)' : ''}`);
+        toast.success(`Saved - ${String(finalOverall).toUpperCase()}${data.teamLeadLogWritten ? ' (team-lead logged)' : ''}`);
         if (data.ccfDropped) toast.error('Result saved, but the CCF value could not be stored yet. Note it separately.');
         // Ready for the NEXT student at the SAME station: clear only the score
         // sheet + the per-student selection (team lead / members). KEEP the day,
@@ -316,7 +315,7 @@ export default function AdvCertGradePage() {
   }
 
   const fmtDay = (d: DayOpt) =>
-    `${d.date}${d.cohort?.cohort_number ? ` — Cohort ${d.cohort.cohort_number}` : ''}${d.is_adv_cert_testing ? ' • testing' : ''}`;
+    `${d.date}${d.cohort?.cohort_number ? ` - Cohort ${d.cohort.cohort_number}` : ''}${d.is_adv_cert_testing ? ' • testing' : ''}`;
 
   return (
     <div className="w-full max-w-none mx-auto p-4 sm:p-6">
@@ -329,7 +328,6 @@ export default function AdvCertGradePage() {
         Pick a group and case, check off each step as the team leader performs it, then record the group result.
       </p>
 
-      <SheetScale>
       {/* Context selectors */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
@@ -375,7 +373,7 @@ export default function AdvCertGradePage() {
               <option key={s.id} value={s.id}>
                 {s.case_code ? `[${s.case_code}] ` : ''}{s.name}
                 {s.cert_tier === 'scenario_testing' ? ' • TEST' : ' • practice'}
-                {s.segment_count === 0 ? ' — no segments yet' : ` (${s.segment_count} segments)`}
+                {s.segment_count === 0 ? ' - no segments yet' : ` (${s.segment_count} segments)`}
               </option>
             ))}
           </select>
@@ -385,7 +383,7 @@ export default function AdvCertGradePage() {
       {/* Team */}
       {selectedGroup && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-4">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Team — {selectedGroup.name}</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Team - {selectedGroup.name}</h2>
           {groupMembers.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-gray-400">No members recorded for this group.</p>
           ) : (
@@ -400,7 +398,7 @@ export default function AdvCertGradePage() {
               </div>
               <div>
                 <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  Team members tested — tap <Crown size={11} className="inline -mt-0.5" /> to set the team lead
+                  Team members tested - tap <Crown size={11} className="inline -mt-0.5" /> to set the team lead
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {groupMembers.map((m) => {
@@ -436,7 +434,7 @@ export default function AdvCertGradePage() {
                 </div>
                 {!teamLeadId && memberIds.length > 0 && (
                   <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">
-                    No team lead set yet — this attempt cannot be saved until you tap a crown or use the dropdown above. Clicking a name only marks it tested, it does not register the lead.
+                    No team lead set yet - this attempt cannot be saved until you tap a crown or use the dropdown above. Clicking a name only marks it tested, it does not register the lead.
                   </p>
                 )}
               </div>
@@ -450,7 +448,6 @@ export default function AdvCertGradePage() {
 
       {scenario && !loadingScenario && (
         <DualPaneGrading
-            showScale
           scenarioLabel="Scenario"
           scoringLabel="Score Sheet"
           scenario={
@@ -650,7 +647,6 @@ export default function AdvCertGradePage() {
           }
         />
       )}
-      </SheetScale>
     </div>
   );
 }

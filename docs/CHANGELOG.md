@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-20
 
+grader-dualpane-cleanup | DualPaneGrading: remove Sheet size control + SheetScale, default split at md, plain hyphen for code-joined dashes in grading UI (card 3fe5cd1c DualPaneGrading cleanup)
 student-layout-preview | Student layout honors Preview-as-Student (admin previewing as student can enter /student; real non-students still redirected) (card 3fe5cd1c Student View)
 
 ## 2026-10-19
