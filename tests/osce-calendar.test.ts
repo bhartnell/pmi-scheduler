@@ -110,3 +110,18 @@ test('registrant state: stamp wins, then recorded error, else pending', () => {
   assert.equal(registrantState({ calendar_invite_sent_at: null, calendar_invite_error: 'Google 403' }), 'failed');
   assert.equal(registrantState({ calendar_invite_sent_at: null, calendar_invite_error: null }), 'pending');
 });
+
+import { buildOsceConfirmation } from '../lib/osce-confirmation-text.ts';
+
+test('confirmation lists blocks in date order, escapes names, links the event page, plain characters only', () => {
+  const c = buildOsceConfirmation({
+    name: 'A <b>Cox</b>', eventLabel: 'Spring 2027 OSCE', slug: 'spring-2027', baseUrl: 'https://www.pmiparamedic.tools/',
+    blocks: [pm, { ...am, date: '2026-11-19', label: 'Day 2 Morning' }, am],
+  });
+  assert.equal(c.actionUrl, 'https://www.pmiparamedic.tools/osce/spring-2027');
+  assert.match(c.message, /A &lt;b&gt;Cox&lt;\/b&gt;/);
+  assert.ok(c.message.indexOf('Day 1 Morning') < c.message.indexOf('Day 1 Afternoon'));
+  assert.ok(c.message.indexOf('Day 1 Afternoon') < c.message.indexOf('Day 2 Morning'));
+  assert.match(c.message, /08:30 - 12:00/);
+  assert.doesNotMatch(c.subject + c.message, /[^\x20-\x7E]/);
+});

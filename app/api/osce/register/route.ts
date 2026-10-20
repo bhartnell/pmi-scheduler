@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { loadAgencyAliases } from '@/lib/agency-aliases';
 import { validPreferredAgency, buildPreferenceNote } from '@/lib/agency-match';
 import { inviteObserverToBlocks } from '@/lib/osce-invites';
+import { sendOsceSignupConfirmation } from '@/lib/osce-confirmation';
 
 // Helper: resolve the most recent open event as default
 async function getDefaultOpenEventId(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<string | null> {
@@ -192,6 +193,13 @@ export async function POST(request: NextRequest) {
     // Add them as a guest on each chosen block's calendar event (Google sends
     // the invite). Failures are recorded on the signup rows, never block signup.
     await inviteObserverToBlocks(supabase, { observerId: observer.id, blockIds: block_ids });
+
+    // Plain-email confirmation in addition to the invite; best effort, never blocks signup.
+    await sendOsceSignupConfirmation(supabase, {
+      observerId: observer.id,
+      blockIds: block_ids,
+      baseUrl: process.env.NEXTAUTH_URL || 'https://www.pmiparamedic.tools',
+    });
 
     return NextResponse.json({
       success: true,
