@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import Link from 'next/link';
+import { ParkAwareLink as Link } from '@/components/ModuleGuard';
 import { BookOpen, ChevronRight, CheckCircle, Clock, Users, Lock } from 'lucide-react';
 import WidgetCard, { WidgetEmpty } from '../WidgetCard';
 

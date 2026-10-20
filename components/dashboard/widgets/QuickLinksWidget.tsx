@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { ParkAwareLink as Link } from '@/components/ModuleGuard';
 import {
   BookOpen,
   BookOpenCheck,
