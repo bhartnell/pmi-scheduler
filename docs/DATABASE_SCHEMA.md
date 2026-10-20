@@ -4450,6 +4450,8 @@ Students tab).
 | created_at | timestamptz | YES | now() |  |
 | event_id | uuid | NO |  |  |
 | contact_email | text | YES |  | correspondence address; invites use COALESCE(contact_email, email) (migration 20261001) |
+| preferred_agency | text | YES |  | Canonical agency the evaluator asked to see (validated against agency_aliases at signup); migration 20261023 |
+| preferred_student_name | text | YES |  | Free-text student the evaluator asked to see; migration 20261023 |
 
 **Foreign Keys:**
 - `event_id` -> `osce_events.id` (`osce_observers_event_id_fkey`)
@@ -4461,6 +4463,17 @@ Students tab).
 - `idx_osce_observers_email`: `CREATE INDEX idx_osce_observers_email ON public.osce_observers USING btree (email)`
 - `idx_osce_observers_event`: `CREATE INDEX idx_osce_observers_event ON public.osce_observers USING btree (event_id)`
 - `osce_observers_event_email_unique`: `CREATE UNIQUE INDEX osce_observers_event_email_unique ON public.osce_observers USING btree (event_id, email)`
+
+#### `agency_aliases`
+
+Ben-editable map from the free-text spellings in `students.agency` to a canonical agency (migration `20261023_osce_agency_preference.sql`). `students.agency` is never rewritten; matching reads this map. Canonical `AMR/MedicWest` = dual-employed (matches either); `None` = no agency. RLS on, service_role policy only. Seeded with 12 rows from the 2026-10-14 triage map.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| alias | text | NO |  | unique on lower(btrim(alias)) |
+| canonical | text | NO |  |  |
+| created_at | timestamptz | YES | now() |  |
 
 #### `osce_observer_blocks`
 

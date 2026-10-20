@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+osce-agency-pref | OSCE evaluator agency preference: agency_aliases map + osce_observers.preferred_agency/preferred_student_name (migration 20261023), signup agency/student fields on both signup pages, GET /api/osce/agencies, GET /api/osce/events/[id]/agency-matches, AgencyPreferencesPanel on OSCE admin Observers tab; lib/agency-match.ts
 osce-cal-2-4 | OSCE CAL 2/4: signup adds registrant as guest on the block event (sendUpdates=all, stamps calendar_invite_sent_at), cancel/admin removal takes them off and clears it; failures recorded in osce_observer_blocks.calendar_invite_error (migration 20261022_osce_observer_blocks_invite_error.sql); lib/osce-invites.ts + guest helpers in lib/osce-calendar.ts
 osce-cal-1-4 | OSCE CAL 1/4: osce_time_blocks.google_event_id (migration 20261021_osce_time_blocks_google_event_id.sql) + lib/osce-calendar.ts per-block event builder/creator (not wired to routes yet) + tests/osce-calendar.test.ts
 trim-2-5 | TRIM 2/5: 15 route-prefix park flags (migration 20261021_trim_park_set.sql); labs/reports/scheduling hubs, student nav and two dashboard widgets use ParkAwareLink so parked links disappear

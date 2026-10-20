@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, Fragment } from 'react';
+import AgencyPreferencesPanel from '@/components/osce/AgencyPreferencesPanel';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -946,6 +947,8 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
           </div>
         </div>
       )}
+
+      <AgencyPreferencesPanel eventId={eventId} refreshKey={observers.length} />
 
       {/* Observer count */}
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">

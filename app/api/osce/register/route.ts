@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { loadAgencyAliases } from '@/lib/agency-aliases';
+import { validPreferredAgency, buildPreferenceNote } from '@/lib/agency-match';
 import { inviteObserverToBlocks } from '@/lib/osce-invites';
 
 // Helper: resolve the most recent open event as default
@@ -28,6 +30,8 @@ export async function POST(request: NextRequest) {
       block_ids,
       agency_preference,
       agency_preference_note,
+      preferred_agency,
+      preferred_student_name,
     } = body;
 
     // Validate required fields
@@ -117,6 +121,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Preference: agency must be on the canonical list (else dropped, never stored as free text); optional, never gating.
+    let prefAgency: string | null = null;
+    if (agency_preference) {
+      try {
+        prefAgency = validPreferredAgency(preferred_agency, await loadAgencyAliases(supabase));
+      } catch (e) {
+        console.error('Could not validate preferred agency; signup continues without it:', e);
+      }
+    }
+    const prefStudent = agency_preference && typeof preferred_student_name === 'string' ? preferred_student_name.trim().slice(0, 120) || null : null;
+
     // Insert observer record
     const { data: observer, error: observerError } = await supabase
       .from('osce_observers')
@@ -129,7 +144,9 @@ export async function POST(request: NextRequest) {
         phone: phone?.trim() || null,
         role: role || null,
         agency_preference: agency_preference || false,
-        agency_preference_note: agency_preference_note?.trim() || null,
+        agency_preference_note: buildPreferenceNote(prefAgency, prefStudent, agency_preference_note),
+        preferred_agency: prefAgency,
+        preferred_student_name: prefStudent,
       })
       .select('id')
       .single();
