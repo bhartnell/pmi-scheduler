@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-20
 
+lab-day-header-squeeze | Lab day page header: breadcrumb row, then title/date (no mid-phrase wrap) + Start Timer/Timer Display/Results, rest in More menu, 44px targets; calendar availability fetch times out at 15s; floating right rail no horizontal scrollbar (card 3ff5cd1c)
 lab-grade-round3 | Station grader: full width (max-w-screen-2xl), save controls one non-sticky row, breadcrumb shows lab day title (card 3ff5cd1c)
 student-layout-preview | Student layout honors Preview-as-Student (admin previewing as student can enter /student; real non-students still redirected) (card 3fe5cd1c Student View)
 

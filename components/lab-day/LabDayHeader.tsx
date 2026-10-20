@@ -2,6 +2,7 @@
 
 import { formatCohortNumber } from '@/lib/format-cohort';
 import Link from 'next/link';
+import type { LucideIcon } from 'lucide-react';
 import {
   ChevronDown,
   Calendar,
@@ -40,6 +41,9 @@ interface LabDayHeaderProps {
   formatTime: (timeString: string | null) => string | null;
 }
 
+const MENU_ITEM_CLASS =
+  'w-full text-left px-4 min-h-[44px] text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2';
+
 export default function LabDayHeader({
   labDay,
   labDayId,
@@ -57,19 +61,30 @@ export default function LabDayHeader({
   formatDate,
   formatTime,
 }: LabDayHeaderProps) {
+  const menuItem = (Icon: LucideIcon, label: string, onClick: () => void) => (
+    <button
+      role="menuitem"
+      onClick={() => { onSetShowDuplicateDropdown(false); onClick(); }}
+      className={MENU_ITEM_CLASS}
+    >
+      <Icon className="w-4 h-4 text-gray-500" />
+      {label}
+    </button>
+  );
+
   return (
     <div className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <Breadcrumbs
-              entityTitle={labDay.title || `${labDay.cohort.program.abbreviation} Group ${formatCohortNumber(labDay.cohort.cohort_number)}`}
-              className="mb-1"
-            />
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+        <Breadcrumbs
+          entityTitle={labDay.title || `${labDay.cohort.program.abbreviation} Group ${formatCohortNumber(labDay.cohort.cohort_number)}`}
+          className="mb-3"
+        />
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="min-w-0 lg:basis-2/5 lg:grow">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white whitespace-nowrap">
               {formatDate(labDay.date)}
             </h1>
-            <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-600 dark:text-gray-400">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-gray-600 dark:text-gray-400">
               {(labDay.start_time || labDay.end_time) ? (
                 <span className="flex items-center gap-1 font-medium text-gray-700 dark:text-gray-300">
                   <Clock className="w-4 h-4" />
@@ -92,91 +107,47 @@ export default function LabDayHeader({
               </span>
             </div>
           </div>
-          <div className="flex flex-col gap-2 items-end print:hidden">
+          <div className="flex flex-col gap-2 items-end print:hidden shrink-0">
             {/* Inline timer widget */}
             <InlineTimerWidget
               labDayId={labDayId}
               onOpenFullTimer={onOpenTimer}
               paused={false}
             />
-            <div className="flex gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <button
                 onClick={onOpenTimer}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                className="inline-flex items-center gap-2 px-3 min-h-[44px] bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
                 <Timer className="w-4 h-4" />
                 Start Timer
               </button>
               <button
                 onClick={() => window.open(`/timer-display/live/${labDayId}`, '_blank')}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 lg:px-3 lg:py-2 max-lg:px-4 max-lg:py-3 max-lg:text-base max-lg:font-medium"
+                className="inline-flex items-center gap-2 px-3 min-h-[44px] bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 title="Open full-screen timer display in new tab"
               >
-                <Monitor className="w-4 h-4 max-lg:w-5 max-lg:h-5" />
-                <span className="hidden sm:inline">Timer Display</span>
-                <span className="sm:hidden">Display</span>
+                <Monitor className="w-4 h-4" />
+                Timer Display
               </button>
               <Link
                 href={`/labs/schedule/${labDayId}/results`}
-                className="inline-flex items-center gap-2 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                className="inline-flex items-center gap-2 px-3 min-h-[44px] bg-purple-600 text-white rounded-lg hover:bg-purple-700"
                 title="View skill evaluation results"
               >
                 <ClipboardCheck className="w-4 h-4" />
                 Results
               </Link>
-              <button
-                onClick={onPrint}
-                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <Printer className="w-4 h-4" />
-                Print
-              </button>
-              <button
-                onClick={onDownloadPDF}
-                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-              >
-                <Download className="w-4 h-4" />
-                PDF
-              </button>
-              <button
-                onClick={onExportCalendar}
-                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                title="Export to Calendar (.ics)"
-              >
-                <CalendarPlus className="w-4 h-4" />
-                Calendar
-              </button>
-              <button
-                onClick={onPrintRoster}
-                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                title="Print student roster"
-              >
-                <Users className="w-4 h-4" />
-                Roster
-              </button>
-              <button
-                onClick={onCSVExport}
-                className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                title="Download roster as CSV"
-              >
-                <FileText className="w-4 h-4" />
-                CSV
-              </button>
-              {/* Duplicate split button */}
+              {/* More menu: everything else (open state reuses the page's dropdown state) */}
               <div className="relative inline-flex">
                 <button
-                  onClick={onOpenDuplicateModal}
-                  className="inline-flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-l-lg hover:bg-gray-50 dark:hover:bg-gray-700 border-r-0"
-                >
-                  <Copy className="w-4 h-4" />
-                  Duplicate
-                </button>
-                <button
                   onClick={() => onSetShowDuplicateDropdown((prev: boolean) => !prev)}
-                  className="inline-flex items-center px-1.5 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-r-lg hover:bg-gray-50 dark:hover:bg-gray-700"
-                  title="More duplicate options"
+                  className="inline-flex items-center gap-2 px-3 min-h-[44px] border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
+                  aria-haspopup="menu"
+                  aria-expanded={showDuplicateDropdown}
                 >
-                  <ChevronDown className="w-3.5 h-3.5" />
+                  More
+                  <ChevronDown className="w-4 h-4" />
                 </button>
                 {showDuplicateDropdown && (
                   <>
@@ -184,39 +155,40 @@ export default function LabDayHeader({
                       className="fixed inset-0 z-10"
                       onClick={() => onSetShowDuplicateDropdown(false)}
                     />
-                    <div className="absolute right-0 top-full mt-1 w-56 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20">
-                      <button
-                        onClick={onOpenNextWeekConfirm}
-                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-t-lg flex items-center gap-2"
+                    <div
+                      role="menu"
+                      className="absolute right-0 top-full mt-1 w-60 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-20 py-1"
+                    >
+                      {menuItem(Printer, 'Print', onPrint)}
+                      {menuItem(Download, 'PDF', onDownloadPDF)}
+                      {menuItem(CalendarPlus, 'Export to Calendar (.ics)', onExportCalendar)}
+                      {menuItem(Users, 'Print roster', onPrintRoster)}
+                      {menuItem(FileText, 'Roster CSV', onCSVExport)}
+                      <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
+                      {menuItem(Copy, 'Duplicate', onOpenDuplicateModal)}
+                      {menuItem(Calendar, 'Copy to Next Week', onOpenNextWeekConfirm)}
+                      {menuItem(Copy, 'Copy to Multiple Dates...', onOpenBulkDuplicateModal)}
+                      <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
+                      <Link
+                        href={`/labs/schedule/${labDayId}/edit`}
+                        role="menuitem"
+                        className={MENU_ITEM_CLASS}
                       >
-                        <Calendar className="w-4 h-4 text-blue-500" />
-                        Copy to Next Week
-                      </button>
-                      <button
-                        onClick={onOpenBulkDuplicateModal}
-                        className="w-full text-left px-4 py-2.5 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-b-lg flex items-center gap-2"
+                        <Edit2 className="w-4 h-4 text-gray-500" />
+                        Edit
+                      </Link>
+                      <Link
+                        href={`/labs/schedule/${labDayId}/stations/new`}
+                        role="menuitem"
+                        className={MENU_ITEM_CLASS}
                       >
-                        <Copy className="w-4 h-4 text-purple-500" />
-                        Copy to Multiple Dates...
-                      </button>
+                        <Plus className="w-4 h-4 text-gray-500" />
+                        Add Station
+                      </Link>
                     </div>
                   </>
                 )}
               </div>
-              <Link
-                href={`/labs/schedule/${labDayId}/edit`}
-                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 font-medium"
-              >
-                <Edit2 className="w-4 h-4" />
-                Edit
-              </Link>
-              <Link
-                href={`/labs/schedule/${labDayId}/stations/new`}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-              >
-                <Plus className="w-4 h-4" />
-                Add Station
-              </Link>
             </div>
           </div>
         </div>
