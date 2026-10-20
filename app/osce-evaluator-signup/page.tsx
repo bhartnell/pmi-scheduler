@@ -27,11 +27,18 @@ export default function OsceEvaluatorSignup() {
   const [loading, setLoading] = useState(true);
   const [selectedBlocks, setSelectedBlocks] = useState<Set<string>>(new Set());
   const [agencyPref, setAgencyPref] = useState(false);
+  const [agencyOptions, setAgencyOptions] = useState<string[]>([]);
+  const [prefAgency, setPrefAgency] = useState('');
+  const [prefStudent, setPrefStudent] = useState('');
   const [status, setStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     name: '', title: '', agency: '', email: '', phone: '', role: '', agency_preference_note: ''
   });
+  useEffect(() => {
+    fetch('/api/osce/agencies').then(r => r.json()).then(d => { if (d.success) setAgencyOptions(d.agencies); }).catch(() => {});
+  }, []);
+
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const [triedSubmit, setTriedSubmit] = useState(false);
 
@@ -117,7 +124,9 @@ export default function OsceEvaluatorSignup() {
           ...formData,
           block_ids: Array.from(selectedBlocks),
           agency_preference: agencyPref,
-          agency_preference_note: agencyPref ? formData.agency_preference_note : ''
+          agency_preference_note: agencyPref ? formData.agency_preference_note : '',
+          preferred_agency: agencyPref ? prefAgency : '',
+          preferred_student_name: agencyPref ? prefStudent : ''
         })
       });
       const data = await res.json();
@@ -126,6 +135,8 @@ export default function OsceEvaluatorSignup() {
         setFormData({ name: '', title: '', agency: '', email: '', phone: '', role: '', agency_preference_note: '' });
         setSelectedBlocks(new Set());
         setAgencyPref(false);
+        setPrefAgency('');
+        setPrefStudent('');
         setTouched({});
         setTriedSubmit(false);
         fetchBlocks();
@@ -363,6 +374,23 @@ export default function OsceEvaluatorSignup() {
                   <span className="osce-agency-detail">Current employees, clinical students placed at your agency, or candidates in your hiring process. We&apos;ll do our best to schedule those students during your selected time blocks.</span>
                 </span>
               </div>
+
+              {agencyPref && (
+                <div className="osce-form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label>Which agency&apos;s students? <span className="osce-optional">(optional)</span></label>
+                  <select value={prefAgency} onChange={e => setPrefAgency(e.target.value)}>
+                    <option value="">No specific agency</option>
+                    {agencyOptions.map(a => <option key={a} value={a}>{a}</option>)}
+                  </select>
+                </div>
+              )}
+
+              {agencyPref && (
+                <div className="osce-form-group" style={{ marginBottom: '1.25rem' }}>
+                  <label>A specific student you&apos;d like to evaluate? <span className="osce-optional">(optional)</span></label>
+                  <input type="text" maxLength={120} placeholder="Student name" value={prefStudent} onChange={e => setPrefStudent(e.target.value)} />
+                </div>
+              )}
 
               {agencyPref && (
                 <div className="osce-form-group" style={{ marginBottom: '1.25rem' }}>

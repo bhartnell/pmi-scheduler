@@ -33,6 +33,8 @@ you'd do this / Before you start / Steps / What good looks like / When it
 goes wrong / Related) and ship-with-empty-content warning: v1 intentionally
 ships with only 3 real articles rather than scaffolding placeholders.
 
+**`components/osce/AgencyPreferencesPanel.tsx`** (2026-10-21) — OSCE admin Observers tab: evaluators who asked for an agency/student, per-block matches against the event cohort, "awaiting scheduling" count. Props: `eventId`, `refreshKey?`. Read-only; fed by `/api/osce/events/[id]/agency-matches`.
+
 **`components/osce/StudentOsceResultsCard.tsx`** and
 **`components/osce/CohortOsceResultsCard.tsx`** (2026-09-14) — Surface OSCE
 assessment results (previously siloed inside the OSCE module) into the
