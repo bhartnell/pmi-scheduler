@@ -9912,6 +9912,19 @@ Last updated: 2026-10-19 (RAE R1/3). Both tables: RLS on, no policies (service r
 | deleted_at | timestamptz | YES |  | soft delete |
 | created_at, updated_at | timestamptz | NO | now() |  |
 
+#### `preinternship_windows`
+
+Last updated: 2026-10-20 (RAE R2/3). Migration `20261020_preinternship_windows.sql`. RLS on, no policies. A cohort's students reach the self-assessment only while a row has opens_at <= now() and (closes_at is null or > now()); no row = closed.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| cohort_id | uuid | NO |  | FK cohorts(id); UNIQUE |
+| opens_at | timestamptz | NO | now() |  |
+| closes_at | timestamptz | YES |  | null = no close date |
+| created_by | text | YES |  |  |
+| created_at | timestamptz | NO | now() |  |
+
 ### PMI Scheduling (Master Calendar) (9 tables)
 
 #### `pmi_academic_years`

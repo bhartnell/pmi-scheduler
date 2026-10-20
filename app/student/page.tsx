@@ -13,6 +13,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { canAccessAdmin } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import SelfAssessmentTodo from '@/components/student/SelfAssessmentTodo';
 import {
   CheckSquare,
   Activity,
@@ -213,6 +214,8 @@ export default function StudentDashboard() {
           Track your progress through the Paramedic Program
         </p>
       </div>
+
+      <SelfAssessmentTodo />
 
       {/* Message Banner (if student record not found) */}
       {dashboardData?.message && (

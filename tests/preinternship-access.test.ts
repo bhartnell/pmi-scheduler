@@ -5,7 +5,7 @@ import {
   type Actor, type ResponseData, type ReviewData, type Store, type StoredResponse,
 } from '../lib/preinternship.ts';
 
-function memStore(): Store {
+function memStore(open = true): Store {
   const responses = new Map<string, StoredResponse & { deleted?: boolean }>();
   const reviews = new Map<string, ReviewData & { userId: string }>();
   return {
@@ -20,6 +20,7 @@ function memStore(): Store {
     async listReviews() { return Object.fromEntries([...reviews].map(([k, v]) => [k, v])); },
     async upsertReview(key, userId, review) { reviews.set(key, { ...review, userId }); },
     async softDeleteReview(key) { return reviews.delete(key); },
+    async isWindowOpen() { return open; },
   };
 }
 
@@ -140,4 +141,13 @@ test('deleted response disappears from lists and cannot be reviewed', async () =
   assert.equal((await svc.listResponses(instructor)).length, 0);
   await deny(svc.saveReview(instructor, recordKeyFor('A'), { instr: { lead: 3 } }), 404);
   await deny(svc.deleteResponse(instructor, 'A'), 404);
+});
+
+test('closed window: students cannot save and see nothing; open window works', async () => {
+  const closed = createPreinternshipService(memStore(false));
+  await deny(closed.saveMyResponse(student('A'), good()), 403);
+  assert.deepEqual(await closed.getMyStatus(student('A')), { response: null, locked: false, open: false });
+  const open = createPreinternshipService(memStore(true));
+  await open.saveMyResponse(student('A'), good());
+  assert.equal((await open.getMyStatus(student('A'))).open, true);
 });
