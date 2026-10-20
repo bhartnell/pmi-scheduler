@@ -33,7 +33,6 @@ import {
   ExternalLink,
   Brain,
   Barcode as BarcodeIcon,
-  TrendingUp,
   Flag,
   MessageSquare,
   Plus,
@@ -1099,13 +1098,6 @@ export default function StudentDetailPage() {
                       )}
                     </div>
                     <div className="flex flex-wrap gap-2 items-center">
-                      <Link
-                        href={`/students/${studentId}/progress`}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 rounded-lg font-medium"
-                      >
-                        <TrendingUp className="w-4 h-4" />
-                        View Progress
-                      </Link>
                       <Link
                         href={`/academics/students/${studentId}/portfolio`}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 rounded-lg font-medium"

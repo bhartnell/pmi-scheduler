@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+trim-3-5-followup | TRIM 3/5 follow-up: removed dead 'View Progress' button (404 after /students/[id]/progress archived) from academics/students/[id]; no other change
 osce-cal-3-4 | OSCE CAL 3/4: plain-email signup confirmation via Resend (lib/osce-confirmation.ts, wording in lib/osce-confirmation-text.ts, both register routes) and per-registrant Resend button on CalendarSyncPanel (calendar-sync action 'resend'); no schema change; test added
 osce-cal-4-4 | OSCE CAL 4/4: admin buttons replace the script backfill - GET/POST /api/osce/events/[id]/calendar-sync (create_events, send_pending), lib/osce-calendar-admin.ts, components/osce/CalendarSyncPanel.tsx on the OSCE admin page; no schema change; tests added to tests/osce-calendar.test.ts
 osce-agency-pref | OSCE evaluator agency preference: agency_aliases map + osce_observers.preferred_agency/preferred_student_name (migration 20261023), signup agency/student fields on both signup pages, GET /api/osce/agencies, GET /api/osce/events/[id]/agency-matches, AgencyPreferencesPanel on OSCE admin Observers tab; lib/agency-match.ts
