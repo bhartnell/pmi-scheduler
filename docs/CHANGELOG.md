@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+(pending) | feat(pals P4/4): AHA Results Export page takes a course (ACLS/PALS); file-name text, resolve link and zip/open params follow it
+
 trim-2-5 | TRIM 2/5: 15 route-prefix park flags (migration 20261021_trim_park_set.sql); labs/reports/scheduling hubs, student nav and two dashboard widgets use ParkAwareLink so parked links disappear
 
 ## 2026-10-20
