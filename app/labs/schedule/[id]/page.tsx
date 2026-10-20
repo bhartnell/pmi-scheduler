@@ -421,7 +421,7 @@ export default function LabDayPage() {
           parts.push(`${data.stations_added} station${data.stations_added === 1 ? '' : 's'} added`);
         const msg = parts.length > 0
           ? `Refreshed: ${parts.join(', ')}`
-          : 'Already matches template — nothing to update';
+          : 'Already matches template - nothing to update';
         toast?.addToast('success', msg);
         fetchLabDay({ silent: true });
       } else {
@@ -910,8 +910,8 @@ export default function LabDayPage() {
                   <div className="flex justify-between gap-2">
                     <dt className="text-gray-500 dark:text-gray-400">Time</dt>
                     <dd className="text-gray-900 dark:text-white font-medium">
-                      {labDay.start_time ? formatTime(labDay.start_time) : '—'}
-                      {labDay.end_time ? ` – ${formatTime(labDay.end_time)}` : ''}
+                      {labDay.start_time ? formatTime(labDay.start_time) : '-'}
+                      {labDay.end_time ? ` - ${formatTime(labDay.end_time)}` : ''}
                     </dd>
                   </div>
                 )}
@@ -1102,7 +1102,7 @@ export default function LabDayPage() {
           onClose={() => setShowRequestCoverage(false)}
           onSubmitted={() => {
             setShowRequestCoverage(false);
-            toast.success('Coverage request submitted — Ryan + Ben notified.');
+            toast.success('Coverage request submitted - Ryan + Ben notified.');
           }}
           prefilledLabDay={{
             id: labDayId,
@@ -1122,7 +1122,7 @@ export default function LabDayPage() {
           onClose={() => setShowGenerateLabShifts(false)}
           onCreated={(count) => {
             if (count > 0) {
-              toast.success(`Created ${count} shift${count === 1 ? '' : 's'} — part-timers can sign up now.`);
+              toast.success(`Created ${count} shift${count === 1 ? '' : 's'} - part-timers can sign up now.`);
             }
           }}
           // Lock to this lab day's cohort + date so a single-lab
