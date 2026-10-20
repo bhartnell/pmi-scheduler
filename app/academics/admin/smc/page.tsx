@@ -327,7 +327,7 @@ export default function SmcAdminPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link
               href="/academics"
@@ -376,7 +376,7 @@ export default function SmcAdminPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-4">
+      <main className="max-w-screen-2xl mx-auto px-4 py-6 space-y-4">
         {/* Summary */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard label="Total" value={counts.total} />

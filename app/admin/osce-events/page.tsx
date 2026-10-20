@@ -253,7 +253,7 @@ export default function OsceEventsListPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-screen-2xl mx-auto">
       <Breadcrumbs className="mb-2" />
 
       {/* Header */}

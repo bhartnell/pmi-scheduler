@@ -285,7 +285,7 @@ export default function SchedulerReportsPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="max-w-screen-2xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Link href="/" className="flex items-center gap-2 text-blue-900 dark:text-blue-400 hover:text-blue-700">
@@ -318,7 +318,7 @@ export default function SchedulerReportsPage() {
       </header>
 
       {/* Main Content */}
-      <main id="main-content" className="max-w-7xl mx-auto px-4 py-6">
+      <main id="main-content" className="max-w-screen-2xl mx-auto px-4 py-6">
         {/* Back link */}
         <Link
           href="/scheduling"

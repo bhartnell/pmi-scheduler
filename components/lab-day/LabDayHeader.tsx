@@ -74,7 +74,7 @@ export default function LabDayHeader({
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Breadcrumbs
           entityTitle={labDay.title || `${labDay.cohort.program.abbreviation} Group ${formatCohortNumber(labDay.cohort.cohort_number)}`}
           className="mb-3"

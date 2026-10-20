@@ -264,7 +264,7 @@ export default function ClinicalDashboardPage() {
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="max-w-screen-2xl mx-auto px-4 py-6">
           <Breadcrumbs className="mb-2" />
           <div className="flex items-center gap-3">
             <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
@@ -278,7 +278,7 @@ export default function ClinicalDashboardPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
+      <main className="max-w-screen-2xl mx-auto px-4 py-8">
         {/* Hospital Visit Log — fast, mobile-friendly quick access. Field
             exception to desktop-first (CLAUDE.md UI Layout Rule): this is
             the one action instructors realistically do FROM a phone while

@@ -20,7 +20,7 @@ export default function LabHeader({ breadcrumbs, title, actions, entityTitle }: 
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm">
-      <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="max-w-screen-2xl mx-auto px-4 py-4">
         {/* Top row - Logo and Auth */}
         <div className="flex items-center justify-between mb-4">
           {/* Logo/Home Link */}

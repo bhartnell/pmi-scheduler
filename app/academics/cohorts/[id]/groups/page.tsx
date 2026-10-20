@@ -474,7 +474,7 @@ export default function LabGroupsPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="max-w-screen-2xl mx-auto px-4 py-4">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
             <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
               <Home className="w-3 h-3" />
@@ -564,7 +564,7 @@ export default function LabGroupsPage() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 print:p-0 print:max-w-none">
+      <main className="max-w-screen-2xl mx-auto px-4 py-6 print:p-0 print:max-w-none">
         {/* Print Header - Only visible when printing */}
         <div className="hidden print:block mb-6">
           <div className="flex justify-between items-start border-b-2 border-gray-800 pb-3">

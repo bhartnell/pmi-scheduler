@@ -341,7 +341,7 @@ export default function HomePage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         {/* Header Skeleton */}
         <header className="bg-white dark:bg-gray-800 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-full animate-pulse" />
               <div className="space-y-2">
@@ -357,19 +357,19 @@ export default function HomePage() {
         </header>
 
         {/* Main Content Skeleton */}
-        <main className="max-w-7xl mx-auto px-4 py-12">
+        <main className="max-w-screen-2xl mx-auto px-4 py-12">
           <div className="text-center mb-8">
             <div className="h-8 w-64 bg-gray-200 dark:bg-gray-700 rounded mx-auto mb-2 animate-pulse" />
             <div className="h-4 w-48 bg-gray-200 dark:bg-gray-700 rounded mx-auto animate-pulse" />
           </div>
 
           {/* Stats skeleton */}
-          <div className="mb-8 max-w-7xl mx-auto">
+          <div className="mb-8 max-w-screen-2xl mx-auto">
             <SkeletonStats rows={4} />
           </div>
 
           {/* Card grid skeleton */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 max-w-7xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 max-w-screen-2xl mx-auto">
             <SkeletonCard rows={6} />
           </div>
         </main>
@@ -429,7 +429,7 @@ export default function HomePage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
         <header className="bg-white dark:bg-gray-800 shadow-sm">
-          <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
                 <Stethoscope className="w-5 h-5 text-white" />
@@ -449,7 +449,7 @@ export default function HomePage() {
             </div>
           </div>
         </header>
-        <main className="max-w-7xl mx-auto px-4 py-12">
+        <main className="max-w-screen-2xl mx-auto px-4 py-12">
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome, {session.user?.name?.split(' ')[0] || 'Guest'}!</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">You have guest-level access.</p>
@@ -487,7 +487,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center" aria-hidden="true">
               <Stethoscope className="w-5 h-5 text-white" />
@@ -538,7 +538,7 @@ export default function HomePage() {
       </header>
 
       {/* Main Content */}
-      <main id="main-content" className="max-w-7xl mx-auto px-4 py-12">
+      <main id="main-content" className="max-w-screen-2xl mx-auto px-4 py-12">
         <PageErrorBoundary>
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome, {session.user?.name?.split(' ')[0] || 'User'}!</h1>
@@ -559,7 +559,7 @@ export default function HomePage() {
         {/* Customizable Dashboard Widgets - First thing instructors see */}
         {preferences && (preferences.dashboard_widgets.length > 0 || editMode) && (
           <ErrorBoundary>
-          <div className="mb-10 max-w-7xl mx-auto">
+          <div className="mb-10 max-w-screen-2xl mx-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-1">
                 Your Dashboard
@@ -662,7 +662,7 @@ export default function HomePage() {
 
         {/* Quick Action - Site Visit Check-In (for clinical users) */}
         {currentUser && effectiveRole && canAccessClinical(effectiveRole) && (
-          <div className="mb-8 max-w-7xl mx-auto">
+          <div className="mb-8 max-w-screen-2xl mx-auto">
             <Link
               href="/clinical/site-visits"
               className="block bg-gradient-to-r from-cyan-500 to-teal-500 dark:from-cyan-600 dark:to-teal-600 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] p-6 group"
@@ -689,7 +689,7 @@ export default function HomePage() {
         {/* Main Navigation Cards */}
         <ErrorBoundary>
         <nav aria-label="Main navigation">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-screen-2xl mx-auto">
           {/* AHA Hub Card - instructor+ only. Was a direct shortcut to just
               /labs/acls-hub; repointed to /labs/aha-hub so PALS is reachable
               the same way ACLS always was (Task Handoff Queue, 2026-07-15:
@@ -1146,7 +1146,7 @@ export default function HomePage() {
 
         {/* PMI Operations Hub - instructor+ only */}
         {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
-          <section className="mt-10 max-w-7xl mx-auto">
+          <section className="mt-10 max-w-screen-2xl mx-auto">
             <div className="mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white">PMI Operations Hub</h3>
               <p className="text-sm text-gray-500 dark:text-gray-400">

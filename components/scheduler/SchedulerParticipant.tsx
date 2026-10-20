@@ -148,7 +148,7 @@ export default function SchedulerParticipant({ pollData, onComplete }: Scheduler
 
   // Participant Form View
   return (
-    <div className="max-w-7xl mx-auto px-4" onMouseUp={handleMouseUp} onTouchEnd={handleMouseUp}>
+    <div className="max-w-screen-2xl mx-auto px-4" onMouseUp={handleMouseUp} onTouchEnd={handleMouseUp}>
       <div className="bg-white rounded-lg shadow-lg p-4 md:p-6 mb-4 md:mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-gray-900 mb-2">{pollData?.title}</h1>
         {pollData?.description && <p className="text-gray-700 text-sm md:text-base">{pollData.description}</p>}

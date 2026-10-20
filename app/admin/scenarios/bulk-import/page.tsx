@@ -444,7 +444,7 @@ export default function BulkImportPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="max-w-screen-2xl mx-auto px-4 py-4">
           <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -470,7 +470,7 @@ export default function BulkImportPage() {
         </div>
       </div>
 
-      <main id="main-content" className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <main id="main-content" className="max-w-screen-2xl mx-auto px-4 py-6 space-y-6">
         {/* Step indicator */}
         <div className="flex items-center gap-4">
           {(['upload', 'preview', 'results'] as Step[]).map((s, i) => (

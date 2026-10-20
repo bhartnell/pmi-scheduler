@@ -408,7 +408,7 @@ export default function CaseEditor({ existingCase, mode }: CaseEditorProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6">
+      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6">
         <Breadcrumbs entityTitle={existingCase?.title} className="mb-4" />
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">

@@ -56,7 +56,7 @@ export default function ModuleFlagsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-6">
+    <div className="max-w-screen-2xl mx-auto p-6">
       <nav className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 mb-4">
         <Link href="/" className="hover:underline"><Home className="w-4 h-4" /></Link>
         <ChevronRight className="w-4 h-4" />

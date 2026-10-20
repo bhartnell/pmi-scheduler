@@ -352,7 +352,7 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
     : null;
 
   return (
-    <div className="max-w-7xl mx-auto px-4">
+    <div className="max-w-screen-2xl mx-auto px-4">
       {/* Scheduled banner — visible once an organiser has used the
           Create Meeting flow. Pulls poll.scheduled_at +
           poll.google_event_link directly. */}

@@ -222,7 +222,7 @@ export default function SemestersAdminPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <header className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-screen-2xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
             <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400">
               <Home className="w-4 h-4" />
@@ -238,7 +238,7 @@ export default function SemestersAdminPage() {
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-6 py-8">
+      <main className="max-w-screen-2xl mx-auto px-6 py-8">
         <div className="mb-6 flex items-center gap-3">
           <Calendar className="w-6 h-6 text-blue-600 dark:text-blue-400" />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
