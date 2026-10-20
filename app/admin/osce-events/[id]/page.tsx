@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import AgencyPreferencesPanel from '@/components/osce/AgencyPreferencesPanel';
+import CalendarSyncPanel from '@/components/osce/CalendarSyncPanel';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -904,6 +905,8 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
           {inviteResult.message}
         </div>
       )}
+
+      <CalendarSyncPanel eventId={eventId} refreshKey={observers.length} />
 
       {/* Test mode section (only for draft events) */}
       {event.status === 'draft' && (
