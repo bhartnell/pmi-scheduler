@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
-// GET /api/adv-cert/record-flags?cohortId=...
+// GET /api/adv-cert/record-flags?cohortId=...[&course=acls|pals]
 // Read-only. Lists megacode attempts for a cohort whose record is INCOMPLETE
 // (overall set, a segment unmarked) or CONTRADICTORY (overall pass, a segment
 // failed). Used to offer resolve-now / proceed-anyway before an AHA export.
@@ -16,8 +16,10 @@ export async function GET(request: NextRequest) {
   }
   try {
     const supabase = getSupabaseAdmin();
-    const { data: days, error: dErr } = await supabase
-      .from('lab_days').select('id, date').eq('cohort_id', cohortId);
+    const course = request.nextUrl.searchParams.get('course');
+    let daysQuery = supabase.from('lab_days').select('id, date').eq('cohort_id', cohortId);
+    if (course === 'acls' || course === 'pals') daysQuery = daysQuery.eq('cert_course', course);
+    const { data: days, error: dErr } = await daysQuery;
     if (dErr) throw dErr;
     const dayIds = (days || []).map((d) => d.id);
     if (!dayIds.length) return NextResponse.json({ success: true, flagged: [] });

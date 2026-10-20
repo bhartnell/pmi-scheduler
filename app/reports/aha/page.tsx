@@ -31,6 +31,9 @@ export default function AhaExportPage() {
   const [template, setTemplate] = useState('megacode');
   const [instructorId, setInstructorId] = useState('');
   const [grouping, setGrouping] = useState<'student' | 'section'>('student');
+  const [course, setCourse] = useState<'acls' | 'pals'>('acls');
+  const courseLabel = course.toUpperCase();
+  const hubHref = course === 'pals' ? '/labs/pals-hub' : '/labs/acls-hub/board';
 
   useEffect(() => {
     fetch('/api/reports/aha/options')
@@ -52,7 +55,7 @@ export default function AhaExportPage() {
   async function withRecordCheck(action: () => void) {
     if (!cohortId) return toast.error('Pick a cohort');
     try {
-      const d = await (await fetch(`/api/adv-cert/record-flags?cohortId=${cohortId}`)).json();
+      const d = await (await fetch(`/api/adv-cert/record-flags?cohortId=${cohortId}&course=${course}`)).json();
       if (d.success && d.flagged?.length) { setFlagged(d.flagged); setPendingAction(() => action); return; }
     } catch { /* proceed */ }
     action();
@@ -60,7 +63,7 @@ export default function AhaExportPage() {
 
   function open(print: boolean) {
     if (!cohortId) return toast.error('Pick a cohort');
-    const p = new URLSearchParams({ template, cohortId });
+    const p = new URLSearchParams({ template, cohortId, course });
     if (instructorId) p.set('instructorId', instructorId);
     if (print) p.set('print', '1');
     const url = `/api/reports/aha?${p.toString()}`;
@@ -70,7 +73,7 @@ export default function AhaExportPage() {
 
   function downloadZip() {
     if (!cohortId) return toast.error('Pick a cohort');
-    const p = new URLSearchParams({ cohortId, grouping });
+    const p = new URLSearchParams({ cohortId, grouping, course });
     if (instructorId) p.set('instructorId', instructorId);
     toast.success('Building ZIP… this can take ~30-60s for a full cohort.');
     window.location.href = `/api/reports/aha/zip?${p.toString()}`;
@@ -95,7 +98,15 @@ export default function AhaExportPage() {
       </p>
 
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 p-5">
-        <div className="grid grid-cols-3 gap-4 max-md:grid-cols-1">
+        <div className="grid grid-cols-4 gap-4 max-md:grid-cols-1">
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Course</label>
+            <select value={course} onChange={(e) => setCourse(e.target.value as 'acls' | 'pals')}
+              className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
+              <option value="acls">ACLS</option>
+              <option value="pals">PALS</option>
+            </select>
+          </div>
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Cohort</label>
             <select value={cohortId} onChange={(e) => setCohortId(e.target.value)}
@@ -166,7 +177,7 @@ export default function AhaExportPage() {
         <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-start gap-1.5">
           <Info className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
           {grouping === 'student'
-            ? 'Files: LastName_FirstName_ACLS_Results.pdf (megacode + airway + adult BLS + infant CPR combined). Excused/no-attempt students are omitted.'
+            ? `Files: LastName_FirstName_${courseLabel}_Results.pdf (megacode + airway + adult BLS + infant CPR combined). Excused/no-attempt students are omitted.`
             : 'Files: one PDF per form type (all students).'}
         </p>
         <div className="mt-4">
@@ -191,7 +202,7 @@ export default function AhaExportPage() {
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
               Incomplete = result set but sections unmarked. Contradictory = overall pass with a failed section.
-              Resolve them on the ACLS hub, or export anyway.
+              Resolve them on the {courseLabel} hub, or export anyway.
             </p>
             <ul className="mt-3 divide-y divide-gray-200 dark:divide-gray-700 text-sm">
               {flagged.map((f) => (
@@ -204,7 +215,7 @@ export default function AhaExportPage() {
               ))}
             </ul>
             <div className="mt-4 flex flex-wrap gap-2 justify-end">
-              <Link href="/labs/acls-hub/board" className="px-4 py-2 min-h-[44px] inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 text-sm">Resolve on ACLS hub</Link>
+              <Link href={hubHref} className="px-4 py-2 min-h-[44px] inline-flex items-center rounded-md border border-gray-300 dark:border-gray-600 text-sm">Resolve on {courseLabel} hub</Link>
               <button type="button" onClick={() => { const a = pendingAction; setFlagged(null); setPendingAction(null); a?.(); }}
                 className="px-4 py-2 min-h-[44px] rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium">Export anyway</button>
               <button type="button" onClick={() => { setFlagged(null); setPendingAction(null); }}
