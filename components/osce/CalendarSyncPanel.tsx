@@ -23,7 +23,7 @@ const STATE_STYLE = {
 /** Admin controls for the OSCE host-calendar events and evaluator invites (OSCE CAL 4/4). Per event, idempotent. */
 export default function CalendarSyncPanel({ eventId, refreshKey }: { eventId: string; refreshKey?: number }) {
   const [status, setStatus] = useState<Status | null>(null);
-  const [busy, setBusy] = useState<'create_events' | 'send_pending' | null>(null);
+  const [busy, setBusy] = useState<'create_events' | 'send_pending' | `resend:${string}` | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const load = useCallback(async () => {
@@ -42,14 +42,14 @@ export default function CalendarSyncPanel({ eventId, refreshKey }: { eventId: st
     return () => { live = false; };
   }, [eventId, refreshKey]);
 
-  const run = async (action: 'create_events' | 'send_pending') => {
-    setBusy(action);
+  const run = async (action: 'create_events' | 'send_pending' | 'resend', observerId?: string) => {
+    setBusy(action === 'resend' ? `resend:${observerId}` : action);
     setMessage(null);
     try {
       const res = await fetch(`/api/osce/events/${eventId}/calendar-sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, observer_id: observerId }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
@@ -134,7 +134,19 @@ export default function CalendarSyncPanel({ eventId, refreshKey }: { eventId: st
               <ul className="space-y-2">
                 {status.registrants.map((r) => (
                   <li key={r.observer_id}>
-                    <div className="font-medium text-gray-800 dark:text-gray-200">{r.name}</div>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-gray-800 dark:text-gray-200">{r.name}</span>
+                      {r.blocks.some((b) => b.state !== 'sent') && (
+                        <button
+                          onClick={() => run('resend', r.observer_id)}
+                          disabled={busy !== null}
+                          className="inline-flex items-center gap-1 px-3 py-2 min-h-[44px] border border-blue-600 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {busy === `resend:${r.observer_id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                          Resend
+                        </button>
+                      )}
+                    </div>
                     <ul className="ml-3">
                       {r.blocks.map((b) => (
                         <li key={b.block_id} className={`flex items-start gap-1 ${STATE_STYLE[b.state]}`}>

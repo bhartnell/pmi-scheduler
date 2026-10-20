@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { loadAgencyAliases } from '@/lib/agency-aliases';
 import { validPreferredAgency, buildPreferenceNote } from '@/lib/agency-match';
 import { inviteObserverToBlocks } from '@/lib/osce-invites';
+import { sendOsceSignupConfirmation } from '@/lib/osce-confirmation';
 
 // POST - Public: register as an OSCE observer for an event (by slug)
 export async function POST(
@@ -198,6 +199,13 @@ export async function POST(
     // Add them as a guest on each chosen block's calendar event (Google sends
     // the invite). Failures are recorded on the signup rows, never block signup.
     await inviteObserverToBlocks(supabase, { observerId: observer.id, blockIds: block_ids });
+
+    // Plain-email confirmation in addition to the invite; best effort, never blocks signup.
+    await sendOsceSignupConfirmation(supabase, {
+      observerId: observer.id,
+      blockIds: block_ids,
+      baseUrl: process.env.NEXTAUTH_URL || 'https://www.pmiparamedic.tools',
+    });
 
     return NextResponse.json({
       success: true,
