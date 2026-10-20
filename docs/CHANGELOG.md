@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+osce-cal-1-4 | OSCE CAL 1/4: osce_time_blocks.google_event_id (migration 20261021_osce_time_blocks_google_event_id.sql) + lib/osce-calendar.ts per-block event builder/creator (not wired to routes yet) + tests/osce-calendar.test.ts
 trim-2-5 | TRIM 2/5: 15 route-prefix park flags (migration 20261021_trim_park_set.sql); labs/reports/scheduling hubs, student nav and two dashboard widgets use ParkAwareLink so parked links disappear
 
 ## 2026-10-20
