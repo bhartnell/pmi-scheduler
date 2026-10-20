@@ -1058,7 +1058,7 @@ export default function LabDayPage() {
           day layout. Available Instructors sits above Skill Coverage
           (staffing is the more time-critical planning question). */}
       <aside
-        className="hidden xl:block fixed right-4 top-24 w-80 z-20 space-y-4 max-h-[calc(100vh-6rem)] overflow-y-auto"
+        className="hidden xl:block fixed right-4 top-24 w-80 z-20 space-y-4 max-h-[calc(100vh-6rem)] overflow-y-auto overflow-x-hidden break-words"
         aria-label="Lab day staffing and skill coverage reference"
       >
         <AvailableInstructorsSection instructorAvailability={instructorAvailability} loading={instructorAvailabilityLoading} />

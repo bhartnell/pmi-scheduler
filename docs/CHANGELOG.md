@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-10-20
+
+lab-day-header-squeeze | Lab day page header: breadcrumb row, then title/date (no mid-phrase wrap) + Start Timer/Timer Display/Results, rest in More menu, 44px targets; calendar availability fetch times out at 15s; floating right rail no horizontal scrollbar (card 3ff5cd1c)
+
 ## 2026-10-19
 
 lab-grade-followup-333 | Lab scenario grader: Sheet size control off by default (prop), two panes at md so browser zoom keeps both, scoring pane bottom padding clears the floating Save bar, em dashes removed from Save labels (card 3fe5cd1c)
