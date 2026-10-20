@@ -33,7 +33,8 @@ import {
   Award,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { isStudent } from '@/lib/permissions';
+import { isStudent, canAccessAdmin } from '@/lib/permissions';
+import { useRolePreview } from '@/components/RolePreviewProvider';
 import ConsentGate from '@/components/ConsentGate';
 
 interface StudentUser {
@@ -50,6 +51,7 @@ export default function StudentLayout({
 }) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const { previewRole } = useRolePreview();
   const [user, setUser] = useState<StudentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -71,8 +73,11 @@ export default function StudentLayout({
       const res = await fetch('/api/instructor/me');
       const data = await res.json();
       if (data.success && data.user) {
-        // Verify user is a student
-        if (!isStudent(data.user.role)) {
+        // Real students pass; admins may also enter while previewing as a
+        // student (the effective role, same as app/student/page.tsx).
+        // Server APIs still enforce the real role, so this is UI-only.
+        const previewingAsStudent = previewRole === 'student' && canAccessAdmin(data.user.role);
+        if (!isStudent(data.user.role) && !previewingAsStudent) {
           // Non-students get redirected to main dashboard
           router.push('/');
           return;
