@@ -1,15 +1,14 @@
 'use client';
 
 // Compression-fraction calculator for the megacode grading sheet.
-// Its own small floating panel (drag handle, remembered position), NOT part of the bottom-right dock.
+// Docked inline in the scoring pane header (above segment 1), collapsible; no drag, no floating layer.
 // Collapsed = the CCF % field alone (stations reading Laerdal Session Viewer); open = Pulseless,
 // Pause/Resume, ROSC and the live readout (stations running the manual timer).
 // Aid, never an authority: the parent owns the CCF value and may edit it freely;
 // this component only reports a calculated record via onChange. It never blocks a rotation.
 
-import { createPortal } from 'react-dom';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import {
   CcfEvent, CcfRecord, DEFAULT_PAUSE_THRESHOLD_SECONDS, fmtClock, longPauses, summarize, toRecord,
 } from '@/lib/ccf';
@@ -25,9 +24,7 @@ interface Props {
   onDevicePercent?: (percent: number | null) => void;
 }
 
-const POS_KEY = 'ccf-panel-pos';
 const COLLAPSED_KEY = 'ccf-panel-collapsed';
-type Pos = { x: number; y: number };
 
 export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAUSE_THRESHOLD_SECONDS, percent = null, onDevicePercent }: Props) {
   const [events, setEvents] = useState<CcfEvent[]>([]);
@@ -35,62 +32,18 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
   const [labels, setLabels] = useState<Record<number, string>>({});
   const [expanded, setExpanded] = useState(false);
 
-  // Collapsed choice and position are remembered per browser; neither touches the running
-  // timer state, which lives in `events`. Default position (null) is bottom-left, clear of the
-  // bottom-right dock and of the scoring sections.
-  const panelRef = useRef<HTMLDivElement>(null);
+  // Collapsed choice is remembered per browser; it never touches the running timer state,
+  // which lives in `events`.
   const [collapsed, setCollapsedState] = useState(false);
-  const [pos, setPos] = useState<Pos | null>(null);
   useEffect(() => {
     try {
       const c = localStorage.getItem(COLLAPSED_KEY);
       if (c !== null) setCollapsedState(c === '1');
-      // Phone width: the open panel cannot clear the bottom-right dock from the default
-      // position, so start collapsed until the user chooses otherwise (not persisted).
-      else if (window.innerWidth < 640) setCollapsedState(true);
-      const p = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
-      if (p && Number.isFinite(p.x) && Number.isFinite(p.y)) setPos(p);
     } catch { /* storage unavailable */ }
   }, []);
   const setCollapsed = (c: boolean) => {
     setCollapsedState(c);
     try { localStorage.setItem(COLLAPSED_KEY, c ? '1' : '0'); } catch { /* storage unavailable */ }
-  };
-
-  const clamp = useCallback((p: Pos): Pos => {
-    const r = panelRef.current?.getBoundingClientRect();
-    const w = r?.width ?? 0; const h = r?.height ?? 0;
-    return { x: Math.max(0, Math.min(p.x, window.innerWidth - w)), y: Math.max(0, Math.min(p.y, window.innerHeight - h)) };
-  }, []);
-  // Keep the panel on screen after a resize or when its size changes (collapse/expand/timeline).
-  useLayoutEffect(() => {
-    if (!pos) return;
-    const c = clamp(pos);
-    if (c.x !== pos.x || c.y !== pos.y) setPos(c);
-  }, [pos, collapsed, expanded, clamp]);
-  useEffect(() => {
-    const onResize = () => setPos((p) => (p ? clamp(p) : p));
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, [clamp]);
-
-  const drag = useRef<{ dx: number; dy: number } | null>(null);
-  const onHandleDown = (e: React.PointerEvent) => {
-    const r = panelRef.current?.getBoundingClientRect();
-    if (!r) return;
-    drag.current = { dx: e.clientX - r.left, dy: e.clientY - r.top };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-  const onHandleMove = (e: React.PointerEvent) => {
-    if (drag.current) setPos(clamp({ x: e.clientX - drag.current.dx, y: e.clientY - drag.current.dy }));
-  };
-  const onHandleUp = () => {
-    if (!drag.current) return;
-    drag.current = null;
-    setPos((p) => {
-      if (p) { try { localStorage.setItem(POS_KEY, JSON.stringify(p)); } catch { /* storage unavailable */ } }
-      return p;
-    });
   };
 
   const live = events.length > 0 && summarize(events, now).active;
@@ -119,15 +72,13 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
 
   const handle = (
     <div className="flex items-center gap-1">
-      <div role="button" aria-label="Drag to move the CCF panel" title="Drag to move"
-        onPointerDown={onHandleDown} onPointerMove={onHandleMove} onPointerUp={onHandleUp} onPointerCancel={onHandleUp}
-        className="flex flex-1 min-h-[44px] cursor-grab active:cursor-grabbing touch-none select-none items-center gap-1 rounded bg-gray-100 dark:bg-gray-700 px-2 text-sm font-medium text-gray-600 dark:text-gray-300">
-        <GripVertical className="h-4 w-4" aria-hidden /> CCF
+      <div className="flex flex-1 min-h-[44px] items-center rounded bg-gray-100 dark:bg-gray-700 px-2 text-sm font-medium text-gray-600 dark:text-gray-300">
+        CCF
       </div>
       <button type="button" aria-expanded={!collapsed} aria-label={collapsed ? 'Expand CCF timer' : 'Collapse CCF timer'}
         onClick={() => setCollapsed(!collapsed)}
         className="flex min-h-[44px] min-w-[44px] items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200">
-        {collapsed ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+        {collapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
       </button>
     </div>
   );
@@ -142,15 +93,9 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
     </label>
   );
 
-  // Portal to <body> so `fixed` is always relative to the viewport (a transformed ancestor would
-  // otherwise bound the panel to its column and leave the right edge unreachable).
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
   const panel = (
-      <div ref={panelRef} role="region" aria-label="Chest compression fraction"
-        style={pos ? { left: pos.x, top: pos.y } : { left: 12, bottom: 12 }}
-        className={`fixed z-40 max-w-[calc(100vw-1.5rem)] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 space-y-2 shadow-xl ${collapsed ? 'w-[17rem]' : 'w-[28rem]'}`}>
+      <div role="region" aria-label="Chest compression fraction"
+        className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 p-2 space-y-2 shadow-sm">
         {handle}
         {percentField}
         {!collapsed && (
@@ -224,7 +169,7 @@ export default function CcfTimer({ onChange, pauseThresholdSeconds = DEFAULT_PAU
 
   return (
     <>
-      {mounted ? createPortal(panel, document.body) : null}
+      {panel}
       <p className="text-xs text-gray-500">Only time between Pulseless and ROSC counts. Pressing Pulseless again after ROSC starts a second arrest window; the fractions are summed.</p>
     </>
   );
