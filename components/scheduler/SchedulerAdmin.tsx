@@ -366,7 +366,7 @@ export default function SchedulerAdmin({ pollData, onComplete }: SchedulerAdminP
             <p className="text-xs text-emerald-800 dark:text-emerald-200">
               {scheduledLabel}
               {pollData.scheduled_end_at
-                ? ` – ${new Date(pollData.scheduled_end_at).toLocaleTimeString(undefined, {
+                ? ` - ${new Date(pollData.scheduled_end_at).toLocaleTimeString(undefined, {
                     hour: 'numeric',
                     minute: 'numeric',
                   })}`

@@ -652,7 +652,7 @@ export default function CertificationsImportPage() {
                               key={h}
                               className="px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap max-w-[200px] overflow-hidden text-ellipsis"
                             >
-                              {row[h] || '—'}
+                              {row[h] || '-'}
                             </td>
                           ))}
                         </tr>
@@ -842,19 +842,19 @@ export default function CertificationsImportPage() {
                         {r.rowIndex}
                       </td>
                       <td className="px-3 py-2 text-gray-900 dark:text-white font-mono text-xs truncate max-w-[160px]">
-                        {r.email || <span className="text-red-500">—</span>}
+                        {r.email || <span className="text-red-500">-</span>}
                       </td>
                       <td className="px-3 py-2 text-gray-700 dark:text-gray-300 truncate max-w-[140px]">
-                        {r.cert_name || '—'}
+                        {r.cert_name || '-'}
                       </td>
                       <td className="px-3 py-2 text-gray-600 dark:text-gray-400 truncate max-w-[120px]">
-                        {r.cert_type || '—'}
+                        {r.cert_type || '-'}
                       </td>
                       <td className="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        {r.expiration_date || '—'}
+                        {r.expiration_date || '-'}
                       </td>
                       <td className="px-3 py-2 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                        {r.cert_number || '—'}
+                        {r.cert_number || '-'}
                       </td>
                       <td className="px-3 py-2">
                         {r.issues.length > 0 ? (

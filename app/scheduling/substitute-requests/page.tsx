@@ -113,7 +113,7 @@ function formatLabDayLabel(labDay: LabDay): string {
   const cohort = labDay.cohort?.cohort_number ? `Cohort ${labDay.cohort.cohort_number}` : '';
   const title = labDay.title ?? '';
   const parts = [date, program, cohort, title].filter(Boolean);
-  return parts.join(' — ');
+  return parts.join(' - ');
 }
 
 function formatRequestDate(isoStr: string): string {
@@ -639,7 +639,7 @@ export default function SubstituteRequestsPage() {
                             <span className="font-medium">Reason:</span> {req.reason}
                             {req.reason_details && (
                               <span className="text-gray-500 dark:text-gray-400 ml-1">
-                                — {req.reason_details}
+ - {req.reason_details}
                               </span>
                             )}
                           </span>
@@ -663,7 +663,7 @@ export default function SubstituteRequestsPage() {
                         {req.status === 'approved' && !req.covered_by && (
                           <div className="mt-2 flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
                             <Users className="w-4 h-4" />
-                            <span>Coverage needed — instructors have been notified</span>
+                            <span>Coverage needed - instructors have been notified</span>
                           </div>
                         )}
                       </div>

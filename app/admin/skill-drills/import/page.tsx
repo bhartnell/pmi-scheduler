@@ -223,7 +223,7 @@ export default function SkillDrillImportPage() {
                   <tr key={i} className="border-t border-gray-100 dark:border-gray-700">
                     <td className="px-4 py-2 font-medium text-gray-900 dark:text-white">{d.title}</td>
                     <td className="px-4 py-2 text-gray-700 dark:text-gray-300">{d.program}</td>
-                    <td className="px-4 py-2 text-gray-700 dark:text-gray-300">{d.semester ?? '—'}</td>
+                    <td className="px-4 py-2 text-gray-700 dark:text-gray-300">{d.semester ?? '-'}</td>
                     <td className="px-4 py-2">
                       {d.has_concept ? <CheckCircle2 className="w-4 h-4 text-green-600" /> : <AlertTriangle className="w-4 h-4 text-amber-500" />}
                     </td>
@@ -258,8 +258,8 @@ export default function SkillDrillImportPage() {
                     <li key={r.index} className="text-gray-700 dark:text-gray-300">
                       <span className="font-medium">{r.title}</span>{' '}
                       {r.error
-                        ? <span className="text-red-600 dark:text-red-400">— error: {r.error}</span>
-                        : <span className="text-green-700 dark:text-green-400">— {r.action}</span>}
+                        ? <span className="text-red-600 dark:text-red-400"> - error: {r.error}</span>
+                        : <span className="text-green-700 dark:text-green-400"> - {r.action}</span>}
                       {r.id && (
                         <Link href={`/labs/skill-drills/${r.id}`} className="ml-2 text-blue-600 dark:text-blue-400 hover:underline text-xs">
                           view →

@@ -333,7 +333,7 @@ export default function LabGroupsPage() {
       const failed = results.filter(r => !r.json?.success && r.status !== 404);
 
       if (stale.length > 0) {
-        alert('Some groups were deleted in another tab — refreshing now.');
+        alert('Some groups were deleted in another tab - refreshing now.');
         setHasChanges(false);
         await fetchData();
       } else if (failed.length > 0) {

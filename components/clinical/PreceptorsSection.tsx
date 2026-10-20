@@ -356,7 +356,7 @@ export default function PreceptorsSection({
                       {assignment.preceptor?.agency_name && (
                         <div className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 truncate">
                           {assignment.preceptor.agency_name}
-                          {assignment.preceptor.station && ` — ${assignment.preceptor.station}`}
+                          {assignment.preceptor.station && ` - ${assignment.preceptor.station}`}
                         </div>
                       )}
 

@@ -146,10 +146,10 @@ export default function StationCards({
                   • station.skill_sheet_url + instructions_url
                       (single legacy URL slots on lab_stations)
                   • stationSkillDocs (inherited from parent skill via
-                      skill_documents — same on every station that
+                      skill_documents - same on every station that
                       uses the skill)
                   • stationDocs (uploaded directly to THIS station via
-                      station_documents — added 2026-05-28 for ad-hoc
+                      station_documents - added 2026-05-28 for ad-hoc
                       one-day attachments). Differentiated by border
                       so instructors can tell what's canonical vs
                       day-specific. */}
@@ -232,7 +232,7 @@ export default function StationCards({
                 When station_type='skill_drill' and the station has
                 drill_ids set, render a link to each drill's reference
                 view at /labs/skill-drills/[id]. Per the brief, skill
-                drills do NOT get Platinum / pass-fail UI here — they
+                drills do NOT get Platinum / pass-fail UI here - they
                 surface the structured reference instead. */}
             {station.station_type === 'skill_drill' && Array.isArray(station.drill_ids) && station.drill_ids.length > 0 && (
               <div className="mb-3 print:hidden flex flex-wrap gap-1.5">
@@ -252,7 +252,7 @@ export default function StationCards({
 
             {/* OSCE Review Board pointer.
                 station_type='osce' stations (e.g. "S3 Week 14 - OSCE
-                Review Board") aren't scored here — the OSCE system
+                Review Board") aren't scored here - the OSCE system
                 (osce_assessments / osce_evaluator_scores, reached via
                 /admin/osce-events) owns evaluator scoring for these.
                 This is a non-intrusive banner only: no scoring UI on
@@ -260,7 +260,7 @@ export default function StationCards({
             {station.station_type === 'osce' && (
               <div className="mb-3 print:hidden flex items-center gap-2 px-3 py-2 text-sm bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-amber-800 dark:text-amber-300">
                 <ClipboardCheck className="w-4 h-4 flex-shrink-0" />
-                <span className="flex-1">OSCE Review Board — scored in the OSCE system</span>
+                <span className="flex-1">OSCE Review Board - scored in the OSCE system</span>
                 <Link
                   href="/admin/osce-results"
                   className="inline-flex items-center gap-1 font-medium underline hover:no-underline flex-shrink-0"

@@ -333,7 +333,7 @@ const FLAGS: FlagDef[] = [
     key: 'feature.lab_day_chat',
     label: 'Lab Day Chat',
     description:
-      'Realtime in-page chat on the lab day view. Off by default after the 2026-05-26 perf incident — only enable when needed (e.g. NREMT testing days where coordinators want the chat panel up).',
+      'Realtime in-page chat on the lab day view. Off by default after the 2026-05-26 perf incident - only enable when needed (e.g. NREMT testing days where coordinators want the chat panel up).',
   },
 ];
 

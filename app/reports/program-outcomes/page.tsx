@@ -71,12 +71,12 @@ interface FormState {
 // ─────────────────────────────────────────
 
 function fmtPct(val: number | null): string {
-  if (val === null || val === undefined) return '—';
+  if (val === null || val === undefined) return '-';
   return `${val.toFixed(1)}%`;
 }
 
 function fmtMonths(val: number | null): string {
-  if (val === null || val === undefined) return '—';
+  if (val === null || val === undefined) return '-';
   return `${val.toFixed(1)} mo`;
 }
 
@@ -543,7 +543,7 @@ export default function ProgramOutcomesPage() {
   const handleSave = async () => {
     const year = parseInt(form.year, 10);
     if (!form.year || isNaN(year) || year < 2000 || year > 2100) {
-      setFormError('Please enter a valid year (2000–2100).');
+      setFormError('Please enter a valid year (2000-2100).');
       return;
     }
 
@@ -1027,7 +1027,7 @@ export default function ProgramOutcomesPage() {
                               {fmtMonths(outcome.avg_completion_months)}
                             </td>
                             <td className="px-4 py-3 text-gray-500 dark:text-gray-400 text-xs max-w-[200px] truncate hidden md:table-cell">
-                              {outcome.notes || '—'}
+                              {outcome.notes || '-'}
                             </td>
                             {isAdmin && (
                               <td className="px-4 py-3 text-right">
@@ -1077,11 +1077,11 @@ export default function ProgramOutcomesPage() {
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-yellow-500" />
-                  <span className="text-gray-600 dark:text-gray-400">75–89% (Good)</span>
+                  <span className="text-gray-600 dark:text-gray-400">75-89% (Good)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-orange-500" />
-                  <span className="text-gray-600 dark:text-gray-400">60–74% (Needs Improvement)</span>
+                  <span className="text-gray-600 dark:text-gray-400">60-74% (Needs Improvement)</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <div className="w-3 h-3 rounded-full bg-red-500" />

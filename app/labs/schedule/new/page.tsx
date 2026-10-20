@@ -1647,7 +1647,7 @@ function NewLabDayPageContent() {
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                                 {dateFormatted}
-                                {suggestion.title && ` — ${suggestion.title}`}
+                                {suggestion.title && ` - ${suggestion.title}`}
                               </div>
                             </div>
                           </div>
@@ -2216,7 +2216,7 @@ function NewLabDayPageContent() {
 
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {(station.drill_ids || []).length === 0
-                            ? 'No drills selected — station will be open drill time.'
+                            ? 'No drills selected - station will be open drill time.'
                             : `${(station.drill_ids || []).length} drill${(station.drill_ids || []).length !== 1 ? 's' : ''} selected.`}
                         </p>
 
@@ -2601,7 +2601,7 @@ function NewLabDayPageContent() {
 
         {/* Skill Coverage — inline on small/medium screens. Lab-planning
             reference (skills + scenarios the cohort has practiced this
-            semester). Not a student tracker — replaces the manual Google
+            semester). Not a student tracker - replaces the manual Google
             Doc the user was maintaining. */}
         <div className="xl:hidden">
           <SkillCoveragePanel

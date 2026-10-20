@@ -185,7 +185,7 @@ export default function LabDayRolesSection({
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400">Instructor</label>
                 {instructorAvailability.length > 0 && (
-                  <span className="text-[10px] text-gray-500 dark:text-gray-400" title="Conflicts and unsubmitted availability are tagged, not hidden — use your judgment.">
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400" title="Conflicts and unsubmitted availability are tagged, not hidden - use your judgment.">
                     All instructors shown; conflicts tagged
                   </span>
                 )}

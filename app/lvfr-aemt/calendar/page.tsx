@@ -286,7 +286,7 @@ export default function LVFRCalendarPage() {
                     Course Calendar
                   </h1>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
-                    LVFR AEMT — 30 instruction days
+                    LVFR AEMT - 30 instruction days
                   </p>
                 </div>
               </div>
@@ -345,8 +345,8 @@ export default function LVFRCalendarPage() {
             </div>
             <p className="mt-1 text-sm text-blue-600 dark:text-blue-400">
               {nextDay.title || nextDay.chapters_covered?.join(', ') || 'No details'}
-              {nextDay.has_lab && ` — LAB: ${nextDay.lab_name || 'Lab Session'}`}
-              {nextDay.has_exam && ` — EXAM: ${nextDay.exam_name || 'Exam'}`}
+              {nextDay.has_lab && ` - LAB: ${nextDay.lab_name || 'Lab Session'}`}
+              {nextDay.has_exam && ` - EXAM: ${nextDay.exam_name || 'Exam'}`}
             </p>
           </div>
         )}
@@ -445,7 +445,7 @@ export default function LVFRCalendarPage() {
               <div className="rounded-xl border border-blue-200 bg-white dark:border-blue-800 dark:bg-gray-800 overflow-hidden">
                 <div className="flex items-center justify-between border-b border-gray-200 px-4 py-3 dark:border-gray-700">
                   <h3 className="font-semibold text-gray-900 dark:text-white">
-                    Day {selectedCalDay.day_number} — {selectedCalDay.title || selectedCalDay.chapters_covered?.join(', ') || 'No title'}
+                    Day {selectedCalDay.day_number} - {selectedCalDay.title || selectedCalDay.chapters_covered?.join(', ') || 'No title'}
                   </h3>
                   <button onClick={() => setSelectedCalDay(null)} className="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
                     <X className="h-4 w-4 text-gray-400" />

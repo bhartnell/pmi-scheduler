@@ -45,7 +45,7 @@ function ProctorEssayModal({
           </ProctorSection>
 
           {/* Skill-specific essay */}
-          <ProctorSection title={`${entry.skillName} — Proctor Essay`} defaultCollapsed={false}>
+          <ProctorSection title={`${entry.skillName} - Proctor Essay`} defaultCollapsed={false}>
             <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-line leading-relaxed">
               {entry.proctorEssay}
             </p>
@@ -136,7 +136,7 @@ function PrepTimer({
           onClick={onSkip}
           className="px-4 py-2.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline min-h-[44px]"
         >
-          Candidate is prepared — skip
+          Candidate is prepared - skip
         </button>
       </div>
     );
@@ -155,7 +155,7 @@ function PrepTimer({
         onClick={() => { setRemaining(0); onSkip(); }}
         className="px-3 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 underline min-h-[44px]"
       >
-        &ldquo;I&rsquo;m prepared&rdquo; — skip
+        &ldquo;I&rsquo;m prepared&rdquo; - skip
       </button>
     </div>
   );
@@ -368,7 +368,7 @@ function MultiPartContent({
               className="mt-2 flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium min-h-[44px]"
             >
               <Play className="w-4 h-4" />
-              Candidate Ready — Continue Reading
+              Candidate Ready - Continue Reading
             </button>
           )}
         </div>

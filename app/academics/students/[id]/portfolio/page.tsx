@@ -234,7 +234,7 @@ function GradeBadge({ grade }: { grade: string }) {
 }
 
 function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   try {
     return parseDateSafe(dateStr).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -441,7 +441,7 @@ export default function StudentPortfolioPage() {
               </div>
               <div>
                 <p className="text-xs font-medium text-gray-500 dark:text-gray-400 print:text-gray-500 uppercase tracking-wide">Enrollment Status</p>
-                <p className="text-base capitalize text-gray-900 dark:text-white print:text-gray-900">{student.status || '—'}</p>
+                <p className="text-base capitalize text-gray-900 dark:text-white print:text-gray-900">{student.status || '-'}</p>
               </div>
               {cohortData?.start_date && (
                 <div>
@@ -482,13 +482,13 @@ export default function StudentPortfolioPage() {
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-green-600 dark:text-green-400 print:text-green-600">
-                {attendanceRate !== null ? `${attendanceRate}%` : '—'}
+                {attendanceRate !== null ? `${attendanceRate}%` : '-'}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 print:text-gray-500 mt-0.5">Attendance Rate</p>
             </div>
             <div className="text-center">
               <p className="text-2xl font-bold text-teal-600 dark:text-teal-400 print:text-teal-600">
-                {clinicalHours.totalHours > 0 ? `${clinicalHours.totalHours}h` : '—'}
+                {clinicalHours.totalHours > 0 ? `${clinicalHours.totalHours}h` : '-'}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 print:text-gray-500 mt-0.5">Clinical Hours</p>
             </div>
@@ -528,7 +528,7 @@ export default function StudentPortfolioPage() {
                         {skills.items.map(skill => (
                           <tr key={skill.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30 print:hover:bg-transparent">
                             <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-white print:text-gray-900">{skill.skill_name}</td>
-                            <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300 print:text-gray-600 capitalize">{skill.skill_category || '—'}</td>
+                            <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300 print:text-gray-600 capitalize">{skill.skill_category || '-'}</td>
                             <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300 print:text-gray-600 whitespace-nowrap">{formatDate(skill.signed_off_at)}</td>
                             <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300 print:text-gray-600">{skill.signed_off_by}</td>
                           </tr>
@@ -645,13 +645,13 @@ export default function StudentPortfolioPage() {
                             <td className="px-4 py-2.5 font-medium text-gray-900 dark:text-white print:text-gray-900">{s.scenario_title}</td>
                             <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300 print:text-gray-600 whitespace-nowrap">{formatDate(s.date)}</td>
                             <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300 print:text-gray-600">
-                              {s.week_number ? `Wk ${s.week_number} / Day ${s.day_number || '?'}` : '—'}
+                              {s.week_number ? `Wk ${s.week_number} / Day ${s.day_number || '?'}` : '-'}
                             </td>
                             <td className="px-4 py-2.5 text-center text-gray-900 dark:text-white print:text-gray-900">
-                              {s.score !== null ? `${s.score}/5` : '—'}
+                              {s.score !== null ? `${s.score}/5` : '-'}
                             </td>
                             <td className="px-4 py-2.5 text-center">
-                              {s.grade !== 'N/A' ? <GradeBadge grade={s.grade} /> : <span className="text-gray-400">—</span>}
+                              {s.grade !== 'N/A' ? <GradeBadge grade={s.grade} /> : <span className="text-gray-400">-</span>}
                             </td>
                             <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300 print:text-gray-600">{s.instructor}</td>
                           </tr>
@@ -721,7 +721,7 @@ export default function StudentPortfolioPage() {
                               <div key={item.label} className="bg-gray-50 dark:bg-gray-700/50 print:bg-gray-50 rounded p-2 text-center">
                                 <p className="text-xs text-gray-500 dark:text-gray-400 print:text-gray-500">{item.label}</p>
                                 <p className="font-semibold text-gray-900 dark:text-white print:text-gray-900">
-                                  {item.val !== null ? `${item.val}/3` : '—'}
+                                  {item.val !== null ? `${item.val}/3` : '-'}
                                 </p>
                               </div>
                             ))}
@@ -849,13 +849,13 @@ export default function StudentPortfolioPage() {
                               {formatDate(rec.lab_day_date)}
                             </td>
                             <td className="px-4 py-2.5 text-gray-600 dark:text-gray-300 print:text-gray-600">
-                              {rec.week_number ? `Wk ${rec.week_number} / Day ${rec.day_number || '?'}` : '—'}
+                              {rec.week_number ? `Wk ${rec.week_number} / Day ${rec.day_number || '?'}` : '-'}
                             </td>
                             <td className="px-4 py-2.5">
                               <StatusBadge status={rec.status} />
                             </td>
                             <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400 print:text-gray-500 text-xs">
-                              {rec.notes || '—'}
+                              {rec.notes || '-'}
                             </td>
                           </tr>
                         ))}

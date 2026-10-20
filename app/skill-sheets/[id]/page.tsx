@@ -1257,7 +1257,7 @@ function StepRow({ step, mode, mark, onCycleMark, onSetMark, noteExpanded, onTog
                       ? 'bg-green-500 text-white shadow-sm'
                       : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600'
                   }`}
-                  title={isComplete ? `Completed #${sequenceNumber} — tap to undo` : 'Mark as completed'}
+                  title={isComplete ? `Completed #${sequenceNumber} - tap to undo` : 'Mark as completed'}
                 >
                   <CheckCircle className="w-5 h-5" />
                 </button>

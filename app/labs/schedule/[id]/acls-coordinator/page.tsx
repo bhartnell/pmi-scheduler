@@ -31,7 +31,7 @@ interface Attempt {
   students?: { student_id: string }[];
 }
 
-const sname = (s?: { first_name: string; last_name: string } | null) => s ? `${s.first_name} ${s.last_name}` : '—';
+const sname = (s?: { first_name: string; last_name: string } | null) => s ? `${s.first_name} ${s.last_name}` : '-';
 
 export default function AclsCoordinatorPage() {
   const { data: session, status } = useSession();
@@ -160,7 +160,7 @@ export default function AclsCoordinatorPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ACLS Coordinator Tracker</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {day?.date}{day?.cohort?.cohort_number ? ` · Cohort ${day.cohort.cohort_number}` : ''}
-              {day?.is_adv_cert_testing ? ' · scored testing day' : ''} — stats & plan-state (not dispatch)
+              {day?.is_adv_cert_testing ? ' · scored testing day' : ''} - stats & plan-state (not dispatch)
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -192,7 +192,7 @@ export default function AclsCoordinatorPage() {
           const btn = 'inline-flex items-center gap-1 min-h-[44px] px-3 text-sm rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700';
           return (
             <section className="mb-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 print:hidden">
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Download className="w-4 h-4" /> Results export — whole cohort</h2>
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Download className="w-4 h-4" /> Results export - whole cohort</h2>
               <div className="flex flex-wrap items-center gap-2">
                 <a href={`/api/reports/aha?template=megacode&${q('&print=1')}`} target="_blank" rel="noreferrer" className={btn}><Printer className="w-4 h-4" /> Print megacode sheets</a>
                 <a href={`/api/reports/aha/zip?${q('&grouping=student')}`} className={btn}><FileArchive className="w-4 h-4" /> PDF zip (per student)</a>
@@ -212,7 +212,7 @@ export default function AclsCoordinatorPage() {
                   <a key={t} href={`/api/reports/aha?template=${t}&${q('&blank=1&print=1')}${blankGroup ? `&labGroupId=${blankGroup}` : ''}${day.date ? `&date=${String(day.date).slice(0, 10)}` : ''}${t === 'megacode' ? `&variant=${encodeURIComponent(blankVariant)}` : ''}`} target="_blank" rel="noreferrer" className={btn}><Printer className="w-4 h-4" /> Blank {label}</a>
                 ))}
               </div>
-              <p className="text-[11px] text-gray-400 mt-1">The zip can take 30–60s to build. Per-student print links are on each group member below.</p>
+              <p className="text-[11px] text-gray-400 mt-1">The zip can take 30-60s to build. Per-student print links are on each group member below.</p>
             </section>
           );
         })()}
@@ -238,7 +238,7 @@ export default function AclsCoordinatorPage() {
                     {g.name} ({g.members.length})
                     {gAttempts.length > 0 && (
                       <span className="font-normal">
-                        {'  — recorded: '}
+                        {' - recorded: '}
                         {gAttempts.map(a => `${a.overall_result.toUpperCase()} (TL ${sname(a.team_lead)})`).join(', ')}
                       </span>
                     )}
@@ -298,14 +298,14 @@ export default function AclsCoordinatorPage() {
 
             {/* Plan-state: who's teaching / where */}
             <section>
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><MapPin className="w-4 h-4" /> Stations — who&apos;s teaching</h2>
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><MapPin className="w-4 h-4" /> Stations - who&apos;s teaching</h2>
               {stations.length === 0 ? <p className="text-xs text-gray-400">No stations recorded.</p> : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                   {stations.map(st => (
                     <div key={st.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-xs">
                       <div className="font-medium text-gray-800 dark:text-gray-100">#{st.station_number} {st.room || st.custom_title || ''}</div>
                       {st.station_notes && <div className="text-gray-400">{st.station_notes}</div>}
-                      <div className="text-gray-500 dark:text-gray-400 mt-0.5">{st.instructor_name || '— unassigned —'}</div>
+                      <div className="text-gray-500 dark:text-gray-400 mt-0.5">{st.instructor_name || ' - unassigned - '}</div>
                       {(() => {
                         const full = fullLabDay?.stations?.find(x => x.id === st.id);
                         return full ? (
@@ -323,7 +323,7 @@ export default function AclsCoordinatorPage() {
 
             {/* Groups: status + what's next */}
             <section>
-              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Users className="w-4 h-4" /> Groups — status & what&apos;s next</h2>
+              <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1"><Users className="w-4 h-4" /> Groups - status & what&apos;s next</h2>
               <div className="grid grid-cols-4 max-xl:grid-cols-2 max-md:grid-cols-1 gap-2 items-start">
                 {groups.map(g => {
                   const gAttempts = attemptsByGroup.get(g.id) || [];

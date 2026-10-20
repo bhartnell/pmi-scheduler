@@ -88,7 +88,7 @@ export default function WikiArticlePage() {
       <div className="max-w-4xl mx-auto px-4 py-6">
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-sm text-red-700 dark:text-red-400">
-            {error}. It may have moved — try the{' '}
+            {error}. It may have moved - try the{' '}
             <Link href="/help/wiki" className="underline">
               Wiki index
             </Link>

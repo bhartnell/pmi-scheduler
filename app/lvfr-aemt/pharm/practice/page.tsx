@@ -47,9 +47,9 @@ interface ScoringResult {
 type PageState = 'setup' | 'quiz' | 'submitting' | 'results' | 'error';
 
 const LEVELS = [
-  { level: 1, label: 'Level 1 — Beginner', desc: '3 fields blanked per card', color: 'emerald' },
-  { level: 2, label: 'Level 2 — Intermediate', desc: '5 fields blanked per card', color: 'amber' },
-  { level: 3, label: 'Level 3 — Advanced', desc: '7+ fields blanked per card', color: 'red' },
+  { level: 1, label: 'Level 1 - Beginner', desc: '3 fields blanked per card', color: 'emerald' },
+  { level: 2, label: 'Level 2 - Intermediate', desc: '5 fields blanked per card', color: 'amber' },
+  { level: 3, label: 'Level 3 - Advanced', desc: '7+ fields blanked per card', color: 'red' },
 ] as const;
 
 function getBlanksForLevel(blanks: string[], level: number): string[] {
@@ -168,7 +168,7 @@ export default function LVFRPharmPracticePage() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-gray-900">LVFR Pharm Practice</h1>
-            <p className="text-xs text-gray-500">Unauthenticated — no login required</p>
+            <p className="text-xs text-gray-500">Unauthenticated - no login required</p>
           </div>
         </div>
       </div>
@@ -202,7 +202,7 @@ export default function LVFRPharmPracticePage() {
                   className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm text-gray-900 placeholder-gray-400 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
                   autoComplete="off"
                 />
-                <p className="text-xs text-gray-500 mt-1">Used to record results — ask your instructor what to enter.</p>
+                <p className="text-xs text-gray-500 mt-1">Used to record results - ask your instructor what to enter.</p>
               </div>
 
               <div>
@@ -359,7 +359,7 @@ function QuizCard({
         <div className="px-4 py-4 border-b border-gray-100">
           <h2 className="text-lg font-bold text-gray-900">{medication.generic_name}</h2>
           <p className="text-sm text-gray-500 mt-0.5">
-            Brand: {medication.brand_names?.join(', ') || '—'}
+            Brand: {medication.brand_names?.join(', ') || '-'}
           </p>
         </div>
 
@@ -380,7 +380,7 @@ function QuizCard({
                   />
                 ) : (
                   <p className="text-sm text-gray-700">
-                    {Array.isArray(value) ? value.join(', ') : String(value || '—')}
+                    {Array.isArray(value) ? value.join(', ') : String(value || '-')}
                   </p>
                 )}
               </div>
@@ -442,7 +442,7 @@ function ResultsView({
           {results.passed ? 'PASSED' : 'NEEDS REVIEW'}
         </div>
         <p className="text-sm text-gray-500 mt-1">
-          {studentName} — Level {difficulty} — 80% required to pass
+          {studentName} - Level {difficulty} - 80% required to pass
         </p>
         <p className="text-xs text-gray-400 mt-2">Your results have been recorded.</p>
       </div>

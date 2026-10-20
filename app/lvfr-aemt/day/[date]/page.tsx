@@ -108,7 +108,7 @@ function formatTimeLabel(label: string | null): string | null {
   const m = label.match(/^(\d{2})(\d{2})-(\d{2})(\d{2})$/);
   if (!m) return label;
   const fmt = (h: string, mm: string) => `${parseInt(h, 10)}:${mm}`;
-  return `${fmt(m[1], m[2])}–${fmt(m[3], m[4])}`;
+  return `${fmt(m[1], m[2])}-${fmt(m[3], m[4])}`;
 }
 
 // Google Drive content for the active LVFR cohort (Group 2 — July 2026 start).
@@ -418,7 +418,7 @@ export default function LVFRDayRunsheetPage() {
             {/* Action row */}
             <div className="flex items-center justify-between flex-wrap gap-2">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Standard day: <strong>7:30 – 11:30 AM</strong> · Lunch · <strong>12:30 – 3:30 PM</strong>
+                Standard day: <strong>7:30 - 11:30 AM</strong> · Lunch · <strong>12:30 - 3:30 PM</strong>
               </p>
               <div className="flex items-center gap-2 flex-wrap">
                 <a
@@ -426,7 +426,7 @@ export default function LVFRDayRunsheetPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium"
-                  title="Open the Google Drive Daily folder — per-day lesson plans & PowerPoints (Day 1–30)"
+                  title="Open the Google Drive Daily folder - per-day lesson plans & PowerPoints (Day 1-30)"
                 >
                   <FolderOpen className="w-3.5 h-3.5" />
                   Lesson plans &amp; slides
@@ -473,7 +473,7 @@ export default function LVFRDayRunsheetPage() {
                       label="Today's brief"
                       sublabel="Short synopsis of what today covers"
                       value={morning.brief}
-                      placeholder="What are we covering today? (1–2 lines for the team)"
+                      placeholder="What are we covering today? (1-2 lines for the team)"
                       accent="brief"
                       icon={Sparkles}
                       onSave={(v) => saveSessionField('morning', 'brief', v)}
@@ -486,7 +486,7 @@ export default function LVFRDayRunsheetPage() {
                   {/* Lunch banner between sessions */}
                   <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 flex items-center justify-center gap-2 text-sm text-amber-800 dark:text-amber-200">
                     <Coffee className="w-4 h-4" />
-                    <span><strong>Lunch</strong> · 11:30 AM – 12:30 PM</span>
+                    <span><strong>Lunch</strong> · 11:30 AM - 12:30 PM</span>
                   </div>
 
                   {afternoon && card(afternoon)}
@@ -496,7 +496,7 @@ export default function LVFRDayRunsheetPage() {
                   {afternoon && (
                     <DayTextField
                       label="Debrief"
-                      sublabel="How the day went — anything the next instructor/day should know"
+                      sublabel="How the day went - anything the next instructor/day should know"
                       value={afternoon.debrief}
                       placeholder="How did today go? What carried over, what to watch tomorrow?"
                       accent="debrief"
@@ -585,7 +585,7 @@ function SessionCard({
   const isMorning = session.session === 'morning';
   const Icon = isMorning ? Sun : Moon;
   const label = isMorning ? 'Morning Session' : 'Afternoon Session';
-  const time = isMorning ? '7:30 AM – 11:30 AM' : '12:30 PM – 3:30 PM';
+  const time = isMorning ? '7:30 AM - 11:30 AM' : '12:30 PM - 3:30 PM';
   const accent = isMorning
     ? 'from-amber-500 to-orange-500'
     : 'from-indigo-500 to-purple-600';
@@ -845,7 +845,7 @@ function AddItemRow({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             autoFocus
-            placeholder="e.g. Skills Practice — 12-Lead"
+            placeholder="e.g. Skills Practice - 12-Lead"
             className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
         </div>
@@ -895,7 +895,7 @@ function AddItemRow({
       {isActivity && (
         <div className="mt-2">
           <label className="block text-xs text-gray-600 dark:text-gray-300 mb-0.5">
-            Coverage notes <span className="text-gray-400">(optional — what was covered / outcome)</span>
+            Coverage notes <span className="text-gray-400">(optional - what was covered / outcome)</span>
           </label>
           <input
             type="text"
@@ -905,7 +905,7 @@ function AddItemRow({
             className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
           />
           <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-0.5">
-            Tier-2 activity — trackable checkbox, not counted in required coverage.
+            Tier-2 activity - trackable checkbox, not counted in required coverage.
           </p>
         </div>
       )}

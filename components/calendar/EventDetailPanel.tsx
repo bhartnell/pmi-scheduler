@@ -385,11 +385,11 @@ export default function EventDetailPanel({ event, open, onClose }: EventDetailPa
         <div className="border-t border-gray-200 dark:border-gray-700 px-5 py-3 space-y-2">
           {/* Open Lab Day.
               The link target order of preference:
-                1. labDayDetail.id — the resolved lab_day row (most reliable)
-                2. event.linked_lab_day_id — the FK on the event itself
+                1. labDayDetail.id - the resolved lab_day row (most reliable)
+                2. event.linked_lab_day_id - the FK on the event itself
                 3. (no link)
               We deliberately don't fall through to event.linked_url
-              anymore — that field can carry stale URLs from older
+              anymore - that field can carry stale URLs from older
               calendar event rows (deleted lab days, renamed routes)
               that 404'd silently when users clicked them. If we don't
               have a concrete lab_day id, we hide the button rather

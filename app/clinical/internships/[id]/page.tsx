@@ -699,7 +699,7 @@ export default function InternshipDetailPage() {
         const msg =
           (data as { error?: string }).error ||
           (res.status === 503
-            ? 'Service unavailable — retried once and still failed. Try again in a moment.'
+            ? 'Service unavailable - retried once and still failed. Try again in a moment.'
             : `Save failed (${res.status})`);
         console.error('Save failed:', msg, (data as { code?: string }).code);
         setSaveError(msg);
@@ -1541,7 +1541,7 @@ export default function InternshipDetailPage() {
         </div>
 
         {/* ─── Section 2: Summary cards row ────────────────────────────────
-            Three at-a-glance cards above the editable detail sections —
+            Three at-a-glance cards above the editable detail sections -
             "where are we?" snapshot. Each card links / scrolls to the
             full editable section below. Renders from the same formData
             the detail sections use; no extra fetches.
@@ -1742,7 +1742,7 @@ export default function InternshipDetailPage() {
               <div className="space-y-2">
                 {/* Agency picker only. Preceptor management was
                     consolidated into the standalone PreceptorsSection
-                    further down (2026-05-11) — the old inline picker
+                    further down (2026-05-11) - the old inline picker
                     duplicated that section's UI, surfaced a confusing
                     "Pre-migration" tag, and ran a separate stale-data
                     filter that masked preceptors users expected to see. */}
@@ -1801,8 +1801,8 @@ export default function InternshipDetailPage() {
                         className="px-2 py-1 text-sm border rounded bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
                       >
                         <option value="pre_internship">Pre-Internship</option>
-                        <option value="phase_1_mentorship">Phase 1 — Mentorship</option>
-                        <option value="phase_2_evaluation">Phase 2 — Evaluation</option>
+                        <option value="phase_1_mentorship">Phase 1 - Mentorship</option>
+                        <option value="phase_2_evaluation">Phase 2 - Evaluation</option>
                         <option value="extended">Extended</option>
                         <option value="completed">Completed</option>
                       </select>
@@ -1918,7 +1918,7 @@ export default function InternshipDetailPage() {
                     <span className="w-6 h-6 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center text-sm font-bold text-indigo-600 dark:text-indigo-400 flex-shrink-0">
                       1
                     </span>
-                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">Phase 1 — Mentorship</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">Phase 1 - Mentorship</h3>
                   </span>
                   <span className="flex items-center gap-2 flex-shrink-0">
                     <span className={`px-2 py-1 text-xs font-medium rounded ${
@@ -1986,7 +1986,7 @@ export default function InternshipDetailPage() {
                     <span className="w-6 h-6 bg-purple-100 dark:bg-purple-900/50 rounded-full flex items-center justify-center text-sm font-bold text-purple-600 dark:text-purple-400 flex-shrink-0">
                       2
                     </span>
-                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">Phase 2 — Evaluation</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white truncate">Phase 2 - Evaluation</h3>
                     {currentPhase === 'extended' && (
                       <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase rounded bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 flex-shrink-0">
                         Extended
@@ -2482,7 +2482,7 @@ export default function InternshipDetailPage() {
                     milestone. Distinct from cleared_for_nremt (step 3,
                     which means we approved them to test); this means
                     they passed and we have the cert on file. Simple
-                    boolean + auto-stamped date per the spec — no
+                    boolean + auto-stamped date per the spec - no
                     scheduling, no result detail. */}
                 <CloseoutStep
                   step={5}
@@ -2694,12 +2694,12 @@ export default function InternshipDetailPage() {
           is not sticky, so on long internship records the user loses
           visibility of unsaved edits as they scroll. This floating bar
           keeps the Save action accessible and makes unsaved state
-          impossible to miss — complementing the beforeunload guard. */}
+          impossible to miss - complementing the beforeunload guard. */}
       {/* Floating save banner — three visual states:
           • dirty + saving:  blue, "Saving..." spinner
           • dirty + error:   red, error message + Retry button
-          • dirty + idle:    amber pulse, "N unsaved change(s) — auto-saving in 1.5s" + manual Save button
-          • clean + recent:  green checkmark "Saved [time]" — fades after a bit
+          • dirty + idle:    amber pulse, "N unsaved change(s) - auto-saving in 1.5s" + manual Save button
+          • clean + recent:  green checkmark "Saved [time]" - fades after a bit
           z-50 puts it above modals so it's never obscured. */}
       {canEdit && (hasChanges || saving || saveError) && (
         <div
@@ -2735,8 +2735,8 @@ export default function InternshipDetailPage() {
               <AlertTriangle className="w-5 h-5 text-amber-600 dark:text-amber-300 flex-shrink-0" />
               <span className="text-sm font-medium">
                 {dirtyFields.size > 0
-                  ? `${dirtyFields.size} unsaved change${dirtyFields.size === 1 ? '' : 's'} — auto-saving…`
-                  : 'Unsaved changes — auto-saving…'}
+                  ? `${dirtyFields.size} unsaved change${dirtyFields.size === 1 ? '' : 's'} - auto-saving…`
+                  : 'Unsaved changes - auto-saving…'}
               </span>
               <button
                 onClick={() => handleSave()}
@@ -2890,7 +2890,7 @@ export default function InternshipDetailPage() {
                   }`}
                 >
                   {willBeComplete
-                    ? '✓ Will save as Complete — email, phone, agency, and credentials are all set.'
+                    ? '✓ Will save as Complete - email, phone, agency, and credentials are all set.'
                     : 'Missing for Complete: ' +
                       [
                         !newPreceptor.email.trim() && 'email',
@@ -2954,7 +2954,7 @@ interface MeetingRowProps {
   subLabel?: string;
   dateField: string;
   linkField: string;
-  pollIdField: string | null; // legacy Rally ID — null for pre-internship row
+  pollIdField: string | null; // legacy Rally ID - null for pre-internship row
   formData: any;
   canEdit: boolean;
   onChange: (field: string, value: any) => void;

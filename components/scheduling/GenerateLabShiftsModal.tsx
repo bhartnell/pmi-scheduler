@@ -185,7 +185,7 @@ export default function GenerateLabShiftsModal({
         <div className="p-5 space-y-4">
           <p className="text-xs text-gray-500 dark:text-gray-400">
             Creates one open shift per lab day in the selected range, linked to that lab day so the
-            existing part-timer signup flow just works. Re-running is safe — lab days that already
+            existing part-timer signup flow just works. Re-running is safe - lab days that already
             have a shift are skipped.
           </p>
 
@@ -323,7 +323,7 @@ export default function GenerateLabShiftsModal({
                     </span>
                     {p.start_time && p.end_time && (
                       <span className="text-xs text-gray-400 flex-shrink-0">
-                        {p.start_time.slice(0, 5)}–{p.end_time.slice(0, 5)}
+                        {p.start_time.slice(0, 5)}-{p.end_time.slice(0, 5)}
                       </span>
                     )}
                     {p.would_skip === 'already_has_shift' && (

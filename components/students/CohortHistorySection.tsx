@@ -132,7 +132,7 @@ const CohortHistorySection = forwardRef<CohortHistoryHandle, { studentId: string
                 <div className="flex flex-wrap items-center gap-2">
                   {/* Event-type chip — leads each row so the user
                       can scan the kind of transition first. NULL on
-                      pre-Phase-2 rows; falls back to "—". */}
+                      pre-Phase-2 rows; falls back to "-". */}
                   {e.event_type && EVENT_TYPE_META[e.event_type] && (
                     <span
                       className={`text-[11px] uppercase tracking-wide font-bold px-1.5 py-0.5 rounded ${EVENT_TYPE_META[e.event_type].chip}`}

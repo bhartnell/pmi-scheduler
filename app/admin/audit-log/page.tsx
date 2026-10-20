@@ -138,7 +138,7 @@ function StatCard({
           {label}
         </p>
         <p className="text-lg font-bold text-gray-900 dark:text-white truncate">
-          {value ?? '—'}
+          {value ?? '-'}
         </p>
       </div>
     </div>
@@ -374,7 +374,7 @@ export default function AuditLogPage() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Audit Log</h1>
                 <p className="text-gray-600 dark:text-gray-400 text-sm">
-                  FERPA compliance — track all access to protected educational records
+                  FERPA compliance - track all access to protected educational records
                 </p>
               </div>
             </div>
@@ -667,7 +667,7 @@ export default function AuditLogPage() {
                           <td className="px-4 py-3">
                             <div className="flex items-start gap-1">
                               <span className="text-sm text-gray-600 dark:text-gray-400 max-w-xs truncate">
-                                {log.resource_description || '—'}
+                                {log.resource_description || '-'}
                               </span>
                               {hasExtra && (
                                 <button
@@ -685,7 +685,7 @@ export default function AuditLogPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400 font-mono whitespace-nowrap">
-                            {log.ip_address || '—'}
+                            {log.ip_address || '-'}
                           </td>
                         </tr>
 

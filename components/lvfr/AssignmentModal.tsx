@@ -113,7 +113,7 @@ export default function AssignmentModal({ day, instructors, onClose, onSave }: A
         onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white"
       >
-        <option value="">— None —</option>
+        <option value=""> - None - </option>
         {sortedInstructors
           .filter((inst) => inst.id !== excludeId)
           .map((inst) => {
@@ -125,7 +125,7 @@ export default function AssignmentModal({ day, instructors, onClose, onSave }: A
             return (
               <option key={inst.id} value={inst.id}>
                 {level === 'full' ? '🟢' : level === 'partial' ? '🟡' : '⚪'}{' '}
-                {inst.name} — {AVAIL_LABEL[level]} ({blockText})
+                {inst.name} - {AVAIL_LABEL[level]} ({blockText})
               </option>
             );
           })}
@@ -149,7 +149,7 @@ export default function AssignmentModal({ day, instructors, onClose, onSave }: A
         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-700">
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white">
-              Day {day.day_number} — {dateDisplay}
+              Day {day.day_number} - {dateDisplay}
             </h3>
             <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
               {day.title || 'No title'}

@@ -45,7 +45,7 @@ const ADMIN_STEPS: TourStep[] = [
   {
     target: '[href="/"]',
     title: 'Dashboard',
-    description: 'Your dashboard gives you an at-a-glance overview of the program — notifications, lab assignments, and stats. You can customize it with the Customize button.',
+    description: 'Your dashboard gives you an at-a-glance overview of the program - notifications, lab assignments, and stats. You can customize it with the Customize button.',
     placement: 'bottom',
   },
   {
@@ -123,7 +123,7 @@ const STUDENT_STEPS: TourStep[] = [
   {
     target: '[href="/student"]',
     title: 'Student Portal',
-    description: 'Your home base — check your progress, upcoming labs, and any announcements from your instructors.',
+    description: 'Your home base - check your progress, upcoming labs, and any announcements from your instructors.',
     placement: 'bottom',
   },
   {

@@ -106,7 +106,7 @@ function formatDateRelative(isoString: string | null): string {
 }
 
 function formatDate(isoString: string | null): string {
-  if (!isoString) return '—';
+  if (!isoString) return '-';
   const safe = isoString.includes('T') || isoString.includes(' ') ? isoString : isoString + 'T12:00:00';
   return new Date(safe).toLocaleDateString('en-US', {
     month: 'short',

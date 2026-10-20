@@ -181,7 +181,7 @@ function Suite1Row({
               />
             ))}
             {row.left === 0 && (
-              <div className="text-xs text-gray-400 italic px-4 py-8">— no seats —</div>
+              <div className="text-xs text-gray-400 italic px-4 py-8"> - no seats - </div>
             )}
           </div>
         </div>

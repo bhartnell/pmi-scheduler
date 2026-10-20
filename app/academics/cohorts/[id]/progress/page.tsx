@@ -64,7 +64,7 @@ export default function CohortProgressPage() {
           <ArrowLeft className="w-4 h-4" /> Cohort
         </Link>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-          Cohort Progress{report ? ` — ${report.cohort.name}` : ''}
+          Cohort Progress{report ? ` - ${report.cohort.name}` : ''}
         </h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Mid-semester tracked stats (scenarios, skills, team-lead coverage).</p>
 
@@ -90,7 +90,7 @@ export default function CohortProgressPage() {
                   {report.flaggedStudents.map((f, i) => (
                     <div key={`${f.id}-${i}`} className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800 rounded-md px-3 py-1.5 text-xs">
                       <span className="font-medium text-gray-800 dark:text-gray-100">{f.name}</span>
-                      <span className="text-amber-700 dark:text-amber-300"> — {f.reason}</span>
+                      <span className="text-amber-700 dark:text-amber-300"> - {f.reason}</span>
                       <span className="text-gray-500 dark:text-gray-400"> ({f.details})</span>
                     </div>
                   ))}
@@ -116,7 +116,7 @@ export default function CohortProgressPage() {
                       <tr key={s.id} className="border-b border-gray-50 dark:border-gray-700/50 last:border-0">
                         <td className="px-3 py-1.5 text-gray-800 dark:text-gray-100">{s.name}</td>
                         <td className="px-3 py-1.5 text-right text-gray-600 dark:text-gray-400">{s.scenarioCount}</td>
-                        <td className="px-3 py-1.5 text-right text-gray-600 dark:text-gray-400">{s.averageScore ? s.averageScore.toFixed(1) : '—'}</td>
+                        <td className="px-3 py-1.5 text-right text-gray-600 dark:text-gray-400">{s.averageScore ? s.averageScore.toFixed(1) : '-'}</td>
                         <td className="px-3 py-1.5 text-right text-gray-600 dark:text-gray-400">{s.skillsCompleted}</td>
                         <td className={`px-3 py-1.5 text-right ${s.teamLeadCount === 0 ? 'text-amber-600 dark:text-amber-400 font-medium' : 'text-gray-600 dark:text-gray-400'}`}>{s.teamLeadCount}</td>
                       </tr>

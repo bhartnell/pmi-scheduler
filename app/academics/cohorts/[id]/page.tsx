@@ -646,7 +646,7 @@ export default function CohortHubPage() {
           'Type DELETE to confirm:',
       );
       if (typed !== 'DELETE') {
-        toast.error('Force Regenerate cancelled — confirmation text did not match');
+        toast.error('Force Regenerate cancelled - confirmation text did not match');
         return;
       }
     }
@@ -1073,7 +1073,7 @@ export default function CohortHubPage() {
               <Link
                 href={`/academics/cohorts/${cohortId}/smc`}
                 className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                title="Student Minimum Competency — the required skills for this program + semester"
+                title="Student Minimum Competency - the required skills for this program + semester"
               >
                 <Target className="w-4 h-4" />
                 SMC Coverage
@@ -1877,7 +1877,7 @@ export default function CohortHubPage() {
               {!genForce && !genFillGapsOnly && (
                 <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                   <CheckCircle className="w-3 h-3 text-green-500" />
-                  Lab days that already exist (week + day match) will be skipped — no duplicates.
+                  Lab days that already exist (week + day match) will be skipped - no duplicates.
                 </p>
               )}
               {!genForce && genFillGapsOnly && (
@@ -1949,7 +1949,7 @@ export default function CohortHubPage() {
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Fills in stations and titles on this cohort&apos;s existing lab
                 days using the matching templates. Won&apos;t create new lab days
-                or remove anything you&apos;ve customised — only adds missing
+                or remove anything you&apos;ve customised - only adds missing
                 stations and updates blank/&ldquo;Content Pending&rdquo; titles.
               </p>
 
@@ -2046,7 +2046,7 @@ export default function CohortHubPage() {
                         className="w-full px-2 py-1 text-sm border border-amber-300 dark:border-amber-700 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         disabled={updRunning}
                       >
-                        <option value="">— select —</option>
+                        <option value=""> - select - </option>
                         <option value="paramedic">paramedic</option>
                         <option value="emt">emt</option>
                         <option value="aemt">aemt</option>
@@ -2066,7 +2066,7 @@ export default function CohortHubPage() {
                         className="w-full px-2 py-1 text-sm border border-amber-300 dark:border-amber-700 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                         disabled={updRunning}
                       >
-                        <option value="">— select —</option>
+                        <option value=""> - select - </option>
                         <option value="1">1</option>
                         <option value="2">2</option>
                         <option value="3">3</option>

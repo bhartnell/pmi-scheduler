@@ -165,11 +165,11 @@ export default function AdminInstructorWorkloadPage() {
     const headers = ['Instructor', 'Email', 'Classes', 'Labs', 'LVFR', 'Shifts', 'Other', 'Total (semester)', 'Avg/Week'];
     const rows = filtered.map(s => [
       s.name, s.email,
-      s.classHours > 0 ? `${s.classHours}` : '—',
-      s.labHours > 0 ? `${s.labHours}` : '—',
-      s.lvfrHours > 0 ? `${s.lvfrHours}` : '—',
-      s.shiftHours > 0 ? `${s.shiftHours}` : '—',
-      s.otherHours > 0 ? `${s.otherHours}` : '—',
+      s.classHours > 0 ? `${s.classHours}` : '-',
+      s.labHours > 0 ? `${s.labHours}` : '-',
+      s.lvfrHours > 0 ? `${s.lvfrHours}` : '-',
+      s.shiftHours > 0 ? `${s.shiftHours}` : '-',
+      s.otherHours > 0 ? `${s.otherHours}` : '-',
       `${s.totalHours}`,
       `${s.avgWeeklyHours}`,
     ]);
@@ -328,22 +328,22 @@ export default function AdminInstructorWorkloadPage() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={s.classHours > 0 ? 'text-gray-900 dark:text-white font-medium' : 'text-gray-300 dark:text-gray-600'}>
-                        {s.classHours > 0 ? `${s.classHours}h` : '—'}
+                        {s.classHours > 0 ? `${s.classHours}h` : '-'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={s.labHours > 0 ? 'text-emerald-700 dark:text-emerald-400 font-medium' : 'text-gray-300 dark:text-gray-600'}>
-                        {s.labHours > 0 ? `${s.labHours}h` : '—'}
+                        {s.labHours > 0 ? `${s.labHours}h` : '-'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={s.lvfrHours > 0 ? 'text-orange-700 dark:text-orange-400 font-medium' : 'text-gray-300 dark:text-gray-600'}>
-                        {s.lvfrHours > 0 ? `${s.lvfrHours}h` : '—'}
+                        {s.lvfrHours > 0 ? `${s.lvfrHours}h` : '-'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={s.shiftHours > 0 ? 'text-blue-700 dark:text-blue-400 font-medium' : 'text-gray-300 dark:text-gray-600'}>
-                        {s.shiftHours > 0 ? `${s.shiftHours}h` : '—'}
+                        {s.shiftHours > 0 ? `${s.shiftHours}h` : '-'}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center bg-gray-50 dark:bg-gray-700/30">

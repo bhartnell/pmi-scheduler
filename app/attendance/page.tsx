@@ -410,7 +410,7 @@ export default function AttendancePage() {
             ) : (
               <div className="text-center py-10">
                 <p className="text-gray-500 dark:text-gray-400">
-                  No active checklists for this cohort yet — create one from the cohort page.
+                  No active checklists for this cohort yet - create one from the cohort page.
                 </p>
               </div>
             )}

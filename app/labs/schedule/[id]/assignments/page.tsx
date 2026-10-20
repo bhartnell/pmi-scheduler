@@ -369,7 +369,7 @@ export default function StationAssignmentsPage() {
                   <span className="truncate">{station.title || 'Station'}</span>
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                  {[station.room, station.instructor_name].filter(Boolean).join(' · ') || '—'}
+                  {[station.room, station.instructor_name].filter(Boolean).join(' · ') || '-'}
                 </div>
               </div>
               {station.students.length === 0 ? (
@@ -485,7 +485,7 @@ export default function StationAssignmentsPage() {
                   {[station.room, station.instructor_name]
                     .filter(Boolean)
                     .join(' · ') ||
-                    'Instructor: —'}
+                    'Instructor: - '}
                 </div>
               </div>
               {station.students.length === 0 ? (
@@ -520,7 +520,7 @@ export default function StationAssignmentsPage() {
           <div className="mt-6 border border-gray-400 rounded-md break-inside-avoid">
             <div className="px-3 py-2 border-b border-gray-400 bg-gray-100">
               <div className="font-bold text-base text-black">
-                {checkoff.checkoff.skill_name || 'Checkoff'} — Roster
+                {checkoff.checkoff.skill_name || 'Checkoff'} - Roster
               </div>
               <div className="text-xs text-gray-700 mt-0.5">
                 {checkoff.progress.complete}/{checkoff.progress.total} complete at print time
@@ -620,7 +620,7 @@ export default function StationAssignmentsPage() {
                       {s.title || 'Station'}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                      {s.students.length} student{s.students.length === 1 ? '' : 's'} · {s.room || '—'}
+                      {s.students.length} student{s.students.length === 1 ? '' : 's'} · {s.room || '-'}
                     </div>
                   </button>
                 </li>

@@ -774,7 +774,7 @@ export default function InternshipTrackerPage() {
         acc.upcoming.push({
           internship,
           milestones,
-          reason: `Phase 1 extended until ${extUntil.toLocaleDateString()}${internship.phase_1_extension_reason ? ` — ${internship.phase_1_extension_reason}` : ''}`
+          reason: `Phase 1 extended until ${extUntil.toLocaleDateString()}${internship.phase_1_extension_reason ? ` - ${internship.phase_1_extension_reason}` : ''}`
         });
       }
     }
@@ -1504,7 +1504,7 @@ export default function InternshipTrackerPage() {
                       </div>
                       {/* Phase 1 */}
                       <div className="p-3 bg-blue-50 dark:bg-blue-900/10 rounded-lg space-y-3">
-                        <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase">Phase 1 — Mentorship</p>
+                        <p className="text-xs font-semibold text-blue-700 dark:text-blue-400 uppercase">Phase 1 - Mentorship</p>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">P1 Start Date</label>
@@ -1542,7 +1542,7 @@ export default function InternshipTrackerPage() {
                       </div>
                       {/* Phase 2 */}
                       <div className="p-3 bg-purple-50 dark:bg-purple-900/10 rounded-lg space-y-3">
-                        <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase">Phase 2 — Evaluation</p>
+                        <p className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase">Phase 2 - Evaluation</p>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">P2 Start Date</label>

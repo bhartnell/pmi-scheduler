@@ -113,7 +113,7 @@ export default function RecurringAvailabilityModal({
       <div className="bg-white dark:bg-gray-800 w-full sm:max-w-md sm:rounded-lg shadow-xl flex flex-col max-h-[95vh]">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-            Recurring availability — {userName}
+            Recurring availability - {userName}
           </h2>
           <button
             type="button"

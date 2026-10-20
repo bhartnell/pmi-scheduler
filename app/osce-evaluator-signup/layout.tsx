@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Evaluator Registration — Paramedic Clinical Capstone',
+  title: 'Evaluator Registration - Paramedic Clinical Capstone',
   description: 'Register as an evaluator for the Paramedic OSCE Clinical Capstone at Pima Medical Institute.',
 };
 

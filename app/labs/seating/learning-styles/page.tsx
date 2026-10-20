@@ -641,7 +641,7 @@ function LearningStylesContent() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400">
-                          {student.agency || '—'}
+                          {student.agency || '-'}
                         </td>
                         <td className="px-4 py-3">
                           {existingStyle ? (
@@ -836,7 +836,7 @@ function LearningStylesContent() {
                           {ls.processing_style.charAt(0).toUpperCase() + ls.processing_style.slice(1)}
                         </span>
                       ) : (
-                        <span className="text-gray-400 text-sm">—</span>
+                        <span className="text-gray-400 text-sm">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4 hidden sm:table-cell">
@@ -845,7 +845,7 @@ function LearningStylesContent() {
                           {ls.structure_style.charAt(0).toUpperCase() + ls.structure_style.slice(1)}
                         </span>
                       ) : (
-                        <span className="text-gray-400 text-sm">—</span>
+                        <span className="text-gray-400 text-sm">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right">

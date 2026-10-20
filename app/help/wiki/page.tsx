@@ -92,7 +92,7 @@ export default function HelpWikiPage() {
               <div>
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Help Wiki</h1>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
-                  How to run the program and how to use the site — organized by task, not by feature.
+                  How to run the program and how to use the site - organized by task, not by feature.
                 </p>
               </div>
             </div>
@@ -103,7 +103,7 @@ export default function HelpWikiPage() {
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search the wiki — try what you're trying to do"
+                placeholder="Search the wiki - try what you're trying to do"
                 className="w-full pl-9 pr-9 py-2.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 autoFocus
               />

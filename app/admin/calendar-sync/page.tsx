@@ -676,7 +676,7 @@ export default function CalendarSyncPage() {
                 Surfaces the last time each event source_type actually
                 produced a new calendar event. A source that's gone
                 stale (or never synced) is easy to miss in the raw
-                totals above — e.g. a source that's only ever created
+                totals above - e.g. a source that's only ever created
                 by a manual admin action can silently stop for months
                 with the aggregate counts still looking fine. */}
             {stats && Object.keys(stats.eventsByType).length > 0 && (
@@ -844,7 +844,7 @@ export default function CalendarSyncPage() {
                               <div className="flex items-center gap-2">
                                 {/* Connected users get Re-sync.
                                     Disconnected / needs-reauth users
-                                    get Send reminder — sends an in-app
+                                    get Send reminder - sends an in-app
                                     notification with a link to the
                                     /settings/calendar-setup wizard. */}
                                 {inst.connected && !inst.needsReauth ? (
@@ -872,7 +872,7 @@ export default function CalendarSyncPage() {
                                         forceResyncingUser === inst.email
                                       }
                                       className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-xs font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                                      title="Force re-sync — DELETES this user's Google events and recreates them. Use when normal Re-sync hasn't fixed stale events."
+                                      title="Force re-sync - DELETES this user's Google events and recreates them. Use when normal Re-sync hasn't fixed stale events."
                                     >
                                       <AlertTriangle
                                         className={`w-3.5 h-3.5 ${
@@ -1134,7 +1134,7 @@ export default function CalendarSyncPage() {
                 )}
                 {confirmingCleanup
                   ? 'Deleting…'
-                  : `Confirm — delete ${cleanupPreview.totals?.events_matched ?? 0} events`}
+                  : `Confirm - delete ${cleanupPreview.totals?.events_matched ?? 0} events`}
               </button>
             </div>
           </div>

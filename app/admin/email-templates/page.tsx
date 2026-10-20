@@ -164,12 +164,12 @@ const DEFAULT_SAMPLE_VALUES: Record<string, string> = {
   '{{dueDate}}':            'March 1, 2026',
   '{{taskUrl}}':            'https://pmiparamedic.tools/tasks',
   '{{labDate}}':            'February 28, 2026',
-  '{{stationInfo}}':        'Station 1 – Airway Management',
+  '{{stationInfo}}':        'Station 1 - Airway Management',
   '{{labUrl}}':             'https://pmiparamedic.tools/labs/schedule',
   '{{lab_name}}':           'Cohort 24-A Lab',
   '{{shiftDate}}':          'February 28, 2026',
-  '{{shiftDetails}}':       '0800–1600, Station 3',
-  '{{shift_time}}':         '0800–1600',
+  '{{shiftDetails}}':       '0800-1600, Station 3',
+  '{{shift_time}}':         '0800-1600',
   '{{signupUrl}}':          'https://pmiparamedic.tools/scheduling/shifts',
   '{{siteName}}':           'Banner University Medical Center',
   '{{site_name}}':          'Banner University Medical Center',
@@ -216,7 +216,7 @@ function buildPreviewHtml(bodyHtml: string): string {
               <table width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td style="color:#6b7280;font-size:12px;text-align:center;">
-                    <p style="margin:0 0 8px 0;">Pima Medical Institute – Paramedic Program</p>
+                    <p style="margin:0 0 8px 0;">Pima Medical Institute - Paramedic Program</p>
                     <p style="margin:0;">
                       <a href="#" style="color:#2563eb;text-decoration:none;">Manage email preferences</a>
                       &nbsp;|&nbsp;
@@ -697,7 +697,7 @@ function TemplateEditor({
             <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-1.5">
               Body HTML
               <span className="ml-2 text-gray-400 dark:text-gray-500 font-normal normal-case">
-                (inner content – header/footer added automatically)
+                (inner content - header/footer added automatically)
               </span>
             </label>
             <textarea
@@ -719,9 +719,9 @@ function TemplateEditor({
             <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
               <p className="text-xs font-semibold text-amber-900 dark:text-amber-300 mb-1">Tips</p>
               <ul className="text-xs text-amber-800 dark:text-amber-400 space-y-0.5 list-disc list-inside">
-                <li>Use inline styles – email clients ignore external CSS</li>
+                <li>Use inline styles - email clients ignore external CSS</li>
                 <li>Keep content width under 600px for compatibility</li>
-                <li>Variables are case-sensitive – use exact casing</li>
+                <li>Variables are case-sensitive - use exact casing</li>
                 <li>Test before saving to confirm rendering</li>
               </ul>
             </div>
@@ -1342,7 +1342,7 @@ export default function EmailTemplatesPage() {
                           )}
                         </span>
                       ) : (
-                        <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
                       )}
                     </td>
 

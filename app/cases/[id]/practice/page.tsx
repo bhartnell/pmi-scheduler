@@ -799,7 +799,7 @@ export default function PracticeModePage() {
         <div className="max-w-2xl mx-auto px-4 py-8">
           <div className="flex items-center gap-2 mb-6">
             <span className="text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-3 py-1 rounded-full">
-              Phase {currentPhaseIdx + 1} — Vitals
+              Phase {currentPhaseIdx + 1} - Vitals
             </span>
           </div>
 

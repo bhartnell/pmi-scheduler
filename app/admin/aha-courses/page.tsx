@@ -250,7 +250,7 @@ export default function AhaCoursesPage() {
           <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
           <p className="text-sm text-amber-800 dark:text-amber-200">
             Additive only. If a cohort already has a lab day at the target date/section, it is left
-            untouched and reported as skipped — this tool never updates or deletes existing rows.
+            untouched and reported as skipped - this tool never updates or deletes existing rows.
             Always run a dry run first.
           </p>
         </div>
@@ -358,7 +358,7 @@ export default function AhaCoursesPage() {
                   {result.plan?.map((p) => (
                     <tr key={p.template_id} className="border-b border-gray-100 dark:border-gray-700/50">
                       <td className="py-1.5 pr-3">{p.day_number}</td>
-                      <td className="py-1.5 pr-3">{p.section_label || p.section_number || '—'}</td>
+                      <td className="py-1.5 pr-3">{p.section_label || p.section_number || '-'}</td>
                       <td className="py-1.5 pr-3">{p.title}</td>
                       <td className="py-1.5 pr-3">{p.date}</td>
                       <td className="py-1.5 pr-3">{p.stations.length}</td>
@@ -384,7 +384,7 @@ export default function AhaCoursesPage() {
         <div className="border-t border-gray-200 dark:border-gray-700 pt-6 mt-2">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">Configure an existing day (Checkpoint B)</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-            For a lab day that already exists (created by hand, or a placeholder) — attaches a template&apos;s
+            For a lab day that already exists (created by hand, or a placeholder) - attaches a template&apos;s
             cert_course/testing-flag/stations onto it. Gap-fill only: a field or station that already has a
             real value is never overwritten, and is reported as a conflict instead.
           </p>
@@ -417,7 +417,7 @@ export default function AhaCoursesPage() {
                 <option value="">Select a day…</option>
                 {configLabDays.map((d) => (
                   <option key={d.id} value={d.id}>
-                    {d.date}{d.section_label ? ` — ${d.section_label}` : d.section_number ? ` — sec ${d.section_number}` : ''}
+                    {d.date}{d.section_label ? ` - ${d.section_label}` : d.section_number ? ` - sec ${d.section_number}` : ''}
                     {d.cert_course ? ` [${d.cert_course}]` : ''}
                   </option>
                 ))}
@@ -431,7 +431,7 @@ export default function AhaCoursesPage() {
               className="w-full md:w-1/2 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
               <option value="">Select a template…</option>
               {configTemplates.map((t) => (
-                <option key={t.id} value={t.id}>Day {t.day_number}{t.section_label ? ` — ${t.section_label}` : ''}: {t.name}</option>
+                <option key={t.id} value={t.id}>Day {t.day_number}{t.section_label ? ` - ${t.section_label}` : ''}: {t.name}</option>
               ))}
             </select>
           </div>
@@ -465,7 +465,7 @@ export default function AhaCoursesPage() {
                 {configResult.field_changes?.length === 0 && <li className="text-gray-400">No changes.</li>}
                 {configResult.field_changes?.map((c, i) => (
                   <li key={i} className={c.action === 'conflict_skipped' ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}>
-                    {c.field}: {JSON.stringify(c.from)} → {JSON.stringify(c.to)} ({c.action === 'conflict_skipped' ? 'CONFLICT — left alone' : 'fill gap'})
+                    {c.field}: {JSON.stringify(c.from)} → {JSON.stringify(c.to)} ({c.action === 'conflict_skipped' ? 'CONFLICT - left alone' : 'fill gap'})
                   </li>
                 ))}
               </ul>

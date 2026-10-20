@@ -266,7 +266,7 @@ function HistoryPanel({ history, groups, cohortId }: HistoryPanelProps) {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-3 text-sm text-gray-600 dark:text-gray-400">
               <span>
-                Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
+                Showing {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, filtered.length)} of {filtered.length}
               </span>
               <div className="flex gap-2">
                 <button
@@ -744,7 +744,7 @@ function GroupManagementPageInner() {
       const failed = results.filter(r => !r.json?.success && r.status !== 404);
 
       if (stale.length > 0) {
-        toast.error('Some groups were deleted in another tab — refreshing now.');
+        toast.error('Some groups were deleted in another tab - refreshing now.');
         setHasChanges(false);
         await fetchGroups(selectedCohortId);
       } else if (failed.length > 0) {
@@ -1038,7 +1038,7 @@ function GroupManagementPageInner() {
                                       document.body.innerHTML = `
                                         <div style="font-family:sans-serif;padding:20px">
                                           <h2>${group.name} Roster</h2>
-                                          <p>${selectedCohort?.program.abbreviation} Group ${selectedCohort?.cohort_number} — Printed ${new Date().toLocaleDateString()}</p>
+                                          <p>${selectedCohort?.program.abbreviation} Group ${selectedCohort?.cohort_number} - Printed ${new Date().toLocaleDateString()}</p>
                                           <hr/>
                                           ${el.innerHTML}
                                         </div>`;

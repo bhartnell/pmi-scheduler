@@ -124,7 +124,7 @@ export default function GradeImportPage() {
       setSummary(data.preview.summary);
       setStep('preview');
     } catch {
-      setError('Network error — please try again');
+      setError('Network error - please try again');
     } finally {
       setPreviewLoading(false);
     }
@@ -317,7 +317,7 @@ export default function GradeImportPage() {
                     <li>File should have student identifier columns (Name, Email, or Student ID)</li>
                     <li>Assessment columns are matched automatically by title</li>
                     <li>Scores can be percentages (85%), fractions (34/40), or plain numbers (85)</li>
-                    <li>Empty cells are skipped — only rows with scores are imported</li>
+                    <li>Empty cells are skipped - only rows with scores are imported</li>
                   </ul>
                 </div>
               </div>
@@ -409,7 +409,7 @@ export default function GradeImportPage() {
                           )}
                         </td>
                         <td className="px-4 py-2 text-gray-700 dark:text-gray-300">
-                          {s.matchedStudentName || '—'}
+                          {s.matchedStudentName || '-'}
                         </td>
                         <td className="px-4 py-2">
                           {s.matchType ? (
@@ -419,7 +419,7 @@ export default function GradeImportPage() {
                                s.matchType === 'name_exact' ? 'Exact Name' :
                                s.matchType === 'name_fuzzy' ? 'Fuzzy Name' : s.matchType}
                             </span>
-                          ) : '—'}
+                          ) : '-'}
                         </td>
                         <td className="px-4 py-2 text-right">
                           <span className="text-gray-900 dark:text-white font-medium">{s.grades.length}</span>

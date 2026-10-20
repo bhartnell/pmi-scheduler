@@ -142,10 +142,10 @@ export default function LVFRDashboardPage() {
         { href: '/lvfr-aemt/pharm', icon: Award, label: 'Pharm Checkpoints', description: 'Medication card practice and testing', color: 'bg-red-600' },
       ]
     : [
-        { href: `/lvfr-aemt/day/${today}`, icon: ListChecks, label: "Today's Runsheet", description: 'Day checklist — morning + afternoon sessions, live checkoff', color: 'bg-rose-600' },
+        { href: `/lvfr-aemt/day/${today}`, icon: ListChecks, label: "Today's Runsheet", description: 'Day checklist - morning + afternoon sessions, live checkoff', color: 'bg-rose-600' },
         { href: '/lvfr-aemt/calendar', icon: Calendar, label: 'Course Calendar', description: 'View and manage the 30-day course schedule', color: 'bg-blue-600' },
         ...(isInstructor ? [
-          { href: '/lvfr-aemt/progress', icon: TrendingUp, label: 'Coverage Roll-up', description: 'Course-wide Tier-1 tracked coverage — done, outstanding, gaps', color: 'bg-rose-700' },
+          { href: '/lvfr-aemt/progress', icon: TrendingUp, label: 'Coverage Roll-up', description: 'Course-wide Tier-1 tracked coverage - done, outstanding, gaps', color: 'bg-rose-700' },
           { href: '/lvfr-aemt/scheduling', icon: Users, label: 'Coverage Grid', description: 'Instructor scheduling and coverage analysis', color: 'bg-amber-600' },
           { href: '/lvfr-aemt/planner', icon: LayoutGrid, label: 'Course Planner', description: 'Plan content blocks across 30 instruction days', color: 'bg-emerald-600' },
         ] : []),
@@ -174,7 +174,7 @@ export default function LVFRDashboardPage() {
                 <div>
                   <h1 className="text-2xl font-bold">LVFR AEMT Program</h1>
                   <p className="text-red-200 text-sm mt-0.5">
-                    Las Vegas Fire & Rescue — Advanced EMT Training
+                    Las Vegas Fire & Rescue - Advanced EMT Training
                     {isObserver && ' (Observer View)'}
                   </p>
                 </div>
@@ -236,7 +236,7 @@ export default function LVFRDashboardPage() {
               <StatCard
                 icon={BarChart3}
                 label="Avg Grade"
-                value={data.studentStats?.avgGrade != null ? `${Math.round(data.studentStats.avgGrade)}%` : '—'}
+                value={data.studentStats?.avgGrade != null ? `${Math.round(data.studentStats.avgGrade)}%` : '-'}
                 sublabel="class average"
                 color="text-purple-600"
                 bgColor="bg-purple-50 dark:bg-purple-900/20"
@@ -247,7 +247,7 @@ export default function LVFRDashboardPage() {
                 <StatCard
                   icon={Award}
                   label="Pharm Checkpoints"
-                  value="—"
+                  value="-"
                   sublabel="completed"
                   color="text-red-600"
                   bgColor="bg-red-50 dark:bg-red-900/20"
@@ -529,7 +529,7 @@ function ReseedConfirmModal({ date, reseeding, onConfirm, onCancel }: {
 
         <div className="px-6 py-4 space-y-3">
           <p className="text-sm text-gray-700 dark:text-gray-300">
-            This will overwrite today&apos;s runsheet — re-seeding every item for {date} from the master
+            This will overwrite today&apos;s runsheet - re-seeding every item for {date} from the master
             calendar. Any manual edits made today (times, notes, added/removed items) will be lost.
           </p>
           <p className="text-sm text-gray-700 dark:text-gray-300">

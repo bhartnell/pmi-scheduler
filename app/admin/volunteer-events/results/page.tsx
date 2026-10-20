@@ -410,7 +410,7 @@ export default function VolunteerResultsPage() {
                               ? event.start_time.substring(0, 5)
                               : '?'}
                             {event.end_time && (
-                              <> – {event.end_time.substring(0, 5)}</>
+                              <> - {event.end_time.substring(0, 5)}</>
                             )}
                           </span>
                         )}

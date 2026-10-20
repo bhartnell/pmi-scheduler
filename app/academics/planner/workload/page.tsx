@@ -194,7 +194,7 @@ function WeekDetailPanel({
       <div className="flex items-center justify-between mb-3">
         <div>
           <span className="font-medium text-gray-900 dark:text-white text-sm">{instructorName}</span>
-          <span className="text-gray-500 dark:text-gray-400 text-sm"> — Week {weekNumber}</span>
+          <span className="text-gray-500 dark:text-gray-400 text-sm"> - Week {weekNumber}</span>
           {weekDate && <span className="text-gray-400 dark:text-gray-500 text-xs ml-1">({formatWeekLabel(weekDate)})</span>}
         </div>
         <button onClick={onClose} className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded">
@@ -225,7 +225,7 @@ function WeekDetailPanel({
                     <span className="text-gray-800 dark:text-gray-200 flex-1 truncate">{d.title}</span>
                     {d.start_time && d.end_time && (
                       <span className="text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                        {formatTime(d.start_time)}–{formatTime(d.end_time)}
+                        {formatTime(d.start_time)}-{formatTime(d.end_time)}
                       </span>
                     )}
                     <span className="text-gray-600 dark:text-gray-300 font-medium whitespace-nowrap">{d.hours}h</span>
@@ -298,9 +298,9 @@ function SummaryCards({
     }
     const peakWeekLabel = peakWeek > 0 && weekDates.has(peakWeek)
       ? `Wk ${peakWeek} (${formatWeekLabel(weekDates.get(peakWeek)!)})`
-      : '—';
+      : '-';
 
-    let maxInstructor = '—';
+    let maxInstructor = '-';
     let maxHours = 0;
     let maxWeek = 0;
     for (const instr of instructors) {
@@ -312,7 +312,7 @@ function SummaryCards({
         }
       }
     }
-    const maxLabel = maxHours > 0 ? `${maxHours}h in Wk ${maxWeek}` : '—';
+    const maxLabel = maxHours > 0 ? `${maxHours}h in Wk ${maxWeek}` : '-';
 
     return { totalInstructors, overallAvg, peakWeekLabel, peakWeekHours, maxInstructor, maxLabel };
   }, [instructorMap, weekNumbers, weekDates]);
@@ -478,7 +478,7 @@ function InstructorDetailRow({
                 const counts = weekNumbers.map(wk => data.weeks.get(wk)?.block_count || 0);
                 const min = Math.min(...counts);
                 const max = Math.max(...counts);
-                return min === max ? `${min}` : `${min}–${max}`;
+                return min === max ? `${min}` : `${min}-${max}`;
               })()}
             </span>
           </div>
@@ -607,7 +607,7 @@ function HeatMapTable({
                           className={`px-1 py-1.5 text-center cursor-pointer transition-all ${heat.bg} ${
                             isSelected ? 'ring-2 ring-blue-500 ring-inset' : 'hover:ring-1 hover:ring-blue-300 hover:ring-inset'
                           }`}
-                          title={`Week ${wk}: ${hours}h\n${breakdownParts.join(', ') || 'No hours'}\n${w?.block_count || 0} blocks — Click for detail`}
+                          title={`Week ${wk}: ${hours}h\n${breakdownParts.join(', ') || 'No hours'}\n${w?.block_count || 0} blocks - Click for detail`}
                           onClick={() => onCellClick(instrData.instructor.id, wk)}
                         >
                           {hours > 0 ? (
@@ -624,7 +624,7 @@ function HeatMapTable({
                               )}
                             </div>
                           ) : (
-                            <span className={`text-xs font-medium ${heat.text}`}>—</span>
+                            <span className={`text-xs font-medium ${heat.text}`}>-</span>
                           )}
                         </td>
                       );

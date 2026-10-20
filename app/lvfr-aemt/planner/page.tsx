@@ -1746,7 +1746,7 @@ export default function CoursePlannerPage() {
               Week {currentWeek} of 10
             </span>
             <span className="text-xs text-gray-500 dark:text-gray-400 ml-2">
-              Days {weekDays[0]}–{weekDays[2]}
+              Days {weekDays[0]}-{weekDays[2]}
             </span>
           </div>
           <button

@@ -129,7 +129,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
         const looksEmpty = nextStudents.length === 0 || nextStations.length === 0;
 
         if (isBackground && hasLoadedDataRef.current && looksEmpty) {
-          console.warn('[IndividualTestingGrid] Ignoring empty background refresh — keeping last known grid');
+          console.warn('[IndividualTestingGrid] Ignoring empty background refresh - keeping last known grid');
         } else {
           if (!looksEmpty) hasLoadedDataRef.current = true;
           setStudents(nextStudents);

@@ -27,7 +27,7 @@ export default function RolePreviewBanner() {
     >
       <Eye className="w-4 h-4 flex-shrink-0" />
       <span>
-        PREVIEW MODE — Viewing as{' '}
+        PREVIEW MODE - Viewing as{' '}
         <span className="px-2 py-0.5 rounded bg-white/20 font-bold">
           {getRoleLabel(previewRole)}
         </span>

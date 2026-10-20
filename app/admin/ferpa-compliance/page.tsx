@@ -381,10 +381,10 @@ function ReleasesTab({ releases, onRefresh }: { releases: FerpaRelease[]; onRefr
                   )}
                 </td>
                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
-                  {s.ferpa_release_agency || '—'}
+                  {s.ferpa_release_agency || '-'}
                 </td>
                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
-                  {s.ferpa_release_date || '—'}
+                  {s.ferpa_release_date || '-'}
                 </td>
                 <td className="px-4 py-3">
                   <button
@@ -444,9 +444,9 @@ function AgencyUsersTab({ users }: { users: AgencyUser[] }) {
                     {u.role === 'agency_liaison' ? 'Liaison' : 'Observer'}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{u.agency_affiliation || '—'}</td>
+                <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{u.agency_affiliation || '-'}</td>
                 <td className="px-4 py-3 text-gray-500 dark:text-gray-400">
-                  {u.agency_scope?.join(', ') || '—'}
+                  {u.agency_scope?.join(', ') || '-'}
                 </td>
                 <td className="px-4 py-3">
                   {u.hasConsent ? (
@@ -662,7 +662,7 @@ function AgreementsTab({ agreements, onRefresh }: { agreements: AgreementVersion
               <div>
                 <h3 className="font-semibold text-gray-900 dark:text-white">{displayName}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Current version: {active?.version || '—'} |{' '}
+                  Current version: {active?.version || '-'} |{' '}
                   {versions.length} version{versions.length !== 1 ? 's' : ''}
                 </p>
               </div>
@@ -727,7 +727,7 @@ function AgreementsTab({ agreements, onRefresh }: { agreements: AgreementVersion
                             v{v.version} {v.is_active && '(active)'}
                           </span>
                           <span className="text-gray-400">
-                            {v.created_by} — {new Date(v.created_at).toLocaleDateString()}
+                            {v.created_by} - {new Date(v.created_at).toLocaleDateString()}
                           </span>
                         </div>
                       </div>

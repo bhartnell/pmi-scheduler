@@ -226,11 +226,11 @@ export default function CohortSkillLogPage() {
                     {String(data.cohort.cohort_number).replace(/\.0$/, '')}
                     {semesterFilter === 'current' &&
                     data.cohort.current_semester != null
-                      ? ` — Semester ${data.cohort.current_semester}`
+                      ? ` - Semester ${data.cohort.current_semester}`
                       : semesterFilter === 'all'
-                        ? ' — All semesters'
+                        ? ' - All semesters'
                         : semesterFilter !== 'current'
-                          ? ` — Semester ${semesterFilter}`
+                          ? ` - Semester ${semesterFilter}`
                           : ''}
                   </p>
                 )}
@@ -415,13 +415,13 @@ export default function CohortSkillLogPage() {
                         )}
                       </td>
                       <td className="px-4 py-2 text-center text-gray-600 dark:text-gray-400 tabular-nums">
-                        {e.week_number ?? '—'}
+                        {e.week_number ?? '-'}
                       </td>
                       <td className="px-4 py-2 text-center text-gray-600 dark:text-gray-400 tabular-nums">
-                        {e.day_number ?? '—'}
+                        {e.day_number ?? '-'}
                       </td>
                       <td className="px-4 py-2 text-center text-gray-600 dark:text-gray-400 tabular-nums">
-                        {e.station_number ?? '—'}
+                        {e.station_number ?? '-'}
                       </td>
                     </tr>
                   ))}

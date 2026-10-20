@@ -120,7 +120,7 @@ export default function LVFRSchedulingPage() {
                   Instructor Coverage Grid
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  LVFR AEMT — {instructors.length} instructors, {grid.length} days
+                  LVFR AEMT - {instructors.length} instructors, {grid.length} days
                 </p>
               </div>
             </div>
@@ -322,7 +322,7 @@ function CoverageCell({
             </span>
           ))
         ) : (
-          <span className="text-xs text-red-500">—</span>
+          <span className="text-xs text-red-500">-</span>
         )}
       </div>
     </div>

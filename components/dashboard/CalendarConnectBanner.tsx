@@ -122,7 +122,7 @@ export default function CalendarConnectBanner() {
           </h3>
           <p className="mt-0.5 text-sm text-amber-800 dark:text-amber-200">
             {needsReauth
-              ? 'Your calendar connection needs to be re-authorized — your classes and labs have stopped syncing. Reconnecting takes about 30 seconds.'
+              ? 'Your calendar connection needs to be re-authorized - your classes and labs have stopped syncing. Reconnecting takes about 30 seconds.'
               : 'Connect your Google Calendar to automatically see your assigned classes and labs.'}
           </p>
           <Link

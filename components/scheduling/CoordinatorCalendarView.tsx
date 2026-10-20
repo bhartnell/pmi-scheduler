@@ -384,7 +384,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
 
   const todayIso = ymd(new Date());
 
-  const weekLabel = `${days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  const weekLabel = `${days[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${days[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
   // ── Heat-map weekly counts ─────────────────────────────────────────
   // Per the spec: count = lab_days + published pmi_schedule_blocks per
@@ -485,7 +485,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                 ? 'bg-blue-600 text-white'
                 : 'bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
             }`}
-            title="Full month — long-range planning"
+            title="Full month - long-range planning"
           >
             Month
           </button>
@@ -604,7 +604,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
           })}
           {scope === 'part_time' && data && data.people.length > peopleInScope.length && (
             <span className="text-gray-400 dark:text-gray-500 italic">
-              ({data.people.length - peopleInScope.length} full-time hidden — toggle &ldquo;All instructors&rdquo;)
+              ({data.people.length - peopleInScope.length} full-time hidden - toggle &ldquo;All instructors&rdquo;)
             </span>
           )}
         </div>
@@ -721,7 +721,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                   <div className="p-1.5 space-y-1 min-h-[140px]">
                     {/* Personal-mode LVFR overlay — gray "on duty"
                         block on dates matching the caller's platoon
-                        affiliation. Informational only — does NOT
+                        affiliation. Informational only - does NOT
                         mark the user unavailable for PMI; coordinator
                         and Jimi himself still see PMI shifts on the
                         same day for cross-checking. */}
@@ -741,9 +741,9 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                         key={`lab-${ld.id}`}
                         href={`/labs/schedule/${ld.id}`}
                         className="block px-1.5 py-1 text-[11px] rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-200 hover:bg-indigo-200 dark:hover:bg-indigo-900/60 truncate"
-                        title={`${ld.cohort?.program?.abbreviation ?? ''} G${ld.cohort?.cohort_number ?? ''}${ld.title ? ` — ${ld.title}` : ''}`}
+                        title={`${ld.cohort?.program?.abbreviation ?? ''} G${ld.cohort?.cohort_number ?? ''}${ld.title ? ` - ${ld.title}` : ''}`}
                       >
-                        {ld.cohort?.program?.abbreviation || 'LAB'} G{ld.cohort?.cohort_number ?? '—'}
+                        {ld.cohort?.program?.abbreviation || 'LAB'} G{ld.cohort?.cohort_number ?? '-'}
                       </Link>
                     ))}
 
@@ -762,7 +762,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                       const tooltipParts = [
                         b.person_name,
                         TYPE_LABELS[b.type],
-                        b.start_time && b.end_time ? `${fmtTime(b.start_time)}–${fmtTime(b.end_time)}` : null,
+                        b.start_time && b.end_time ? `${fmtTime(b.start_time)}-${fmtTime(b.end_time)}` : null,
                         b.hours != null ? `${b.hours.toFixed(2)}h` : null,
                         b.label,
                         b.notes,
@@ -1001,7 +1001,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                       className="block px-2 py-1 text-xs rounded bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-200 hover:bg-indigo-200 dark:hover:bg-indigo-900/60"
                     >
                       <span className="font-semibold">
-                        {ld.cohort?.program?.abbreviation || 'LAB'} G{ld.cohort?.cohort_number ?? '—'}
+                        {ld.cohort?.program?.abbreviation || 'LAB'} G{ld.cohort?.cohort_number ?? '-'}
                       </span>
                       {ld.title && <span className="ml-2 opacity-80">{ld.title}</span>}
                     </Link>
@@ -1018,7 +1018,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                     const tooltipParts = [
                       b.person_name,
                       TYPE_LABELS[b.type],
-                      b.start_time && b.end_time ? `${fmtTime(b.start_time)}–${fmtTime(b.end_time)}` : null,
+                      b.start_time && b.end_time ? `${fmtTime(b.start_time)}-${fmtTime(b.end_time)}` : null,
                       b.hours != null ? `${b.hours.toFixed(2)}h` : null,
                       b.label,
                       b.notes,
@@ -1027,7 +1027,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium">{shortName(b.person_name)}</span>
                         <span className="text-[10px] opacity-80">
-                          {b.start_time ? `${fmtTime(b.start_time)}${b.end_time ? `–${fmtTime(b.end_time)}` : ''}` : TYPE_LABELS[b.type]}
+                          {b.start_time ? `${fmtTime(b.start_time)}${b.end_time ? `-${fmtTime(b.end_time)}` : ''}` : TYPE_LABELS[b.type]}
                         </span>
                         {b.label && (
                           <span className="text-[10px] opacity-80 truncate flex-1 text-right">{b.label}</span>
@@ -1070,7 +1070,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
       {/* ── Semester heat map ─────────────────────────────────────────
           15 weeks of the current semester rendered as a single row of
           intensity-coded squares. Independent of the calendar grid's
-          date range — it's there to answer "which weeks are heavy /
+          date range - it's there to answer "which weeks are heavy /
           slow this semester" in one glance. Cell tooltip shows the
           week range + lab/class counts; cell click jumps the calendar
           to that week. */}
@@ -1079,7 +1079,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
           <div className="flex items-center gap-2 mb-2">
             <Flame className="w-4 h-4 text-orange-500" />
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-              {semester.name} — semester heat map
+              {semester.name} - semester heat map
             </h3>
             <span className="text-[11px] text-gray-500 dark:text-gray-400">
               15-week snapshot · click a week to jump
@@ -1100,7 +1100,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
               const wkEnd = addDays(wk.start, 6);
               const tooltip =
                 `Week ${idx + 1}: ` +
-                `${wk.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${wkEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}\n` +
+                `${wk.start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${wkEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}\n` +
                 (total === 0
                   ? 'No PMI activity'
                   : `${wk.labs} lab day(s) · ${wk.classes} class block(s)`);
@@ -1127,10 +1127,10 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
               <span className="w-3 h-3 rounded bg-gray-100 dark:bg-gray-800" /> empty
             </span>
             <span className="inline-flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-amber-100 dark:bg-amber-900/30" /> light (1–2)
+              <span className="w-3 h-3 rounded bg-amber-100 dark:bg-amber-900/30" /> light (1-2)
             </span>
             <span className="inline-flex items-center gap-1">
-              <span className="w-3 h-3 rounded bg-orange-300 dark:bg-orange-700" /> medium (3–5)
+              <span className="w-3 h-3 rounded bg-orange-300 dark:bg-orange-700" /> medium (3-5)
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="w-3 h-3 rounded bg-red-500 dark:bg-red-700" /> heavy (6+)
@@ -1142,7 +1142,7 @@ export default function CoordinatorCalendarView({ personal = false }: Coordinato
       <div className="px-6 py-3 text-[11px] text-gray-500 dark:text-gray-400 border-t border-gray-100 dark:border-gray-700">
         <span className="font-semibold">Block styles:</span>{' '}
         Solid = confirmed lab/shift · Outlined = availability/recurring · Striped = logged hours.
-        Read-only — click any lab block to open its day; full month view, hours sidebar, and gap detection ship next.
+        Read-only - click any lab block to open its day; full month view, hours sidebar, and gap detection ship next.
       </div>
     </div>
   );

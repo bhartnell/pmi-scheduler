@@ -101,7 +101,7 @@ export default function SeedAvailabilityPage() {
       if (data.success) {
         toast.success(
           dryRun
-            ? `Dry run complete — ${data.availability_inserted ?? 0} rows would be inserted`
+            ? `Dry run complete - ${data.availability_inserted ?? 0} rows would be inserted`
             : `Seeded ${data.availability_inserted ?? 0} availability rows across ${data.instructors_touched ?? 0} instructors`
         );
       } else {
@@ -148,9 +148,9 @@ export default function SeedAvailabilityPage() {
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
           One-shot bulk action that seeds default Mon-Fri{' '}
-          <strong>{form.start_time}–{form.end_time}</strong> availability for every
+          <strong>{form.start_time}-{form.end_time}</strong> availability for every
           full-time instructor (<code>role IN (&apos;lead_instructor&apos;,&apos;instructor&apos;) AND is_part_time = false</code>) across the chosen window.
-          Idempotent — re-running won&apos;t create duplicates. Part-time instructors continue to submit their own availability.
+          Idempotent - re-running won&apos;t create duplicates. Part-time instructors continue to submit their own availability.
         </p>
 
         <section className="bg-white dark:bg-gray-800 rounded-xl shadow-sm ring-1 ring-gray-200 dark:ring-gray-700 p-6 mb-6">
@@ -197,7 +197,7 @@ export default function SeedAvailabilityPage() {
             </div>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-            Weekdays are fixed at Mon-Fri (1–5). To customise, call the API directly with a <code>weekdays[]</code> body field.
+            Weekdays are fixed at Mon-Fri (1-5). To customise, call the API directly with a <code>weekdays[]</code> body field.
           </p>
         </section>
 
@@ -253,7 +253,7 @@ export default function SeedAvailabilityPage() {
             {result.errors && result.errors.length > 0 && (
               <details className="mt-3">
                 <summary className="text-xs font-medium text-amber-700 dark:text-amber-300 cursor-pointer">
-                  {result.errors.length} per-instructor error(s) — click to expand
+                  {result.errors.length} per-instructor error(s) - click to expand
                 </summary>
                 <ul className="mt-2 text-xs text-amber-800 dark:text-amber-200 list-disc pl-5 space-y-0.5">
                   {result.errors.map((e, i) => <li key={i}>{e}</li>)}

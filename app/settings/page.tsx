@@ -1061,7 +1061,7 @@ const ALERT_TYPE_OPTIONS: { value: TimerAudioSettings['alertType']; label: strin
   { value: 'beeps',       label: 'Beeps Only',     description: 'Soft chime beeps at warnings and rotation end' },
   { value: 'voice',       label: 'Voice Only',     description: 'Voice announcements (no beeps)' },
   { value: 'voice_beeps', label: 'Voice + Beeps',  description: 'Both beeps and voice announcements' },
-  { value: 'silent',      label: 'Silent',         description: 'No audio — visual alerts only' },
+  { value: 'silent',      label: 'Silent',         description: 'No audio - visual alerts only' },
 ];
 
 function TimerAudioPanel() {
@@ -1146,7 +1146,7 @@ function TimerAudioPanel() {
             className="w-full accent-blue-600"
           />
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Default is 30% — keeps sounds pleasant and non-startling
+            Default is 30% - keeps sounds pleasant and non-startling
           </p>
         </div>
       )}
@@ -1412,7 +1412,7 @@ function ProfilePanel() {
         <span className="flex items-center gap-2 text-sm text-gray-800 dark:text-gray-100">
           <ScrollText className="w-4 h-4 text-gray-500 dark:text-gray-400" />
           AHA Instructor Credentials
-          <span className="text-xs text-gray-400">— AHA number &amp; signature for export forms</span>
+          <span className="text-xs text-gray-400"> - AHA number &amp; signature for export forms</span>
         </span>
         <ChevronRight className="w-4 h-4 text-gray-400" />
       </Link>
@@ -1490,7 +1490,7 @@ function GoogleCalendarPanel() {
       toast.success(
         parts.length > 0
           ? `Synced ${parts.join(', ')}`
-          : 'Nothing to sync — no published assignments yet'
+          : 'Nothing to sync - no published assignments yet'
       );
       await fetchSyncStats();
     } catch (err) {
@@ -1686,7 +1686,7 @@ function GoogleCalendarPanel() {
                 {syncStats === null
                   ? 'Loading…'
                   : syncStats.count === 0
-                  ? 'No series synced yet — click "Sync Now" to push your published assignments.'
+                  ? 'No series synced yet - click "Sync Now" to push your published assignments.'
                   : `${syncStats.count} series on Google Calendar${
                       syncStats.last_synced_at
                         ? ` · last synced ${new Date(syncStats.last_synced_at).toLocaleString()}`

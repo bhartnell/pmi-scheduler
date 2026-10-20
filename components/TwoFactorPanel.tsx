@@ -407,7 +407,7 @@ export default function TwoFactorPanel() {
                 ? `Authenticator app verification is required at sign-in. ${
                     status?.backup_codes_remaining
                       ? `${status.backup_codes_remaining} backup code${status.backup_codes_remaining !== 1 ? 's' : ''} remaining.`
-                      : 'No backup codes remaining — consider regenerating them.'
+                      : 'No backup codes remaining - consider regenerating them.'
                   }`
                 : 'Add an extra layer of security to your account.'}
             </p>

@@ -69,7 +69,7 @@ export default function WeekStripView({ grid, instructors, onRefresh, isInstruct
     const first = new Date(weekDays[0].date + 'T12:00:00');
     const last = new Date(weekDays[weekDays.length - 1].date + 'T12:00:00');
     const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    return `${fmt(first)}${weekDays.length > 1 ? ' – ' + fmt(last) : ''}`;
+    return `${fmt(first)}${weekDays.length > 1 ? ' - ' + fmt(last) : ''}`;
   }, [weekDays]);
 
   // Handle swap logic

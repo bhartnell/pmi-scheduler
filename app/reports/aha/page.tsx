@@ -72,7 +72,7 @@ export default function AhaExportPage() {
     if (!cohortId) return toast.error('Pick a cohort');
     const p = new URLSearchParams({ cohortId, grouping });
     if (instructorId) p.set('instructorId', instructorId);
-    toast.success('Building ZIP… this can take ~30–60s for a full cohort.');
+    toast.success('Building ZIP… this can take ~30-60s for a full cohort.');
     window.location.href = `/api/reports/aha/zip?${p.toString()}`;
   }
 
@@ -90,7 +90,7 @@ export default function AhaExportPage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">AHA Results Export</h1>
       </div>
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-        Generate the completed AHA form set for a cohort — autofilled, document-formatted, downloadable as PDF.
+        Generate the completed AHA form set for a cohort - autofilled, document-formatted, downloadable as PDF.
         Print &amp; sign (or use a saved signature) is a post-step; move the PDF to the shared drive manually.
       </p>
 
@@ -115,7 +115,7 @@ export default function AhaExportPage() {
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Signing instructor (optional)</label>
             <select value={instructorId} onChange={(e) => setInstructorId(e.target.value)}
               className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
-              <option value="">— blank (wet-sign) —</option>
+              <option value=""> - blank (wet-sign) - </option>
               {instructors.map((i) => <option key={i.id} value={i.id}>{i.name}{i.ahaNumber ? ` (#${i.ahaNumber})` : ''}</option>)}
             </select>
           </div>
@@ -128,7 +128,7 @@ export default function AhaExportPage() {
         )}
         {instructors.length === 0 && (
           <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-            No instructors have AHA credentials on file yet — set them under <Link href="/settings/aha-credentials" className="underline">AHA Credentials</Link> to fill the sign-off line.
+            No instructors have AHA credentials on file yet - set them under <Link href="/settings/aha-credentials" className="underline">AHA Credentials</Link> to fill the sign-off line.
           </p>
         )}
 
@@ -151,15 +151,15 @@ export default function AhaExportPage() {
           <FileArchive className="w-5 h-5 text-green-600" /> Download all 4 forms as a ZIP
         </h2>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-          Pre-separated PDFs — unzip and drag each into the student’s folder. No Adobe extraction. Uses the cohort + signing instructor selected above.
+          Pre-separated PDFs - unzip and drag each into the student’s folder. No Adobe extraction. Uses the cohort + signing instructor selected above.
         </p>
         <div className="grid grid-cols-2 gap-4 max-md:grid-cols-1">
           <div>
             <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Grouping</label>
             <select value={grouping} onChange={(e) => setGrouping(e.target.value as 'student' | 'section')}
               className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
-              <option value="student">By student — one combined PDF per student (recommended)</option>
-              <option value="section">By section — one PDF per form type (AHA records)</option>
+              <option value="student">By student - one combined PDF per student (recommended)</option>
+              <option value="section">By section - one PDF per form type (AHA records)</option>
             </select>
           </div>
         </div>
@@ -174,13 +174,13 @@ export default function AhaExportPage() {
             className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-md text-sm font-medium">
             <Download className="w-4 h-4" /> Download ZIP
           </button>
-          <span className="ml-3 text-xs text-gray-400">~30–60s for a full cohort (PDFs render server-side).</span>
+          <span className="ml-3 text-xs text-gray-400">~30-60s for a full cohort (PDFs render server-side).</span>
         </div>
       </div>
 
       <div className="mt-4 text-xs text-gray-500 dark:text-gray-400 space-y-1">
         <p><strong>Megacode:</strong> each student’s best scored attempt fills the form by rhythm section (Brady/VF/pVT/PEA/Asystole/Tachy/PCAC share the same criteria, so practice scenarios are valid testing cases per AHA). Named AHA variants show the scenario number; others are labeled by their rhythm chain. Students with no attempt (e.g. excused) are omitted.</p>
-        <p><strong>Per-form instructor:</strong> pick the signing instructor per form export (re-select and re-open for a different signer) — keeps a recerting instructor’s signature off their own form.</p>
+        <p><strong>Per-form instructor:</strong> pick the signing instructor per form export (re-select and re-open for a different signer) - keeps a recerting instructor’s signature off their own form.</p>
       </div>
 
       {flagged && (

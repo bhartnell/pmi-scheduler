@@ -172,7 +172,7 @@ export default function AdminExamSessionsPage() {
     if (newTotal < s.total_used || newPima < s.pima_used) {
       const ok = confirm(
         `Heads-up: you're setting capacity (${newTotal} seats / ${newPima} Pima) BELOW what's already signed up `
-        + `(${s.total_used} seats / ${s.pima_used} Pima). No student will be removed — their seats are kept — but the `
+        + `(${s.total_used} seats / ${s.pima_used} Pima). No student will be removed - their seats are kept - but the `
         + `session will show as over capacity until you move/remove someone. Save anyway?`,
       );
       if (!ok) return;
@@ -372,7 +372,7 @@ export default function AdminExamSessionsPage() {
               <label className="text-xs text-gray-600 dark:text-gray-300">Proctor (primary instructor)
                 <select value={form.primary_instructor_id} onChange={e => setForm(f => ({ ...f, primary_instructor_id: e.target.value }))}
                   className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                  <option value="">— pick later —</option>
+                  <option value=""> - pick later - </option>
                   {candidates.map(c => <option key={c.id} value={c.id}>{c.name} ({c.role})</option>)}
                 </select>
                 <span className="text-[10px] text-gray-400">Only the proctor gets the calendar invite; other directors get an email heads-up</span>
@@ -380,7 +380,7 @@ export default function AdminExamSessionsPage() {
             </div>
             <label className="block text-xs text-gray-600 dark:text-gray-300">Notes (optional)
               <input type="text" value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
-                placeholder="e.g. Reserved computer lab — extra Pima machines"
+                placeholder="e.g. Reserved computer lab - extra Pima machines"
                 className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100" />
             </label>
             <div className="flex justify-end gap-2">
@@ -416,12 +416,12 @@ export default function AdminExamSessionsPage() {
               <label className="text-xs text-gray-600 dark:text-gray-300">Student
                 <select value={place.student_id} onChange={e => setPlace(p => ({ ...p, student_id: e.target.value }))}
                   className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                  <option value="">— pick a student —</option>
+                  <option value=""> - pick a student - </option>
                   {roster.map(r => (
                     <option key={r.id} value={r.id}>
                       {r.last_name}, {r.first_name}
-                      {r.cohort ? ` — ${r.cohort.program?.abbreviation ?? ''} ${r.cohort.cohort_number ?? ''} (S${r.cohort.current_semester ?? '?'})` : ''}
-                      {r.email ? '' : ' — no email on roster'}
+                      {r.cohort ? ` - ${r.cohort.program?.abbreviation ?? ''} ${r.cohort.cohort_number ?? ''} (S${r.cohort.current_semester ?? '?'})` : ''}
+                      {r.email ? '' : ' - no email on roster'}
                     </option>
                   ))}
                 </select>
@@ -429,10 +429,10 @@ export default function AdminExamSessionsPage() {
               <label className="text-xs text-gray-600 dark:text-gray-300">Session
                 <select value={place.session_id} onChange={e => setPlace(p => ({ ...p, session_id: e.target.value }))}
                   className="mt-1 w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100">
-                  <option value="">— pick a session —</option>
+                  <option value=""> - pick a session - </option>
                   {sessions.map(s => (
                     <option key={s.id} value={s.id}>
-                      {fmtDate(s.date)} {fmtTime(s.start_time)} — {s.total_left} seats / {s.pima_left} Pima left{s.status === 'closed' ? ' (closed to self-service)' : ''}
+                      {fmtDate(s.date)} {fmtTime(s.start_time)} - {s.total_left} seats / {s.pima_left} Pima left{s.status === 'closed' ? ' (closed to self-service)' : ''}
                     </option>
                   ))}
                 </select>
@@ -467,7 +467,7 @@ export default function AdminExamSessionsPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow border border-amber-300 dark:border-amber-700 overflow-hidden">
             <div className="px-5 py-3 bg-amber-50 dark:bg-amber-900/20 flex items-center gap-2">
               <Hourglass className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-              <h2 className="font-semibold text-amber-900 dark:text-amber-200 text-sm">Pending approval ({pendingAll.length}) — phase-1 signups</h2>
+              <h2 className="font-semibold text-amber-900 dark:text-amber-200 text-sm">Pending approval ({pendingAll.length}) - phase-1 signups</h2>
             </div>
             <div className="divide-y divide-gray-100 dark:divide-gray-700">
               {pendingAll.map(p => (
@@ -499,7 +499,7 @@ export default function AdminExamSessionsPage() {
 
         {/* Sessions */}
         {!loading && sessions.length === 0 && (
-          <p className="text-sm text-gray-500 dark:text-gray-400">No sessions yet — create the first one.</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">No sessions yet - create the first one.</p>
         )}
         {sessions.map(s => (
           <div key={s.id} className="bg-white dark:bg-gray-800 rounded-xl shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
@@ -507,7 +507,7 @@ export default function AdminExamSessionsPage() {
               <div>
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-gray-900 dark:text-gray-100">{fmtDate(s.date)}</h3>
-                  <span className="text-sm text-gray-500 dark:text-gray-400">{fmtTime(s.start_time)} – {fmtTime(s.end_time)}</span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">{fmtTime(s.start_time)} - {fmtTime(s.end_time)}</span>
                   <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${s.status === 'open' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
                     {s.status}
                   </span>

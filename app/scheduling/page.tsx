@@ -742,13 +742,13 @@ export default function SchedulingPage() {
 
         {/* ── Coordinator-tab extras: Coverage Requests + Part-Timer
             Status table. Moved here from the Overview tab per the
-            UI restructure spec — these belong with the coordinator
+            UI restructure spec - these belong with the coordinator
             tools, not the general overview. They render below the
             CoordinatorCalendarView (which is rendered earlier in
             the JSX, at the top of the calendar tab).
             Order: Coverage Requests first since pending tickets are
             actionable (need approve/decline) and belong above the
-            passive Part-Timer Status table — director sees what
+            passive Part-Timer Status table - director sees what
             needs doing immediately on tab open. ── */}
         {activeTab === 'calendar' && effectiveRole && hasMinRole(effectiveRole, 'lead_instructor') && (
         <>
@@ -781,7 +781,7 @@ export default function SchedulingPage() {
                       return req.date;
                     }
                   })();
-                  const timeRange = `${req.start_time.slice(0, 5)}–${req.end_time.slice(0, 5)}`;
+                  const timeRange = `${req.start_time.slice(0, 5)}-${req.end_time.slice(0, 5)}`;
                   const labLabel = req.lab_day
                     ? req.lab_day.cohort
                       ? `${req.lab_day.cohort.program?.abbreviation ?? ''} ${req.lab_day.cohort.cohort_number}`.trim()

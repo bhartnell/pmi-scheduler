@@ -336,7 +336,7 @@ export default function SmcCompletionPage() {
                 {data?.cohort && (
                   <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                     {data.cohort.program_abbr} Cohort{' '}
-                    {String(data.cohort.cohort_number).replace(/\.0$/, '')} —
+                    {String(data.cohort.cohort_number).replace(/\.0$/, '')} -
                     Semester {data.semester}
                   </p>
                 )}
@@ -498,7 +498,7 @@ export default function SmcCompletionPage() {
               </button>
             ))}
             {/* Clinical-skills toggle. Only rendered when there's something
-                to reveal — silent when the cohort's SMC has zero clinical-
+                to reveal - silent when the cohort's SMC has zero clinical-
                 only entries (EMT/AEMT have none currently). */}
             {counts.clinical_only > 0 && (
               <label
@@ -612,7 +612,7 @@ export default function SmcCompletionPage() {
                         {r.skill_id === null && (
                           <span
                             className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
-                            title="Not linked to skills catalog — admin review needed"
+                            title="Not linked to skills catalog - admin review needed"
                           >
                             unlinked
                           </span>
@@ -620,7 +620,7 @@ export default function SmcCompletionPage() {
                         {isWeak && (
                           <span
                             className="inline-flex items-center gap-0.5 text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
-                            title={`Matched via ${methodMeta?.label.toLowerCase()} — review suggested`}
+                            title={`Matched via ${methodMeta?.label.toLowerCase()} - review suggested`}
                           >
                             <AlertCircle className="w-2.5 h-2.5" />
                             {methodMeta?.label.toLowerCase()}
@@ -647,7 +647,7 @@ export default function SmcCompletionPage() {
                     </div>
                     <div className="text-right flex-shrink-0">
                       <div className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums">
-                        {r.covered ? `${r.lab_day_count}×` : '—'}
+                        {r.covered ? `${r.lab_day_count}×` : '-'}
                       </div>
                       {r.last_run_date && (
                         <div className="text-xs text-gray-500 dark:text-gray-400">

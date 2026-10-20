@@ -212,7 +212,7 @@ export default function LVFRPharmPage() {
                   Pharmacology Checkpoints
                 </h1>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {medications.length} medications — Fill-in-the-blank practice
+                  {medications.length} medications - Fill-in-the-blank practice
                 </p>
               </div>
             </div>
@@ -357,9 +357,9 @@ function MenuView({
   onStart: (level: number) => void;
 }) {
   const levels = [
-    { level: 1, label: 'Level 1 — Beginner', desc: '3 blanked fields per card', color: 'green' },
-    { level: 2, label: 'Level 2 — Intermediate', desc: '5 blanked fields per card', color: 'yellow' },
-    { level: 3, label: 'Level 3 — Advanced', desc: '7+ blanked fields per card', color: 'red' },
+    { level: 1, label: 'Level 1 - Beginner', desc: '3 blanked fields per card', color: 'green' },
+    { level: 2, label: 'Level 2 - Intermediate', desc: '5 blanked fields per card', color: 'yellow' },
+    { level: 3, label: 'Level 3 - Advanced', desc: '7+ blanked fields per card', color: 'red' },
   ];
 
   return (
@@ -493,7 +493,7 @@ function TakeCheckpointView({
             {medication.generic_name}
           </h2>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Brand: {medication.brand_names?.join(', ') || '—'}
+            Brand: {medication.brand_names?.join(', ') || '-'}
           </p>
         </div>
 
@@ -517,7 +517,7 @@ function TakeCheckpointView({
                     />
                   ) : (
                     <div className="text-sm text-gray-700 dark:text-gray-300">
-                      {Array.isArray(value) ? value.join(', ') : String(value || '—')}
+                      {Array.isArray(value) ? value.join(', ') : String(value || '-')}
                     </div>
                   )}
                 </div>
@@ -588,7 +588,7 @@ function ResultsView({
         <div className={`mt-2 text-lg font-semibold ${results.passed ? 'text-green-700' : 'text-red-700'}`}>
           {results.passed ? 'PASSED' : 'NEEDS REVIEW'}
         </div>
-        <p className="mt-1 text-sm text-gray-500">Level {difficulty} — 80% required to pass</p>
+        <p className="mt-1 text-sm text-gray-500">Level {difficulty} - 80% required to pass</p>
       </div>
 
       {/* Per-Medication Breakdown */}

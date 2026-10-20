@@ -338,10 +338,10 @@ export default function ExternalAccessPage() {
                         {entry.default_role}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{entry.default_scope?.join(', ') || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{entry.default_scope?.join(', ') || '-'}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{entry.approved_by}</td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                      {entry.approved_at ? new Date(entry.approved_at).toLocaleDateString() : '—'}
+                      {entry.approved_at ? new Date(entry.approved_at).toLocaleDateString() : '-'}
                     </td>
                     <td className="px-4 py-3">
                       {entry.is_active ? (
@@ -567,7 +567,7 @@ export default function ExternalAccessPage() {
                   </p>
                   <div className="max-h-32 overflow-y-auto text-xs text-gray-600 dark:text-gray-400 space-y-1">
                     {importPreview.slice(0, 10).map((row, i) => (
-                      <div key={i}>{row.name} — {row.email}</div>
+                      <div key={i}>{row.name} - {row.email}</div>
                     ))}
                     {importPreview.length > 10 && (
                       <div className="text-gray-400 dark:text-gray-500">...and {importPreview.length - 10} more</div>

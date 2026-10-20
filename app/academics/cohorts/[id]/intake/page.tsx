@@ -301,14 +301,14 @@ export default function Day1IntakePage() {
                       >
                         {EMS_LEVELS.map(l => (
                           <option key={l} value={l}>
-                            {l === '' ? '— Not set —' : l}
+                            {l === '' ? ' - Not set - ' : l}
                           </option>
                         ))}
                       </select>
                     </div>
 
                     {/* Agency — hardcoded <select> for clean mobile
-                        picker. Empty option ("— Not set —") stores
+                        picker. Empty option (" - Not set - ") stores
                         null. Existing values that aren't on the
                         list (legacy free-text agencies on already-
                         edited rows) are preserved by injecting them
@@ -325,7 +325,7 @@ export default function Day1IntakePage() {
                       >
                         {EMS_EMPLOYERS.map(name => (
                           <option key={name || '__not_set__'} value={name}>
-                            {name === '' ? '— Not set —' : name}
+                            {name === '' ? ' - Not set - ' : name}
                           </option>
                         ))}
                         {s.agency && !EMS_EMPLOYERS.includes(s.agency) && (

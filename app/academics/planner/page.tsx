@@ -900,7 +900,7 @@ function BlockEditModal({
                 {/* Per-day time overrides for multi-day repeat */}
                 {repeatType === 'weekly_multi' && repeatDays.size > 1 && (
                   <div className="mt-3 space-y-2 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-3">
-                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Time per day (optional — defaults to times above)</div>
+                    <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Time per day (optional - defaults to times above)</div>
                     {Array.from(repeatDays).sort().map(d => (
                       <div key={d} className="flex items-center gap-2">
                         <span className="text-xs text-gray-600 dark:text-gray-400 w-12">{DAY_SHORT[d]}:</span>
@@ -1095,7 +1095,7 @@ function BlockEditModal({
                     <Calendar className="w-4 h-4 text-green-600 dark:text-green-400" />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-green-800 dark:text-green-300">
-                        {labDayLink.title || `Lab Day — ${new Date(labDayLink.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                        {labDayLink.title || `Lab Day - ${new Date(labDayLink.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                       </div>
                       <div className="text-xs text-green-600 dark:text-green-400">
                         Open lab day details
@@ -1140,7 +1140,7 @@ function BlockEditModal({
                       <option value="">Select program...</option>
                       {safePrograms.map(ps => (
                         <option key={ps.id} value={ps.id}>
-                          {getProgramLabel(ps)} — {formatClassDays(safeArray(ps.class_days))}
+                          {getProgramLabel(ps)} - {formatClassDays(safeArray(ps.class_days))}
                         </option>
                       ))}
                     </select>
@@ -1483,7 +1483,7 @@ function GenerateWizard({
         if (checkRes.ok && checkData.has_existing) {
           setExistingBlocks(checkData as ExistingBlocksInfo);
           setShowDuplicateDialog(true);
-          return; // Don't advance yet — wait for user choice
+          return; // Don't advance yet - wait for user choice
         }
       } catch {
         // Non-critical — proceed without check
@@ -1799,7 +1799,7 @@ function GenerateWizard({
                           <span>
                             Blocks will be assigned to <strong>{previewSemester.name}</strong>
                             {previewSemester.start_date && previewSemester.end_date && (
-                              <> ({previewSemester.start_date} – {previewSemester.end_date})</>
+                              <> ({previewSemester.start_date} - {previewSemester.end_date})</>
                             )}
                           </span>
                         </div>
@@ -1995,7 +1995,7 @@ function GenerateWizard({
           {wizard.step === 4 && (
             <div className="space-y-4">
               <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 px-3 py-2 text-sm text-blue-700 dark:text-blue-300">
-                Starting {wizard.startDate} — generating <strong>{previewCount} dated blocks</strong> across 15 weeks
+                Starting {wizard.startDate} - generating <strong>{previewCount} dated blocks</strong> across 15 weeks
                 {onlinePreview.length > 0 ? ` + ${onlinePreview.length} online courses` : ''}
                 {wizard.loadLabTemplate && labTemplateInfo?.available ? ' + lab template' : ''}.
               </div>
@@ -2033,7 +2033,7 @@ function GenerateWizard({
                   <div className="divide-y divide-purple-100 dark:divide-purple-800">
                     {onlinePreview.map((t, i) => (
                       <div key={i} className="px-3 py-2 text-sm text-gray-700 dark:text-gray-300">
-                        {t.course_code} — {t.course_name}
+                        {t.course_code} - {t.course_name}
                       </div>
                     ))}
                   </div>
@@ -2136,7 +2136,7 @@ function GenerateWizard({
                   onChange={e => setUnmappedFallbackId(e.target.value)}
                   className="w-full text-sm px-2 py-1.5 border border-amber-300 dark:border-amber-700 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                 >
-                  <option value="">— select a semester —</option>
+                  <option value=""> - select a semester - </option>
                   {genPreview.available_semesters.map(s => (
                     <option key={s.id} value={s.id}>
                       {s.name} ({s.start_date}{s.end_date ? ` → ${s.end_date}` : ''})
@@ -3172,7 +3172,7 @@ function SemesterPlannerPage() {
                     alert(result.error || 'Failed to publish blocks');
                     return;
                   }
-                  alert(`Published ${result.count || 0} block(s) — they're now live on the Master Calendar.`);
+                  alert(`Published ${result.count || 0} block(s) - they're now live on the Master Calendar.`);
                   await loadSemesterData();
                 } catch (err) {
                   alert(err instanceof Error ? err.message : 'Publish failed');
@@ -3272,7 +3272,7 @@ function SemesterPlannerPage() {
                   {weekNumber && weekNumber >= 1 && weekNumber <= 15 && (
                     <span className="text-blue-600 dark:text-blue-400 mr-1">Week {weekNumber}:</span>
                   )}
-                  {formatDateLong(currentWeekStart)} – {formatDateLong(weekEnd)}
+                  {formatDateLong(currentWeekStart)} - {formatDateLong(weekEnd)}
                 </>
               ) : (
                 <>

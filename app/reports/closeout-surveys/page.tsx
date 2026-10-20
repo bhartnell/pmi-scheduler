@@ -518,7 +518,7 @@ export default function CloseoutSurveyReportPage() {
                       <span className="text-sm font-medium">Avg Overall Rating</span>
                     </div>
                     <p className={`text-3xl font-bold ${scoreColor(overallAvg)}`}>
-                      {overallAvg !== null ? overallAvg.toFixed(1) : '—'}
+                      {overallAvg !== null ? overallAvg.toFixed(1) : '-'}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">out of 5.0</p>
                   </div>

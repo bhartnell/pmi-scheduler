@@ -551,7 +551,7 @@ export default function UserManagementPage() {
                           )}
                           {/* Program tag: the PATCH API already lets a protected superadmin
                               edit their own row (isProtectedSuperadmin only blocks OTHER users
-                              from modifying it) — mirror that here instead of hiding the
+                              from modifying it) - mirror that here instead of hiding the
                               control outright, so Ben/Josh can self-tag primary_program. */}
                           {canModify &&
                             (!isProtected || currentUser.email.toLowerCase() === user.email.toLowerCase()) && (
@@ -559,7 +559,7 @@ export default function UserManagementPage() {
                                 value={user.primary_program || ''}
                                 onChange={(e) => handleSetProgram(user.id, e.target.value)}
                                 className="text-sm px-2 py-1 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-                                title="Program tag (primary discipline) — drives the general-lab-default calendar rule"
+                                title="Program tag (primary discipline) - drives the general-lab-default calendar rule"
                               >
                                 <option value="">No program tag</option>
                                 <option value="paramedic">Paramedic</option>

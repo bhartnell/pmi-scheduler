@@ -216,7 +216,7 @@ export default function VolunteerSignupPage() {
             <div className="p-4 border-b border-gray-200 dark:border-gray-700">
               <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-blue-500" />
-                Available Events — Select the dates you can attend
+                Available Events - Select the dates you can attend
               </h3>
             </div>
             <div className="p-4 space-y-3">

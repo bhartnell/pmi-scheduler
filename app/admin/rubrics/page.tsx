@@ -175,7 +175,7 @@ function RubricPreview({
                       className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
                     >
                       <td className="px-4 py-3">
-                        <p className="font-medium text-gray-900 dark:text-white">{criterion.name || '—'}</p>
+                        <p className="font-medium text-gray-900 dark:text-white">{criterion.name || '-'}</p>
                         {criterion.description && (
                           <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
                             {criterion.description}

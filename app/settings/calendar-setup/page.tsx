@@ -391,7 +391,7 @@ function Step2Sync({
           </div>
         ) : counts.block_count === 0 ? (
           <p className="text-sm text-blue-800 dark:text-blue-200">
-            You don&apos;t have any published classes or labs assigned right now. You can still finish setup — when classes are scheduled, your calendar will sync automatically.
+            You don&apos;t have any published classes or labs assigned right now. You can still finish setup - when classes are scheduled, your calendar will sync automatically.
           </p>
         ) : (
           <p className="text-sm text-blue-900 dark:text-blue-100">

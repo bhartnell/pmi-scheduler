@@ -245,7 +245,7 @@ export default function LogMyShiftModal({ onClose, onSaved }: LogMyShiftModalPro
               type="text"
               value={courseLabel}
               onChange={e => setCourseLabel(e.target.value)}
-              placeholder="e.g. EMT Lecture — Module 4"
+              placeholder="e.g. EMT Lecture - Module 4"
               disabled={submitting}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
             />
@@ -262,7 +262,7 @@ export default function LogMyShiftModal({ onClose, onSaved }: LogMyShiftModalPro
               disabled={submitting}
               className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm text-gray-900 dark:text-gray-100"
             >
-              <option value="">— Not covering for anyone —</option>
+              <option value=""> - Not covering for anyone - </option>
               {instructors.map(i => (
                 <option key={i.id} value={i.id}>{i.name}</option>
               ))}
@@ -293,7 +293,7 @@ export default function LogMyShiftModal({ onClose, onSaved }: LogMyShiftModalPro
           {success && (
             <div className="rounded-lg border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 p-3 flex items-start gap-2 text-sm text-emerald-800 dark:text-emerald-200">
               <CheckCircle2 className="w-4 h-4 flex-shrink-0 mt-0.5" />
-              <span>Logged — coordinator notified.</span>
+              <span>Logged - coordinator notified.</span>
             </div>
           )}
         </div>

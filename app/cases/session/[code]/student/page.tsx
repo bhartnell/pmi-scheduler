@@ -630,7 +630,7 @@ export default function StudentSessionPage() {
           {phaseTitle}
         </span>
         <span className="text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">
-          {initials} — {runningScore} pts
+          {initials} - {runningScore} pts
         </span>
       </header>
 

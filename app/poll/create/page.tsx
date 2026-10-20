@@ -40,7 +40,7 @@ function CreatePollInner() {
     if (!studentName && !purpose) return undefined;
     const purposeLabel = purpose ? PURPOSE_LABELS[purpose] ?? purpose : 'Meeting';
     const title = studentName
-      ? `${studentName} — ${purposeLabel}`
+      ? `${studentName} - ${purposeLabel}`
       : purposeLabel;
     return {
       title,

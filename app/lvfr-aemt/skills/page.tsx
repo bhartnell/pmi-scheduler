@@ -377,7 +377,7 @@ export default function SkillsPage() {
                 onChange={e => setSelectedStudentId(e.target.value || null)}
                 className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white px-3 py-2 text-sm"
               >
-                <option value="">— Choose a student —</option>
+                <option value=""> - Choose a student - </option>
                 {students.map(s => (
                   <option key={s.id} value={s.id}>{s.last_name}, {s.first_name}</option>
                 ))}
@@ -663,7 +663,7 @@ function SkillCard({ skill, expanded, onToggle, onLogAttempt }: {
                 {a.result === 'pass' ? 'Pass' : 'Fail'}
               </span>
               {a.evaluator?.[0]?.name && <span className="text-gray-400">by {a.evaluator[0].name}</span>}
-              {a.notes && <span className="text-gray-400 truncate max-w-[200px]" title={a.notes}>— {a.notes}</span>}
+              {a.notes && <span className="text-gray-400 truncate max-w-[200px]" title={a.notes}> - {a.notes}</span>}
             </div>
           ))}
         </div>
@@ -775,7 +775,7 @@ function MatrixView({ data, loading, category, setCategory, nremtOnly, setNremtO
                         key={sk.id}
                         className={`px-1 py-1.5 text-center ${onCellClick ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600' : ''}`}
                         onClick={() => onCellClick?.(st.id, sk.id, sk.name)}
-                        title={`${st.last_name}: ${sk.name} — ${cfg?.label || 'Not Started'}${cell ? ` (${cell.total_attempts} attempts)` : ''}`}
+                        title={`${st.last_name}: ${sk.name} - ${cfg?.label || 'Not Started'}${cell ? ` (${cell.total_attempts} attempts)` : ''}`}
                       >
                         <div className={`w-3 h-3 rounded-full mx-auto ${cfg?.dotColor || 'bg-gray-300'}`} />
                       </td>
@@ -937,21 +937,21 @@ function ClassCompletionView() {
             <button
               onClick={() => { window.location.href = `/api/lvfr-aemt/skills/reference-export`; }}
               className="flex items-center gap-1.5 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium whitespace-nowrap"
-              title="Download blank reference sheets, one page per skill (.pdf) — for teaching and hand-documenting a rare failure."
+              title="Download blank reference sheets, one page per skill (.pdf) - for teaching and hand-documenting a rare failure."
             >
               <Download className="w-4 h-4" /> Reference sheets (.pdf)
             </button>
             <button
               onClick={() => { window.location.href = `/api/lvfr-aemt/skills/blank-checklist-export`; }}
               className="flex items-center gap-1.5 px-3 py-2 text-sm bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg font-medium whitespace-nowrap"
-              title="Download the blank class checklist — all skills by category, checkboxes to mark off as covered (.pdf). For printing/handing out."
+              title="Download the blank class checklist - all skills by category, checkboxes to mark off as covered (.pdf). For printing/handing out."
             >
               <Download className="w-4 h-4" /> Blank checklist (.pdf)
             </button>
           </div>
         </div>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-3">
-          Check a skill once it&apos;s been covered with the class — it counts complete for the whole roster.
+          Check a skill once it&apos;s been covered with the class - it counts complete for the whole roster.
           Rare individual failures are documented by hand off the blank reference sheet, not here.
         </p>
       </div>

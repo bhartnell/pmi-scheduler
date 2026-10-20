@@ -296,14 +296,14 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           href: '/admin/semesters',
           icon: CalendarIcon,
           title: 'Semester Management',
-          description: 'Set the S1 start date once per year — system auto-derives S1–S4 with break weeks. Per-cohort overrides for off-calendar groups.',
+          description: 'Set the S1 start date once per year - system auto-derives S1-S4 with break weeks. Per-cohort overrides for off-calendar groups.',
           color: 'bg-indigo-600',
         },
         {
           href: '/admin/seed-availability',
           icon: CalendarIcon,
           title: 'Seed Full-Time Availability',
-          description: 'Bulk-create Mon-Fri default availability for full-time instructors across a date window. Idempotent — re-runs skip rows already present.',
+          description: 'Bulk-create Mon-Fri default availability for full-time instructors across a date window. Idempotent - re-runs skip rows already present.',
           color: 'bg-emerald-600',
         },
         {
@@ -465,7 +465,7 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           href: '/admin/instructor-workload',
           icon: Users,
           title: 'Instructor Workload',
-          description: 'Semester workload by instructor — class, lab, LVFR, and shift hours',
+          description: 'Semester workload by instructor - class, lab, LVFR, and shift hours',
           color: 'bg-blue-600',
         },
         {

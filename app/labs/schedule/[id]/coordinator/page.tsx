@@ -909,7 +909,7 @@ export default function CoordinatorViewPage() {
         // (source is 'a' implicitly, first duplicate becomes 'b', etc.)
         const suffixLetter = String.fromCharCode('a'.charCodeAt(0) + siblings.length);
         const baseNumber = source.station_number;
-        const displayLabel = `Station ${baseNumber}${suffixLetter} — ${sourceSkillName}`;
+        const displayLabel = `Station ${baseNumber}${suffixLetter} - ${sourceSkillName}`;
 
         const nextNumber = stations.length > 0
           ? Math.max(...stations.map(s => s.station_number)) + 1
@@ -1652,7 +1652,7 @@ export default function CoordinatorViewPage() {
                         className="w-full text-left px-3 py-2 text-sm text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 flex items-center gap-2"
                       >
                         <Clock className="w-4 h-4" />
-                        On Break (5–10 min)
+                        On Break (5-10 min)
                       </button>
                     )}
                     {/* Retake-station toggle — NREMT-day only,
@@ -1711,7 +1711,7 @@ export default function CoordinatorViewPage() {
             <div className="flex items-center gap-1.5">
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">
                 <ArrowRight className="w-3 h-3" />
-                En Route — {enRouteEntry.studentName}
+                En Route - {enRouteEntry.studentName}
               </span>
               {(Date.now() - enRouteEntry.sentAt) < 30000 && (
                 <button
@@ -1796,7 +1796,7 @@ export default function CoordinatorViewPage() {
             </label>
             {isStationUnavailable ? (
               <div className="text-xs italic text-gray-500 dark:text-gray-400 px-2 py-1.5 border border-dashed border-gray-300 dark:border-gray-600 rounded">
-                {isStationClosed ? 'Station temporarily closed' : 'Examiner on break — back soon'}
+                {isStationClosed ? 'Station temporarily closed' : 'Examiner on break - back soon'}
               </div>
             ) : (
               <div className="flex items-center gap-1">
@@ -1911,8 +1911,8 @@ export default function CoordinatorViewPage() {
                 <div className="flex items-center gap-2 min-w-0">
                   <AlertTriangle className="w-5 h-5 flex-shrink-0" />
                   <span className="font-bold text-sm truncate">
-                    ASSISTANCE NEEDED — {alert.station_name}
-                    {alert.notes ? ` — ${alert.notes}` : ''}
+                    ASSISTANCE NEEDED - {alert.station_name}
+                    {alert.notes ? ` - ${alert.notes}` : ''}
                   </span>
                 </div>
                 <button
@@ -2000,7 +2000,7 @@ export default function CoordinatorViewPage() {
             Station Occupancy
           </h3>
           <span className="text-sm text-gray-500 dark:text-gray-400">
-            Each physical station — who&apos;s there, pass/fail/open
+            Each physical station - who&apos;s there, pass/fail/open
           </span>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
@@ -2013,7 +2013,7 @@ export default function CoordinatorViewPage() {
                 className="col-span-2 rounded-xl border-2 border-dashed border-indigo-300 dark:border-indigo-700 bg-indigo-50/40 dark:bg-indigo-900/10 p-2 sm:p-3"
               >
                 <div className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wide mb-1.5 px-1">
-                  Combined proctor — BVM + O2/NRB (same examiner)
+                  Combined proctor - BVM + O2/NRB (same examiner)
                 </div>
                 <div className="grid grid-cols-2 gap-2 sm:gap-3">
                   {renderStationCard(bvmStation)}
@@ -2323,7 +2323,7 @@ export default function CoordinatorViewPage() {
                             </span>
                             <span
                               className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-purple-500 text-white text-[8px] font-bold flex items-center justify-center"
-                              title="Retake attempt — grading in progress"
+                              title="Retake attempt - grading in progress"
                             >
                               R
                             </span>
@@ -2877,7 +2877,7 @@ export default function CoordinatorViewPage() {
                         // Count students still needing this skill for queue indicator
                         const waiting = students.filter(st => (studentNeeds[st.id] || []).includes(skillName)).length;
                         const codeLabel = code ? ` [${code}]` : '';
-                        const queueLabel = waiting > 0 ? ` — ${waiting} waiting` : '';
+                        const queueLabel = waiting > 0 ? ` - ${waiting} waiting` : '';
                         return (
                           <option key={s.id} value={s.id}>
                             {skillName}{codeLabel}{queueLabel}
@@ -2982,7 +2982,7 @@ export default function CoordinatorViewPage() {
       {/* Mid-exam station delete confirmation. Only reachable from the
           per-station three-dot menu, which is already gated to NREMT days
           and overflow/retake stations. Evaluations are preserved via
-          their independent lab_day_id FK — explicit in the copy so the
+          their independent lab_day_id FK - explicit in the copy so the
           coordinator isn't nervous about losing data. */}
       {deleteStationConfirm && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">

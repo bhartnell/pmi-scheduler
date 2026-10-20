@@ -483,7 +483,7 @@ export default function DashboardDefaultsPage() {
         {/* Preview summary */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-5">
           <h2 className="font-semibold text-gray-900 dark:text-white mb-3 text-sm uppercase tracking-wide">
-            Preview — {ROLE_LABELS[selectedRole]}
+            Preview - {ROLE_LABELS[selectedRole]}
           </h2>
           <div className="flex flex-wrap gap-2">
             {widgets.length === 0 ? (

@@ -105,7 +105,7 @@ const GETTING_STARTED_STEPS = [
     step: 3,
     title: 'Use the Command Palette',
     description:
-      'Press Cmd+K (Mac) or Ctrl+K (Windows/Linux) at any time to open the command palette. You can quickly navigate to any section, search students, scenarios, tasks, and more — all from the keyboard.',
+      'Press Cmd+K (Mac) or Ctrl+K (Windows/Linux) at any time to open the command palette. You can quickly navigate to any section, search students, scenarios, tasks, and more - all from the keyboard.',
     icon: Search,
   },
   {
@@ -178,7 +178,7 @@ const FAQ_ITEMS: FaqItem[] = [
   },
   {
     category: 'Account & Access',
-    question: 'My role says "pending" — what do I do?',
+    question: 'My role says "pending" - what do I do?',
     answer:
       'New @pmi.edu accounts are automatically created with a pending status. An administrator must assign you a role before you can access the system. Contact your program director or a current admin.',
   },
@@ -210,7 +210,7 @@ const FAQ_ITEMS: FaqItem[] = [
     category: 'Scheduling',
     question: 'What is the difference between Scheduling Polls and Part-Timer Scheduling?',
     answer:
-      'Scheduling Polls (/scheduler) are Doodle-style polls for finding a meeting time — you create a poll with proposed dates, share the link, and participants mark their availability. Part-Timer Scheduling (/scheduling) is for managing recurring shift availability and sign-ups for open shifts.',
+      'Scheduling Polls (/scheduler) are Doodle-style polls for finding a meeting time - you create a poll with proposed dates, share the link, and participants mark their availability. Part-Timer Scheduling (/scheduling) is for managing recurring shift availability and sign-ups for open shifts.',
   },
   {
     category: 'Scheduling',
@@ -370,15 +370,15 @@ const CHANGELOG_VERSIONS: ChangelogVersion[] = [
     version: '1.4.0',
     date: '2026-02-28',
     added: [
-      'Error boundaries on every page — crashes are caught gracefully with a recovery UI',
-      'PWA offline support via service worker — the app works without an internet connection',
-      'Skeleton loading states throughout — blank screens replaced with animated placeholders',
-      'Database tools page for admins (/admin/db-tools) — health checks and query runner',
-      'Full help documentation at /help — Getting Started, FAQ, Keyboard Shortcuts, Role Guides',
-      'Changelog system — version history in Help and a "What\'s New" modal after updates',
-      'Granular notification preferences — per-category email and push settings',
-      'Onboarding tour system — role-specific guided tour, replayable from Settings',
-      'Improved form validation — inline error messages and input validation helpers',
+      'Error boundaries on every page - crashes are caught gracefully with a recovery UI',
+      'PWA offline support via service worker - the app works without an internet connection',
+      'Skeleton loading states throughout - blank screens replaced with animated placeholders',
+      'Database tools page for admins (/admin/db-tools) - health checks and query runner',
+      'Full help documentation at /help - Getting Started, FAQ, Keyboard Shortcuts, Role Guides',
+      'Changelog system - version history in Help and a "What\'s New" modal after updates',
+      'Granular notification preferences - per-category email and push settings',
+      'Onboarding tour system - role-specific guided tour, replayable from Settings',
+      'Improved form validation - inline error messages and input validation helpers',
     ],
     changed: [
       'Global search API returns richer result previews with contextual snippets',
@@ -389,11 +389,11 @@ const CHANGELOG_VERSIONS: ChangelogVersion[] = [
     version: '1.3.0',
     date: '2026-02-21',
     added: [
-      'Activity tracker — captures recent page visits, surfaced in the Command Palette',
-      'Quick Actions menu — floating button for one-tap access to frequent workflows',
-      'Command Palette (Ctrl+K / ⌘K) — keyboard-driven search and navigation',
-      'Global timer banner — countdown visible on every page when a lab timer is running',
-      'Offline provider and OfflineBanner — detects network state and warns users',
+      'Activity tracker - captures recent page visits, surfaced in the Command Palette',
+      'Quick Actions menu - floating button for one-tap access to frequent workflows',
+      'Command Palette (Ctrl+K / ⌘K) - keyboard-driven search and navigation',
+      'Global timer banner - countdown visible on every page when a lab timer is running',
+      'Offline provider and OfflineBanner - detects network state and warns users',
     ],
     changed: [
       'Settings page restructured with tabbed sections: Notifications, Email, Timer Audio, Profile, Onboarding',
@@ -403,11 +403,11 @@ const CHANGELOG_VERSIONS: ChangelogVersion[] = [
     version: '1.2.0',
     date: '2026-02-14',
     added: [
-      'Help page (/help) — initial version with Getting Started, FAQ, and keyboard shortcuts',
-      'Onboarding tour wrapper — shows welcome modal and guided tour to new users automatically',
-      'Global search API (/api/search) — searches students, scenarios, lab days, tasks, and more',
-      'Feedback button — persistent floating button for bug reports and feature requests',
-      'Notification bell — shows unread notification count in the header',
+      'Help page (/help) - initial version with Getting Started, FAQ, and keyboard shortcuts',
+      'Onboarding tour wrapper - shows welcome modal and guided tour to new users automatically',
+      'Global search API (/api/search) - searches students, scenarios, lab days, tasks, and more',
+      'Feedback button - persistent floating button for bug reports and feature requests',
+      'Notification bell - shows unread notification count in the header',
     ],
     changed: [
       'Theme toggle moved to Settings; dark mode preference persisted in localStorage',
@@ -418,14 +418,14 @@ const CHANGELOG_VERSIONS: ChangelogVersion[] = [
     version: '1.1.0',
     date: '2026-02-07',
     added: [
-      'Student portal (/student) — view progress, clinical hours, skill sign-offs, portfolio',
-      'Preceptor evaluation forms — hospital preceptors can submit evaluations for clinical shifts',
-      'Cohort archive — completed cohorts archived and browsable separately from active ones',
-      'Endorsement system — instructors endorse students for specific skills with audit trail',
-      'BLS Platinum Checklist — tracks BLS skill completion against platinum standard requirements',
-      'Swap interest panel — students can indicate interest in swapping lab slots',
-      'Site visit alerts — automatic alerts when clinical site visit deadlines are approaching',
-      'Capacity warnings — visual indicators when lab sections are near or at capacity',
+      'Student portal (/student) - view progress, clinical hours, skill sign-offs, portfolio',
+      'Preceptor evaluation forms - hospital preceptors can submit evaluations for clinical shifts',
+      'Cohort archive - completed cohorts archived and browsable separately from active ones',
+      'Endorsement system - instructors endorse students for specific skills with audit trail',
+      'BLS Platinum Checklist - tracks BLS skill completion against platinum standard requirements',
+      'Swap interest panel - students can indicate interest in swapping lab slots',
+      'Site visit alerts - automatic alerts when clinical site visit deadlines are approaching',
+      'Capacity warnings - visual indicators when lab sections are near or at capacity',
     ],
     changed: [
       'Lab header redesigned with inline status indicators and quick-action buttons',
@@ -440,18 +440,18 @@ const CHANGELOG_VERSIONS: ChangelogVersion[] = [
     version: '1.0.0',
     date: '2026-01-31',
     added: [
-      'Core scheduling system — polls, availability submission, result aggregation',
-      'Labs (/labs) — lab days, sections, scenarios, student assignments',
-      'Clinical tracking (/clinical) — hospital shifts, agency internship hours, field contacts',
-      'Admin panel (/admin) — user management, role assignment, cohort creation, reports',
-      'Scenario library — create, version, and assign EMS scenarios to lab days',
-      'Task management — Kanban board with due dates and assignments',
-      'Lab Day Templates — reusable templates for common lab day structures',
-      'Reports page — exportable clinical hours, attendance, scenario completion, certifications',
+      'Core scheduling system - polls, availability submission, result aggregation',
+      'Labs (/labs) - lab days, sections, scenarios, student assignments',
+      'Clinical tracking (/clinical) - hospital shifts, agency internship hours, field contacts',
+      'Admin panel (/admin) - user management, role assignment, cohort creation, reports',
+      'Scenario library - create, version, and assign EMS scenarios to lab days',
+      'Task management - Kanban board with due dates and assignments',
+      'Lab Day Templates - reusable templates for common lab day structures',
+      'Reports page - exportable clinical hours, attendance, scenario completion, certifications',
       'Excel and PDF export utilities',
       'ICS calendar export for lab and clinical schedules',
       'Barcode support for student ID scanning at lab check-in',
-      'Role-based access control — superadmin, admin, lead_instructor, instructor, volunteer_instructor, student, guest',
+      'Role-based access control - superadmin, admin, lead_instructor, instructor, volunteer_instructor, student, guest',
       'Google OAuth restricted to @pmi.edu and @my.pmi.edu domains',
       'Audit logging for all sensitive operations',
       'Email notification system with per-event templates',
@@ -758,7 +758,7 @@ export default function HelpPage() {
                   .join(', ')}
               </>
             ) : (
-              <>No results found for &ldquo;{searchQuery}&rdquo; — try different keywords</>
+              <>No results found for &ldquo;{searchQuery}&rdquo; - try different keywords</>
             )}
           </p>
         </div>
@@ -776,7 +776,7 @@ export default function HelpPage() {
           <div className="flex-1 min-w-0">
             <h2 className="font-bold">Help Wiki</h2>
             <p className="text-sm text-blue-100">
-              Task-by-task playbooks — running a lab day, building from a template, enrolling students, and more.
+              Task-by-task playbooks - running a lab day, building from a template, enrolling students, and more.
             </p>
           </div>
           <ArrowRight className="w-5 h-5 flex-shrink-0 group-hover:translate-x-1 transition-transform" />
@@ -901,7 +901,7 @@ export default function HelpPage() {
                     <p className="text-sm font-semibold text-amber-800 dark:text-amber-300 mb-1">Pro Tip</p>
                     <p className="text-sm text-amber-700 dark:text-amber-400">
                       Press <KbdKey>⌘K</KbdKey> / <KbdKey>Ctrl+K</KbdKey> at any time to instantly search and navigate
-                      to any part of the system — students, scenarios, tasks, lab days, and more.
+                      to any part of the system - students, scenarios, tasks, lab days, and more.
                     </p>
                   </div>
                 </div>
@@ -930,7 +930,7 @@ export default function HelpPage() {
                       <div>
                         <h3 className="font-bold text-gray-900 dark:text-white">Admin / Superadmin</h3>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Full system management — user, settings, reports, certifications
+                          Full system management - user, settings, reports, certifications
                         </p>
                       </div>
                     </div>

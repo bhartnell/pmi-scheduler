@@ -86,7 +86,7 @@ export default function AtRiskStudentsWidget() {
       {students.length === 0 ? (
         <WidgetEmpty
           icon={<CheckCircle className="w-10 h-10 mx-auto text-green-500 dark:text-green-400" />}
-          message="No at-risk students — attendance looks good!"
+          message="No at-risk students - attendance looks good!"
         />
       ) : (
         <div className="space-y-2">

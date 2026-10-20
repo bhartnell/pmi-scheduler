@@ -91,7 +91,7 @@ export default function WithdrawModal({
           </div>
 
           <p className="text-[11px] text-gray-500 dark:text-gray-400">
-            This <strong>preserves</strong> the student&apos;s file — cohort, labs, skills,
+            This <strong>preserves</strong> the student&apos;s file - cohort, labs, skills,
             clinical, and team-lead history all stay intact. They&apos;re just excluded from
             the active roster and completion stats. Fully reversible any time via
             <strong> Re-enroll</strong>. This does <strong>not</strong> delete anything.

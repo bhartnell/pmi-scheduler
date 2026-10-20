@@ -166,7 +166,7 @@ function SeatingChartsContent() {
           classroom_id: selectedClassroom || undefined,
           // Include the room name in the chart title so operators can
           // tell at a glance which room a chart is for ("EMT G5 — Suite 1").
-          name: `${cohort?.program.abbreviation} ${cohort?.cohort_number} Seating${classroom ? ` — ${classroom.name}` : ''}`,
+          name: `${cohort?.program.abbreviation} ${cohort?.cohort_number} Seating${classroom ? ` - ${classroom.name}` : ''}`,
         }),
       });
 

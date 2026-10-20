@@ -700,7 +700,7 @@ function RowCard({
           )}
           {!linked && (
             <span className="text-amber-600 dark:text-amber-400">
-              — not linked to catalog
+ - not linked to catalog
             </span>
           )}
         </div>
@@ -815,7 +815,7 @@ function EditRowModal({
               max={52}
               value={weekNumber}
               onChange={(e) => setWeekNumber(e.target.value)}
-              placeholder="—"
+              placeholder="-"
               className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-900 text-gray-900 dark:text-white"
             />
           </FormField>
@@ -973,7 +973,7 @@ function AddRowModal({
             </select>
           </FormField>
         </div>
-        <FormField label="Catalog skill (optional — pick to auto-fill)">
+        <FormField label="Catalog skill (optional - pick to auto-fill)">
           <SkillPicker skills={skills} value={skillId} onChange={handlePickSkill} />
         </FormField>
         <FormField label="Skill name (as it appears on the SMC)">

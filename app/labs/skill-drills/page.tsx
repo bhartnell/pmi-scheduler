@@ -1174,7 +1174,7 @@ export default function SkillDrillsPage() {
                               ) : (
                                 <>
                                   <Upload className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">Click to choose file (PDF, DOCX, image — max 10 MB)</span>
+                                  <span className="text-xs text-gray-500 dark:text-gray-400">Click to choose file (PDF, DOCX, image - max 10 MB)</span>
                                 </>
                               )}
                             </label>

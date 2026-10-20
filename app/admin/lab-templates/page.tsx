@@ -704,7 +704,7 @@ function ApplySection({ cohorts }: ApplySectionProps) {
             </p>
             {parseBreakWeeks().length > 0 && (
               <p className="text-xs text-amber-700 dark:text-amber-300">
-                Break weeks: {parseBreakWeeks().join(', ')} — lab days after these weeks will shift forward.
+                Break weeks: {parseBreakWeeks().join(', ')} - lab days after these weeks will shift forward.
               </p>
             )}
             <p className="text-xs text-amber-700 dark:text-amber-300">

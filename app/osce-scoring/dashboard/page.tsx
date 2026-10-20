@@ -134,7 +134,7 @@ export default function EvaluatorDashboard() {
       {/* Test mode banner */}
       {isTestMode && (
         <div className="bg-orange-500 text-white text-center py-2 font-bold text-sm">
-          TEST MODE — This is a practice event. Scores will not affect real assessments.
+          TEST MODE - This is a practice event. Scores will not affect real assessments.
         </div>
       )}
 
