@@ -491,6 +491,12 @@ export default function AdvCertGradePage() {
 
           </div>
 
+          {(!scenario.grading_model || scenario.grading_model === 'adv_cert_checklist') && scenario.segments.length > 0 && (
+            <div className="space-y-1">
+              <CcfTimer key={ccfKey} percent={ccf?.percent ?? null} onDevicePercent={setDevicePercent} onChange={(rec) => setCcf((prev) => (rec ? (prev?.source === 'entered' && prev.original ? { ...prev, intervals: rec.intervals } : rec) : prev && prev.source === 'calculated' ? null : prev))} />
+            </div>
+          )}
+
           {scenario.grading_model && scenario.grading_model !== 'adv_cert_checklist' && (
             <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 text-sm text-blue-800 dark:text-blue-300">
               This is a learning station case. It uses the ACLS learning tracker (Pass / Watch), not the megacode checklist.{' '}
@@ -575,7 +581,6 @@ export default function AdvCertGradePage() {
               </button>
             </div>
             <div className="mb-3 space-y-3">
-              <CcfTimer key={ccfKey} percent={ccf?.percent ?? null} onDevicePercent={setDevicePercent} onChange={(rec) => setCcf((prev) => (rec ? (prev?.source === 'entered' && prev.original ? { ...prev, intervals: rec.intervals } : rec) : prev && prev.source === 'calculated' ? null : prev))} />
               <div className="rounded-md border border-gray-200 dark:border-gray-700 p-3">
                 <div className="text-sm font-medium text-gray-900 dark:text-white mb-2">
                   Chest compression fraction {ccf ? `(${ccf.source})` : '(optional)'}
