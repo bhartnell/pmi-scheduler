@@ -28,3 +28,13 @@ export function findParkedFlag(pathname: string, flags: ModuleFlag[]): ModuleFla
 export function isHrefParked(href: string, flags: ModuleFlag[]): boolean {
   return findParkedFlag(href.split(/[?#]/)[0], flags) !== null;
 }
+
+/**
+ * Section-level park: a flag keyed `/section/<page>/<name>` hides one section of a page.
+ * Exact match only; a section with no parked flag stays visible, so a missing row or a
+ * failed flag read can never hide content.
+ */
+export function isSectionParked(key: string, flags: ModuleFlag[]): boolean {
+  const k = normalizeFlagKey(key);
+  return flags.some(f => !f.enabled && normalizeFlagKey(f.key) === k);
+}
