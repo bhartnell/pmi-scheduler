@@ -552,6 +552,12 @@ export default function ClinicalDashboardPage() {
                   description="Semester 4 finals"
                 />
                 <SecondaryCard
+                  href="/clinical/pre-internship-review"
+                  icon={ClipboardCheck}
+                  title="Pre-Internship Review"
+                  description="Self-assessment vs instructor, agency summaries"
+                />
+                <SecondaryCard
                   href="/admin/osce-events"
                   icon={ClipboardCheck}
                   title="OSCE Events"

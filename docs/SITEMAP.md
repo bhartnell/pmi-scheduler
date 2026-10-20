@@ -362,6 +362,7 @@ Student-facing portal. 12 pages.
 | `/student/peer-eval` | Peer eval workflow |
 | `/student/profile` | Profile |
 | `/student/self-assessment` | Pre-Internship Self-Assessment (Rae's tool, RAE R2/3). Student only; gated per cohort by `preinternship_windows` (closed = "Not open for your cohort yet"); submit, return, update until an instructor review locks it. Entry: To-do card on `/student`. |
+| `/clinical/pre-internship-review` | Pre-Internship Self-Assessment instructor review (Rae's tool, RAE R3/3). Instructor roles only (server-enforced; students get 403). Roster + per-student detail, ten-behavior instructor ratings with gap flags and calibration label, "Refill from ratings", save (locks the student's answers; Unlock button), one-page agency summary (HTML download / copy text, r1/r2 never included), cohort CSV. Entry: "Pre-Internship Review" card on `/clinical`. |
 | `/student/skill-evaluations` | Skill evaluation results list (standard labs; NREMT/cert hard-excluded) — nav-linked "Skill Results" |
 | `/student/skill-evaluations/[id]` | Eval detail |
 | `/student/skill-sheets` | Skill sheets |
