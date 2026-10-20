@@ -325,7 +325,7 @@ export function formatSubItemsSummary(criteriaName: string, subItems: SubItem[],
   const prefix = mnemonic || criteriaName;
   const ratingStr = rating || '?';
   let result = `${prefix}: ${got.length}/${subItems.length} (${ratingStr})`;
-  if (got.length > 0) result += ` — Got: ${got.join(', ')}`;
+  if (got.length > 0) result += ` - Got: ${got.join(', ')}`;
   if (missed.length > 0) result += `. Missed: ${missed.join(', ')}`;
   return result;
 }

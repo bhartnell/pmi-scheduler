@@ -164,7 +164,6 @@ export default function AclsLearningStationPage() {
             </div>
           )}
           <DualPaneGrading
-            showScale
             scenarioLabel="Case"
             scoringLabel="Pass / Watch"
             scenario={

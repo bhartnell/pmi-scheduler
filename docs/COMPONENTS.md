@@ -201,7 +201,7 @@ auto-sync flow.
   post-lab debrief workflow.
 - `components/lab-day/ScenarioPickerModal.tsx` — searchable scenario
   picker reused across station edit + checkoff flows.
-- `components/grading/DualPaneGrading.tsx` — shared side-by-side grading layout (scenario pane | scoring pane, each scrolls independently on >= lg; tab toggle below). Lifted from the OSCE scoring view. Has an A-/A+ sheet-size control (CSS zoom 70-150%, localStorage `pmi.gradingScale`). Used by `/labs/adv-cert/grade`; to be applied to standard/NREMT/PALS/OSCE.
+- `components/grading/DualPaneGrading.tsx` — shared side-by-side grading layout (scenario pane | scoring pane, each scrolls independently from md up by default (`splitAt` 'md'|'lg'); tab toggle below). Lifted from the OSCE scoring view. No sheet-size control (removed 2026-10-20; it fought browser zoom; `SheetScale.tsx` deleted). Used by `/labs/adv-cert/grade`, `/labs/adv-cert/learning-station`, `/labs/grade/station/[id]`.
 - `components/grading/CcfTimer.tsx` — chest-compression-fraction control as its own floating panel (NOT in the FloatingDock): drag handle, position remembered per browser (localStorage `ccf-panel-pos`), kept inside the viewport; default bottom-left. Collapsible (`ccf-panel-collapsed`, default collapsed): collapsed = the CCF % field alone (typed value saved with source `device`, for Laerdal Session Viewer stations); expanded adds Pulseless / Pause-Resume / ROSC, live readout, timeline + pause tags. Collapsing never disturbs a running timer. Logic in `lib/ccf.ts`; wired into `/labs/adv-cert/grade` (single consumer, shared ACLS/PALS). (Last updated: 2026-10-02)
 - `components/grading/ScenarioReferencePanel.tsx` — read-only scenario
   reference panel on the grading page (so the grader can see scenario
