@@ -529,7 +529,7 @@ export default function GradeStationPage() {
     // Unlock Tab 2 when BVM Prep starts (phase 2)
     if (phaseIdx >= 2 && !dualSkillTab2Unlocked) {
       setDualSkillTab2Unlocked(true);
-      setDualSkillToast('O2/NRB time complete — BVM Ventilation now active');
+      setDualSkillToast('O2/NRB time complete - BVM Ventilation now active');
       // Auto-switch to Tab 2
       setDualSkillActiveTab(1);
       // Clear toast after 5 seconds
@@ -829,7 +829,7 @@ export default function GradeStationPage() {
         }
 
         if (isInProgress) {
-          toast.info('Progress saved — you can continue later');
+          toast.info('Progress saved - you can continue later');
         } else {
           // Stay on the grading page and ready up for the next
           // student. Previously this alerted + router.pushed back
@@ -871,7 +871,7 @@ export default function GradeStationPage() {
             // student names before it disappears.
             toast.addToast(
               'error',
-              `No email address on file for ${list}. Their feedback was NOT sent — add their email in the cohort roster to enable future sends.`,
+              `No email address on file for ${list}. Their feedback was NOT sent - add their email in the cohort roster to enable future sends.`,
               9000,
             );
           }
@@ -1309,7 +1309,7 @@ export default function GradeStationPage() {
             <div>
               <div className="font-bold text-lg">RETAKE ATTEMPT</div>
               <div className="text-sm text-amber-100">
-                {retakeStudentName ? `Student: ${retakeStudentName}` : 'Retake evaluation'} — This is a second attempt. Result will be compared with first attempt.
+                {retakeStudentName ? `Student: ${retakeStudentName}` : 'Retake evaluation'} - This is a second attempt. Result will be compared with first attempt.
               </div>
             </div>
           </div>
@@ -1689,7 +1689,7 @@ export default function GradeStationPage() {
           senderName={session.user.name || 'Unknown'}
           senderEmail={session.user.email || ''}
           senderRole="instructor"
-          stationContext={`Station ${station.station_number} — ${station.skill_name || station.custom_title || 'Unknown'}`}
+          stationContext={`Station ${station.station_number} - ${station.skill_name || station.custom_title || 'Unknown'}`}
           bottomOffset={120}
           defaultOpen={!!station.lab_day.is_nremt_testing}
         />
@@ -1764,7 +1764,7 @@ function SkillDrillStationView({
           </Link>
           <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 text-xs font-medium">
             <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
-            Skill Drill Station — active
+            Skill Drill Station - active
           </span>
         </div>
 
@@ -1781,7 +1781,7 @@ function SkillDrillStationView({
             </div>
           )}
           <p className="mt-2 text-sm text-orange-700 dark:text-orange-300">
-            Student-led practice. No formal grading or pass/fail — coach,
+            Student-led practice. No formal grading or pass/fail - coach,
             observe, and use the notes box below for anything worth
             remembering.
           </p>
