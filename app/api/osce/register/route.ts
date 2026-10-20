@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { inviteObserverToBlocks } from '@/lib/osce-invites';
 
 // Helper: resolve the most recent open event as default
 async function getDefaultOpenEventId(supabase: ReturnType<typeof getSupabaseAdmin>): Promise<string | null> {
@@ -170,6 +171,10 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Add them as a guest on each chosen block's calendar event (Google sends
+    // the invite). Failures are recorded on the signup rows, never block signup.
+    await inviteObserverToBlocks(supabase, { observerId: observer.id, blockIds: block_ids });
 
     return NextResponse.json({
       success: true,

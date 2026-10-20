@@ -4470,7 +4470,8 @@ Students tab).
 | observer_id | uuid | NO |  |  |
 | block_id | uuid | NO |  |  |
 | created_at | timestamptz | YES | now() |  |
-| calendar_invite_sent_at | timestamptz | YES |  |  |
+| calendar_invite_sent_at | timestamptz | YES |  | Set when the registrant was added as a guest on the block event; cleared on cancel |
+| calendar_invite_error | text | YES |  | Last failed invite/removal message (OSCE CAL 2/4); cleared on success |
 
 **Foreign Keys:**
 - `observer_id` -> `osce_observers.id` (`osce_observer_blocks_observer_id_fkey`)

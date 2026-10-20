@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { removeObserverFromBlocks } from '@/lib/osce-invites';
 
 // DELETE - Admin: remove an observer
 export async function DELETE(
@@ -13,6 +14,9 @@ export async function DELETE(
   try {
     const { id } = await params;
     const supabase = getSupabaseAdmin();
+
+    // Remove the guest from their calendar events before the signup rows go.
+    await removeObserverFromBlocks(supabase, { observerId: id });
 
     const { error } = await supabase
       .from('osce_observers')

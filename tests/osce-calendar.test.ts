@@ -51,3 +51,49 @@ test('createOsceBlockEvent is idempotent and never throws', async () => {
   const boom = (async () => { throw new Error('down'); }) as typeof fetch;
   assert.equal((await createOsceBlockEvent({ accessToken: 't', event, block: am, baseUrl, fetchImpl: boom })).status, 'error');
 });
+
+import { addOsceGuest, removeOsceGuest } from '../lib/osce-calendar.ts';
+
+function fakeGoogle(attendees: { email: string }[], failPatch = false) {
+  const calls: { method: string; url: string; body?: unknown }[] = [];
+  const f = (async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? 'GET';
+    calls.push({ method, url, body: init?.body ? JSON.parse(String(init.body)) : undefined });
+    if (method === 'GET') return new Response(JSON.stringify({ attendees }), { status: 200 });
+    return failPatch ? new Response('denied', { status: 403 }) : new Response('{}', { status: 200 });
+  }) as unknown as typeof fetch;
+  return { f, calls };
+}
+
+test('addOsceGuest patches attendees with sendUpdates=all and keeps existing guests', async () => {
+  const { f, calls } = fakeGoogle([{ email: 'a@x.org' }]);
+  const r = await addOsceGuest({ accessToken: 't', eventId: 'ev1', email: 'b@x.org', displayName: 'B', fetchImpl: f });
+  assert.equal(r.status, 'added');
+  const patch = calls[1];
+  assert.equal(patch.method, 'PATCH');
+  assert.match(patch.url, /sendUpdates=all/);
+  assert.deepEqual((patch.body as { attendees: { email: string }[] }).attendees.map(a => a.email), ['a@x.org', 'b@x.org']);
+});
+
+test('addOsceGuest does not re-add (case-insensitive) and sends nothing', async () => {
+  const { f, calls } = fakeGoogle([{ email: 'A@X.org' }]);
+  assert.equal((await addOsceGuest({ accessToken: 't', eventId: 'ev1', email: 'a@x.org', fetchImpl: f })).status, 'already');
+  assert.equal(calls.length, 1);
+});
+
+test('removeOsceGuest removes only that guest; absent is a no-op', async () => {
+  const { f, calls } = fakeGoogle([{ email: 'a@x.org' }, { email: 'b@x.org' }]);
+  assert.equal((await removeOsceGuest({ accessToken: 't', eventId: 'ev1', email: 'B@x.org', fetchImpl: f })).status, 'removed');
+  assert.deepEqual((calls[1].body as { attendees: { email: string }[] }).attendees.map(a => a.email), ['a@x.org']);
+  const g = fakeGoogle([{ email: 'a@x.org' }]);
+  assert.equal((await removeOsceGuest({ accessToken: 't', eventId: 'ev1', email: 'z@x.org', fetchImpl: g.f })).status, 'absent');
+  assert.equal(g.calls.length, 1);
+});
+
+test('guest calls report errors instead of throwing, no retry', async () => {
+  const { f, calls } = fakeGoogle([], true);
+  assert.equal((await addOsceGuest({ accessToken: 't', eventId: 'ev1', email: 'a@x.org', fetchImpl: f })).status, 'error');
+  assert.equal(calls.length, 2);
+  const boom = (async () => { throw new Error('down'); }) as typeof fetch;
+  assert.equal((await removeOsceGuest({ accessToken: 't', eventId: 'ev1', email: 'a@x.org', fetchImpl: boom })).status, 'error');
+});
