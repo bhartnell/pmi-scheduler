@@ -1221,46 +1221,40 @@ export default function GradeStationPage() {
 
         {/* Save Buttons (Bottom) — ONLY for scenario stations */}
         {!isSkillsStation && (
-          <div className="sticky bottom-4 space-y-2">
-            {/* Finish Later */}
-            <button
-              onClick={() => handleSave('pending', 'in_progress')}
-              disabled={saving || !selectedGroupId}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 border-2 border-amber-400 dark:border-amber-600 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 rounded-lg hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg font-medium"
-            >
-              <Save className="w-5 h-5" />
-              Finish Later
-            </button>
-
-            {/* Primary save: Send Later */}
-            <button
-              onClick={() => handleSave('queued')}
-              disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
-              className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg font-medium"
-            >
-              {saving ? (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              ) : (
-                <Save className="w-5 h-5" />
-              )}
-              {saving ? 'Saving...' : `Save and send later${selectedStudentName ? ` (${selectedStudentName})` : ''}`}
-            </button>
-
-            {/* Secondary options */}
-            <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-2 pt-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <button
-                onClick={() => handleSave('sent')}
-                disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
-                className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow"
+                onClick={() => handleSave('pending', 'in_progress')}
+                disabled={saving || !selectedGroupId}
+                className="min-h-[44px] px-3 text-sm font-medium text-amber-700 dark:text-amber-300 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Save and send now
+                Finish Later
               </button>
               <button
                 onClick={() => handleSave('do_not_send')}
                 disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
-                className="flex items-center justify-center gap-1.5 px-3 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow bg-white dark:bg-gray-800"
+                className="min-h-[44px] px-3 text-sm font-medium text-gray-600 dark:text-gray-400 hover:underline disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Do Not Send
+              </button>
+              <button
+                onClick={() => handleSave('queued')}
+                disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
+                className="min-h-[44px] flex items-center justify-center gap-2 px-4 border border-blue-600 text-blue-700 dark:text-blue-300 bg-white dark:bg-gray-800 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                {saving ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                ) : (
+                  <Save className="w-4 h-4" />
+                )}
+                {saving ? 'Saving...' : `Save and send later${selectedStudentName ? ` (${selectedStudentName})` : ''}`}
+              </button>
+              <button
+                onClick={() => handleSave('sent')}
+                disabled={saving || (strictNremt && !allRated) || !selectedGroupId || !teamLeaderId}
+                className="min-h-[44px] flex items-center justify-center gap-1.5 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+              >
+                Save and send now
               </button>
             </div>
 
@@ -1580,11 +1574,11 @@ export default function GradeStationPage() {
           )}
         </main>
       ) : (
-      <main className="max-w-7xl mx-auto px-4 py-4 space-y-4 pb-20">
+      <main className="max-w-screen-2xl mx-auto px-4 py-4 space-y-4 pb-20">
         {useSplitGrading ? (
           <DualPaneGrading
             scenario={scenarioPane}
-            scoring={<div className="space-y-4 pb-64">{scoringPane}</div>}
+            scoring={<div className="space-y-4 pb-8">{scoringPane}</div>}
             splitAt="md"
             scenarioLabel="Scenario"
             scoringLabel="Grading"

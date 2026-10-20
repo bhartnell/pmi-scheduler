@@ -49,17 +49,17 @@ export default function GradingHeader({
 
   return (
     <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
-      <div className="max-w-2xl mx-auto px-4 py-3">
+      <div className="max-w-screen-2xl mx-auto px-4 py-3">
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
           <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400">Home</Link>
           <ChevronRight className="w-4 h-4" />
           <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">Labs</Link>
           <ChevronRight className="w-4 h-4" />
           <Link href={`/labs/schedule/${labDay.id}`} className="hover:text-blue-600 dark:hover:text-blue-400">
-            {new Date(labDay.date + 'T12:00:00').toLocaleDateString()}
+            {labDay.title?.trim() || new Date(labDay.date + 'T12:00:00').toLocaleDateString()}
           </Link>
           <ChevronRight className="w-4 h-4" />
-          <span>Grade</span>
+          <span>Station {station.station_number}</span>
         </div>
         <div className="flex items-center justify-between">
           <div>
@@ -75,6 +75,8 @@ export default function GradingHeader({
             </div>
             <p className="text-sm text-gray-600 dark:text-gray-400">
               {labDay.cohort.program.abbreviation} Group {formatCohortNumber(labDay.cohort.cohort_number)}
+              {' · '}
+              {new Date(labDay.date + 'T12:00:00').toLocaleDateString()}
             </p>
             {nremtCode && (
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
