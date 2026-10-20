@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ## 2026-10-20
 
 lab-grade-round3 | Station grader: full width (max-w-screen-2xl), save controls one non-sticky row at end of scoring pane, breadcrumb shows lab day title + Station N, date in subtitle; no save payload change (card 3ff5cd1c)
+student-layout-preview | Student layout honors Preview-as-Student (admin previewing as student can enter /student; real non-students still redirected) (card 3fe5cd1c Student View)
 
 ## 2026-10-19
 
