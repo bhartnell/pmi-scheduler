@@ -112,19 +112,25 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-violet-500',
           badge: pendingAccessRequests > 0 ? pendingAccessRequests : undefined,
         },
-        {
-          href: '/admin/external-access',
-          icon: Key,
-          title: 'External Access',
-          description: 'Manage approved external emails for agency partners and contracted students',
-          color: 'bg-indigo-600',
-        },
+        // External Access - archived, hidden from nav (TRIM 3/5)
         {
           href: '/admin/deletion-requests',
           icon: Trash2,
           title: 'Deletion Requests',
           description: 'Review and approve deletion requests from instructors',
           color: 'bg-red-500',
+        },
+        {
+          // Direct entry point added (TRIM 3/5) — /admin/tools (the page
+          // that previously carried this link) is archived. Without this,
+          // admins/mentors with no active assignment of their own have no
+          // in-app path to /onboarding (the home-dashboard widget is gated
+          // to the viewer's own assignment; see docs/SITEMAP.md).
+          href: '/onboarding',
+          icon: GraduationCap,
+          title: 'Instructor Onboarding',
+          description: 'Assign onboarding templates to new instructors and track mentor/mentee task progress',
+          color: 'bg-orange-500',
         },
       ],
     },
@@ -184,27 +190,9 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'Import lab templates from JSON files with seed data for quick setup',
           color: 'bg-blue-600',
         },
-        {
-          href: '/admin/rubrics',
-          icon: Star,
-          title: 'Assessment Rubrics',
-          description: 'Build and manage scenario grading rubrics with criteria and rating scales',
-          color: 'bg-violet-600',
-        },
-        {
-          href: '/admin/email-templates',
-          icon: Mail,
-          title: 'Email Templates',
-          description: 'Customize notification email templates sent by the system',
-          color: 'bg-blue-500',
-        },
-        {
-          href: '/admin/program-requirements',
-          icon: ClipboardList,
-          title: 'Program Requirements',
-          description: 'Configure required clinical hours, skills, and scenarios per program',
-          color: 'bg-orange-500',
-        },
+        // Assessment Rubrics - archived, hidden from nav (TRIM 3/5)
+        // Email Templates - archived, hidden from nav (TRIM 3/5)
+        // Program Requirements - archived, hidden from nav (TRIM 3/5)
         {
           href: '/admin/dashboard-defaults',
           icon: Layout,
@@ -234,27 +222,9 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'Park a section of the site behind a plain notice without deleting anything; unpark any time',
           color: 'bg-gray-600',
         },
-        {
-          href: '/admin/equipment',
-          icon: Package,
-          title: 'Equipment Inventory',
-          description: 'Track lab equipment, availability, conditions, and check-out/check-in flow',
-          color: 'bg-cyan-600',
-        },
-        {
-          href: '/admin/time-clock',
-          icon: Clock,
-          title: 'Instructor Time Clock',
-          description: 'Review, approve, and export instructor time entries for payroll',
-          color: 'bg-blue-600',
-        },
-        {
-          href: '/admin/attendance-appeals',
-          icon: CalendarDays,
-          title: 'Attendance Appeals',
-          description: 'Review and action student attendance absence appeal requests',
-          color: 'bg-amber-600',
-        },
+        // Equipment Inventory - archived, hidden from nav (TRIM 3/5)
+        // Instructor Time Clock - archived, hidden from nav (TRIM 3/5)
+        // Attendance Appeals - archived, hidden from nav (TRIM 3/5)
         // Equipment Maintenance - archived, hidden from nav
         // Incident Reports - archived, hidden from nav
         {
@@ -342,20 +312,8 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
       icon: Database,
       defaultExpanded: false,
       links: [
-        {
-          href: '/admin/certifications',
-          icon: Award,
-          title: 'Certifications Import',
-          description: 'Bulk import instructor certifications from CSV and monitor expiration dates',
-          color: 'bg-purple-500',
-        },
-        {
-          href: '/admin/certifications/compliance',
-          icon: BadgeCheck,
-          title: 'Certification Compliance',
-          description: 'View compliance status for all instructor certifications and identify gaps',
-          color: 'bg-green-600',
-        },
+        // Certifications Import - archived, hidden from nav (TRIM 3/5)
+        // Certification Compliance - archived, hidden from nav (TRIM 3/5)
         {
           href: '/admin/data-export',
           icon: Download,
@@ -378,44 +336,12 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-emerald-500',
 },
         // Data Export Archives - consolidated into /admin/data-export (redirects)
-        {
-          href: '/admin/certifications/verification',
-          icon: ShieldCheck,
-          title: 'Certification Verification',
-          description: 'Verify and review individual instructor certification credentials',
-          color: 'bg-teal-600',
-        },
-        {
-          href: '/admin/bulk-operations',
-          icon: Layers,
-          title: 'Bulk Operations',
-          description: 'Execute bulk data operations with rollback support',
-          color: 'bg-slate-600',
-        },
+        // Certification Verification - archived, hidden from nav (TRIM 3/5)
+        // Bulk Operations - archived, hidden from nav (TRIM 3/5)
       ],
     },
-    {
-      id: 'communication',
-      title: 'Communication',
-      icon: Megaphone,
-      defaultExpanded: false,
-      links: [
-        {
-          href: '/admin/announcements',
-          icon: Megaphone,
-          title: 'Announcements',
-          description: 'Post system-wide announcements for instructors and students',
-          color: 'bg-sky-500',
-        },
-        {
-          href: '/admin/broadcast',
-          icon: Bell,
-          title: 'Broadcast Notifications',
-          description: 'Send targeted in-app or email notifications to users, roles, cohorts, or individuals',
-          color: 'bg-indigo-600',
-        },
-      ],
-    },
+    // 'communication' section removed (TRIM 3/5) — both Announcements and
+    // Broadcast Notifications archived, leaving no links in this section.
     {
       id: 'student-management',
       title: 'Student Management',
@@ -439,13 +365,7 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
         // Alumni Tracking hidden per codebase-streamline spec —
         // archived to speculative-features branch. /admin/alumni
         // route + API + DB intact for re-activation later.
-        {
-          href: '/admin/qa-checklist',
-          icon: ClipboardCheck,
-          title: 'QA Checklist',
-          description: 'Comprehensive quality assurance checklist for testing all major features across roles',
-          color: 'bg-blue-600',
-        },
+        // QA Checklist - archived, hidden from nav (TRIM 3/5)
       ],
     },
     {
@@ -468,13 +388,7 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'Semester workload by instructor - class, lab, LVFR, and shift hours',
           color: 'bg-blue-600',
         },
-        {
-          href: '/reports/closeout-surveys',
-          icon: ClipboardCheck,
-          title: 'Closeout Surveys',
-          description: 'View and analyze clinical internship closeout survey results',
-          color: 'bg-teal-600',
-        },
+        // Closeout Surveys - archived, hidden from nav (TRIM 3/5)
         {
           href: '/reports/builder',
           icon: Wrench,
@@ -482,13 +396,7 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'Build custom reports with flexible queries and saved templates',
           color: 'bg-violet-600',
         },
-        {
-          href: '/reports/program-outcomes',
-          icon: GraduationCap,
-          title: 'Program Outcomes',
-          description: 'Track program-level outcomes, pass rates, and accreditation metrics',
-          color: 'bg-green-600',
-        },
+        // Program Outcomes - archived, hidden from nav (TRIM 3/5)
       ],
     },
     {
@@ -504,13 +412,7 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'View page views, active users, top pages, and usage patterns across the system',
           color: 'bg-teal-600',
         },
-        {
-          href: '/admin/system-alerts',
-          icon: Bell,
-          title: 'System Alerts',
-          description: 'Monitor system health alerts for storage, errors, cron jobs, and performance',
-          color: 'bg-rose-600',
-        },
+        // System Alerts - archived, hidden from nav (TRIM 3/5)
       ],
     },
     {
@@ -520,13 +422,7 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
       defaultExpanded: false,
       superadminOnly: true,
       links: [
-        {
-          href: '/admin/system-health',
-          icon: Database,
-          title: 'System Health',
-          description: 'Database metrics, row counts, activity and scheduled job status',
-          color: 'bg-blue-600',
-        },
+        // System Health - archived, hidden from nav (TRIM 3/5)
         {
           href: '/admin/audit-log',
           icon: FileText,
@@ -541,13 +437,7 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'Consent tracking, FERPA releases, and agency access management',
           color: 'bg-red-600',
         },
-        {
-          href: '/admin/compliance',
-          icon: ClipboardCheck,
-          title: 'Compliance Audits',
-          description: 'Track and manage regulatory compliance audits with automated checks and manual logging',
-          color: 'bg-emerald-600',
-        },
+        // Compliance Audits - archived, hidden from nav (TRIM 3/5)
         {
           href: '/admin/roles',
           icon: Key,
@@ -569,13 +459,10 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           description: 'Centralized config panel: email, notifications, security, features, branding, and legal',
           color: 'bg-blue-800',
         },
-        {
-          href: '/admin/database-tools',
-          icon: Wrench,
-          title: 'Database Cleanup Utilities',
-          description: 'Clear old audit logs, notifications, orphaned records, and view database statistics',
-          color: 'bg-rose-700',
-        },
+        // Database Cleanup Utilities - archived, hidden from nav (TRIM 3/5)
+        // (note: /api/admin/database-tools/cohorts stays live — used by
+        // app/cases/leaderboard/page.tsx — only the page + its orphans/
+        // stats/audit-logs/notifications API routes moved to archive/)
         {
           href: '/admin/webhooks',
           icon: Webhook,
@@ -885,7 +772,7 @@ export default function AdminPage() {
             <div className="flex items-center gap-3">
               <Archive className="w-5 h-5 text-gray-400 dark:text-gray-500" />
               <span className="font-semibold text-gray-600 dark:text-gray-400">Archived Features</span>
-              <span className="text-xs text-gray-400 dark:text-gray-500">(10)</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">(5)</span>
             </div>
             {archivedExpanded ? (
               <ChevronDown className="w-4 h-4 text-gray-400 dark:text-gray-500 flex-shrink-0" />
@@ -903,16 +790,11 @@ export default function AdminPage() {
                   { label: 'Seating Charts', href: '/labs/seating/charts' },
                   { label: 'Learning Styles', href: '/labs/seating/learning-styles' },
                   { label: 'Seating Preferences', href: '/labs/seating/preferences' },
-                  { label: 'Peer Evaluations', href: '/labs/peer-evals' },
-                  { label: 'Mentorship', href: '/labs/mentorship' },
-                  { label: 'Equipment Maintenance', href: '/admin/equipment/maintenance' },
-                  // Protocol Tracking link removed 2026-05-12 — protocol
-                  // tracking lives in Platinum, not in the labs section.
-                  // Route still exists for deep links but isn't surfaced.
-                  { label: 'Deep Links', href: '/admin/deep-links' },
-                  { label: 'Resource Bookings', href: '/scheduling/resource-bookings' },
+                  // Peer Evaluations, Mentorship, Equipment Maintenance,
+                  // Deep Links, Resource Bookings, Incident Reports moved
+                  // to /archive and removed from this list (TRIM 3/5) —
+                  // their routes no longer exist in the build.
                   { label: 'Medications Resource', href: '/resources/medications' },
-                  { label: 'Incident Reports', href: '/admin/incidents' },
                   { label: 'Scenario Usage Overview', href: '/reports/scenario-usage-overview' },
                   // Cases Leaderboard hidden — gamification archived
                   // to speculative-features branch.

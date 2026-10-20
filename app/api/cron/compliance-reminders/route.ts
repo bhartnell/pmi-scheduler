@@ -97,7 +97,7 @@ export async function GET(request: NextRequest) {
           message: `The following audits are past due: ${overdueNames}. Please run or log these audits.`,
           type: 'compliance_due',
           category: 'system',
-          linkUrl: '/admin/compliance',
+          linkUrl: '/admin',
           referenceType: 'compliance_audit',
         });
         notificationCount++;
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
           message: `Audits due within 7 days: ${dueSoonNames}`,
           type: 'compliance_due',
           category: 'system',
-          linkUrl: '/admin/compliance',
+          linkUrl: '/admin',
           referenceType: 'compliance_audit',
         });
         notificationCount++;
@@ -135,7 +135,7 @@ export async function GET(request: NextRequest) {
           message: `These audits have never been completed: ${neverRunNames}`,
           type: 'compliance_due',
           category: 'system',
-          linkUrl: '/admin/compliance',
+          linkUrl: '/admin',
           referenceType: 'compliance_audit',
         });
         notificationCount++;
@@ -153,7 +153,7 @@ export async function GET(request: NextRequest) {
           data: {
             title: 'Compliance Audits Overdue',
             message: `The following compliance audits are overdue and require attention:\n\n${overdueList}\n\nPlease log into the admin panel to run or record these audits.`,
-            actionUrl: `${process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools'}/admin/compliance`,
+            actionUrl: `${process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools'}/admin`,
             actionText: 'View Compliance Dashboard',
           },
         });

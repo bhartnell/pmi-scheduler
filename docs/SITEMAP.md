@@ -10,9 +10,17 @@
 > nav reachability (main nav / admin hub / drill-down / URL-only), with
 > Ben's keep/tuck-away/archive decisions. This file is a narrative
 > companion and can drift; the register is what cleanup decisions are
-> made from. `/admin/tools` (added 2026-09-19) is the guaranteed,
-> always-linked home for every feature the register marks "Tucked away."
+> made from. `/admin/tools`, the former guaranteed home for every
+> feature the register marked "Tucked away," was archived 2026-10-20
+> (TRIM 3/5) — see the `/onboarding` and `/admin/tools` rows below.
 
+> Refreshed 2026-10-20 (TRIM 3/5: moved every CLEAN-REMOVE page from the
+> 1b table to `archive/` outside `app/` — 43 pages, their only-used-here
+> API routes, and `lib/tucked-away-features.ts` — so they drop out of the
+> build entirely rather than just losing a nav link. Full list and revert
+> instructions in `archive/README.md`. Held out per Ben's instruction:
+> `/osce-evaluator-signup`, `/admin/osce-tokens`, `/cases/leaderboard`,
+> `/cases/session`. No tables touched.)
 > Refreshed 2026-09-22 (Help Wiki v1: `/help/wiki` + `/help/wiki/[slug]` added — markdown-file-backed task how-tos, organized by "Running the program" / "Using the site", searchable across title+body, with role tags and a reusable `WikiArticleLink` embedded on `/labs/schedule/[id]`, `/admin/lab-templates`, and `/academics/students/import`. Entry point: new banner card on `/help`. Ships with 3 real articles verified against the live codebase (not click-tested — no OAuth-capable dev session in this environment); no CMS/DB in v1, content is `content/wiki/*.md`.)
 > Refreshed 2026-09-19 (`/admin/tools` — Admin Tools page added: guaranteed home for every "Tucked away" Feature Register entry, seeded with Instructor Onboarding, OSCE Admin, and the Report Generator; linked from `/admin/settings`. Root-caused why `/onboarding` was unreachable for admins/mentors: the only in-app link was the home-dashboard widget, gated on the viewer having their *own* active onboarding assignment — Ben is a mentor, not an instructor being onboarded, so it never showed for him. Fixed by giving `/onboarding` an unconditional entry point on the new page rather than changing the dashboard gate.)
 > Refreshed 2026-10-19 (`/admin/module-flags` added: park/unpark a route prefix via `module_flags`; admin level; linked from the `/admin` hub Lab & Clinical group. Parked routes render a plain notice from `ModuleGuard` in the root layout.)
@@ -161,8 +169,8 @@ Two doors — labeled to keep directors out of the student dead-end:
 | `/help/wiki` | Help Wiki index — task how-tos, searchable, grouped into "Running the program" / "Using the site" | any |
 | `/help/wiki/[slug]` | Individual wiki article | any |
 | `/notifications` | inbox | any |
-| `/onboarding` | **Stale entry corrected 2026-09-19** — this is Instructor Onboarding (mentor/mentee template + task-progress tracking for new instructors), not a post-signup student flow. Reachable only via the home-dashboard widget, itself gated to the viewer's *own* active assignment — an admin/mentor with no assignment of their own has no in-app path in. Guaranteed entry point added at `/admin/tools`. | any authenticated (assignment/admin-gated) |
-| `/admin/tools` | Admin Tools — guaranteed, always-linked home for every Feature Register row Ben has marked "Tucked away" (seeded 2026-09-19 with Instructor Onboarding, OSCE Admin, Report Generator); grouped by Area, driven by `lib/tucked-away-features.ts` | admin+ |
+| `/onboarding` | Instructor Onboarding (mentor/mentee template + task-progress tracking for new instructors), not a post-signup student flow. The home-dashboard widget path is gated to the viewer's *own* active assignment, so it alone doesn't reach admins/mentors. **Updated 2026-10-20 (TRIM 3/5):** `/admin/tools` (its former guaranteed entry point) is archived; a direct "Instructor Onboarding" card was added to the Admin hub's Users & Access group instead, so this stays reachable for admins/mentors. | any authenticated (assignment/admin-gated) |
+| ~~`/admin/tools`~~ | **Archived 2026-10-20 (TRIM 3/5)** — moved to `archive/app/admin/tools`, along with `lib/tucked-away-features.ts`. Its only inbound link was a card on `/admin/settings` (also removed). Of its 3 seeded features, OSCE Admin and Report Generator already had their own hub cards (`/admin` and `/reports` respectively); Instructor Onboarding's replacement entry point is noted above. See `archive/README.md`. | n/a |
 | `/request-access` | external access request | unauth |
 | `/resources` | resource hub | any |
 | `/resources/medications` | medication reference | any |

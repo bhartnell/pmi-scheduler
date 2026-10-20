@@ -15,8 +15,7 @@ import {
   Trash2,
   Download,
   Mail,
-  Bell,
-  Wrench
+  Bell
 } from 'lucide-react';
 import { PROTECTED_SUPERADMINS } from '@/lib/permissions';
 import { PageLoader } from '@/components/ui';
@@ -213,28 +212,12 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Admin Tools — guaranteed home for tucked-away features */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center gap-2">
-            <Wrench className="w-5 h-5 text-gray-500 dark:text-gray-400" />
-            <h2 className="font-semibold text-gray-900 dark:text-white">Admin Tools</h2>
-          </div>
-          <div className="p-4 flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-900 dark:text-white">Tucked-away features</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Instructor Onboarding, OSCE Admin, Report Generator, and anything else kept but out of the main nav
-              </p>
-            </div>
-            <Link
-              href="/admin/tools"
-              className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-            >
-              <Wrench className="w-4 h-4" />
-              Open
-            </Link>
-          </div>
-        </div>
+        {/* Admin Tools card removed (TRIM 3/5) — /admin/tools and
+            lib/tucked-away-features.ts archived. Its 3 registered features
+            (Instructor Onboarding, OSCE Admin, Report Generator) each keep
+            their own separate entry point elsewhere, so nothing is orphaned:
+            /onboarding (home page, QuickLinksWidget), /admin/osce-events
+            (admin hub card), /reports/builder (reports hub card). */}
 
         {/* Feature Flags */}
         <FeatureFlagsCard />
