@@ -52,6 +52,9 @@ export function useCalendarAvailability(
     prevKeyRef.current = requestKey;
 
     let cancelled = false;
+    // Never leave the "checking" spinner up forever if the calendar API stalls
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
 
     const fetchAvailability = async () => {
       setLoading(true);
@@ -63,7 +66,7 @@ export function useCalendarAvailability(
           endTime,
         });
 
-        const res = await fetch(`/api/calendar/availability?${params}`);
+        const res = await fetch(`/api/calendar/availability?${params}`, { signal: controller.signal });
         if (cancelled) return;
 
         if (!res.ok) {
@@ -126,8 +129,11 @@ export function useCalendarAvailability(
           setSummary({ free: freeCount, total: filteredEmails.length });
         }
       } catch (err) {
-        console.error('Error fetching calendar availability:', err);
+        if ((err as Error).name !== 'AbortError') {
+          console.error('Error fetching calendar availability:', err);
+        }
       }
+      clearTimeout(timeout);
       if (!cancelled) {
         setLoading(false);
       }
@@ -137,6 +143,8 @@ export function useCalendarAvailability(
 
     return () => {
       cancelled = true;
+      clearTimeout(timeout);
+      controller.abort();
     };
   }, [shouldFetch, date, emailsKey, startTime, endTime, filteredEmails]);
 

@@ -245,7 +245,7 @@ function ScenarioBody({
       {proctorNotes && (
         <div className="mt-4 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/20 p-3">
           <div className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wide mb-1">
-            ⚠️ Proctor Reference Only — Do Not Read to Candidate
+            ⚠️ Proctor Reference Only - Do Not Read to Candidate
           </div>
           <p className="text-sm text-amber-900 dark:text-amber-100 whitespace-pre-wrap">
             {proctorNotes}
@@ -286,7 +286,7 @@ export default function ScenarioReferencePanel({
           className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200 text-sm font-medium hover:bg-blue-100 dark:hover:bg-blue-900/30"
         >
           <span>📋</span>
-          <span>View Scenario — {scenario.title}</span>
+          <span>View Scenario - {scenario.title}</span>
         </button>
 
         {mobileOpen && (
@@ -294,7 +294,7 @@ export default function ScenarioReferencePanel({
             <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               <h3 className="text-sm font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
                 <span>📋</span>
-                <span>Scenario Reference — {scenario.title}</span>
+                <span>Scenario Reference - {scenario.title}</span>
               </h3>
               <button
                 type="button"
@@ -321,7 +321,7 @@ export default function ScenarioReferencePanel({
           <div className="flex items-center gap-2 min-w-0">
             <span className="shrink-0">📋</span>
             <span className="font-bold text-sm text-gray-900 dark:text-gray-100 truncate">
-              Scenario Reference — {scenario.title}
+              Scenario Reference - {scenario.title}
             </span>
           </div>
           {collapsed ? (
