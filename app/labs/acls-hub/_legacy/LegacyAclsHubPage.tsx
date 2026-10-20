@@ -66,7 +66,7 @@ interface CalEvent {
 interface InstructorOpt { id: string; name: string }
 
 const hhmm = (t?: string | null) => (t ? t.slice(0, 5) : '');
-const sname = (s?: { first_name: string; last_name: string } | null) => (s ? `${s.first_name} ${s.last_name}` : '—');
+const sname = (s?: { first_name: string; last_name: string } | null) => (s ? `${s.first_name} ${s.last_name}` : '-');
 const toMin = (t?: string | null) => (t ? parseInt(t.slice(0, 2), 10) * 60 + parseInt(t.slice(3, 5), 10) : null);
 const fromMin = (m: number) => `${String(Math.floor(m / 60) % 24).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}:00`;
 // Signed minutes actual runs against planned (positive = behind schedule).
@@ -354,7 +354,7 @@ function AclsHubPageContent() {
         <div key={d.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-700 dark:text-gray-200">
           <Clock className="w-4 h-4 text-gray-400" />
           <span className="font-medium">{d.section_label || d.title}</span>
-          <span className="text-xs text-gray-400">{hhmm(d.start_time)}–{hhmm(d.end_time)}</span>
+          <span className="text-xs text-gray-400">{hhmm(d.start_time)}-{hhmm(d.end_time)}</span>
           {names.length > 0 && <span className="text-xs text-gray-500 dark:text-gray-400">{names.join(', ')}</span>}
         </div>
       );
@@ -367,7 +367,7 @@ function AclsHubPageContent() {
           <div className="font-medium text-gray-800 dark:text-gray-100 flex items-center gap-2">
             {isSection ? <Layers className="w-4 h-4 text-indigo-500" /> : <Clock className="w-4 h-4 text-gray-400" />}
             {d.section_label || d.title || 'Lab'}
-            <span className="text-xs text-gray-400">{hhmm(d.start_time)}–{hhmm(d.end_time)} · {d.stations.length} stations{d.is_adv_cert_testing ? ' · scored' : ''}</span>
+            <span className="text-xs text-gray-400">{hhmm(d.start_time)}-{hhmm(d.end_time)} · {d.stations.length} stations{d.is_adv_cert_testing ? ' · scored' : ''}</span>
           </div>
           <div className="flex items-center gap-2 print:hidden">
             <Link href={`/labs/schedule/${d.id}`} className="text-xs px-2 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">Open</Link>
@@ -393,8 +393,8 @@ function AclsHubPageContent() {
                 <div className="font-medium text-gray-700 dark:text-gray-200 flex items-center gap-1">
                   <MapPin className="w-3 h-3 text-gray-400" />#{st.station_number} {st.room || ''}
                 </div>
-                <div className="text-gray-500 dark:text-gray-400">{st.scenario?.case_code || st.scenario?.title || st.custom_title || '—'}</div>
-                <div className="text-gray-400">{st.instructor_name || '— unassigned —'}</div>
+                <div className="text-gray-500 dark:text-gray-400">{st.scenario?.case_code || st.scenario?.title || st.custom_title || '-'}</div>
+                <div className="text-gray-400">{st.instructor_name || ' - unassigned - '}</div>
               </Link>
             ))}
           </div>
@@ -434,7 +434,7 @@ function AclsHubPageContent() {
                 <GraduationCap className="w-6 h-6 text-red-600" /> ACLS Hub
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''} — full event, one place
+                {cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''} - full event, one place
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -494,14 +494,14 @@ function AclsHubPageContent() {
           }`}</style>
           {cohort && (
             <>
-              <h1 className="text-xl font-bold">ACLS Course Schedule — {cohortLabel}</h1>
+              <h1 className="text-xl font-bold">ACLS Course Schedule - {cohortLabel}</h1>
               <p className="text-sm mb-2">{dates.map(prettyDate).join('   ·   ')}</p>
               {dates.map((date, di) => {
                 const dayEvents = events.filter(e => e.date === date).sort((a, b) => (a.start_time || '').localeCompare(b.start_time || ''));
                 const daySections = visibleLabDays.filter(d => d.date === date).sort(bySectionTime);
                 return (
                   <div key={date} style={{ breakBefore: di > 0 ? 'page' : 'auto' }}>
-                    <h2 className="text-base font-bold mt-3 mb-1">Day {di + 1} — {prettyDate(date)}</h2>
+                    <h2 className="text-base font-bold mt-3 mb-1">Day {di + 1} - {prettyDate(date)}</h2>
                     <table>
                       <thead><tr><th style={{ width: '110px' }}>Time</th><th>Lesson / Activity</th><th style={{ width: '150px' }}>Room / Instructor</th></tr></thead>
                       <tbody>
@@ -509,7 +509,7 @@ function AclsHubPageContent() {
                           ? <tr><td colSpan={3}>No schedule blocks.</td></tr>
                           : dayEvents.map(e => (
                             <tr key={e.id}>
-                              <td>{hhmm(e.start_time)}–{hhmm(e.end_time)}</td>
+                              <td>{hhmm(e.start_time)}-{hhmm(e.end_time)}</td>
                               <td>{e.title}</td>
                               <td>{[e.room, rowInstructorNames(e).join(', '), e.content_notes].filter(Boolean).join(' · ')}</td>
                             </tr>
@@ -518,10 +518,10 @@ function AclsHubPageContent() {
                     </table>
                     {daySections.length > 0 && (
                       <div className="mt-1">
-                        <div className="font-bold mt-2 mb-1">Lab sections — station plan</div>
+                        <div className="font-bold mt-2 mb-1">Lab sections - station plan</div>
                         {daySections.map(s => (
                           <div key={s.id} style={{ breakInside: 'avoid' }}>
-                            <div className="font-semibold">{(s.section_label || s.title || 'Lab')} · {hhmm(s.start_time)}–{hhmm(s.end_time)}</div>
+                            <div className="font-semibold">{(s.section_label || s.title || 'Lab')} · {hhmm(s.start_time)}-{hhmm(s.end_time)}</div>
                             <table>
                               <thead><tr><th style={{ width: '32px' }}>#</th><th style={{ width: '120px' }}>Room</th><th>Case / Skill</th><th style={{ width: '150px' }}>Instructor</th></tr></thead>
                               <tbody>
@@ -555,7 +555,7 @@ function AclsHubPageContent() {
         ) : (
           <RegionGrid>
             {/* ── Region 1: Overview ── */}
-            <Region title="Overview — megacode TL stats" icon={<UserCheck className="w-4 h-4" />}>
+            <Region title="Overview - megacode TL stats" icon={<UserCheck className="w-4 h-4" />}>
             <section>
               <div className="grid grid-cols-3 max-lg:grid-cols-2 gap-3">
                 <StatTile label="Megacode lab days" value={visibleLabDays.filter(d => megacodeLabDayIds.has(d.id) && visibleDates.includes(d.date)).length} />
@@ -609,12 +609,12 @@ function AclsHubPageContent() {
             {stats.notPassed.length > 0 && (
               <section style={{ breakInside: 'avoid' }} className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-800 rounded-xl p-4">
                 <h2 className="text-base font-semibold text-amber-900 dark:text-amber-100 mb-2 flex items-center gap-1">
-                  <XCircle className="w-4 h-4" /> Not yet passed megacode as TL — {stats.notPassed.length} of {stats.totalStudents}
+                  <XCircle className="w-4 h-4" /> Not yet passed megacode as TL - {stats.notPassed.length} of {stats.totalStudents}
                 </h2>
                 <div className="flex flex-wrap gap-1.5">
                   {stats.notPassed.map(s => (
                     <span key={s.id} className={`text-sm font-medium px-3 py-1 rounded-full ${s.failed ? 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'}`}>
-                      {s.last_name}, {s.first_name}{s.failed ? ' — failed' : ' — not yet'}
+                      {s.last_name}, {s.first_name}{s.failed ? ' - failed' : ' - not yet'}
                     </span>
                   ))}
                 </div>
@@ -650,7 +650,7 @@ function AclsHubPageContent() {
               return (
                 <section key={date} style={{ breakInside: 'avoid' }}>
                   <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100 mb-2 flex items-center gap-2">
-                    <CalendarDays className="w-4 h-4 text-red-600" /> Day {dates.indexOf(date) + 1} — {prettyDate(date)}
+                    <CalendarDays className="w-4 h-4 text-red-600" /> Day {dates.indexOf(date) + 1} - {prettyDate(date)}
                   </h3>
 
                   {/* Schedule (didactic + labs together) */}
@@ -701,7 +701,7 @@ function AclsHubPageContent() {
                               </span>
                             );
                           })() : (
-                            <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}–{hhmm(e.end_time)}</span>
+                            <span className="font-mono text-xs text-gray-500 dark:text-gray-400 w-24 shrink-0">{hhmm(e.start_time)}-{hhmm(e.end_time)}</span>
                           )}
                           <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${TYPE_COLOR[e.event_type] || TYPE_COLOR.class}`}>{e.event_type}</span>
                           <span className="text-gray-800 dark:text-gray-100 flex-1 min-w-[12rem]">{e.title}</span>
@@ -720,7 +720,7 @@ function AclsHubPageContent() {
                                   onChange={(ev) => saveBlock(e, { [f.field]: ev.target.value || null })}
                                   className="text-xs min-h-[36px] w-40 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1"
                                 >
-                                  <option value="">{f.label}: —</option>
+                                  <option value="">{f.label}: - </option>
                                   {instructorOpts.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
                                 </select>
                               ))}
@@ -757,7 +757,7 @@ function AclsHubPageContent() {
             {/* Per-group MEGACODE team-lead coverage (whole event) */}
             <section style={{ breakInside: 'avoid' }}>
               {absentError && <div role="alert" className="mb-2 text-xs text-red-700 dark:text-red-300">{absentError}</div>}
-              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">Groups — megacode TL coverage (practice + testing)</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-1">Groups - megacode TL coverage (practice + testing)</h3>
               <div className="space-y-2">
                 {groups.map(g => {
                   const gAttempts = attemptsByGroup.get(g.id) || [];
@@ -808,7 +808,7 @@ function AclsHubPageContent() {
                       <div className="space-y-0.5">
                         {slots.map((s, i) => (
                           <div key={i} className="text-[11px] text-gray-500 dark:text-gray-400">
-                            Day {dates.indexOf(s.date) + 1} · {s.section} · #{s.station} {s.room ? `(${s.room})` : ''} — {s.title}
+                            Day {dates.indexOf(s.date) + 1} · {s.section} · #{s.station} {s.room ? `(${s.room})` : ''} - {s.title}
                           </div>
                         ))}
                       </div>

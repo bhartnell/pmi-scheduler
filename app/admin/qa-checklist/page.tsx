@@ -73,7 +73,7 @@ const INITIAL_GROUPS: Omit<ChecklistGroup, 'collapsed'>[] = [
       { id: 'auth-02', feature: '@pmi.edu domain restriction', steps: 'Attempt login with a non-@pmi.edu Google account. Verify access is denied with a clear error message.', priority: 'Critical', status: 'untested', notes: '' },
       { id: 'auth-03', feature: 'Role assignment', steps: 'Log in as a new user. Verify role defaults to "pending". Admin promotes user to instructor role. Re-login and verify correct access.', priority: 'Critical', status: 'untested', notes: '' },
       { id: 'auth-04', feature: 'Guest access login', steps: 'Use a guest access link or token. Verify guest can view allowed content and is blocked from restricted areas.', priority: 'High', status: 'untested', notes: '' },
-      { id: 'auth-05', feature: 'Session timeout / sign out', steps: 'Click "Sign out" from user menu. Verify session is cleared and user is redirected to sign-in page. Attempt to navigate to a protected route — verify redirect.', priority: 'High', status: 'untested', notes: '' },
+      { id: 'auth-05', feature: 'Session timeout / sign out', steps: 'Click "Sign out" from user menu. Verify session is cleared and user is redirected to sign-in page. Attempt to navigate to a protected route - verify redirect.', priority: 'High', status: 'untested', notes: '' },
       { id: 'auth-06', feature: 'Pending approval state', steps: 'Log in as a user with "pending" role. Verify they see a pending approval message and cannot access protected features.', priority: 'High', status: 'untested', notes: '' },
     ],
   },
@@ -260,7 +260,7 @@ const ROLE_SCENARIOS = [
     color: 'bg-red-500',
     path: [
       'Sign in with admin @pmi.edu account',
-      'Navigate to Admin panel — verify all admin cards are visible',
+      'Navigate to Admin panel - verify all admin cards are visible',
       'Create a lab day and take attendance',
       'Manage users: promote one pending user',
       'Generate and download a student data export',
@@ -279,7 +279,7 @@ const ROLE_SCENARIOS = [
       'Sign off a skill for a student',
       'Submit scheduling availability for an upcoming poll',
       'Create or complete a task',
-      'View notifications — mark all as read',
+      'View notifications - mark all as read',
     ],
   },
   {
@@ -289,11 +289,11 @@ const ROLE_SCENARIOS = [
     path: [
       'Sign in with student @pmi.edu account',
       'Navigate to student portal',
-      'View My Progress — verify skill completion %',
-      'View clinical hours — verify hours total',
-      'View portfolio — check scenario history',
-      'Attempt to access /admin — verify redirect',
-      'Check profile settings — update display name',
+      'View My Progress - verify skill completion %',
+      'View clinical hours - verify hours total',
+      'View portfolio - check scenario history',
+      'Attempt to access /admin - verify redirect',
+      'Check profile settings - update display name',
     ],
   },
   {
@@ -304,8 +304,8 @@ const ROLE_SCENARIOS = [
       'Use a guest access token/link to log in',
       'Verify limited navigation options are shown',
       'Attempt to access lab schedule (read-only expected)',
-      'Attempt to access student records — verify blocked',
-      'Attempt to access admin panel — verify blocked',
+      'Attempt to access student records - verify blocked',
+      'Attempt to access admin panel - verify blocked',
       'Verify no ability to modify any data',
     ],
   },
@@ -625,7 +625,7 @@ export default function QAChecklistPage() {
 
           {/* Print header (only visible when printing) */}
           <div className="hidden print:block mb-4">
-            <h1 className="text-3xl font-bold text-gray-900">PMI EMS Scheduler — QA Checklist</h1>
+            <h1 className="text-3xl font-bold text-gray-900">PMI EMS Scheduler - QA Checklist</h1>
             <p className="text-gray-600 mt-1">Generated: {new Date().toLocaleString()}</p>
           </div>
 

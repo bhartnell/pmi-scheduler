@@ -231,7 +231,7 @@ export default function RideAlongPollPage() {
             </div>
             {(poll?.cohortLabel || poll?.semesterLabel) && (
               <p className="text-teal-100 text-sm">
-                {[poll.cohortLabel, poll.semesterLabel].filter(Boolean).join(' — ')}
+                {[poll.cohortLabel, poll.semesterLabel].filter(Boolean).join(' - ')}
               </p>
             )}
             {deadlineStr && (
@@ -284,7 +284,7 @@ export default function RideAlongPollPage() {
                 onChange={e => setEmail(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               />
-              <p className="text-xs text-gray-500 mt-1">Optional — helps us match your response to your student record</p>
+              <p className="text-xs text-gray-500 mt-1">Optional - helps us match your response to your student record</p>
             </div>
 
             {/* Available Days */}

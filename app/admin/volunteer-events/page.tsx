@@ -406,7 +406,7 @@ export default function VolunteerEventsPage() {
           .filter((e) => e.source === 'lab_day' && e.linked_id)
           .map((e) => ({
             id: e.linked_id as string,
-            label: `${e.date} — ${e.title}`,
+            label: `${e.date} - ${e.title}`,
           }));
         setLabDayOptions(opts);
       }
@@ -469,7 +469,7 @@ export default function VolunteerEventsPage() {
     const end = event.end_time ? event.end_time.slice(0, 5) : '';
     const timeRange = start && end ? `${start}-${end}` : '(time TBD)';
 
-    setCorrectionSubject(`Update: ${event.name} — Time Correction`);
+    setCorrectionSubject(`Update: ${event.name} - Time Correction`);
     setCorrectionBody(
       `Hi {Name},\n\n` +
         `We wanted to let you know that the time for ${event.name} on ${formattedDate} has been updated.\n\n` +
@@ -1279,7 +1279,7 @@ export default function VolunteerEventsPage() {
               <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <Mail className="h-5 w-5 text-amber-500" />
-                  Send Correction Email — {correctionEvent.name}
+                  Send Correction Email - {correctionEvent.name}
                 </h3>
                 <button
                   onClick={() => {

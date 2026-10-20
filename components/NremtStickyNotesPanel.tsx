@@ -114,7 +114,7 @@ function PanelContent({
         >
           {criticalFail ? (
             <>
-              Examiner Comments — Critical failure explanation required
+              Examiner Comments - Critical failure explanation required
               <span className="text-red-500 ml-1">*</span>
             </>
           ) : (

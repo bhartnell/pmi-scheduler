@@ -409,7 +409,7 @@ export default function ChecklistAttendance({
                 >
                   {checklists.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name} — {formatDate(c.date)}
+                      {c.name} - {formatDate(c.date)}
                     </option>
                   ))}
                 </select>

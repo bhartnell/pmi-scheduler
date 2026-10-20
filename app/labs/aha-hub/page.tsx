@@ -28,9 +28,9 @@ interface AhaHubData {
 }
 
 function formatDates(dates: string[]) {
-  if (dates.length === 0) return '—';
+  if (dates.length === 0) return '-';
   if (dates.length === 1) return dates[0];
-  return `${dates[0]} – ${dates[dates.length - 1]}`;
+  return `${dates[0]} - ${dates[dates.length - 1]}`;
 }
 
 function CourseSection({
@@ -71,7 +71,7 @@ function CourseSection({
         <div className="mb-4 flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
           <ShieldAlert className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>
-            No {title} certification templates are configured yet — the AHA Course Generator
+            No {title} certification templates are configured yet - the AHA Course Generator
             won&apos;t find a template to assign until one is set up.
           </span>
         </div>

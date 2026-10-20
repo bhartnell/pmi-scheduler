@@ -74,7 +74,7 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
       },
       {
         title: 'AHA Results Export',
-        description: 'Completed AHA form sets (Megacode, Airway, Adult BLS) per cohort — autofilled, document-formatted PDF for course submission.',
+        description: 'Completed AHA form sets (Megacode, Airway, Adult BLS) per cohort - autofilled, document-formatted PDF for course submission.',
         href: '/reports/aha',
         icon: ClipboardSignature,
         color: 'text-red-600 dark:text-red-400',
@@ -184,7 +184,7 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
       },
       {
         title: 'Custom Report Builder',
-        description: 'Build ad-hoc tabular reports against any data source — pick columns, filters, and grouping.',
+        description: 'Build ad-hoc tabular reports against any data source - pick columns, filters, and grouping.',
         href: '/reports/builder',
         icon: Wrench,
         color: 'text-fuchsia-600 dark:text-fuchsia-400',
@@ -244,7 +244,7 @@ const REPORT_SECTIONS: { heading: string; reports: ReportLink[] }[] = [
       },
       {
         title: 'Team Leads',
-        description: 'Per-cohort tally of who has led which scenarios — used during NREMT prep.',
+        description: 'Per-cohort tally of who has led which scenarios - used during NREMT prep.',
         href: '/reports/team-leads',
         icon: ClipboardSignature,
         color: 'text-amber-600 dark:text-amber-400',

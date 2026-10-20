@@ -269,7 +269,7 @@ export default function LabTemplateImportPage() {
       const proceed = window.confirm(
         `This file contains ${clientPlaceholders.length} placeholder template(s) ` +
           `(Content Pending titles or empty stations):\n\n${list}${more}\n\n` +
-          `These will be SKIPPED — they will not overwrite existing content. ` +
+          `These will be SKIPPED - they will not overwrite existing content. ` +
           `Non-placeholder templates will still apply.\n\n` +
           `Proceed?`,
       );
@@ -346,14 +346,14 @@ export default function LabTemplateImportPage() {
         const proceed = window.confirm(
           `The embedded data files contain ${data.placeholder_count} placeholder template(s):\n\n` +
             `${list}${more}\n\n` +
-            `These will be SKIPPED — they will not overwrite existing content. ` +
+            `These will be SKIPPED - they will not overwrite existing content. ` +
             `The non-placeholder templates will still be seeded.\n\n` +
             `Proceed? (Fix the JSON files in data/ to silence this warning permanently.)`,
         );
         if (!proceed) {
           setSeedResult({
             success: false,
-            summary: { errors: ['Seed cancelled — placeholders not confirmed.'] },
+            summary: { errors: ['Seed cancelled - placeholders not confirmed.'] },
           });
           return;
         }
@@ -582,7 +582,7 @@ export default function LabTemplateImportPage() {
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                     Preview: {(parsed as CoursePayload).program_type}
                     {(parsed as CoursePayload).semester_number !== undefined &&
-                      ` — Semester ${(parsed as CoursePayload).semester_number}`}
+                      ` - Semester ${(parsed as CoursePayload).semester_number}`}
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {(parsed as CoursePayload).courses.length} courses → pmi_course_templates
@@ -594,7 +594,7 @@ export default function LabTemplateImportPage() {
                     Detected: Lab template
                   </div>
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    Preview: {(parsed as ImportPayload).program} — Semester {(parsed as ImportPayload).semester}
+                    Preview: {(parsed as ImportPayload).program} - Semester {(parsed as ImportPayload).semester}
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400">
                     {(parsed as ImportPayload).templates.length} templates,{' '}
@@ -648,7 +648,7 @@ export default function LabTemplateImportPage() {
                         {placeholders.slice(0, 8).map((p) => (
                           <li key={`${p.week_number}-${p.day_number}`}>
                             <span className="font-mono">Wk{p.week_number} D{p.day_number}</span>
-                            {p.title ? ` — "${p.title}"` : ''}
+                            {p.title ? ` - "${p.title}"` : ''}
                             <span className="text-amber-700 dark:text-amber-300"> ({p.reasons.join('; ')})</span>
                           </li>
                         ))}
@@ -685,7 +685,7 @@ export default function LabTemplateImportPage() {
                         <span className="ml-2 text-gray-500 dark:text-gray-400">{c.course_name}</span>
                       </td>
                       <td>{['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][c.day_index] ?? `Day ${c.day_index}`}</td>
-                      <td>{c.start_time}–{c.end_time}</td>
+                      <td>{c.start_time}-{c.end_time}</td>
                       <td>{c.block_type || 'lecture'}{c.is_online ? ' · online' : ''}</td>
                     </tr>
                   ))}
@@ -822,7 +822,7 @@ export default function LabTemplateImportPage() {
                         </div>
                       ) : (
                         <p className="text-xs text-gray-400 italic">
-                          No stations — content pending
+                          No stations - content pending
                         </p>
                       )}
                     </div>

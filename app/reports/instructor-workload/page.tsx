@@ -556,7 +556,7 @@ export default function InstructorWorkloadPage() {
                                     {instructor.lvfrDaysCount}
                                   </span>
                                 ) : (
-                                  <span className="text-gray-300 dark:text-gray-600">—</span>
+                                  <span className="text-gray-300 dark:text-gray-600">-</span>
                                 )}
                               </td>
                               <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400 text-xs">

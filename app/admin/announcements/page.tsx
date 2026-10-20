@@ -88,7 +88,7 @@ const AUDIENCE_LABELS: Record<string, string> = {
 };
 
 function formatDate(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const safe = iso.includes('T') || iso.includes(' ') ? iso : iso + 'T12:00:00';
   return new Date(safe).toLocaleDateString('en-US', {
     month: 'short',

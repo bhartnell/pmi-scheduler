@@ -190,7 +190,7 @@ export default function PlanningWorkspacePage() {
 
   useEffect(() => { if (status === 'authenticated') loadBlocks(); }, [loadBlocks, status]);
 
-  const weekDays = useMemo(() => Array.from({ length: 6 }, (_, i) => addDays(weekStart, i)), [weekStart]); // Mon–Sat
+  const weekDays = useMemo(() => Array.from({ length: 6 }, (_, i) => addDays(weekStart, i)), [weekStart]); // Mon-Sat
 
   // Blocks for the selected cohort, grouped by date and ordered.
   const blocksByDate = useMemo(() => {
@@ -516,7 +516,7 @@ export default function PlanningWorkspacePage() {
                     <span>{day.toLocaleDateString('en-US', { weekday: 'short', month: 'numeric', day: 'numeric' })}</span>
                     {dayBlocks.length > 0 && (
                       <span className="font-normal text-[10px] text-gray-400">
-                        {dayBlocks.length} · {fmtTime(dayBlocks[0].start_time)}–{fmtTime(dayBlocks[dayBlocks.length - 1].end_time)}
+                        {dayBlocks.length} · {fmtTime(dayBlocks[0].start_time)}-{fmtTime(dayBlocks[dayBlocks.length - 1].end_time)}
                       </span>
                     )}
                   </div>
@@ -525,7 +525,7 @@ export default function PlanningWorkspacePage() {
                     onDragOver={e => { if (draggingId && editable) e.preventDefault(); }}
                     onDrop={e => { if (!draggingId || !editable) return; e.preventDefault(); moveBlock(draggingId, key, dayBlocks.length); }}
                   >
-                    {dayBlocks.length === 0 && <div className="text-[11px] text-gray-300 dark:text-gray-600 px-1 py-2">—</div>}
+                    {dayBlocks.length === 0 && <div className="text-[11px] text-gray-300 dark:text-gray-600 px-1 py-2">-</div>}
                     {dayBlocks.map((b, i) => {
                       const color = b.color || TYPE_COLORS[b.block_type || 'other'] || TYPE_COLORS.other;
                       const instrs = (b.instructors || []).map(iu => iu.instructor?.name).filter(Boolean);
@@ -565,21 +565,21 @@ export default function PlanningWorkspacePage() {
                             )}
                           </div>
                           <div className="text-gray-500 dark:text-gray-400 flex items-center gap-1 flex-wrap">
-                            <span>{fmtTime(b.start_time)}–{fmtTime(b.end_time)}</span>
+                            <span>{fmtTime(b.start_time)}-{fmtTime(b.end_time)}</span>
                             {editable && editingRoomId === b.id ? (
                               <select autoFocus value={b.room_id || ''}
                                 onClick={e => e.stopPropagation()}
                                 onChange={e => assignRoom(b.id, e.target.value || null)}
                                 onBlur={() => setEditingRoomId(null)}
                                 className="text-[11px] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
-                                <option value="">— No room —</option>
+                                <option value=""> - No room - </option>
                                 {roomsList.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
                               </select>
                             ) : (
                               <button type="button"
                                 onClick={e => { e.stopPropagation(); if (editable) setEditingRoomId(b.id); }}
                                 className={`${editable ? 'hover:text-blue-600 dark:hover:text-blue-400' : ''} ${b.room?.name ? '' : 'text-gray-300 dark:text-gray-600'}`}>
-                                · {b.room?.name || (editable ? 'room' : '—')}
+                                · {b.room?.name || (editable ? 'room' : '-')}
                               </button>
                             )}
                           </div>
@@ -593,7 +593,7 @@ export default function PlanningWorkspacePage() {
                               onBlur={() => setEditingInstrId(null)}
                               className="mt-0.5 w-full text-[11px] border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800"
                             >
-                              <option value="">— Unassigned —</option>
+                              <option value=""> - Unassigned - </option>
                               {instructorsList.map(inst => <option key={inst.id} value={inst.id}>{inst.name}</option>)}
                             </select>
                           ) : (
@@ -603,7 +603,7 @@ export default function PlanningWorkspacePage() {
                               className={`mt-0.5 inline-flex items-center gap-1 ${editable ? 'hover:text-blue-600 dark:hover:text-blue-400' : ''} ${instrs.length ? 'text-gray-500 dark:text-gray-400' : 'text-gray-300 dark:text-gray-600'}`}
                             >
                               <User className="w-3 h-3" />
-                              <span className="truncate">{instrs.length ? instrs.join(', ') : (editable ? 'assign' : '—')}</span>
+                              <span className="truncate">{instrs.length ? instrs.join(', ') : (editable ? 'assign' : '-')}</span>
                             </button>
                           )}
                           {b.status === 'draft' && <span className="ml-1 text-amber-600 dark:text-amber-400">· draft</span>}

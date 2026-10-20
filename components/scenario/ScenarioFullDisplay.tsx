@@ -357,7 +357,7 @@ export default function ScenarioFullDisplay({
             <div>
               <span className="font-medium text-gray-700 dark:text-gray-300">S - Signs/Symptoms:</span>{' '}
               <span className="text-gray-600 dark:text-gray-400">
-                {sample?.signs_symptoms || scenario?.chief_complaint || '—'}
+                {sample?.signs_symptoms || scenario?.chief_complaint || '-'}
               </span>
             </div>
             <div>
@@ -380,11 +380,11 @@ export default function ScenarioFullDisplay({
             </div>
             <div>
               <span className="font-medium text-gray-700 dark:text-gray-300">L - Last Oral Intake:</span>{' '}
-              <span className="text-gray-600 dark:text-gray-400">{sample?.last_oral_intake || '—'}</span>
+              <span className="text-gray-600 dark:text-gray-400">{sample?.last_oral_intake || '-'}</span>
             </div>
             <div>
               <span className="font-medium text-gray-700 dark:text-gray-300">E - Events Leading:</span>{' '}
-              <span className="text-gray-600 dark:text-gray-400">{sample?.events_leading || '—'}</span>
+              <span className="text-gray-600 dark:text-gray-400">{sample?.events_leading || '-'}</span>
             </div>
           </div>
         </div>

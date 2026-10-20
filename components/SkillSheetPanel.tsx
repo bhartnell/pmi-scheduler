@@ -837,7 +837,7 @@ export default function SkillSheetPanel({
         // Show toast
         showToast(
           saveStatus === 'in_progress'
-            ? `Progress saved — ${studentName || 'Student'}`
+            ? `Progress saved - ${studentName || 'Student'}`
             : `\u2713 Evaluation submitted for ${studentName || 'student'}`,
           'success'
         );
@@ -1871,7 +1871,7 @@ export default function SkillSheetPanel({
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                   Open the <strong>Examiner Notes</strong> panel (right column
                   on desktop, floating drawer tab on mobile) and type a short
-                  explanation of why the student failed — e.g. which critical
+                  explanation of why the student failed - e.g. which critical
                   criteria were missed. Then press Save again.
                 </p>
               </div>
@@ -2060,7 +2060,7 @@ export default function SkillSheetPanel({
                     Min: <span className="tabular-nums">{minPts}</span>
                   </span>
                   <span className={`text-xs lg:text-sm font-medium ${colorClass}`}>
-                    — {statusLabel}
+ - {statusLabel}
                   </span>
                 </div>
               );
@@ -2324,7 +2324,7 @@ export default function SkillSheetPanel({
                     <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                        Correcting Attempt {directorEditAttemptNumber || 1} — Director Correction
+                        Correcting Attempt {directorEditAttemptNumber || 1} - Director Correction
                       </h3>
                       <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
                         This saves in place and overwrites the existing score sheet. It does not create a new attempt.
@@ -2456,7 +2456,7 @@ export default function SkillSheetPanel({
                         className="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
                       >
                         {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                        Save — Send Now
+                        Save - Send Now
                       </button>
                       <button
                         onClick={() => dispatchSave('do_not_send')}
@@ -2557,7 +2557,7 @@ export default function SkillSheetPanel({
                       }`}
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                      {gradeMode === 'team' ? `Submit Team (${teamMembers.length})` : `Submit Competency${studentName ? ` — ${studentName}` : ''}`}
+                      {gradeMode === 'team' ? `Submit Team (${teamMembers.length})` : `Submit Competency${studentName ? ` - ${studentName}` : ''}`}
                     </button>
                     <p className="text-[10px] text-gray-400 text-center">
                       Final evaluations are not emailed to students
@@ -2686,7 +2686,7 @@ export default function SkillSheetPanel({
         )}
 
         {/* Mode Toggle.
-            On NREMT testing days, only the Final tab is offered — the
+            On NREMT testing days, only the Final tab is offered - the
             Teaching and Formative tabs are filtered out so a stray
             click can't drop the panel into the practice checklist.
             Mirrors the same filter on the embedded variant above
@@ -2979,7 +2979,7 @@ export default function SkillSheetPanel({
                     <ShieldAlert className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                     <div>
                       <h3 className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                        Correcting Attempt {directorEditAttemptNumber || 1} — Director Correction
+                        Correcting Attempt {directorEditAttemptNumber || 1} - Director Correction
                       </h3>
                       <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5">
                         This saves in place and overwrites the existing score sheet. It does not create a new attempt.
@@ -3111,7 +3111,7 @@ export default function SkillSheetPanel({
                         className="flex items-center justify-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-medium"
                       >
                         {sendingEmail ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                        Save — Send Now
+                        Save - Send Now
                       </button>
                       <button
                         onClick={() => dispatchSave('do_not_send')}
@@ -3203,7 +3203,7 @@ export default function SkillSheetPanel({
                       }`}
                     >
                       {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                      {gradeMode === 'team' ? `Submit Team (${teamMembers.length})` : `Submit Competency${studentName ? ` — ${studentName}` : ''}`}
+                      {gradeMode === 'team' ? `Submit Team (${teamMembers.length})` : `Submit Competency${studentName ? ` - ${studentName}` : ''}`}
                     </button>
                     <p className="text-[10px] text-gray-400 text-center">
                       Final evaluations are not emailed to students
@@ -3281,7 +3281,7 @@ function PanelStepRow({
     <span
       className="inline-block w-2 h-2 rounded-full bg-red-500 dark:bg-red-400 flex-shrink-0 mr-1.5"
       aria-label="Critical failure linked"
-      title="Critical failure criterion — failing this step may result in a critical failure"
+      title="Critical failure criterion - failing this step may result in a critical failure"
     />
   ) : null;
   // NREMT desktop styling classes — apply only at lg+ when NREMT testing
@@ -3403,7 +3403,7 @@ function PanelStepRow({
         <Megaphone className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1">
-            Proctor Prompt — Read to Candidate
+            Proctor Prompt - Read to Candidate
           </p>
           <p className="text-xs text-amber-900 dark:text-amber-200 italic leading-relaxed">
             &ldquo;{step.proctor_prompt}&rdquo;
@@ -3420,7 +3420,7 @@ function PanelStepRow({
         <Megaphone className="w-4 h-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300 mb-1">
-            Proctor Prompt — Read to Candidate
+            Proctor Prompt - Read to Candidate
           </p>
           <p className="text-xs text-amber-900 dark:text-amber-200 italic leading-relaxed">
             &ldquo;{step.proctor_prompt}&rdquo;
@@ -3534,7 +3534,7 @@ function PanelStepRow({
                           ? 'bg-green-500 text-white shadow-sm'
                           : 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 hover:bg-green-100 dark:hover:bg-green-900/30 hover:text-green-600'
                       }`}
-                      title={sequenceNumber != null ? `Completed #${sequenceNumber} — tap to undo` : 'Mark as completed'}
+                      title={sequenceNumber != null ? `Completed #${sequenceNumber} - tap to undo` : 'Mark as completed'}
                     >
                       <CheckCircle className="w-4 h-4" />
                     </button>
@@ -3758,7 +3758,7 @@ function ExistingEvalSummary({
               {ev.below_min_pass_reason && (
                 <p className="mt-1 text-[9px] italic text-amber-700 dark:text-amber-400 flex items-center gap-1">
                   <ShieldAlert className="w-2.5 h-2.5 flex-shrink-0" />
-                  Passed below minimum — {ev.below_min_pass_reason}
+                  Passed below minimum - {ev.below_min_pass_reason}
                 </p>
               )}
               {ev.edited_by && ev.edited_at && (
@@ -3766,7 +3766,7 @@ function ExistingEvalSummary({
                   <ShieldAlert className="w-2.5 h-2.5 flex-shrink-0" />
                   Corrected by {ev.edited_by_user?.name || 'a director'} on{' '}
                   {new Date(ev.edited_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                  {ev.edit_reason ? ` — ${ev.edit_reason}` : ''}
+                  {ev.edit_reason ? ` - ${ev.edit_reason}` : ''}
                 </p>
               )}
             </div>

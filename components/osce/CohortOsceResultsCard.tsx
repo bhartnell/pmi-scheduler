@@ -69,7 +69,7 @@ export default function CohortOsceResultsCard({ cohortId }: { cohortId: string }
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-sm font-medium text-gray-900 dark:text-white truncate">{s.student_name}</span>
               {s.has_unconfirmed_match && (
-                <span title="At least one assessment is an unconfirmed name match — verify on the student's page">
+                <span title="At least one assessment is an unconfirmed name match - verify on the student's page">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                 </span>
               )}

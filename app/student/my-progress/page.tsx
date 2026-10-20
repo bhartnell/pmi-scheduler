@@ -438,12 +438,12 @@ export default function MyProgressPage() {
             ].map(m => (
               <div key={m.label} className="text-center">
                 <div className="text-[11px] text-gray-500 dark:text-gray-400">{m.label}</div>
-                <div className="text-lg font-bold text-gray-900 dark:text-white">{m.you != null ? m.you : '—'}</div>
+                <div className="text-lg font-bold text-gray-900 dark:text-white">{m.you != null ? m.you : '-'}</div>
                 <div className="text-[11px] text-gray-400">group {m.avg}</div>
               </div>
             ))}
           </div>
-          <p className="mt-2 text-[11px] text-gray-400">Group figures are averages across all members — individual classmates&apos; progress is private.</p>
+          <p className="mt-2 text-[11px] text-gray-400">Group figures are averages across all members - individual classmates&apos; progress is private.</p>
         </div>
       )}
 
@@ -960,7 +960,7 @@ export default function MyProgressPage() {
                   {(lab.startTime || lab.endTime) && (
                     <p className="text-sm text-indigo-700 dark:text-indigo-300">
                       {lab.startTime ? formatTime(lab.startTime) : ''}
-                      {lab.startTime && lab.endTime ? ' – ' : ''}
+                      {lab.startTime && lab.endTime ? ' - ' : ''}
                       {lab.endTime ? formatTime(lab.endTime) : ''}
                     </p>
                   )}

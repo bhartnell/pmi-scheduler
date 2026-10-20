@@ -437,7 +437,7 @@ export default function ReportBuilderPage() {
   };
 
   const formatCellValue = (val: unknown): string => {
-    if (val === null || val === undefined) return '—';
+    if (val === null || val === undefined) return '-';
     if (typeof val === 'boolean') return val ? 'Yes' : 'No';
     if (typeof val === 'object') return JSON.stringify(val);
     return String(val);
@@ -701,7 +701,7 @@ export default function ReportBuilderPage() {
 
                 {filters.length === 0 && (
                   <p className="text-sm text-gray-400 dark:text-gray-500 italic">
-                    No filters applied — all records will be returned
+                    No filters applied - all records will be returned
                   </p>
                 )}
 
@@ -735,7 +735,7 @@ export default function ReportBuilderPage() {
                       onChange={(e) => setSortBy(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="">— No Sort —</option>
+                      <option value=""> - No Sort - </option>
                       {availableColumns.map((c) => (
                         <option key={c.key} value={c.key}>{c.label}</option>
                       ))}
@@ -764,7 +764,7 @@ export default function ReportBuilderPage() {
                       onChange={(e) => setGroupBy(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
                     >
-                      <option value="">— No Grouping —</option>
+                      <option value=""> - No Grouping - </option>
                       {availableColumns.map((c) => (
                         <option key={c.key} value={c.key}>{c.label}</option>
                       ))}

@@ -121,7 +121,7 @@ function Chip({ state }: { state: 'pass' | 'watch' | 'fail' | 'none' }) {
     fail: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200',
     none: 'bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500',
   }[state];
-  const label = { pass: 'Pass', watch: 'Watch', fail: 'Fail', none: '—' }[state];
+  const label = { pass: 'Pass', watch: 'Watch', fail: 'Fail', none: '-' }[state];
   return <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${cls}`}>{label}</span>;
 }
 
@@ -579,7 +579,7 @@ function BoardContent({ course }: { course: CertCourse }) {
           {editable ? (
             <select aria-label={`Instructor for ${e.title}`} value={e.metadata?.instructor_id || ''} disabled={busy}
               onChange={(ev) => saveBlock(e, { instructor_id: ev.target.value || null })} className={`${inputCls} w-44`}>
-              <option value="">Instructor: —</option>
+              <option value="">Instructor: - </option>
               {instructorOpts.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
             </select>
           ) : (rowNames(e).length > 0 && <span className="text-xs text-gray-500">{rowNames(e).join(', ')}</span>)}
@@ -594,16 +594,16 @@ function BoardContent({ course }: { course: CertCourse }) {
     <>
     <div className="flex items-center justify-end gap-2 mt-3">
       <Link href={`/labs/schedule/${d.id}/coordinator`} className="inline-flex items-center gap-1.5 text-xs font-medium px-3 min-h-[36px] rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
-        <Users className="w-4 h-4" /> Coordinator — {d.section_label || d.title || 'section'}
+        <Users className="w-4 h-4" /> Coordinator - {d.section_label || d.title || 'section'}
       </Link>
       <button type="button" onClick={() => setTimerFor(d)} className="inline-flex items-center gap-1.5 text-xs font-medium px-3 min-h-[36px] rounded border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20">
-        <Timer className="w-4 h-4" /> Rotation timer — {d.section_label || d.title || 'section'}
+        <Timer className="w-4 h-4" /> Rotation timer - {d.section_label || d.title || 'section'}
       </button>
     </div>
     <div className="grid grid-cols-4 max-xl:grid-cols-3 max-md:grid-cols-2 max-sm:grid-cols-1 gap-2 rounded-xl border-2 border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/40 p-2.5 my-3">
       {[...d.stations].sort((x, y) => x.station_number - y.station_number).map((st, idx, arr) => {
         const learning = st.scenario?.cert_tier === 'learning_station';
-        const caseName = st.scenario?.title ? `${st.scenario.case_code ? `${st.scenario.case_code.replace(/^CASE_/i, 'Case ').replace(/_/g, ' ')} - ` : ''}${st.scenario.title}` : st.scenario?.case_code || st.custom_title || '—';
+        const caseName = st.scenario?.title ? `${st.scenario.case_code ? `${st.scenario.case_code.replace(/^CASE_/i, 'Case ').replace(/_/g, ' ')} - ` : ''}${st.scenario.title}` : st.scenario?.case_code || st.custom_title || '-';
         const category = st.scenario?.category;
         const tag = learning ? 'learning' : d.is_adv_cert_testing ? (course === 'acls' ? 'megacode' : 'testing') : 'station';
         // Single contract: lab_days.rotation_duration is authoritative (the timer reads it); lab_stations.rotation_minutes is only a mirror and is never shown.
@@ -626,14 +626,14 @@ function BoardContent({ course }: { course: CertCourse }) {
             <select aria-label={`Room for station ${st.station_number}`} value={st.room || ''}
               onChange={ev => saveStation(st, { room: ev.target.value || null })}
               className="text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1">
-              <option value="">Room: —</option>
+              <option value="">Room: - </option>
               {st.room && !locations.some(l => l.name === st.room) && <option value={st.room}>{st.room}</option>}
               {locations.map(l => <option key={l.id} value={l.name}>{l.name}</option>)}
             </select>
             <select aria-label={`Instructor for station ${st.station_number}`} value={st.instructor_name || ''}
               onChange={ev => { const i = fullInstructors.find(x => x.name === ev.target.value); saveStation(st, { instructor_name: i?.name || null, instructor_email: i?.email || null }); }}
               className="text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1">
-              <option value="">Instructor: —</option>
+              <option value="">Instructor: - </option>
               {st.instructor_name && !fullInstructors.some(i => i.name === st.instructor_name) && <option value={st.instructor_name}>{st.instructor_name}</option>}
               {fullInstructors.map(i => <option key={i.id} value={i.name}>{i.name}</option>)}
             </select>
@@ -662,7 +662,7 @@ function BoardContent({ course }: { course: CertCourse }) {
         return (
           <section key={date}>
             <div className="flex items-center justify-between mb-1.5">
-              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">Day {dayNo(date)} — {prettyDate(date)}</h3>
+              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">Day {dayNo(date)} - {prettyDate(date)}</h3>
               <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">ends {fmt(layout.ends[date] ?? 0)}</span>
             </div>
             <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">

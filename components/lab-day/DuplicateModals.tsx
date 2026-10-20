@@ -248,7 +248,7 @@ export default function DuplicateModals({
             <div className="overflow-y-auto flex-1 p-4 space-y-4">
               <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3 text-sm text-gray-600 dark:text-gray-400">
                 <span className="font-medium text-gray-900 dark:text-white">Source: </span>
-                {labDay?.title && <span>{labDay.title} — </span>}
+                {labDay?.title && <span>{labDay.title} - </span>}
                 {labDay?.date ? formatDate(labDay.date) : 'this lab day'}
                 <span className="ml-2 text-xs">({labDay.stations?.length ?? 0} stations)</span>
               </div>

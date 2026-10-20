@@ -146,7 +146,7 @@ export default function AvailableInstructorsSection({
       )}
 
       {/* Conflict and no-data instructors are shown separately, clearly
-          labeled with the reason — never lumped into a bare "unavailable"
+          labeled with the reason - never lumped into a bare "unavailable"
           bucket (the earlier confusion: everyone showed unavailable
           because of Pima Tuesday-class conflicts + sparse seeded data). */}
       {conflicts.length > 0 && (
@@ -168,7 +168,7 @@ export default function AvailableInstructorsSection({
                   title={reason ? `${reason}${extra}` : undefined}
                 >
                   {i.name}
-                  {reason && <span className="font-normal opacity-75"> — {reason}{extra}</span>}
+                  {reason && <span className="font-normal opacity-75"> - {reason}{extra}</span>}
                 </span>
               );
             })}

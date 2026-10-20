@@ -457,7 +457,7 @@ function ExportDropdown({ dateRange, activePrograms, activeEventTypes, selectedI
             )}
             {selectedSemester && (
               <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {selectedSemester.start_date} to {selectedSemester.end_date} — all event types.
+                {selectedSemester.start_date} to {selectedSemester.end_date} - all event types.
               </div>
             )}
           </div>
@@ -947,7 +947,7 @@ function CalendarContent() {
       synthetic.push({
         id: `lvfr-compact-${b.date}-${b.session}`,
         source: 'lvfr',
-        title: `LVFR AEMT — ${isMorning ? 'Morning' : 'Afternoon'} Session`,
+        title: `LVFR AEMT - ${isMorning ? 'Morning' : 'Afternoon'} Session`,
         date: b.date,
         start_time: isMorning ? '07:30' : '12:30',
         end_time: isMorning ? '11:30' : '15:30',
@@ -1231,7 +1231,7 @@ function CalendarContent() {
         </button>
 
         {/* Program chips. LVFR gets a sibling "Compact" toggle when
-            active — collapses LVFR clutter into 2 session blocks per
+            active - collapses LVFR clutter into 2 session blocks per
             day (Morning / Afternoon) so the rest of the master
             calendar stays scannable. */}
         {PROGRAMS.map(prog => (

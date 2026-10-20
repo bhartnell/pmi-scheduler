@@ -477,7 +477,7 @@ export default function InstructorTimeClockPage() {
                             minute: '2-digit',
                             hour12: true,
                           })}
-                          {' — '}
+                          {' - '}
                           {entry.clock_out
                             ? new Date(entry.clock_out).toLocaleTimeString('en-US', {
                                 hour: 'numeric',

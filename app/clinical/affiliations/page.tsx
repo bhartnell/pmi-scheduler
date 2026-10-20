@@ -91,11 +91,11 @@ function getRowColorClass(affiliation: Affiliation): string {
   if (daysUntil < 0) return 'bg-red-50 dark:bg-red-900/10';
   if (daysUntil <= 30) return 'bg-red-50 dark:bg-red-900/10';
   if (daysUntil <= 90) return 'bg-yellow-50 dark:bg-yellow-900/10';
-  return ''; // Green/normal — no special background
+  return ''; // Green/normal - no special background
 }
 
 function formatDate(dateStr: string | null): string {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   const d = new Date(dateStr + 'T12:00:00');
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
@@ -600,7 +600,7 @@ export default function AffiliationsPage() {
                           {getExpiryLabel(aff.expiration_date)}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="text-gray-900 dark:text-white">{aff.responsible_person || '—'}</div>
+                          <div className="text-gray-900 dark:text-white">{aff.responsible_person || '-'}</div>
                           {aff.responsible_person_email && (
                             <div className="text-xs text-gray-500 dark:text-gray-400">{aff.responsible_person_email}</div>
                           )}

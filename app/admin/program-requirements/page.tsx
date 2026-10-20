@@ -229,7 +229,7 @@ function VersionHistory({ history, program }: { history: HistoryEntry[]; program
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   const getCategoryLabel = (cat: string | null): string => {
-    if (!cat) return '—';
+    if (!cat) return '-';
     return CATEGORIES.find((c) => c.key === cat)?.label ?? cat;
   };
 
@@ -308,7 +308,7 @@ function VersionHistory({ history, program }: { history: HistoryEntry[]; program
                         {entry.required_value}
                       </td>
                       <td className="px-4 py-2 text-gray-600 dark:text-gray-400 hidden md:table-cell text-xs">
-                        {entry.created_by ?? '—'}
+                        {entry.created_by ?? '-'}
                       </td>
                     </tr>
                   ))}

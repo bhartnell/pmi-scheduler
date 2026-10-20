@@ -297,7 +297,7 @@ export default function ScenarioTransformPage() {
             Scenario Structure Transform
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Normalizes scenario data — converts string critical_actions to objects, seeds missing phases, and standardises vitals format.
+            Normalizes scenario data - converts string critical_actions to objects, seeds missing phases, and standardises vitals format.
           </p>
         </div>
       </div>

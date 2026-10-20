@@ -680,7 +680,7 @@ function CohortOverviewTab({
                             {bestEval.critical_fail && (
                               <span
                                 className="absolute -top-1 -left-1 w-3.5 h-3.5 rounded-full bg-red-700 text-white text-[8px] font-bold flex items-center justify-center"
-                                title={`Critical fail (auto-fail regardless of points)${bestEval.critical_fail_notes ? `: ${bestEval.critical_fail_notes}` : ' — no reason recorded'}`}
+                                title={`Critical fail (auto-fail regardless of points)${bestEval.critical_fail_notes ? `: ${bestEval.critical_fail_notes}` : ' - no reason recorded'}`}
                               >
                                 !
                               </span>
@@ -688,7 +688,7 @@ function CohortOverviewTab({
                             {hasRetake && (
                               <span
                                 className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-amber-500 text-white text-[8px] font-bold flex items-center justify-center"
-                                title={`Retake attempted — First: ${allEvals.find(e => !e.is_retake)?.result || 'N/A'}, Retake: ${allEvals.find(e => e.is_retake)?.result || 'N/A'}`}
+                                title={`Retake attempted - First: ${allEvals.find(e => !e.is_retake)?.result || 'N/A'}, Retake: ${allEvals.find(e => e.is_retake)?.result || 'N/A'}`}
                               >
                                 R
                               </span>
@@ -827,8 +827,8 @@ function ScoreCell({ evaluation }: { evaluation: Evaluation }) {
     label = result.toUpperCase();
   }
 
-  const tooltipText = `Points: ${points_earned}/${points_possible}${minimum_points !== null ? ` — Minimum: ${minimum_points}` : ''} — ${label}`
-    + (critical_fail ? ` (auto-fail regardless of points${critical_fail_notes ? `: ${critical_fail_notes}` : ' — no reason recorded'})` : '');
+  const tooltipText = `Points: ${points_earned}/${points_possible}${minimum_points !== null ? ` - Minimum: ${minimum_points}` : ''} - ${label}`
+    + (critical_fail ? ` (auto-fail regardless of points${critical_fail_notes ? `: ${critical_fail_notes}` : ' - no reason recorded'})` : '');
 
   return (
     <div className="flex flex-col items-center gap-1">
@@ -862,7 +862,7 @@ function SkillWeaknessTab({ summary }: { summary: Summary | null }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-gray-500 dark:text-gray-400">
-        Skills sorted by pass rate (weakest first) — use this view for pre-NREMT coaching focus areas.
+        Skills sorted by pass rate (weakest first) - use this view for pre-NREMT coaching focus areas.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {sorted.map((skill) => (

@@ -473,7 +473,7 @@ export default function OpenLabManagementPage() {
                                 {su.what_to_work_on}
                               </td>
                               <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400 whitespace-nowrap">
-                                {su.requested_instructor?.name || '—'}
+                                {su.requested_instructor?.name || '-'}
                               </td>
                               <td className="px-4 py-2.5 text-gray-500 dark:text-gray-400 whitespace-nowrap">
                                 {formatTimestamp(su.created_at)}

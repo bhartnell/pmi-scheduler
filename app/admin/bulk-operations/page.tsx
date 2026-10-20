@@ -638,7 +638,7 @@ export default function BulkOperationsPage() {
               {filters.length === 0 && (
                 <div className="py-6 flex flex-col items-center gap-2 text-sm text-gray-400 dark:text-gray-500 border border-dashed border-gray-300 dark:border-gray-600 rounded-lg">
                   <Filter className="w-8 h-8 opacity-40" />
-                  <span>No filters applied — all records in the table will be targeted</span>
+                  <span>No filters applied - all records in the table will be targeted</span>
                   <button
                     onClick={addFilter}
                     className="text-blue-600 dark:text-blue-400 hover:underline"
@@ -931,7 +931,7 @@ export default function BulkOperationsPage() {
                           {op.affected_count.toLocaleString()}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-400 max-w-40 truncate">
-                          {op.executed_by ?? '—'}
+                          {op.executed_by ?? '-'}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
                           {fmtDate(op.created_at)}

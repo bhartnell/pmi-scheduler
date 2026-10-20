@@ -79,7 +79,7 @@ interface InternshipRow {
 const PHASE_LABELS: Record<number, { label: string; trackerLink: string; placeholder: string }> = {
   1: { label: 'S1 · Didactic', trackerLink: '/clinical/clinical-tracker', placeholder: 'No cohorts in the didactic phase' },
   2: { label: 'S2 · Compliance', trackerLink: '/clinical/clinical-tracker', placeholder: 'No cohorts in the compliance-prep phase' },
-  3: { label: 'S3 · Clinicals', trackerLink: '/clinical/hours', placeholder: 'No cohorts in the clinical phase — hospital visits, hours, and rotation stats will show here' },
+  3: { label: 'S3 · Clinicals', trackerLink: '/clinical/hours', placeholder: 'No cohorts in the clinical phase - hospital visits, hours, and rotation stats will show here' },
   4: { label: 'S4 · Internship', trackerLink: '/clinical/internships', placeholder: 'No cohorts in the internship phase' },
 };
 
@@ -295,7 +295,7 @@ export default function ClinicalDashboardPage() {
               <Hospital className="w-6 h-6 flex-shrink-0" />
               <div>
                 <div className="font-semibold">Log a Hospital Visit</div>
-                <div className="text-teal-100 text-xs">Fast entry — works well on your phone in the field</div>
+                <div className="text-teal-100 text-xs">Fast entry - works well on your phone in the field</div>
               </div>
             </div>
             <ChevronRight className="w-5 h-5 flex-shrink-0" />
@@ -368,7 +368,7 @@ export default function ClinicalDashboardPage() {
             active S1-S4 phase view above (status='graduated' on cohorts,
             set via the "Graduate" toggle on the Cohort Manager), but still
             fully clickable/accessible here. Distinct from archiving
-            (is_archived) — archive stays the separate final "put away"
+            (is_archived) - archive stays the separate final "put away"
             step; graduating just moves a finished cohort out of the active
             pipeline view. */}
         {effectiveRole && canAccessClinical(effectiveRole) && !phaseLoading && graduatedCohorts.length > 0 && (
@@ -458,7 +458,7 @@ export default function ClinicalDashboardPage() {
         )}
 
         {/*
-          Secondary section — everything else, below a visual divider.
+          Secondary section - everything else, below a visual divider.
           Uses compact 3/4-column cards with smaller text + subtle styling
           so the primary workflow above stays visually dominant.
          */}
@@ -572,7 +572,7 @@ export default function ClinicalDashboardPage() {
               </>
             )}
             {/* Affiliation Tracker hidden per codebase-streamline
-                spec. /clinical/affiliations page + API + DB intact —
+                spec. /clinical/affiliations page + API + DB intact -
                 only the entry card is removed. Direct URL still
                 works if anyone has a bookmark. */}
           </div>
@@ -583,7 +583,7 @@ export default function ClinicalDashboardPage() {
 }
 
 /* ──────────────────────────────────────────────────────────────────
-   Card components — kept local so the parent component stays scannable
+   Card components - kept local so the parent component stays scannable
    and we avoid coupling to the shared ToolCard abstraction used on the
    cohort hub (different visual weight requirements).
    ────────────────────────────────────────────────────────────────── */

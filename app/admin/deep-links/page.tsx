@@ -330,10 +330,10 @@ export default function DeepLinksPage() {
           <p className="font-medium mb-1">Universal Link Files Deployed</p>
           <ul className="list-disc list-inside space-y-0.5 text-blue-700 dark:text-blue-400">
             <li>
-              <code className="font-mono text-xs">/.well-known/apple-app-site-association</code> — iOS Universal Links
+              <code className="font-mono text-xs">/.well-known/apple-app-site-association</code> - iOS Universal Links
             </li>
             <li>
-              <code className="font-mono text-xs">/.well-known/assetlinks.json</code> — Android App Links
+              <code className="font-mono text-xs">/.well-known/assetlinks.json</code> - Android App Links
             </li>
           </ul>
           <p className="mt-2 text-xs text-blue-600 dark:text-blue-500">
@@ -474,7 +474,7 @@ export default function DeepLinksPage() {
                         </code>
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell text-gray-600 dark:text-gray-400">
-                        {config.description ?? <span className="italic text-gray-400">—</span>}
+                        {config.description ?? <span className="italic text-gray-400">-</span>}
                       </td>
                       <td className="px-4 py-3">
                         <ActiveBadge active={config.is_active} />

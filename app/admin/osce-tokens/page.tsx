@@ -296,10 +296,10 @@ export default function OsceTokenManagement() {
     const ev = eventDetails;
     const title = ev?.title || selectedEvent?.title || 'OSCE';
     const range = ev
-      ? ev.start_date === ev.end_date ? fmtDate(ev.start_date) : `${fmtDate(ev.start_date)} – ${fmtDate(ev.end_date)}`
+      ? ev.start_date === ev.end_date ? fmtDate(ev.start_date) : `${fmtDate(ev.start_date)} - ${fmtDate(ev.end_date)}`
       : '';
     const lines = [
-      `Subject: [PMI] OSCE Evaluator Invitation — ${title}`,
+      `Subject: [PMI] OSCE Evaluator Invitation - ${title}`,
       '',
       `Hello ${t.evaluator_name},`,
       '',
@@ -311,11 +311,11 @@ export default function OsceTokenManagement() {
     if (t.evaluator_role) lines.push(`Role: ${roleLabels[t.evaluator_role] || t.evaluator_role}`);
     if (t.blocks && t.blocks.length > 0) {
       lines.push('Your block(s):');
-      t.blocks.forEach(b => lines.push(`  - ${b.label}: ${fmtDate(b.date)}, ${fmtTime(b.start_time)}–${fmtTime(b.end_time)}`));
+      t.blocks.forEach(b => lines.push(`  - ${b.label}: ${fmtDate(b.date)}, ${fmtTime(b.start_time)}-${fmtTime(b.end_time)}`));
     }
     lines.push(
       '',
-      'What we\'re asking: observe student scenario performances and score them using the online scoring form — no account or login needed.',
+      'What we\'re asking: observe student scenario performances and score them using the online scoring form - no account or login needed.',
       '',
       `Your personal scoring link: ${getLink(t.token)}`,
     );
@@ -370,7 +370,7 @@ export default function OsceTokenManagement() {
             >
               {events.map(e => (
                 <option key={e.id} value={e.id}>
-                  {e.title} ({e.status}) — {e.start_date}
+                  {e.title} ({e.status}) - {e.start_date}
                 </option>
               ))}
             </select>
@@ -378,7 +378,7 @@ export default function OsceTokenManagement() {
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Tokens generated here link to <code>/osce-scoring/enter?token=...</code> for this event only.
                 {selectedEvent.status === 'draft' && (
-                  <span className="text-amber-600 dark:text-amber-400"> This event is still Draft — consider setting it Open before inviting.</span>
+                  <span className="text-amber-600 dark:text-amber-400"> This event is still Draft - consider setting it Open before inviting.</span>
                 )}
               </p>
             )}
@@ -572,7 +572,7 @@ export default function OsceTokenManagement() {
                             )}
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                            {t.email || <span className="text-amber-600 dark:text-amber-400">No email on file — can&apos;t send an invite</span>}
+                            {t.email || <span className="text-amber-600 dark:text-amber-400">No email on file - can&apos;t send an invite</span>}
                             {' · '}Valid until {new Date(t.valid_until).toLocaleString()}
                           </p>
                           {(result?.error || t.invite_last_error) && !result?.success && (

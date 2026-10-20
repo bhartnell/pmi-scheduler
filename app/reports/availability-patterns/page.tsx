@@ -693,7 +693,7 @@ export default function AvailabilityPatternsPage() {
                           : 'text-emerald-600 dark:text-emerald-400'
                       }`}
                     >
-                      {d.hasNoData ? '—' : d.avgInstructors.toFixed(1)}
+                      {d.hasNoData ? '-' : d.avgInstructors.toFixed(1)}
                     </div>
                     <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">avg</div>
                     {d.isGap && (

@@ -53,7 +53,7 @@ export default function LabDayCheckInSection({ labDay, labDayId, onLabDayUpdate 
             </div>
             <div>
               <h3 className="font-semibold text-gray-900 dark:text-white text-sm">Student Self Check-In</h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{labDay.checkin_enabled ? 'Check-in is active — students can tap their name to mark themselves present.' : 'Enable to give students a link to check themselves in.'}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{labDay.checkin_enabled ? 'Check-in is active - students can tap their name to mark themselves present.' : 'Enable to give students a link to check themselves in.'}</p>
             </div>
           </div>
           <button onClick={labDay.checkin_enabled ? handleDisableCheckIn : handleEnableCheckIn} disabled={checkInLoading} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium flex-shrink-0 transition-colors disabled:opacity-50 ${labDay.checkin_enabled ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}>

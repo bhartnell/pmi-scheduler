@@ -99,7 +99,7 @@ const EXPORT_TYPES: {
     type: 'full_backup',
     icon: HardDrive,
     title: 'Full Backup',
-    description: 'Everything combined — cohorts, students, labs, clinical, assessments',
+    description: 'Everything combined - cohorts, students, labs, clinical, assessments',
     color: 'bg-gray-700',
     warning: 'This export may be large and take several seconds to generate.',
   },

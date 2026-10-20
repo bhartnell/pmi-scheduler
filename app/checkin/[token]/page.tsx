@@ -254,7 +254,7 @@ export default function CheckInPage() {
           {data && (
             <div>
               <h1 className="text-xl font-bold text-gray-900">
-                {data.labDay.title || `Lab Day — ${data.cohort.program_abbreviation} Group ${data.cohort.cohort_number}`}
+                {data.labDay.title || `Lab Day - ${data.cohort.program_abbreviation} Group ${data.cohort.cohort_number}`}
               </h1>
               <p className="text-gray-500 text-sm mt-0.5">
                 {formatDate(data.labDay.date)}

@@ -565,7 +565,7 @@ export default function MyStatsPage() {
                               className="hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
                             >
                               <td className="px-5 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                                {lab.date ? formatDate(lab.date) : '—'}
+                                {lab.date ? formatDate(lab.date) : '-'}
                               </td>
                               <td className="px-5 py-3 text-gray-900 dark:text-white">
                                 {lab.lab_day_id ? (
@@ -582,7 +582,7 @@ export default function MyStatsPage() {
                               <td className="px-5 py-3 text-gray-600 dark:text-gray-400">
                                 {lab.program && lab.cohort_number
                                   ? `${lab.program} ${lab.cohort_number}`
-                                  : '—'}
+                                  : '-'}
                               </td>
                               <td className="px-5 py-3 text-right text-gray-700 dark:text-gray-300 whitespace-nowrap">
                                 {formatHours(lab.duration_hours)}
@@ -594,7 +594,7 @@ export default function MyStatsPage() {
                                     <Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />
                                   </span>
                                 ) : (
-                                  <span className="text-gray-400 dark:text-gray-500">—</span>
+                                  <span className="text-gray-400 dark:text-gray-500">-</span>
                                 )}
                               </td>
                             </tr>
@@ -609,7 +609,7 @@ export default function MyStatsPage() {
                         <div key={`${lab.lab_day_id}-${idx}`} className="p-4 space-y-1">
                           <div className="flex items-center justify-between">
                             <span className="text-sm text-gray-500 dark:text-gray-400">
-                              {lab.date ? formatDate(lab.date) : '—'}
+                              {lab.date ? formatDate(lab.date) : '-'}
                             </span>
                             {lab.avg_rating !== null && (
                               <span className="inline-flex items-center gap-1 text-yellow-600 dark:text-yellow-400 text-sm font-medium">

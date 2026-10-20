@@ -135,7 +135,7 @@ export default function LabsPage() {
     },
     {
       title: 'PALS Hub',
-      description: 'Full PALS event — schedule, sections, team-lead coverage',
+      description: 'Full PALS event - schedule, sections, team-lead coverage',
       href: '/labs/pals-hub',
       icon: Stethoscope,
       color: 'emerald',
@@ -143,7 +143,7 @@ export default function LabsPage() {
     },
     {
       title: 'PALS Testing Grading',
-      description: 'AHA PALS checklist testing — PASS / NR per student',
+      description: 'AHA PALS checklist testing - PASS / NR per student',
       href: '/labs/pals/grade',
       icon: Stethoscope,
       color: 'sky',

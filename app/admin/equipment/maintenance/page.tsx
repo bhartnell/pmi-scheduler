@@ -139,7 +139,7 @@ const EMPTY_FORM: MaintenanceFormData = {
 // ---------------------------------------------------------------------------
 
 function formatDate(iso: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const safe = iso.includes('T') || iso.includes(' ') ? iso : iso + 'T12:00:00';
   return new Date(safe).toLocaleDateString('en-US', {
     month: 'short',
@@ -149,7 +149,7 @@ function formatDate(iso: string | null | undefined): string {
 }
 
 function formatCurrency(amount: number | null | undefined): string {
-  if (amount == null) return '—';
+  if (amount == null) return '-';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
 }
 
@@ -259,7 +259,7 @@ function MaintenanceModal({
               required
               className={inputClass}
             >
-              <option value="">— Select Equipment —</option>
+              <option value=""> - Select Equipment - </option>
               {equipmentOptions.map((eq) => (
                 <option key={eq.id} value={eq.id}>
                   {eq.name}{eq.category ? ` (${eq.category})` : ''}
@@ -1167,7 +1167,7 @@ export default function MaintenanceLogPage() {
                             </td>
                             <td className="px-4 py-3 text-gray-600 dark:text-gray-300 hidden md:table-cell whitespace-nowrap">
                               {record.completed_date ? formatDate(record.completed_date) : (
-                                <span className="text-gray-400 dark:text-gray-500">—</span>
+                                <span className="text-gray-400 dark:text-gray-500">-</span>
                               )}
                             </td>
                             <td className="px-4 py-3 hidden lg:table-cell whitespace-nowrap">
@@ -1180,7 +1180,7 @@ export default function MaintenanceLogPage() {
                                   {formatDate(record.next_due_date)}
                                 </span>
                               ) : (
-                                <span className="text-gray-400 dark:text-gray-500">—</span>
+                                <span className="text-gray-400 dark:text-gray-500">-</span>
                               )}
                             </td>
                             <td className="px-4 py-3 text-gray-600 dark:text-gray-300 hidden lg:table-cell">

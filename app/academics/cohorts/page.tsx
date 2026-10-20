@@ -727,7 +727,7 @@ export default function CohortManagementPage() {
                                 Semester phase badges (PM only).
                                 Prior version showed a green "Clinical" tag
                                 whenever track_clinical_hours was true, which
-                                is enabled for every PM cohort at all times —
+                                is enabled for every PM cohort at all times -
                                 so the badge appeared on S1/S2 cohorts that
                                 aren't actually in the clinical phase.
                                 Repurposed now as a proper phase indicator:
@@ -739,7 +739,7 @@ export default function CohortManagementPage() {
                                 cohort.current_semester === 3 && (
                                   <span
                                     className="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-xs rounded flex items-center gap-1"
-                                    title="Semester 3 — clinical rotations"
+                                    title="Semester 3 - clinical rotations"
                                   >
                                     <Activity className="w-3 h-3" />
                                     Clinical
@@ -749,7 +749,7 @@ export default function CohortManagementPage() {
                                 cohort.current_semester === 4 && (
                                   <span
                                     className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs rounded flex items-center gap-1"
-                                    title="Semester 4 — field internship"
+                                    title="Semester 4 - field internship"
                                   >
                                     <Briefcase className="w-3 h-3" />
                                     Internship

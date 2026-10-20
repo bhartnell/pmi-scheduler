@@ -875,7 +875,7 @@ export default function NewStationPage() {
                 </div>
 
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  {selectedDrillIds.length === 0 ? 'No drills selected — station will show as open drill time.' : `${selectedDrillIds.length} drill${selectedDrillIds.length !== 1 ? 's' : ''} selected.`}
+                  {selectedDrillIds.length === 0 ? 'No drills selected - station will show as open drill time.' : `${selectedDrillIds.length} drill${selectedDrillIds.length !== 1 ? 's' : ''} selected.`}
                   {' '}<Link href="/labs/skill-drills" target="_blank" className="text-blue-600 dark:text-blue-400 hover:underline">Manage drill library</Link>
                 </p>
 

@@ -61,7 +61,7 @@ const STATUS_CONFIG = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function formatHours(h: number | null): string {
-  if (h === null || h === undefined) return '—';
+  if (h === null || h === undefined) return '-';
   const hours = Math.floor(h);
   const minutes = Math.round((h - hours) * 60);
   return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
@@ -557,7 +557,7 @@ export default function AdminTimeClockPage() {
                         {/* Notes */}
                         <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-[160px]">
                           <span className="truncate block" title={entry.notes || ''}>
-                            {entry.notes || '—'}
+                            {entry.notes || '-'}
                           </span>
                         </td>
 

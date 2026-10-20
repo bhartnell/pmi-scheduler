@@ -413,7 +413,7 @@ export default function UserActivityPage() {
                   Activity by Hour
                 </h2>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                  When users are most active — useful for scheduling maintenance
+                  When users are most active - useful for scheduling maintenance
                 </p>
                 <div className="overflow-y-auto max-h-64">
                   <HourlyBarChart data={data.activity_by_hour} />

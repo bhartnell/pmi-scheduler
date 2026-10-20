@@ -142,7 +142,7 @@ const EMPTY_FORM: AlumniFormData = {
 // ---------------------------------------------------------------------------
 
 function fmtDate(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   return new Date(iso + 'T00:00:00').toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -1378,7 +1378,7 @@ export default function AlumniPage() {
                             {/* Cohort / Grad */}
                             <td className="px-4 py-3 hidden md:table-cell">
                               <p className="text-gray-700 dark:text-gray-300 text-xs">
-                                {a.cohort?.name ?? '—'}
+                                {a.cohort?.name ?? '-'}
                               </p>
                               <p className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">
                                 {fmtDate(a.graduation_date)}
@@ -1419,7 +1419,7 @@ export default function AlumniPage() {
                                 )}
                               {(a.employment_status === 'seeking' ||
                                 a.employment_status === 'unknown') && (
-                                <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+                                <span className="text-xs text-gray-400 dark:text-gray-500">-</span>
                               )}
                             </td>
 

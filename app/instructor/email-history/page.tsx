@@ -277,7 +277,7 @@ export default function EmailHistoryPage() {
                 <div key={ev.id} className="px-4 py-3 flex items-center justify-between">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                      {ev.skill_sheet?.skill_name || 'Evaluation'} — {ev.student?.first_name} {ev.student?.last_name}
+                      {ev.skill_sheet?.skill_name || 'Evaluation'} - {ev.student?.first_name} {ev.student?.last_name}
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {ev.evaluation_type === 'formative' ? 'Formative' : 'Final'} | Result: {ev.result?.toUpperCase()} | {ev.lab_day?.date ? new Date(ev.lab_day.date + 'T12:00:00').toLocaleDateString() : new Date(ev.created_at).toLocaleDateString()}

@@ -50,7 +50,7 @@ export default function CalendarAvailabilityDot({ status, events, size = 'sm' }:
           <div className="font-medium mb-1">{statusLabels[status]}</div>
           {events?.map((e, i) => (
             <div key={i} className="text-gray-300">
-              {e.title}: {new Date(e.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}–{new Date(e.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {e.title}: {new Date(e.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}-{new Date(e.end).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </div>
           ))}
           <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900" />

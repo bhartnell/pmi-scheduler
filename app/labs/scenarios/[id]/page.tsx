@@ -1052,12 +1052,12 @@ export default function ScenarioEditorPage() {
 
     // SAMPLE
     html += '<h2>SAMPLE History</h2><table>';
-    html += `<tr><th style="width:30px;">S</th><th style="width:120px;">Signs/Symptoms</th><td>${escapeHtml(s.sample_history?.signs_symptoms || s.chief_complaint || '—')}</td></tr>`;
+    html += `<tr><th style="width:30px;">S</th><th style="width:120px;">Signs/Symptoms</th><td>${escapeHtml(s.sample_history?.signs_symptoms || s.chief_complaint || '-')}</td></tr>`;
     html += `<tr><th>A</th><th>Allergies</th><td>${escapeHtml(s.allergies || 'NKDA')}</td></tr>`;
     html += `<tr><th>M</th><th>Medications</th><td>${s.medications.length > 0 ? s.medications.map(m => escapeHtml(m)).join(', ') : 'None'}</td></tr>`;
     html += `<tr><th>P</th><th>Past Medical Hx</th><td>${s.medical_history.length > 0 ? s.medical_history.map(h => escapeHtml(h)).join(', ') : 'None'}</td></tr>`;
-    html += `<tr><th>L</th><th>Last Oral Intake</th><td>${escapeHtml(s.sample_history?.last_oral_intake || '—')}</td></tr>`;
-    html += `<tr><th>E</th><th>Events Leading</th><td>${escapeHtml(s.sample_history?.events_leading || '—')}</td></tr>`;
+    html += `<tr><th>L</th><th>Last Oral Intake</th><td>${escapeHtml(s.sample_history?.last_oral_intake || '-')}</td></tr>`;
+    html += `<tr><th>E</th><th>Events Leading</th><td>${escapeHtml(s.sample_history?.events_leading || '-')}</td></tr>`;
     html += '</table>';
 
     // OPQRST
@@ -1319,7 +1319,7 @@ export default function ScenarioEditorPage() {
       if (incomingId && incomingId !== scenarioId) {
         const proceed = window.confirm(
           `The uploaded JSON has a different scenario id (${incomingId.slice(0, 8)}…). ` +
-            `\n\nIt will be APPLIED to THIS scenario (${(scenarioId ?? '').slice(0, 8)}…) anyway — ` +
+            `\n\nIt will be APPLIED to THIS scenario (${(scenarioId ?? '').slice(0, 8)}…) anyway - ` +
             `that prevents accidental duplicates. Proceed?`,
         );
         if (!proceed) return;
@@ -1329,7 +1329,7 @@ export default function ScenarioEditorPage() {
         `Replace this scenario's content with the uploaded JSON?\n\n` +
           `Current: "${scenario.title || '(untitled)'}"\n` +
           (incomingTitle ? `Incoming: "${incomingTitle}"\n` : '') +
-          `\nThis is a destructive update — existing fields will be overwritten. ` +
+          `\nThis is a destructive update - existing fields will be overwritten. ` +
           `Use Version History to revert if needed.`,
       );
       if (!proceedReplace) return;
@@ -1366,7 +1366,7 @@ export default function ScenarioEditorPage() {
   // See lib/scenario-export.ts for round-trip fidelity notes.
   const handleExportJson = () => {
     const payload = buildSingleExport({
-      id: scenarioId, // round-trip identity — bulk-import dedups on this
+      id: scenarioId, // round-trip identity - bulk-import dedups on this
       title: scenario.title,
       category: scenario.category,
       subcategory: scenario.subcategory,
@@ -1667,7 +1667,7 @@ export default function ScenarioEditorPage() {
                     onClick={() => jsonInputRef.current?.click()}
                     disabled={updatingFromJson}
                     className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50"
-                    title="Replace this scenario's content from a JSON file (updates this row by id — no duplicates)"
+                    title="Replace this scenario's content from a JSON file (updates this row by id - no duplicates)"
                   >
                     <Upload className="w-4 h-4" />
                     {updatingFromJson ? 'Updating…' : 'Update from JSON'}
@@ -2293,7 +2293,7 @@ export default function ScenarioEditorPage() {
                 <tr>
                   <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">S</td>
                   <td className="font-semibold border border-black p-1 bg-gray-100" style={{ width: '110px' }}>Signs/Symptoms</td>
-                  <td className="border border-black p-1">{scenario.sample_history?.signs_symptoms || scenario.chief_complaint || '—'}</td>
+                  <td className="border border-black p-1">{scenario.sample_history?.signs_symptoms || scenario.chief_complaint || '-'}</td>
                 </tr>
                 <tr>
                   <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">A</td>
@@ -2313,12 +2313,12 @@ export default function ScenarioEditorPage() {
                 <tr>
                   <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">L</td>
                   <td className="font-semibold border border-black p-1 bg-gray-100">Last Oral Intake</td>
-                  <td className="border border-black p-1">{scenario.sample_history?.last_oral_intake || '—'}</td>
+                  <td className="border border-black p-1">{scenario.sample_history?.last_oral_intake || '-'}</td>
                 </tr>
                 <tr>
                   <td className="w-7 font-bold text-center border-2 border-black bg-gray-200 p-1">E</td>
                   <td className="font-semibold border border-black p-1 bg-gray-100">Events Leading</td>
-                  <td className="border border-black p-1">{scenario.sample_history?.events_leading || '—'}</td>
+                  <td className="border border-black p-1">{scenario.sample_history?.events_leading || '-'}</td>
                 </tr>
               </tbody>
             </table>
@@ -3225,7 +3225,7 @@ export default function ScenarioEditorPage() {
                       value={(phase.instructor_cues || []).join('\n')}
                       onChange={(e) => updatePhase(index, { instructor_cues: e.target.value.split('\n') })}
                       rows={3}
-                      placeholder="One cue per line — instructor-facing coaching (anticipate errors, redirect language). Distinct from Expected Actions."
+                      placeholder="One cue per line - instructor-facing coaching (anticipate errors, redirect language). Distinct from Expected Actions."
                       className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
                     />
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Instructor-facing prompts for running the scenario (one per line).</p>
@@ -3383,7 +3383,7 @@ export default function ScenarioEditorPage() {
           {isEditing && (
             <div>
               <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">
-                Change summary (optional — shown in version history)
+                Change summary (optional - shown in version history)
               </label>
               <input
                 type="text"

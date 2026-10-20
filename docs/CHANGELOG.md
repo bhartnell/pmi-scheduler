@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-20
 
+em-dash-join-plain-hyphen | UI text: em/en dashes in rendered page and component text replaced with plain hyphens (183 .tsx files under app/ and components/; API routes, lib/, calendar sync, osce location parsing, and files in open PRs #340/#341 untouched) (card 3ff5cd1c)
 lab-grade-round3 | Station grader: full width (max-w-screen-2xl), save controls one non-sticky row, breadcrumb shows lab day title (card 3ff5cd1c)
 student-layout-preview | Student layout honors Preview-as-Student (admin previewing as student can enter /student; real non-students still redirected) (card 3fe5cd1c Student View)
 

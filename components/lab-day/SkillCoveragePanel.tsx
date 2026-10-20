@@ -619,8 +619,8 @@ export default function SkillCoveragePanel({
                                 className="ml-2 text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
                                 title={
                                   s.smc_min_attempts && s.smc_min_attempts > 1
-                                    ? `SMC requires this skill (min ${s.smc_min_attempts} attempts) — not yet covered`
-                                    : 'SMC requires this skill — not yet covered'
+                                    ? `SMC requires this skill (min ${s.smc_min_attempts} attempts) - not yet covered`
+                                    : 'SMC requires this skill - not yet covered'
                                 }
                               >
                                 SMC gap
@@ -651,7 +651,7 @@ export default function SkillCoveragePanel({
                             {!s.in_program && s.kind !== 'scenario' && (
                               <span
                                 className="ml-2 text-[10px] uppercase font-semibold text-gray-500 dark:text-gray-400"
-                                title="Not on the program list — ran anyway"
+                                title="Not on the program list - ran anyway"
                               >
                                 extra
                               </span>
@@ -666,7 +666,7 @@ export default function SkillCoveragePanel({
                         <div className="text-right flex-shrink-0">
                           <div className="text-sm font-semibold text-gray-900 dark:text-white tabular-nums">
                             {s.lab_day_count === 0
-                              ? '—'
+                              ? '-'
                               : `${s.lab_day_count}×`}
                           </div>
                           {s.last_run_date && (

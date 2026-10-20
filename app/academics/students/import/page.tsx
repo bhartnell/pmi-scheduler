@@ -322,10 +322,10 @@ function DataCell({
     <td className="px-2 py-2 text-sm max-w-[140px] truncate">
       {tooltipText ? (
         <Tooltip text={tooltipText}>
-          <span className={cellClass}>{value || '—'}</span>
+          <span className={cellClass}>{value || '-'}</span>
         </Tooltip>
       ) : (
-        <span className={cellClass}>{value || '—'}</span>
+        <span className={cellClass}>{value || '-'}</span>
       )}
     </td>
   );
@@ -365,7 +365,7 @@ function ImportHistorySection() {
     if (mode === 'skip') return 'Skip dupes';
     if (mode === 'update') return 'Update dupes';
     if (mode === 'import_new') return 'Allow dupes';
-    return '—';
+    return '-';
   };
 
   const formatDate = (iso: string) => {
@@ -790,7 +790,7 @@ function ImportStudentsContent() {
 
         {/* Step 1: Cohort Selection */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Step 1 — Select Cohort</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Step 1 - Select Cohort</h2>
           <select
             value={selectedCohort}
             onChange={(e) => setSelectedCohort(e.target.value)}
@@ -807,7 +807,7 @@ function ImportStudentsContent() {
 
         {/* Step 2: Duplicate Mode */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Step 2 — Duplicate Handling</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">Step 2 - Duplicate Handling</h2>
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
             Duplicates are detected by exact email match OR by case-insensitive first + last name match.
           </p>
@@ -859,7 +859,7 @@ function ImportStudentsContent() {
 
         {/* Step 3: Input Method */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Step 3 — Add Student Data</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Step 3 - Add Student Data</h2>
 
           <div className="flex gap-2 mb-4">
             <button
@@ -928,7 +928,7 @@ function ImportStudentsContent() {
               </label>
               {pasteData && (
                 <p className="mt-2 text-sm text-green-600 dark:text-green-400">
-                  File loaded — {parsedStudents.length} student{parsedStudents.length !== 1 ? 's' : ''} parsed
+                  File loaded - {parsedStudents.length} student{parsedStudents.length !== 1 ? 's' : ''} parsed
                 </p>
               )}
             </div>
@@ -951,7 +951,7 @@ function ImportStudentsContent() {
               <div className="p-4 border-b dark:border-gray-700 flex flex-wrap items-center gap-3 justify-between">
                 <div>
                   <h2 className="font-semibold text-gray-900 dark:text-white">
-                    Step 4 — Review &amp; Select Rows
+                    Step 4 - Review &amp; Select Rows
                   </h2>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                     {validCount > 0 && (
@@ -1116,11 +1116,11 @@ function ImportStudentsContent() {
           <ul className="text-sm text-blue-700 dark:text-blue-400 space-y-1">
             <li>Download the CSV template for the correct column order and example data</li>
             <li>Copy and paste directly from Excel, Google Sheets, or any spreadsheet</li>
-            <li>Headers are auto-detected — include a header row for best results</li>
+            <li>Headers are auto-detected - include a header row for best results</li>
             <li>Required: first_name, last_name. Optional: email, phone, agency, emergency_contact_name, emergency_contact_phone, learning_style, notes</li>
             <li>Valid values for learning_style: visual, auditory, kinesthetic, reading</li>
             <li>Duplicates are detected by email (exact) or name (case-insensitive)</li>
-            <li>Rows with errors are deselected by default — fix them in the source or remove them</li>
+            <li>Rows with errors are deselected by default - fix them in the source or remove them</li>
           </ul>
         </div>
       </main>

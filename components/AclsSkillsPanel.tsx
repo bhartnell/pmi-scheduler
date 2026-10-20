@@ -88,7 +88,7 @@ export default function AclsSkillsPanel({ groups }: { groups: { id: string; name
 
   return (
     <section className="print:hidden">
-      <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Skills stations — capture</h2>
+      <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">Skills stations - capture</h2>
       <div className="flex flex-wrap gap-2 mb-2">
         {SKILLS.map((s) => (
           <button key={s.key} onClick={() => setSkill(s.key)}

@@ -488,7 +488,7 @@ export default function InstructorHistoryPage() {
                                 {entry.program_abbreviation} Cohort {entry.cohort_number}
                               </div>
                             ) : (
-                              <span className="text-gray-400 dark:text-gray-500">—</span>
+                              <span className="text-gray-400 dark:text-gray-500">-</span>
                             )}
                           </td>
 
@@ -514,7 +514,7 @@ export default function InstructorHistoryPage() {
                                 ))}
                               </div>
                             ) : (
-                              <span className="text-gray-400 dark:text-gray-500">—</span>
+                              <span className="text-gray-400 dark:text-gray-500">-</span>
                             )}
                           </td>
                         </tr>

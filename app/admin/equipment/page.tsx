@@ -128,7 +128,7 @@ interface CheckoutFormData {
 // ---------------------------------------------------------------------------
 
 function formatDate(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const safe = iso.includes('T') || iso.includes(' ') ? iso : iso + 'T12:00:00';
   return new Date(safe).toLocaleDateString('en-US', {
     month: 'short',
@@ -275,7 +275,7 @@ function EquipmentModal({
                 onChange={(e) => setForm({ ...form, condition: e.target.value })}
                 className={inputClass}
               >
-                <option value="">— Select —</option>
+                <option value=""> - Select - </option>
                 <option value="new">New</option>
                 <option value="good">Good</option>
                 <option value="fair">Fair</option>
@@ -577,7 +577,7 @@ function ActiveCheckoutsPanel({
                     {formatDate(checkout.checked_out_at)}
                   </td>
                   <td className="px-4 py-3 text-gray-500 dark:text-gray-400 hidden lg:table-cell text-xs max-w-xs truncate">
-                    {checkout.notes ?? '—'}
+                    {checkout.notes ?? '-'}
                   </td>
                   <td className="px-4 py-3 text-right">
                     <button

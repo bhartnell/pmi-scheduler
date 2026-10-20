@@ -490,7 +490,7 @@ app.post('/webhook', (req, res) => {
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 dark:border-gray-700">
         <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
-          {webhook.name} — Details
+          {webhook.name} - Details
         </h3>
         <button
           onClick={onClose}
@@ -572,7 +572,7 @@ app.post('/webhook', (req, res) => {
               <div>
                 <p className="font-medium">
                   {testResult.success ? 'Delivery successful' : 'Delivery failed'}
-                  {testResult.status !== null && ` — HTTP ${testResult.status}`}
+                  {testResult.status !== null && ` - HTTP ${testResult.status}`}
                 </p>
                 {testResult.body && (
                   <p className="text-xs mt-1 opacity-80 font-mono break-all line-clamp-3">
@@ -672,7 +672,7 @@ app.post('/webhook', (req, res) => {
                         </td>
                         <td className="px-3 py-2">
                           <span className={`text-xs font-mono font-semibold ${statusColor(log.response_status)}`}>
-                            {log.response_status ?? '—'}
+                            {log.response_status ?? '-'}
                           </span>
                         </td>
                         <td className="px-3 py-2">
@@ -1056,7 +1056,7 @@ export default function WebhooksPage() {
                     {/* Delivery stats */}
                     <div className="hidden md:block text-right flex-shrink-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-white">
-                        {wh.stats.success_rate !== null ? `${wh.stats.success_rate}%` : '—'}
+                        {wh.stats.success_rate !== null ? `${wh.stats.success_rate}%` : '-'}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
                         {wh.stats.total_deliveries > 0

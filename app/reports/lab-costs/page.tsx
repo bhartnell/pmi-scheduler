@@ -592,7 +592,7 @@ export default function LabCostsReportPage() {
                               key={c}
                               className="px-4 py-3 text-right text-gray-500 dark:text-gray-400 hidden md:table-cell"
                             >
-                              {d.breakdown[c] ? `$${d.breakdown[c].toFixed(2)}` : '—'}
+                              {d.breakdown[c] ? `$${d.breakdown[c].toFixed(2)}` : '-'}
                             </td>
                           ))}
                         </tr>
@@ -616,7 +616,7 @@ export default function LabCostsReportPage() {
                           >
                             {report.categoryBreakdown[c]
                               ? `$${report.categoryBreakdown[c].toFixed(2)}`
-                              : '—'}
+                              : '-'}
                           </td>
                         ))}
                       </tr>

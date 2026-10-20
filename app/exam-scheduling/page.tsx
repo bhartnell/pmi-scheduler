@@ -115,7 +115,7 @@ export default function ExamSchedulingPage() {
           ? 'Your slot has been moved.'
           : json.autoConfirmed
             ? 'You\'re confirmed! Check your email for details.'
-            : 'Signup received — pending director approval. You\'ll get an email when it\'s decided.',
+            : 'Signup received - pending director approval. You\'ll get an email when it\'s decided.',
       );
       setPicking(null);
       setUsesOwn(null);
@@ -155,7 +155,7 @@ export default function ExamSchedulingPage() {
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/10 rounded-lg"><CalendarDays className="w-6 h-6" /></div>
             <div>
-              <h1 className="text-2xl font-bold">Final Written Exam — Self-Scheduling</h1>
+              <h1 className="text-2xl font-bold">Final Written Exam - Self-Scheduling</h1>
               <p className="text-blue-200 text-sm mt-0.5">Pick a session, tell us about your computer, you&apos;re set.</p>
             </div>
           </div>
@@ -208,8 +208,8 @@ export default function ExamSchedulingPage() {
             <p className="text-xs text-gray-500 dark:text-gray-400">
               Signed in as <strong>{me.student.name}</strong>
               {me.student.willAutoConfirm
-                ? ' — phase 2: your signup confirms instantly.'
-                : ' — signups require director approval before they\'re confirmed.'}
+                ? ' - phase 2: your signup confirms instantly.'
+                : ' - signups require director approval before they\'re confirmed.'}
             </p>
 
             {/* Current slot */}
@@ -231,7 +231,7 @@ export default function ExamSchedulingPage() {
                     </div>
                     <p className="text-sm text-gray-700 dark:text-gray-300">{fmtDate(mySession.date)}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" /> {fmtTime(mySession.start_time)} – {fmtTime(mySession.end_time)}
+                      <Clock className="w-3.5 h-3.5" /> {fmtTime(mySession.start_time)} - {fmtTime(mySession.end_time)}
                     </p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
                       {me.signup.uses_own_computer
@@ -251,7 +251,7 @@ export default function ExamSchedulingPage() {
                   </div>
                 </div>
                 <p className="text-xs text-gray-400 dark:text-gray-500 mt-3 flex items-center gap-1">
-                  <RefreshCw className="w-3 h-3" /> Need a different day? Pick any open session below — rescheduling is free.
+                  <RefreshCw className="w-3 h-3" /> Need a different day? Pick any open session below - rescheduling is free.
                 </p>
               </div>
             )}
@@ -276,7 +276,7 @@ export default function ExamSchedulingPage() {
                   >
                     <p className="font-medium text-gray-900 dark:text-gray-100">{fmtDate(s.date)}</p>
                     <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" /> {fmtTime(s.start_time)} – {fmtTime(s.end_time)}
+                      <Clock className="w-3.5 h-3.5" /> {fmtTime(s.start_time)} - {fmtTime(s.end_time)}
                     </p>
                     <div className="flex items-center gap-3 mt-2 text-xs text-gray-600 dark:text-gray-300">
                       <span>{s.total_left} of {s.total_spots} seats left</span>
@@ -306,7 +306,7 @@ export default function ExamSchedulingPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-md w-full p-6">
             <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
-              {fmtDate(picking.date)} · {fmtTime(picking.start_time)}–{fmtTime(picking.end_time)}
+              {fmtDate(picking.date)} · {fmtTime(picking.start_time)}-{fmtTime(picking.end_time)}
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
               The written exam runs in <strong>LockDown Browser</strong>. Which computer will you use?

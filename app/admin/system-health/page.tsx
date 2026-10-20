@@ -90,7 +90,7 @@ function relativeTime(iso: string | null): string {
 }
 
 function fmtDateTime(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   return new Date(iso).toLocaleString('en-US', {
     month: 'short',
     day: 'numeric',
@@ -320,7 +320,7 @@ export default function SystemHealthPage() {
       border: 'border-yellow-200 dark:border-yellow-800',
       dot: 'bg-yellow-500',
       text: 'text-yellow-800 dark:text-yellow-300',
-      label: 'Degraded — Review Warnings',
+      label: 'Degraded - Review Warnings',
     },
     red: {
       bg: 'bg-red-50 dark:bg-red-900/20',
@@ -566,7 +566,7 @@ export default function SystemHealthPage() {
                   {health.activityMetrics.dailyBreakdown.length > 0 && (
                     <div>
                       <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3 uppercase tracking-wide">
-                        Daily Activity — Past 7 Days
+                        Daily Activity - Past 7 Days
                       </p>
                       <MiniBarChart data={health.activityMetrics.dailyBreakdown} />
                     </div>
@@ -626,7 +626,7 @@ export default function SystemHealthPage() {
                                 {e.user_email ?? 'System'}
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
-                                {e.description ?? '—'}
+                                {e.description ?? '-'}
                               </td>
                             </tr>
                           ))}

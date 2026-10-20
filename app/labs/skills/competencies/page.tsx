@@ -129,7 +129,7 @@ function CompetencyCell({
         className="w-full h-full min-h-[2.25rem] flex items-center justify-center text-gray-300 dark:text-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors rounded"
         aria-label="No competency set - click to add"
       >
-        <span className="text-xs">—</span>
+        <span className="text-xs">-</span>
       </button>
     );
   }
@@ -488,7 +488,7 @@ export default function SkillCompetenciesPage() {
                   );
                 })}
                 <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded border text-xs text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-600">
-                  <span>—</span>
+                  <span>-</span>
                   <span>Not tracked</span>
                 </div>
               </div>

@@ -460,7 +460,7 @@ export default function MyUnavailabilityPage() {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">My Unavailability</h1>
           </div>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 max-w-2xl">
-            Mark days, weeks, or a recurring pattern where you&apos;re NOT available — this
+            Mark days, weeks, or a recurring pattern where you&apos;re NOT available - this
             overrides your default schedule everywhere the staffing picker looks.
           </p>
         </div>
@@ -576,7 +576,7 @@ export default function MyUnavailabilityPage() {
             </button>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-            Set a weekly pattern once instead of editing individual days — e.g. every
+            Set a weekly pattern once instead of editing individual days - e.g. every
             Thursday until you turn it off, or every Wed/Fri until a specific date.
           </p>
 
@@ -611,7 +611,7 @@ export default function MyUnavailabilityPage() {
                         : `${formatTime(t.start_time!)} - ${formatTime(t.end_time!)}`}
                     </div>
                     <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                      From {t.start_date} —{' '}
+                      From {t.start_date} - {' '}
                       {t.end_date ? `until ${t.end_date}` : 'until turned off'}
                     </div>
                     {t.reason && (

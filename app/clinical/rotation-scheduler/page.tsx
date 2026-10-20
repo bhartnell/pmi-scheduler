@@ -66,7 +66,7 @@ interface Rotation {
 interface StudentPlacementStatus {
   student: Student;
   rotationCount: number;
-  totalNeeded: number; // placeholder – can be configured
+  totalNeeded: number; // placeholder - can be configured
   placementColor: 'red' | 'amber' | 'green';
   siteHistory: string[]; // site_ids already visited
 }
@@ -388,13 +388,13 @@ export default function RotationSchedulerPage() {
       });
 
       if (visitedSite) {
-        setSuccessMsg('Assigned! Note: student has visited this site before — consider variety.');
+        setSuccessMsg('Assigned! Note: student has visited this site before - consider variety.');
       } else {
         setSuccessMsg('Rotation assigned.');
       }
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
-      setError('Network error — please try again.');
+      setError('Network error - please try again.');
     } finally {
       setSaving(false);
     }
@@ -414,7 +414,7 @@ export default function RotationSchedulerPage() {
         setError(data.error || 'Failed to remove rotation.');
       }
     } catch (err) {
-      setError('Network error — please try again.');
+      setError('Network error - please try again.');
     } finally {
       setSaving(false);
     }

@@ -249,19 +249,19 @@ export default function LVFRGradesPage() {
                   <div>
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Overall</p>
                     <p className={`text-3xl font-bold ${scoreColor(ownSummary.overall_average)}`}>
-                      {ownSummary.overall_average > 0 ? `${ownSummary.overall_average}%` : '—'}
+                      {ownSummary.overall_average > 0 ? `${ownSummary.overall_average}%` : '-'}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Quizzes</p>
                     <p className={`text-3xl font-bold ${scoreColor(ownSummary.quiz_average)}`}>
-                      {ownSummary.quiz_average > 0 ? `${ownSummary.quiz_average}%` : '—'}
+                      {ownSummary.quiz_average > 0 ? `${ownSummary.quiz_average}%` : '-'}
                     </p>
                   </div>
                   <div>
                     <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase">Exams</p>
                     <p className={`text-3xl font-bold ${scoreColor(ownSummary.exam_average)}`}>
-                      {ownSummary.exam_average > 0 ? `${ownSummary.exam_average}%` : '—'}
+                      {ownSummary.exam_average > 0 ? `${ownSummary.exam_average}%` : '-'}
                     </p>
                   </div>
                   <div>
@@ -296,7 +296,7 @@ export default function LVFRGradesPage() {
                               {g.assessment?.title || g.assessment_id}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {g.date_taken ? new Date(g.date_taken).toLocaleDateString() : '—'}
+                              {g.date_taken ? new Date(g.date_taken).toLocaleDateString() : '-'}
                             </p>
                           </div>
                           <div className="flex items-center gap-3">
@@ -381,8 +381,8 @@ export default function LVFRGradesPage() {
                           {summaries.filter(s => s.at_risk).map(s => (
                             <tr key={s.student_id}>
                               <td className="py-2 font-medium text-gray-900 dark:text-white">{s.student_name}</td>
-                              <td className={`py-2 ${scoreColor(s.quiz_average)}`}>{s.quiz_average > 0 ? `${s.quiz_average}%` : '—'}</td>
-                              <td className={`py-2 ${scoreColor(s.exam_average)}`}>{s.exam_average > 0 ? `${s.exam_average}%` : '—'}</td>
+                              <td className={`py-2 ${scoreColor(s.quiz_average)}`}>{s.quiz_average > 0 ? `${s.quiz_average}%` : '-'}</td>
+                              <td className={`py-2 ${scoreColor(s.exam_average)}`}>{s.exam_average > 0 ? `${s.exam_average}%` : '-'}</td>
                               <td className={`py-2 font-bold ${scoreColor(s.overall_average)}`}>{s.overall_average}%</td>
                             </tr>
                           ))}
@@ -429,9 +429,9 @@ export default function LVFRGradesPage() {
                             onClick={() => { setSelectedStudent(s.student_id); setActiveTab('by-student'); }}
                           >
                             <td className="px-4 py-2 font-medium text-gray-900 dark:text-white">{s.student_name}</td>
-                            <td className={`px-4 py-2 text-center ${scoreColor(s.quiz_average)}`}>{s.quiz_average > 0 ? `${s.quiz_average}%` : '—'}</td>
-                            <td className={`px-4 py-2 text-center ${scoreColor(s.exam_average)}`}>{s.exam_average > 0 ? `${s.exam_average}%` : '—'}</td>
-                            <td className={`px-4 py-2 text-center font-bold ${scoreColor(s.overall_average)}`}>{s.overall_average > 0 ? `${s.overall_average}%` : '—'}</td>
+                            <td className={`px-4 py-2 text-center ${scoreColor(s.quiz_average)}`}>{s.quiz_average > 0 ? `${s.quiz_average}%` : '-'}</td>
+                            <td className={`px-4 py-2 text-center ${scoreColor(s.exam_average)}`}>{s.exam_average > 0 ? `${s.exam_average}%` : '-'}</td>
+                            <td className={`px-4 py-2 text-center font-bold ${scoreColor(s.overall_average)}`}>{s.overall_average > 0 ? `${s.overall_average}%` : '-'}</td>
                             <td className="px-4 py-2 text-center text-gray-600 dark:text-gray-400">{s.total_graded}</td>
                             <td className="px-4 py-2 text-center">
                               {s.at_risk ? (
@@ -467,7 +467,7 @@ export default function LVFRGradesPage() {
                     <option value="">Select a student...</option>
                     {summaries.map(s => (
                       <option key={s.student_id} value={s.student_id}>
-                        {s.student_name} — {s.overall_average > 0 ? `${s.overall_average}%` : 'No grades'}
+                        {s.student_name} - {s.overall_average > 0 ? `${s.overall_average}%` : 'No grades'}
                       </option>
                     ))}
                   </select>
@@ -488,9 +488,9 @@ export default function LVFRGradesPage() {
                       {summary && (
                         <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
                           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                            <div><p className="text-xs text-gray-500 uppercase">Overall</p><p className={`text-2xl font-bold ${scoreColor(summary.overall_average)}`}>{summary.overall_average > 0 ? `${summary.overall_average}%` : '—'}</p></div>
-                            <div><p className="text-xs text-gray-500 uppercase">Quizzes</p><p className={`text-2xl font-bold ${scoreColor(summary.quiz_average)}`}>{summary.quiz_average > 0 ? `${summary.quiz_average}%` : '—'}</p></div>
-                            <div><p className="text-xs text-gray-500 uppercase">Exams</p><p className={`text-2xl font-bold ${scoreColor(summary.exam_average)}`}>{summary.exam_average > 0 ? `${summary.exam_average}%` : '—'}</p></div>
+                            <div><p className="text-xs text-gray-500 uppercase">Overall</p><p className={`text-2xl font-bold ${scoreColor(summary.overall_average)}`}>{summary.overall_average > 0 ? `${summary.overall_average}%` : '-'}</p></div>
+                            <div><p className="text-xs text-gray-500 uppercase">Quizzes</p><p className={`text-2xl font-bold ${scoreColor(summary.quiz_average)}`}>{summary.quiz_average > 0 ? `${summary.quiz_average}%` : '-'}</p></div>
+                            <div><p className="text-xs text-gray-500 uppercase">Exams</p><p className={`text-2xl font-bold ${scoreColor(summary.exam_average)}`}>{summary.exam_average > 0 ? `${summary.exam_average}%` : '-'}</p></div>
                             <div><p className="text-xs text-gray-500 uppercase">Passed</p><p className="text-2xl font-bold text-green-600">{summary.passed_count}</p></div>
                             <div><p className="text-xs text-gray-500 uppercase">Failed</p><p className="text-2xl font-bold text-red-600">{summary.failed_count}</p></div>
                           </div>
@@ -510,7 +510,7 @@ export default function LVFRGradesPage() {
                                 <div key={g.id} className="px-4 py-3 flex items-center justify-between">
                                   <div>
                                     <p className="text-sm font-medium text-gray-900 dark:text-white">{g.assessment?.title || g.assessment_id}</p>
-                                    <p className="text-xs text-gray-500">{g.date_taken ? new Date(g.date_taken).toLocaleDateString() : '—'}</p>
+                                    <p className="text-xs text-gray-500">{g.date_taken ? new Date(g.date_taken).toLocaleDateString() : '-'}</p>
                                   </div>
                                   <div className="flex items-center gap-3">
                                     <span className={`text-lg font-bold ${scoreColor(g.score_percent)}`}>{g.score_percent}%</span>
@@ -551,7 +551,7 @@ export default function LVFRGradesPage() {
                             <div className="flex items-center gap-4">
                               <div className="text-right">
                                 <p className={`text-sm font-bold ${scoreColor(a.class_average)}`}>
-                                  {a.class_average > 0 ? `${a.class_average}%` : '—'}
+                                  {a.class_average > 0 ? `${a.class_average}%` : '-'}
                                 </p>
                                 <p className="text-xs text-gray-500">avg</p>
                               </div>
@@ -648,7 +648,7 @@ function CohortAggregateView({ cohortSummary }: { cohortSummary: CohortSummary }
             <div key={a.assessment_id} className="px-4 py-3 flex items-center justify-between">
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{a.title}</p>
-                <p className="text-xs text-gray-500">{CATEGORY_LABELS[a.category] || a.category} — {a.graded_count} students</p>
+                <p className="text-xs text-gray-500">{CATEGORY_LABELS[a.category] || a.category} - {a.graded_count} students</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right">

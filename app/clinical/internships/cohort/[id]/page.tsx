@@ -148,7 +148,7 @@ const PHASE_META: Record<string, { label: string; classes: string; chip: string 
 };
 
 function formatDate(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   try {
     return new Date(iso + 'T12:00:00').toLocaleDateString('en-US', {
       month: 'short',
@@ -231,7 +231,7 @@ function computeNextStep(i: Internship, cohortId: string): NextStep {
     }
     if (!i.extension_eval_completed) {
       return {
-        label: `Extension eval — ${formatShortDate(i.extension_eval_date)}`,
+        label: `Extension eval - ${formatShortDate(i.extension_eval_date)}`,
         tone: 'pending',
         href: internshipHref,
       };
@@ -246,7 +246,7 @@ function computeNextStep(i: Internship, cohortId: string): NextStep {
     }
     if (!i.phase_2_eval_completed) {
       return {
-        label: `Phase 2 eval — ${formatShortDate(i.phase_2_eval_scheduled)}`,
+        label: `Phase 2 eval - ${formatShortDate(i.phase_2_eval_scheduled)}`,
         tone: 'pending',
         href: internshipHref,
       };
@@ -262,7 +262,7 @@ function computeNextStep(i: Internship, cohortId: string): NextStep {
     }
     if (!i.phase_1_eval_completed) {
       return {
-        label: `Phase 1 eval — ${formatShortDate(i.phase_1_eval_scheduled)}`,
+        label: `Phase 1 eval - ${formatShortDate(i.phase_1_eval_scheduled)}`,
         tone: 'pending',
         href: internshipHref,
       };
@@ -299,7 +299,7 @@ function computeNextStep(i: Internship, cohortId: string): NextStep {
   }
   if (!i.pre_internship_meeting_completed) {
     return {
-      label: `Pre-internship meeting — ${formatShortDate(i.pre_internship_meeting_scheduled)}`,
+      label: `Pre-internship meeting - ${formatShortDate(i.pre_internship_meeting_scheduled)}`,
       tone: 'pending',
       href: internshipHref,
     };
@@ -557,7 +557,7 @@ export default function PmInternshipCohortHub() {
             <div className="min-w-0 flex-1">
               <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <Briefcase className="w-5 h-5 text-teal-600 dark:text-teal-400" />
-                Internship Tracker — {cohortLabel}
+                Internship Tracker - {cohortLabel}
               </h1>
               {cohort?.current_semester != null && (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -752,7 +752,7 @@ export default function PmInternshipCohortHub() {
                       Next step
                     </th>
                     {/* NREMT-passed indicator. Stays a single emoji
-                        column — no count, no date — per the spec's
+                        column - no count, no date - per the spec's
                         "simple records confirmation" requirement. */}
                     <SortableTH
                       label="NREMT"
@@ -818,10 +818,10 @@ export default function PmInternshipCohortHub() {
                         <td className="px-3 py-2 text-gray-700 dark:text-gray-300 hidden md:table-cell">
                           {i.field_preceptors
                             ? `${i.field_preceptors.first_name} ${i.field_preceptors.last_name}`
-                            : <span className="text-gray-400">—</span>}
+                            : <span className="text-gray-400">-</span>}
                         </td>
                         <td className="px-3 py-2 text-gray-700 dark:text-gray-300 hidden md:table-cell">
-                          {agencyLabel || <span className="text-gray-400">—</span>}
+                          {agencyLabel || <span className="text-gray-400">-</span>}
                         </td>
                         <td className="px-3 py-2 hidden md:table-cell">
                           <NextStepCell step={nextStep} />
@@ -837,7 +837,7 @@ export default function PmInternshipCohortHub() {
                           {i.nremt_passed ? (
                             <span className="text-emerald-600 dark:text-emerald-400 text-base leading-none" aria-label="NREMT passed">✅</span>
                           ) : (
-                            <span className="text-gray-300 dark:text-gray-600" aria-label="NREMT not passed">—</span>
+                            <span className="text-gray-300 dark:text-gray-600" aria-label="NREMT not passed">-</span>
                           )}
                         </td>
                       </tr>

@@ -246,8 +246,8 @@ export default function PalsGradePage() {
     try {
       const { synced, remaining } = await flushQueue(postAttempt);
       setPendingCount(remaining);
-      if (synced > 0) toast.success(`Synced ${synced} queued attempt${synced === 1 ? '' : 's'}${remaining ? ` — ${remaining} still pending` : ''}`);
-      else if (remaining > 0) toast.error('Still offline — attempts remain queued');
+      if (synced > 0) toast.success(`Synced ${synced} queued attempt${synced === 1 ? '' : 's'}${remaining ? ` - ${remaining} still pending` : ''}`);
+      else if (remaining > 0) toast.error('Still offline - attempts remain queued');
     } finally {
       setSyncing(false);
     }
@@ -290,9 +290,9 @@ export default function PalsGradePage() {
       const data = await postAttempt(payload);
       if (data.success) {
         const dueNote = data.attempt?.remediation_due_at
-          ? ` — remediation due ${new Date(data.attempt.remediation_due_at).toLocaleDateString()}`
+          ? ` - remediation due ${new Date(data.attempt.remediation_due_at).toLocaleDateString()}`
           : '';
-        toast.success(`Saved — ${computedResult}${dueNote}`);
+        toast.success(`Saved - ${computedResult}${dueNote}`);
         resetForNextStudent();
       } else {
         toast.error(data.error || 'Failed to save');
@@ -301,7 +301,7 @@ export default function PalsGradePage() {
       // Network failure (offline / sustained outage) — queue locally, don't lose the grade.
       queueAttempt(payload);
       setPendingCount(queueLength());
-      toast.success(`Saved offline (${computedResult}) — will sync when back online`);
+      toast.success(`Saved offline (${computedResult}) - will sync when back online`);
       resetForNextStudent();
     } finally {
       setSaving(false);
@@ -312,7 +312,7 @@ export default function PalsGradePage() {
     return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
   }
 
-  const fmtDay = (d: DayOpt) => `${d.date}${d.cohort?.cohort_number ? ` — Cohort ${d.cohort.cohort_number}` : ''}`;
+  const fmtDay = (d: DayOpt) => `${d.date}${d.cohort?.cohort_number ? ` - Cohort ${d.cohort.cohort_number}` : ''}`;
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6">
@@ -371,7 +371,7 @@ export default function PalsGradePage() {
               <option key={s.id} value={s.id}>
                 {s.case_code ? `[${s.case_code}] ` : ''}{s.title}
                 {s.cert_tier === 'scenario_testing' ? ' • TEST' : ' • practice'}
-                {s.subtype ? ` — ${s.subtype}` : ''}
+                {s.subtype ? ` - ${s.subtype}` : ''}
               </option>
             ))}
           </select>
@@ -381,7 +381,7 @@ export default function PalsGradePage() {
       {/* Team */}
       {selectedGroup && (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-4">
-          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Team — {selectedGroup.name}</h2>
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Team - {selectedGroup.name}</h2>
           {groupMembers.length === 0 ? (
             <p className="text-sm text-gray-500 dark:text-gray-400">No members recorded for this group.</p>
           ) : (
@@ -395,13 +395,13 @@ export default function PalsGradePage() {
                 </select>
                 {teamLead && (
                   <p className="mt-1 text-xs text-gray-400">
-                    Discipline: {teamLead.discipline ? teamLead.discipline.toUpperCase() : 'not set — mark out-of-scope steps N/A per the tester’s actual scope'}
+                    Discipline: {teamLead.discipline ? teamLead.discipline.toUpperCase() : 'not set - mark out-of-scope steps N/A per the tester’s actual scope'}
                   </p>
                 )}
               </div>
               <div>
                 <span className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">
-                  Team members tested (not individually graded) — tap <Crown size={11} className="inline -mt-0.5" /> to set the team leader
+                  Team members tested (not individually graded) - tap <Crown size={11} className="inline -mt-0.5" /> to set the team leader
                 </span>
                 <div className="flex flex-wrap gap-2">
                   {groupMembers.map((m) => {
@@ -434,20 +434,20 @@ export default function PalsGradePage() {
                 </div>
                 {!teamLeadId && memberIds.length > 0 && (
                   <p className="mt-1.5 text-xs text-red-600 dark:text-red-400">
-                    No team leader set yet — this attempt cannot be saved until you tap a crown or use the dropdown above. Clicking a name only marks it &quot;tested,&quot; it does not register the leader.
+                    No team leader set yet - this attempt cannot be saved until you tap a crown or use the dropdown above. Clicking a name only marks it &quot;tested,&quot; it does not register the leader.
                   </p>
                 )}
               </div>
               {retestCandidates.length > 0 && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Retest of (optional — this student has open NR attempts on this checklist)</label>
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Retest of (optional - this student has open NR attempts on this checklist)</label>
                   <select value={retestOf} onChange={(e) => setRetestOf(e.target.value)}
                     className="w-full sm:w-96 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm">
                     <option value="">Not a retest</option>
                     {retestCandidates.map((c) => (
                       <option key={c.id} value={c.id}>
                         NR on {new Date(c.attempted_at).toLocaleDateString()}
-                        {c.remediation_due_at ? ` — remediation due ${new Date(c.remediation_due_at).toLocaleDateString()}` : ''}
+                        {c.remediation_due_at ? ` - remediation due ${new Date(c.remediation_due_at).toLocaleDateString()}` : ''}
                       </option>
                     ))}
                   </select>
@@ -478,7 +478,7 @@ export default function PalsGradePage() {
               </span>
               {scenario.checklist && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                  {scenario.checklist.category}{scenario.checklist.subtype ? ` — ${scenario.checklist.subtype}` : ''}
+                  {scenario.checklist.category}{scenario.checklist.subtype ? ` - ${scenario.checklist.subtype}` : ''}
                 </span>
               )}
             </div>
@@ -487,7 +487,7 @@ export default function PalsGradePage() {
 
           {!scenario.checklist && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-sm text-yellow-800 dark:text-yellow-300">
-              This scenario has no checklist linked yet — cannot be graded.
+              This scenario has no checklist linked yet - cannot be graded.
             </div>
           )}
 
@@ -545,7 +545,7 @@ export default function PalsGradePage() {
                 </div>
 
                 {computedResult === 'NR' && (
-                  <textarea placeholder="Remediation notes — which skills require remediation (required for NR)" rows={2}
+                  <textarea placeholder="Remediation notes - which skills require remediation (required for NR)" rows={2}
                     value={remediationNotes} onChange={(e) => setRemediationNotes(e.target.value)}
                     className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm mb-3" />
                 )}

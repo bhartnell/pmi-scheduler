@@ -139,8 +139,8 @@ function DayDetailPanel({
               <div className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
                 <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
                 <span>
-                  {labDay.start_time ? formatTime(labDay.start_time) : '—'}
-                  {labDay.end_time ? ` – ${formatTime(labDay.end_time)}` : ''}
+                  {labDay.start_time ? formatTime(labDay.start_time) : '-'}
+                  {labDay.end_time ? ` - ${formatTime(labDay.end_time)}` : ''}
                 </span>
               </div>
             )}
@@ -376,7 +376,7 @@ export default function CohortCalendarPage() {
 
     const events = labDays.map((ld) => {
       const titlePart = ld.title
-        ? `${cohortLabel} – ${ld.title}`
+        ? `${cohortLabel} - ${ld.title}`
         : cohortLabel
           ? `${cohortLabel} Lab Day`
           : `Lab Day`;
@@ -643,7 +643,7 @@ export default function CohortCalendarPage() {
                         title={
                           labDay.title
                             ? labDay.title
-                            : `${cohortLabel} Lab Day${labDay.week_number != null ? ` – Week ${labDay.week_number}` : ''}`
+                            : `${cohortLabel} Lab Day${labDay.week_number != null ? ` - Week ${labDay.week_number}` : ''}`
                         }
                       >
                         <div className="font-medium truncate flex items-center gap-1">
@@ -770,7 +770,7 @@ export default function CohortCalendarPage() {
                             <span className="flex items-center gap-1">
                               <Clock className="w-3 h-3" />
                               {formatTime(labDay.start_time)}
-                              {labDay.end_time ? ` – ${formatTime(labDay.end_time)}` : ''}
+                              {labDay.end_time ? ` - ${formatTime(labDay.end_time)}` : ''}
                             </span>
                           )}
                           {labDay.stations && labDay.stations.length > 0 && (

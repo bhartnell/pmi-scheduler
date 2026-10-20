@@ -230,7 +230,7 @@ function ScenarioPanel({ scenario, letter, fullContent }: { scenario: ScenarioDa
       {/* Header */}
       <div className="bg-blue-600 text-white rounded-xl p-4">
         <p className="text-blue-200 text-xs mb-1">PMI Paramedic Clinical Capstone</p>
-        <h2 className="text-lg font-bold">Scenario {letter} — {scenario.title}</h2>
+        <h2 className="text-lg font-bold">Scenario {letter} - {scenario.title}</h2>
         {scenario.dispatch && <p className="text-blue-100 text-sm mt-1">{scenario.dispatch}</p>}
       </div>
 
@@ -693,7 +693,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
           </span>
           <div>
             <p className="font-bold text-slate-900 dark:text-white text-sm">
-              Scenario {scenarioLetter} — {scenarioData.title}
+              Scenario {scenarioLetter} - {scenarioData.title}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {assessment.student_name} | Slot {assessment.slot_number} | Day {assessment.day_number}
@@ -866,7 +866,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
                 <h1 className="text-lg font-bold text-slate-900 dark:text-white">{assessment.student_name}</h1>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {scenarioData ? `Scenario ${scenarioLetter} — ${scenarioData.title} | ` : ''}Slot {assessment.slot_number} &middot; {evaluator.name}
+                {scenarioData ? `Scenario ${scenarioLetter} - ${scenarioData.title} | ` : ''}Slot {assessment.slot_number} &middot; {evaluator.name}
               </p>
             </div>
             <div className="text-right min-w-[60px]">
@@ -887,7 +887,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
       {/* Test mode banner */}
       {isTestMode && (
         <div className="flex-shrink-0 bg-orange-500 text-white text-center py-2 font-bold text-sm print:hidden">
-          TEST MODE — Practice event. Scores will not affect real assessments.
+          TEST MODE - Practice event. Scores will not affect real assessments.
         </div>
       )}
 
@@ -895,7 +895,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
       {!isOnline && (
         <div className="flex-shrink-0 bg-red-600 text-white text-center py-2 px-4 text-sm font-medium print:hidden">
           <span className="inline-block w-2 h-2 bg-red-300 rounded-full mr-2 animate-pulse" />
-          Offline — scores saved locally, will sync when reconnected
+          Offline - scores saved locally, will sync when reconnected
         </div>
       )}
 

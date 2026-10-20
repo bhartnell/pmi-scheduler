@@ -639,7 +639,7 @@ export default function EditLabDayPage() {
               <AlertCircle className="w-5 h-5 text-orange-600 dark:text-orange-400 flex-shrink-0 mt-0.5" />
               <div className="flex-1">
                 <h3 className="font-medium text-orange-800 dark:text-orange-300">
-                  Coverage Requested — {labDay.coverage_needed} instructor{labDay.coverage_needed > 1 ? 's' : ''} needed
+                  Coverage Requested - {labDay.coverage_needed} instructor{labDay.coverage_needed > 1 ? 's' : ''} needed
                 </h3>
                 {labDay.coverage_note && (
                   <p className="text-sm text-orange-700 dark:text-orange-400 mt-1">

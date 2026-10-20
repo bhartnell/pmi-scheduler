@@ -345,7 +345,7 @@ export default function PlanningCalendarPage() {
       await fetchSchedules();
       closeModal();
     } catch (err) {
-      setFormError('Network error — please try again.');
+      setFormError('Network error - please try again.');
     } finally {
       setSaving(false);
     }
@@ -485,7 +485,7 @@ export default function PlanningCalendarPage() {
               >
                 <option value="">All Sites</option>
                 {sites.map(s => (
-                  <option key={s.id} value={s.id}>{s.abbreviation} — {s.name}</option>
+                  <option key={s.id} value={s.id}>{s.abbreviation} - {s.name}</option>
                 ))}
               </select>
 
@@ -554,7 +554,7 @@ export default function PlanningCalendarPage() {
                         <div
                           key={i}
                           className={`px-1.5 py-0.5 rounded text-xs ${colors.bg} ${colors.text} truncate`}
-                          title={`${a.siteName} — ${a.institution}`}
+                          title={`${a.siteName} - ${a.institution}`}
                         >
                           <span className="font-semibold">{a.siteAbbr}</span>
                           <span className="ml-1 opacity-75">{a.institution}</span>
@@ -595,13 +595,13 @@ export default function PlanningCalendarPage() {
                     <span className={`mt-1 w-2.5 h-2.5 rounded-full flex-shrink-0 ${colors.dot}`} />
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-gray-900 dark:text-white text-sm">
-                        {s.site?.abbreviation ?? '?'} — {s.site?.name}
+                        {s.site?.abbreviation ?? '?'} - {s.site?.name}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
                         {s.institution} &bull; {s.days_of_week.map(d => d.charAt(0).toUpperCase() + d.slice(1, 3)).join(', ')}
                       </div>
                       <div className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
-                        {s.start_date}{s.end_date ? ` – ${s.end_date}` : ' (ongoing)'}
+                        {s.start_date}{s.end_date ? ` - ${s.end_date}` : ' (ongoing)'}
                       </div>
                     </div>
                     {canEdit && (
@@ -671,7 +671,7 @@ export default function PlanningCalendarPage() {
                           Days: {a.schedule.days_of_week.map(d => d.charAt(0).toUpperCase() + d.slice(1)).join(', ')}
                         </div>
                         <div className="text-xs text-gray-400 dark:text-gray-500">
-                          {a.schedule.start_date}{a.schedule.end_date ? ` – ${a.schedule.end_date}` : ' (ongoing)'}
+                          {a.schedule.start_date}{a.schedule.end_date ? ` - ${a.schedule.end_date}` : ' (ongoing)'}
                         </div>
                         {a.schedule.notes && (
                           <div className="text-sm text-gray-600 dark:text-gray-400 mt-1 italic">{a.schedule.notes}</div>
@@ -825,7 +825,7 @@ export default function PlanningCalendarPage() {
                 >
                   <option value="">Select a site...</option>
                   {sites.map(s => (
-                    <option key={s.id} value={s.id}>{s.abbreviation} — {s.name}</option>
+                    <option key={s.id} value={s.id}>{s.abbreviation} - {s.name}</option>
                   ))}
                 </select>
               </div>

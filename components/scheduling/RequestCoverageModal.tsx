@@ -287,7 +287,7 @@ export default function RequestCoverageModal({
                 }}
                 className="w-full px-3 py-2 text-sm border rounded-lg bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white"
               >
-                <option value="">— not linked —</option>
+                <option value=""> - not linked - </option>
                 {loadingLabDays && <option disabled>Loading…</option>}
                 {labDays.map((l) => {
                   const cohort = l.cohort

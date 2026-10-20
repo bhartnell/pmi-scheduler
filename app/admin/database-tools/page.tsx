@@ -65,7 +65,7 @@ type SortDir = 'asc' | 'desc';
 // ---------------------------------------------------------------------------
 
 function fmtDate(iso: string | null): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const safe = iso.includes('T') || iso.includes(' ') ? iso : iso + 'T12:00:00';
   return new Date(safe).toLocaleDateString('en-US', {
     month: 'short',
@@ -897,7 +897,7 @@ export default function DatabaseToolsPage() {
                           {cohort.name}
                         </td>
                         <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">
-                          {cohort.program ?? '—'}
+                          {cohort.program ?? '-'}
                         </td>
                         <td className="px-4 py-2.5 text-gray-600 dark:text-gray-400">
                           {fmtDate(cohort.end_date)}
@@ -1084,16 +1084,16 @@ export default function DatabaseToolsPage() {
                         {row.table_name}
                       </td>
                       <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">
-                        {row.row_count !== null ? row.row_count.toLocaleString() : '—'}
+                        {row.row_count !== null ? row.row_count.toLocaleString() : '-'}
                       </td>
                       <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">
-                        {row.total_size ?? '—'}
+                        {row.total_size ?? '-'}
                       </td>
                       <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">
-                        {row.index_size ?? '—'}
+                        {row.index_size ?? '-'}
                       </td>
                       <td className="px-4 py-2.5 text-right text-gray-700 dark:text-gray-300">
-                        {row.table_size ?? '—'}
+                        {row.table_size ?? '-'}
                       </td>
                     </tr>
                   ))}

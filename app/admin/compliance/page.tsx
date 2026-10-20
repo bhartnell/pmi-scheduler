@@ -368,10 +368,10 @@ export default function ComplianceDashboardPage() {
                       return (
                         <tr key={entry.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                           <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                            {entry.completed_at ? new Date(entry.completed_at).toLocaleDateString() : '—'}
+                            {entry.completed_at ? new Date(entry.completed_at).toLocaleDateString() : '-'}
                           </td>
                           <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">
-                            {entry.audit?.audit_type || '—'}
+                            {entry.audit?.audit_type || '-'}
                           </td>
                           <td className="px-4 py-3">
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${rc.bg} ${rc.color}`}>
@@ -380,10 +380,10 @@ export default function ComplianceDashboardPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                            {entry.completed_by?.split('@')[0] || '—'}
+                            {entry.completed_by?.split('@')[0] || '-'}
                           </td>
                           <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-xs truncate">
-                            {entry.findings ? entry.findings.slice(0, 100) + (entry.findings.length > 100 ? '...' : '') : '—'}
+                            {entry.findings ? entry.findings.slice(0, 100) + (entry.findings.length > 100 ? '...' : '') : '-'}
                           </td>
                         </tr>
                       );
@@ -402,7 +402,7 @@ export default function ComplianceDashboardPage() {
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-3xl w-full max-h-[80vh] overflow-hidden">
             <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{scriptOutput.audit} — Output</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{scriptOutput.audit} - Output</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
                   Result: <span className={`font-medium ${scriptOutput.result === 'pass' ? 'text-green-600' : scriptOutput.result === 'fail' ? 'text-red-600' : 'text-blue-600'}`}>{scriptOutput.result.toUpperCase()}</span>
                 </p>

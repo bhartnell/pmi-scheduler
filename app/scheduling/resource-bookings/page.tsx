@@ -96,7 +96,7 @@ const STATUS_CONFIG: Record<
   },
 };
 
-const HOURS = Array.from({ length: 15 }, (_, i) => i + 7); // 7am–9pm
+const HOURS = Array.from({ length: 15 }, (_, i) => i + 7); // 7am-9pm
 const DAYS_OF_WEEK = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -389,7 +389,7 @@ function BookingFormModal({ resources, selectedResourceId, onClose, onSave, defa
       if (data.success) {
         toast.success(
           data.booking.status === 'pending'
-            ? 'Booking submitted — pending approval'
+            ? 'Booking submitted - pending approval'
             : 'Resource booked successfully'
         );
         onSave();
@@ -430,7 +430,7 @@ function BookingFormModal({ resources, selectedResourceId, onClose, onSave, defa
                 <option value="">Select a resource...</option>
                 {activeResources.map(r => (
                   <option key={r.id} value={r.id}>
-                    {r.name}{r.location ? ` — ${r.location}` : ''}
+                    {r.name}{r.location ? ` - ${r.location}` : ''}
                   </option>
                 ))}
               </select>
@@ -439,7 +439,7 @@ function BookingFormModal({ resources, selectedResourceId, onClose, onSave, defa
             {selectedResource?.requires_approval && (
               <p className="mt-1 text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" />
-                This resource requires approval — booking will be pending until reviewed.
+                This resource requires approval - booking will be pending until reviewed.
               </p>
             )}
           </div>
@@ -614,7 +614,7 @@ function WeeklyCalendar({ bookings, weekStart, onApprove, onCancel, currentUserE
                   >
                     <div className="font-semibold text-gray-900 dark:text-white truncate">{booking.title}</div>
                     <div className="text-gray-500 dark:text-gray-400 truncate">
-                      {formatTime(booking.start_time)} – {formatTime(booking.end_time)}
+                      {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                     </div>
                     <div className={`inline-flex items-center gap-0.5 mt-0.5 ${statusCfg.text}`}>
                       <statusCfg.icon className="w-3 h-3" />
@@ -786,7 +786,7 @@ export default function ResourceBookingsPage() {
   const goToToday = () => setWeekStart(getWeekStart(new Date()));
 
   const weekEnd = addDays(weekStart, 6);
-  const weekLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  const weekLabel = `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
 
   // ── Filtered resources ────────────────────────────────────────────────────
 
@@ -1120,7 +1120,7 @@ export default function ResourceBookingsPage() {
                                 </span>
                               </div>
                               <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                                {formatDateTime(b.start_time)} – {formatTime(b.end_time)}
+                                {formatDateTime(b.start_time)} - {formatTime(b.end_time)}
                               </div>
                               <div className="text-xs text-gray-400 dark:text-gray-500">{b.booked_by}</div>
                               {b.notes && (

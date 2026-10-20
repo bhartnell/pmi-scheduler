@@ -250,7 +250,7 @@ export default function SemesterReviewPage() {
                 {data?.cohort && (
                   <p className="text-sm text-gray-500 dark:text-gray-400 truncate">
                     {data.cohort.program_abbr} Cohort{' '}
-                    {String(data.cohort.cohort_number).replace(/\.0$/, '')} —
+                    {String(data.cohort.cohort_number).replace(/\.0$/, '')} -
                     Semester {data.semester} · Template vs Actual
                   </p>
                 )}
@@ -355,10 +355,10 @@ export default function SemesterReviewPage() {
             count={buckets.not_yet.length}
             icon={<Circle className="w-5 h-5 text-amber-500" />}
             accent="amber"
-            description="Template items that haven't been covered yet this semester. Sorted by scheduled template number — most overdue first."
+            description="Template items that haven't been covered yet this semester. Sorted by scheduled template number - most overdue first."
           >
             {buckets.not_yet.length === 0 ? (
-              <EmptyRow message="Nothing missing — the template has been fully covered." />
+              <EmptyRow message="Nothing missing - the template has been fully covered." />
             ) : (
               <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                 {buckets.not_yet.map((b) => (
@@ -413,7 +413,7 @@ export default function SemesterReviewPage() {
                         {b.match_method === 'fuzzy' && (
                           <span
                             className="ml-2 text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 inline-flex items-center gap-0.5"
-                            title="Matched via fuzzy name similarity — review"
+                            title="Matched via fuzzy name similarity - review"
                           >
                             <AlertCircle className="w-2.5 h-2.5" />
                             fuzzy
@@ -496,7 +496,7 @@ export default function SemesterReviewPage() {
             description="Lab stations that ran but weren't in the template. Instructor availability, guest speakers, ad-hoc additions."
           >
             {buckets.additions.length === 0 ? (
-              <EmptyRow message="No additions — everything that ran was in the template." />
+              <EmptyRow message="No additions - everything that ran was in the template." />
             ) : (
               <ul className="divide-y divide-gray-100 dark:divide-gray-700">
                 {buckets.additions.map((a) => (

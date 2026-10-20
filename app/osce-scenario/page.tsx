@@ -60,7 +60,7 @@ export default function OsceScenarioList() {
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">OSCE Scenarios</h1>
           </div>
           <p className="text-gray-500 dark:text-gray-400">
-            PMI Paramedic Program — Select a scenario to view details.
+            PMI Paramedic Program - Select a scenario to view details.
           </p>
         </div>
 
@@ -81,7 +81,7 @@ export default function OsceScenarioList() {
                       Scenario {s.scenario_letter}: {s.title}
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      {s.patient_name} — {s.patient_age}, {s.patient_gender === 'M' ? 'Male' : 'Female'} — {s.chief_complaint}
+                      {s.patient_name} - {s.patient_age}, {s.patient_gender === 'M' ? 'Male' : 'Female'} - {s.chief_complaint}
                     </p>
                   </div>
                 </div>

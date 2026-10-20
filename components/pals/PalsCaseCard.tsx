@@ -124,7 +124,7 @@ export default function PalsCaseCard({ card }: { card: PalsCard | null | undefin
           <div className="text-[10px] font-bold uppercase tracking-wide text-gray-500 dark:text-gray-400">Primary Assessment</div>
 
           {flow.evaluate_initial_pat && (
-            <PhaseBand label="Evaluate — General Impression (PAT)" color="blue">
+            <PhaseBand label="Evaluate - General Impression (PAT)" color="blue">
               <KeyValueGrid data={flow.evaluate_initial_pat} />
             </PhaseBand>
           )}
@@ -137,7 +137,7 @@ export default function PalsCaseCard({ card }: { card: PalsCard | null | undefin
             </PhaseBand>
           )}
           {flow.evaluate_primary_abcde && (
-            <PhaseBand label="Evaluate — Primary (ABCDE)" color="blue">
+            <PhaseBand label="Evaluate - Primary (ABCDE)" color="blue">
               <KeyValueGrid data={flow.evaluate_primary_abcde} />
             </PhaseBand>
           )}
@@ -186,7 +186,7 @@ export default function PalsCaseCard({ card }: { card: PalsCard | null | undefin
             {card.paramedic_scope_na_candidates && card.paramedic_scope_na_candidates.length > 0 && (
               <div className="bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded p-2 text-xs text-sky-800 dark:text-sky-300">
                 <span className="font-semibold">Possible out-of-paramedic-scope items for this case:</span>{' '}
-                {card.paramedic_scope_na_candidates.join(', ')} — cross-reference against the checklist below; mark N/A per the tester&apos;s actual scope, not this list alone.
+                {card.paramedic_scope_na_candidates.join(', ')} - cross-reference against the checklist below; mark N/A per the tester&apos;s actual scope, not this list alone.
               </div>
             )}
           </div>

@@ -720,8 +720,8 @@ export default function CapacityPage() {
           <div className="flex flex-wrap gap-4 text-sm">
             {[
               { label: 'Available', note: '< 70%', barClass: 'bg-green-500', textClass: 'text-green-700 dark:text-green-300' },
-              { label: 'High Utilization', note: '70 – 89%', barClass: 'bg-yellow-500', textClass: 'text-yellow-700 dark:text-yellow-300' },
-              { label: 'Near Capacity', note: '90 – 100%', barClass: 'bg-red-500', textClass: 'text-red-700 dark:text-red-300' },
+              { label: 'High Utilization', note: '70 - 89%', barClass: 'bg-yellow-500', textClass: 'text-yellow-700 dark:text-yellow-300' },
+              { label: 'Near Capacity', note: '90 - 100%', barClass: 'bg-red-500', textClass: 'text-red-700 dark:text-red-300' },
               { label: 'Over Capacity', note: '> 100%', barClass: 'bg-red-700', textClass: 'text-red-800 dark:text-red-200' },
             ].map(({ label, note, barClass, textClass }) => (
               <div key={label} className="flex items-center gap-2">

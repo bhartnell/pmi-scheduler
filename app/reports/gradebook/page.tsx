@@ -129,7 +129,7 @@ function pctCellBg(pct: number | null): string {
 }
 
 function formatPct(pct: number | null): string {
-  return pct !== null ? `${pct}%` : '—';
+  return pct !== null ? `${pct}%` : '-';
 }
 
 // ─────────────────────────────────────────────────
@@ -398,7 +398,7 @@ export default function GradebookPage() {
                   Student Grade Book
                   {gradebook && (
                     <span className="ml-2 text-base font-normal text-gray-500 dark:text-gray-400">
-                      — {gradebook.cohort.name}
+ - {gradebook.cohort.name}
                     </span>
                   )}
                 </h1>

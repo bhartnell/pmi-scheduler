@@ -163,7 +163,7 @@ function formatRelativeTime(dateStr: string): string {
 }
 
 function formatDate(dateStr: string | undefined | null): string {
-  if (!dateStr) return '—';
+  if (!dateStr) return '-';
   return parseDateSafe(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 

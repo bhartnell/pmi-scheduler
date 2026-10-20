@@ -239,7 +239,7 @@ function ThreeStateCell({
           value ? THREE_STATE_COLORS[value] : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 border-transparent'
         } ${saving ? 'opacity-50' : 'hover:opacity-80'}`}
       >
-        {value ? THREE_STATE_LETTERS[value] : '—'}
+        {value ? THREE_STATE_LETTERS[value] : '-'}
       </button>
       {open && (
         <div className="absolute z-50 left-0 mt-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg min-w-[120px]">
@@ -251,7 +251,7 @@ function ThreeStateCell({
                 opt ? THREE_STATE_COLORS[opt] : 'text-gray-500 dark:text-gray-400'
               } ${value === opt ? 'ring-1 ring-inset ring-gray-400' : ''}`}
             >
-              {opt ? THREE_STATE_LABELS[opt] : '— Clear —'}
+              {opt ? THREE_STATE_LABELS[opt] : ' - Clear - '}
             </button>
           ))}
         </div>
@@ -303,7 +303,7 @@ function FluStatusCell({
   saving?: boolean;
 }) {
   const next: FluStatus = value === null ? 'received' : value === 'received' ? 'declined' : null;
-  const letter = value === 'received' ? 'R' : value === 'declined' ? 'D' : '—';
+  const letter = value === 'received' ? 'R' : value === 'declined' ? 'D' : '-';
   const colors =
     value === 'received'
       ? 'bg-green-100 text-green-800 dark:bg-green-900/40 dark:text-green-300'
@@ -409,7 +409,7 @@ function AggBar({ label, count, total }: { label: string; count: number; total: 
 // touched by the main page's print CSS at all.
 
 function printFieldRowHtml(label: string, value: boolean | ThreeState | string): string {
-  let text = '—';
+  let text = '-';
   let color = '#9ca3af';
   if (typeof value === 'boolean') {
     text = value ? '✓' : '✗';
@@ -526,7 +526,7 @@ function PrintModal({
     <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center p-4 overflow-y-auto print:bg-white print:p-0">
       <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-2xl w-full mt-8 print:shadow-none print:mt-0">
         <div className="flex items-center justify-between p-4 border-b print:hidden">
-          <h2 className="font-semibold text-gray-900 dark:text-white">Print Preview — {name}</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-white">Print Preview - {name}</h2>
           <div className="flex items-center gap-3">
             {/* One-or-both checklist selection */}
             <div className="flex items-center gap-3 text-sm">
@@ -602,7 +602,7 @@ function PrintModal({
 }
 
 function PrintRow({ label, value }: { label: string; value: boolean | ThreeState | string }) {
-  let display = '—';
+  let display = '-';
   let color = 'text-gray-400';
   if (typeof value === 'boolean') {
     display = value ? '✓' : '✗';
@@ -1006,9 +1006,9 @@ export default function ClinicalTrackerPage() {
               disabled={isAemtCohort || isEmtCohort}
               title={
                 isEmtCohort
-                  ? 'Complio is not applicable for EMT — EMT uses agency ride-alongs'
+                  ? 'Complio is not applicable for EMT - EMT uses agency ride-alongs'
                   : isAemtCohort
-                  ? 'Complio is not applicable for AEMT — mCE only'
+                  ? 'Complio is not applicable for AEMT - mCE only'
                   : undefined
               }
               className={`px-4 py-2 text-sm font-medium transition-colors ${
@@ -1024,7 +1024,7 @@ export default function ClinicalTrackerPage() {
             <button
               onClick={() => { if (!isEmtCohort) setTab('mce'); }}
               disabled={isEmtCohort}
-              title={isEmtCohort ? 'mCE is not applicable for EMT — EMT uses agency ride-alongs' : undefined}
+              title={isEmtCohort ? 'mCE is not applicable for EMT - EMT uses agency ride-alongs' : undefined}
               className={`px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200 dark:border-gray-700 ${
                 isEmtCohort
                   ? 'bg-gray-100 dark:bg-gray-700/50 text-gray-400 dark:text-gray-500 cursor-not-allowed'
@@ -1052,7 +1052,7 @@ export default function ClinicalTrackerPage() {
             </p>
             <p className="text-gray-500 dark:text-gray-400 text-sm max-w-xl mx-auto">
               Complio and mCE are hospital-compliance systems used by Paramedic and AEMT
-              students. EMT students complete agency ride-alongs (usually with AMR) instead —
+              students. EMT students complete agency ride-alongs (usually with AMR) instead -
               tracked on the{' '}
               <Link href="/clinical/emt-tracking" className="text-teal-600 dark:text-teal-400 hover:underline">
                 EMT Tracking
@@ -1068,7 +1068,7 @@ export default function ClinicalTrackerPage() {
             onClick={() => setShowAgg(v => !v)}
             className="w-full flex items-center justify-between px-4 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
           >
-            <span>Completion Overview — {currentCohort ? cohortLabel(currentCohort) : 'Selected Cohort'} ({tab === 'complio' ? 'Complio' : 'mCE'})</span>
+            <span>Completion Overview - {currentCohort ? cohortLabel(currentCohort) : 'Selected Cohort'} ({tab === 'complio' ? 'Complio' : 'mCE'})</span>
             {showAgg ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
 
@@ -1227,25 +1227,25 @@ function ComplioTable({
               {/* COVID greys to N/A when a COVID exemption is on file (display only). */}
               <TD>
                 {row.covid_exemption
-                  ? <NaCell title="COVID-19 exemption on file — vaccine N/A" />
+                  ? <NaCell title="COVID-19 exemption on file - vaccine N/A" />
                   : <CheckCell value={row.covid_complete} onChange={v => onSave(row.student_id, 'covid_complete', v)} saving={sk('covid_complete')} />}
               </TD>
               <TD><CheckCell value={row.covid_exemption} onChange={v => onSave(row.student_id, 'covid_exemption', v)} saving={sk('covid_exemption')} /></TD>
               {/* TB PPD 1/2 ↔ QuantiFERON mutual exclusion (display only):
                   QuantiFERON on file → both PPDs N/A; both PPDs done → QuantiFERON N/A.
-                  Suppressed when tbConflict (all three on file) — see note above. */}
+                  Suppressed when tbConflict (all three on file) - see note above. */}
               <TD>
                 {row.tb_questionnaire && !tbConflict
-                  ? <NaCell title="QuantiFERON on file — TB PPD not required" />
+                  ? <NaCell title="QuantiFERON on file - TB PPD not required" />
                   : <CheckCell value={row.tb_test_1_complete} onChange={v => onSave(row.student_id, 'tb_test_1_complete', v)} saving={sk('tb_test_1_complete')} />}
               </TD>
               <TD>
-                <div className="flex gap-1" title={tbConflict ? 'TB PPD 1/2 and QuantiFERON are all on file — clear whichever is extra' : undefined}>
+                <div className="flex gap-1" title={tbConflict ? 'TB PPD 1/2 and QuantiFERON are all on file - clear whichever is extra' : undefined}>
                   {row.tb_questionnaire && !tbConflict
-                    ? <NaCell title="QuantiFERON on file — TB PPD not required" />
+                    ? <NaCell title="QuantiFERON on file - TB PPD not required" />
                     : <CheckCell value={row.tb_test_2_complete} onChange={v => onSave(row.student_id, 'tb_test_2_complete', v)} saving={sk('tb_test_2_complete')} />}
                   {(row.tb_test_1_complete && row.tb_test_2_complete) && !tbConflict
-                    ? <NaCell title="Two TB PPDs on file — QuantiFERON not required" />
+                    ? <NaCell title="Two TB PPDs on file - QuantiFERON not required" />
                     : <CheckCell value={row.tb_questionnaire} onChange={v => onSave(row.student_id, 'tb_questionnaire', v)} saving={sk('tb_questionnaire')} />}
                 </div>
               </TD>

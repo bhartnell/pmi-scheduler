@@ -275,7 +275,7 @@ export default function LabDayChatInner({
       // twice in the same tick → two channels with the same name,
       // duplicated listeners, listener-array stack overflow.
       if (subscribingRef.current) {
-        console.warn('[LabDayChat] subscribe() called while already subscribing — skipped');
+        console.warn('[LabDayChat] subscribe() called while already subscribing - skipped');
         return;
       }
       subscribingRef.current = true;
@@ -549,7 +549,7 @@ export default function LabDayChatInner({
                   aria-label={channelStatus}
                 />
                 {channelStatus === 'offline'
-                  ? 'offline — direct actions still work'
+                  ? 'offline - direct actions still work'
                   : `${connectedUsers} connected${channelStatus === 'reconnecting' ? ' · reconnecting…' : ''}`}
               </span>
             </div>

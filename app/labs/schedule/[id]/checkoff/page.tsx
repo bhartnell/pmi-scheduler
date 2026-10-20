@@ -468,7 +468,7 @@ export default function CheckoffCoordinatorPage() {
                           )}
                         </div>
                         <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          {[s.room, s.instructor_name].filter(Boolean).join(' · ') || '—'}
+                          {[s.room, s.instructor_name].filter(Boolean).join(' · ') || '-'}
                         </div>
                       </div>
                       {!s.is_checkoff && (
@@ -651,7 +651,7 @@ function StudentRow({
                 )}
                 {stationLabel.title && (
                   <span className="truncate max-w-[14ch] sm:max-w-none">
-                    — {stationLabel.title}
+ - {stationLabel.title}
                   </span>
                 )}
               </span>

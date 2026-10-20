@@ -256,7 +256,7 @@ export default function LogHoursModal({
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700">
           <div>
             <h2 className="text-base font-semibold text-gray-900 dark:text-white">
-              Log hours — {userName}
+              Log hours - {userName}
             </h2>
             {unavailableLabel && (
               <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-0.5">
@@ -457,7 +457,7 @@ export default function LogHoursModal({
 
               <p className="text-[11px] text-gray-500 dark:text-gray-400 -mt-2">
                 Creates one entry per lab day. For Gannon&apos;s class block: pick the cohort and Day 1
-                — the system follows the cohort&apos;s actual schedule (Thursday for PM14, Monday for
+ - the system follows the cohort&apos;s actual schedule (Thursday for PM14, Monday for
                 the May cohort).
               </p>
 

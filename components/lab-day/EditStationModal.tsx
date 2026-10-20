@@ -815,7 +815,7 @@ export default function EditStationModal({
                 </div>
               </div>
               {/* Scrollable scenario list. Taller (max-h-72) and
-                  showing chief_complaint as a third line per row —
+                  showing chief_complaint as a third line per row -
                   the wider modal makes this readable instead of
                   truncated to nothing. Helps tell apart same-named
                   scenarios that exist as duplicates or variants. */}
@@ -1332,7 +1332,7 @@ export default function EditStationModal({
             <div className="flex items-center justify-between mb-2">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Instructors</label>
               {instructorAvailability.length > 0 && (
-                <span className="text-xs text-gray-500 dark:text-gray-400" title="Conflicts and unsubmitted availability are tagged, not hidden — use your judgment.">
+                <span className="text-xs text-gray-500 dark:text-gray-400" title="Conflicts and unsubmitted availability are tagged, not hidden - use your judgment.">
                   All instructors shown; conflicts tagged
                 </span>
               )}
@@ -1409,7 +1409,7 @@ export default function EditStationModal({
             {/* "+ Custom name..." is a placeholder path (Ben, 2026-08-18): the real
                 workflows are volunteer-instructor status or the station notes. An
                 email is still required here because it's the identity key for this
-                assignment end to end — station_instructors upserts on
+                assignment end to end - station_instructors upserts on
                 (station_id, user_email), and remove/set-primary/dedup all match on
                 it, as do the assignment notification and calendar sync. Name-only
                 entry used to fail SILENTLY: the label promised a name, the Add
@@ -1435,12 +1435,12 @@ export default function EditStationModal({
                 </div>
                 {editForm.instructor_name.trim() && !editForm.instructor_email.trim() ? (
                   <p className="mt-1.5 text-xs text-amber-700 dark:text-amber-500">
-                    An email is required to add &ldquo;{editForm.instructor_name.trim()}&rdquo; — a name on its own can&apos;t be saved to this station.
+                    An email is required to add &ldquo;{editForm.instructor_name.trim()}&rdquo; - a name on its own can&apos;t be saved to this station.
                     For a guest or volunteer without an email, set their role to Volunteer Instructor in Admin &rarr; Users so they appear in the list above, or record them in Station Notes below.
                   </p>
                 ) : (
                   <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
-                    Email required — it&apos;s how the assignment, notification, and calendar invite are tracked.
+                    Email required - it&apos;s how the assignment, notification, and calendar invite are tracked.
                   </p>
                 )}
               </div>

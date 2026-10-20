@@ -246,7 +246,7 @@ export default function SemestersAdminPage() {
           </h1>
         </div>
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-8">
-          Set the S1 start date once per year — the system derives S2/S3/S4 dates
+          Set the S1 start date once per year - the system derives S2/S3/S4 dates
           (15-week semesters with a 1-week review break between). Per-cohort overrides handle off-calendar cohorts.
         </p>
 
@@ -672,7 +672,7 @@ function EditSemesterModal({
                       </span>
                       {c.has_override ? (
                         <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-200 text-amber-900 dark:bg-amber-700 dark:text-amber-100">
-                          OVERRIDE — opt in to drop
+                          OVERRIDE - opt in to drop
                         </span>
                       ) : (
                         <span className="px-1.5 py-0.5 rounded text-[10px] bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 inline-flex items-center gap-1">
@@ -702,7 +702,7 @@ function EditSemesterModal({
                     Per-cohort schedule windows
                   </p>
                   <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
-                    Set a manual start/stop date for a cohort instead of the semester&apos;s standard dates — for a cohort that starts off-calendar or bridges into the next semester by a week or two.
+                    Set a manual start/stop date for a cohort instead of the semester&apos;s standard dates - for a cohort that starts off-calendar or bridges into the next semester by a week or two.
                   </p>
                 </div>
               </div>

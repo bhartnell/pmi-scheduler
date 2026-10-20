@@ -1631,7 +1631,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                         labDay.priority_reason && labDay.priority_flag && labDay.priority_flag !== 'normal'
                           ? `${labDay.priority_flag.toUpperCase()}: ${labDay.priority_reason}`
                           : null,
-                      ].filter(Boolean).join(' — ');
+                      ].filter(Boolean).join(' - ');
                       const countTone = isCritical
                         ? 'text-red-700 dark:text-red-300'
                         : isHigh
@@ -1800,7 +1800,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
         {/* Print header */}
         <div className="print-header mb-6">
           <div className="text-sm font-semibold text-gray-500 uppercase tracking-widest mb-1">
-            Pima Medical Institute — Paramedic Program
+            Pima Medical Institute - Paramedic Program
           </div>
           <h1 className="text-2xl font-bold text-gray-900">{getPrintTitle()}</h1>
           {selectedCohort && cohorts.find(c => c.id === selectedCohort) && (
@@ -1845,13 +1845,13 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                             {labDay.week_number && labDay.day_number && (
                               <span className="text-sm text-gray-600 ml-1">
                                 {!labDay.title && `Week ${labDay.week_number}, Day ${labDay.day_number}`}
-                                {labDay.title && ` — W${labDay.week_number}D${labDay.day_number}`}
+                                {labDay.title && ` - W${labDay.week_number}D${labDay.day_number}`}
                               </span>
                             )}
                           </div>
                           {(labDay.start_time || labDay.end_time) && (
                             <span className="text-sm text-gray-600 whitespace-nowrap flex-shrink-0">
-                              {formatTime(labDay.start_time)}{labDay.start_time && labDay.end_time ? ' – ' : ''}{formatTime(labDay.end_time)}
+                              {formatTime(labDay.start_time)}{labDay.start_time && labDay.end_time ? ' - ' : ''}{formatTime(labDay.end_time)}
                             </span>
                           )}
                         </div>
@@ -1884,10 +1884,10 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                                     )}
                                   </td>
                                   <td className="py-1 pr-3 text-gray-700 align-top text-xs">
-                                    {station.instructor_name || <span className="text-gray-300">—</span>}
+                                    {station.instructor_name || <span className="text-gray-300">-</span>}
                                   </td>
                                   <td className="py-1 text-gray-700 align-top text-xs">
-                                    {station.room || <span className="text-gray-300">—</span>}
+                                    {station.room || <span className="text-gray-300">-</span>}
                                   </td>
                                 </tr>
                               ))}
@@ -1990,13 +1990,13 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                           )}
                           {labDay.week_number && labDay.day_number && (
                             <span className="text-sm text-gray-600 ml-1">
-                              {!labDay.title ? `Week ${labDay.week_number}, Day ${labDay.day_number}` : ` — W${labDay.week_number}D${labDay.day_number}`}
+                              {!labDay.title ? `Week ${labDay.week_number}, Day ${labDay.day_number}` : ` - W${labDay.week_number}D${labDay.day_number}`}
                             </span>
                           )}
                         </div>
                         {(labDay.start_time || labDay.end_time) && (
                           <span className="text-sm text-gray-600 whitespace-nowrap flex-shrink-0">
-                            {formatTime(labDay.start_time)}{labDay.start_time && labDay.end_time ? ' – ' : ''}{formatTime(labDay.end_time)}
+                            {formatTime(labDay.start_time)}{labDay.start_time && labDay.end_time ? ' - ' : ''}{formatTime(labDay.end_time)}
                           </span>
                         )}
                       </div>
@@ -2027,10 +2027,10 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                                   )}
                                 </td>
                                 <td className="py-1 pr-3 text-gray-700 align-top text-xs">
-                                  {station.instructor_name || <span className="text-gray-300">—</span>}
+                                  {station.instructor_name || <span className="text-gray-300">-</span>}
                                 </td>
                                 <td className="py-1 text-gray-700 align-top text-xs">
-                                  {station.room || <span className="text-gray-300">—</span>}
+                                  {station.room || <span className="text-gray-300">-</span>}
                                 </td>
                               </tr>
                             ))}
@@ -2178,8 +2178,8 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
                 <Lock className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                 <p className="text-xs text-blue-700 dark:text-blue-300 font-medium">
                   {showAllNotes
-                    ? 'Editing your note — other instructors can see all notes in "All Notes" mode'
-                    : 'Personal note — only visible to you in "My Notes" mode'}
+                    ? 'Editing your note - other instructors can see all notes in "All Notes" mode'
+                    : 'Personal note - only visible to you in "My Notes" mode'}
                 </p>
               </div>
             </div>

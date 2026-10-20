@@ -707,7 +707,7 @@ export default function HomePage() {
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">AHA Hub</h3>
                 <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  ACLS and PALS in one place — schedule, lab sections, team-lead stats, print.
+                  ACLS and PALS in one place - schedule, lab sections, team-lead stats, print.
                 </p>
                 <div className="flex flex-wrap justify-center gap-2 text-xs">
                   <span className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">ACLS</span>
@@ -845,7 +845,7 @@ export default function HomePage() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Written Exam Signup</h3>
               <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                Students sign up here — pick your own exam session and computer option.
+                Students sign up here - pick your own exam session and computer option.
               </p>
               <div className="flex flex-wrap justify-center gap-2 text-xs">
                 <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Students</span>
@@ -1020,7 +1020,7 @@ export default function HomePage() {
           )}
 
           {/* Case Studies card hidden per the codebase-streamline
-              spec — feature moved to the speculative-features
+              spec - feature moved to the speculative-features
               archive branch. Routes / API / DB tables left intact;
               only the dashboard entry point is removed. Restore by
               uncommenting if the feature gets reactivated. */}

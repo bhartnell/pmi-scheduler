@@ -1114,7 +1114,7 @@ function WalkupEvaluatorsPanel({ eventId }: { eventId: string }) {
         </h3>
       </div>
       <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-        Self-registered on event day via the &quot;not on this list&quot; option — not pre-invited.
+        Self-registered on event day via the &quot;not on this list&quot; option - not pre-invited.
       </p>
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">
         <table className="w-full">
@@ -1818,7 +1818,7 @@ function RosterSetupPanel({ eventId, event, onGenerated }: { eventId: string; ev
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">Generate Roster &amp; Assessments</h3>
         <p className="text-xs text-gray-500 dark:text-gray-400">
           Auto-populates this event&apos;s cohort roster into the time blocks below (even split, respecting each
-          block&apos;s capacity — {event.minutes_per_student} min/student, set in Settings), and creates the matching
+          block&apos;s capacity - {event.minutes_per_student} min/student, set in Settings), and creates the matching
           scored assessments. One-shot: run once per event.
         </p>
         {!event.cohort_id && (
@@ -1859,7 +1859,7 @@ function RosterSetupPanel({ eventId, event, onGenerated }: { eventId: string; ev
       {overlap.length > 0 && (
         <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
           <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-          Scenario{overlap.length !== 1 ? 's' : ''} {overlap.join(', ')} assigned to both days — a student on Day 1 could
+          Scenario{overlap.length !== 1 ? 's' : ''} {overlap.join(', ')} assigned to both days - a student on Day 1 could
           brief a Day 2 student on it. Confirm this is intentional before generating.
         </div>
       )}

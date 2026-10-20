@@ -79,7 +79,7 @@ const TRADE_STATUS_COLORS: Record<ShiftTradeRequest['status'], { bg: string; tex
 
 const TRADE_STATUS_LABELS: Record<ShiftTradeRequest['status'], string> = {
   pending: 'Open',
-  accepted: 'Accepted — Awaiting Approval',
+  accepted: 'Accepted - Awaiting Approval',
   declined: 'Declined',
   approved: 'Approved',
   cancelled: 'Cancelled',
@@ -946,7 +946,7 @@ function ShiftsPageContent() {
                                 : 'Filled'}
                           </span>
                           {/* Secondary line: total shifts on this day.
-                              Was "filled/total" — kept as a context
+                              Was "filled/total" - kept as a context
                               count, just clearer about what it is. */}
                           <span className={`block text-[9px] leading-none mt-0.5 ${
                             isSelected ? 'text-white/70' : 'text-gray-400 dark:text-gray-500'

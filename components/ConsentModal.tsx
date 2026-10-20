@@ -83,7 +83,7 @@ export default function ConsentModal({
               {agreementTitle}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Version {version} — Please read and accept to continue
+              Version {version} - Please read and accept to continue
             </p>
           </div>
         </div>
