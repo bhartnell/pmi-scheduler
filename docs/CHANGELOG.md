@@ -9,7 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
-trim-archive-tags | archive/README.md: added 'Potential bring-back' section (first entry: instructor history); docs only
+trim-archive-tags | archive/README.md: 'Potential bring-back' section (instructor history, excluded from delete) + 'Reviewed, stays archived' list; docs only
 
 trim-3-5-followup | TRIM 3/5 follow-up: removed dead 'View Progress' button (404 after /students/[id]/progress archived) from academics/students/[id]; no other change
 osce-cal-3-4 | OSCE CAL 3/4: plain-email signup confirmation via Resend (lib/osce-confirmation.ts, wording in lib/osce-confirmation-text.ts, both register routes) and per-registrant Resend button on CalendarSyncPanel (calendar-sync action 'resend'); no schema change; test added

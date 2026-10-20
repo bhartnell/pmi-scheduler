@@ -11,13 +11,30 @@ Two directories predate this file and are unrelated to the list below:
 
 ## Potential bring-back
 
-Archived items worth restoring if the need returns. Add new entries here, newest last.
+Rule (Ben, 2026-10-20): anything schedule-derived (reads `lab_day_roles`, `lab_days`,
+`lab_stations`, `station_instructors`, or LVFR assignments) gets a plain-language
+"what it does" review before it is archived or deleted. The December delete pass runs on
+this review, not on visit counts. **Entries in this section are EXCLUDED from any future
+DELETE card unless Ben removes the tag.** Add new entries at the end of the list.
 
-| Item | Archived path | Why it may come back |
-|---|---|---|
-| Instructor history | `archive/app/instructor/history/page.tsx`, `archive/app/api/instructor/history/route.ts` | Schedule-derived per-instructor lab day and station history. Ben 2026-10-20: useful for staffing justification and workload adjustments. |
+### Instructor history [KEEP - excluded from delete]
 
-To restore, move the folders back under `app/` at the same relative path (`git mv`), then re-add a navigation entry point per the Navigation Entry-Point Rule.
+- **Path:** `archive/app/instructor/history/page.tsx`, `archive/app/api/instructor/history/route.ts`
+- **What it does:** shows per-instructor lab day and station history, derived from the schedule.
+- **Why it might come back:** staffing justification and workload adjustments (Ben, 2026-10-20).
+- **Restore:** `git mv archive/app/instructor/history app/instructor/history` and
+  `git mv archive/app/api/instructor/history app/api/instructor/history`, then add a
+  navigation entry point (Navigation Entry-Point Rule).
+
+### Reviewed, stays archived
+
+Schedule-derived or instructor-facing items reviewed 2026-10-20 and judged not worth
+bringing back:
+
+- `archive/app/reports/instructor-analytics` (+ its API route): thin copy of the kept
+  `reports/instructor-workload`.
+- `archive/app/instructor/teaching`: manual diary, 0 rows.
+- `archive/app/instructor/ce`: manual, 0 rows.
 
 ## TRIM 3/5 — 2026-10-20
 
