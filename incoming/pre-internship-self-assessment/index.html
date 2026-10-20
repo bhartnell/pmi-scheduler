@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Paramedic Pre-Internship Self-Assessment</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@500&family=Source+Sans+3:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="styles.css">
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="lead">
+      <span class="eyebrow">Pima Medical Institute · Las Vegas · Paramedic Program</span>
+      <h1>Pre-Internship Self-Assessment</h1>
+      <p class="muted" id="subline">Complete this before your field internship begins. Plan on 15 to 20 minutes.</p>
+    </div>
+    <nav class="tabs" id="tabs" role="tablist" hidden>
+      <button role="tab" id="tab-form" aria-selected="false" data-view="form">Student form</button>
+      <button role="tab" id="tab-review" aria-selected="false" data-view="review">Instructor review</button>
+    </nav>
+  </header>
+
+  <main id="view-form"></main>
+  <main id="view-review" hidden></main>
+</div>
+<div class="toast" id="toast" hidden></div>
+<!-- Load order matters: content, then storage, then app. -->
+<script src="content.js"></script>
+<script src="storage-adapter.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

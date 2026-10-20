@@ -632,3 +632,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 
 ### CertBoard (2026-10-19)
 `components/aha/CertBoard.tsx` — the ACLS Board, parameterised by `course` (`'acls' | 'pals'`). Rendered by `app/labs/acls-hub/board/page.tsx` and `app/labs/pals-hub/page.tsx`. Course config picks hub API, grading route, result labels/keys (ACLS `pass`/`fail`, PALS `PASS`/`NR`). Each lab section has a Coordinator link to `/labs/schedule/[id]/coordinator`.
+
+### SelfAssessmentTodo (2026-10-20)
+
+`components/student/SelfAssessmentTodo.tsx` - student dashboard To-do card; links to `/student/self-assessment` only while the cohort window is open, otherwise "Nothing due right now." Reads `SA_STORAGE.getMyStatus()`.

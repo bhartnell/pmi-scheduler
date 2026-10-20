@@ -100,6 +100,14 @@ export function createSupabaseStore(): Store {
       }, { onConflict: 'record_key' });
       fail(error, 'save review');
     },
+    async isWindowOpen(cohortId) {
+      if (!cohortId) return false;
+      const now = new Date().toISOString();
+      const { data, error } = await sb.from('preinternship_windows').select('id')
+        .eq('cohort_id', cohortId).lte('opens_at', now).or(`closes_at.is.null,closes_at.gt.${now}`).limit(1);
+      fail(error, 'check window');
+      return (data?.length ?? 0) > 0;
+    },
     async softDeleteReview(recordKey) {
       const { data, error } = await sb.from('preinternship_reviews')
         .update({ deleted_at: new Date().toISOString() }).eq('record_key', recordKey).is('deleted_at', null).select('id');

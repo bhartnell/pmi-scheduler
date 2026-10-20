@@ -15,7 +15,7 @@ export const SA_STORAGE = {
     return r.response;
   },
   /** Also exposes lock state so the form can explain a reviewed (locked) response. */
-  getMyStatus: () => call<{ response: unknown | null; locked: boolean }>('/api/preinternship/my-response'),
+  getMyStatus: () => call<{ response: unknown | null; locked: boolean; open: boolean }>('/api/preinternship/my-response'),
   saveMyResponse: (response: unknown) =>
     call<null>('/api/preinternship/my-response', { method: 'PUT', body: JSON.stringify(response) }),
   listResponses: () => call<{ id: string; data: unknown; locked: boolean }[]>('/api/preinternship/responses'),

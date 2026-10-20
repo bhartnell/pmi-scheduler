@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-20
 
+rae-r2-student-form | RAE R2/3: student Pre-Internship Self-Assessment page /student/self-assessment, To-do card on /student, cohort window gate (new preinternship_windows table, no rows = closed), content ported to lib/preinternship-content.ts; Rae's handoff files kept in /incoming (card 3fe5cd1c)
 bell-action-only | Notification bell badge counts only unread action types (lab_assignment, task_assigned, shift_available); informational still listed (card 3ff5cd1c)
 lab-day-header-squeeze | Lab day page header: breadcrumb row, then title/date (no mid-phrase wrap) + Start Timer/Timer Display/Results, rest in More menu, 44px targets; calendar availability fetch times out at 15s; floating right rail no horizontal scrollbar (card 3ff5cd1c)
 em-dash-join-plain-hyphen | UI text: em/en dashes in rendered page and component text replaced with plain hyphens (183 .tsx files under app/ and components/; API routes, lib/, calendar sync, osce location parsing, and files in open PRs #340/#341 untouched) (card 3ff5cd1c)

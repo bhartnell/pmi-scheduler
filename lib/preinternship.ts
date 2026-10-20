@@ -66,6 +66,8 @@ export interface Store {
   listReviews(): Promise<Record<string, ReviewData>>;
   upsertReview(recordKey: string, userId: string, review: ReviewData): Promise<void>;
   softDeleteReview(recordKey: string): Promise<boolean>;
+  /** True when the cohort has an open pre-internship window right now. No window row = closed. */
+  isWindowOpen(cohortId: string | null): Promise<boolean>;
 }
 
 export class AccessError extends Error {
@@ -159,19 +161,25 @@ export function createPreinternshipService(store: Store) {
 
     async getMyResponse(actor: Actor): Promise<ResponseData | null> {
       requireStudent(actor);
+      if (!(await store.isWindowOpen(actor.cohortId ?? null))) return null;
       const r = await store.getResponse(actor.id); // keyed by the actor, never by input
       return r ? r.data : null;
     },
 
-    /** Returns lock state alongside so the UI can explain a locked form. */
+    /** Lock and window state ride along so the UI can explain a locked or not-yet-open form. */
     async getMyStatus(actor: Actor) {
       requireStudent(actor);
+      const open = await store.isWindowOpen(actor.cohortId ?? null);
+      if (!open) return { response: null, locked: false, open };
       const r = await store.getResponse(actor.id);
-      return { response: r ? r.data : null, locked: !!r?.locked };
+      return { response: r ? r.data : null, locked: !!r?.locked, open };
     },
 
     async saveMyResponse(actor: Actor, input: unknown): Promise<void> {
       requireStudent(actor);
+      if (!(await store.isWindowOpen(actor.cohortId ?? null))) {
+        throw new AccessError(403, 'The self-assessment is not open for your cohort yet.');
+      }
       const data = validateResponse(input);
       const existing = await store.getResponse(actor.id);
       if (existing?.locked) {
