@@ -9,6 +9,16 @@ moves.
 Two directories predate this file and are unrelated to the list below:
 `ai-scenario-generator/` and `pals-hub-page.tsx`.
 
+## Potential bring-back
+
+Archived items worth restoring if the need returns. Add new entries here, newest last.
+
+| Item | Archived path | Why it may come back |
+|---|---|---|
+| Instructor history | `archive/app/instructor/history/page.tsx`, `archive/app/api/instructor/history/route.ts` | Schedule-derived per-instructor lab day and station history. Ben 2026-10-20: useful for staffing justification and workload adjustments. |
+
+To restore, move the folders back under `app/` at the same relative path (`git mv`), then re-add a navigation entry point per the Navigation Entry-Point Rule.
+
 ## TRIM 3/5 — 2026-10-20
 
 Moved every page the [TRIM 1b dependency/layout table](https://app.notion.com/p/3fe5cd1cbc9b81b3835bf7db6e4bf36c)
