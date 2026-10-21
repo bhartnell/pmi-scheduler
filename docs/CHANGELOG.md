@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+poll-unify | Poll create unified on the full builder: internship checklist 'Schedule Phase 1/2 Eval' buttons now open /poll/create with student + purpose pre-fill; /scheduling/polls/create (reduced form) removed and redirected, legacy /scheduler/create and /admin/create redirects repointed (card 3d45cd1c)
 trim-6-7a-4c | Home calendar: Week and Month as two separate cards with own nav; Who's coming resolver (lib/lab-day-attendees.ts) includes station instructors + co-instructors, de-duplicated; 3000px ceiling on home and Part A2 pages (docs/LAYOUT.md)
 lab-day-whos-coming | Lab day page: one "Who's coming (n)" block (roles, station assignments, confirmed signups, volunteers, Other) with Add instructor dropdown + Other free text, replaces Lab Leads & Roamers card, calendar spinner and empty Volunteers row; Available Today / Skill Coverage collapsed by default; migration 20261021 adds lab_day_roles.other_name + role 'attending'
 trim-6-7b-1b | Removed per-page brand/user/notification header rows (Scheduling module, Settings, Tasks, Skill Sheets, Skill Drills, LabHeader) now that the app-wide top bar carries them; page title rows and breadcrumbs kept for 6/7b-1c

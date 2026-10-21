@@ -409,13 +409,18 @@ const nextConfig: NextConfig = {
         permanent: true,
       },
       {
+        source: '/scheduling/polls/create',
+        destination: '/poll/create',
+        permanent: true,
+      },
+      {
         source: '/scheduler/create',
-        destination: '/scheduling/polls/create',
+        destination: '/poll/create',
         permanent: true,
       },
       {
         source: '/admin/create',
-        destination: '/scheduling/polls/create',
+        destination: '/poll/create',
         permanent: true,
       },
     ];
