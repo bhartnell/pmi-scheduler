@@ -172,15 +172,15 @@ export const QUICK_LINK_WHITELIST: Record<string, string[]> = {
 // Role-based default configurations
 export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: string[] }> = {
   superadmin: {
-    widgets: ['needs_attention', 'at_risk_students', 'overview_stats', 'program_snapshot', 'my_tasks', 'quick_stats', 'my_labs', 'overdue_tasks', 'notifications', 'recent_activity', 'cert_expiry', 'recent_feedback', 'quick_links'],
+    widgets: ['at_risk_students', 'program_snapshot', 'my_labs', 'notifications', 'cert_expiry', 'recent_feedback'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
   },
   admin: {
-    widgets: ['needs_attention', 'at_risk_students', 'overview_stats', 'program_snapshot', 'my_tasks', 'quick_stats', 'my_labs', 'overdue_tasks', 'notifications', 'recent_activity', 'cert_expiry', 'recent_feedback', 'quick_links'],
+    widgets: ['at_risk_students', 'program_snapshot', 'my_labs', 'notifications', 'cert_expiry', 'recent_feedback'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
   },
   lead_instructor: {
-    widgets: ['needs_attention', 'my_tasks', 'my_labs', 'at_risk_students', 'overview_stats', 'program_snapshot', 'quick_stats', 'open_stations', 'overdue_tasks', 'cert_expiry', 'notifications', 'quick_links'],
+    widgets: ['my_labs', 'at_risk_students', 'program_snapshot', 'open_stations', 'cert_expiry', 'notifications'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical'],
   },
   agency_liaison: {
@@ -188,7 +188,7 @@ export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: stri
     quickLinks: ['lvfr_dashboard', 'lvfr_calendar', 'lvfr_scheduling', 'lvfr_pharm'],
   },
   instructor: {
-    widgets: ['my_cohort', 'my_tasks', 'my_labs', 'notifications', 'overdue_tasks', 'open_stations', 'cert_expiry', 'quick_links'],
+    widgets: ['my_cohort', 'my_labs', 'notifications', 'open_stations', 'cert_expiry'],
     quickLinks: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding'],
   },
   volunteer_instructor: {

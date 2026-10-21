@@ -18,8 +18,6 @@ import {
   Settings,
   UserPlus,
   Briefcase,
-  Building2,
-  Plus,
   CheckSquare,
   Clock,
   CalendarDays,
@@ -37,6 +35,7 @@ import HomeTopBar from '@/components/home/HomeTopBar';
 import SectionTiles from '@/components/home/SectionTiles';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
 import DraggableWidgetGrid from '@/components/dashboard/DraggableWidgetGrid';
+import HomeStatBar from '@/components/dashboard/HomeStatBar';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import {
@@ -504,6 +503,17 @@ export default function HomePage() {
           <CalendarConnectBanner />
         </ErrorBoundary>
 
+        {/* Stat bar (TRIM 6/7a-2): merged Quick Stats + Overview, plus the large
+            Log Site Visit button (replaces the old Site Visit Check-In banner). */}
+        {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
+          <ErrorBoundary>
+            <HomeStatBar
+              isAdmin={hasMinRole(effectiveRole, 'admin')}
+              canLogSiteVisit={canAccessClinical(effectiveRole)}
+            />
+          </ErrorBoundary>
+        )}
+
         {/* Customizable Dashboard Widgets - First thing instructors see */}
         {preferences && (preferences.dashboard_widgets.length > 0 || editMode) && (
           <ErrorBoundary>
@@ -606,32 +616,6 @@ export default function HomePage() {
             />
           </div>
           </ErrorBoundary>
-        )}
-
-        {/* Quick Action - Site Visit Check-In (for clinical users) */}
-        {currentUser && effectiveRole && canAccessClinical(effectiveRole) && (
-          <div className="mb-8 max-w-screen-2xl mx-auto">
-            <Link
-              href="/clinical/site-visits"
-              className="block bg-gradient-to-r from-cyan-500 to-teal-500 dark:from-cyan-600 dark:to-teal-600 rounded-2xl shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] p-6 group"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                    <Building2 className="w-7 h-7 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-white">Site Visit Check-In</h3>
-                    <p className="text-cyan-100 text-sm">Log your clinical site visit</p>
-                  </div>
-                </div>
-                <div className="hidden sm:flex items-center gap-2 bg-white/20 px-4 py-2 rounded-lg text-white font-medium">
-                  <Plus className="w-5 h-5" />
-                  Log Visit
-                </div>
-              </div>
-            </Link>
-          </div>
         )}
 
         {/* Section tiles (TRIM 6/7a-1) */}

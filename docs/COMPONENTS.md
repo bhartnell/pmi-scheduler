@@ -313,6 +313,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 |-----------|------|-------|-------------|
 | `AnnouncementBanner` | `components/dashboard/AnnouncementBanner.tsx` | _(none)_ | System-wide announcement banner fetched from system config. |
 | `CustomizeModal` | `components/dashboard/CustomizeModal.tsx` | `CustomizeModalProps { isOpen, onClose, widgets, quickLinks, onSave, role }` | Modal for customizing dashboard widget layout and quick link selection. |
+| `HomeStatBar` | `components/dashboard/HomeStatBar.tsx` | `{ isAdmin, canLogSiteVisit }` | One-row home stat bar (labs this week, active students, open spots, needs attention, open feedback, days to next cert day); each stat links; Pick stats saved to `dashboard_layouts.layout.stat_bar_stats`; large Log Site Visit button. |
 | `DraggableWidgetGrid` | `components/dashboard/DraggableWidgetGrid.tsx` | `DraggableWidgetGridProps { widgets, onReorder, renderWidget }` | Drag-and-drop grid layout for dashboard widgets. |
 | `ResizableWidget` | `components/dashboard/ResizableWidget.tsx` | `ResizableWidgetProps { widgetId, children, defaultSize? }` | Resizable container for dashboard widgets. Also exports `useWidgetSizes` hook. |
 | `WidgetCard` | `components/dashboard/WidgetCard.tsx` | `WidgetCardProps { title, icon?, actions?, loading?, error?, children }` | Standard card wrapper for dashboard widgets. Also exports `WidgetEmpty`. |
