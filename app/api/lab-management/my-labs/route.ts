@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { hasMinRole } from '@/lib/permissions';
+import { resolveLabDayAttendees } from '@/lib/lab-day-attendees';
 
 // lab_users.primary_program -> programs.abbreviation
 const PROGRAM_ABBREVIATION: Record<string, string> = {
@@ -52,9 +53,10 @@ export async function GET(request: NextRequest) {
         cohort:cohorts(id, cohort_number, program:programs(abbreviation)),
         stations:lab_stations(
           id, station_number, custom_title, instructor_name, instructor_email,
-          scenario:scenarios(id, title)
+          scenario:scenarios(id, title),
+          co_instructors:station_instructors(user_name, user_email)
         ),
-        roles:lab_day_roles(role, instructor_id, instructor:lab_users!lab_day_roles_instructor_id_fkey(name, email))
+        roles:lab_day_roles(role, instructor_id, instructor:lab_users!lab_day_roles_instructor_id_fkey(name, email, is_part_time))
       `)
       .eq('is_archived', false)
       .gte('date', start)
@@ -92,8 +94,16 @@ export async function GET(request: NextRequest) {
           roles: (ld.roles || []).map((r: any) => ({
             role: r.role,
             name: r.instructor?.name || r.instructor?.email?.split('@')[0] || null,
+            email: r.instructor?.email ?? null,
+            is_part_time: r.instructor?.is_part_time ?? null,
           })),
           stations,
+          station_people: (ld.stations || []).map((s: any) => ({
+            station_number: s.station_number,
+            instructor_name: s.instructor_name || null,
+            instructor_email: s.instructor_email || null,
+            co_instructors: (s.co_instructors || []).map((c: any) => ({ name: c.user_name || null, email: c.user_email || null })),
+          })),
           include: inProgram || hasRole || stations.some(s => s.is_mine),
         };
       })
@@ -119,7 +129,11 @@ export async function GET(request: NextRequest) {
         });
       });
     }
-    const withSignups = days.map(d => ({ ...d, signups: signupsByDate[d.date] || [] }));
+    const withSignups = days.map(({ station_people, ...d }) => {
+      const signups = signupsByDate[d.date] || [];
+      const { attendees, open } = resolveLabDayAttendees({ roles: d.roles, stations: station_people, signups });
+      return { ...d, signups, attendees, open_stations: open };
+    });
 
     return NextResponse.json({ success: true, today: start, labDays: withSignups });
   } catch (error) {

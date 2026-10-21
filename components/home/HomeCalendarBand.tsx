@@ -302,8 +302,8 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
     next: () => void,
     today: () => void,
   ) => (
-    <div className="flex items-center gap-1 mb-2">
-      <span className="text-sm font-semibold text-gray-900 dark:text-white mr-2">{label}</span>
+    <div className="flex items-center gap-1 mb-3">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mr-2">{label}</h3>
       <div className="ml-auto flex items-center gap-1">
         <button type="button" aria-label={`Previous ${label.toLowerCase()}`} onClick={prev} className={navBtn}>
           <ChevronLeft className="w-5 h-5" />
@@ -412,9 +412,9 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
   const side = layout === 'side';
 
   return (
-    <section className="mb-8 bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+    <section className="mb-8">
       <div className="flex flex-wrap items-center gap-3 mb-3">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mr-2">Calendar</h3>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mr-2">Calendar</h2>
         {/* Side by side only has room above 1300 CSS px; below that the band is always stacked. */}
         <div className="inline-flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 max-[1300px]:hidden">
           <button type="button" className={seg(layout === 'stacked')} onClick={() => update({ layout: 'stacked' })}>
@@ -454,8 +454,8 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
           Full calendar
         </Link>
       </div>
-      <div className={`grid gap-6 ${side ? 'min-[1300px]:grid-cols-5' : ''}`}>
-        <div className={`min-w-0 ${side ? 'min-[1300px]:col-span-3' : ''}`}>
+      <div className={`grid gap-4 ${side ? 'min-[1300px]:grid-cols-5' : ''}`}>
+        <div className={`min-w-0 bg-white dark:bg-gray-800 rounded-xl shadow p-4 ${side ? 'min-[1300px]:col-span-3' : ''}`}>
           {panelNav(
             'Week',
             weekTitle,
@@ -466,7 +466,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
           {weekGrid}
           {weekList}
         </div>
-        <div className={`min-w-0 ${side ? 'min-[1300px]:col-span-2' : ''}`}>
+        <div className={`min-w-0 bg-white dark:bg-gray-800 rounded-xl shadow p-4 ${side ? 'min-[1300px]:col-span-2' : ''}`}>
           {panelNav(
             'Month',
             monthTitle,

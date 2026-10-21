@@ -1285,7 +1285,7 @@ export default function GradeStationPage() {
 
       {/* NREMT Candidate Instructions */}
       {station?.lab_day?.is_nremt_testing && (
-        <div className="w-full px-4 md:px-6 2xl:px-8 pt-2 space-y-2">
+        <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 pt-2 space-y-2">
           <NremtCandidateInstructions
             key={nremtInstructionsKey}
             stationName={station.custom_title || station.skill_name || ''}
@@ -1302,7 +1302,7 @@ export default function GradeStationPage() {
       {/* RETAKE ATTEMPT Banner */}
       {isRetakeMode && (
         <div className="bg-amber-500 text-white border-b border-amber-600">
-          <div className="w-full px-4 md:px-6 2xl:px-8 py-3 flex items-center gap-3">
+          <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-3 flex items-center gap-3">
             <svg className="w-6 h-6 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
             </svg>
@@ -1394,8 +1394,8 @@ export default function GradeStationPage() {
           className={
             station?.lab_day?.is_nremt_testing
               ? // NREMT: mobile stacked (<lg) becomes 3-col grid at lg+
-                'w-full px-4 md:px-6 2xl:px-8 py-4 pb-24 flex flex-col gap-4 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)_20rem] lg:gap-4 lg:items-start'
-              : 'flex gap-6 w-full px-4 md:px-6 2xl:px-8 py-4 pb-4'
+                'w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4 pb-24 flex flex-col gap-4 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)_20rem] lg:gap-4 lg:items-start'
+              : 'flex gap-6 w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4 pb-4'
           }
         >
           {/* Left: Student panel */}
@@ -1574,7 +1574,7 @@ export default function GradeStationPage() {
           )}
         </main>
       ) : (
-      <main className="w-full px-4 md:px-6 2xl:px-8 py-4 space-y-4 pb-20">
+      <main className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4 space-y-4 pb-20">
         {useSplitGrading ? (
           <DualPaneGrading
             scenario={scenarioPane}
@@ -1753,7 +1753,7 @@ function SkillDrillStationView({
         />
       )}
 
-      <main className="w-full px-4 md:px-6 2xl:px-8 py-6 space-y-5">
+      <main className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-6 space-y-5">
         {/* Back link + station header */}
         <div className="flex items-center justify-between gap-3">
           <Link

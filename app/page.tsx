@@ -484,7 +484,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Top bar + sub-nav line come from AppChrome in the root layout (TRIM 6/7b-1a) */}
       {/* Main Content */}
-      <main id="main-content" className="px-4 py-6">
+      <main id="main-content" className="px-4 py-6 w-full max-w-[3000px] mx-auto">
         <PageErrorBoundary>
 
         {/* System Announcements */}

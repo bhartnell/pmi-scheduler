@@ -42,7 +42,7 @@ export default function AttemptRecordPage() {
   const missed = rec ? rec.segments.reduce((n, s) => n + s.criteria.filter(c => !c.met).length, 0) : 0;
 
   return (
-    <div className="w-full px-4 md:px-6 2xl:px-8 py-4 text-gray-900 dark:text-gray-100">
+    <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4 text-gray-900 dark:text-gray-100">
       <button type="button" onClick={() => router.back()} className="inline-flex items-center gap-1 text-sm text-blue-700 dark:text-blue-300 min-h-[44px]">
         <ArrowLeft className="w-4 h-4" /> Back
       </button>
