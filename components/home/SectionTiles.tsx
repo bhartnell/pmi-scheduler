@@ -7,6 +7,8 @@ import { OPS_HUB_LINKS, visibleSections } from './sections';
 
 interface SectionTilesProps {
   role: string | null | undefined;
+  /** Right-of-Month version (TRIM 6/7a-7): 3 x 3, icon + name, description as hover text, no chips. */
+  compact?: boolean;
 }
 
 /**
@@ -14,9 +16,60 @@ interface SectionTilesProps {
  * one-line description, 2-3 chips) plus a centered row of small PMI
  * Operations Hub tiles. Desktop-first: three across, stacks on phones.
  */
-export default function SectionTiles({ role }: SectionTilesProps) {
+export default function SectionTiles({ role, compact }: SectionTilesProps) {
   const sections = visibleSections(role);
   const showOps = !!role && hasMinRole(role, 'instructor');
+
+  if (compact) {
+    return (
+      <section aria-label="Sections" className="min-w-0">
+        <p className="text-[15px] font-semibold text-gray-900 dark:text-white mb-3">Sections</p>
+        <div className="grid grid-cols-3 max-sm:grid-cols-2 gap-3">
+          {sections.map((s) => {
+            const Icon = s.icon;
+            return (
+              <Link
+                key={s.key}
+                href={s.href}
+                title={s.description}
+                className="min-h-[104px] min-w-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow p-3 flex flex-col items-center justify-center text-center gap-2 group"
+              >
+                <span className={`w-10 h-10 rounded-lg flex items-center justify-center ${s.color}`}>
+                  <Icon className="w-5 h-5" aria-hidden="true" />
+                </span>
+                <span className="text-sm font-bold text-gray-900 dark:text-white group-hover:underline">{s.title}</span>
+              </Link>
+            );
+          })}
+        </div>
+        {showOps && (
+          <div className="mt-4">
+            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">PMI Operations Hub</p>
+            <div className="flex flex-wrap gap-2">
+              {OPS_HUB_LINKS.map((o) => {
+                const OpsIcon = o.icon;
+                return (
+                  <a
+                    key={o.href}
+                    href={o.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-3 min-h-[44px] bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+                  >
+                    <span className={`w-6 h-6 rounded flex items-center justify-center ${o.color}`}>
+                      <OpsIcon className="w-3.5 h-3.5" aria-hidden="true" />
+                    </span>
+                    <span className="text-xs font-medium text-gray-900 dark:text-white">{o.label}</span>
+                    <ExternalLink className="w-3 h-3 text-gray-400" aria-hidden="true" />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  }
 
   return (
     <section aria-label="Sections" className="mt-10">

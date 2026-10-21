@@ -516,6 +516,11 @@ export default function HomePage() {
               userName={currentUser.name ?? null}
               defaultMine={effectiveRole === 'volunteer_instructor'}
               canViewAs={hasMinRole(effectiveRole, 'admin')}
+              sectionsSlot={
+                <ErrorBoundary>
+                  <SectionTiles role={effectiveRole} compact />
+                </ErrorBoundary>
+              }
               todaySlot={
                 hasMinRole(effectiveRole, 'instructor') ? (
                   <ErrorBoundary>
@@ -631,10 +636,12 @@ export default function HomePage() {
           </ErrorBoundary>
         )}
 
-        {/* Section tiles (TRIM 6/7a-1) */}
-        <ErrorBoundary>
-          <SectionTiles role={effectiveRole} />
-        </ErrorBoundary>
+        {/* Section tiles (TRIM 6/7a-1): beside the Month for calendar users (6/7a-7), here otherwise */}
+        {!(currentUser && effectiveRole && hasMinRole(effectiveRole, 'volunteer_instructor')) && (
+          <ErrorBoundary>
+            <SectionTiles role={effectiveRole} />
+          </ErrorBoundary>
+        )}
 
         {/* Existing page cards stay reachable, collapsed, until the section
             landings (TRIM 6/7b) carry every page. */}
