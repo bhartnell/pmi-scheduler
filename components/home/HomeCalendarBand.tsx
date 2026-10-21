@@ -130,6 +130,8 @@ function EventChip({
   membership,
   canSignUp,
   busy,
+  ended,
+  listed,
   onSignUp,
   onRemove,
 }: {
@@ -138,6 +140,10 @@ function EventChip({
   membership?: Membership;
   canSignUp?: boolean;
   busy?: boolean;
+  /** The event's date/end time is behind us: no Sign up. */
+  ended?: boolean;
+  /** The signed-in user is named in the event's instructor list. */
+  listed?: boolean;
   onSignUp?: (labDayId: string) => void;
   onRemove?: (labDayId: string) => void;
 }) {
@@ -149,7 +155,11 @@ function EventChip({
   const volunteer = e.event_type === 'volunteer';
   // Every lab gets a Sign up for anyone not already on the day; "needs
   // instructors" is only the dashed emphasis, never the condition.
-  const showLabButton = !!labDayId && !!canSignUp && !!membership;
+  // Sign up is for lab-type events that have not ended; past days keep the
+  // faded chip with no button. A person named in the event's instructor list
+  // is also in (listed), same as the lab day page's Who's coming.
+  const showLabButton = !!labDayId && !!canSignUp && !!membership && (!ended || membership.on || listed);
+  const isIn = !!membership?.on || !!listed;
   const body = (
     <div
       className={`rounded-md px-2 py-1 text-xs min-h-[44px] ${open > 0 ? 'border-2 border-dashed' : 'border'}`}
@@ -190,7 +200,7 @@ function EventChip({
     <div className="[--chip-surface:#ffffff] dark:[--chip-surface:#1f2937]">
       {content}
       {showLabButton &&
-        (membership!.on ? (
+        (isIn ? (
           <div className="mt-0.5 flex items-center gap-2 text-[11px]">
             <span className="font-medium text-green-700 dark:text-green-400">You&apos;re in</span>
             {membership!.role_ids.length > 0 && (
@@ -216,6 +226,16 @@ function EventChip({
         ))}
     </div>
   );
+}
+
+/** True once the event's day is over (today counts until its end time; no end time = through the day). */
+function hasEnded(e: BandEvent, now: Date): boolean {
+  const today = ymd(now);
+  if (e.date < today) return true;
+  if (e.date > today || !e.end_time) return false;
+  const [h, m] = e.end_time.split(':').map(Number);
+  if (Number.isNaN(h)) return false;
+  return now.getHours() * 60 + now.getMinutes() >= h * 60 + (m || 0);
 }
 
 export default function HomeCalendarBand({ userName, defaultMine, canViewAs, todaySlot }: Props) {
@@ -398,6 +418,10 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
       membership: id ? membership[id] : undefined,
       canSignUp,
       busy: !!id && busyDay === id,
+      ended: hasEnded(e, new Date()),
+      listed:
+        !!userName &&
+        (e.instructor_names ?? []).some(i => i.toLowerCase() === userName.toLowerCase()),
       onSignUp: signUp,
       onRemove: removeSignUp,
     };
@@ -654,7 +678,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
 
       {/* Row 1: Today (left) + This week (right). Stacks below 1200px. */}
       <div
-        className={`grid gap-[18px] max-md:gap-4 ${
+        className={`grid items-start gap-[18px] max-md:gap-4 ${
           todaySlot ? 'grid-cols-[minmax(360px,2fr)_minmax(0,3fr)] max-[1199px]:grid-cols-1' : 'grid-cols-1'
         }`}
       >
