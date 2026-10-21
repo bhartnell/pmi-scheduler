@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+trim-6-7b-1a | App-wide top bar + one sub-navigation/breadcrumb line moved into the root layout (AppChrome); hidden on sign-in, public, student and timer-display pages; Home page no longer renders its own copy
 trim-6-7a-4b | Home calendar band: week and month always shown together (toggle removed), independent week/month nav, month-day click moves the week, side-by-side 3:2 above 1300px, platoon day tint removed (A/B/C badge kept)
 
 trim-6-7a-3 | Home Today band (TodayBand: today's labs strip, station tiles with Grade, dashed 'Needs an instructor', Who's coming / Still open / Ask for help); my-labs API gains rotations, roles, signups (additive); home drops Welcome header and width cap

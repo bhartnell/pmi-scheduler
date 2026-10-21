@@ -195,3 +195,18 @@ export function visibleSections(role: Role | string | null | undefined): HomeSec
   if (!role) return [];
   return HOME_SECTIONS.filter((s) => s.visible(role));
 }
+
+/** Section whose landing, chip or sub-path contains this pathname (null on Home or no match). */
+export function sectionForPath(pathname: string): HomeSection | null {
+  if (pathname === '/') return null;
+  const inside = (href: string) => pathname === href || pathname.startsWith(href + '/');
+  return (
+    HOME_SECTIONS.find((s) => pathname === s.href || s.chips.some((c) => pathname === c.href)) ??
+    HOME_SECTIONS.find((s) => inside(s.href) || s.chips.some((c) => inside(c.href))) ??
+    null
+  );
+}
+
+export function activeSectionKey(pathname: string): string | null {
+  return sectionForPath(pathname)?.key ?? null;
+}

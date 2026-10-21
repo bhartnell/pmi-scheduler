@@ -31,7 +31,6 @@ import {
 import { canAccessAdmin, canAccessClinical, canAccessScheduling, canAccessAffiliations, canAccessLVFR, hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import HomeTopBar from '@/components/home/HomeTopBar';
 import SectionTiles from '@/components/home/SectionTiles';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
 import DraggableWidgetGrid from '@/components/dashboard/DraggableWidgetGrid';
@@ -483,9 +482,7 @@ export default function HomePage() {
   // Logged in - show main menu
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Header: top bar with the nine sections (TRIM 6/7a-1) */}
-      <HomeTopBar role={effectiveRole} />
-
+      {/* Top bar + sub-nav line come from AppChrome in the root layout (TRIM 6/7b-1a) */}
       {/* Main Content */}
       <main id="main-content" className="px-4 py-6">
         <PageErrorBoundary>
