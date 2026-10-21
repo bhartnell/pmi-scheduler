@@ -5,7 +5,7 @@ import { createNotification } from '@/lib/notifications';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 const VALID_STATUSES = ['new', 'read', 'in_progress', 'needs_investigation', 'resolved', 'archived'];
-const VALID_TYPES = ['bug', 'feature', 'other'];
+const VALID_TYPES = ['bug', 'feature', 'scenario', 'other'];
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // RFC 4180-ish CSV parser. The previous version split on '\n' first
@@ -179,6 +179,7 @@ function normalizeType(raw: string): string | null {
     'bug report': 'bug',
     'feature': 'feature',
     'feature request': 'feature',
+    'scenario': 'scenario',
     'feedback': 'other',
     'other': 'other',
   };
@@ -430,7 +431,8 @@ export async function POST(request: NextRequest) {
       if (statusChanged && current.user_email) {
         try {
           const typeLabel = current.report_type === 'bug' ? 'bug report' :
-                           current.report_type === 'feature' ? 'feature request' : 'feedback';
+                           current.report_type === 'feature' ? 'feature request' :
+                           current.report_type === 'scenario' ? 'scenario report' : 'feedback';
           const pageRef = current.page_url ? ` on ${current.page_url}` : '';
           const statusLabel = newStatus.replace(/_/g, ' ');
 

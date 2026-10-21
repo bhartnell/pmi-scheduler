@@ -28,6 +28,9 @@
  */
 
 import { useState } from 'react';
+import LeveledActionList from '@/components/scenario/LeveledActionList';
+import { hasLeveledActions, parseLeveledActions } from '@/lib/scenario-actions';
+import { useFeedbackScenario } from '@/lib/feedback-context';
 import {
   Info,
   Radio,
@@ -63,6 +66,7 @@ export default function ScenarioFullDisplay({
   expandAllPhases = false,
   hideEmpty = false,
 }: ScenarioFullDisplayProps) {
+  useFeedbackScenario(scenario?.id, scenario?.title);
   const [expandedPhases, setExpandedPhases] = useState<Set<number>>(() => {
     const phases = Array.isArray(scenario?.phases) ? scenario.phases : [];
     if (expandAllPhases) {
@@ -515,22 +519,15 @@ export default function ScenarioFullDisplay({
                     <PhaseTextBlock label="Changes on Entering This Phase" value={phase.changes} tone="blue" />
                     {(() => {
                       // expected_actions is string[] in v2; legacy rows store a single
-                      // string (split on newlines). Never drop an unexpected shape silently.
-                      const ea = phase.expected_actions;
-                      const actions: string[] = (Array.isArray(ea) ? ea : typeof ea === 'string' ? ea.split(/\r?\n/) : [])
-                        .map((a: unknown) => (typeof a === 'string' ? a : a == null ? '' : JSON.stringify(a)).trim())
-                        .filter((a: string) => a !== '');
-                      if (actions.length === 0) return null;
+                      // string. LeveledActionList splits lines and [EMT]/[AEMT]/[Paramedic]
+                      // prefixes and never drops an unexpected shape silently.
+                      if (!hasLeveledActions(parseLeveledActions(phase.expected_actions))) return null;
                       return (
                         <div>
                           <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Expected Actions
                           </h5>
-                          <ul className="text-sm text-gray-600 dark:text-gray-400 list-disc list-inside">
-                            {actions.map((action, aIdx) => (
-                              <li key={aIdx}>{action}</li>
-                            ))}
-                          </ul>
+                          <LeveledActionList actions={phase.expected_actions} />
                         </div>
                       );
                     })()}
@@ -618,7 +615,8 @@ function AssessmentRow({ letter, text, action }: { letter: string; text: string;
         {text && <span className="text-gray-700 dark:text-gray-300">{text}</span>}
         {hasAction && (
           <div className="mt-0.5 text-sm text-emerald-800 dark:text-emerald-300">
-            <span className="font-semibold">Expected action:</span> {action}
+            <span className="font-semibold">Expected action:</span>
+            <LeveledActionList actions={action} textClassName="text-sm text-emerald-800 dark:text-emerald-300" />
           </div>
         )}
       </div>

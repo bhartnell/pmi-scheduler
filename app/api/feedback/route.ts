@@ -143,6 +143,8 @@ export async function POST(request: NextRequest) {
     let description: string;
     let page_url: string | null;
     let user_agent: string | null;
+    let scenario_id: string | null = null;
+    let scenario_title: string | null = null;
     let screenshotFiles: File[] = [];
 
     const contentType = request.headers.get('content-type') || '';
@@ -154,6 +156,8 @@ export async function POST(request: NextRequest) {
       report_type = (formData.get('report_type') as string) || 'other';
       page_url = (formData.get('page_url') as string) || null;
       user_agent = (formData.get('user_agent') as string) || null;
+      scenario_id = (formData.get('scenario_id') as string) || null;
+      scenario_title = (formData.get('scenario_title') as string) || null;
       const fileFields = formData.getAll('screenshot');
       for (const fileField of fileFields) {
         if (fileField && typeof fileField !== 'string') {
@@ -167,6 +171,8 @@ export async function POST(request: NextRequest) {
       report_type = body.report_type || 'other';
       page_url = body.page_url || null;
       user_agent = body.user_agent || null;
+      scenario_id = body.scenario_id || null;
+      scenario_title = body.scenario_title || null;
     }
 
     if (!description?.trim()) {
@@ -182,6 +188,9 @@ export async function POST(request: NextRequest) {
         page_url: page_url || null,
         user_email: session?.user?.email || 'anonymous',
         user_agent: user_agent || null,
+        // Only a 'scenario' report carries scenario context
+        scenario_id: report_type === 'scenario' ? (scenario_id || null) : null,
+        scenario_title: report_type === 'scenario' && scenario_title ? scenario_title.slice(0, 300) : null,
         status: 'new'
       })
       .select()

@@ -16,6 +16,8 @@ import {
 import type { Station, ScenarioPhase } from './types';
 import { toArray } from './types';
 import ScenarioFullDisplay from '@/components/scenario/ScenarioFullDisplay';
+import LeveledActionList from '@/components/scenario/LeveledActionList';
+import { useFeedbackScenario } from '@/lib/feedback-context';
 
 interface ScenarioGradingProps {
   station: Station;
@@ -340,11 +342,9 @@ function CollapsiblePhase({
                 <div className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider border-b border-indigo-200 dark:border-indigo-800 pb-1">
                   Expected Interventions
                 </div>
-                <ul className="text-xs text-gray-700 dark:text-gray-300 pl-2 list-disc list-inside">
-                  {expectedActions.map((action, aIdx) => (
-                    <li key={aIdx}>{action}</li>
-                  ))}
-                </ul>
+                <div className="pl-2">
+                  <LeveledActionList actions={expectedActions} textClassName="text-xs text-gray-700 dark:text-gray-300" />
+                </div>
               </div>
             )}
 
@@ -383,6 +383,7 @@ export default function ScenarioGrading({
   isNremtTesting,
 }: ScenarioGradingProps) {
   const scenario = station.scenario;
+  useFeedbackScenario(scenario?.id, scenario?.title);
 
   return (
     <>

@@ -7895,6 +7895,8 @@ Counts and last write measured live 2026-10-19. "Our code" = any `.from()`/`rpc(
 | updated_at | timestamptz | YES | now() |  |
 | screenshot_url | text | YES |  |  |
 | digest_sent_at | timestamptz | YES |  | Set when the resolved-feedback weekly digest email (`app/api/cron/feedback-digest`, wired weekly Sun 7am UTC) has emailed the reporter; migration `20260701_feedback_reports_digest_sent_at.sql` applied to production |
+| scenario_id | text | YES |  | Scenario open on screen when a `report_type='scenario'` report was filed (migration `20261021_feedback_reports_scenario.sql`, applied) |
+| scenario_title | text | YES |  | Title of that scenario |
 
 **Check Constraints:**
 - `feedback_reports_status_check`: `((status = ANY (ARRAY['new'::text, 'read'::text, 'in_progress'::text, 'needs_investigation'::text, 'resolved'::text, 'archived'::text])))`

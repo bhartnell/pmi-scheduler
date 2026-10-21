@@ -3,9 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
-import { MessageSquare, X, Send, Bug, Lightbulb, HelpCircle, Loader2, CheckCircle, Camera } from 'lucide-react';
+import { MessageSquare, X, Send, Bug, Lightbulb, HelpCircle, Loader2, CheckCircle, Camera, FileText } from 'lucide-react';
+import { getFeedbackScenario, type FeedbackScenario } from '@/lib/feedback-context';
 
-type ReportType = 'bug' | 'feature' | 'other';
+type ReportType = 'bug' | 'feature' | 'scenario' | 'other';
 
 const MAX_SCREENSHOTS = 3;
 
@@ -25,12 +26,15 @@ export default function FeedbackButton() {
   const [screenshotFiles, setScreenshotFiles] = useState<File[]>([]);
   const [screenshotPreviewUrls, setScreenshotPreviewUrls] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  // Scenario on screen when the form opened (grader, scenario view, megacode pane)
+  const [scenarioContext, setScenarioContext] = useState<FeedbackScenario | null>(null);
 
   // Reset form when modal opens
   useEffect(() => {
     if (isOpen) {
       setDescription('');
       setReportType('bug');
+      setScenarioContext(getFeedbackScenario());
       setSubmitted(false);
       setError(null);
       setScreenshotFiles([]);
@@ -113,6 +117,10 @@ export default function FeedbackButton() {
       formData.append('description', description.trim());
       formData.append('report_type', reportType);
       formData.append('page_url', pathname);
+      if (reportType === 'scenario' && scenarioContext) {
+        formData.append('scenario_id', scenarioContext.id);
+        formData.append('scenario_title', scenarioContext.title);
+      }
       formData.append('user_agent', typeof navigator !== 'undefined' ? navigator.userAgent : '');
       screenshotFiles.forEach((file) => {
         formData.append('screenshot', file);
@@ -260,6 +268,18 @@ export default function FeedbackButton() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => setReportType('scenario')}
+                        className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
+                          reportType === 'scenario'
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                            : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 text-gray-700 dark:text-gray-300'
+                        }`}
+                      >
+                        <FileText className="w-5 h-5" />
+                        <span>Scenario</span>
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setReportType('other')}
                         className={`flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all ${
                           reportType === 'other'
@@ -273,10 +293,18 @@ export default function FeedbackButton() {
                     </div>
                   </div>
 
+                  {reportType === 'scenario' && (
+                    <p className="text-sm text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-900/20 rounded-lg px-3 py-2">
+                      {scenarioContext
+                        ? <>About scenario: <span className="font-semibold">{scenarioContext.title || scenarioContext.id}</span></>
+                        : 'No scenario is open on this page. Name the scenario in your note.'}
+                    </p>
+                  )}
+
                   {/* Description */}
                   <div>
                     <label htmlFor="feedback-description" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      {reportType === 'bug' ? 'What happened?' : reportType === 'feature' ? 'What would you like?' : 'Your feedback'}{' '}
+                      {reportType === 'bug' ? 'What happened?' : reportType === 'feature' ? 'What would you like?' : reportType === 'scenario' ? 'What should change in the scenario?' : 'Your feedback'}{' '}
                       <span className="text-red-500" aria-hidden="true">*</span>
                       <span className="sr-only">(required)</span>
                     </label>
@@ -294,6 +322,8 @@ export default function FeedbackButton() {
                           ? 'Describe the issue you encountered...'
                           : reportType === 'feature'
                           ? 'Describe the feature you would like...'
+                          : reportType === 'scenario'
+                          ? 'What is wrong or missing in the scenario content...'
                           : 'Share your thoughts...'
                       }
                       rows={4}

@@ -30,7 +30,9 @@ import {
 
 interface FeedbackReport {
   id: string;
-  report_type: 'bug' | 'feature' | 'other';
+  report_type: 'bug' | 'feature' | 'scenario' | 'other';
+  scenario_id?: string | null;
+  scenario_title?: string | null;
   description: string;
   page_url: string | null;
   user_email: string;
@@ -60,6 +62,7 @@ const STATUS_CONFIG = {
 const TYPE_CONFIG = {
   bug: { label: 'BUG REPORT', bgColor: 'border-red-500 bg-red-50 dark:bg-red-900/20', headerBg: 'bg-red-100 dark:bg-red-900/40', textColor: 'text-red-700 dark:text-red-300', icon: Bug },
   feature: { label: 'FEATURE REQUEST', bgColor: 'border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20', headerBg: 'bg-yellow-100 dark:bg-yellow-900/40', textColor: 'text-yellow-700 dark:text-yellow-300', icon: Lightbulb },
+  scenario: { label: 'SCENARIO', bgColor: 'border-purple-500 bg-purple-50 dark:bg-purple-900/20', headerBg: 'bg-purple-100 dark:bg-purple-900/40', textColor: 'text-purple-700 dark:text-purple-300', icon: FileText },
   other: { label: 'FEEDBACK', bgColor: 'border-blue-500 bg-blue-50 dark:bg-blue-900/20', headerBg: 'bg-blue-100 dark:bg-blue-900/40', textColor: 'text-blue-700 dark:text-blue-300', icon: HelpCircle }
 };
 
@@ -224,7 +227,8 @@ export default function FeedbackAdminPage() {
 
   const copyForClaude = async (report: FeedbackReport) => {
     const typeLabel = report.report_type === 'bug' ? 'BUG REPORT' :
-                      report.report_type === 'feature' ? 'FEATURE REQUEST' : 'FEEDBACK';
+                      report.report_type === 'feature' ? 'FEATURE REQUEST' :
+                      report.report_type === 'scenario' ? 'SCENARIO' : 'FEEDBACK';
 
     const priorityConfig = getPriorityConfig(report.priority);
 
@@ -234,7 +238,7 @@ export default function FeedbackAdminPage() {
 **Date:** ${formatDate(report.created_at)}
 **From:** ${report.user_email}
 **Page:** ${report.page_url || 'N/A'}
-**Status:** ${STATUS_CONFIG[report.status].label}
+${report.report_type === 'scenario' ? `**Scenario:** ${report.scenario_title || 'not captured'}${report.scenario_id ? ` (${report.scenario_id})` : ''}\n` : ''}**Status:** ${STATUS_CONFIG[report.status].label}
 
 ### Description
 ${report.description}
@@ -546,6 +550,7 @@ ${report.user_agent || 'Not available'}
                 <option value="all">All</option>
                 <option value="bug">Bug</option>
                 <option value="feature">Feature</option>
+                <option value="scenario">Scenario</option>
                 <option value="other">Other</option>
               </select>
             </div>

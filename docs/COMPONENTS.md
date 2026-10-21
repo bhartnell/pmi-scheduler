@@ -78,6 +78,8 @@ endpoint (`app/api/lab-management/students/[id]/route.ts`) now also rejects
 could flip status via the plain Edit form, bypassing the intended permission
 model).
 
+**`components/scenario/LeveledActionList.tsx`** — Renders expected actions as labeled EMT / AEMT / Paramedic lists (parsing in `lib/scenario-actions.ts`); used by ScenarioFullDisplay and ScenarioGrading.
+
 **`components/scenario/ScenarioFullDisplay.tsx`** — Read-only renderer for
 the full scenario card (dispatch, patient, SAMPLE, phases, vitals, critical
 actions, debrief points). Used on the scenario edit page's preview pane
@@ -450,7 +452,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 | `Toast` / `ToastProvider` | `components/Toast.tsx` | _(provider: `{ children }`)_ | Toast notification system. Exports `useToast` hook and `ToastProvider` context provider. |
 | `FloatingDock` | `components/FloatingDock.tsx` | `children` | Sole owner of the persistent bottom-right overlay corner (Quick Actions FAB, Role Preview, Feedback stack in flow). Exposes a page slot (`#floating-dock-page-slot`, `DOCK_PAGE_SLOT_ID`) that pages may fill via portal (filled via `DockPortal`; used by page toasts and the student case "View Vitals" button). Add new persistent floating controls as children here, never with their own `fixed bottom-*/right-*`. |
 | `DockPortal` | `components/DockPortal.tsx` | `children` | Portals children into FloatingDock's page slot so toasts / persistent page buttons stack beside the dock instead of overlapping it. Use instead of `fixed bottom-* right-*`. (2026-10-06) |
-| `FeedbackButton` | `components/FeedbackButton.tsx` | _(none)_ | Floating feedback button with modal form for bugs, feature requests, and general feedback. |
+| `FeedbackButton` | `components/FeedbackButton.tsx` | _(none)_ | Floating feedback button with modal form for bugs, feature requests, scenario content, and general feedback (a Scenario report captures the scenario open on screen via `lib/feedback-context.ts`). |
 
 ### Onboarding
 

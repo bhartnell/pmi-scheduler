@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-10-21
+
+feedback-scenario | Feedback button gains 'Scenario' type (captures open scenario id/title; additive feedback_reports.scenario_id/scenario_title); expected actions render as EMT/AEMT/Paramedic lists via LeveledActionList
+
 ## 2026-10-20
 
 home-two-clicks | My Upcoming Labs widget: lists every program lab day in next 7 days, today pinned with station list + Grade buttons (own station first); new read-only GET /api/lab-management/my-labs; no schema change
