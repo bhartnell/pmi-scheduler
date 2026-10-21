@@ -7,10 +7,11 @@ import { platoonBadge, type Platoon } from '@/lib/lvfr-platoon-style';
 import { useToast } from '@/components/Toast';
 
 /**
- * Home calendar band (TRIM 6/7a-4b, reshaped in 6/7a-5 to mock round 9):
- * top row = Today tile (slot, left) + This week tile (right); Month tile
- * centered below at 1250px. Tiles size to their content; spare width becomes
- * gap (docs/LAYOUT.md). Read-only against the master calendar's sources
+ * Home calendar band (TRIM 6/7a-4b, reshaped in 6/7a-5 and 6/7a-7 to mock
+ * round 10): row 1 = Today tile (slot, left) + This week tile (right, day
+ * columns are 1fr so they scale with the tile); row 2 = Month (3fr, left) beside
+ * the sections slot (2fr, right). The month shows one chip per lab day or
+ * cert-course day. Tiles size to their content (docs/LAYOUT.md). Read-only against the master calendar's sources
  * (/api/calendar/unified and /api/scheduling/lvfr-platoons). Each tile has its
  * own Mine / Everyone / Labs only filter, saved as `week_filter` and
  * `month_filter` in the additive `calendar_band` key of the user's dashboard
@@ -54,6 +55,8 @@ interface Props {
   canViewAs: boolean;
   /** The Today tile (left of This week on the top row). Omitted: This week takes the row. */
   todaySlot?: ReactNode;
+  /** Right of the Month tile on row 2 (the compact section tiles). Omitted: Month is centered alone. */
+  sectionsSlot?: ReactNode;
 }
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -119,6 +122,38 @@ function hrefFor(e: BandEvent): string | null {
   return e.linked_url;
 }
 
+/** "ACLS (Day 1 of 2)" -> "ACLS Day 1 of 2". */
+function courseDayTitle(title: string): string {
+  return title.replace(/\s*\(\s*(Day \d+ of \d+)\s*\)/i, ' $1');
+}
+
+const COURSE_DAY_RE = /^(ACLS|PALS|NREMT)\s*\(\s*Day \d+ of \d+\s*\)/i;
+
+/**
+ * Month roll-up: a certification course day (ACLS, PALS, NREMT) is planned as a
+ * parent block "ACLS (Day 1 of 2)" plus a pile of sub-blocks ("ACLS · Break",
+ * "ACLS LAB · Megacode Practice ..."). The month keeps the parent as the one
+ * chip for that course and day and drops the sub-blocks. Lab days and classes
+ * pass through. The week keeps the full detail.
+ */
+function rollUpCourseDays(list: BandEvent[]): BandEvent[] {
+  const parents = new Map<string, BandEvent>();
+  for (const e of list) {
+    if (e.source !== 'planner') continue;
+    const m = COURSE_DAY_RE.exec(e.title);
+    if (m) parents.set(`${e.date}|${m[1].toUpperCase()}`, e);
+  }
+  if (parents.size === 0) return list;
+  return list
+    .filter(e => {
+      if (e.source !== 'planner') return true;
+      if (COURSE_DAY_RE.test(e.title)) return true;
+      const m = /^(ACLS|PALS|NREMT)\b/i.exec(e.title);
+      return !(m && parents.has(`${e.date}|${m[1].toUpperCase()}`));
+    })
+    .map(e => (COURSE_DAY_RE.test(e.title) ? { ...e, title: courseDayTitle(e.title) } : e));
+}
+
 interface Membership {
   on: boolean;
   role_ids: string[];
@@ -171,16 +206,13 @@ function EventChip({
       title={[e.title, time, e.room, (e.instructor_names ?? []).join(', ')].filter(Boolean).join(' · ')}
     >
       <div className="font-semibold truncate" style={{ color: e.color }}>
-        {compact && e.start_time ? `${fmtTime(e.start_time)} ` : ''}
         {draft ? `${e.title} (draft)` : e.title}
       </div>
-      {!compact && (
-        <div className="text-gray-600 dark:text-gray-300 truncate">
-          {time}
-          {e.room ? ` · ${e.room}` : ''}
-        </div>
-      )}
-      {!compact && (e.instructor_names ?? []).length > 0 && (
+      <div className="text-gray-600 dark:text-gray-300 truncate">
+        {time}
+        {e.room ? ` · ${e.room}` : ''}
+      </div>
+      {(e.instructor_names ?? []).length > 0 && (
         <div className="text-gray-500 dark:text-gray-400 truncate">{(e.instructor_names ?? []).join(', ')}</div>
       )}
       {open > 0 && (
@@ -188,13 +220,58 @@ function EventChip({
           Needs {open} instructor{open === 1 ? '' : 's'}
         </div>
       )}
-      {volunteer && !compact && (
+      {volunteer && (
         <span className="mt-0.5 inline-block rounded bg-blue-600 px-1.5 py-0.5 text-[11px] font-medium text-white">
           Sign up
         </span>
       )}
     </div>
   );
+  if (compact) {
+    // Month: one line, the Sign up tag sits at the right end of the chip.
+    const tag =
+      showLabButton &&
+      (isIn ? (
+        <span className="shrink-0 text-[10px] font-medium text-gray-500 dark:text-gray-400">You&apos;re in</span>
+      ) : (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onSignUp?.(labDayId!)}
+          className="shrink-0 rounded px-1.5 py-1 text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50"
+        >
+          {busy ? '...' : 'Sign up'}
+        </button>
+      ));
+    const label = (
+      <div className="min-w-0 flex-1 font-semibold truncate" style={{ color: e.color }}>
+        {e.start_time ? `${fmtTime(e.start_time)} ` : ''}
+        {draft ? `${e.title} (draft)` : e.title}
+      </div>
+    );
+    return (
+      <div className="[--chip-surface:#ffffff] dark:[--chip-surface:#1f2937]">
+        <div
+          className={`flex items-center gap-1 rounded-md px-2 text-xs min-h-[44px] ${open > 0 ? 'border-2 border-dashed' : 'border'}`}
+          style={{
+            backgroundColor: `color-mix(in srgb, ${e.color} 14%, var(--chip-surface))`,
+            borderColor: open > 0 ? e.color : `color-mix(in srgb, ${e.color} 35%, var(--chip-surface))`,
+            borderLeft: open > 0 ? undefined : `3px solid ${e.color}`,
+          }}
+          title={[e.title, time, e.room, (e.instructor_names ?? []).join(', ')].filter(Boolean).join(' · ')}
+        >
+          {href ? (
+            <Link href={href} className="flex min-w-0 flex-1 items-center self-stretch">
+              {label}
+            </Link>
+          ) : (
+            label
+          )}
+          {tag}
+        </div>
+      </div>
+    );
+  }
   const content = href ? <Link href={href}>{body}</Link> : body;
   return (
     <div className="[--chip-surface:#ffffff] dark:[--chip-surface:#1f2937]">
@@ -238,7 +315,7 @@ function hasEnded(e: BandEvent, now: Date): boolean {
   return now.getHours() * 60 + now.getMinutes() >= h * 60 + (m || 0);
 }
 
-export default function HomeCalendarBand({ userName, defaultMine, canViewAs, todaySlot }: Props) {
+export default function HomeCalendarBand({ userName, defaultMine, canViewAs, todaySlot, sectionsSlot }: Props) {
   const [weekFilter, setWeekFilter] = useState<Filter>(defaultMine ? 'mine' : 'all');
   const [monthFilter, setMonthFilter] = useState<Filter>(defaultMine ? 'mine' : 'all');
   const [weekAnchor, setWeekAnchor] = useState<Date>(() => new Date());
@@ -430,13 +507,14 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
   const loading = loadedKey !== `${startKey}|${endKey}`;
   const personName = viewAs || userName;
   const groupByDate = useCallback(
-    (filter: Filter) => {
-      const visible =
+    (filter: Filter, rollUp = false) => {
+      const visible0 =
         filter === 'labs'
           ? events.filter(e => e.event_type === 'lab' && (!viewAs || isMine(e, personName)))
           : filter === 'mine' || viewAs
             ? events.filter(e => isMine(e, personName))
             : events;
+      const visible = rollUp ? rollUpCourseDays(visible0) : visible0;
       const m = new Map<string, BandEvent[]>();
       for (const e of visible) {
         const list = m.get(e.date) ?? [];
@@ -448,7 +526,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
     [events, viewAs, personName],
   );
   const weekByDate = useMemo(() => groupByDate(weekFilter), [groupByDate, weekFilter]);
-  const monthByDate = useMemo(() => groupByDate(monthFilter), [groupByDate, monthFilter]);
+  const monthByDate = useMemo(() => groupByDate(monthFilter, true), [groupByDate, monthFilter]);
 
   const rangeDays = (r: { start: Date; end: Date }) => {
     const out: Date[] = [];
@@ -558,8 +636,8 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
   // Events inside a day are always a column.
   const weekGrid = (
     <div
-      className="grid gap-[18px] justify-between max-md:hidden"
-      style={{ gridTemplateColumns: 'repeat(5, minmax(120px, 220px))' }}
+      className="grid gap-[18px] max-md:hidden"
+      style={{ gridTemplateColumns: 'repeat(5, minmax(0, 1fr))' }}
     >
       {weekDays.map(d => {
         const key = ymd(d);
@@ -698,18 +776,25 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
         </div>
       </div>
 
-      {/* Row 2: Month, centered, never wider than 1250px. */}
-      <div className={`${tile} w-full max-w-[1250px] mx-auto`}>
-        {panelNav(
-          'Month',
-          monthTitle,
-          filterControl(monthFilter, f => update({ month_filter: f })),
-          () => setMonthAnchor(a => new Date(a.getFullYear(), a.getMonth() - 1, 1)),
-          () => setMonthAnchor(a => new Date(a.getFullYear(), a.getMonth() + 1, 1)),
-          () => setMonthAnchor(new Date()),
-          'This month',
-        )}
-        {monthGrid}
+      {/* Row 2: Month (3fr) beside the sections (2fr). Stacks below 1200px. */}
+      <div
+        className={`grid items-start gap-[18px] max-md:gap-4 ${
+          sectionsSlot ? 'grid-cols-[minmax(0,3fr)_minmax(300px,2fr)] max-[1199px]:grid-cols-1' : 'grid-cols-1'
+        }`}
+      >
+        <div className={`${tile} ${sectionsSlot ? '' : 'w-full max-w-[1250px] mx-auto'}`}>
+          {panelNav(
+            'Month',
+            monthTitle,
+            filterControl(monthFilter, f => update({ month_filter: f })),
+            () => setMonthAnchor(a => new Date(a.getFullYear(), a.getMonth() - 1, 1)),
+            () => setMonthAnchor(a => new Date(a.getFullYear(), a.getMonth() + 1, 1)),
+            () => setMonthAnchor(new Date()),
+            'This month',
+          )}
+          {monthGrid}
+        </div>
+        {sectionsSlot}
       </div>
     </section>
   );
