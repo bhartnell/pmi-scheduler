@@ -40,13 +40,14 @@ export async function GET(request: NextRequest) {
     const { data: labDays, error } = await supabase
       .from('lab_days')
       .select(`
-        id, date, title, start_time, section_label,
+        id, date, title, start_time, section_label, num_rotations, rotation_duration,
+        priority_flag,
         cohort:cohorts(id, cohort_number, program:programs(abbreviation)),
         stations:lab_stations(
           id, station_number, custom_title, instructor_name, instructor_email,
           scenario:scenarios(id, title)
         ),
-        roles:lab_day_roles(instructor_id)
+        roles:lab_day_roles(role, instructor_id, instructor:lab_users!lab_day_roles_instructor_id_fkey(name, email))
       `)
       .eq('is_archived', false)
       .gte('date', start)
@@ -78,6 +79,13 @@ export async function GET(request: NextRequest) {
           start_time: ld.start_time,
           cohort_number: ld.cohort?.cohort_number ?? null,
           program: ld.cohort?.program?.abbreviation ?? null,
+          num_rotations: ld.num_rotations ?? null,
+          rotation_duration: ld.rotation_duration ?? null,
+          priority_flag: ld.priority_flag ?? null,
+          roles: (ld.roles || []).map((r: any) => ({
+            role: r.role,
+            name: r.instructor?.name || r.instructor?.email?.split('@')[0] || null,
+          })),
           stations,
           include: inProgram || hasRole || stations.some(s => s.is_mine),
         };
@@ -85,7 +93,28 @@ export async function GET(request: NextRequest) {
       .filter(d => d.include)
       .map(({ include: _include, ...d }) => d);
 
-    return NextResponse.json({ success: true, today: start, labDays: days });
+    // Confirmed part-timer/volunteer signups, matched to lab days by date
+    // (same open_shifts -> shift_signups join the lab days list uses).
+    const dates = [...new Set(days.map(d => d.date))];
+    const signupsByDate: Record<string, string[]> = {};
+    if (dates.length > 0) {
+      const { data: shifts } = await supabase
+        .from('open_shifts')
+        .select('date, signups:shift_signups(status, instructor:instructor_id(name, email))')
+        .in('date', dates)
+        .eq('is_cancelled', false);
+      (shifts || []).forEach((sh: any) => {
+        (sh.signups || []).forEach((su: any) => {
+          if (su.status !== 'confirmed') return;
+          const name = su.instructor?.name || su.instructor?.email?.split('@')[0];
+          if (!name) return;
+          (signupsByDate[sh.date] ||= []).push(name);
+        });
+      });
+    }
+    const withSignups = days.map(d => ({ ...d, signups: signupsByDate[d.date] || [] }));
+
+    return NextResponse.json({ success: true, today: start, labDays: withSignups });
   } catch (error) {
     console.error('Error fetching my labs:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch labs' }, { status: 500 });
