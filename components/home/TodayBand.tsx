@@ -52,7 +52,7 @@ export default function TodayBand() {
 
   useEffect(() => {
     const today = localDateString(new Date());
-    fetch(`/api/lab-management/my-labs?today=${today}`)
+    fetch(`/api/lab-management/my-labs?today=${today}&scope=all`)
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
         const all: LabDay[] = data?.labDays || [];

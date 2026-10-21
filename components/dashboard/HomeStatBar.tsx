@@ -175,7 +175,7 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
   };
 
   return (
-    <div className="mb-6 max-w-screen-2xl mx-auto flex items-stretch gap-3 max-md:flex-col">
+    <div className="mb-6 flex items-stretch gap-3 max-md:flex-col">
       {canLogSiteVisit && (
         <Link
           href="/clinical/site-visits"
