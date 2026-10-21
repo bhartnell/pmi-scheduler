@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ## 2026-10-21
 
 lab-day-whos-coming | Lab day page: one "Who's coming (n)" block (roles, station assignments, confirmed signups, volunteers, Other) with Add instructor dropdown + Other free text, replaces Lab Leads & Roamers card, calendar spinner and empty Volunteers row; Available Today / Skill Coverage collapsed by default; migration 20261021 adds lab_day_roles.other_name + role 'attending'
+trim-6-7b-1b | Removed per-page brand/user/notification header rows (Scheduling module, Settings, Tasks, Skill Sheets, Skill Drills, LabHeader) now that the app-wide top bar carries them; page title rows and breadcrumbs kept for 6/7b-1c
 osce-standby | OSCE soft cap: signups past a block's planned spots are accepted as standby (new osce_observer_blocks.capacity_status), standby wording in the confirmation email, admin Block capacity strip with manual Promote and a Second room possible indicator (card 3ea5cd1c)
 trim-6-7b-1a | App-wide top bar + one sub-navigation/breadcrumb line moved into the root layout (AppChrome); hidden on sign-in, public, student and timer-display pages; Home page no longer renders its own copy
 

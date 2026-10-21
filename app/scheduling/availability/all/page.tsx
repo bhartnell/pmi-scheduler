@@ -27,8 +27,6 @@ import {
   Send,
   RefreshCw,
 } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import NotificationBell from '@/components/NotificationBell';
 import { useToast } from '@/components/Toast';
 import { formatTime, type InstructorAvailability, type CurrentUser } from '@/types';
 
@@ -1568,22 +1566,6 @@ export default function AllAvailabilityPage() {
       {/* ---- Header ---- */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          {/* Top bar */}
-          <div className="flex items-center justify-between">
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-blue-900 dark:text-blue-400 hover:text-blue-700"
-            >
-              <div className="w-10 h-10 bg-blue-900 dark:bg-blue-700 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">PMI</span>
-              </div>
-            </Link>
-            <div className="flex items-center gap-4">
-              <NotificationBell />
-              <ThemeToggle />
-            </div>
-          </div>
-
           {/* Breadcrumbs */}
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4 mb-2">
             <Link
