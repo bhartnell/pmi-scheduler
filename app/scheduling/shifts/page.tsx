@@ -25,8 +25,6 @@ import {
   CalendarPlus,
   Download
 } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import NotificationBell from '@/components/NotificationBell';
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 import EmptyState from '@/components/EmptyState';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -651,20 +649,6 @@ function ShiftsPageContent() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center gap-2 text-blue-900 dark:text-blue-400 hover:text-blue-700">
-                <div className="w-10 h-10 bg-blue-900 dark:bg-blue-700 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">PMI</span>
-                </div>
-              </Link>
-            </div>
-            <div className="flex items-center gap-4">
-              <NotificationBell />
-              <ThemeToggle />
-            </div>
-          </div>
-
           <Breadcrumbs className="mt-4 mb-2" />
 
           {/* Title and Actions */}

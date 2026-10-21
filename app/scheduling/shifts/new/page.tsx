@@ -19,8 +19,6 @@ import {
   UserCheck,
   AlertCircle
 } from 'lucide-react';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import NotificationBell from '@/components/NotificationBell';
 import HelpTooltip from '@/components/HelpTooltip';
 import LabCalendarPanel from '@/components/LabCalendarPanel';
 import FormField from '@/components/FormField';
@@ -526,20 +524,6 @@ function CreateShiftPageInner() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="flex items-center gap-2 text-blue-900 dark:text-blue-400 hover:text-blue-700">
-                <div className="w-10 h-10 bg-blue-900 dark:bg-blue-700 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">PMI</span>
-                </div>
-              </Link>
-            </div>
-            <div className="flex items-center gap-4">
-              <NotificationBell />
-              <ThemeToggle />
-            </div>
-          </div>
-
           {/* Breadcrumbs */}
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4 mb-2">
             <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
