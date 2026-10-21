@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+osce-standby | OSCE soft cap: signups past a block's planned spots are accepted as standby (new osce_observer_blocks.capacity_status), standby wording in the confirmation email, admin Block capacity strip with manual Promote and a Second room possible indicator (card 3ea5cd1c)
 trim-6-7a-4b | Home calendar band: week and month always shown together (toggle removed), independent week/month nav, month-day click moves the week, side-by-side 3:2 above 1300px, platoon day tint removed (A/B/C badge kept)
 
 trim-6-7a-3b | Today band lists every program's lab days for admin+/lead (my-labs ?scope=all, additive); home width caps removed from stat bar, tiles and dashboard rows; Reset re-fetches preferences with cache: no-store so the 5-min private cache no longer re-serves the old saved layout

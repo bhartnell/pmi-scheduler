@@ -119,6 +119,22 @@ export async function PUT(
       }
     }
 
+    // Promote one standby block signup to confirmed. Manual only, sends nothing outward.
+    if (typeof body.promote_block_id === 'string') {
+      const { data: promoted, error: promoteError } = await supabase
+        .from('osce_observer_blocks')
+        .update({ capacity_status: 'confirmed' })
+        .eq('observer_id', observerId)
+        .eq('block_id', body.promote_block_id)
+        .select('id');
+      if (promoteError || !promoted || promoted.length === 0) {
+        return NextResponse.json(
+          { success: false, error: 'Could not promote this signup from standby' },
+          { status: 500 }
+        );
+      }
+    }
+
     // Update block assignments if provided
     if (body.block_ids !== undefined && Array.isArray(body.block_ids)) {
       // Get current assignments
