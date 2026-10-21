@@ -41,7 +41,7 @@ import { parseDateSafe } from '@/lib/utils';
 // uses the summative-eval workflow. API routes (/api/clinical/internships/
 // [id]/summative-evaluations) stay in place so historical rows remain
 // queryable; only the UI is gone.
-import Breadcrumbs from '@/components/Breadcrumbs';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 import PreceptorsSection from '@/components/clinical/PreceptorsSection';
 import CloseoutSection from '@/components/clinical/CloseoutSection';
 import CollapsibleCard from '@/components/clinical/CollapsibleCard';
@@ -1193,9 +1193,8 @@ export default function InternshipDetailPage() {
             stretches to match the main content area below. Generous
             horizontal padding instead of mx-auto centering. */}
         <div className="w-full px-6 py-6">
-          <Breadcrumbs
+          <BreadcrumbNames
             entityTitle={student ? `${student.first_name} ${student.last_name}` : 'Detail'}
-            className="mb-2"
           />
 
           <div className="flex items-center justify-between">

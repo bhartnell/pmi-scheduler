@@ -36,7 +36,7 @@ import {
 } from 'lucide-react';
 import { SKIN_OPTIONS } from '@/lib/constants';
 import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
-import Breadcrumbs from '@/components/Breadcrumbs';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 import { buildSingleExport, downloadJson, sanitizeFilename } from '@/lib/scenario-export';
 
 // Helper to safely convert DB values to arrays (handles string, array, null)
@@ -1595,9 +1595,8 @@ export default function ScenarioEditorPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10 print:hidden">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <Breadcrumbs
+          <BreadcrumbNames
             entityTitle={isEditing ? (scenario.title || 'Edit Scenario') : 'New'}
-            className="mb-2"
           />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

@@ -22,7 +22,6 @@ import {
   AlertCircle,
   CheckCircle,
 } from 'lucide-react';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import DockPortal from '@/components/DockPortal';
 
 interface TemplateData {
@@ -240,7 +239,6 @@ export default function LabDayTemplatesPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">

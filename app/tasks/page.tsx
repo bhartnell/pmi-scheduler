@@ -34,7 +34,6 @@ import { PageLoader, SkeletonCard } from '@/components/ui';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   InstructorTask,
   TaskPriority,
@@ -516,7 +515,6 @@ function TasksPageContent() {
       <header className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
           {/* Breadcrumbs */}
-          <Breadcrumbs className="mt-4 mb-2" />
 
           {/* Title and New Task button */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import ExportDropdown from '@/components/ExportDropdown';
 import type { ExportConfig } from '@/lib/export-utils';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Student {
   id: string;
@@ -202,7 +201,6 @@ function StudentsPageContent() {
       {/* Header */}
       <div className="bg-white shadow-sm dark:bg-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-6">
-          <Breadcrumbs className="mb-1" />
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Student Roster</h1>
             <div className="flex gap-2">

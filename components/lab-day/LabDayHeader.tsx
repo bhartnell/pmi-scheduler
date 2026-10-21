@@ -20,7 +20,7 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import InlineTimerWidget from '@/components/InlineTimerWidget';
-import Breadcrumbs from '@/components/Breadcrumbs';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 import type { LabDay } from './types';
 
 interface LabDayHeaderProps {
@@ -75,9 +75,8 @@ export default function LabDayHeader({
   return (
     <div className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
       <div className="w-full px-4 md:px-6 2xl:px-8 py-6">
-        <Breadcrumbs
+        <BreadcrumbNames
           entityTitle={labDay.title || `${labDay.cohort.program.abbreviation} Group ${formatCohortNumber(labDay.cohort.cohort_number)}`}
-          className="mb-3"
         />
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="min-w-0 lg:basis-2/5 lg:grow">

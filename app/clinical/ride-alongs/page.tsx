@@ -14,7 +14,6 @@ import {
   Loader2,
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Stats {
   totalShifts: number;
@@ -114,7 +113,6 @@ export default function RideAlongsHubPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-6">
-          <Breadcrumbs className="mb-2" />
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
               <Ambulance className="w-6 h-6 text-purple-600 dark:text-purple-400" />

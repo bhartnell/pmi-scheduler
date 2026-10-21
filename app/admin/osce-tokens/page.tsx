@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Token {
   id: string;
@@ -343,7 +342,6 @@ export default function OsceTokenManagement() {
 
   return (
     <div className="p-6 max-w-screen-2xl mx-auto space-y-6">
-      <Breadcrumbs className="mb-2" />
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">OSCE Guest Tokens &amp; Invites</h1>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">

@@ -16,7 +16,6 @@
 import { useEffect, useState, use } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Printer, ListChecks, Wrench, Settings, FileText, Clock, Users, AlertTriangle } from 'lucide-react';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface SetupBlock {
   label: string;
@@ -103,7 +102,6 @@ export default function SkillDrillReferencePage({ params }: { params: Promise<{ 
     <div className="max-w-4xl mx-auto p-6 space-y-6 print:p-0 print:max-w-none">
       {/* Top chrome — hidden on print */}
       <div className="print:hidden">
-        <Breadcrumbs />
         <div className="flex items-center justify-between mt-3">
           <Link href="/labs" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">
             <ArrowLeft className="w-4 h-4" /> Labs
