@@ -200,6 +200,13 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
           color: 'bg-indigo-500',
         },
         {
+          href: '/admin/program-rosters',
+          icon: Users,
+          title: 'Default Rosters',
+          description: 'Choose which instructors are pre-assigned to each program’s labs',
+          color: 'bg-teal-600',
+        },
+        {
           href: '/admin/aha-courses',
           icon: GraduationCap,
           title: 'AHA Course Generator',
