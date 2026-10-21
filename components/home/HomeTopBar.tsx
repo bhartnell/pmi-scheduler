@@ -32,7 +32,7 @@ export default function HomeTopBar({ role }: HomeTopBarProps) {
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
-      <div className="max-w-screen-2xl mx-auto px-4 py-3 pr-20 flex items-center gap-4">
+      <div className="w-full max-w-[3000px] mx-auto pl-[clamp(16px,2.75vw,96px)] pr-[calc(clamp(16px,2.75vw,96px)+3rem)] py-3 flex items-center gap-4">
         <Link href="/" className="flex items-center gap-3 shrink-0" aria-label="PMI Paramedic Tools home">
           <span className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center" aria-hidden="true">
             <Stethoscope className="w-5 h-5 text-white" />

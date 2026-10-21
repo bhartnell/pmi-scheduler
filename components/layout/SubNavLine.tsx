@@ -72,7 +72,7 @@ export default function SubNavLine({ pathname }: { pathname: string }) {
     <div className="border-t border-gray-100 dark:border-gray-700">
       <nav
         aria-label="Breadcrumb"
-        className="max-w-screen-2xl mx-auto px-4 h-10 flex items-center text-sm text-gray-500 dark:text-gray-400 overflow-x-auto whitespace-nowrap"
+        className="w-full max-w-[3000px] mx-auto px-[clamp(16px,2.75vw,96px)] h-10 flex items-center text-sm text-gray-500 dark:text-gray-400 overflow-x-auto whitespace-nowrap"
       >
         {content}
       </nav>
