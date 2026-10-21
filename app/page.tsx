@@ -37,6 +37,7 @@ import CustomizeModal from '@/components/dashboard/CustomizeModal';
 import DraggableWidgetGrid from '@/components/dashboard/DraggableWidgetGrid';
 import HomeStatBar from '@/components/dashboard/HomeStatBar';
 import HomeCalendarBand from '@/components/home/HomeCalendarBand';
+import TodayBand from '@/components/home/TodayBand';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import {
@@ -486,12 +487,8 @@ export default function HomePage() {
       <HomeTopBar role={effectiveRole} />
 
       {/* Main Content */}
-      <main id="main-content" className="max-w-screen-2xl mx-auto px-4 py-12">
+      <main id="main-content" className="px-4 py-6">
         <PageErrorBoundary>
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Welcome, {session.user?.name?.split(' ')[0] || 'User'}!</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-2">What would you like to do today?</p>
-        </div>
 
         {/* System Announcements */}
         <ErrorBoundary>
@@ -512,6 +509,13 @@ export default function HomePage() {
               isAdmin={hasMinRole(effectiveRole, 'admin')}
               canLogSiteVisit={canAccessClinical(effectiveRole)}
             />
+          </ErrorBoundary>
+        )}
+
+        {/* Today band (TRIM 6/7a-3): today's labs, station tiles, Grade buttons */}
+        {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
+          <ErrorBoundary>
+            <TodayBand />
           </ErrorBoundary>
         )}
 

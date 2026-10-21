@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+trim-6-7a-3 | Home Today band (TodayBand: today's labs strip, station tiles with Grade, dashed 'Needs an instructor', Who's coming / Still open / Ask for help); my-labs API gains rotations, roles, signups (additive); home drops Welcome header and width cap
 trim-6-7a-4 | Home calendar band (HomeCalendarBand: Mon-Fri week + month, Stacked/Side by side, platoon badge, needs-instructors dashed outline + Sign up, Everyone / Mine + open spots, admin View-as, phone agenda); unified calendar lab events gain metadata.open_station_count; lean defaults drop Notifications, My Upcoming Labs, Recent Feedback
 trim-6-7a-2 | Home stat bar (merged Quick Stats + Overview, Pick stats saved as additive `stat_bar_stats` in dashboard layout), large Log Site Visit button, new GET /api/dashboard/next-cert-day, layout PUT now merges keys, lean role-default widgets (optional row off by default)
 overview-all-cols | Fix /api/clinical/overview-all 42703: select real EMT/AEMT tracking columns (ridealong_scanned, vitals_tracker_date, vax_uploaded) and normalize to the *_complete flags the route uses
