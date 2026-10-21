@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+poll-unify | Poll create unified on the full builder: internship checklist 'Schedule Phase 1/2 Eval' buttons now open /poll/create with student + purpose pre-fill; /scheduling/polls/create (reduced form) removed and redirected, legacy /scheduler/create and /admin/create redirects repointed (card 3d45cd1c)
 osce-standby | OSCE soft cap: signups past a block's planned spots are accepted as standby (new osce_observer_blocks.capacity_status), standby wording in the confirmation email, admin Block capacity strip with manual Promote and a Second room possible indicator (card 3ea5cd1c)
 trim-6-7b-1a | App-wide top bar + one sub-navigation/breadcrumb line moved into the root layout (AppChrome); hidden on sign-in, public, student and timer-display pages; Home page no longer renders its own copy
 

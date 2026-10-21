@@ -1947,10 +1947,12 @@ export default function InternshipDetailPage() {
                       <ChecklistRow key={item.key} item={item} section="phase1" />
                     ))}
 
-                    {/* Schedule Phase 1 Eval link → /scheduling/polls/create. */}
+                    {/* Schedule Phase 1 Eval link → full poll builder (/poll/create). */}
                     {!formData.phase_1_eval_completed && canEdit && (
                       <a
-                        href="/scheduling/polls/create"
+                        href={`/poll/create?internship_id=${encodeURIComponent(internshipId)}` +
+                          `&student_name=${encodeURIComponent(student ? `${student.first_name} ${student.last_name}`.trim() : 'Student')}` +
+                          `&purpose=phase1_eval`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block w-full text-center py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
@@ -2021,7 +2023,9 @@ export default function InternshipDetailPage() {
                     {/* Schedule Phase 2 Eval link */}
                     {!formData.phase_2_eval_completed && canEdit && (
                       <a
-                        href="/scheduling/polls/create"
+                        href={`/poll/create?internship_id=${encodeURIComponent(internshipId)}` +
+                          `&student_name=${encodeURIComponent(student ? `${student.first_name} ${student.last_name}`.trim() : 'Student')}` +
+                          `&purpose=phase2_eval`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block w-full text-center py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white rounded-lg"
@@ -2986,8 +2990,7 @@ function MeetingRow({
   const resolvedLink = link || (legacyPollId ? `https://rallly.co/p/${legacyPollId}` : '');
 
   // Full poll builder (/poll/create) — handles real time-slot
-  // selection, unlike the simplified date-range form at
-  // /scheduling/polls/create. Context params pre-fill the title and
+  // selection. Context params pre-fill the title and
   // give /poll/create a "Back to Internship" target. Same-tab nav so
   // the post-create redirect lands the coordinator on the new poll's
   // detail page (where the shareable link is).

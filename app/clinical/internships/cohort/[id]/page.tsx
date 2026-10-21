@@ -209,7 +209,7 @@ const NEXT_STEP_CLASSES: Record<NextStepTone, string> = {
  * unmet gate gives users a direct "what do I do now?" answer in the table.
  *
  * For meeting links: there's no internal scheduler route yet beyond
- * /scheduling/polls/create. We link those action items to the student's
+ * the /poll/create builder. We link those action items to the student's
  * internship file where the MeetingRow UI (added in Part 2.4) provides
  * the Create Meeting button + paste-link flow.
  *
