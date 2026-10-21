@@ -38,6 +38,7 @@ export type AuditResourceType =
   | 'learning_style'
   | 'cohort'
   | 'lab_day'
+  | 'program_default_instructors'
   | 'scenario'
   | 'user'
   | 'guest_access'

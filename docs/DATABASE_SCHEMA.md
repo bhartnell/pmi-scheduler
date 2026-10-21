@@ -406,6 +406,22 @@
 **RLS Policies:**
 - `Allow all for programs` (ALL, permissive, roles: {public})
 
+#### `program_default_instructors`
+
+Default (pre-assigned) instructor roster per program, admin-editable at `/admin/program-rosters`. Migration `20261021_program_default_instructors.sql`. Not yet read by the calendar sync / Who's coming (wiring pending, see Task Handoff card TRIM 6/7a-8b).
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| program_id | uuid | NO |  | -> `programs.id` ON DELETE CASCADE |
+| user_id | uuid | NO |  | -> `lab_users.id` ON DELETE CASCADE |
+| added_by | text | YES |  | Email of the admin, or `migration` |
+| source | text | YES |  | `seed:trim-6-7a-8b-2026-10-21` or `admin-ui` |
+| created_at | timestamptz | NO | now() |  |
+
+**Unique:** `(program_id, user_id)`. **RLS:** enabled, `program_default_instructors_service_role` (ALL, service_role).
+Seeded 2026-10-21 from Ben's lists: Paramedic = Ben, Josh, Schafer, Rae, Ryan; EMT = Stacie, Josh, Schafer (8 rows).
+
 #### `cohorts`
 
 | Column | Type | Nullable | Default | Notes |
