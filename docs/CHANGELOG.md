@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ## 2026-10-21
 
 trim-6-7a-9 | Top bar, sub-nav and avatar use the page clamp gutter (3000px ceiling); View as computes Sign up / You're in for the chosen person (read-only, buttons disabled); Remove beside You're in in month + week; Sign up is a filled tag; stat bar: total first, open spots/feedback dropped, semester mini columns, Needs attention off by default with tooltip; Operations Hub row back under the Sections column; Today tile density (card 4005cd1c...c96894b10319)
+cohorts-graduate | 'Graduate cohort' (POST/GET /api/lab-management/cohorts/[id]/graduate, admin+): cohort graduated + end_date, remaining active students graduated with that date, history rows; home stat bar, Quick Stats and by-program counts now exclude graduated/inactive cohorts. Reuses existing 'graduated' status (no schema change). Card 4005cd1c...a98
 trim-6-7a-8 (items 4+5) | Compact section tiles get their one-line description back (12px dim); PMI Operations Hub moves out of the Sections column into a full-width OperationsHubRow under Month + Sections (card 4005cd1c...a98; Sign up eligibility, default roster, Remove me split to child cards)
 
 trim-6-7a-7 | Home round 10: week day columns 1fr (scale with tile), Month (3fr) beside compact 3x3 section tiles (2fr) with Ops Hub links, month rolls ACLS/PALS/NREMT course days up to one 'Course Day n of m' chip, month Sign up is an inline tag on the chip (card 4005cd1c...fe21)

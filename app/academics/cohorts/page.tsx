@@ -312,21 +312,58 @@ export default function CohortManagementPage() {
   // "put away" step.
   const handleToggleGraduated = async (cohort: Cohort) => {
     const graduating = cohort.status !== 'graduated';
-    const action = graduating ? 'mark as graduated' : 'un-graduate (return to active)';
-    if (!confirm(`Are you sure you want to ${action} ${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)}?`)) {
-      return;
-    }
+    const label = `${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)}`;
 
     try {
+      if (graduating) {
+        // "Graduate cohort": marks the cohort graduated AND every student still
+        // active in it (students who already finished keep their own dates).
+        const prev = await fetch(`/api/lab-management/cohorts/${cohort.id}/graduate`);
+        const prevData = await prev.json();
+        if (!prevData.success) {
+          alert('Failed to load students: ' + (prevData.error || 'unknown error'));
+          return;
+        }
+        const remaining: { first_name: string; last_name: string }[] = prevData.students || [];
+        const names = remaining.map(s => `${s.first_name} ${s.last_name}`).join(', ');
+        const endDate = prompt(
+          `Graduate ${label}?\n\n` +
+            (remaining.length
+              ? `${remaining.length} active student${remaining.length === 1 ? '' : 's'} will be marked graduated:\n${names}\n\n`
+              : 'No active students remain in this group.\n\n') +
+            'Graduation date (YYYY-MM-DD):',
+          new Date().toISOString().slice(0, 10)
+        );
+        if (endDate === null) return;
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate.trim())) {
+          alert('Enter the date as YYYY-MM-DD.');
+          return;
+        }
+        const res = await fetch(`/api/lab-management/cohorts/${cohort.id}/graduate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ end_date: endDate.trim() }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setCohorts(cohorts.map(c => c.id === cohort.id ? { ...c, status: 'graduated' } : c));
+        } else {
+          alert('Failed to graduate: ' + data.error);
+        }
+        return;
+      }
+
+      // Un-graduate returns the cohort only; students are re-activated one at a
+      // time from their own page (Re-enroll) so nobody is flipped by guesswork.
+      if (!confirm(`Un-graduate (return to active) ${label}? Students stay as they are.`)) return;
       const res = await fetch(`/api/lab-management/cohorts/${cohort.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: graduating ? 'graduated' : 'active' }),
+        body: JSON.stringify({ status: 'active' }),
       });
-
       const data = await res.json();
       if (data.success) {
-        setCohorts(cohorts.map(c => c.id === cohort.id ? { ...c, status: graduating ? 'graduated' : 'active' } : c));
+        setCohorts(cohorts.map(c => c.id === cohort.id ? { ...c, status: 'active' } : c));
       } else {
         alert('Failed to update: ' + data.error);
       }

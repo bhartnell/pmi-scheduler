@@ -119,9 +119,8 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
       weekEnd.setDate(weekStart.getDate() + 6);
       const today = localDateString(now);
 
-      const [layout, students, labs, stations, feedback, cert, counts] = await Promise.all([
+      const [layout, labs, stations, feedback, cert, counts] = await Promise.all([
         getJson('/api/dashboard/layout'),
-        getJson('/api/lab-management/students?status=active'),
         getJson(`/api/lab-management/lab-days?startDate=${localDateString(weekStart)}&endDate=${localDateString(weekEnd)}`),
         getJson('/api/lab-management/stations?open=true&upcoming=true'),
         isAdmin ? getJson('/api/feedback?status=new&limit=1') : Promise.resolve(null),
@@ -165,7 +164,9 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
 
       setValues({
         labs_this_week: labs ? (labs.pagination?.total ?? labs.labDays?.length ?? 0) : null,
-        active_students: students ? (students.pagination?.total ?? students.students?.length ?? 0) : null,
+        // Same source as the by-program tiles so the two always agree and
+        // graduated / inactive cohorts are left out.
+        active_students: counts?.success ? (counts.total as number) : null,
         open_spots: openSpots,
         needs_attention: needsAttention,
         open_feedback: openFeedback,
