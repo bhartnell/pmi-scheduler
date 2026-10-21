@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+trim-6-7a-1 | Home: top bar with the nine sections + breadcrumb line (components/home/HomeTopBar), bottom band of nine section tiles + Operations Hub row (components/home/SectionTiles, sections.ts); Preview moved from the floating dock into the avatar menu (UserMenu, RolePreviewSelector inMenu)
 overview-all-cols | Fix /api/clinical/overview-all 42703: select real EMT/AEMT tracking columns (ridealong_scanned, vitals_tracker_date, vax_uploaded) and normalize to the *_complete flags the route uses
 
 trim-7-a2 | TRIM 7/7 Part A2: working pages (station grader, PALS grader, ACLS coordinator, lab day, lab coordinator, lab schedule, clinical tracker, internship cohort, planner templates, master calendar, lab day header, adv-cert attempt) drop max-w cap, w-full with standard padding; LAYOUT.md rule added

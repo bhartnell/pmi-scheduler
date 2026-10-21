@@ -450,7 +450,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 |-----------|------|-------|-------------|
 | `NotificationBell` | `components/NotificationBell.tsx` | _(none)_ | Notification bell icon with unread count badge and dropdown list. |
 | `Toast` / `ToastProvider` | `components/Toast.tsx` | _(provider: `{ children }`)_ | Toast notification system. Exports `useToast` hook and `ToastProvider` context provider. |
-| `FloatingDock` | `components/FloatingDock.tsx` | `children` | Sole owner of the persistent bottom-right overlay corner (Quick Actions FAB, Role Preview, Feedback stack in flow). Exposes a page slot (`#floating-dock-page-slot`, `DOCK_PAGE_SLOT_ID`) that pages may fill via portal (filled via `DockPortal`; used by page toasts and the student case "View Vitals" button). Add new persistent floating controls as children here, never with their own `fixed bottom-*/right-*`. |
+| `FloatingDock` | `components/FloatingDock.tsx` | `children` | Sole owner of the persistent bottom-right overlay corner (Quick Actions FAB, Feedback stack in flow; Role Preview now lives in the avatar menu). Exposes a page slot (`#floating-dock-page-slot`, `DOCK_PAGE_SLOT_ID`) that pages may fill via portal (filled via `DockPortal`; used by page toasts and the student case "View Vitals" button). Add new persistent floating controls as children here, never with their own `fixed bottom-*/right-*`. |
 | `DockPortal` | `components/DockPortal.tsx` | `children` | Portals children into FloatingDock's page slot so toasts / persistent page buttons stack beside the dock instead of overlapping it. Use instead of `fixed bottom-* right-*`. (2026-10-06) |
 | `FeedbackButton` | `components/FeedbackButton.tsx` | _(none)_ | Floating feedback button with modal form for bugs, feature requests, scenario content, and general feedback (a Scenario report captures the scenario open on screen via `lib/feedback-context.ts`). |
 
@@ -475,7 +475,9 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 |-----------|------|-------|-------------|
 | `RolePreviewProvider` | `components/RolePreviewProvider.tsx` | `{ children }` | Context provider for role preview mode. Exports `useRolePreview` hook. |
 | `RolePreviewBanner` | `components/RolePreviewBanner.tsx` | _(none)_ | Warning banner shown when the user is in role preview mode. |
-| `RolePreviewSelector` | `components/RolePreviewSelector.tsx` | _(none)_ | Role dropdown selector for entering/exiting role preview. |
+| `RolePreviewSelector` | `components/RolePreviewSelector.tsx` | _(none)_ | Role picker for entering/exiting role preview. `inMenu` renders it as a collapsible block inside the avatar menu (UserMenu); admin+ only. |
+| `HomeTopBar` | `components/home/HomeTopBar.tsx` | `role` | Home top bar: brand, the nine sections (role-gated via `components/home/sections.ts`), search/bell/help/theme, breadcrumb line. Avatar is the global UserMenu. (2026-10-21) |
+| `SectionTiles` | `components/home/SectionTiles.tsx` | `role`, `showOpsHub` | Home bottom band: nine section tiles with chips + PMI Operations Hub row. Section config in `components/home/sections.ts`. (2026-10-21) |
 
 ### Security
 

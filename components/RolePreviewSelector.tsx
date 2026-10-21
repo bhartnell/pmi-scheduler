@@ -17,7 +17,12 @@ const PREVIEWABLE_ROLES: Role[] = [
   'guest',
 ];
 
-export default function RolePreviewSelector() {
+/**
+ * `inMenu` renders the same picker as a collapsible block inside the avatar
+ * menu (UserMenu) instead of a floating button; behaviour and role gating are
+ * identical.
+ */
+export default function RolePreviewSelector({ inMenu = false }: { inMenu?: boolean } = {}) {
   const { data: session } = useSession();
   const { startPreview, isPreviewMode, previewRole, exitPreview } = useRolePreview();
   const [realRole, setRealRole] = useState<string | null>(null);
@@ -48,6 +53,62 @@ export default function RolePreviewSelector() {
   }, [isOpen]);
 
   if (!realRole || !canAccessAdmin(realRole)) return null;
+
+  if (inMenu) {
+    return (
+      <div ref={ref} className="border-t border-gray-100 dark:border-gray-700 py-1" data-testid="preview-as-role">
+        <button
+          type="button"
+          role="menuitem"
+          aria-expanded={isOpen}
+          onClick={() => setIsOpen(prev => !prev)}
+          className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+            isPreviewMode ? 'text-orange-700 dark:text-orange-300 font-medium' : 'text-gray-700 dark:text-gray-200'
+          }`}
+        >
+          <Eye className="w-4 h-4" />
+          <span className="flex-1 text-left">{isPreviewMode ? `Previewing: ${getRoleLabel(previewRole!)}` : 'Preview as role'}</span>
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {isOpen && (
+          <div className="pb-1">
+            {PREVIEWABLE_ROLES.map(role => (
+              <button
+                key={role}
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  startPreview(role);
+                  setIsOpen(false);
+                }}
+                className={`w-full text-left pl-9 pr-3 py-2 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+                  previewRole === role
+                    ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 font-medium'
+                    : 'text-gray-700 dark:text-gray-300'
+                }`}
+              >
+                {getRoleLabel(role)}
+                {previewRole === role && <Check className="w-4 h-4" />}
+              </button>
+            ))}
+            {isPreviewMode && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  exitPreview();
+                  setIsOpen(false);
+                }}
+                className="w-full text-left pl-9 pr-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium"
+              >
+                Exit Preview
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div ref={ref} className="relative print:hidden">

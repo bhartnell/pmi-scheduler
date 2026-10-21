@@ -5,13 +5,13 @@ import type { ReactNode } from 'react';
 /**
  * FloatingDock - the ONE owner of the persistent bottom-right overlay corner.
  *
- * Feedback, Role Preview, and the Quick Actions FAB used to each position
+ * Feedback and the Quick Actions FAB used to each position
  * themselves with their own `fixed` offsets, so they collided (Preview sat on
  * top of Feedback) and per-page fixes never held. Now they are children of this
  * dock and stack in normal flow: no two widgets can occupy the same spot.
  *
  * Slots (top to bottom): page slot (#floating-dock-page-slot, filled via portal by
- * pages that need a persistent control, e.g. the CCF timer), Quick Actions FAB, Role Preview, Feedback.
+ * pages that need a persistent control, e.g. the CCF timer), Quick Actions FAB, Feedback (Role Preview moved into the avatar menu, UserMenu).
  * Do NOT add a new persistent floating control with its own `fixed bottom-* right-*`;
  * render it as a child here instead.
  *
