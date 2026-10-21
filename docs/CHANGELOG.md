@@ -10,7 +10,10 @@ Format: `commit-hash | brief description`
 ## 2026-10-21
 
 trim-6-7a-4c | Home calendar: Week and Month as two separate cards with own nav; Who's coming resolver (lib/lab-day-attendees.ts) includes station instructors + co-instructors, de-duplicated; 3000px ceiling on home and Part A2 pages (docs/LAYOUT.md)
+osce-standby | OSCE soft cap: signups past a block's planned spots are accepted as standby (new osce_observer_blocks.capacity_status), standby wording in the confirmation email, admin Block capacity strip with manual Promote and a Second room possible indicator (card 3ea5cd1c)
 trim-6-7b-1a | App-wide top bar + one sub-navigation/breadcrumb line moved into the root layout (AppChrome); hidden on sign-in, public, student and timer-display pages; Home page no longer renders its own copy
+
+trim-6-7a-2b | Stat bar: defaults are labs this week / students by program / needs attention / next high-priority lab; open spots + open feedback kept under Pick stats; new read-only GET /api/dashboard/student-counts (active students by program and cohorts.current_semester); next-cert-day also matches priority_flag high/critical; tiles link to the thing counted, none to the calendar
 trim-6-7a-4b | Home calendar band: week and month always shown together (toggle removed), independent week/month nav, month-day click moves the week, side-by-side 3:2 above 1300px, platoon day tint removed (A/B/C badge kept)
 
 trim-6-7a-3b | Today band lists every program's lab days for admin+/lead (my-labs ?scope=all, additive); home width caps removed from stat bar, tiles and dashboard rows; Reset re-fetches preferences with cache: no-store so the 5-min private cache no longer re-serves the old saved layout

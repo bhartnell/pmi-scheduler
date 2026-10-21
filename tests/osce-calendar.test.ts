@@ -125,3 +125,14 @@ test('confirmation lists blocks in date order, escapes names, links the event pa
   assert.match(c.message, /08:30 - 12:00/);
   assert.doesNotMatch(c.subject + c.message, /[^\x20-\x7E]/);
 });
+
+test('standby blocks are marked and the email says received, not confirmed', () => {
+  const c = buildOsceConfirmation({
+    name: 'B Lee', eventLabel: 'Fall 2026 OSCE', slug: 'fall-2026', baseUrl: 'https://www.pmiparamedic.tools',
+    blocks: [{ ...am, standby: true }, pm],
+  });
+  assert.match(c.message, /Day 1 Morning: .*\(standby\)/);
+  assert.doesNotMatch(c.message, /Day 1 Afternoon: .*\(standby\)/);
+  assert.match(c.subject, /received/);
+  assert.doesNotMatch(c.subject + c.message, /[^\x20-\x7E]/);
+});

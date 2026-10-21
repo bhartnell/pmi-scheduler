@@ -12,7 +12,7 @@ import { buildOsceConfirmation } from '@/lib/osce-confirmation-text';
 /** Send the confirmation for a just-created signup. Never throws. */
 export async function sendOsceSignupConfirmation(
   supabase: SupabaseClient,
-  opts: { observerId: string; blockIds: string[]; baseUrl: string },
+  opts: { observerId: string; blockIds: string[]; baseUrl: string; standbyBlockIds?: string[] },
 ): Promise<void> {
   try {
     const { data: obs } = await supabase
@@ -25,12 +25,12 @@ export async function sendOsceSignupConfirmation(
 
     const [{ data: event }, { data: blocks }] = await Promise.all([
       supabase.from('osce_events').select('title, subtitle, slug').eq('id', obs.event_id).maybeSingle(),
-      supabase.from('osce_time_blocks').select('label, date, start_time, end_time').in('id', opts.blockIds),
+      supabase.from('osce_time_blocks').select('id, label, date, start_time, end_time').in('id', opts.blockIds),
     ]);
     if (!event || !blocks || blocks.length === 0) return;
 
     const eventLabel = event.subtitle ? `${event.title}, ${event.subtitle}` : event.title;
-    const c = buildOsceConfirmation({ name: obs.name, eventLabel, slug: event.slug, blocks, baseUrl: opts.baseUrl });
+    const c = buildOsceConfirmation({ name: obs.name, eventLabel, slug: event.slug, blocks: blocks.map((b) => ({ ...b, standby: (opts.standbyBlockIds ?? []).includes(b.id) })), baseUrl: opts.baseUrl });
     const res = await sendEmail({
       to,
       subject: c.subject,
