@@ -25,6 +25,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ParkAwareLink as Link } from '@/components/ModuleGuard';
 import { useSession, signOut } from 'next-auth/react';
+import RolePreviewSelector from '@/components/RolePreviewSelector';
 import {
   Settings as SettingsIcon,
   Calendar,
@@ -231,6 +232,9 @@ export default function UserMenu() {
               </Link>
             )}
           </nav>
+
+          {/* Preview-as-role lives here (admins only; renders nothing otherwise). */}
+          <RolePreviewSelector inline onDone={() => setOpen(false)} />
 
           <div className="border-t border-gray-100 dark:border-gray-700 py-1">
             <button

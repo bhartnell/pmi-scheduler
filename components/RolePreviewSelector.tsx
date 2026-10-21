@@ -17,7 +17,17 @@ const PREVIEWABLE_ROLES: Role[] = [
   'guest',
 ];
 
-export default function RolePreviewSelector() {
+/**
+ * `inline` renders the role list as a section of a host menu (the avatar
+ * menu) instead of a floating button; `onDone` lets the host close itself.
+ */
+export default function RolePreviewSelector({
+  inline = false,
+  onDone,
+}: {
+  inline?: boolean;
+  onDone?: () => void;
+} = {}) {
   const { data: session } = useSession();
   const { startPreview, isPreviewMode, previewRole, exitPreview } = useRolePreview();
   const [realRole, setRealRole] = useState<string | null>(null);
@@ -48,6 +58,48 @@ export default function RolePreviewSelector() {
   }, [isOpen]);
 
   if (!realRole || !canAccessAdmin(realRole)) return null;
+
+  if (inline) {
+    return (
+      <div className="border-t border-gray-100 dark:border-gray-700 py-1 print:hidden" role="group" aria-label="Preview as role">
+        <div className="px-3 py-1.5 text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+          <Eye className="w-3.5 h-3.5" /> Preview as role
+        </div>
+        {PREVIEWABLE_ROLES.map(role => (
+          <button
+            key={role}
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              startPreview(role);
+              onDone?.();
+            }}
+            className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-gray-50 dark:hover:bg-gray-700/50 ${
+              previewRole === role
+                ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 font-medium'
+                : 'text-gray-700 dark:text-gray-200'
+            }`}
+          >
+            {getRoleLabel(role)}
+            {previewRole === role && <Check className="w-4 h-4" />}
+          </button>
+        ))}
+        {isPreviewMode && (
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              exitPreview();
+              onDone?.();
+            }}
+            className="w-full text-left px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 font-medium"
+          >
+            Exit preview
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div ref={ref} className="relative print:hidden">
