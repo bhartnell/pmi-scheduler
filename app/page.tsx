@@ -18,8 +18,6 @@ import {
   Settings,
   UserPlus,
   Briefcase,
-  Building2,
-  Plus,
   CheckSquare,
   Clock,
   CalendarDays,
