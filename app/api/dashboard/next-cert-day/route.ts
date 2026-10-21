@@ -5,10 +5,10 @@ import { requireAuth } from '@/lib/api-auth';
 /**
  * GET /api/dashboard/next-cert-day?today=YYYY-MM-DD
  *
- * Read-only. The next non-archived lab day that is an AHA certification day
- * (cert_course acls/pals) or an NREMT testing day, on or after `today`
- * (client-local date, so the count matches the viewer's calendar).
- * Powers "days to the next cert day" in the home stat bar.
+ * Read-only. The next non-archived lab day on or after `today` (client-local
+ * date, so the count matches the viewer's calendar) that is an AHA certification
+ * day (cert_course acls/pals), an NREMT testing day, or flagged high/critical
+ * priority. Powers "Next high-priority lab" in the home stat bar.
  */
 export async function GET(request: Request) {
   const auth = await requireAuth('volunteer_instructor');
@@ -23,10 +23,10 @@ export async function GET(request: Request) {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('lab_days')
-      .select('id, date, title, cert_course, is_nremt_testing')
+      .select('id, date, title, cert_course, is_nremt_testing, priority_flag')
       .eq('is_archived', false)
       .gte('date', today)
-      .or('cert_course.not.is.null,is_nremt_testing.eq.true')
+      .or('cert_course.not.is.null,is_nremt_testing.eq.true,priority_flag.in.(high,critical)')
       .order('date', { ascending: true })
       .limit(1);
     if (error) throw error;

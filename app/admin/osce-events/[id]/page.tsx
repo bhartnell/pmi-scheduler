@@ -62,6 +62,7 @@ interface OsceEvent {
 
 interface ObserverBlock {
   block_id: string;
+  capacity_status?: 'confirmed' | 'standby';
   day_number: number;
   label: string;
   date: string;
@@ -657,6 +658,35 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
     return o.name.toLowerCase().includes(q) || o.agency.toLowerCase().includes(q) || o.email.toLowerCase().includes(q);
   });
 
+  const promoteStandby = async (observerId: string, blockId: string) => {
+    const res = await fetch(`/api/osce/events/${eventId}/observers/${observerId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ promote_block_id: blockId }),
+    });
+    if (res.ok) fetchObservers();
+  };
+
+  // Per block: confirmed / standby / physicians, and whether a second room looks possible.
+  // Second room = signed-up evaluators (confirmed + standby) >= 2 x planned spots AND at least 2 physicians (role md).
+  const blockSummaries = timeBlocks.map(tb => {
+    const rows = observers.flatMap(o => {
+      const b = o.blocks.find(x => x.block_id === tb.id);
+      return b ? [{ o, standby: b.capacity_status === 'standby' }] : [];
+    });
+    const confirmed = rows.filter(r => !r.standby).length;
+    const standby = rows.filter(r => r.standby);
+    const physicians = rows.filter(r => r.o.role === 'md').length;
+    return {
+      block: tb,
+      confirmed,
+      standby,
+      physicians,
+      secondRoom: rows.length >= 2 * tb.max_observers && physicians >= 2,
+    };
+  });
+  const showSummaries = blockSummaries.some(s => s.standby.length > 0 || s.physicians > 0);
+
   // block capacity map
   const blockCapacity = new Map<string, { count: number; max: number }>();
   timeBlocks.forEach(b => blockCapacity.set(b.id, { count: b.observer_count, max: b.max_observers }));
@@ -958,6 +988,36 @@ function ObserversTab({ eventId, event, onRefresh }: { eventId: string; event: O
         {filtered.length} observer{filtered.length !== 1 ? 's' : ''}
         {searchQuery && ` matching "${searchQuery}"`}
       </p>
+
+      {showSummaries && (
+        <div className="mb-4 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Block capacity</h3>
+          <div className="grid grid-cols-3 max-md:grid-cols-1 gap-3">
+            {blockSummaries.map(s => (
+              <div key={s.block.id} className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 text-sm">
+                <div className="font-medium text-gray-900 dark:text-white">Day {s.block.day_number} - {s.block.label}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                  {s.confirmed}/{s.block.max_observers} confirmed, {s.standby.length} standby, {s.physicians} physician{s.physicians === 1 ? '' : 's'}
+                </div>
+                {s.secondRoom && (
+                  <div className="text-xs font-semibold text-green-700 dark:text-green-400 mb-1">Second room possible</div>
+                )}
+                {s.standby.map(r => (
+                  <div key={r.o.id} className="flex items-center justify-between gap-2 py-1 min-h-[44px]">
+                    <span className="text-xs text-gray-700 dark:text-gray-300">{r.o.name} ({r.o.agency}){r.o.role === 'md' ? ' - physician' : ''}</span>
+                    <button
+                      onClick={() => promoteStandby(r.o.id, s.block.id)}
+                      className="px-2 py-1 text-xs rounded bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      Promote
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Observer table */}
       <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden overflow-x-auto">

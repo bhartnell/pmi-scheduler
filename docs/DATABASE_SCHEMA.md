@@ -4487,6 +4487,7 @@ Ben-editable map from the free-text spellings in `students.agency` to a canonica
 | created_at | timestamptz | YES | now() |  |
 | calendar_invite_sent_at | timestamptz | YES |  | Set when the registrant was added as a guest on the block event; cleared on cancel |
 | calendar_invite_error | text | YES |  | Last failed invite/removal message (OSCE CAL 2/4); cleared on success |
+| capacity_status | text | NO | 'confirmed' | 'confirmed' or 'standby' (CHECK). Signups past the block's max_observers are standby; promotion is manual from the admin view |
 
 **Foreign Keys:**
 - `observer_id` -> `osce_observers.id` (`osce_observer_blocks_observer_id_fkey`)

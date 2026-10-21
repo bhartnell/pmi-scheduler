@@ -83,7 +83,7 @@ export default function OsceDynamicSignup() {
 
   const toggleBlock = (id: string) => {
     const block = blocks.find(b => b.id === id);
-    if (!block || block.observer_count >= block.max_observers) return;
+    if (!block) return;
     setSelectedBlocks(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
@@ -110,7 +110,6 @@ export default function OsceDynamicSignup() {
   if (!formData.email.trim()) fieldErrors.email = 'Email is required';
   else if (!emailRegex.test(formData.email.trim())) fieldErrors.email = 'Please enter a valid email address';
 
-  const allBlocksFull = blocks.length > 0 && blocks.every(b => b.observer_count >= b.max_observers);
   const showError = (field: string) => (touched[field] || triedSubmit) && fieldErrors[field];
   const markTouched = (field: string) => setTouched(prev => ({ ...prev, [field]: true }));
 
@@ -319,11 +318,6 @@ export default function OsceDynamicSignup() {
           </p>
 
           <div className="osce-form-container">
-            {allBlocksFull && (
-              <div className="osce-all-full-banner">
-                All time blocks are currently full. Please contact <a href="mailto:bhartnell@pmi.edu" style={{ color: '#C62828', fontWeight: 600 }}>bhartnell@pmi.edu</a> to be added to a waitlist.
-              </div>
-            )}
             <form onSubmit={handleSubmit} noValidate>
               <div className="osce-form-row">
                 <div className="osce-form-group">
@@ -372,14 +366,14 @@ export default function OsceDynamicSignup() {
 
               <div className="osce-avail-group">
                 <label className="osce-avail-label">When can you attend? <span className="osce-optional">(select all that work)</span></label>
-                <p className="osce-avail-hint">Each time block is capped at {blocks[0]?.max_observers || event.max_observers_per_block || 4} outside evaluators. Full blocks are locked.</p>
+                <p className="osce-avail-hint">Each time block has {blocks[0]?.max_observers || event.max_observers_per_block || 4} planned evaluator spots. More are welcome: once a block is at its planned number, you are added as standby and may be asked to switch in or work alongside another evaluator.</p>
                 <div className="osce-block-list">
                   {blocks.map(block => {
                     const full = block.observer_count >= block.max_observers;
                     const checked = selectedBlocks.has(block.id);
                     const remaining = block.max_observers - block.observer_count;
                     return (
-                      <div key={block.id} className={`osce-block-item${checked ? ' osce-checked' : ''}${full ? ' osce-locked' : ''}`} onClick={() => toggleBlock(block.id)}>
+                      <div key={block.id} className={`osce-block-item${checked ? ' osce-checked' : ''}`} onClick={() => toggleBlock(block.id)}>
                         <span className="osce-check-box">
                           {checked && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>}
                         </span>
@@ -390,13 +384,13 @@ export default function OsceDynamicSignup() {
                         </span>
                         <span className="osce-block-capacity">
                           <span className="osce-mini-dots">{renderDots(block)}</span>
-                          <span className="osce-cap-text">{full ? 'Full' : `${remaining} open`}</span>
+                          <span className="osce-cap-text">{full ? 'Standby' : `${remaining} open`}</span>
                         </span>
                       </div>
                     );
                   })}
                 </div>
-                {triedSubmit && selectedBlocks.size === 0 && !allBlocksFull && (
+                {triedSubmit && selectedBlocks.size === 0 && (
                   <span className="osce-field-error" style={{ marginTop: '0.5rem', display: 'block' }}>Please select at least one time block</span>
                 )}
               </div>
@@ -437,9 +431,9 @@ export default function OsceDynamicSignup() {
 
               <div className="osce-submit-row">
                 <p className="osce-submit-note">We&apos;ll follow up with evaluator materials and a detailed schedule within 48 hours of your registration.</p>
-                <button type="submit" className="osce-submit-btn" disabled={submitting || allBlocksFull}>
+                <button type="submit" className="osce-submit-btn" disabled={submitting}>
                   {submitting && <span className="osce-spinner" />}
-                  {submitting ? 'Submitting\u2026' : allBlocksFull ? 'All Blocks Full' : 'Register'}
+                  {submitting ? 'Submitting\u2026' : 'Register'}
                 </button>
               </div>
 

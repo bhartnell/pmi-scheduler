@@ -13,11 +13,12 @@ import { Building2, Check, SlidersHorizontal } from 'lucide-react';
 
 type StatKey =
   | 'labs_this_week'
+  | 'students_by_program'
   | 'active_students'
   | 'open_spots'
   | 'needs_attention'
   | 'open_feedback'
-  | 'days_to_cert';
+  | 'next_priority_lab';
 
 interface StatDef {
   key: StatKey;
@@ -27,14 +28,33 @@ interface StatDef {
 
 const STAT_DEFS: StatDef[] = [
   { key: 'labs_this_week', label: 'Labs this week' },
-  { key: 'active_students', label: 'Active students' },
+  { key: 'students_by_program', label: 'Students by program' },
+  { key: 'active_students', label: 'Active students (total)' },
   { key: 'open_spots', label: 'Open instructor spots' },
   { key: 'needs_attention', label: 'Needs attention' },
   { key: 'open_feedback', label: 'Open feedback', adminOnly: true },
-  { key: 'days_to_cert', label: 'Days to next cert day' },
+  { key: 'next_priority_lab', label: 'Next high-priority lab' },
 ];
 
-const DEFAULT_STATS: StatKey[] = STAT_DEFS.map(d => d.key);
+// Open spots and open feedback stay available under Pick stats but are not on by default.
+const DEFAULT_STATS: StatKey[] = ['labs_this_week', 'students_by_program', 'needs_attention', 'next_priority_lab'];
+
+// Saved picks from before the rename.
+const LEGACY_KEYS: Record<string, StatKey> = { days_to_cert: 'next_priority_lab' };
+
+interface ProgramCount {
+  name: string;
+  total: number;
+  semesters: { semester: number | null; count: number }[];
+}
+
+interface NextLab {
+  id: string;
+  date: string;
+  title: string | null;
+  cert_course: string | null;
+  is_nremt_testing: boolean | null;
+}
 
 interface Values {
   labs_this_week: number | null;
@@ -42,7 +62,8 @@ interface Values {
   open_spots: number | null;
   needs_attention: number | null;
   open_feedback: number | null;
-  days_to_cert: number | null;
+  programs: ProgramCount[] | null;
+  next_lab: { label: string; days: number; href: string } | null | undefined;
 }
 
 function localDateString(d: Date): string {
@@ -50,6 +71,19 @@ function localDateString(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+function nextLabHref(lab: NextLab): string {
+  const date = encodeURIComponent(lab.date);
+  if (lab.cert_course === 'acls') return `/labs/acls-hub/board?date=${date}`;
+  if (lab.cert_course === 'pals') return `/labs/pals-hub?date=${date}`;
+  return `/labs/schedule/${lab.id}`;
+}
+
+function nextLabCourse(lab: NextLab): string {
+  if (lab.cert_course) return lab.cert_course.toUpperCase();
+  if (lab.is_nremt_testing) return 'NREMT';
+  return lab.title || 'Lab';
 }
 
 async function getJson(url: string): Promise<any | null> {
@@ -85,19 +119,26 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
       weekEnd.setDate(weekStart.getDate() + 6);
       const today = localDateString(now);
 
-      const [layout, students, labs, stations, feedback, cert] = await Promise.all([
+      const [layout, students, labs, stations, feedback, cert, counts] = await Promise.all([
         getJson('/api/dashboard/layout'),
         getJson('/api/lab-management/students?status=active'),
         getJson(`/api/lab-management/lab-days?startDate=${localDateString(weekStart)}&endDate=${localDateString(weekEnd)}`),
         getJson('/api/lab-management/stations?open=true&upcoming=true'),
         isAdmin ? getJson('/api/feedback?status=new&limit=1') : Promise.resolve(null),
         getJson(`/api/dashboard/next-cert-day?today=${today}`),
+        getJson('/api/dashboard/student-counts'),
       ]);
       if (cancelled) return;
 
       const saved = layout?.layout?.stat_bar_stats;
       if (Array.isArray(saved)) {
-        setPicked(saved.filter((k: unknown): k is StatKey => STAT_DEFS.some(d => d.key === k)));
+        const migrated = saved.map((k: unknown) => (typeof k === 'string' ? LEGACY_KEYS[k] ?? k : k));
+        setPicked(
+          migrated.filter(
+            (k: unknown, i: number): k is StatKey =>
+              STAT_DEFS.some(d => d.key === k) && migrated.indexOf(k) === i,
+          ),
+        );
       }
 
       const openSpots: number | null = stations ? (stations.stations?.length ?? 0) : null;
@@ -107,12 +148,20 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
       const needsAttention =
         openSpots === null ? null : (openSpots > 0 ? 1 : 0) + ((openFeedback ?? 0) > 0 ? 1 : 0);
 
-      let daysToCert: number | null = null;
+      // undefined = still loading / failed; null = loaded, nothing upcoming.
+      let nextLab: Values['next_lab'] = cert ? null : undefined;
       if (cert?.next?.date) {
-        const target = new Date(`${cert.next.date}T00:00:00`);
+        const lab = cert.next as NextLab;
+        const target = new Date(`${lab.date}T00:00:00`);
         const start = new Date(`${today}T00:00:00`);
-        daysToCert = Math.round((target.getTime() - start.getTime()) / 86400000);
+        const days = Math.round((target.getTime() - start.getTime()) / 86400000);
+        const dateLabel = target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        nextLab = { label: `${nextLabCourse(lab)}, ${dateLabel}`, days, href: nextLabHref(lab) };
       }
+
+      const programs: ProgramCount[] | null = counts?.success
+        ? (counts.programs as ProgramCount[]).map(p => ({ name: p.name, total: p.total, semesters: p.semesters }))
+        : null;
 
       setValues({
         labs_this_week: labs ? (labs.pagination?.total ?? labs.labDays?.length ?? 0) : null,
@@ -120,7 +169,8 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
         open_spots: openSpots,
         needs_attention: needsAttention,
         open_feedback: openFeedback,
-        days_to_cert: daysToCert,
+        programs,
+        next_lab: nextLab,
       });
     })();
     return () => {
@@ -155,24 +205,50 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
     switch (key) {
       case 'labs_this_week':
         return '/labs/schedule';
+      case 'students_by_program':
       case 'active_students':
-        return '/academics/students';
+        return '/academics/cohorts';
       case 'open_spots':
         return '/labs/schedule';
       case 'needs_attention':
         return (values?.open_spots ?? 0) > 0 ? '/labs/schedule' : '/admin/feedback';
       case 'open_feedback':
         return '/admin/feedback';
-      case 'days_to_cert':
-        return '/calendar';
+      case 'next_priority_lab':
+        return values?.next_lab?.href ?? '/labs/schedule';
     }
   };
 
   const display = (key: StatKey): string => {
+    if (key === 'next_priority_lab') {
+      const lab = values?.next_lab;
+      if (lab === undefined) return values ? '-' : '';
+      return lab === null ? 'None' : `${lab.days} ${lab.days === 1 ? 'day' : 'days'}`;
+    }
+    if (key === 'students_by_program') return '';
     const v = values?.[key];
     if (v === null || v === undefined) return values ? '-' : '';
     return String(v);
   };
+
+  const labelFor = (def: StatDef): string => {
+    if (def.key === 'next_priority_lab' && values?.next_lab) return `Next high-priority lab: ${values.next_lab.label}`;
+    return def.label;
+  };
+
+  // One tile per program, semester breakdown as the label; other stats are one tile each.
+  interface Tile { id: string; href: string; value: string; label: string }
+  const tiles: Tile[] = shown.flatMap((def): Tile[] => {
+    if (def.key !== 'students_by_program') {
+      return [{ id: def.key, href: hrefFor(def.key), value: display(def.key), label: labelFor(def) }];
+    }
+    if (!values?.programs) return [{ id: def.key, href: hrefFor(def.key), value: values ? '-' : '', label: def.label }];
+    return values.programs.map(p => {
+      const sems = p.semesters.filter(s => s.semester !== null);
+      const label = sems.length > 1 ? `${p.name}: ${sems.map(s => `S${s.semester} ${s.count}`).join(', ')}` : p.name;
+      return { id: `${def.key}:${p.name}`, href: hrefFor(def.key), value: String(p.total), label };
+    });
+  });
 
   return (
     <div className="mb-6 flex items-stretch gap-3 max-md:flex-col">
@@ -190,16 +266,16 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
           {shown.length === 0 && (
             <span className="px-3 text-sm text-gray-500 dark:text-gray-400">No stats picked.</span>
           )}
-          {shown.map(def => (
+          {tiles.map(tile => (
             <Link
-              key={def.key}
-              href={hrefFor(def.key)}
+              key={tile.id}
+              href={tile.href}
               className="flex flex-col items-start px-4 py-2 min-h-[44px] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 group"
             >
               <span className="text-xl font-bold leading-tight text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                {display(def.key) || <span className="inline-block w-6 h-5 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />}
+                {tile.value || <span className="inline-block w-6 h-5 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 group-hover:underline">{def.label}</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 group-hover:underline">{tile.label}</span>
             </Link>
           ))}
         </div>

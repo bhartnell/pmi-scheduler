@@ -94,7 +94,9 @@ export async function POST(
       );
     }
 
-    // Check capacity for each block BEFORE inserting
+    // Soft cap: a block at max_observers still accepts the signup, recorded as standby
+    // (promotion is manual, from the admin view). Only confirmed rows count toward the cap.
+    const standbyBlockIds: string[] = [];
     for (const blockId of block_ids) {
       // Get block info (must belong to this event)
       const { data: block } = await supabase
@@ -111,21 +113,14 @@ export async function POST(
         );
       }
 
-      // Count current observers for this block
+      // Count confirmed observers for this block
       const { count } = await supabase
         .from('osce_observer_blocks')
         .select('id', { count: 'exact', head: true })
-        .eq('block_id', blockId);
+        .eq('block_id', blockId)
+        .eq('capacity_status', 'confirmed');
 
-      if (count !== null && count >= block.max_observers) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `The "${block.label}" block is now full. Please refresh and select a different time.`,
-          },
-          { status: 409 }
-        );
-      }
+      if (count !== null && count >= block.max_observers) standbyBlockIds.push(blockId);
     }
 
     // Preference: agency must be on the canonical list (else dropped, never stored as free text); optional, never gating.
@@ -180,6 +175,7 @@ export async function POST(
     const blockInserts = block_ids.map((blockId: string) => ({
       observer_id: observer.id,
       block_id: blockId,
+      capacity_status: standbyBlockIds.includes(blockId) ? 'standby' : 'confirmed',
     }));
 
     const { error: blocksError } = await supabase
@@ -204,6 +200,7 @@ export async function POST(
     await sendOsceSignupConfirmation(supabase, {
       observerId: observer.id,
       blockIds: block_ids,
+      standbyBlockIds,
       baseUrl: process.env.NEXTAUTH_URL || 'https://www.pmiparamedic.tools',
     });
 

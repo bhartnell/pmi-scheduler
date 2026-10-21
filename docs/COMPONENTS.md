@@ -648,4 +648,5 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 
 `components/student/SelfAssessmentTodo.tsx` - student dashboard To-do card; links to `/student/self-assessment` only while the cohort window is open, otherwise "Nothing due right now." Reads `SA_STORAGE.getMyStatus()`.
 
-- `components/home/HomeTopBar.tsx`, `SectionTiles.tsx`, `sections.ts` — home top bar (brand, nine sections, utilities, Home breadcrumb line), bottom section tiles + PMI Operations Hub row, and the shared section/role-visibility data (TRIM 6/7a-1). Section links point at today's hubs until 6/7b. (Last updated: 2026-10-21)
+- `components/layout/AppChrome.tsx` (root-layout wrapper: signed-in, non-student, non-public routes only), `components/layout/SubNavLine.tsx` (the one line under the bar: section pages on a front page, path links deeper, 'Home' on Home) (TRIM 6/7b-1a, last updated 2026-10-21)
+- `components/home/HomeTopBar.tsx` (now app-wide via AppChrome), `SectionTiles.tsx`, `sections.ts` — home top bar (brand, nine sections, utilities, Home breadcrumb line), bottom section tiles + PMI Operations Hub row, and the shared section/role-visibility data (TRIM 6/7a-1). Section links point at today's hubs until 6/7b. (Last updated: 2026-10-21)

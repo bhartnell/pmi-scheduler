@@ -36,7 +36,7 @@ export async function GET(
     const observerIds = observers.map((o) => o.id);
     const { data: observerBlocks, error: blocksError } = await supabase
       .from('osce_observer_blocks')
-      .select('observer_id, block_id, osce_time_blocks(id, day_number, label, date, start_time, end_time)')
+      .select('observer_id, block_id, capacity_status, osce_time_blocks(id, day_number, label, date, start_time, end_time)')
       .in('observer_id', observerIds);
 
     if (blocksError) {
@@ -49,6 +49,7 @@ export async function GET(
     // Group blocks by observer_id
     const blocksByObserver: Record<string, Array<{
       block_id: string;
+      capacity_status: string;
       day_number: number;
       label: string;
       date: string;
@@ -66,6 +67,7 @@ export async function GET(
         if (blockData) {
           blocksByObserver[ob.observer_id].push({
             block_id: ob.block_id,
+            capacity_status: ob.capacity_status,
             day_number: blockData.day_number,
             label: blockData.label,
             date: blockData.date,

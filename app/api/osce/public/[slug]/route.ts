@@ -48,16 +48,18 @@ export async function GET(
 
     // Get observer counts per block
     let countMap: Record<string, number> = {};
+    let standbyMap: Record<string, number> = {};
     if (blocks && blocks.length > 0) {
       const blockIds = blocks.map((b) => b.id);
       const { data: counts } = await supabase
         .from('osce_observer_blocks')
-        .select('block_id')
+        .select('block_id, capacity_status')
         .in('block_id', blockIds);
 
       if (counts) {
         for (const row of counts) {
-          countMap[row.block_id] = (countMap[row.block_id] || 0) + 1;
+          const m = row.capacity_status === 'standby' ? standbyMap : countMap;
+          m[row.block_id] = (m[row.block_id] || 0) + 1;
         }
       }
     }
@@ -72,6 +74,7 @@ export async function GET(
       max_observers: block.max_observers,
       sort_order: block.sort_order,
       observer_count: countMap[block.id] || 0,
+      standby_count: standbyMap[block.id] || 0,
     }));
 
     return NextResponse.json({
