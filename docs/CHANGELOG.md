@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+overview-all-cols | Fix /api/clinical/overview-all 42703: select real EMT/AEMT tracking columns (ridealong_scanned, vitals_tracker_date, vax_uploaded) and normalize to the *_complete flags the route uses
+
 trim-7-a2 | TRIM 7/7 Part A2: working pages (station grader, PALS grader, ACLS coordinator, lab day, lab coordinator, lab schedule, clinical tracker, internship cohort, planner templates, master calendar, lab day header, adv-cert attempt) drop max-w cap, w-full with standard padding; LAYOUT.md rule added
 
 feedback-scenario | Feedback button gains 'Scenario' type (captures open scenario id/title; additive feedback_reports.scenario_id/scenario_title); expected actions render as EMT/AEMT/Paramedic lists via LeveledActionList

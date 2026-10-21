@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
     // Fetch EMT tracking
     const { data: emtTracking, error: emtError } = await supabase
       .from('emt_student_tracking')
-      .select('student_id, mce_complete, vax_complete, ride_along_complete, vitals_complete');
+      .select('student_id, mce_complete, vax_complete, ridealong_scanned, vitals_tracker_date');
 
     if (emtError) {
       console.error('Error fetching EMT tracking:', emtError);
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
     // Fetch AEMT tracking
     const { data: aemtTracking, error: aemtError } = await supabase
       .from('aemt_student_tracking')
-      .select('student_id, mce_complete, vax_complete, ride_along_complete, clinical_1_complete, clinical_2_complete, clinical_3_complete, vitals_complete');
+      .select('student_id, mce_complete, vax_uploaded, ridealong_scanned, clinical_1_complete, clinical_2_complete, clinical_3_complete, vitals_tracker_date');
 
     if (aemtError) {
       console.error('Error fetching AEMT tracking:', aemtError);
@@ -86,13 +86,24 @@ export async function GET(request: NextRequest) {
     });
 
     const emtTrackingMap = new Map();
+    // Normalize to the *_complete flags used below; the tables store these as
+    // ridealong_scanned (boolean) and vitals_tracker_date (date).
     (emtTracking || []).forEach((t) => {
-      emtTrackingMap.set(t.student_id, t);
+      emtTrackingMap.set(t.student_id, {
+        ...t,
+        ride_along_complete: !!t.ridealong_scanned,
+        vitals_complete: !!t.vitals_tracker_date,
+      });
     });
 
     const aemtTrackingMap = new Map();
     (aemtTracking || []).forEach((t) => {
-      aemtTrackingMap.set(t.student_id, t);
+      aemtTrackingMap.set(t.student_id, {
+        ...t,
+        vax_complete: !!t.vax_uploaded,
+        ride_along_complete: !!t.ridealong_scanned,
+        vitals_complete: !!t.vitals_tracker_date,
+      });
     });
 
     // Process students
