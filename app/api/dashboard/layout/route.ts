@@ -85,12 +85,21 @@ export async function PUT(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
+    // Merge into the existing layout instead of replacing it, so independent
+    // writers (widget list sync, stat-bar picks) never wipe each other's keys.
+    const { data: existing } = await supabase
+      .from('dashboard_layouts')
+      .select('layout')
+      .eq('user_email', session.user.email)
+      .maybeSingle();
+    const merged = { ...(existing?.layout && typeof existing.layout === 'object' ? existing.layout : {}), ...body.layout };
+
     const { data, error } = await supabase
       .from('dashboard_layouts')
       .upsert(
         {
           user_email: session.user.email,
-          layout: body.layout,
+          layout: merged,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_email', ignoreDuplicates: false }
