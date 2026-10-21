@@ -115,8 +115,9 @@ export default function SectionTiles({ role, compact }: SectionTilesProps) {
 }
 
 /**
- * Josh's PMI Operations Hub links (TRIM 6/7a-8): one full-width row under the
- * Month and Sections, small tiles left-aligned with the label. Instructor+.
+ * Josh's PMI Operations Hub links (TRIM 6/7a-8, placed by 6/7a-9): small
+ * left-aligned tiles under the 3 x 3 Sections grid, in the Sections column.
+ * Instructor+.
  */
 export function OperationsHubRow({ role }: { role: string | null | undefined }) {
   if (!role || !hasMinRole(role, 'instructor')) return null;

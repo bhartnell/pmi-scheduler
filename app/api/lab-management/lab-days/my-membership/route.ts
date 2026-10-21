@@ -12,9 +12,29 @@ import { hasMinRole } from '@/lib/permissions';
 export async function GET(request: NextRequest) {
   const auth = await requireAuth('volunteer_instructor');
   if (auth instanceof NextResponse) return auth;
-  const { user } = auth;
+  const signedIn = auth.user;
+  let user = signedIn;
+  let viewingAs = false;
 
-  // POST /lab-day-roles needs instructor; volunteers keep their own sign-up path.
+  // View as (admin and up): compute everything for THAT person, read-only, so
+  // the Sign up / You're in buttons render exactly as they would for them.
+  const asId = request.nextUrl.searchParams.get('as');
+  if (asId && asId !== signedIn.id) {
+    if (!hasMinRole(signedIn.role as never, 'admin')) {
+      return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+    }
+    const { data: target } = await getSupabaseAdmin()
+      .from('lab_users')
+      .select('id, name, email, role')
+      .eq('id', asId)
+      .maybeSingle();
+    if (!target) return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
+    user = target as typeof signedIn;
+    viewingAs = true;
+  }
+
+  // volunteer_instructor ranks level 2, same as instructor (lib/permissions.ts),
+  // so this already admits volunteers; the POST needs the same level.
   const canSignUp = hasMinRole(user.role as never, 'instructor');
 
   const ids = [
@@ -25,7 +45,7 @@ export async function GET(request: NextRequest) {
         .filter(Boolean),
     ),
   ].slice(0, 200);
-  if (ids.length === 0) return NextResponse.json({ success: true, user_id: user.id, can_sign_up: canSignUp, days: {} });
+  if (ids.length === 0) return NextResponse.json({ success: true, user_id: user.id, can_sign_up: canSignUp, viewing_as: viewingAs, days: {} });
 
   const supabase = getSupabaseAdmin();
   const email = user.email.toLowerCase();
@@ -78,7 +98,7 @@ export async function GET(request: NextRequest) {
       if (mine) d.on = true;
     }
 
-    return NextResponse.json({ success: true, user_id: user.id, can_sign_up: canSignUp, days });
+    return NextResponse.json({ success: true, user_id: user.id, can_sign_up: canSignUp, viewing_as: viewingAs, days });
   } catch (error) {
     console.error('Error reading lab day membership:', error);
     return NextResponse.json({ success: false, error: 'Failed to read membership' }, { status: 500 });

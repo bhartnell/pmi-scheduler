@@ -517,9 +517,12 @@ export default function HomePage() {
               defaultMine={effectiveRole === 'volunteer_instructor'}
               canViewAs={hasMinRole(effectiveRole, 'admin')}
               sectionsSlot={
-                <ErrorBoundary>
-                  <SectionTiles role={effectiveRole} compact />
-                </ErrorBoundary>
+                <div className="min-w-0">
+                  <ErrorBoundary>
+                    <SectionTiles role={effectiveRole} compact />
+                  </ErrorBoundary>
+                  <OperationsHubRow role={effectiveRole} />
+                </div>
               }
               todaySlot={
                 hasMinRole(effectiveRole, 'instructor') ? (
@@ -529,7 +532,6 @@ export default function HomePage() {
                 ) : undefined
               }
             />
-            <OperationsHubRow role={effectiveRole} />
           </ErrorBoundary>
         )}
 
