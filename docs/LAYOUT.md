@@ -1,6 +1,6 @@
 # Layout standard
 
-Last updated: 2026-10-21 (TRIM 6/7a-4c)
+Last updated: 2026-10-21 (TRIM 6/7a-5)
 
 Ben runs a 1920 screen at 80 percent browser zoom, so the viewport is about
 2400 CSS px wide. Desktop-first; adapt DOWN. Acceptance test is "more visible
@@ -35,6 +35,40 @@ views are under the ceiling, so nothing changes there; at 33 percent (about
 5800) the page stops spreading and centers. Everything under 3000 is uncapped.
 Applied to home (`app/page.tsx`) and every page carrying the Part A2 class
 (`w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8`).
+
+## Tile standard (TRIM 6/7a-5, mock round 9) - supersedes Part A/A2 where they conflict
+
+Tiles size to their content. The window is wide; the tiles do not care. Spare
+width becomes space between tiles, never a stretched tile.
+
+1. Page gutter scales with the viewport: `padding-inline: clamp(16px, 2.75vw, 96px)`
+   (`px-[clamp(16px,2.75vw,96px)]`). No max-width cap on working pages below
+   3000px; content pages (hubs, forms, settings) may cap at 1800px.
+2. Gap between tiles 18px (16px on phone). Section label (small caps, faint,
+   12px, letter-spaced) 6px above its tiles; 18px between groups.
+3. Tile = surface one step lighter than the page background, 1px border,
+   radius 12px, padding 14px 16px. Separation by surface and gap, not heavy
+   outlines or shadows. Nested blocks inside a tile use the sunk shade (one
+   step darker than the surface), radius 8px.
+4. Column grids inside a tile have a max column width (week day column
+   `minmax(120px, 220px)`; station rows full tile width, one line, 44px tall).
+   When the window is wider than the tile needs, the grid leaves the rest as
+   gap (`justify-content: space-between`) or a neighbor tile takes it.
+5. Text measure under about 70 characters. Type scale: 15px tile titles, 13px
+   body, 12px meta, 11px labels; tabular numerals on anything numeric.
+6. Color: one accent for actions; type colors for calendar events (lab, class,
+   clinical, AHA/NREMT, OSCE); semantic green/amber/red only for state (open
+   station, needs instructors, errors). Platoon A/B/C badge only, no day tint.
+7. Touch targets 44px for anything tapped on a tablet (Grade, Sign up, Start
+   Timer); denser rows where people scan.
+8. Phone: everything stacks in one column, gutter 16px, week becomes a day list.
+
+Applied to home (`app/page.tsx`, `components/home/*`): row 1 is
+`grid-cols-[minmax(360px,2fr)_minmax(0,3fr)]` (Today left, This week right),
+stacking below 1200px; row 2 is the Month tile centered at max 1250px. Each of
+the week and month tiles has its own Mine / Everyone / Labs only filter, saved
+as `week_filter` / `month_filter` in the `calendar_band` dashboard-layout key.
+The old Stacked / Side by side switch is gone; a saved `layout` key is ignored.
 
 ## Part A (width-cap pass) exceptions, left narrow on purpose
 

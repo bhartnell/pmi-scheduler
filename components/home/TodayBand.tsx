@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { HelpCircle, Timer, UserPlus } from 'lucide-react';
 
 /**
- * Home "Today" band (TRIM 6/7a-3): compact version of the lab schedule page's
+ * Home "Today" tile (TRIM 6/7a-3, tile form in 6/7a-5): compact version of the lab schedule page's
  * "Today's Labs" block. Read-only; reuses /api/lab-management/my-labs (the
  * source of the My Labs widget). Start Timer / Open lab day just link to the
  * lab day page, where the existing timer controller runs unchanged.
@@ -55,23 +55,26 @@ export default function TodayBand() {
   }, []);
 
   return (
-    <section aria-label="Today" className="mb-6">
-      <div className="flex items-center gap-2 mb-2">
-        <Timer className="w-5 h-5 text-green-600 dark:text-green-400" aria-hidden="true" />
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Today</h2>
-        <span className="text-sm text-gray-500 dark:text-gray-400">
+    <section
+      aria-label="Today"
+      className="min-w-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3.5"
+    >
+      <div className="flex items-center gap-2 mb-3">
+        <Timer className="w-4 h-4 text-green-600 dark:text-green-400" aria-hidden="true" />
+        <h2 className="text-[15px] font-semibold text-gray-900 dark:text-white">Today</h2>
+        <span className="text-[12px] text-gray-500 dark:text-gray-400">
           {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </span>
       </div>
 
       {days === null ? (
-        <div className="h-24 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse" />
+        <div className="h-24 rounded-lg bg-gray-100 dark:bg-gray-900/40 animate-pulse" />
       ) : days.length === 0 ? (
-        <p className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-4 text-sm text-gray-500 dark:text-gray-400">
+        <p className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 p-3 text-[13px] text-gray-500 dark:text-gray-400">
           No labs scheduled for today.
         </p>
       ) : (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-[18px]">
           {days.map(day => {
             const open = day.open_stations;
             const coming = day.attendees.map(
@@ -83,13 +86,10 @@ export default function TodayBand() {
                 : 'Lab day';
             const mins = day.rotation_duration;
             return (
-              <div
-                key={day.id}
-                className="rounded-lg border border-green-300 dark:border-green-700 bg-white dark:bg-gray-800 p-4"
-              >
+              <div key={day.id} className="flex flex-col gap-2.5">
                 <div className="flex items-center justify-between gap-3 flex-wrap max-md:flex-col max-md:items-stretch">
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
+                    <h3 className="text-[13px] font-semibold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
                       {heading}
                       {day.priority_flag && day.priority_flag !== 'normal' && (
                         <span className="px-2 py-0.5 text-[11px] font-bold uppercase rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
@@ -97,7 +97,7 @@ export default function TodayBand() {
                         </span>
                       )}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                    <p className="text-[12px] text-gray-600 dark:text-gray-400">
                       {day.title || day.section_label || 'Lab day'}
                       {day.num_rotations && mins ? ` - ${day.num_rotations} rotations x ${mins} min` : ''}
                     </p>
@@ -105,13 +105,13 @@ export default function TodayBand() {
                   <div className="flex gap-2">
                     <Link
                       href={`/labs/schedule/${day.id}`}
-                      className="min-h-[44px] inline-flex items-center px-4 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      className="min-h-[44px] inline-flex items-center px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-[13px] text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
                       Open lab day
                     </Link>
                     <Link
                       href={`/labs/schedule/${day.id}`}
-                      className="min-h-[44px] inline-flex items-center gap-2 px-4 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium"
+                      className="min-h-[44px] inline-flex items-center gap-2 px-3 rounded-lg bg-green-600 hover:bg-green-700 text-white text-[13px] font-medium"
                     >
                       <Timer className="w-4 h-4" aria-hidden="true" />
                       Start Timer
@@ -120,45 +120,45 @@ export default function TodayBand() {
                 </div>
 
                 {day.stations.length > 0 && (
-                  <div className="grid grid-cols-4 max-xl:grid-cols-3 max-lg:grid-cols-2 max-sm:grid-cols-1 gap-2 mt-3">
+                  <ul className="flex flex-col gap-1.5 rounded-lg bg-gray-50 dark:bg-gray-900/40 p-1.5">
                     {day.stations.map(st => {
                       const isOpen = !st.instructor_name;
                       return (
-                        <div
+                        <li
                           key={st.id}
-                          className={`relative flex items-stretch rounded-lg border ${
+                          className={`flex items-center gap-3 min-h-[44px] rounded-lg border bg-white dark:bg-gray-800 pl-3 ${
                             isOpen
                               ? 'border-dashed border-amber-400 dark:border-amber-600'
                               : st.is_mine
-                                ? 'border-green-400 dark:border-green-600 bg-green-50 dark:bg-green-900/20'
+                                ? 'border-green-400 dark:border-green-600'
                                 : 'border-gray-200 dark:border-gray-700'
                           }`}
                         >
-                          <Link
-                            href={`/labs/grade/station/${st.id}`}
-                            className="flex-1 min-w-0 p-2 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-l-lg"
+                          <span className="w-6 text-[13px] font-semibold tabular-nums text-gray-900 dark:text-white">
+                            {st.station_number}
+                          </span>
+                          <span className="flex-1 min-w-0 truncate text-[13px] text-gray-900 dark:text-white">
+                            {st.title || 'Station'}
+                          </span>
+                          <span
+                            className={`max-w-[40%] truncate text-[12px] ${isOpen ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}
                           >
-                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                              {st.station_number}{st.title ? ` - ${st.title}` : ''}
-                            </p>
-                            <p className={`text-xs truncate ${isOpen ? 'text-amber-700 dark:text-amber-400' : 'text-gray-500 dark:text-gray-400'}`}>
-                              {isOpen ? 'Needs an instructor' : st.instructor_name}
-                            </p>
-                          </Link>
+                            {isOpen ? 'Needs an instructor' : st.instructor_name}
+                          </span>
                           <Link
                             href={`/labs/grade/station/${st.id}`}
-                            className="min-h-[44px] flex items-center px-3 rounded-r-lg bg-blue-600 hover:bg-blue-700 text-white text-sm flex-shrink-0"
+                            className="min-h-[44px] flex items-center px-4 rounded-r-lg bg-blue-600 hover:bg-blue-700 text-white text-[13px] flex-shrink-0"
                           >
                             Grade
                           </Link>
-                        </div>
+                        </li>
                       );
                     })}
-                  </div>
+                  </ul>
                 )}
 
-                <div className="flex items-center justify-between gap-3 flex-wrap mt-3 text-sm text-gray-600 dark:text-gray-400">
-                  <p>
+                <div className="flex items-center justify-between gap-3 flex-wrap text-[13px] text-gray-600 dark:text-gray-400">
+                  <p className="min-w-0 max-w-[70ch]">
                     <span className="font-medium text-gray-800 dark:text-gray-200">Who&apos;s coming:</span>{' '}
                     {coming.length > 0 ? coming.join(', ') : 'nobody assigned yet'}
                     <span className="mx-2 text-gray-400">|</span>
