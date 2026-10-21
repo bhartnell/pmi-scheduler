@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+lab-day-whos-coming | Lab day page: one "Who's coming (n)" block (roles, station assignments, confirmed signups, volunteers, Other) with Add instructor dropdown + Other free text, replaces Lab Leads & Roamers card, calendar spinner and empty Volunteers row; Available Today / Skill Coverage collapsed by default; migration 20261021 adds lab_day_roles.other_name + role 'attending'
 trim-6-7a-4b | Home calendar band: week and month always shown together (toggle removed), independent week/month nav, month-day click moves the week, side-by-side 3:2 above 1300px, platoon day tint removed (A/B/C badge kept)
 
 trim-6-7a-3b | Today band lists every program's lab days for admin+/lead (my-labs ?scope=all, additive); home width caps removed from stat bar, tiles and dashboard rows; Reset re-fetches preferences with cache: no-store so the 5-min private cache no longer re-serves the old saved layout
