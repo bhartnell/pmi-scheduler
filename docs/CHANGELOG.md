@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+trim-6-7a-4c | Home calendar: Week and Month as two separate cards with own nav; Who's coming resolver (lib/lab-day-attendees.ts) includes station instructors + co-instructors, de-duplicated; 3000px ceiling on home and Part A2 pages (docs/LAYOUT.md)
 trim-6-7b-1a | App-wide top bar + one sub-navigation/breadcrumb line moved into the root layout (AppChrome); hidden on sign-in, public, student and timer-display pages; Home page no longer renders its own copy
 trim-6-7a-4b | Home calendar band: week and month always shown together (toggle removed), independent week/month nav, month-day click moves the week, side-by-side 3:2 above 1300px, platoon day tint removed (A/B/C badge kept)
 
@@ -28,6 +29,7 @@ home-two-clicks | My Upcoming Labs widget: lists every program lab day in next 7
 
 ## 2026-10-21
 
+trim-6-7a-4c | Home calendar: Week and Month as two separate cards with own nav; Who's coming resolver (lib/lab-day-attendees.ts) includes station instructors + co-instructors, de-duplicated; 3000px ceiling on home and Part A2 pages (docs/LAYOUT.md)
 trim-6-7a-4b | Home calendar band: week and month always shown together (toggle removed), independent week/month nav, month-day click moves the week, side-by-side 3:2 above 1300px, platoon day tint removed (A/B/C badge kept)
 
 trim-7-partA | TRIM 7/7 Part A: width-cap pass, max-w-5xl/6xl/7xl mx-auto -> max-w-screen-2xl on kept pages; docs/LAYOUT.md; class names only
