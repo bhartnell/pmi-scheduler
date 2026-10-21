@@ -4,20 +4,31 @@ import { Stethoscope, Search, HelpCircle } from 'lucide-react';
 import { ParkAwareLink as Link } from '@/components/ModuleGuard';
 import NotificationBell from '@/components/NotificationBell';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { visibleSections } from './sections';
+import { usePathname } from 'next/navigation';
+import { visibleSections, activeSectionKey } from './sections';
+import SubNavLine from '@/components/layout/SubNavLine';
 
 interface HomeTopBarProps {
   role: string | null | undefined;
 }
 
+const navLinkClass = (active: boolean) =>
+  active
+    ? 'inline-flex items-center px-3 min-h-[44px] text-sm font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded-lg'
+    : 'inline-flex items-center px-3 min-h-[44px] text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors';
+
 /**
- * Home top bar: brand, the nine sections, and utilities. The avatar menu
- * (Preview, settings, sign out) is the global UserMenu pinned top-right, so
- * the right edge reserves room for it. Under the bar, a breadcrumb line.
- * Wide layout is the base; below lg the section links scroll sideways.
+ * App-wide top bar (TRIM 6/7b-1a, rendered by AppChrome in the root layout):
+ * brand, the nine sections, and utilities. The avatar menu (Preview,
+ * settings, sign out) is the global UserMenu pinned top-right, so the right
+ * edge reserves room for it. Under the bar, SubNavLine is the one line that
+ * is both breadcrumb and sub-navigation. Wide layout is the base; below lg the
+ * section links scroll sideways.
  */
 export default function HomeTopBar({ role }: HomeTopBarProps) {
   const sections = visibleSections(role);
+  const pathname = usePathname() ?? '/';
+  const activeKey = activeSectionKey(pathname);
 
   return (
     <header className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
@@ -34,8 +45,8 @@ export default function HomeTopBar({ role }: HomeTopBarProps) {
             <li>
               <Link
                 href="/"
-                aria-current="page"
-                className="inline-flex items-center px-3 min-h-[44px] text-sm font-semibold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-900/30 rounded-lg"
+                aria-current={pathname === '/' ? 'page' : undefined}
+                className={navLinkClass(pathname === '/')}
               >
                 Home
               </Link>
@@ -44,7 +55,8 @@ export default function HomeTopBar({ role }: HomeTopBarProps) {
               <li key={s.key}>
                 <Link
                   href={s.href}
-                  className="inline-flex items-center px-3 min-h-[44px] text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                  aria-current={activeKey === s.key ? 'true' : undefined}
+                  className={navLinkClass(activeKey === s.key)}
                 >
                   {s.short}
                 </Link>
@@ -76,13 +88,7 @@ export default function HomeTopBar({ role }: HomeTopBarProps) {
           <ThemeToggle />
         </div>
       </div>
-      <div className="border-t border-gray-100 dark:border-gray-700">
-        <nav aria-label="Breadcrumb" className="max-w-screen-2xl mx-auto px-4 py-2 text-sm text-gray-500 dark:text-gray-400">
-          <ol className="flex items-center gap-1">
-            <li aria-current="page" className="font-medium text-gray-700 dark:text-gray-200">Home</li>
-          </ol>
-        </nav>
-      </div>
+      <SubNavLine pathname={pathname} />
     </header>
   );
 }
