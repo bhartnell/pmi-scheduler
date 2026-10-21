@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
-import { platoonBadge, platoonTint, type Platoon } from '@/lib/lvfr-platoon-style';
+import { platoonBadge, type Platoon } from '@/lib/lvfr-platoon-style';
 
 /**
- * Home calendar band (TRIM 6/7a-4): Mon-Fri week and month views.
+ * Home calendar band (TRIM 6/7a-4b): Mon-Fri week and month shown together.
  * Read-only against the master calendar's sources (/api/calendar/unified and
  * /api/scheduling/lvfr-platoons). View, layout and filter are saved as the
- * additive `calendar_band` key in the user's dashboard layout.
+ * additive `calendar_band` key in the user's dashboard layout (a legacy
+ * `view` key saved by the earlier toggle is ignored).
  */
 
 interface BandEvent {
@@ -29,12 +30,10 @@ interface BandEvent {
   metadata?: Record<string, unknown>;
 }
 
-type View = 'week' | 'month';
 type Layout = 'stacked' | 'side';
 type Filter = 'all' | 'mine';
 
 interface Prefs {
-  view: View;
   layout: Layout;
   filter?: Filter;
 }
@@ -135,10 +134,10 @@ function EventChip({ e, compact }: { e: BandEvent; compact?: boolean }) {
 }
 
 export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: Props) {
-  const [view, setView] = useState<View>('week');
   const [layout, setLayout] = useState<Layout>('stacked');
   const [filter, setFilter] = useState<Filter>(defaultMine ? 'mine' : 'all');
-  const [anchor, setAnchor] = useState<Date>(() => new Date());
+  const [weekAnchor, setWeekAnchor] = useState<Date>(() => new Date());
+  const [monthAnchor, setMonthAnchor] = useState<Date>(() => new Date());
   const [events, setEvents] = useState<BandEvent[]>([]);
   const [platoons, setPlatoons] = useState<Map<string, Platoon>>(new Map());
   const [loadedKey, setLoadedKey] = useState('');
@@ -153,7 +152,6 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
       .then(j => {
         const p = j?.layout?.calendar_band as Partial<Prefs> | undefined;
         if (cancelled || !p) return;
-        if (p.view === 'week' || p.view === 'month') setView(p.view);
         if (p.layout === 'stacked' || p.layout === 'side') setLayout(p.layout);
         if (p.filter === 'all' || p.filter === 'mine') setFilter(p.filter);
       })
@@ -172,8 +170,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
   }, []);
 
   const update = (patch: Partial<Prefs>) => {
-    const next: Prefs = { view, layout, filter, ...patch };
-    if (patch.view) setView(patch.view);
+    const next: Prefs = { layout, filter, ...patch };
     if (patch.layout) setLayout(patch.layout);
     if (patch.filter) setFilter(patch.filter);
     savePrefs(next);
@@ -187,19 +184,19 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
       .catch(() => {});
   }, [canViewAs]);
 
-  // Visible range (Mon-Fri grid; month spans whole weeks)
-  const range = useMemo(() => {
-    if (view === 'week') {
-      const start = mondayOf(anchor);
-      return { start, end: addDays(start, 4) };
-    }
-    const first = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
-    const last = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+  // Week range (Mon-Fri) and month range (whole Mon-Fri weeks); one fetch covers both.
+  const weekRange = useMemo(() => {
+    const start = mondayOf(weekAnchor);
+    return { start, end: addDays(start, 4) };
+  }, [weekAnchor]);
+  const monthRange = useMemo(() => {
+    const first = new Date(monthAnchor.getFullYear(), monthAnchor.getMonth(), 1);
+    const last = new Date(monthAnchor.getFullYear(), monthAnchor.getMonth() + 1, 0);
     return { start: mondayOf(first), end: addDays(mondayOf(last), 4) };
-  }, [view, anchor]);
+  }, [monthAnchor]);
 
-  const startKey = ymd(range.start);
-  const endKey = ymd(range.end);
+  const startKey = ymd(weekRange.start < monthRange.start ? weekRange.start : monthRange.start);
+  const endKey = ymd(weekRange.end > monthRange.end ? weekRange.end : monthRange.end);
 
   useEffect(() => {
     let cancelled = false;
@@ -243,22 +240,19 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
     return m;
   }, [visible]);
 
-  const days = useMemo(() => {
+  const rangeDays = (r: { start: Date; end: Date }) => {
     const out: Date[] = [];
-    for (let d = new Date(range.start); d <= range.end; d = addDays(d, 1)) {
+    for (let d = new Date(r.start); d <= r.end; d = addDays(d, 1)) {
       if (d.getDay() >= 1 && d.getDay() <= 5) out.push(new Date(d));
     }
     return out;
-  }, [range]);
+  };
+  const weekDays = useMemo(() => rangeDays(weekRange), [weekRange]);
+  const monthDays = useMemo(() => rangeDays(monthRange), [monthRange]);
 
   const todayKey = ymd(new Date());
-  const step = (dir: number) =>
-    setAnchor(a => (view === 'week' ? addDays(a, 7 * dir) : new Date(a.getFullYear(), a.getMonth() + dir, 1)));
-
-  const title =
-    view === 'week'
-      ? `${range.start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${range.end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`
-      : anchor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+  const weekTitle = `${weekRange.start.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })} - ${weekRange.end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+  const monthTitle = monthAnchor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
   const seg = (active: boolean) =>
     `px-3 min-h-[44px] text-sm font-medium transition-colors ${
@@ -267,14 +261,24 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
         : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
     }`;
 
-  const dayHeader = (d: Date) => {
+  const dayHeader = (d: Date, onPick?: () => void) => {
     const key = ymd(d);
     const p = platoons.get(key);
+    const label = `${DAY_NAMES[d.getDay() - 1]} ${d.getDate()}`;
     return (
       <div className="flex items-center justify-between gap-1 text-sm font-semibold text-gray-900 dark:text-white">
-        <span className={key === todayKey ? 'text-blue-600 dark:text-blue-400' : ''}>
-          {DAY_NAMES[d.getDay() - 1]} {d.getDate()}
-        </span>
+        {onPick ? (
+          <button
+            type="button"
+            onClick={onPick}
+            title="Show this week"
+            className={`hover:underline ${key === todayKey ? 'text-blue-600 dark:text-blue-400' : ''}`}
+          >
+            {label}
+          </button>
+        ) : (
+          <span className={key === todayKey ? 'text-blue-600 dark:text-blue-400' : ''}>{label}</span>
+        )}
         {p && p !== 'off' && (
           <span
             className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-bold rounded ${platoonBadge(p)}`}
@@ -287,28 +291,49 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
     );
   };
 
-  const cellTint = (key: string) => {
-    if (key === todayKey) return 'bg-blue-50 dark:bg-blue-900/20';
-    const p = platoons.get(key);
-    return p ? platoonTint(p) : '';
-  };
+  // Today is outlined; there is no per-day platoon tint (the A/B/C badge is the only marking).
+  const cellRing = (key: string) => (key === todayKey ? 'ring-2 ring-inset ring-blue-500' : '');
 
+  const navBtn = 'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700';
+  const panelNav = (
+    label: string,
+    title: string,
+    prev: () => void,
+    next: () => void,
+    today: () => void,
+  ) => (
+    <div className="flex items-center gap-1 mb-2">
+      <span className="text-sm font-semibold text-gray-900 dark:text-white mr-2">{label}</span>
+      <div className="ml-auto flex items-center gap-1">
+        <button type="button" aria-label={`Previous ${label.toLowerCase()}`} onClick={prev} className={navBtn}>
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <button type="button" onClick={today} className="min-h-[44px] px-3 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+          Today
+        </button>
+        <span className="px-2 text-sm font-medium text-gray-900 dark:text-white">{title}</span>
+        <button type="button" aria-label={`Next ${label.toLowerCase()}`} onClick={next} className={navBtn}>
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+
+  // Events inside a day are always a column.
   const weekGrid = (
     <div className="grid grid-cols-5 gap-2 max-md:hidden">
-      {days.map(d => {
+      {weekDays.map(d => {
         const key = ymd(d);
         const list = byDate.get(key) ?? [];
         return (
           <div
             key={key}
-            className={`rounded-lg border border-gray-200 dark:border-gray-700 p-2 min-h-[140px] ${cellTint(key)}`}
+            className={`rounded-lg border border-gray-200 dark:border-gray-700 p-2 min-h-[140px] min-w-0 ${cellRing(key)}`}
           >
             {dayHeader(d)}
-            <div className={`mt-2 gap-1.5 ${layout === 'side' ? 'flex flex-row items-start' : 'flex flex-col'}`}>
+            <div className="mt-2 flex flex-col gap-1.5">
               {list.map(e => (
-                <div key={e.id} className={layout === 'side' ? 'flex-1 min-w-0' : ''}>
-                  <EventChip e={e} compact={layout === 'side' && list.length > 2} />
-                </div>
+                <EventChip key={e.id} e={e} />
               ))}
               {list.length === 0 && !loading && (
                 <div className="text-xs text-gray-400 dark:text-gray-500">Nothing scheduled</div>
@@ -320,29 +345,50 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
     </div>
   );
 
-  const weeks: Date[][] = [];
-  for (let i = 0; i < days.length; i += 5) weeks.push(days.slice(i, i + 5));
+  // Phone: the week as one agenda list, grouped by day.
+  const weekList = (
+    <div className="md:hidden space-y-3">
+      {weekDays
+        .filter(d => (byDate.get(ymd(d)) ?? []).length > 0)
+        .map(d => {
+          const key = ymd(d);
+          return (
+            <div key={key} className={`rounded-lg border border-gray-200 dark:border-gray-700 p-2 ${cellRing(key)}`}>
+              {dayHeader(d)}
+              <div className="mt-2 space-y-1.5">
+                {(byDate.get(key) ?? []).map(e => (
+                  <EventChip key={e.id} e={e} />
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      {!loading && weekDays.every(d => (byDate.get(ymd(d)) ?? []).length === 0) && (
+        <div className="text-sm text-gray-500 dark:text-gray-400">Nothing scheduled this week.</div>
+      )}
+    </div>
+  );
 
   const monthGrid = (
-    <div className="max-md:hidden">
+    <div>
       <div className="grid grid-cols-5 gap-px mb-px text-xs font-semibold text-gray-500 dark:text-gray-400">
         {DAY_NAMES.map(n => (
-          <div key={n} className="px-2 py-1">
+          <div key={n} className="px-2 py-1 max-md:px-0.5">
             {n}
           </div>
         ))}
       </div>
       <div className="grid grid-cols-5 gap-px bg-gray-200 dark:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
-        {weeks.flat().map(d => {
+        {monthDays.map(d => {
           const key = ymd(d);
           const list = byDate.get(key) ?? [];
-          const inMonth = d.getMonth() === anchor.getMonth();
+          const inMonth = d.getMonth() === monthAnchor.getMonth();
           return (
             <div
               key={key}
-              className={`bg-white dark:bg-gray-800 p-1.5 min-h-[110px] ${cellTint(key)} ${inMonth ? '' : 'opacity-50'}`}
+              className={`bg-white dark:bg-gray-800 p-1.5 max-md:p-0.5 min-h-[110px] max-md:min-h-[64px] min-w-0 ${cellRing(key)} ${inMonth ? '' : 'opacity-50'}`}
             >
-              {dayHeader(d)}
+              {dayHeader(d, () => setWeekAnchor(d))}
               <div className="mt-1 space-y-1">
                 {list.slice(0, 3).map(e => (
                   <EventChip key={e.id} e={e} compact />
@@ -363,43 +409,14 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
     </div>
   );
 
-  // Phone: one agenda list, grouped by day.
-  const phoneList = (
-    <div className="md:hidden space-y-3">
-      {days
-        .filter(d => (byDate.get(ymd(d)) ?? []).length > 0)
-        .map(d => {
-          const key = ymd(d);
-          return (
-            <div key={key} className={`rounded-lg border border-gray-200 dark:border-gray-700 p-2 ${cellTint(key)}`}>
-              {dayHeader(d)}
-              <div className="mt-2 space-y-1.5">
-                {(byDate.get(key) ?? []).map(e => (
-                  <EventChip key={e.id} e={e} />
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      {!loading && visible.length === 0 && (
-        <div className="text-sm text-gray-500 dark:text-gray-400">Nothing scheduled in this range.</div>
-      )}
-    </div>
-  );
+  const side = layout === 'side';
 
   return (
-    <section className="mb-8 max-w-screen-2xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+    <section className="mb-8 bg-white dark:bg-gray-800 rounded-xl shadow p-4">
       <div className="flex flex-wrap items-center gap-3 mb-3">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mr-2">Calendar</h3>
-        <div className="inline-flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
-          <button type="button" className={seg(view === 'week')} onClick={() => update({ view: 'week' })}>
-            Week
-          </button>
-          <button type="button" className={seg(view === 'month')} onClick={() => update({ view: 'month' })}>
-            Month
-          </button>
-        </div>
-        <div className="inline-flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 max-md:hidden">
+        {/* Side by side only has room above 1300 CSS px; below that the band is always stacked. */}
+        <div className="inline-flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 max-[1300px]:hidden">
           <button type="button" className={seg(layout === 'stacked')} onClick={() => update({ layout: 'stacked' })}>
             Stacked
           </button>
@@ -433,24 +450,33 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
             </select>
           </label>
         )}
-        <div className="ml-auto flex items-center gap-1">
-          <button type="button" aria-label="Previous" onClick={() => step(-1)} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-            <ChevronLeft className="w-5 h-5" />
-          </button>
-          <button type="button" onClick={() => setAnchor(new Date())} className="min-h-[44px] px-3 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-            Today
-          </button>
-          <span className="px-2 text-sm font-medium text-gray-900 dark:text-white">{title}</span>
-          <button type="button" aria-label="Next" onClick={() => step(1)} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-            <ChevronRight className="w-5 h-5" />
-          </button>
-          <Link href="/calendar" className="ml-2 text-sm text-blue-600 dark:text-blue-400 hover:underline">
-            Full calendar
-          </Link>
+        <Link href="/calendar" className="ml-auto text-sm text-blue-600 dark:text-blue-400 hover:underline">
+          Full calendar
+        </Link>
+      </div>
+      <div className={`grid gap-6 ${side ? 'min-[1300px]:grid-cols-5' : ''}`}>
+        <div className={`min-w-0 ${side ? 'min-[1300px]:col-span-3' : ''}`}>
+          {panelNav(
+            'Week',
+            weekTitle,
+            () => setWeekAnchor(a => addDays(a, -7)),
+            () => setWeekAnchor(a => addDays(a, 7)),
+            () => setWeekAnchor(new Date()),
+          )}
+          {weekGrid}
+          {weekList}
+        </div>
+        <div className={`min-w-0 ${side ? 'min-[1300px]:col-span-2' : ''}`}>
+          {panelNav(
+            'Month',
+            monthTitle,
+            () => setMonthAnchor(a => new Date(a.getFullYear(), a.getMonth() - 1, 1)),
+            () => setMonthAnchor(a => new Date(a.getFullYear(), a.getMonth() + 1, 1)),
+            () => setMonthAnchor(new Date()),
+          )}
+          {monthGrid}
         </div>
       </div>
-      {view === 'week' ? weekGrid : monthGrid}
-      {phoneList}
     </section>
   );
 }

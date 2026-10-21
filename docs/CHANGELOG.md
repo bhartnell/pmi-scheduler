@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+trim-6-7a-4b | Home calendar band: week and month always shown together (toggle removed), independent week/month nav, month-day click moves the week, side-by-side 3:2 above 1300px, platoon day tint removed (A/B/C badge kept)
+
 trim-6-7a-3b | Today band lists every program's lab days for admin+/lead (my-labs ?scope=all, additive); home width caps removed from stat bar, tiles and dashboard rows; Reset re-fetches preferences with cache: no-store so the 5-min private cache no longer re-serves the old saved layout
 trim-6-7a-3 | Home Today band (TodayBand: today's labs strip, station tiles with Grade, dashed 'Needs an instructor', Who's coming / Still open / Ask for help); my-labs API gains rotations, roles, signups (additive); home drops Welcome header and width cap
 trim-6-7a-4 | Home calendar band (HomeCalendarBand: Mon-Fri week + month, Stacked/Side by side, platoon badge, needs-instructors dashed outline + Sign up, Everyone / Mine + open spots, admin View-as, phone agenda); unified calendar lab events gain metadata.open_station_count; lean defaults drop Notifications, My Upcoming Labs, Recent Feedback
@@ -24,6 +26,8 @@ feedback-scenario | Feedback button gains 'Scenario' type (captures open scenari
 home-two-clicks | My Upcoming Labs widget: lists every program lab day in next 7 days, today pinned with station list + Grade buttons (own station first); new read-only GET /api/lab-management/my-labs; no schema change
 
 ## 2026-10-21
+
+trim-6-7a-4b | Home calendar band: week and month always shown together (toggle removed), independent week/month nav, month-day click moves the week, side-by-side 3:2 above 1300px, platoon day tint removed (A/B/C badge kept)
 
 trim-7-partA | TRIM 7/7 Part A: width-cap pass, max-w-5xl/6xl/7xl mx-auto -> max-w-screen-2xl on kept pages; docs/LAYOUT.md; class names only
 
