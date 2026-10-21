@@ -275,7 +275,7 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
         </Link>
       )}
       <div className="flex-1 flex items-center bg-white dark:bg-gray-800 rounded-xl shadow px-2 min-h-[60px] max-md:flex-wrap">
-        <div className="flex-1 flex items-center flex-wrap">
+        <div className="flex-1 flex items-center flex-wrap gap-x-4 gap-y-2 py-1">
           {shown.length === 0 && (
             <span className="px-3 text-sm text-gray-500 dark:text-gray-400">No stats picked.</span>
           )}
@@ -284,18 +284,18 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
               key={tile.id}
               href={tile.href}
               title={tile.title}
-              className="flex flex-col items-start px-4 py-2 min-h-[44px] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 group"
+              className={`flex flex-col items-start px-3 py-2 min-h-[44px] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 group ${tile.cols ? 'min-w-[230px]' : 'min-w-[150px]'}`}
             >
-              <span className="text-xl font-bold leading-tight text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+              <span className="text-[22px] font-bold leading-tight text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
                 {tile.value || <span className="inline-block w-6 h-5 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />}
               </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 group-hover:underline">{tile.label}</span>
+              <span className="text-xs whitespace-nowrap text-gray-500 dark:text-gray-400 group-hover:underline">{tile.label}</span>
               {tile.cols && (
                 <span className="mt-0.5 flex items-start gap-2.5 tabular-nums">
                   {tile.cols.map(c => (
                     <span key={c.label} className="flex min-w-[1.5rem] flex-col items-center leading-tight">
-                      <span className="text-[10px] text-gray-500 dark:text-gray-400">{c.label}</span>
-                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{c.value}</span>
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400">{c.label}</span>
+                      <span className="text-[15px] font-semibold text-gray-800 dark:text-gray-200">{c.value}</span>
                     </span>
                   ))}
                 </span>

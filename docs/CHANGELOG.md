@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+trim-6-7a-10 | Home: 'Your Dashboard' block renders only when a widget is enabled; 'All pages' list removed; Customize home / Reset home layout in the avatar menu (+ 'Customize home' link under Operations Hub row); stat bar tiles min 150/230px, 22px numbers, 12px one-line labels, 16px gaps, wraps instead of crushing, 11px/15px semester columns. Role-default stat set already matched Ben's picks (no change). Card 4005cd1c...fb0e
 perf-avail-timeout | Lab day page: instructor-availability fetch aborts after 8s (and on unmount) so 'Checking instructor availability...' cannot spin forever; panel hides when empty. PERF card 3ff5cd1c...d6 (partial)
 
 trim-6-7a-9 | Top bar, sub-nav and avatar use the page clamp gutter (3000px ceiling); View as computes Sign up / You're in for the chosen person (read-only, buttons disabled); Remove beside You're in in month + week; Sign up is a filled tag; stat bar: total first, open spots/feedback dropped, semester mini columns, Needs attention off by default with tooltip; Operations Hub row back under the Sections column; Today tile density (card 4005cd1c...c96894b10319)
