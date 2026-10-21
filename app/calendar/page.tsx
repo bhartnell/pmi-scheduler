@@ -1090,7 +1090,7 @@ function CalendarContent() {
   }
 
   return (
-    <div className="w-full px-4 md:px-6 2xl:px-8 py-6 print:px-0 print:py-0">
+    <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-6 print:px-0 print:py-0">
       <Breadcrumbs className="mb-2" />
 
       {/* ── Header ────────────────────────────────────────────────────── */}

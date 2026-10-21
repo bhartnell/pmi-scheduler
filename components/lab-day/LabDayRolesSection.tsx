@@ -28,6 +28,8 @@ interface LabDayRolesSectionProps {
   // submission + conflict/volunteer classification.
   instructorAvailability: InstructorAvailabilityEntry[];
   onRolesChange: (roles: LabDayRole[]) => void;
+  /** Render inside the Who's coming block: no outer card, form open by default. */
+  embedded?: boolean;
 }
 
 export default function LabDayRolesSection({
@@ -38,9 +40,10 @@ export default function LabDayRolesSection({
   calendarAvailability,
   instructorAvailability,
   onRolesChange,
+  embedded = false,
 }: LabDayRolesSectionProps) {
   const toast = useToast();
-  const [showRoleAssignForm, setShowRoleAssignForm] = useState(false);
+  const [showRoleAssignForm, setShowRoleAssignForm] = useState(embedded);
   const [roleAssignRole, setRoleAssignRole] = useState<'lab_lead' | 'roamer' | 'observer' | 'coordinator'>('roamer');
   const [roleAssignInstructorId, setRoleAssignInstructorId] = useState('');
   const [addingRole, setAddingRole] = useState(false);
@@ -64,7 +67,7 @@ export default function LabDayRolesSection({
       if (data.success) {
         onRolesChange([...labDayRoles, data.role]);
         setRoleAssignInstructorId('');
-        setShowRoleAssignForm(false);
+        setShowRoleAssignForm(embedded);
         toast?.addToast('success', 'Role assigned successfully');
       } else {
         toast?.addToast('error', data.error || 'Failed to assign role');
@@ -147,8 +150,8 @@ export default function LabDayRolesSection({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 print:shadow-none print:border print:border-gray-300">
-      <div className="flex items-center justify-between mb-3">
+    <div className={embedded ? '' : 'bg-white dark:bg-gray-800 rounded-lg shadow p-4 mb-6 print:shadow-none print:border print:border-gray-300'}>
+      <div className={`flex items-center justify-between mb-3 ${embedded ? 'hidden' : ''}`}>
         <h3 className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
           <Users className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           Lab Leads &amp; Roamers
@@ -233,7 +236,7 @@ export default function LabDayRolesSection({
         </div>
       )}
 
-      {labDayRoles.length === 0 && !showRoleAssignForm ? (
+      {embedded ? null : labDayRoles.length === 0 && !showRoleAssignForm ? (
         <p className="text-sm text-gray-400 dark:text-gray-500 italic print:hidden">
           No roles assigned.{' '}
           {userRole && canAccessAdmin(userRole) ? (

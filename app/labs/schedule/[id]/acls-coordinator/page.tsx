@@ -149,7 +149,7 @@ export default function AclsCoordinatorPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="w-full px-4 md:px-6 2xl:px-8 py-5">
+      <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-5">
         <Link href={`/labs/schedule/${labDayId}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-3 print:hidden">
           <ArrowLeft className="w-4 h-4" /> Lab Day
         </Link>

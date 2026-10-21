@@ -29,8 +29,8 @@ interface LabDay {
   num_rotations: number | null;
   rotation_duration: number | null;
   priority_flag: string | null;
-  roles: { role: string; name: string | null }[];
-  signups: string[];
+  attendees: { name: string; labels: string[]; employment: 'full-time' | 'part-time' | null }[];
+  open_stations: number;
   stations: Station[];
 }
 
@@ -39,13 +39,6 @@ function localDateString(d: Date): string {
   const day = String(d.getDate()).padStart(2, '0');
   return `${d.getFullYear()}-${m}-${day}`;
 }
-
-const ROLE_LABEL: Record<string, string> = {
-  lab_lead: 'Lead',
-  roamer: 'Roamer',
-  observer: 'Observer',
-  coordinator: 'Coordinator',
-};
 
 export default function TodayBand() {
   const [days, setDays] = useState<LabDay[] | null>(null);
@@ -80,11 +73,10 @@ export default function TodayBand() {
       ) : (
         <div className="space-y-3">
           {days.map(day => {
-            const open = day.stations.filter(s => !s.instructor_name).length;
-            const coming = [
-              ...day.roles.filter(r => r.name).map(r => `${r.name} (${ROLE_LABEL[r.role] || r.role})`),
-              ...day.signups.map(n => `${n} (signed up)`),
-            ];
+            const open = day.open_stations;
+            const coming = day.attendees.map(
+              a => `${a.name} (${[...a.labels, a.employment].filter(Boolean).join(', ')})`,
+            );
             const heading =
               day.program && day.cohort_number != null
                 ? `${day.program} Group ${day.cohort_number}`

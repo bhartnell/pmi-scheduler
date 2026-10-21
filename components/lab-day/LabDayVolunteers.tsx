@@ -162,7 +162,9 @@ export default function LabDayVolunteers({ labDayId }: LabDayVolunteersProps) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  if (loading) return null;
+  // No volunteers: nothing to show (the Who's coming block lists everyone;
+  // this card only earns its space for check-in links / evaluations).
+  if (loading || volunteers.length === 0) return null;
 
   return (
     <div className="mb-6 print:mb-4">

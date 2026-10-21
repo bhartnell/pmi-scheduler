@@ -31,9 +31,11 @@ export default function AvailableInstructorsSection({
   const collapsedStorageKey = 'available-today-collapsed';
   const [collapsed, setCollapsedState] = useState<boolean>(() => {
     try {
-      return window.localStorage.getItem(collapsedStorageKey) === '1';
+      // Collapsed unless the user has opened it before (remembered per browser).
+      const saved = window.localStorage.getItem(collapsedStorageKey);
+      return saved === null ? true : saved === '1';
     } catch {
-      return false;
+      return true;
     }
   });
   const setCollapsed = (updater: boolean | ((v: boolean) => boolean)) => {
