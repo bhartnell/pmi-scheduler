@@ -173,18 +173,19 @@ export interface BreadcrumbsProps {
   className?: string;
 }
 
-export default function Breadcrumbs({ entityTitle, customSegments, className }: BreadcrumbsProps) {
-  const pathname = usePathname();
+export interface BreadcrumbItem {
+  label: string;
+  href: string;
+  isCurrent: boolean;
+}
 
-  // Build breadcrumb items from the current pathname
+/** Items for a pathname, Home first. Shared with the app-wide AppChrome line. */
+export function buildBreadcrumbItems(
+  pathname: string,
+  entityTitle?: string,
+  customSegments?: Record<string, string>,
+): BreadcrumbItem[] {
   const segments = pathname.split('/').filter(Boolean);
-
-  interface BreadcrumbItem {
-    label: string;
-    href: string;
-    isCurrent: boolean;
-  }
-
   const items: BreadcrumbItem[] = [];
 
   // Always start with Home
@@ -232,6 +233,13 @@ export default function Breadcrumbs({ entityTitle, customSegments, className }: 
       items.push({ label, href, isCurrent: isLast });
     }
   }
+
+  return items;
+}
+
+export default function Breadcrumbs({ entityTitle, customSegments, className }: BreadcrumbsProps) {
+  const pathname = usePathname();
+  const items = buildBreadcrumbItems(pathname, entityTitle, customSegments);
 
   return (
     <nav aria-label="Breadcrumb" className={className}>
