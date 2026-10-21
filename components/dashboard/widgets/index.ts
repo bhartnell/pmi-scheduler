@@ -172,15 +172,15 @@ export const QUICK_LINK_WHITELIST: Record<string, string[]> = {
 // Role-based default configurations
 export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: string[] }> = {
   superadmin: {
-    widgets: ['at_risk_students', 'program_snapshot', 'my_labs', 'notifications', 'cert_expiry', 'recent_feedback'],
+    widgets: ['at_risk_students', 'program_snapshot', 'cert_expiry'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
   },
   admin: {
-    widgets: ['at_risk_students', 'program_snapshot', 'my_labs', 'notifications', 'cert_expiry', 'recent_feedback'],
+    widgets: ['at_risk_students', 'program_snapshot', 'cert_expiry'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
   },
   lead_instructor: {
-    widgets: ['my_labs', 'at_risk_students', 'program_snapshot', 'open_stations', 'cert_expiry', 'notifications'],
+    widgets: ['at_risk_students', 'program_snapshot', 'open_stations', 'cert_expiry'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical'],
   },
   agency_liaison: {
@@ -188,11 +188,11 @@ export const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: stri
     quickLinks: ['lvfr_dashboard', 'lvfr_calendar', 'lvfr_scheduling', 'lvfr_pharm'],
   },
   instructor: {
-    widgets: ['my_cohort', 'my_labs', 'notifications', 'open_stations', 'cert_expiry'],
+    widgets: ['my_cohort', 'open_stations', 'cert_expiry'],
     quickLinks: ['scenarios', 'students', 'schedule', 'my_certs', 'onboarding'],
   },
   volunteer_instructor: {
-    widgets: ['my_labs', 'notifications'],
+    widgets: [],
     quickLinks: ['schedule', 'todays_labs'],
   },
   program_director: {
