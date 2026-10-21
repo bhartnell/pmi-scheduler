@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { ParkAwareLink as Link } from '@/components/ModuleGuard';
 import {
@@ -238,6 +238,23 @@ export default function HomePage() {
     }
     setResetting(false);
   };
+
+  const resetHomeRef = useRef<() => void>(() => {});
+  resetHomeRef.current = handleResetToDefault;
+
+  // Avatar menu (UserMenu) triggers Customize / Reset for the home page.
+  useEffect(() => {
+    const onCustomize = () => setShowCustomize(true);
+    const onReset = () => {
+      if (window.confirm('Reset your home layout to the role default?')) resetHomeRef.current();
+    };
+    window.addEventListener('pmi:customize-home', onCustomize);
+    window.addEventListener('pmi:reset-home', onReset);
+    return () => {
+      window.removeEventListener('pmi:customize-home', onCustomize);
+      window.removeEventListener('pmi:reset-home', onReset);
+    };
+  }, []);
 
   // Enter edit mode: snapshot current widget order into editWidgets
   const handleEnterEditMode = () => {
@@ -522,6 +539,14 @@ export default function HomePage() {
                     <SectionTiles role={effectiveRole} compact />
                   </ErrorBoundary>
                   <OperationsHubRow role={effectiveRole} />
+                  <button
+                    type="button"
+                    onClick={() => setShowCustomize(true)}
+                    className="mt-2 min-h-[44px] inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 print:hidden"
+                  >
+                    <Settings className="w-4 h-4" />
+                    Customize home
+                  </button>
                 </div>
               }
               todaySlot={
@@ -536,7 +561,7 @@ export default function HomePage() {
         )}
 
         {/* Customizable Dashboard Widgets - First thing instructors see */}
-        {preferences && (
+        {preferences && (editMode || activeWidgets.length > 0) && (
           <ErrorBoundary>
           <div className="mb-10">
             <div className="flex items-center justify-between mb-4">
@@ -646,469 +671,6 @@ export default function HomePage() {
           </ErrorBoundary>
         )}
 
-        {/* Existing page cards stay reachable, collapsed, until the section
-            landings (TRIM 6/7b) carry every page. */}
-        <details className="mt-10">
-          <summary className="cursor-pointer min-h-[44px] flex items-center text-sm font-semibold text-gray-700 dark:text-gray-200">
-            All pages
-          </summary>
-        <ErrorBoundary>
-        <nav aria-label="Main navigation" className="mt-4">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
-          {/* AHA Hub Card - instructor+ only. Was a direct shortcut to just
-              /labs/acls-hub; repointed to /labs/aha-hub so PALS is reachable
-              the same way ACLS always was (Task Handoff Queue, 2026-07-15:
-              Ben couldn't find the PALS hub because only ACLS had a front
-              door here). /labs/aha-hub lists both ACLS and PALS cohorts and
-              links out to each course's full hub. */}
-          {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
-            <Link
-              href="/labs/aha-hub"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group ring-2 ring-red-500/60"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-red-200 dark:group-hover:bg-red-900/50 transition-colors">
-                  <GraduationCap className="w-8 h-8 text-red-600 dark:text-red-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">AHA Hub</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  ACLS and PALS in one place - schedule, lab sections, team-lead stats, print.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-xs">
-                  <span className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">ACLS</span>
-                  <span className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">PALS</span>
-                  <span className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">Print</span>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {/* Lab Management Card - instructor+ only */}
-          {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
-            <Link
-              href="/labs"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
-                  <GraduationCap className="w-8 h-8 text-green-600 dark:text-green-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Labs</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  Manage lab schedules, scenarios, and assessments.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-xs">
-                  <span className="px-2 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">Scenarios</span>
-                  <span className="px-2 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">Students</span>
-                  <span className="px-2 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">Grading</span>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {/* Open Lab Card - instructor+ only */}
-          {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
-            <Link
-              href="/admin/open-labs"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 transition-colors">
-                  <DoorOpen className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Open Lab</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  Manage weekly open lab sessions, signups, and QR flyer.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-xs">
-                  <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">Sessions</span>
-                  <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">Signups</span>
-                  <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">QR Code</span>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {/* Lab Schedule (Read-Only) Card - For volunteer instructors only */}
-          {currentUser && effectiveRole === 'volunteer_instructor' && (
-            <Link
-              href="/labs/schedule"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-green-200 dark:group-hover:bg-green-900/50 transition-colors">
-                  <GraduationCap className="w-8 h-8 text-green-600 dark:text-green-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Lab Schedule <span className="text-sm font-normal text-gray-500 dark:text-gray-400">(Read Only)</span></h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  View upcoming lab schedules and assignments (read-only).
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-xs">
-                  <span className="px-2 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">View Only</span>
-                  <span className="px-2 py-1 bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 rounded-full">Schedule</span>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {/* Academics Card - instructor+ only */}
-          {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
-            <Link
-              href="/academics"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
-                  <BookOpen className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Academics</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  Manage students, cohorts, planner, and skill sheets.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-xs">
-                  <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Students</span>
-                  <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Cohorts</span>
-                  <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Planner</span>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {/* Instructor Portal Card - instructor+ only */}
-          {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
-            <Link
-              href="/instructor"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-purple-200 dark:group-hover:bg-purple-900/50 transition-colors">
-                  <Award className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Instructor Portal</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  Track certifications, CE hours, and teaching activities.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-xs">
-                  <span className="px-2 py-1 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full">Certifications</span>
-                  <span className="px-2 py-1 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full">CE Tracker</span>
-                  <span className="px-2 py-1 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded-full">Teaching Log</span>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {/* Written Exam Self-Scheduling — students (incl. roster students
-              holding an instructor role) + staff */}
-          {currentUser && effectiveRole && (effectiveRole === 'student' || hasMinRole(effectiveRole, 'instructor')) && (
-          <Link
-            href="/exam-scheduling"
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
-                <Calendar className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Written Exam Signup</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                Students sign up here - pick your own exam session and computer option.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 text-xs">
-                <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Students</span>
-                <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Self-Schedule</span>
-                <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">LockDown Browser</span>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Manage Exam Sessions — the ADMIN door (directors create/manage
-              sessions + approve the queue). Separate card so a director isn't
-              lured into the student signup page. */}
-          {currentUser && effectiveRole && hasMinRole(effectiveRole, 'admin') && (
-          <Link
-            href="/admin/exam-sessions"
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                <Calendar className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Manage Exam Sessions</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                Directors: create exam sessions, approve signups, record results.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 text-xs">
-                <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">Create Sessions</span>
-                <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">Approval Queue</span>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Scheduling Card - instructor+ only */}
-          {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
-          <Link
-            href="/scheduling/polls"
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                <Calendar className="w-8 h-8 text-blue-600 dark:text-blue-400" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Scheduling Polls</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                Find the best meeting times with students and preceptors.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 text-xs">
-                <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">Create Polls</span>
-                <span className="px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-full">View Results</span>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Tasks Card - instructor+ only */}
-          {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
-          <Link
-            href="/tasks"
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
-                <CheckSquare className="w-8 h-8 text-amber-600 dark:text-amber-400" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Tasks</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                Assign and track tasks between instructors.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 text-xs">
-                <span className="px-2 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">Assign</span>
-                <span className="px-2 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">Track</span>
-                <span className="px-2 py-1 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">Comment</span>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Scheduling Card - scheduling roles only */}
-          {currentUser && effectiveRole && canAccessScheduling(effectiveRole) && (
-          <Link
-            href="/scheduling"
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-cyan-100 dark:bg-cyan-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-cyan-200 dark:group-hover:bg-cyan-900/50 transition-colors">
-                <Clock className="w-8 h-8 text-cyan-600 dark:text-cyan-400" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Scheduling</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                Set availability and sign up for open shifts.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 text-xs">
-                <span className="px-2 py-1 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 rounded-full">Availability</span>
-                <span className="px-2 py-1 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 rounded-full">Shifts</span>
-                <span className="px-2 py-1 bg-cyan-50 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 rounded-full">Sign Up</span>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Unified Calendar Card - scheduling roles only */}
-          {currentUser && effectiveRole && canAccessScheduling(effectiveRole) && (
-          <Link
-            href="/calendar"
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-rose-100 dark:bg-rose-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-rose-200 dark:group-hover:bg-rose-900/50 transition-colors">
-                <CalendarDays className="w-8 h-8 text-rose-600 dark:text-rose-400" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Calendar</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                Unified view of lab days, open shifts, and coverage needs.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 text-xs">
-                <span className="px-2 py-1 bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-full">Lab Days</span>
-                <span className="px-2 py-1 bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-full">Shifts</span>
-                <span className="px-2 py-1 bg-rose-50 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 rounded-full">Coverage</span>
-              </div>
-            </div>
-          </Link>
-          )}
-
-          {/* Onboarding Card - For admin/superadmin or users with active onboarding */}
-          {hasOnboarding && (
-            <Link
-              href="/onboarding"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-2 border-indigo-200 dark:border-indigo-800"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
-                  <BookOpen className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Onboarding</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  {currentUser && effectiveRole && canAccessAdmin(effectiveRole)
-                    ? 'Manage instructor onboarding assignments and progress.'
-                    : 'Track your onboarding progress and complete required tasks.'}
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-xs">
-                  <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Tasks</span>
-                  <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Progress</span>
-                  <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Tracks</span>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {/* Student Portal Card - For students */}
-          {currentUser && effectiveRole === 'student' && (
-            <Link
-              href="/student"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-2 border-emerald-200 dark:border-emerald-800"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 transition-colors">
-                  <Users className="w-8 h-8 text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Student Portal</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  View your progress, completions, and lab sign-ups.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-xs">
-                  <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">Progress</span>
-                  <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">Labs</span>
-                  <span className="px-2 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full">Documents</span>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {/* Case Studies card hidden per the codebase-streamline
-              spec - feature moved to the speculative-features
-              archive branch. Routes / API / DB tables left intact;
-              only the dashboard entry point is removed. Restore by
-              uncommenting if the feature gets reactivated. */}
-
-          {/* Clinical & Internship Card - lead_instructor+ or program_director */}
-          {currentUser && effectiveRole && (canAccessClinical(effectiveRole) || canAccessAffiliations(effectiveRole)) && (
-            <Link
-              href="/clinical"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-2 border-teal-200 dark:border-teal-800"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-teal-100 dark:bg-teal-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-teal-200 dark:group-hover:bg-teal-900/50 transition-colors">
-                  <Briefcase className="w-8 h-8 text-teal-600 dark:text-teal-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Clinical & Internship</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  Track internships, preceptors, and field placements.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-xs">
-                  <span className="px-2 py-1 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-full">Internships</span>
-                  <span className="px-2 py-1 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-full">Preceptors</span>
-                  <span className="px-2 py-1 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-400 rounded-full">Meetings</span>
-                </div>
-              </div>
-            </Link>
-          )}
-
-
-          {/* LVFR AEMT Card - LVFR access only */}
-          {currentUser && effectiveRole && canAccessLVFR(effectiveRole) && (
-            <Link
-              href="/lvfr-aemt"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-2 border-orange-300 dark:border-orange-700"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-orange-100 dark:bg-orange-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50 transition-colors">
-                  <Flame className="w-8 h-8 text-orange-600 dark:text-orange-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">LVFR AEMT</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  LVFR Fire Academy AEMT course management.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-xs">
-                  <span className="px-2 py-1 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">Calendar</span>
-                  <span className="px-2 py-1 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">Scheduling</span>
-                  <span className="px-2 py-1 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">Grades</span>
-                  <span className="px-2 py-1 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">Skills</span>
-                  <span className="px-2 py-1 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 rounded-full">Pharm</span>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {/* Admin Card - Only for admin+ */}
-          {currentUser && effectiveRole && canAccessAdmin(effectiveRole) && (
-            <Link
-              href="/admin"
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group border-2 border-red-200 dark:border-red-800"
-            >
-              <div className="flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-red-200 dark:group-hover:bg-red-900/50 transition-colors">
-                  <Settings className="w-8 h-8 text-red-600 dark:text-red-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Admin Settings</h3>
-                <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                  Manage users, roles, and system settings.
-                </p>
-                <div className="flex flex-wrap justify-center gap-2 text-xs">
-                  <span className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">Users</span>
-                  <span className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">Guests</span>
-                  <span className="px-2 py-1 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400 rounded-full">Settings</span>
-                </div>
-              </div>
-            </Link>
-          )}
-
-          {/* My Account Card — always visible, gives every user a
-              discoverable path to /settings without needing the
-              UserMenu dropdown (which can be missed). */}
-          <Link
-            href="/settings"
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-indigo-100 dark:bg-indigo-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-200 dark:group-hover:bg-indigo-900/50 transition-colors">
-                <Settings className="w-8 h-8 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">My Account</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                Notification preferences, Google Calendar, sign-in sessions.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 text-xs">
-                <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Settings</span>
-                <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Calendar</span>
-                <span className="px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 rounded-full">Notifications</span>
-              </div>
-            </div>
-          </Link>
-
-          {/* Help Card - Always visible */}
-          <Link
-            href="/help"
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-          >
-            <div className="flex flex-col items-center text-center">
-              <div className="w-16 h-16 bg-sky-100 dark:bg-sky-900/30 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-sky-200 dark:group-hover:bg-sky-900/50 transition-colors">
-                <HelpCircle className="w-8 h-8 text-sky-600 dark:text-sky-400" />
-              </div>
-              <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Help Center</h3>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mb-4">
-                Documentation, guides, FAQs, and keyboard shortcuts.
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 text-xs">
-                <span className="px-2 py-1 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded-full">Guides</span>
-                <span className="px-2 py-1 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded-full">FAQ</span>
-                <span className="px-2 py-1 bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 rounded-full">Shortcuts</span>
-              </div>
-            </div>
-          </Link>
-        </div>
-        </nav>
-        </ErrorBoundary>
-        </details>
 
         </PageErrorBoundary>
       </main>
