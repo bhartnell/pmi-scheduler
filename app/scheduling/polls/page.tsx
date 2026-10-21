@@ -1,13 +1,12 @@
 'use client';
 
-import { signOut, useSession } from 'next-auth/react';
+import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { Calendar, LogOut, Plus, ExternalLink, Eye, Trash2 } from 'lucide-react';
+import { Calendar, Plus, ExternalLink, Eye, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
-import Link from 'next/link';
 
 export default function SchedulerHome() {
   const { data: session, status } = useSession();
@@ -125,41 +124,6 @@ export default function SchedulerHome() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Header with Home Link */}
-      <header className="bg-white shadow-sm dark:bg-gray-800">
-        <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            {/* Logo/Home Link */}
-            <Link
-              href="/"
-              className="flex items-center gap-2 text-blue-900 hover:text-blue-700 transition-colors dark:text-white dark:hover:text-gray-300"
-            >
-              <div className="w-10 h-10 bg-blue-900 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">PMI</span>
-              </div>
-              <div>
-                <div className="font-bold text-lg leading-tight">PMI Paramedic Tools</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">Scheduling Polls</div>
-              </div>
-            </Link>
-
-            {/* Right side - Auth info */}
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-gray-600 dark:text-gray-300 hidden sm:block">
-                {session.user?.email}
-              </span>
-              <button
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400 transition-colors"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Sign Out</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       <main className="max-w-screen-2xl mx-auto px-4 py-8">
         {/* Title and Create Button */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
