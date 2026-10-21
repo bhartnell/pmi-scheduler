@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { useKeyboardShortcuts, KeyboardShortcut } from '@/hooks/useKeyboardShortcuts';
 import KeyboardShortcutsHelp from '@/components/KeyboardShortcutsHelp';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import { buildBulkExport, downloadJson, ExportableScenarioInput } from '@/lib/scenario-export';
 
 interface Scenario {
@@ -373,7 +372,6 @@ export default function ScenariosPage() {
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <Breadcrumbs className="mb-1" />
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Scenario Library</h1>
             </div>
             <button

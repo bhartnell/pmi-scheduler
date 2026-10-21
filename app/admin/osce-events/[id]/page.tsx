@@ -35,7 +35,7 @@ import {
   Save,
   ClipboardCheck,
 } from 'lucide-react';
-import Breadcrumbs from '@/components/Breadcrumbs';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -241,7 +241,7 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="p-6 max-w-screen-2xl mx-auto">
-      <Breadcrumbs entityTitle={event.title} className="mb-2" />
+      <BreadcrumbNames entityTitle={event.title} />
 
       {/* Header */}
       <div className="mb-6">

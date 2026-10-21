@@ -23,7 +23,7 @@ import {
   Search,
 } from 'lucide-react';
 import { formatCohortNumber } from '@/lib/format-cohort';
-import Breadcrumbs from '@/components/Breadcrumbs';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 
 /**
  * PM Internship Cohort Hub.
@@ -545,7 +545,7 @@ export default function PmInternshipCohortHub() {
       {/* ─── Header ─────────────────────────────────────────────────────── */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4">
-          <Breadcrumbs entityTitle={cohortLabel} className="mb-2" />
+          <BreadcrumbNames entityTitle={cohortLabel} />
           <div className="flex items-center gap-3">
             <Link
               href="/clinical/internships"

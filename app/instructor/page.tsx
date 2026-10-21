@@ -24,7 +24,6 @@ import { canAccessAdmin, hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import type { CurrentUser } from '@/types';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface DashboardStats {
   total_certs: number;
@@ -189,7 +188,6 @@ export default function InstructorDashboard() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div>

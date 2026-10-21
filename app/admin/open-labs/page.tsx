@@ -18,7 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { canAccessAdmin } from '@/lib/permissions';
-import Breadcrumbs from '@/components/Breadcrumbs';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 import { PageLoader } from '@/components/ui';
 import type { CurrentUser } from '@/types';
 
@@ -266,9 +266,8 @@ export default function OpenLabManagementPage() {
 
   return (
     <div className="max-w-screen-2xl mx-auto px-6 py-6">
-      <Breadcrumbs
+      <BreadcrumbNames
         customSegments={{ 'admin/open-labs': 'Open Labs' }}
-        className="mb-4"
       />
 
       {/* Header */}

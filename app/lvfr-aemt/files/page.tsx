@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { canEditLVFR } from '@/lib/permissions';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   FileText, FileSpreadsheet, Image, File, Upload,
   Download, Search, ChevronDown, ChevronRight,
@@ -260,7 +259,6 @@ export default function FilesPage() {
       {/* Header */}
       <div className="bg-gradient-to-r from-red-700 to-red-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Breadcrumbs className="mb-3 [&_*]:!text-red-200 [&_a:hover]:!text-white" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white/10 rounded-lg"><FolderOpen className="w-6 h-6" /></div>

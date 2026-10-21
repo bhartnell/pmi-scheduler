@@ -24,7 +24,6 @@ import {
   ListChecks,
   ClipboardSignature,
 } from 'lucide-react';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface ReportLink {
   title: string;
@@ -234,7 +233,6 @@ export default function ReportsHubPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <Breadcrumbs className="mb-2" />
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-6">

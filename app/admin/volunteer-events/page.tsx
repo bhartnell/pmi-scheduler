@@ -20,7 +20,6 @@ import {
   Pencil,
   Mail,
 } from 'lucide-react';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -699,7 +698,6 @@ export default function VolunteerEventsPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 md:p-8">
       <div className="max-w-screen-2xl mx-auto">
-        <Breadcrumbs className="mb-2" />
 
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">

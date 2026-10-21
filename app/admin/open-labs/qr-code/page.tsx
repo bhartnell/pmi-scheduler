@@ -10,7 +10,7 @@ import {
   Link as LinkIcon,
 } from 'lucide-react';
 import { canAccessAdmin } from '@/lib/permissions';
-import Breadcrumbs from '@/components/Breadcrumbs';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 import { PageLoader } from '@/components/ui';
 import QRCodeDisplay from '@/components/QRCodeDisplay';
 import type { CurrentUser } from '@/types';
@@ -96,12 +96,11 @@ export default function OpenLabQRCodePage() {
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
-      <Breadcrumbs
+      <BreadcrumbNames
         customSegments={{
           'admin/open-labs': 'Open Labs',
           'admin/open-labs/qr-code': 'QR Code',
         }}
-        className="mb-4"
       />
 
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">

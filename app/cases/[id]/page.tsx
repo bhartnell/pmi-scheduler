@@ -29,7 +29,7 @@ import {
   DIFFICULTY_COLORS,
 } from '@/types/case-studies';
 import { hasMinRole } from '@/lib/permissions';
-import Breadcrumbs from '@/components/Breadcrumbs';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -207,7 +207,7 @@ export default function CaseDetailPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
-        <Breadcrumbs entityTitle={caseData.title} className="mb-4" />
+        <BreadcrumbNames entityTitle={caseData.title} />
 
         {/* Header card */}
         <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-6">

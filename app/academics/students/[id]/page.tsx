@@ -48,7 +48,7 @@ import { canManageStudentRoster, hasMinRole, type Role } from '@/lib/permissions
 import StudentCommunications from '@/components/StudentCommunications';
 import AttendanceAlertBanner from '@/components/AttendanceAlertBanner';
 import LearningPlanBanner from '@/components/LearningPlanBanner';
-import Breadcrumbs from '@/components/Breadcrumbs';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 
 interface Student {
   id: string;
@@ -826,9 +826,8 @@ export default function StudentDetailPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-6">
-          <Breadcrumbs
+          <BreadcrumbNames
             entityTitle={`${student.first_name} ${student.last_name}`}
-            className="mb-1"
           />
         </div>
       </div>

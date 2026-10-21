@@ -25,7 +25,6 @@ import {
 } from 'lucide-react';
 import { canAccessClinical, canAccessAffiliations, hasMinRole, type Role } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface DashboardStats {
   activePreceptors: number;
@@ -265,7 +264,6 @@ export default function ClinicalDashboardPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-6">
-          <Breadcrumbs className="mb-2" />
           <div className="flex items-center gap-3">
             <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
               <Briefcase className="w-6 h-6 text-teal-600 dark:text-teal-400" />

@@ -26,7 +26,6 @@ import {
 import { canAccessClinical, canEditClinical, type Role } from '@/lib/permissions';
 import { useToast } from '@/components/Toast';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import { apiFetch, isAuthError } from '@/lib/fetch-utils';
 
 interface Student {
@@ -1017,7 +1016,6 @@ export default function ClinicalHoursTrackerPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
         <div className="max-w-screen-2xl mx-auto px-6 py-6">
-          <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">

@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import { ParkAwareLink as Link } from '@/components/ModuleGuard';
 import { buildBreadcrumbItems } from '@/components/Breadcrumbs';
 import { sectionForPath } from '@/components/home/sections';
+import { useBreadcrumbNames } from '@/components/layout/BreadcrumbNames';
 
 /**
  * The one line under the app-wide top bar (TRIM 6/7b-1). It is both the
@@ -12,6 +13,7 @@ import { sectionForPath } from '@/components/home/sections';
  * shows the path as links; on Home it just says Home. Same height everywhere.
  */
 export default function SubNavLine({ pathname }: { pathname: string }) {
+  const names = useBreadcrumbNames();
   const section = sectionForPath(pathname);
   const onFront =
     section && (pathname === section.href || section.chips.some((c) => c.href === pathname));
@@ -49,7 +51,7 @@ export default function SubNavLine({ pathname }: { pathname: string }) {
       </>
     );
   } else {
-    const items = buildBreadcrumbItems(pathname).slice(1);
+    const items = buildBreadcrumbItems(pathname, names.entityTitle, names.customSegments).slice(1);
     content = (
       <ol className="flex items-center gap-1">
         {items.map((item, i) => (

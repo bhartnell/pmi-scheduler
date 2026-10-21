@@ -14,7 +14,6 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 import Link from 'next/link';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface ParsedTemplate {
   name: string;
@@ -162,7 +161,6 @@ export default function RideAlongImportPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-screen-2xl mx-auto px-4 py-8">
-        <Breadcrumbs />
 
         <div className="mb-6 flex items-center gap-4">
           <Link

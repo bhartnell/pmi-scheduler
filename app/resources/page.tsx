@@ -25,7 +25,6 @@ import { hasMinRole } from '@/lib/permissions';
 import { PageLoader } from '@/components/ui';
 import { useToast } from '@/components/Toast';
 import { parseDateSafe } from '@/lib/utils';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -819,7 +818,6 @@ export default function ResourcesPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <Breadcrumbs className="mb-2" />
 
           {/* Title + Action */}
           <div className="flex items-center justify-between gap-4">
