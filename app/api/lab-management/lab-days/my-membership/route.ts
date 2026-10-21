@@ -31,12 +31,20 @@ export async function GET(request: NextRequest) {
   const email = user.email.toLowerCase();
 
   try {
-    const [rolesRes, stationsRes] = await Promise.all([
+    const [rolesRes, stationsRes, signupsRes] = await Promise.all([
       supabase.from('lab_day_roles').select('id, lab_day_id, role').eq('instructor_id', user.id).in('lab_day_id', ids),
       supabase
         .from('lab_stations')
         .select('lab_day_id, instructor_email, station_instructors(user_email)')
         .in('lab_day_id', ids),
+      // Confirmed shift signups put a person on the day too (Who's coming source 3).
+      supabase
+        .from('open_shifts')
+        .select('lab_day_id, signups:shift_signups!inner(status, instructor_id)')
+        .eq('is_cancelled', false)
+        .in('lab_day_id', ids)
+        .eq('signups.status', 'confirmed')
+        .eq('signups.instructor_id', user.id),
     ]);
     if (rolesRes.error) throw rolesRes.error;
     if (stationsRes.error) throw stationsRes.error;
@@ -49,6 +57,11 @@ export async function GET(request: NextRequest) {
       if (!d) continue;
       d.on = true;
       d.role_ids.push(r.id as string);
+    }
+    // A failed signup read only narrows "You're in"; it never blocks the response.
+    for (const sh of (signupsRes.data || []) as unknown as { lab_day_id: string | null }[]) {
+      const d = sh.lab_day_id ? days[sh.lab_day_id] : null;
+      if (d) d.on = true;
     }
     for (const s of (stationsRes.data || []) as unknown as {
       lab_day_id: string;
