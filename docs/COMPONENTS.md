@@ -476,7 +476,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 |-----------|------|-------|-------------|
 | `RolePreviewProvider` | `components/RolePreviewProvider.tsx` | `{ children }` | Context provider for role preview mode. Exports `useRolePreview` hook. |
 | `RolePreviewBanner` | `components/RolePreviewBanner.tsx` | _(none)_ | Warning banner shown when the user is in role preview mode. |
-| `RolePreviewSelector` | `components/RolePreviewSelector.tsx` | _(none)_ | Role dropdown selector for entering/exiting role preview. |
+| `RolePreviewSelector` | `components/RolePreviewSelector.tsx` | `inline?`, `onDone?` | Role list for entering/exiting role preview. `inline` renders it as a section of the avatar menu (UserMenu); no longer in the floating dock. |
 
 ### Security
 
@@ -643,3 +643,5 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 ### SelfAssessmentTodo (2026-10-20)
 
 `components/student/SelfAssessmentTodo.tsx` - student dashboard To-do card; links to `/student/self-assessment` only while the cohort window is open, otherwise "Nothing due right now." Reads `SA_STORAGE.getMyStatus()`.
+
+- `components/home/HomeTopBar.tsx`, `SectionTiles.tsx`, `sections.ts` — home top bar (brand, nine sections, utilities, Home breadcrumb line), bottom section tiles + PMI Operations Hub row, and the shared section/role-visibility data (TRIM 6/7a-1). Section links point at today's hubs until 6/7b. (Last updated: 2026-10-21)

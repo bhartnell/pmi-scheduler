@@ -25,19 +25,16 @@ import {
   CalendarDays,
   RotateCcw,
   HelpCircle,
-  Search,
   LayoutGrid,
   Check,
   Flame,
-  Package,
-  Printer,
-  ExternalLink,
   DoorOpen,
 } from 'lucide-react';
 import { canAccessAdmin, canAccessClinical, canAccessScheduling, canAccessAffiliations, canAccessLVFR, hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import NotificationBell from '@/components/NotificationBell';
+import HomeTopBar from '@/components/home/HomeTopBar';
+import SectionTiles from '@/components/home/SectionTiles';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
 import DraggableWidgetGrid from '@/components/dashboard/DraggableWidgetGrid';
 import HomeStatBar from '@/components/dashboard/HomeStatBar';
@@ -486,57 +483,8 @@ export default function HomePage() {
   // Logged in - show main menu
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-sm print:hidden">
-        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center" aria-hidden="true">
-              <Stethoscope className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="font-bold text-gray-900 dark:text-white">PMI Paramedic Tools</p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Pima Paramedic Institute</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-600 dark:text-gray-400 hidden sm:block" aria-label={`Signed in as ${session.user?.email}`}>{session.user?.email}</span>
-            {/* Search / command palette trigger */}
-            <button
-              onClick={() => {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                (window as any).__openCommandPalette?.();
-              }}
-              aria-label="Open search (Ctrl+K)"
-              title="Search (Ctrl+K / Cmd+K)"
-              className="hidden sm:flex items-center gap-2 px-3 py-1.5 text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors border border-gray-200 dark:border-gray-600"
-            >
-              <Search className="w-3.5 h-3.5" aria-hidden="true" />
-              <span className="text-gray-400 dark:text-gray-500">Search</span>
-              <kbd className="inline-flex items-center px-1 py-0.5 text-xs font-mono text-gray-400 dark:text-gray-500 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded">
-                ⌘K
-              </kbd>
-            </button>
-            <NotificationBell />
-            <Link
-              href="/help"
-              aria-label="Help Center"
-              className="flex items-center gap-1.5 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <HelpCircle className="w-4 h-4" aria-hidden="true" />
-              <span className="hidden sm:inline text-sm">Help</span>
-            </Link>
-            <ThemeToggle />
-            <button
-              onClick={() => signOut()}
-              aria-label="Sign out"
-              className="flex items-center gap-2 px-3 py-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
-            >
-              <LogOut className="w-4 h-4" aria-hidden="true" />
-              <span className="hidden sm:inline">Sign Out</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Header: top bar with the nine sections (TRIM 6/7a-1) */}
+      <HomeTopBar role={effectiveRole} />
 
       {/* Main Content */}
       <main id="main-content" className="max-w-screen-2xl mx-auto px-4 py-12">
@@ -672,9 +620,19 @@ export default function HomePage() {
           </ErrorBoundary>
         )}
 
-        {/* Main Navigation Cards */}
+        {/* Section tiles (TRIM 6/7a-1) */}
         <ErrorBoundary>
-        <nav aria-label="Main navigation">
+          <SectionTiles role={effectiveRole} />
+        </ErrorBoundary>
+
+        {/* Existing page cards stay reachable, collapsed, until the section
+            landings (TRIM 6/7b) carry every page. */}
+        <details className="mt-10 max-w-screen-2xl mx-auto">
+          <summary className="cursor-pointer min-h-[44px] flex items-center text-sm font-semibold text-gray-700 dark:text-gray-200">
+            All pages
+          </summary>
+        <ErrorBoundary>
+        <nav aria-label="Main navigation" className="mt-4">
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-screen-2xl mx-auto">
           {/* AHA Hub Card - instructor+ only. Was a direct shortcut to just
               /labs/acls-hub; repointed to /labs/aha-hub so PALS is reachable
@@ -1129,103 +1087,7 @@ export default function HomePage() {
         </div>
         </nav>
         </ErrorBoundary>
-
-        {/* PMI Operations Hub - instructor+ only */}
-        {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
-          <section className="mt-10 max-w-screen-2xl mx-auto">
-            <div className="mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">PMI Operations Hub</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Managed by Josh Lomonaco &mdash;{' '}
-                <a
-                  href="https://pmi-ops.vercel.app"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 dark:text-blue-400 hover:underline"
-                >
-                  pmi-ops.vercel.app
-                </a>
-              </p>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
-              {/* Inventory */}
-              <a
-                href="https://pmi-ops.vercel.app/inventory"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-              >
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-14 h-14 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50 transition-colors">
-                    <Package className="w-7 h-7 text-blue-600 dark:text-blue-400" />
-                  </div>
-                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-1">Inventory</h4>
-                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-3">Track equipment, supplies, and consumables</p>
-                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
-                    Open in PMI Ops <ExternalLink className="w-3 h-3" />
-                  </span>
-                </div>
-              </a>
-
-              {/* Print Hub */}
-              <a
-                href="https://pmi-ops.vercel.app/print-hub"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-              >
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-14 h-14 bg-violet-100 dark:bg-violet-900/30 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-violet-200 dark:group-hover:bg-violet-900/50 transition-colors">
-                    <Printer className="w-7 h-7 text-violet-600 dark:text-violet-400" />
-                  </div>
-                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-1">Print Hub</h4>
-                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-3">Submit and manage print requests</p>
-                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
-                    Open in PMI Ops <ExternalLink className="w-3 h-3" />
-                  </span>
-                </div>
-              </a>
-
-              {/* Library */}
-              <a
-                href="https://pmi-ops.vercel.app/library"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-              >
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-14 h-14 bg-amber-100 dark:bg-amber-900/30 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-amber-200 dark:group-hover:bg-amber-900/50 transition-colors">
-                    <BookOpen className="w-7 h-7 text-amber-600 dark:text-amber-400" />
-                  </div>
-                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-1">Library</h4>
-                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-3">Browse and check out program resources</p>
-                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
-                    Open in PMI Ops <ExternalLink className="w-3 h-3" />
-                  </span>
-                </div>
-              </a>
-
-              {/* Certifications */}
-              <a
-                href="https://gridsquares.app/certifications"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-xl transition-shadow p-6 group"
-              >
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mb-3 group-hover:bg-emerald-200 dark:group-hover:bg-emerald-900/50 transition-colors">
-                    <Award className="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
-                  </div>
-                  <h4 className="text-base font-bold text-gray-900 dark:text-white mb-1">Certifications</h4>
-                  <p className="text-gray-600 dark:text-gray-400 text-xs mb-3">Manage instructor and student certifications</p>
-                  <span className="text-xs text-blue-600 dark:text-blue-400 font-medium flex items-center gap-1">
-                    Open in PMI Ops <ExternalLink className="w-3 h-3" />
-                  </span>
-                </div>
-              </a>
-            </div>
-          </section>
-        )}
+        </details>
 
         </PageErrorBoundary>
       </main>
