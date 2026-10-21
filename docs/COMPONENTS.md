@@ -120,6 +120,8 @@ instructors" toggle to reveal `conflict`/`no_availability` instructors.
 Distinct from the pre-existing `calendarAvailability` prop (Google
 Calendar free/busy) — both dots/suffixes render side by side.
 
+**`components/lab-day/WhosComingBlock.tsx`** — Added 2026-10-21: lab day page "Who's coming (n)" block. Reads `/api/lab-management/lab-days/[id]/whos-coming` (lab_day_roles + station assignments + confirmed shift signups + volunteer registrations), adds/removes via `/api/lab-management/lab-day-roles` (role `attending`, or `other_name` for Other; calendar invite through the existing role sync). Embeds `LabDayRolesSection` (`embedded` prop) behind an "Assign Lab Leads & Roamers" link.
+
 **`components/lab-day/LabDayRolesSection.tsx`** — Updated 2026-07-02: new
 required prop `instructorAvailability: InstructorAvailabilityEntry[]`.
 The role-assignment instructor picker defaults to available/volunteer

@@ -4,6 +4,7 @@
 > Reconciled to live database -- June 8, 2026 (see "Schema Reconciliation Additions")
 > Check constraints re-verified against live -- June 10, 2026 (all 146 documented CHECK definitions normalized to exact pg_get_constraintdef output; 4 had real value-list drift)
 > Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
+> Last updated: 2026-10-21 -- `lab_day_roles`: added nullable `other_name` and role `attending` (migration `20261021_lab_day_roles_attending_other.sql`, applied live; lab day Who's coming block)
 > Last updated: 2026-10-01 -- `lab_users.signature_face` now 'script' (embedded Dancing Script); legacy 'classic'/'formal'/'casual' still valid, render as script (no schema change)
 > Last updated: 2026-09-29 -- added `scenarios.assessment_{x..e}_action` (Scenario Format v2); `phases` jsonb gains optional keys changes/triggers/modifiers/branch
 > Last updated: 2026-07-12 -- added `lab_days.is_archived` (migration `20260712_lab_days_is_archived.sql`, archive-not-delete flag excluding rows from the general lab schedule + ACLS hub list views)
@@ -1821,6 +1822,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | role | text | NO |  |  |
 | notes | text | YES |  |  |
 | created_at | timestamptz | YES | now() |  |
+| other_name | text | YES |  | Free-text name for an "Other" attendee (instructor_id NULL, no calendar event). Added 2026-10-21. |
 
 **Foreign Keys:**
 - `lab_day_id` -> `lab_days.id` (`lab_day_roles_lab_day_id_fkey`)
@@ -1830,7 +1832,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 - `lab_day_roles_lab_day_id_instructor_id_role_key`: (role, instructor_id, lab_day_id)
 
 **Check Constraints:**
-- `lab_day_roles_role_check`: `((role = ANY (ARRAY['lab_lead'::text, 'roamer'::text, 'observer'::text, 'coordinator'::text])))`
+- `lab_day_roles_role_check`: `((role = ANY (ARRAY['lab_lead'::text, 'roamer'::text, 'observer'::text, 'coordinator'::text, 'attending'::text])))`
 
 **Indexes:**
 - `idx_lab_day_roles_instructor`: `CREATE INDEX idx_lab_day_roles_instructor ON public.lab_day_roles USING btree (instructor_id)`

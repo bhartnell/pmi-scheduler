@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     // filter they show up twice in the station instructor dropdown.
     const { data, error } = await supabase
       .from('lab_users')
-      .select('id, name, email, role, is_active')
+      .select('id, name, email, role, is_active, is_part_time')
       .in('role', ['instructor', 'lead_instructor', 'admin', 'superadmin', 'volunteer_instructor'])
       .eq('is_active', true)
       .order('name');
