@@ -315,7 +315,7 @@ export default function PalsGradePage() {
   const fmtDay = (d: DayOpt) => `${d.date}${d.cohort?.cohort_number ? ` - Cohort ${d.cohort.cohort_number}` : ''}`;
 
   return (
-    <div className="max-w-screen-2xl mx-auto p-4 sm:p-6">
+    <div className="w-full px-4 md:px-6 2xl:px-8 py-4">
       <div className="flex items-center justify-between mb-4">
         <Link href={returnTo || '/labs/pals-hub'} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">
           <ArrowLeft className="w-4 h-4" /> Back to PALS Hub

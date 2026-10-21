@@ -968,7 +968,7 @@ export default function ClinicalTrackerPage() {
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-screen-2xl mx-auto px-4 py-5">
+        <div className="w-full px-4 md:px-6 2xl:px-8 py-5">
           <Breadcrumbs className="mb-2" />
           <div className="flex items-center gap-3">
             <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
@@ -982,7 +982,7 @@ export default function ClinicalTrackerPage() {
         </div>
       </div>
 
-      <main className="max-w-screen-2xl mx-auto px-4 py-6">
+      <main className="w-full px-4 md:px-6 2xl:px-8 py-6">
         {/* Controls */}
         <div className="flex flex-wrap items-center gap-3 mb-4">
           <select
