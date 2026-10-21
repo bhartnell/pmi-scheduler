@@ -412,7 +412,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
   const side = layout === 'side';
 
   return (
-    <section className="mb-8 max-w-screen-2xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow p-4">
+    <section className="mb-8 bg-white dark:bg-gray-800 rounded-xl shadow p-4">
       <div className="flex flex-wrap items-center gap-3 mb-3">
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white mr-2">Calendar</h3>
         {/* Side by side only has room above 1300 CSS px; below that the band is always stacked. */}

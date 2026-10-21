@@ -19,7 +19,7 @@ export default function SectionTiles({ role }: SectionTilesProps) {
   const showOps = !!role && hasMinRole(role, 'instructor');
 
   return (
-    <section aria-label="Sections" className="mt-10 max-w-screen-2xl mx-auto">
+    <section aria-label="Sections" className="mt-10">
       <div className="grid grid-cols-3 max-lg:grid-cols-2 max-sm:grid-cols-1 gap-4">
         {sections.map((s) => {
           const Icon = s.icon;

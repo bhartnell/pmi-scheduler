@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { hasMinRole } from '@/lib/permissions';
 
 // lab_users.primary_program -> programs.abbreviation
 const PROGRAM_ABBREVIATION: Record<string, string> = {
@@ -12,11 +13,17 @@ const PROGRAM_ABBREVIATION: Record<string, string> = {
 // Home -> Grade: every scheduled lab day for the caller's program over the
 // next 7 days (plus any day they hold a station or role on), with the station
 // list embedded so the widget can offer a Grade button per station.
+// With ?scope=all (Home Today band), admin+ and lead instructors get every
+// program's lab days instead of just their own program's.
 // Read-only; reuses lab_days / lab_stations / lab_day_roles as-is.
 export async function GET(request: NextRequest) {
   const auth = await requireAuth('instructor');
   if (auth instanceof NextResponse) return auth;
   const { user } = auth;
+
+  const allPrograms =
+    request.nextUrl.searchParams.get('scope') === 'all' &&
+    (hasMinRole(user.role, 'admin') || user.role === 'lead_instructor');
 
   const todayParam = request.nextUrl.searchParams.get('today');
   const start = todayParam && /^\d{4}-\d{2}-\d{2}$/.test(todayParam)
@@ -70,7 +77,7 @@ export async function GET(request: NextRequest) {
           }))
           .sort((a, b) => Number(b.is_mine) - Number(a.is_mine) || (a.station_number || 0) - (b.station_number || 0));
         const hasRole = !!me?.id && (ld.roles || []).some((r: any) => r.instructor_id === me.id);
-        const inProgram = !programAbbr || ld.cohort?.program?.abbreviation === programAbbr;
+        const inProgram = allPrograms || !programAbbr || ld.cohort?.program?.abbreviation === programAbbr;
         return {
           id: ld.id,
           date: ld.date,

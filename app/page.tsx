@@ -203,7 +203,7 @@ export default function HomePage() {
       await fetch('/api/user/preferences', { method: 'DELETE' });
       // Also clear the layout DB entry so DB fallback returns the role default
       await fetch('/api/dashboard/layout', { method: 'DELETE' }).catch(() => {});
-      const prefsRes = await fetch('/api/user/preferences');
+      const prefsRes = await fetch('/api/user/preferences', { cache: 'no-store' });
       const prefsData = await prefsRes.json();
       if (prefsData.success) {
         setPreferences(prefsData.preferences);
@@ -224,7 +224,7 @@ export default function HomePage() {
       // Also clear locally-persisted widget sizes
       resetWidgetSizes();
       // Re-fetch fresh preferences (will return role default)
-      const prefsRes = await fetch('/api/user/preferences');
+      const prefsRes = await fetch('/api/user/preferences', { cache: 'no-store' });
       const prefsData = await prefsRes.json();
       if (prefsData.success && prefsData.preferences) {
         setPreferences(prefsData.preferences);
@@ -533,7 +533,7 @@ export default function HomePage() {
         {/* Customizable Dashboard Widgets - First thing instructors see */}
         {preferences && (
           <ErrorBoundary>
-          <div className="mb-10 max-w-screen-2xl mx-auto">
+          <div className="mb-10">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-1">
                 Your Dashboard
@@ -641,13 +641,13 @@ export default function HomePage() {
 
         {/* Existing page cards stay reachable, collapsed, until the section
             landings (TRIM 6/7b) carry every page. */}
-        <details className="mt-10 max-w-screen-2xl mx-auto">
+        <details className="mt-10">
           <summary className="cursor-pointer min-h-[44px] flex items-center text-sm font-semibold text-gray-700 dark:text-gray-200">
             All pages
           </summary>
         <ErrorBoundary>
         <nav aria-label="Main navigation" className="mt-4">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 max-w-screen-2xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
           {/* AHA Hub Card - instructor+ only. Was a direct shortcut to just
               /labs/acls-hub; repointed to /labs/aha-hub so PALS is reachable
               the same way ACLS always was (Task Handoff Queue, 2026-07-15:
