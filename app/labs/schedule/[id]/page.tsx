@@ -213,11 +213,16 @@ export default function LabDayPage() {
     const labStart = labDay.start_time || '08:00:00';
     const labEnd = labDay.end_time || '17:00:00';
     setInstructorAvailabilityLoading(true);
-    fetch(`/api/lab-management/instructor-availability?date=${labDay.date}&start_time=${labStart}&end_time=${labEnd}&lab_day_id=${labDay.id}`)
+    // 8s cap: the availability call can hang on the calendar lookup; abort so
+    // the "Checking..." panel never spins forever (the panel hides when empty).
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    fetch(`/api/lab-management/instructor-availability?date=${labDay.date}&start_time=${labStart}&end_time=${labEnd}&lab_day_id=${labDay.id}`, { signal: controller.signal })
       .then(res => res.json())
       .then(data => { if (data.success) setInstructorAvailability(data.instructors || []); })
       .catch(() => {})
-      .finally(() => setInstructorAvailabilityLoading(false));
+      .finally(() => { clearTimeout(timeout); setInstructorAvailabilityLoading(false); });
+    return () => { clearTimeout(timeout); controller.abort(); };
   }, [labDay?.date, labDay?.id, labDay?.start_time, labDay?.end_time]);
 
   // ---- Fetch functions ----

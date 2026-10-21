@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+perf-avail-timeout | Lab day page: instructor-availability fetch aborts after 8s (and on unmount) so 'Checking instructor availability...' cannot spin forever; panel hides when empty. PERF card 3ff5cd1c...d6 (partial)
+
 cohorts-graduate | 'Graduate cohort' (POST/GET /api/lab-management/cohorts/[id]/graduate, admin+): cohort graduated + end_date, remaining active students graduated with that date, history rows; home stat bar, Quick Stats and by-program counts now exclude graduated/inactive cohorts. Reuses existing 'graduated' status (no schema change). Card 4005cd1c...a98
 trim-6-7a-8b | New table program_default_instructors (+ seed from Ben's lists, 8 rows), /admin/program-rosters checklist + API, lib/program-default-instructors.ts reader; sync wiring held (card 4005cd1c...cf9704c257)
 trim-6-7a-8 (items 4+5) | Compact section tiles get their one-line description back (12px dim); PMI Operations Hub moves out of the Sections column into a full-width OperationsHubRow under Month + Sections (card 4005cd1c...a98; Sign up eligibility, default roster, Remove me split to child cards)
