@@ -1,17 +1,21 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { platoonBadge, type Platoon } from '@/lib/lvfr-platoon-style';
 import { useToast } from '@/components/Toast';
 
 /**
- * Home calendar band (TRIM 6/7a-4b): Mon-Fri week and month shown together.
- * Read-only against the master calendar's sources (/api/calendar/unified and
- * /api/scheduling/lvfr-platoons). View, layout and filter are saved as the
- * additive `calendar_band` key in the user's dashboard layout (a legacy
- * `view` key saved by the earlier toggle is ignored).
+ * Home calendar band (TRIM 6/7a-4b, reshaped in 6/7a-5 to mock round 9):
+ * top row = Today tile (slot, left) + This week tile (right); Month tile
+ * centered below at 1250px. Tiles size to their content; spare width becomes
+ * gap (docs/LAYOUT.md). Read-only against the master calendar's sources
+ * (/api/calendar/unified and /api/scheduling/lvfr-platoons). Each tile has its
+ * own Mine / Everyone / Labs only filter, saved as `week_filter` and
+ * `month_filter` in the additive `calendar_band` key of the user's dashboard
+ * layout. The old `layout` (Stacked / Side by side) and `view` keys are left in
+ * place by older saves and ignored; a legacy `filter` seeds both tiles.
  */
 
 interface BandEvent {
@@ -33,13 +37,14 @@ interface BandEvent {
   metadata?: Record<string, unknown>;
 }
 
-type Layout = 'stacked' | 'side';
-type Filter = 'all' | 'mine';
+type Filter = 'all' | 'mine' | 'labs';
 
 interface Prefs {
-  layout: Layout;
-  filter?: Filter;
+  week_filter?: Filter;
+  month_filter?: Filter;
 }
+
+const isFilter = (v: unknown): v is Filter => v === 'all' || v === 'mine' || v === 'labs';
 
 interface Props {
   userName: string | null;
@@ -47,6 +52,8 @@ interface Props {
   defaultMine: boolean;
   /** Directors and admins get the View-as switch. */
   canViewAs: boolean;
+  /** The Today tile (left of This week on the top row). Omitted: This week takes the row. */
+  todaySlot?: ReactNode;
 }
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -154,6 +161,7 @@ function EventChip({
       title={[e.title, time, e.room, (e.instructor_names ?? []).join(', ')].filter(Boolean).join(' · ')}
     >
       <div className="font-semibold truncate" style={{ color: e.color }}>
+        {compact && e.start_time ? `${fmtTime(e.start_time)} ` : ''}
         {draft ? `${e.title} (draft)` : e.title}
       </div>
       {!compact && (
@@ -210,9 +218,9 @@ function EventChip({
   );
 }
 
-export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: Props) {
-  const [layout, setLayout] = useState<Layout>('stacked');
-  const [filter, setFilter] = useState<Filter>(defaultMine ? 'mine' : 'all');
+export default function HomeCalendarBand({ userName, defaultMine, canViewAs, todaySlot }: Props) {
+  const [weekFilter, setWeekFilter] = useState<Filter>(defaultMine ? 'mine' : 'all');
+  const [monthFilter, setMonthFilter] = useState<Filter>(defaultMine ? 'mine' : 'all');
   const [weekAnchor, setWeekAnchor] = useState<Date>(() => new Date());
   const [monthAnchor, setMonthAnchor] = useState<Date>(() => new Date());
   const [events, setEvents] = useState<BandEvent[]>([]);
@@ -231,10 +239,13 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
     fetch('/api/dashboard/layout')
       .then(r => (r.ok ? r.json() : null))
       .then(j => {
-        const p = j?.layout?.calendar_band as Partial<Prefs> | undefined;
+        const p = j?.layout?.calendar_band as (Prefs & { filter?: unknown }) | undefined;
         if (cancelled || !p) return;
-        if (p.layout === 'stacked' || p.layout === 'side') setLayout(p.layout);
-        if (p.filter === 'all' || p.filter === 'mine') setFilter(p.filter);
+        const legacy = p.filter === 'all' || p.filter === 'mine' ? p.filter : null;
+        const w = isFilter(p.week_filter) ? p.week_filter : legacy;
+        const m = isFilter(p.month_filter) ? p.month_filter : legacy;
+        if (w) setWeekFilter(w);
+        if (m) setMonthFilter(m);
       })
       .catch(() => {});
     return () => {
@@ -251,9 +262,9 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
   }, []);
 
   const update = (patch: Partial<Prefs>) => {
-    const next: Prefs = { layout, filter, ...patch };
-    if (patch.layout) setLayout(patch.layout);
-    if (patch.filter) setFilter(patch.filter);
+    const next: Prefs = { week_filter: weekFilter, month_filter: monthFilter, ...patch };
+    if (patch.week_filter) setWeekFilter(patch.week_filter);
+    if (patch.month_filter) setMonthFilter(patch.month_filter);
     savePrefs(next);
   };
 
@@ -394,20 +405,26 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
 
   const loading = loadedKey !== `${startKey}|${endKey}`;
   const personName = viewAs || userName;
-  const visible = useMemo(
-    () => (filter === 'mine' || viewAs ? events.filter(e => isMine(e, personName)) : events),
-    [events, filter, viewAs, personName],
+  const groupByDate = useCallback(
+    (filter: Filter) => {
+      const visible =
+        filter === 'labs'
+          ? events.filter(e => e.event_type === 'lab' && (!viewAs || isMine(e, personName)))
+          : filter === 'mine' || viewAs
+            ? events.filter(e => isMine(e, personName))
+            : events;
+      const m = new Map<string, BandEvent[]>();
+      for (const e of visible) {
+        const list = m.get(e.date) ?? [];
+        list.push(e);
+        m.set(e.date, list);
+      }
+      return m;
+    },
+    [events, viewAs, personName],
   );
-
-  const byDate = useMemo(() => {
-    const m = new Map<string, BandEvent[]>();
-    for (const e of visible) {
-      const list = m.get(e.date) ?? [];
-      list.push(e);
-      m.set(e.date, list);
-    }
-    return m;
-  }, [visible]);
+  const weekByDate = useMemo(() => groupByDate(weekFilter), [groupByDate, weekFilter]);
+  const monthByDate = useMemo(() => groupByDate(monthFilter), [groupByDate, monthFilter]);
 
   const rangeDays = (r: { start: Date; end: Date }) => {
     const out: Date[] = [];
@@ -424,7 +441,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
   const monthTitle = monthAnchor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
 
   const seg = (active: boolean) =>
-    `px-3 min-h-[44px] text-sm font-medium transition-colors ${
+    `px-3 min-h-[44px] text-[13px] font-medium transition-colors ${
       active
         ? 'bg-blue-600 text-white'
         : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
@@ -464,23 +481,49 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
   const cellRing = (key: string) => (key === todayKey ? 'ring-2 ring-inset ring-blue-500' : '');
 
   const navBtn = 'min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700';
+  const filterControl = (value: Filter, onPick: (f: Filter) => void) => (
+    <div className="inline-flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600" role="group" aria-label="Filter">
+      {(
+        [
+          ['mine', 'Mine'],
+          ['all', 'Everyone'],
+          ['labs', 'Labs only'],
+        ] as [Filter, string][]
+      ).map(([f, label]) => (
+        <button
+          key={f}
+          type="button"
+          className={seg(f === 'all' ? value === 'all' && !viewAs : value === f || (f === 'mine' && !!viewAs && value === 'all'))}
+          onClick={() => {
+            if (f === 'all') setViewAs('');
+            onPick(f);
+          }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
   const panelNav = (
     label: string,
     title: string,
+    filterNode: ReactNode,
     prev: () => void,
     next: () => void,
     today: () => void,
+    todayLabel: string,
   ) => (
-    <div className="flex items-center gap-1 mb-3">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mr-2">{label}</h3>
+    <div className="flex items-center gap-x-3 gap-y-1 flex-wrap mb-3">
+      <h3 className="text-[15px] font-semibold text-gray-900 dark:text-white mr-1">{label}</h3>
+      {filterNode}
       <div className="ml-auto flex items-center gap-1">
         <button type="button" aria-label={`Previous ${label.toLowerCase()}`} onClick={prev} className={navBtn}>
           <ChevronLeft className="w-5 h-5" />
         </button>
-        <button type="button" onClick={today} className="min-h-[44px] px-3 text-sm rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
-          Today
+        <button type="button" onClick={today} className="min-h-[44px] px-3 text-[13px] rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+          {todayLabel}
         </button>
-        <span className="px-2 text-sm font-medium text-gray-900 dark:text-white">{title}</span>
+        <span className="px-2 text-[13px] font-medium text-gray-900 dark:text-white tabular-nums">{title}</span>
         <button type="button" aria-label={`Next ${label.toLowerCase()}`} onClick={next} className={navBtn}>
           <ChevronRight className="w-5 h-5" />
         </button>
@@ -490,14 +533,17 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
 
   // Events inside a day are always a column.
   const weekGrid = (
-    <div className="grid grid-cols-5 gap-2 max-md:hidden">
+    <div
+      className="grid gap-[18px] justify-between max-md:hidden"
+      style={{ gridTemplateColumns: 'repeat(5, minmax(120px, 220px))' }}
+    >
       {weekDays.map(d => {
         const key = ymd(d);
-        const list = byDate.get(key) ?? [];
+        const list = weekByDate.get(key) ?? [];
         return (
           <div
             key={key}
-            className={`rounded-lg border border-gray-200 dark:border-gray-700 p-2 min-h-[140px] min-w-0 ${cellRing(key)}`}
+            className={`rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/40 p-2 min-h-[140px] min-w-0 ${cellRing(key)}`}
           >
             {dayHeader(d)}
             <div className="mt-2 flex flex-col gap-1.5">
@@ -518,21 +564,21 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
   const weekList = (
     <div className="md:hidden space-y-3">
       {weekDays
-        .filter(d => (byDate.get(ymd(d)) ?? []).length > 0)
+        .filter(d => (weekByDate.get(ymd(d)) ?? []).length > 0)
         .map(d => {
           const key = ymd(d);
           return (
             <div key={key} className={`rounded-lg border border-gray-200 dark:border-gray-700 p-2 ${cellRing(key)}`}>
               {dayHeader(d)}
               <div className="mt-2 space-y-1.5">
-                {(byDate.get(key) ?? []).map(e => (
+                {(weekByDate.get(key) ?? []).map(e => (
                   <EventChip key={e.id} e={e} {...chipProps(e)} />
                 ))}
               </div>
             </div>
           );
         })}
-      {!loading && weekDays.every(d => (byDate.get(ymd(d)) ?? []).length === 0) && (
+      {!loading && weekDays.every(d => (weekByDate.get(ymd(d)) ?? []).length === 0) && (
         <div className="text-sm text-gray-500 dark:text-gray-400">Nothing scheduled this week.</div>
       )}
     </div>
@@ -550,7 +596,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
       <div className="grid grid-cols-5 gap-px bg-gray-200 dark:bg-gray-700 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
         {monthDays.map(d => {
           const key = ymd(d);
-          const list = byDate.get(key) ?? [];
+          const list = monthByDate.get(key) ?? [];
           const inMonth = d.getMonth() === monthAnchor.getMonth();
           return (
             <div
@@ -578,37 +624,19 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
     </div>
   );
 
-  const side = layout === 'side';
+  const tile = 'min-w-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3.5';
 
   return (
-    <section className="mb-8">
-      <div className="flex flex-wrap items-center gap-3 mb-3">
-        <h2 className="text-lg font-semibold text-gray-900 dark:text-white mr-2">Calendar</h2>
-        {/* Side by side only has room above 1300 CSS px; below that the band is always stacked. */}
-        <div className="inline-flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600 max-[1300px]:hidden">
-          <button type="button" className={seg(layout === 'stacked')} onClick={() => update({ layout: 'stacked' })}>
-            Stacked
-          </button>
-          <button type="button" className={seg(layout === 'side')} onClick={() => update({ layout: 'side' })}>
-            Side by side
-          </button>
-        </div>
-        <div className="inline-flex rounded-lg overflow-hidden border border-gray-300 dark:border-gray-600">
-          <button type="button" className={seg(filter === 'all' && !viewAs)} onClick={() => { setViewAs(''); update({ filter: 'all' }); }}>
-            Everyone
-          </button>
-          <button type="button" className={seg(filter === 'mine' || !!viewAs)} onClick={() => update({ filter: 'mine' })}>
-            Mine + open spots
-          </button>
-        </div>
+    <section aria-label="Calendar" className="mb-8 flex flex-col gap-[18px] max-md:gap-4">
+      <div className="flex flex-wrap items-center gap-3">
         {canViewAs && (
-          <label className="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
+          <label className="inline-flex items-center gap-1.5 text-[13px] text-gray-700 dark:text-gray-300">
             <Eye className="w-4 h-4" />
             View as
             <select
               value={viewAs}
               onChange={e => setViewAs(e.target.value)}
-              className="min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 text-sm"
+              className="min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 text-[13px]"
             >
               <option value="">Me</option>
               {instructors.map(i => (
@@ -619,32 +647,45 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
             </select>
           </label>
         )}
-        <Link href="/calendar" className="ml-auto text-sm text-blue-600 dark:text-blue-400 hover:underline">
+        <Link href="/calendar" className="ml-auto text-[13px] text-blue-600 dark:text-blue-400 hover:underline">
           Full calendar
         </Link>
       </div>
-      <div className={`grid gap-4 ${side ? 'min-[1300px]:grid-cols-5' : ''}`}>
-        <div className={`min-w-0 bg-white dark:bg-gray-800 rounded-xl shadow p-4 ${side ? 'min-[1300px]:col-span-3' : ''}`}>
+
+      {/* Row 1: Today (left) + This week (right). Stacks below 1200px. */}
+      <div
+        className={`grid gap-[18px] max-md:gap-4 ${
+          todaySlot ? 'grid-cols-[minmax(360px,2fr)_minmax(0,3fr)] max-[1199px]:grid-cols-1' : 'grid-cols-1'
+        }`}
+      >
+        {todaySlot}
+        <div className={tile}>
           {panelNav(
-            'Week',
+            'This week',
             weekTitle,
+            filterControl(weekFilter, f => update({ week_filter: f })),
             () => setWeekAnchor(a => addDays(a, -7)),
             () => setWeekAnchor(a => addDays(a, 7)),
             () => setWeekAnchor(new Date()),
+            'Today',
           )}
           {weekGrid}
           {weekList}
         </div>
-        <div className={`min-w-0 bg-white dark:bg-gray-800 rounded-xl shadow p-4 ${side ? 'min-[1300px]:col-span-2' : ''}`}>
-          {panelNav(
-            'Month',
-            monthTitle,
-            () => setMonthAnchor(a => new Date(a.getFullYear(), a.getMonth() - 1, 1)),
-            () => setMonthAnchor(a => new Date(a.getFullYear(), a.getMonth() + 1, 1)),
-            () => setMonthAnchor(new Date()),
-          )}
-          {monthGrid}
-        </div>
+      </div>
+
+      {/* Row 2: Month, centered, never wider than 1250px. */}
+      <div className={`${tile} w-full max-w-[1250px] mx-auto`}>
+        {panelNav(
+          'Month',
+          monthTitle,
+          filterControl(monthFilter, f => update({ month_filter: f })),
+          () => setMonthAnchor(a => new Date(a.getFullYear(), a.getMonth() - 1, 1)),
+          () => setMonthAnchor(a => new Date(a.getFullYear(), a.getMonth() + 1, 1)),
+          () => setMonthAnchor(new Date()),
+          'This month',
+        )}
+        {monthGrid}
       </div>
     </section>
   );

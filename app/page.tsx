@@ -484,7 +484,7 @@ export default function HomePage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Top bar + sub-nav line come from AppChrome in the root layout (TRIM 6/7b-1a) */}
       {/* Main Content */}
-      <main id="main-content" className="px-4 py-6 w-full max-w-[3000px] mx-auto">
+      <main id="main-content" className="px-[clamp(16px,2.75vw,96px)] py-6 w-full max-w-[3000px] mx-auto">
         <PageErrorBoundary>
 
         {/* System Announcements */}
@@ -509,20 +509,20 @@ export default function HomePage() {
           </ErrorBoundary>
         )}
 
-        {/* Today band (TRIM 6/7a-3): today's labs, station tiles, Grade buttons */}
-        {currentUser && effectiveRole && hasMinRole(effectiveRole, 'instructor') && (
-          <ErrorBoundary>
-            <TodayBand />
-          </ErrorBoundary>
-        )}
-
-        {/* Calendar band (TRIM 6/7a-4): Mon-Fri week and month */}
+        {/* Today + This week on row 1, Month below (TRIM 6/7a-5, mock round 9) */}
         {currentUser && effectiveRole && hasMinRole(effectiveRole, 'volunteer_instructor') && (
           <ErrorBoundary>
             <HomeCalendarBand
               userName={currentUser.name ?? null}
               defaultMine={effectiveRole === 'volunteer_instructor'}
               canViewAs={hasMinRole(effectiveRole, 'admin')}
+              todaySlot={
+                hasMinRole(effectiveRole, 'instructor') ? (
+                  <ErrorBoundary>
+                    <TodayBand />
+                  </ErrorBoundary>
+                ) : undefined
+              }
             />
           </ErrorBoundary>
         )}

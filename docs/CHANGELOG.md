@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+trim-6-7a-5 | Home reshaped to mock round 9: Today tile (left) + This week tile (right) on row 1, Month tile centered at 1250px on row 2, per-tile Mine / Everyone / Labs only filters, Stacked/Side by side switch removed, scaled page gutter; layout standard written into docs/LAYOUT.md (card 4005cd1c...db8a)
 trim-6-7a-4d | Home calendar: Sign up on every lab (adds/removes the user via lab-day-roles, same row as Who's coming) with new my-membership read endpoint; lab clicks open the lab day, class/planner links removed from home; solid event chips (card 4005cd1c...a96a)
 
 6/7b-1c | Per-page Breadcrumbs component removed from 78 files; SubNavLine is the one path line; pages with record names mount BreadcrumbNames (components/layout/BreadcrumbNames.tsx) so the line shows lab day / student / case titles instead of 'Detail'
