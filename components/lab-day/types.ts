@@ -118,6 +118,7 @@ export interface Instructor {
   name: string;
   email: string;
   role: string;
+  is_part_time?: boolean | null;
 }
 
 // Shape returned by GET /api/lab-management/instructor-availability —
@@ -141,9 +142,11 @@ export interface InstructorAvailabilityEntry {
 export interface LabDayRole {
   id: string;
   lab_day_id: string;
-  instructor_id: string;
-  role: 'lab_lead' | 'roamer' | 'observer' | 'coordinator';
+  /** NULL for an "Other" attendee (free-text other_name, no lab_users row). */
+  instructor_id: string | null;
+  role: 'lab_lead' | 'roamer' | 'observer' | 'coordinator' | 'attending';
   notes: string | null;
+  other_name?: string | null;
   instructor?: {
     id: string;
     name: string;

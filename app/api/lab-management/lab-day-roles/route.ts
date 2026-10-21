@@ -5,9 +5,10 @@ import { requireAuth } from '@/lib/api-auth';
 export interface LabDayRole {
   id: string;
   lab_day_id: string;
-  instructor_id: string;
-  role: 'lab_lead' | 'roamer' | 'observer' | 'coordinator';
+  instructor_id: string | null;
+  role: 'lab_lead' | 'roamer' | 'observer' | 'coordinator' | 'attending';
   notes: string | null;
+  other_name: string | null;
   created_at: string;
   instructor?: {
     id: string;
@@ -75,25 +76,34 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { lab_day_id, instructor_id, role, notes } = body;
+    // "Other" attendee: free-text name, no lab_users row, no calendar event.
+    const otherName = typeof body.other_name === 'string' ? body.other_name.trim() : '';
 
-    if (!lab_day_id || !instructor_id || !role) {
+    if (!lab_day_id || !role || (!instructor_id && !otherName)) {
       return NextResponse.json({ success: false, error: 'Missing required fields' }, { status: 400 });
     }
 
-    if (!['lab_lead', 'roamer', 'observer', 'coordinator'].includes(role)) {
+    if (!['lab_lead', 'roamer', 'observer', 'coordinator', 'attending'].includes(role)) {
       return NextResponse.json({ success: false, error: 'Invalid role' }, { status: 400 });
+    }
+
+    if (!instructor_id && role !== 'attending') {
+      return NextResponse.json({ success: false, error: 'Other attendees can only be added as attending' }, { status: 400 });
     }
 
     const supabase = getSupabaseAdmin();
 
-    // Check if role already exists
-    const { data: existing } = await supabase
+    // Check if role already exists (NULL-instructor "Other" rows are
+    // distinct by name, so dedupe those on other_name instead).
+    const existingQuery = supabase
       .from('lab_day_roles')
       .select('id')
       .eq('lab_day_id', lab_day_id)
-      .eq('instructor_id', instructor_id)
-      .eq('role', role)
-      .single();
+      .eq('role', role);
+    const { data: existing } = await (instructor_id
+      ? existingQuery.eq('instructor_id', instructor_id)
+      : existingQuery.is('instructor_id', null).ilike('other_name', otherName.replace(/[%_]/g, '\\$&'))
+    ).maybeSingle();
 
     if (existing) {
       return NextResponse.json({ success: false, error: 'Role already assigned' }, { status: 409 });
@@ -103,9 +113,10 @@ export async function POST(request: NextRequest) {
       .from('lab_day_roles')
       .insert({
         lab_day_id,
-        instructor_id,
+        instructor_id: instructor_id || null,
         role,
-        notes: notes || null
+        notes: notes || null,
+        other_name: instructor_id ? null : otherName,
       })
       .select(`
         *,
@@ -150,6 +161,7 @@ export async function POST(request: NextRequest) {
             roamer: 'Roamer',
             observer: 'Observer',
             coordinator: 'Coordinator',
+            attending: 'Attending',
           };
           const cohort = Array.isArray((labDay as any).cohort)
             ? (labDay as any).cohort[0]

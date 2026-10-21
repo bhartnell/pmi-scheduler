@@ -65,7 +65,7 @@ import StationCards from '@/components/lab-day/StationCards';
 import StudentRatingsSection from '@/components/lab-day/StudentRatingsSection';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
 import LabDayHeader from '@/components/lab-day/LabDayHeader';
-import LabDayRolesSection from '@/components/lab-day/LabDayRolesSection';
+import WhosComingBlock from '@/components/lab-day/WhosComingBlock';
 import LabDayCoverageSection from '@/components/lab-day/LabDayCoverageSection';
 import LabDaySkillSignoffs from '@/components/lab-day/LabDaySkillSignoffs';
 import LabDayCheckInSection from '@/components/lab-day/LabDayCheckInSection';
@@ -732,7 +732,7 @@ export default function LabDayPage() {
           </div>
         )}
 
-        <LabDayRolesSection labDayId={labDayId} labDayRoles={labDayRoles} instructors={instructors} userRole={userRole} calendarAvailability={calendarAvailability} instructorAvailability={instructorAvailability} onRolesChange={setLabDayRoles} />
+        <WhosComingBlock labDayId={labDayId} labDayRoles={labDayRoles} instructors={instructors} userRole={userRole} calendarAvailability={calendarAvailability} instructorAvailability={instructorAvailability} onRolesChange={setLabDayRoles} />
 
         {/* Below xl, shown inline here (no spare screen space to pair it
             with the skill-coverage panel yet). At xl+ it moves into the
@@ -742,7 +742,6 @@ export default function LabDayPage() {
         </div>
 
         {calendarSummary.total > 0 && !calendarLoading && (<div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3 print:hidden"><Calendar className="w-4 h-4" /><span>{calendarSummary.free} of {calendarSummary.total} instructor{calendarSummary.total !== 1 ? 's' : ''} {calendarSummary.free === 1 ? 'has a' : 'have'} free calendar{calendarSummary.free !== 1 ? 's' : ''} for this date</span>{calendarSummary.free < calendarSummary.total && <span className="text-amber-600 dark:text-amber-400 text-xs font-medium">({calendarSummary.total - calendarSummary.free} busy or disconnected)</span>}</div>)}
-        {calendarLoading && (<div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 mb-3 print:hidden"><Loader2 className="w-4 h-4 animate-spin" /><span>Checking calendar availability...</span></div>)}
 
         <LabDayCoverageSection labDayId={labDayId} userRole={userRole} />
 
@@ -1069,7 +1068,7 @@ export default function LabDayPage() {
         {labDay?.cohort?.id && (
           <SkillCoveragePanel
             cohortId={labDay.cohort.id}
-            defaultExpanded={true}
+            defaultExpanded={false}
           />
         )}
       </aside>
