@@ -29,7 +29,7 @@ import {
 
 interface FeedbackReport {
   id: string;
-  report_type: 'bug' | 'feature' | 'other';
+  report_type: 'bug' | 'feature' | 'scenario' | 'other';
   description: string;
   page_url: string | null;
   user_email: string;

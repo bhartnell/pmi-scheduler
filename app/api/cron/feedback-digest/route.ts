@@ -8,6 +8,7 @@ const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
 const REPORT_TYPE_LABEL: Record<string, string> = {
   bug: 'Bug report',
   feature: 'Feature request',
+  scenario: 'Scenario report',
   other: 'Feedback',
 };
 
