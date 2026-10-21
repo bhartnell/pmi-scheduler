@@ -6,19 +6,19 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 // Role-based default configurations
 const ROLE_DEFAULTS: Record<string, { widgets: string[]; quickLinks: string[] }> = {
   superadmin: {
-    widgets: ['notifications', 'my_labs', 'recent_feedback'],
+    widgets: [],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
   },
   admin: {
-    widgets: ['notifications', 'my_labs', 'recent_feedback'],
+    widgets: [],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical', 'feedback', 'admin'],
   },
   lead_instructor: {
-    widgets: ['notifications', 'my_labs', 'open_stations'],
+    widgets: ['open_stations'],
     quickLinks: ['scenarios', 'students', 'schedule', 'emt_tracker', 'clinical'],
   },
   instructor: {
-    widgets: ['notifications', 'my_labs', 'open_stations'],
+    widgets: ['open_stations'],
     quickLinks: ['scenarios', 'students', 'schedule', 'my_certs'],
   },
   guest: {

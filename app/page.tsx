@@ -36,6 +36,7 @@ import SectionTiles from '@/components/home/SectionTiles';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
 import DraggableWidgetGrid from '@/components/dashboard/DraggableWidgetGrid';
 import HomeStatBar from '@/components/dashboard/HomeStatBar';
+import HomeCalendarBand from '@/components/home/HomeCalendarBand';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import {
@@ -514,8 +515,19 @@ export default function HomePage() {
           </ErrorBoundary>
         )}
 
+        {/* Calendar band (TRIM 6/7a-4): Mon-Fri week and month */}
+        {currentUser && effectiveRole && hasMinRole(effectiveRole, 'volunteer_instructor') && (
+          <ErrorBoundary>
+            <HomeCalendarBand
+              userName={currentUser.name ?? null}
+              defaultMine={effectiveRole === 'volunteer_instructor'}
+              canViewAs={hasMinRole(effectiveRole, 'admin')}
+            />
+          </ErrorBoundary>
+        )}
+
         {/* Customizable Dashboard Widgets - First thing instructors see */}
-        {preferences && (preferences.dashboard_widgets.length > 0 || editMode) && (
+        {preferences && (
           <ErrorBoundary>
           <div className="mb-10 max-w-screen-2xl mx-auto">
             <div className="flex items-center justify-between mb-4">

@@ -286,6 +286,7 @@ export async function GET(request: NextRequest) {
               event_type: 'lab',
               metadata: {
                 station_count: stations.length,
+                open_station_count: stations.filter(s => !s.instructor_name).length,
                 section_number: ldSec,
                 section_label: ldSecLabel || undefined,
               },
