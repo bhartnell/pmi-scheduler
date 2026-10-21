@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+osce-standby | OSCE soft cap: signups past a block's planned spots are accepted as standby (new osce_observer_blocks.capacity_status), standby wording in the confirmation email, admin Block capacity strip with manual Promote and a Second room possible indicator (card 3ea5cd1c)
 trim-6-7b-1a | App-wide top bar + one sub-navigation/breadcrumb line moved into the root layout (AppChrome); hidden on sign-in, public, student and timer-display pages; Home page no longer renders its own copy
 trim-6-7a-4b | Home calendar band: week and month always shown together (toggle removed), independent week/month nav, month-day click moves the week, side-by-side 3:2 above 1300px, platoon day tint removed (A/B/C badge kept)
 
