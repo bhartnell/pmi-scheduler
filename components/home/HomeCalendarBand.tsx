@@ -167,6 +167,7 @@ function EventChip({
   busy,
   ended,
   listed,
+  viewingAs,
   onSignUp,
   onRemove,
 }: {
@@ -179,6 +180,8 @@ function EventChip({
   ended?: boolean;
   /** The signed-in user is named in the event's instructor list. */
   listed?: boolean;
+  /** View as someone else (read-only): buttons are disabled and say whose view this is. */
+  viewingAs?: string;
   onSignUp?: (labDayId: string) => void;
   onRemove?: (labDayId: string) => void;
 }) {
@@ -228,19 +231,37 @@ function EventChip({
     </div>
   );
   if (compact) {
-    // Month: one line, the Sign up tag sits at the right end of the chip.
+    // Month: one line, the tag sits at the right end of the chip. Sign up is a
+    // small filled control (44px hit area); You're in is the same shape, muted,
+    // with Remove beside it for a self-signup.
+    const tagShape = 'inline-flex items-center rounded px-1.5 py-0.5 text-[11px] font-bold leading-tight';
+    const viewNote = viewingAs ? `Viewing as ${viewingAs}` : undefined;
     const tag =
       showLabButton &&
       (isIn ? (
-        <span className="shrink-0 text-[10px] font-medium text-gray-500 dark:text-gray-400">You&apos;re in</span>
+        <span className="shrink-0 flex items-center">
+          <span className={`${tagShape} bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200`}>You&apos;re in</span>
+          {membership!.role_ids.length > 0 && (
+            <button
+              type="button"
+              disabled={busy || !!viewingAs}
+              title={viewNote}
+              onClick={() => onRemove?.(labDayId!)}
+              className="inline-flex min-h-[44px] items-center px-2 text-[11px] font-semibold text-gray-600 dark:text-gray-300 underline disabled:opacity-50"
+            >
+              {busy ? '...' : 'Remove'}
+            </button>
+          )}
+        </span>
       ) : (
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || !!viewingAs}
+          title={viewNote}
           onClick={() => onSignUp?.(labDayId!)}
-          className="shrink-0 rounded px-1.5 py-1 text-[11px] font-semibold text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/30 disabled:opacity-50"
+          className="shrink-0 inline-flex min-h-[44px] items-center px-0.5 disabled:opacity-50"
         >
-          {busy ? '...' : 'Sign up'}
+          <span className={`${tagShape} bg-blue-600 text-white`}>{busy ? '...' : 'Sign up'}</span>
         </button>
       ));
     const label = (
@@ -279,11 +300,12 @@ function EventChip({
       {showLabButton &&
         (isIn ? (
           <div className="mt-0.5 flex items-center gap-2 text-[11px]">
-            <span className="font-medium text-green-700 dark:text-green-400">You&apos;re in</span>
+            <span className="inline-flex items-center rounded bg-gray-200 px-1.5 py-0.5 text-[11px] font-bold text-gray-700 dark:bg-gray-700 dark:text-gray-200">You&apos;re in</span>
             {membership!.role_ids.length > 0 && (
               <button
                 type="button"
-                disabled={busy}
+                disabled={busy || !!viewingAs}
+                title={viewingAs ? `Viewing as ${viewingAs}` : undefined}
                 onClick={() => onRemove?.(labDayId!)}
                 className="min-h-[44px] px-2 text-gray-600 dark:text-gray-300 underline disabled:opacity-50"
               >
@@ -294,7 +316,8 @@ function EventChip({
         ) : (
           <button
             type="button"
-            disabled={busy}
+            disabled={busy || !!viewingAs}
+            title={viewingAs ? `Viewing as ${viewingAs}` : undefined}
             onClick={() => onSignUp?.(labDayId!)}
             className="mt-0.5 min-h-[44px] rounded bg-blue-600 px-3 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
           >
@@ -420,10 +443,13 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
         .join(','),
     [events],
   );
+  // View as: membership and can_sign_up are computed for THAT person (read-only).
+  const viewAsId = viewAs ? instructors.find(i => i.name === viewAs)?.id ?? '' : '';
   useEffect(() => {
     if (!labDayIdsKey) return;
+    if (viewAs && !viewAsId) return;
     let cancelled = false;
-    fetch(`/api/lab-management/lab-days/my-membership?ids=${labDayIdsKey}`)
+    fetch(`/api/lab-management/lab-days/my-membership?ids=${labDayIdsKey}${viewAsId ? `&as=${viewAsId}` : ''}`)
       .then(r => (r.ok ? r.json() : null))
       .then(j => {
         if (cancelled || !j?.success) return;
@@ -434,7 +460,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
     return () => {
       cancelled = true;
     };
-  }, [labDayIdsKey]);
+  }, [labDayIdsKey, viewAs, viewAsId]);
 
   const signUp = useCallback(
     async (labDayId: string) => {
@@ -497,8 +523,9 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
       busy: !!id && busyDay === id,
       ended: hasEnded(e, new Date()),
       listed:
-        !!userName &&
-        (e.instructor_names ?? []).some(i => i.toLowerCase() === userName.toLowerCase()),
+        !!(viewAs || userName) &&
+        (e.instructor_names ?? []).some(i => i.toLowerCase() === (viewAs || userName)!.toLowerCase()),
+      viewingAs: viewAs || undefined,
       onSignUp: signUp,
       onRemove: removeSignUp,
     };

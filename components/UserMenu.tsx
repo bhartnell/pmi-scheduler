@@ -134,9 +134,9 @@ export default function UserMenu() {
       // (z-50). Slightly more aggressive than the previous z-[55]
       // because at least one report came in that the menu was
       // hidden by a route-level header — this defensively wins.
-      // top-2 right-2 keeps the avatar pinned in the corner without
-      // colliding with most existing per-page header content.
-      className="fixed top-2 right-2 z-[60] print:hidden"
+      // top-2 keeps the avatar pinned at the top; right matches the page
+      // gutter (clamp, 3000px ceiling) so it lines up with the top bar's edge.
+      className="fixed top-2 right-[max(clamp(16px,2.75vw,96px),calc((100vw-3000px)/2+clamp(16px,2.75vw,96px)))] z-[60] print:hidden"
       data-testid="user-menu"
     >
       <button

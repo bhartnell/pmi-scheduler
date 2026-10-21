@@ -12,12 +12,10 @@ import { Building2, Check, SlidersHorizontal } from 'lucide-react';
  */
 
 type StatKey =
+  | 'active_students'
   | 'labs_this_week'
   | 'students_by_program'
-  | 'active_students'
-  | 'open_spots'
   | 'needs_attention'
-  | 'open_feedback'
   | 'next_priority_lab';
 
 interface StatDef {
@@ -26,18 +24,20 @@ interface StatDef {
   adminOnly?: boolean;
 }
 
+// Order here is the order on the bar: the total comes first.
 const STAT_DEFS: StatDef[] = [
+  { key: 'active_students', label: 'Active students (total)' },
   { key: 'labs_this_week', label: 'Labs this week' },
   { key: 'students_by_program', label: 'Students by program' },
-  { key: 'active_students', label: 'Active students (total)' },
-  { key: 'open_spots', label: 'Open instructor spots' },
   { key: 'needs_attention', label: 'Needs attention' },
-  { key: 'open_feedback', label: 'Open feedback', adminOnly: true },
   { key: 'next_priority_lab', label: 'Next high-priority lab' },
 ];
 
-// Open spots and open feedback stay available under Pick stats but are not on by default.
-const DEFAULT_STATS: StatKey[] = ['labs_this_week', 'students_by_program', 'needs_attention', 'next_priority_lab'];
+// Needs attention is available under Pick stats but off by default.
+const DEFAULT_STATS: StatKey[] = ['active_students', 'labs_this_week', 'students_by_program', 'next_priority_lab'];
+
+const NEEDS_ATTENTION_TITLE =
+  'Counts two things: (1) 1 if any upcoming lab station still needs an instructor, and (2) 1 if there are new feedback reports (admins only). Each number links to its list.';
 
 // Saved picks from before the rename.
 const LEGACY_KEYS: Record<string, StatKey> = { days_to_cert: 'next_priority_lab' };
@@ -209,12 +209,8 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
       case 'students_by_program':
       case 'active_students':
         return '/academics/cohorts';
-      case 'open_spots':
-        return '/labs/schedule';
       case 'needs_attention':
         return (values?.open_spots ?? 0) > 0 ? '/labs/schedule' : '/admin/feedback';
-      case 'open_feedback':
-        return '/admin/feedback';
       case 'next_priority_lab':
         return values?.next_lab?.href ?? '/labs/schedule';
     }
@@ -227,7 +223,7 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
       return lab === null ? 'None' : `${lab.days} ${lab.days === 1 ? 'day' : 'days'}`;
     }
     if (key === 'students_by_program') return '';
-    const v = values?.[key];
+    const v = values?.[key as 'active_students' | 'labs_this_week' | 'needs_attention'];
     if (v === null || v === undefined) return values ? '-' : '';
     return String(v);
   };
@@ -238,16 +234,32 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
   };
 
   // One tile per program, semester breakdown as the label; other stats are one tile each.
-  interface Tile { id: string; href: string; value: string; label: string }
+  interface Tile {
+    id: string;
+    href: string;
+    value: string;
+    label: string;
+    title?: string;
+    /** Semester mini columns: label above number, aligned. */
+    cols?: { label: string; value: number }[];
+  }
   const tiles: Tile[] = shown.flatMap((def): Tile[] => {
     if (def.key !== 'students_by_program') {
-      return [{ id: def.key, href: hrefFor(def.key), value: display(def.key), label: labelFor(def) }];
+      return [
+        {
+          id: def.key,
+          href: hrefFor(def.key),
+          value: display(def.key),
+          label: labelFor(def),
+          title: def.key === 'needs_attention' ? NEEDS_ATTENTION_TITLE : undefined,
+        },
+      ];
     }
     if (!values?.programs) return [{ id: def.key, href: hrefFor(def.key), value: values ? '-' : '', label: def.label }];
     return values.programs.map(p => {
       const sems = p.semesters.filter(s => s.semester !== null);
-      const label = sems.length > 1 ? `${p.name}: ${sems.map(s => `S${s.semester} ${s.count}`).join(', ')}` : p.name;
-      return { id: `${def.key}:${p.name}`, href: hrefFor(def.key), value: String(p.total), label };
+      const cols = sems.length > 1 ? sems.map(s => ({ label: `S${s.semester}`, value: s.count })) : undefined;
+      return { id: `${def.key}:${p.name}`, href: hrefFor(def.key), value: String(p.total), label: p.name, cols };
     });
   });
 
@@ -271,12 +283,23 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
             <Link
               key={tile.id}
               href={tile.href}
+              title={tile.title}
               className="flex flex-col items-start px-4 py-2 min-h-[44px] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 group"
             >
               <span className="text-xl font-bold leading-tight text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
                 {tile.value || <span className="inline-block w-6 h-5 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />}
               </span>
               <span className="text-xs text-gray-500 dark:text-gray-400 group-hover:underline">{tile.label}</span>
+              {tile.cols && (
+                <span className="mt-0.5 flex items-start gap-2.5 tabular-nums">
+                  {tile.cols.map(c => (
+                    <span key={c.label} className="flex min-w-[1.5rem] flex-col items-center leading-tight">
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400">{c.label}</span>
+                      <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{c.value}</span>
+                    </span>
+                  ))}
+                </span>
+              )}
             </Link>
           ))}
         </div>
