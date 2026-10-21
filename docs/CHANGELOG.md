@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+trim-6-7a-2b | Home stat bar: default set is labs this week, students by program (live cohorts via program-snapshot), needs attention, next high-priority lab (course, date, days; links to the lab day or AHA hub); open spots/feedback stay under Pick stats; next-cert-day also matches high/critical priority_flag
 trim-6-7a-4b | Home calendar band: week and month always shown together (toggle removed), independent week/month nav, month-day click moves the week, side-by-side 3:2 above 1300px, platoon day tint removed (A/B/C badge kept)
 
 trim-6-7a-3b | Today band lists every program's lab days for admin+/lead (my-labs ?scope=all, additive); home width caps removed from stat bar, tiles and dashboard rows; Reset re-fetches preferences with cache: no-store so the 5-min private cache no longer re-serves the old saved layout

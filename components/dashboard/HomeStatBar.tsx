@@ -13,11 +13,12 @@ import { Building2, Check, SlidersHorizontal } from 'lucide-react';
 
 type StatKey =
   | 'labs_this_week'
+  | 'students_by_program'
   | 'active_students'
   | 'open_spots'
   | 'needs_attention'
   | 'open_feedback'
-  | 'days_to_cert';
+  | 'next_priority_lab';
 
 interface StatDef {
   key: StatKey;
@@ -27,14 +28,31 @@ interface StatDef {
 
 const STAT_DEFS: StatDef[] = [
   { key: 'labs_this_week', label: 'Labs this week' },
-  { key: 'active_students', label: 'Active students' },
+  { key: 'students_by_program', label: 'Students by program' },
+  { key: 'active_students', label: 'Active students (total)' },
   { key: 'open_spots', label: 'Open instructor spots' },
   { key: 'needs_attention', label: 'Needs attention' },
   { key: 'open_feedback', label: 'Open feedback', adminOnly: true },
-  { key: 'days_to_cert', label: 'Days to next cert day' },
+  { key: 'next_priority_lab', label: 'Next high-priority lab' },
 ];
 
-const DEFAULT_STATS: StatKey[] = STAT_DEFS.map(d => d.key);
+// Open spots and open feedback stay available under Pick stats, not default.
+const DEFAULT_STATS: StatKey[] = ['labs_this_week', 'students_by_program', 'needs_attention', 'next_priority_lab'];
+
+// Saved picks from before the rename.
+const LEGACY_KEYS: Record<string, StatKey> = { days_to_cert: 'next_priority_lab' };
+
+interface ProgramTile {
+  program: string;
+  label: string;
+  total: number;
+  href: string;
+}
+
+interface PriorityLab {
+  text: string;
+  href: string;
+}
 
 interface Values {
   labs_this_week: number | null;
@@ -42,7 +60,8 @@ interface Values {
   open_spots: number | null;
   needs_attention: number | null;
   open_feedback: number | null;
-  days_to_cert: number | null;
+  next_priority_lab: PriorityLab | null;
+  programs: ProgramTile[] | null;
 }
 
 function localDateString(d: Date): string {
@@ -50,6 +69,58 @@ function localDateString(d: Date): string {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+const COURSE_LABELS: Record<string, string> = { acls: 'ACLS', pals: 'PALS', bls: 'BLS' };
+
+interface NextLabDay {
+  id: string;
+  date: string;
+  title: string | null;
+  cert_course: string | null;
+  is_nremt_testing: boolean | null;
+}
+
+interface SnapshotRow {
+  program: string;
+  program_name: string | null;
+  semester: number | null;
+  count: number;
+}
+
+function formatPriorityLab(next: NextLabDay, today: string): PriorityLab {
+  const target = new Date(`${next.date}T00:00:00`);
+  const start = new Date(`${today}T00:00:00`);
+  const days = Math.round((target.getTime() - start.getTime()) / 86400000);
+  const dateText = target.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const dayText = days === 0 ? 'today' : days === 1 ? '1 day' : `${days} days`;
+  const cert = typeof next.cert_course === 'string' ? next.cert_course.toLowerCase() : '';
+  const name = COURSE_LABELS[cert] ?? (next.is_nremt_testing ? 'NREMT' : next.title || 'Lab');
+  return {
+    text: `${name}, ${dateText}, ${dayText}`,
+    // AHA days open the AHA hub; any other lab opens its own lab day page.
+    href: cert === 'acls' || cert === 'pals' ? '/labs/aha-hub' : `/labs/schedule/${next.id}`,
+  };
+}
+
+function groupPrograms(rows: SnapshotRow[]): ProgramTile[] {
+  const byProgram = new Map<string, ProgramTile & { parts: string[] }>();
+  for (const r of rows) {
+    const t = byProgram.get(r.program) ?? {
+      program: r.program,
+      label: r.program_name || r.program,
+      total: 0,
+      href: `/academics/cohorts?program=${encodeURIComponent(r.program)}`,
+      parts: [] as string[],
+    };
+    t.total += r.count;
+    if (r.semester != null) t.parts.push(`S${r.semester} ${r.count}`);
+    byProgram.set(r.program, t);
+  }
+  return Array.from(byProgram.values()).map(({ parts, ...t }) => ({
+    ...t,
+    label: parts.length > 0 ? `${t.label}: ${parts.join(', ')}` : t.label,
+  }));
 }
 
 async function getJson(url: string): Promise<any | null> {
@@ -85,19 +156,26 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
       weekEnd.setDate(weekStart.getDate() + 6);
       const today = localDateString(now);
 
-      const [layout, students, labs, stations, feedback, cert] = await Promise.all([
+      const [layout, students, labs, stations, feedback, cert, snapshot] = await Promise.all([
         getJson('/api/dashboard/layout'),
         getJson('/api/lab-management/students?status=active'),
         getJson(`/api/lab-management/lab-days?startDate=${localDateString(weekStart)}&endDate=${localDateString(weekEnd)}`),
         getJson('/api/lab-management/stations?open=true&upcoming=true'),
         isAdmin ? getJson('/api/feedback?status=new&limit=1') : Promise.resolve(null),
         getJson(`/api/dashboard/next-cert-day?today=${today}`),
+        // Lead instructor and up only; lower roles get null and the tiles hide.
+        getJson('/api/dashboard/program-snapshot'),
       ]);
       if (cancelled) return;
 
       const saved = layout?.layout?.stat_bar_stats;
       if (Array.isArray(saved)) {
-        setPicked(saved.filter((k: unknown): k is StatKey => STAT_DEFS.some(d => d.key === k)));
+        const mapped: unknown[] = saved.map((k: unknown) => (typeof k === 'string' ? LEGACY_KEYS[k] ?? k : k));
+        setPicked(
+          mapped.filter(
+            (k, i): k is StatKey => STAT_DEFS.some(d => d.key === k) && mapped.indexOf(k) === i,
+          ),
+        );
       }
 
       const openSpots: number | null = stations ? (stations.stations?.length ?? 0) : null;
@@ -107,12 +185,7 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
       const needsAttention =
         openSpots === null ? null : (openSpots > 0 ? 1 : 0) + ((openFeedback ?? 0) > 0 ? 1 : 0);
 
-      let daysToCert: number | null = null;
-      if (cert?.next?.date) {
-        const target = new Date(`${cert.next.date}T00:00:00`);
-        const start = new Date(`${today}T00:00:00`);
-        daysToCert = Math.round((target.getTime() - start.getTime()) / 86400000);
-      }
+      const priorityLab = cert?.next?.date ? formatPriorityLab(cert.next, today) : null;
 
       setValues({
         labs_this_week: labs ? (labs.pagination?.total ?? labs.labDays?.length ?? 0) : null,
@@ -120,7 +193,8 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
         open_spots: openSpots,
         needs_attention: needsAttention,
         open_feedback: openFeedback,
-        days_to_cert: daysToCert,
+        next_priority_lab: priorityLab,
+        programs: snapshot?.rows ? groupPrograms(snapshot.rows) : null,
       });
     })();
     return () => {
@@ -163,16 +237,32 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
         return (values?.open_spots ?? 0) > 0 ? '/labs/schedule' : '/admin/feedback';
       case 'open_feedback':
         return '/admin/feedback';
-      case 'days_to_cert':
-        return '/calendar';
+      case 'next_priority_lab':
+        return values?.next_priority_lab?.href ?? '/labs/schedule';
+      case 'students_by_program':
+        return '/academics/cohorts';
     }
   };
 
   const display = (key: StatKey): string => {
-    const v = values?.[key];
+    if (key === 'next_priority_lab') return values?.next_priority_lab?.text ?? (values ? '-' : '');
+    const v = values?.[key as Exclude<StatKey, 'next_priority_lab' | 'students_by_program'>];
     if (v === null || v === undefined) return values ? '-' : '';
     return String(v);
   };
+
+  const tile = (key: string, href: string, value: string, label: string) => (
+    <Link
+      key={key}
+      href={href}
+      className="flex flex-col items-start px-4 py-2 min-h-[44px] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 group"
+    >
+      <span className="text-xl font-bold leading-tight text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+        {value || <span className="inline-block w-6 h-5 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />}
+      </span>
+      <span className="text-xs text-gray-500 dark:text-gray-400 group-hover:underline">{label}</span>
+    </Link>
+  );
 
   return (
     <div className="mb-6 flex items-stretch gap-3 max-md:flex-col">
@@ -190,18 +280,14 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
           {shown.length === 0 && (
             <span className="px-3 text-sm text-gray-500 dark:text-gray-400">No stats picked.</span>
           )}
-          {shown.map(def => (
-            <Link
-              key={def.key}
-              href={hrefFor(def.key)}
-              className="flex flex-col items-start px-4 py-2 min-h-[44px] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 group"
-            >
-              <span className="text-xl font-bold leading-tight text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                {display(def.key) || <span className="inline-block w-6 h-5 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />}
-              </span>
-              <span className="text-xs text-gray-500 dark:text-gray-400 group-hover:underline">{def.label}</span>
-            </Link>
-          ))}
+          {shown.flatMap(def => {
+            if (def.key === 'students_by_program') {
+              // One tile per program, read-only from live cohorts; hidden for
+              // roles the snapshot route does not serve.
+              return (values?.programs ?? []).map(p => tile(`program-${p.program}`, p.href, String(p.total), p.label));
+            }
+            return [tile(def.key, hrefFor(def.key), display(def.key), def.label)];
+          })}
         </div>
         <div className="relative" ref={pickerRef}>
           <button
