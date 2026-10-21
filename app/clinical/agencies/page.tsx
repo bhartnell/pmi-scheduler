@@ -248,7 +248,7 @@ function AgenciesContent() {
     <div className="min-h-screen bg-gradient-to-br from-teal-50 to-cyan-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="max-w-screen-2xl mx-auto px-4 py-6">
           <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -279,7 +279,7 @@ function AgenciesContent() {
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+      <main className="max-w-screen-2xl mx-auto px-4 py-6 space-y-6">
         {/* Success / Error Messages */}
         {successMessage && (
           <div className="p-4 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 rounded-lg flex items-center gap-2 text-green-800 dark:text-green-200">

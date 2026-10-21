@@ -59,7 +59,7 @@ export default function CohortProgressPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-5xl mx-auto px-4 py-5">
+      <div className="max-w-screen-2xl mx-auto px-4 py-5">
         <Link href={`/academics/cohorts/${cohortId}`} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-3">
           <ArrowLeft className="w-4 h-4" /> Cohort
         </Link>

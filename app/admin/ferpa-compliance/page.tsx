@@ -142,7 +142,7 @@ export default function FerpaCompliancePage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       {/* Header */}
       <div className="border-b border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-        <div className="mx-auto max-w-7xl px-4 py-4">
+        <div className="mx-auto max-w-screen-2xl px-4 py-4">
           <div className="flex items-center gap-4">
             <Link
               href="/admin"
@@ -186,7 +186,7 @@ export default function FerpaCompliancePage() {
       </div>
 
       {/* Content */}
-      <div className="mx-auto max-w-7xl px-4 py-6">
+      <div className="mx-auto max-w-screen-2xl px-4 py-6">
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 p-4 text-red-700 dark:bg-red-900/20 dark:text-red-400">
             <AlertCircle className="mb-1 inline h-4 w-4" /> {error}

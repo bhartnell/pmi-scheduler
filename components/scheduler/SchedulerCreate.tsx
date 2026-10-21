@@ -100,7 +100,7 @@ export default function SchedulerCreate({ pollData, onComplete }: SchedulerCreat
   // Mode Selection View
   if (view === 'mode-select') {
     return (
-      <div className="max-w-7xl mx-auto px-4">
+      <div className="max-w-screen-2xl mx-auto px-4">
         <div className="text-center mb-6 md:mb-8">
           <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-2 md:mb-3">Select Poll Type</h1>
           <p className="text-gray-700 dark:text-gray-300 text-sm md:text-base">Choose the type of scheduling poll to create</p>
@@ -143,7 +143,7 @@ export default function SchedulerCreate({ pollData, onComplete }: SchedulerCreat
   const canCreate = pollConfig.title.trim() && pollConfig.startDate && creatorSelectedSlots.length > 0;
 
   return (
-    <div className="max-w-7xl mx-auto px-4">
+    <div className="max-w-screen-2xl mx-auto px-4">
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 md:p-6 mb-4 md:mb-6">
         <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mb-3 md:mb-4">
           Create {schedulingMode === 'individual' ? 'Individual Meeting' : 'Group Session'} Poll

@@ -13,6 +13,8 @@ home-two-clicks | My Upcoming Labs widget: lists every program lab day in next 7
 
 ## 2026-10-21
 
+trim-7-partA | TRIM 7/7 Part A: width-cap pass, max-w-5xl/6xl/7xl mx-auto -> max-w-screen-2xl on kept pages; docs/LAYOUT.md; class names only
+
 trim-archive-tags | archive/README.md: 'Potential bring-back' section (instructor history, excluded from delete) + 'Reviewed, stays archived' list; docs only
 
 trim-3-5-followup | TRIM 3/5 follow-up: removed dead 'View Progress' button (404 after /students/[id]/progress archived) from academics/students/[id]; no other change

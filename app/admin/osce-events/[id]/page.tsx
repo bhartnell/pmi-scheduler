@@ -239,7 +239,7 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
   ];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 max-w-screen-2xl mx-auto">
       <Breadcrumbs entityTitle={event.title} className="mb-2" />
 
       {/* Header */}

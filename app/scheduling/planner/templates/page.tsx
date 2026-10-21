@@ -237,7 +237,7 @@ export default function TemplateEditorPage() {
     <div className="min-h-screen bg-white dark:bg-gray-900">
       {/* Header */}
       <div className="border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-6 py-4">
-        <div className="flex items-center justify-between max-w-5xl mx-auto">
+        <div className="flex items-center justify-between max-w-screen-2xl mx-auto">
           <div className="flex items-center gap-3">
             <a href="/academics/planner" className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
               <ChevronLeft className="w-5 h-5" />
@@ -261,7 +261,7 @@ export default function TemplateEditorPage() {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-6 py-6">
+      <div className="max-w-screen-2xl mx-auto px-6 py-6">
         {/* Filters */}
         <div className="flex items-center gap-4 mb-6">
           <div className="flex items-center gap-2">

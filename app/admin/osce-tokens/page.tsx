@@ -342,7 +342,7 @@ export default function OsceTokenManagement() {
   const unsentWithEmail = tokens.filter(t => t.email && !t.invited_at);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-6">
+    <div className="p-6 max-w-screen-2xl mx-auto space-y-6">
       <Breadcrumbs className="mb-2" />
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">OSCE Guest Tokens &amp; Invites</h1>

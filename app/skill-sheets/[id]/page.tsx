@@ -683,7 +683,7 @@ function SkillSheetDetailContent() {
 
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm no-print">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="max-w-screen-2xl mx-auto px-4 py-4">
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
             <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
@@ -812,7 +812,7 @@ function SkillSheetDetailContent() {
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
+      <div className="max-w-screen-2xl mx-auto px-4 py-6">
 
         {/* Student / Lab Day selectors for formative & final modes */}
         {(mode === 'formative' || mode === 'final') && (
