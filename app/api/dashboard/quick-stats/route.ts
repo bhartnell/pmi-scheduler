@@ -75,11 +75,14 @@ export async function GET(_request: NextRequest) {
 
     const [studentsRes, labsMonthRes, labsWeekRes, openTasksRes] =
       await Promise.all([
-        // Active students count (head-only count).
+        // Active students count (head-only count), excluding students of
+        // graduated or inactive cohorts (same rule as /api/dashboard/student-counts).
         supabase
           .from('students')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'active'),
+          .select('id, cohort:cohorts!students_cohort_id_fkey!inner(id)', { count: 'exact', head: true })
+          .eq('status', 'active')
+          .eq('cohort.status', 'active')
+          .eq('cohort.is_active', true),
 
         // Lab days this month.
         supabase
