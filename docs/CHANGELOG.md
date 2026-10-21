@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+trim-6-7a-4d | Home calendar: Sign up on every lab (adds/removes the user via lab-day-roles, same row as Who's coming) with new my-membership read endpoint; lab clicks open the lab day, class/planner links removed from home; solid event chips (card 4005cd1c...a96a)
+
 6/7b-1c | Per-page Breadcrumbs component removed from 78 files; SubNavLine is the one path line; pages with record names mount BreadcrumbNames (components/layout/BreadcrumbNames.tsx) so the line shows lab day / student / case titles instead of 'Detail'
 poll-unify | Poll create unified on the full builder: internship checklist 'Schedule Phase 1/2 Eval' buttons now open /poll/create with student + purpose pre-fill; /scheduling/polls/create (reduced form) removed and redirected, legacy /scheduler/create and /admin/create redirects repointed (card 3d45cd1c)
 trim-6-7a-4c | Home calendar: Week and Month as two separate cards with own nav; Who's coming resolver (lib/lab-day-attendees.ts) includes station instructors + co-instructors, de-duplicated; 3000px ceiling on home and Part A2 pages (docs/LAYOUT.md)
@@ -35,6 +37,8 @@ feedback-scenario | Feedback button gains 'Scenario' type (captures open scenari
 home-two-clicks | My Upcoming Labs widget: lists every program lab day in next 7 days, today pinned with station list + Grade buttons (own station first); new read-only GET /api/lab-management/my-labs; no schema change
 
 ## 2026-10-21
+
+trim-6-7a-4d | Home calendar: Sign up on every lab (adds/removes the user via lab-day-roles, same row as Who's coming) with new my-membership read endpoint; lab clicks open the lab day, class/planner links removed from home; solid event chips (card 4005cd1c...a96a)
 
 trim-6-7a-4c | Home calendar: Week and Month as two separate cards with own nav; Who's coming resolver (lib/lab-day-attendees.ts) includes station instructors + co-instructors, de-duplicated; 3000px ceiling on home and Part A2 pages (docs/LAYOUT.md)
 trim-6-7a-4b | Home calendar band: week and month always shown together (toggle removed), independent week/month nav, month-day click moves the week, side-by-side 3:2 above 1300px, platoon day tint removed (A/B/C badge kept)

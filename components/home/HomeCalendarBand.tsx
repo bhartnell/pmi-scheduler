@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { platoonBadge, type Platoon } from '@/lib/lvfr-platoon-style';
+import { useToast } from '@/components/Toast';
 
 /**
  * Home calendar band (TRIM 6/7a-4b): Mon-Fri week and month shown together.
@@ -25,6 +26,8 @@ interface BandEvent {
   instructor_names?: string[];
   room?: string;
   linked_url?: string;
+  linked_id?: string;
+  linked_lab_day_id?: string;
   event_type: string;
   status?: string;
   metadata?: Record<string, unknown>;
@@ -89,25 +92,69 @@ function isMine(e: BandEvent, name: string | null): boolean {
   return (e.instructor_names ?? []).some(i => i.toLowerCase() === n);
 }
 
-function EventChip({ e, compact }: { e: BandEvent; compact?: boolean }) {
+/** The lab day an event stands for: a lab_days event, or a planner block linked to one. */
+function labDayIdOf(e: BandEvent): string | null {
+  if (e.event_type !== 'lab') return null;
+  if (e.source === 'lab_day') return e.linked_id ?? e.id.replace(/^lab-/, '');
+  return e.linked_lab_day_id ?? null;
+}
+
+/**
+ * Where a click goes: a lab opens its lab day page; classes and anything whose
+ * link would be the semester planner go nowhere from home (the planner is
+ * reached from Schedule / settings).
+ */
+function hrefFor(e: BandEvent): string | null {
+  const labDayId = labDayIdOf(e);
+  if (labDayId) return `/labs/schedule/${labDayId}`;
+  if (e.source === 'planner' || e.source === 'lvfr') return null;
+  if (!e.linked_url || e.linked_url.includes('/planner')) return null;
+  return e.linked_url;
+}
+
+interface Membership {
+  on: boolean;
+  role_ids: string[];
+}
+
+function EventChip({
+  e,
+  compact,
+  membership,
+  canSignUp,
+  busy,
+  onSignUp,
+  onRemove,
+}: {
+  e: BandEvent;
+  compact?: boolean;
+  membership?: Membership;
+  canSignUp?: boolean;
+  busy?: boolean;
+  onSignUp?: (labDayId: string) => void;
+  onRemove?: (labDayId: string) => void;
+}) {
   const open = openStations(e);
   const draft = e.status === 'draft';
   const time = [fmtTime(e.start_time), fmtTime(e.end_time)].filter(Boolean).join('-');
-  const signUp = open > 0 || e.event_type === 'volunteer';
+  const labDayId = labDayIdOf(e);
+  const href = hrefFor(e);
+  const volunteer = e.event_type === 'volunteer';
+  // Every lab gets a Sign up for anyone not already on the day; "needs
+  // instructors" is only the dashed emphasis, never the condition.
+  const showLabButton = !!labDayId && !!canSignUp && !!membership;
   const body = (
     <div
-      className={`rounded-md px-2 py-1 text-xs min-h-[44px] max-md:min-h-[44px] ${
-        open > 0 ? 'border-2 border-dashed' : 'border'
-      } ${draft ? 'opacity-70' : ''}`}
+      className={`rounded-md px-2 py-1 text-xs min-h-[44px] ${open > 0 ? 'border-2 border-dashed' : 'border'}`}
       style={{
-        backgroundColor: `${e.color}20`,
-        borderColor: open > 0 ? e.color : `${e.color}55`,
+        backgroundColor: `color-mix(in srgb, ${e.color} 14%, var(--chip-surface))`,
+        borderColor: open > 0 ? e.color : `color-mix(in srgb, ${e.color} 35%, var(--chip-surface))`,
         borderLeft: open > 0 ? undefined : `3px solid ${e.color}`,
       }}
       title={[e.title, time, e.room, (e.instructor_names ?? []).join(', ')].filter(Boolean).join(' · ')}
     >
       <div className="font-semibold truncate" style={{ color: e.color }}>
-        {e.title}
+        {draft ? `${e.title} (draft)` : e.title}
       </div>
       {!compact && (
         <div className="text-gray-600 dark:text-gray-300 truncate">
@@ -123,14 +170,44 @@ function EventChip({ e, compact }: { e: BandEvent; compact?: boolean }) {
           Needs {open} instructor{open === 1 ? '' : 's'}
         </div>
       )}
-      {signUp && !compact && (
+      {volunteer && !compact && (
         <span className="mt-0.5 inline-block rounded bg-blue-600 px-1.5 py-0.5 text-[11px] font-medium text-white">
           Sign up
         </span>
       )}
     </div>
   );
-  return e.linked_url ? <Link href={e.linked_url}>{body}</Link> : body;
+  const content = href ? <Link href={href}>{body}</Link> : body;
+  return (
+    <div className="[--chip-surface:#ffffff] dark:[--chip-surface:#1f2937]">
+      {content}
+      {showLabButton &&
+        (membership!.on ? (
+          <div className="mt-0.5 flex items-center gap-2 text-[11px]">
+            <span className="font-medium text-green-700 dark:text-green-400">You&apos;re in</span>
+            {membership!.role_ids.length > 0 && (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onRemove?.(labDayId!)}
+                className="min-h-[44px] px-2 text-gray-600 dark:text-gray-300 underline disabled:opacity-50"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onSignUp?.(labDayId!)}
+            className="mt-0.5 min-h-[44px] rounded bg-blue-600 px-3 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {busy ? 'Signing up...' : 'Sign up'}
+          </button>
+        ))}
+    </div>
+  );
 }
 
 export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: Props) {
@@ -143,6 +220,10 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
   const [loadedKey, setLoadedKey] = useState('');
   const [instructors, setInstructors] = useState<{ id: string; name: string }[]>([]);
   const [viewAs, setViewAs] = useState('');
+  const toast = useToast();
+  const [membership, setMembership] = useState<Record<string, Membership>>({});
+  const [canSignUp, setCanSignUp] = useState(false);
+  const [busyDay, setBusyDay] = useState<string | null>(null);
 
   // Saved prefs
   useEffect(() => {
@@ -222,6 +303,94 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
       cancelled = true;
     };
   }, [startKey, endKey]);
+
+  // Which lab days the signed-in user is already on (drives Sign up / You're in).
+  const labDayIdsKey = useMemo(
+    () =>
+      [...new Set(events.map(labDayIdOf).filter((x): x is string => !!x))]
+        .sort()
+        .join(','),
+    [events],
+  );
+  useEffect(() => {
+    if (!labDayIdsKey) return;
+    let cancelled = false;
+    fetch(`/api/lab-management/lab-days/my-membership?ids=${labDayIdsKey}`)
+      .then(r => (r.ok ? r.json() : null))
+      .then(j => {
+        if (cancelled || !j?.success) return;
+        setCanSignUp(!!j.can_sign_up);
+        setMembership(j.days ?? {});
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [labDayIdsKey]);
+
+  const signUp = useCallback(
+    async (labDayId: string) => {
+      setBusyDay(labDayId);
+      try {
+        const me = await fetch('/api/lab-management/lab-days/my-membership?ids=' + labDayId).then(r => r.json());
+        const res = await fetch('/api/lab-management/lab-day-roles', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lab_day_id: labDayId, role: 'attending', instructor_id: me.user_id }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setMembership(m => ({ ...m, [labDayId]: { on: true, role_ids: [data.role.id] } }));
+          const ev = events.find(x => labDayIdOf(x) === labDayId);
+          const day = ev ? new Date(`${ev.date}T12:00:00`).toLocaleDateString(undefined, { weekday: 'long' }) : 'then';
+          toast.success(`You're in, see you ${day}`);
+        } else if (res.status === 409) {
+          setMembership(m => ({ ...m, [labDayId]: { on: true, role_ids: [] } }));
+        } else {
+          toast.error(data.error || 'Could not sign up');
+        }
+      } catch {
+        toast.error('Could not sign up');
+      }
+      setBusyDay(null);
+    },
+    [events, toast],
+  );
+
+  const removeSignUp = useCallback(
+    async (labDayId: string) => {
+      const ids = membership[labDayId]?.role_ids ?? [];
+      setBusyDay(labDayId);
+      try {
+        for (const id of ids) {
+          const res = await fetch(`/api/lab-management/lab-day-roles?id=${id}`, { method: 'DELETE' });
+          const data = await res.json();
+          if (!data.success) {
+            toast.error(data.error || 'Could not remove');
+            setBusyDay(null);
+            return;
+          }
+        }
+        setMembership(m => ({ ...m, [labDayId]: { on: false, role_ids: [] } }));
+        toast.success('Removed');
+      } catch {
+        toast.error('Could not remove');
+      }
+      setBusyDay(null);
+    },
+    [membership, toast],
+  );
+
+  const chipProps = (e: BandEvent) => {
+    const id = labDayIdOf(e);
+    return {
+      membership: id ? membership[id] : undefined,
+      canSignUp,
+      busy: !!id && busyDay === id,
+      onSignUp: signUp,
+      onRemove: removeSignUp,
+    };
+  };
 
   const loading = loadedKey !== `${startKey}|${endKey}`;
   const personName = viewAs || userName;
@@ -333,7 +502,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
             {dayHeader(d)}
             <div className="mt-2 flex flex-col gap-1.5">
               {list.map(e => (
-                <EventChip key={e.id} e={e} />
+                <EventChip key={e.id} e={e} {...chipProps(e)} />
               ))}
               {list.length === 0 && !loading && (
                 <div className="text-xs text-gray-400 dark:text-gray-500">Nothing scheduled</div>
@@ -357,7 +526,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
               {dayHeader(d)}
               <div className="mt-2 space-y-1.5">
                 {(byDate.get(key) ?? []).map(e => (
-                  <EventChip key={e.id} e={e} />
+                  <EventChip key={e.id} e={e} {...chipProps(e)} />
                 ))}
               </div>
             </div>
@@ -391,7 +560,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs }: P
               {dayHeader(d, () => setWeekAnchor(d))}
               <div className="mt-1 space-y-1">
                 {list.slice(0, 3).map(e => (
-                  <EventChip key={e.id} e={e} compact />
+                  <EventChip key={e.id} e={e} compact {...chipProps(e)} />
                 ))}
                 {list.length > 3 && (
                   <Link
