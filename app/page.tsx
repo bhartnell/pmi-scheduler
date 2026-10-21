@@ -31,7 +31,7 @@ import {
 import { canAccessAdmin, canAccessClinical, canAccessScheduling, canAccessAffiliations, canAccessLVFR, hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import SectionTiles from '@/components/home/SectionTiles';
+import SectionTiles, { OperationsHubRow } from '@/components/home/SectionTiles';
 import CustomizeModal from '@/components/dashboard/CustomizeModal';
 import DraggableWidgetGrid from '@/components/dashboard/DraggableWidgetGrid';
 import HomeStatBar from '@/components/dashboard/HomeStatBar';
@@ -529,6 +529,7 @@ export default function HomePage() {
                 ) : undefined
               }
             />
+            <OperationsHubRow role={effectiveRole} />
           </ErrorBoundary>
         )}
 

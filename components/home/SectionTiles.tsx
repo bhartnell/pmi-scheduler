@@ -7,7 +7,7 @@ import { OPS_HUB_LINKS, visibleSections } from './sections';
 
 interface SectionTilesProps {
   role: string | null | undefined;
-  /** Right-of-Month version (TRIM 6/7a-7): 3 x 3, icon + name, description as hover text, no chips. */
+  /** Right-of-Month version (TRIM 6/7a-7): 3 x 3, icon + name + one-line description, no chips, no Operations Hub (OperationsHubRow). */
   compact?: boolean;
 }
 
@@ -15,6 +15,9 @@ interface SectionTilesProps {
  * Bottom band of the home page: nine section tiles (icon square, title,
  * one-line description, 2-3 chips) plus a centered row of small PMI
  * Operations Hub tiles. Desktop-first: three across, stacks on phones.
+ * The compact (beside-the-Month) version carries icon, name and the one-line
+ * description (TRIM 6/7a-8); the Operations Hub row is OperationsHubRow, a
+ * full-width row under the Month and Sections.
  */
 export default function SectionTiles({ role, compact }: SectionTilesProps) {
   const sections = visibleSections(role);
@@ -32,41 +35,17 @@ export default function SectionTiles({ role, compact }: SectionTilesProps) {
                 key={s.key}
                 href={s.href}
                 title={s.description}
-                className="min-h-[104px] min-w-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow p-3 flex flex-col items-center justify-center text-center gap-2 group"
+                className="min-h-[120px] min-w-0 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md transition-shadow p-3 flex flex-col items-center justify-center text-center gap-2 group"
               >
                 <span className={`w-10 h-10 rounded-lg flex items-center justify-center ${s.color}`}>
                   <Icon className="w-5 h-5" aria-hidden="true" />
                 </span>
                 <span className="text-sm font-bold text-gray-900 dark:text-white group-hover:underline">{s.title}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400 leading-snug">{s.description}</span>
               </Link>
             );
           })}
         </div>
-        {showOps && (
-          <div className="mt-4">
-            <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">PMI Operations Hub</p>
-            <div className="flex flex-wrap gap-2">
-              {OPS_HUB_LINKS.map((o) => {
-                const OpsIcon = o.icon;
-                return (
-                  <a
-                    key={o.href}
-                    href={o.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 px-3 min-h-[44px] bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
-                  >
-                    <span className={`w-6 h-6 rounded flex items-center justify-center ${o.color}`}>
-                      <OpsIcon className="w-3.5 h-3.5" aria-hidden="true" />
-                    </span>
-                    <span className="text-xs font-medium text-gray-900 dark:text-white">{o.label}</span>
-                    <ExternalLink className="w-3 h-3 text-gray-400" aria-hidden="true" />
-                  </a>
-                );
-              })}
-            </div>
-          </div>
-        )}
       </section>
     );
   }
@@ -131,6 +110,39 @@ export default function SectionTiles({ role, compact }: SectionTilesProps) {
           </div>
         </div>
       )}
+    </section>
+  );
+}
+
+/**
+ * Josh's PMI Operations Hub links (TRIM 6/7a-8): one full-width row under the
+ * Month and Sections, small tiles left-aligned with the label. Instructor+.
+ */
+export function OperationsHubRow({ role }: { role: string | null | undefined }) {
+  if (!role || !hasMinRole(role, 'instructor')) return null;
+  return (
+    <section aria-label="PMI Operations Hub" className="w-full mt-4">
+      <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400 mb-2">PMI Operations Hub</p>
+      <div className="flex flex-wrap gap-2">
+        {OPS_HUB_LINKS.map((o) => {
+          const OpsIcon = o.icon;
+          return (
+            <a
+              key={o.href}
+              href={o.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3 min-h-[44px] bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow"
+            >
+              <span className={`w-6 h-6 rounded flex items-center justify-center ${o.color}`}>
+                <OpsIcon className="w-3.5 h-3.5" aria-hidden="true" />
+              </span>
+              <span className="text-xs font-medium text-gray-900 dark:text-white">{o.label}</span>
+              <ExternalLink className="w-3 h-3 text-gray-400" aria-hidden="true" />
+            </a>
+          );
+        })}
+      </div>
     </section>
   );
 }
