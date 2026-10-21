@@ -312,23 +312,51 @@ export default function CohortManagementPage() {
   // "put away" step.
   const handleToggleGraduated = async (cohort: Cohort) => {
     const graduating = cohort.status !== 'graduated';
-    const action = graduating ? 'mark as graduated' : 'un-graduate (return to active)';
-    if (!confirm(`Are you sure you want to ${action} ${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)}?`)) {
-      return;
+    const label = `${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)}`;
+    let message: string;
+    let graduationDate: string | undefined;
+    if (graduating) {
+      // Preview the students who will be marked graduated with the cohort.
+      let names: string[] = [];
+      try {
+        const prev = await fetch(`/api/lab-management/cohorts/${cohort.id}/graduate`);
+        const pd = await prev.json();
+        if (!pd.success) {
+          alert('Failed to load students: ' + pd.error);
+          return;
+        }
+        names = (pd.active_students || []).map((s: { first_name: string; last_name: string }) => `${s.first_name} ${s.last_name}`);
+      } catch (error) {
+        console.error('Error loading cohort students:', error);
+        return;
+      }
+      const today = new Date().toISOString().slice(0, 10);
+      const entered = prompt(
+        `Graduate ${label}?\n\n${names.length} active student${names.length === 1 ? '' : 's'} will be marked graduated and the cohort made inactive:\n${names.join(', ') || '(none)'}\n\nGraduation date (YYYY-MM-DD):`,
+        today
+      );
+      if (entered === null) return;
+      graduationDate = entered.trim();
+      message = '';
+    } else {
+      message = `Un-graduate ${label}? The cohort and the students graduated with it return to active.`;
+      if (!confirm(message)) return;
     }
 
     try {
-      const res = await fetch(`/api/lab-management/cohorts/${cohort.id}`, {
-        method: 'PATCH',
+      const res = await fetch(`/api/lab-management/cohorts/${cohort.id}/graduate`, {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: graduating ? 'graduated' : 'active' }),
+        body: JSON.stringify(graduating ? { graduation_date: graduationDate } : { undo: true }),
       });
 
       const data = await res.json();
       if (data.success) {
-        setCohorts(cohorts.map(c => c.id === cohort.id ? { ...c, status: graduating ? 'graduated' : 'active' } : c));
+        setCohorts(cohorts.map(c => c.id === cohort.id
+          ? { ...c, status: graduating ? 'graduated' : 'active', is_active: !graduating }
+          : c));
       } else {
-        alert('Failed to update: ' + data.error);
+        alert('Failed to update: ' + (data.error || 'unknown error'));
       }
     } catch (error) {
       console.error('Error toggling graduated status:', error);

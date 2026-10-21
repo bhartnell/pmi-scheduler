@@ -62,7 +62,7 @@ export async function GET() {
     const rowMap = new Map<string, SnapshotRow>();
     for (const s of (students ?? []) as any[]) {
       const cohort = s.cohorts;
-      if (!cohort || cohort.is_archived === true) continue;
+      if (!cohort || cohort.is_archived === true || cohort.is_active === false) continue;
       const program = cohort.programs;
       if (!program) continue;
       const abbr: string = (program.abbreviation || '').toUpperCase();

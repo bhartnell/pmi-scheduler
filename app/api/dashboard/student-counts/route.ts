@@ -19,8 +19,9 @@ export async function GET() {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('students')
-      .select('id, cohort:cohorts!students_cohort_id_fkey(current_semester, program:programs(name, abbreviation))')
+      .select('id, cohort:cohorts!students_cohort_id_fkey!inner(current_semester, is_active, program:programs(name, abbreviation))')
       .eq('status', 'active')
+      .eq('cohort.is_active', true)
       .limit(5000);
     if (error) throw error;
 

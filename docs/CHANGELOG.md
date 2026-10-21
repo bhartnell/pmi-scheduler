@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-21
 
+cohort-graduate | 'Graduate cohort' (admin+): POST /api/lab-management/cohorts/[id]/graduate sets cohort graduated + inactive + end_date and marks remaining active students graduated (existing status, no schema change); undo restores only those students; home stat bar, Quick Stats, program snapshot now exclude inactive cohorts (card 4005cd1c...c3ce)
+
 trim-6-7a-8 (items 4+5) | Compact section tiles get their one-line description back (12px dim); PMI Operations Hub moves out of the Sections column into a full-width OperationsHubRow under Month + Sections (card 4005cd1c...a98; Sign up eligibility, default roster, Remove me split to child cards)
 
 trim-6-7a-7 | Home round 10: week day columns 1fr (scale with tile), Month (3fr) beside compact 3x3 section tiles (2fr) with Ops Hub links, month rolls ACLS/PALS/NREMT course days up to one 'Course Day n of m' chip, month Sign up is an inline tag on the chip (card 4005cd1c...fe21)

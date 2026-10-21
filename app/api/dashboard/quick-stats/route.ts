@@ -78,8 +78,9 @@ export async function GET(_request: NextRequest) {
         // Active students count (head-only count).
         supabase
           .from('students')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'active'),
+          .select('id, cohort:cohorts!students_cohort_id_fkey!inner(is_active)', { count: 'exact', head: true })
+          .eq('status', 'active')
+          .eq('cohort.is_active', true),
 
         // Lab days this month.
         supabase
