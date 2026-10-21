@@ -1860,7 +1860,7 @@ export default function CoordinatorViewPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* ─── Top Bar (sticky) ─────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-4 py-3">
+        <div className="w-full px-4 md:px-6 2xl:px-8 py-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <Link
               href={`/labs/schedule/${labDayId}`}
@@ -1907,7 +1907,7 @@ export default function CoordinatorViewPage() {
               key={alert.id}
               className="animate-pulse bg-amber-500 dark:bg-amber-600 text-white border-b border-amber-600 dark:border-amber-700"
             >
-              <div className="max-w-[1600px] mx-auto px-4 py-2 flex items-center justify-between gap-3">
+              <div className="w-full px-4 md:px-6 2xl:px-8 py-2 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2 min-w-0">
                   <AlertTriangle className="w-5 h-5 flex-shrink-0" />
                   <span className="font-bold text-sm truncate">
@@ -1928,7 +1928,7 @@ export default function CoordinatorViewPage() {
       )}
 
       {/* ─── Title ────────────────────────────────────────────────────── */}
-      <div className="max-w-[1600px] mx-auto px-4 pt-4 pb-2">
+      <div className="w-full px-4 md:px-6 2xl:px-8 pt-4 pb-2">
         {labDayInfo?.is_nremt_testing && (
           <div className="bg-red-600 text-white text-center py-2 font-bold rounded-lg mb-3 text-sm sm:text-base">
             NREMT Psychomotor Testing Day -- Official Examination
@@ -1945,7 +1945,7 @@ export default function CoordinatorViewPage() {
 
       {/* ─── Section 2: Stats Row (compact, sticky) ──────────────────── */}
       <div className="sticky top-[73px] z-20 bg-white/90 dark:bg-gray-800/90 backdrop-blur border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-[1600px] mx-auto px-4 py-2">
+        <div className="w-full px-4 md:px-6 2xl:px-8 py-2">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-1.5">
             <div className="flex items-center gap-2">
               <Users className="w-4 h-4 text-blue-600 dark:text-blue-400" />
@@ -1992,7 +1992,7 @@ export default function CoordinatorViewPage() {
         </div>
       </div>
 
-      <main className="max-w-[1600px] mx-auto px-4 py-4">
+      <main className="w-full px-4 md:px-6 2xl:px-8 py-4">
         {/* ─── Section 3: Station Board / Occupancy view (PRIMARY WORKFLOW) ── */}
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 flex items-center gap-2">

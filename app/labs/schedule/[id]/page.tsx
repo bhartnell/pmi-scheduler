@@ -571,11 +571,11 @@ export default function LabDayPage() {
 
       <LabDayHeader labDay={labDay} labDayId={labDayId} showDuplicateDropdown={showDuplicateDropdown} onSetShowDuplicateDropdown={setShowDuplicateDropdown} onOpenTimer={() => setShowTimer(true)} onPrint={() => handlePrint(labDay, labDayRoles, cohortStudents)} onDownloadPDF={() => handleDownloadPDF(labDay)} onExportCalendar={() => handleExportCalendar(labDay, labDayRoles)} onPrintRoster={() => handlePrintRoster(labDay, cohortStudents)} onCSVExport={() => handleCSVExport(labDayId, labDay.date, toast)} onOpenDuplicateModal={() => { setShowDuplicateModal(true); setShowDuplicateDropdown(false); }} onOpenNextWeekConfirm={() => { setShowDuplicateDropdown(false); setShowNextWeekConfirm(true); }} onOpenBulkDuplicateModal={() => { setShowDuplicateDropdown(false); setShowBulkDuplicateModal(true); }} formatDate={formatDate} formatTime={formatTime} />
 
-      <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 pt-4 flex justify-end print:hidden">
+      <div className="w-full px-4 md:px-6 2xl:px-8 pt-4 flex justify-end print:hidden">
         <WikiArticleLink slug="run-a-lab-day" label="Help: Running a lab day" />
       </div>
 
-      <main className={`max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-6${showRosterPrint ? ' print:hidden' : ''}`}>
+      <main className={`w-full px-4 md:px-6 2xl:px-8 py-6${showRosterPrint ? ' print:hidden' : ''}`}>
         {labDay.is_nremt_testing && (
           <div className="bg-red-600 text-white text-center py-2 font-bold rounded-lg mb-4">
             NREMT Psychomotor Testing Day &mdash; Official Examination

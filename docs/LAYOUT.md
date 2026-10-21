@@ -1,6 +1,6 @@
 # Layout standard
 
-Last updated: 2026-10-20 (TRIM 7/7 Part A)
+Last updated: 2026-10-21 (TRIM 7/7 Part A2)
 
 Ben runs a 1920 screen at 80 percent browser zoom, so the viewport is about
 2400 CSS px wide. Desktop-first; adapt DOWN. Acceptance test is "more visible
@@ -18,6 +18,14 @@ without scrolling" at 2400 and at 1440 CSS px.
 - Student view and the pre-internship form are phone-first: single column,
   two columns at `lg`.
 - Touch targets at least 44px high.
+
+## Working pages get NO width cap (Part A2)
+
+Pages where someone grades, runs a lab, or reads a tracker fill the window:
+`w-full px-4 md:px-6 2xl:px-8`, no `max-w-*` on the page wrapper. Hubs,
+settings, forms and reports keep `max-w-screen-2xl`. Inner `max-w-3xl/4xl`
+blocks capping a column of controls on working pages go too, unless they wrap
+a single text paragraph.
 
 ## Part A (width-cap pass) exceptions, left narrow on purpose
 

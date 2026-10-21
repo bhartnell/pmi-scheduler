@@ -820,7 +820,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
   if (status === 'loading') {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-        <div className="max-w-screen-2xl mx-auto px-4 py-8">
+        <div className="w-full px-4 md:px-6 2xl:px-8 py-8">
           <div className="h-8 w-56 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mb-6" />
           <SkeletonTable rows={7} columns={4} />
         </div>
@@ -901,7 +901,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
 
       {/* Header */}
       <div className="bg-white shadow-sm dark:bg-gray-800 print:hidden">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="w-full px-4 md:px-6 2xl:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <Breadcrumbs className="mb-1" />
@@ -945,7 +945,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
         </div>
       </div>
 
-      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6 print:hidden">
+      <main className="w-full px-4 md:px-6 2xl:px-8 py-6 print:hidden">
         <PageErrorBoundary>
         {/* Calendar Controls */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6 print:hidden">
