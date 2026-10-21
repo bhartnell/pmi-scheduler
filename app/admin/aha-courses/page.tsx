@@ -9,7 +9,6 @@ import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PageLoader } from '@/components/ui';
 import { useToast } from '@/components/Toast';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import type { CurrentUser } from '@/types';
 
 interface Cohort {
@@ -227,7 +226,6 @@ export default function AhaCoursesPage() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">

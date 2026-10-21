@@ -25,7 +25,6 @@ import {
   X,
   Check,
 } from 'lucide-react';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import ConflictPanel from '@/components/calendar/ConflictPanel';
 import SlotFinderPanel from '@/components/calendar/SlotFinderPanel';
 import EventDetailPanel from '@/components/calendar/EventDetailPanel';
@@ -1091,7 +1090,6 @@ function CalendarContent() {
 
   return (
     <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-6 print:px-0 print:py-0">
-      <Breadcrumbs className="mb-2" />
 
       {/* ── Header ────────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4 print:hidden">

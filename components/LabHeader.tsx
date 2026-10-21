@@ -1,6 +1,6 @@
 'use client';
 
-import Breadcrumbs from '@/components/Breadcrumbs';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 
 interface LabHeaderProps {
   breadcrumbs?: { label: string; href?: string }[];
@@ -17,7 +17,7 @@ export default function LabHeader({ breadcrumbs, title, actions, entityTitle }: 
         {/* Bottom row - Breadcrumbs and Title */}
         <div>
           {/* Breadcrumbs - use universal component */}
-          <Breadcrumbs entityTitle={entityTitle} className="mb-1" />
+          <BreadcrumbNames entityTitle={entityTitle} />
 
           {/* Title and Actions */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

@@ -18,7 +18,6 @@ import {
   Clock,
 } from 'lucide-react';
 import { formatCohortNumber } from '@/lib/format-cohort';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 /**
  * Internship Tracker — cohort picker.
@@ -227,7 +226,6 @@ export default function InternshipCohortPickerPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-3 min-w-0">
               <div className="min-w-0">

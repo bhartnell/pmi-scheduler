@@ -3,7 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
-import Breadcrumbs from '@/components/Breadcrumbs';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 import { PageLoader } from '@/components/ui';
 import { exportToExcel } from '@/lib/export-utils';
 import {
@@ -409,7 +409,7 @@ export default function SkillResultsPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Breadcrumbs */}
-        <Breadcrumbs
+        <BreadcrumbNames
           entityTitle={labDay?.title || 'Lab Day'}
           customSegments={{ results: 'Results' }}
         />

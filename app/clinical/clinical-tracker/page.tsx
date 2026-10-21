@@ -13,7 +13,6 @@ import {
   ChevronUp,
   X,
 } from 'lucide-react';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -969,7 +968,6 @@ export default function ClinicalTrackerPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-5">
-          <Breadcrumbs className="mb-2" />
           <div className="flex items-center gap-3">
             <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
               <FileCheck className="w-6 h-6 text-teal-600 dark:text-teal-400" />

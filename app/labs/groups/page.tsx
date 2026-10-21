@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { hasMinRole, canManageContent, type Role } from '@/lib/permissions';
 import { useToast } from '@/components/Toast';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ---- Types ----
 
@@ -798,7 +797,6 @@ function GroupManagementPageInner() {
         }
       `}</style>
 
-      <Breadcrumbs className="mb-2" />
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm no-print">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">

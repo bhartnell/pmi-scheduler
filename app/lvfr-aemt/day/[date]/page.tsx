@@ -41,7 +41,6 @@ import {
   FolderOpen,
   type LucideIcon,
 } from 'lucide-react';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import { getSupabase } from '@/lib/supabase';
 
 // ── Types ────────────────────────────────────────────────────────
@@ -346,7 +345,6 @@ export default function LVFRDayRunsheetPage() {
       {/* Header */}
       <div className="bg-gradient-to-r from-red-700 to-red-900 text-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Breadcrumbs className="mb-3 [&_*]:!text-red-200 [&_a:hover]:!text-white" />
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <div className="flex items-center gap-3">

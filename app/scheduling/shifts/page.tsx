@@ -27,7 +27,6 @@ import {
 } from 'lucide-react';
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 import EmptyState from '@/components/EmptyState';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import { useToast } from '@/components/Toast';
 import { PageLoader, SkeletonTable, ContentLoader } from '@/components/ui';
 import {
@@ -649,7 +648,6 @@ function ShiftsPageContent() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <Breadcrumbs className="mt-4 mb-2" />
 
           {/* Title and Actions */}
           <div className="flex items-center justify-between">

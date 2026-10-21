@@ -3,7 +3,6 @@
 import { useState, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   Upload, FileSpreadsheet, CheckCircle2, AlertTriangle,
   XCircle, ArrowRight, ArrowLeft, Loader2, Shield,
@@ -201,7 +200,6 @@ export default function GradeImportPage() {
       {/* Header */}
       <div className="bg-gradient-to-r from-red-700 to-red-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Breadcrumbs className="mb-3 [&_*]:!text-red-200 [&_a:hover]:!text-white" />
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/10 rounded-lg">
               <FileSpreadsheet className="w-6 h-6" />

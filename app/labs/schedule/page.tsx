@@ -38,7 +38,6 @@ import { downloadICS, parseLocalDate } from '@/lib/ics-export';
 import { PageLoader, SkeletonTable, ContentLoader } from '@/components/ui';
 import CalendarAvailabilityDot from '@/components/CalendarAvailabilityDot';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface Cohort {
   id: string;
@@ -904,7 +903,6 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
         <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <Breadcrumbs className="mb-1" />
               <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Lab Schedule</h1>
             </div>
             <div className="flex items-center gap-2">

@@ -260,6 +260,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 | Component | File | Props | Description |
 |-----------|------|-------|-------------|
 | `Breadcrumbs` | `components/Breadcrumbs.tsx` | `BreadcrumbsProps { entityTitle?, customSegments?, className? }` | Auto-generated breadcrumb navigation derived from the current pathname. Supports dynamic segments (UUIDs, numeric IDs) and custom label overrides. |
+| `BreadcrumbNames` | `components/layout/BreadcrumbNames.tsx` | `{ entityTitle?, customSegments? }` | Renders nothing. A page mounts it to give the app-wide SubNavLine the record name for the current path (replaces per-page Breadcrumbs, 6/7b-1c). `Breadcrumbs.tsx` now only exports `buildBreadcrumbItems` for SubNavLine. |
 | `LabHeader` | `components/LabHeader.tsx` | `LabHeaderProps { breadcrumbs, title, actions, entityTitle }` | Standard page header used across lab management pages; renders breadcrumbs, page title, and action buttons. |
 | `PageErrorBoundary` | `components/PageErrorBoundary.tsx` | `PageErrorBoundaryProps { children, fallback?, featureName? }` | React class-component error boundary for page-level crash recovery with retry support. |
 | `SectionErrorPage` | `components/SectionErrorPage.tsx` | `SectionErrorPageProps { title?, message?, actionLabel?, actionHref? }` | Full-page error display for section-level failures with optional action link. |

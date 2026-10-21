@@ -19,7 +19,6 @@ import { PageLoader } from '@/components/ui';
 import { hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import type { CurrentUser } from '@/types';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function AcademicsPage() {
   const { data: session, status } = useSession();
@@ -141,7 +140,6 @@ export default function AcademicsPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-screen-2xl mx-auto px-4 py-6">
-        <Breadcrumbs />
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Academics</h1>

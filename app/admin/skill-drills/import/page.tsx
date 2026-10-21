@@ -12,7 +12,6 @@ import {
   ClipboardPaste,
   Loader2,
 } from 'lucide-react';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 // Mirrors the import endpoint's accepted shapes.
 // See app/api/admin/skill-drills/import/route.ts.
@@ -123,7 +122,6 @@ export default function SkillDrillImportPage() {
 
   return (
     <div className="max-w-screen-2xl mx-auto p-6 space-y-6">
-      <Breadcrumbs />
       <div className="flex items-center gap-3">
         <Link href="/admin" className="text-gray-500 hover:text-gray-700 dark:text-gray-400">
           <ArrowLeft className="w-5 h-5" />

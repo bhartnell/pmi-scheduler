@@ -35,7 +35,6 @@ import RecurringAvailabilityModal from '@/components/scheduling/RecurringAvailab
 import CoordinatorCalendarView from '@/components/scheduling/CoordinatorCalendarView';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import type { CurrentUser } from '@/types';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 export default function SchedulingPage() {
   const { data: session, status } = useSession();
@@ -348,7 +347,6 @@ export default function SchedulingPage() {
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-6 py-4">
           {/* Breadcrumbs */}
-          <Breadcrumbs className="mt-4 mb-2" />
 
           {/* Title */}
           <div className="flex items-center gap-3">

@@ -60,7 +60,6 @@ import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { PageLoader } from '@/components/ui';
 import type { CurrentUser } from '@/types';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 const STORAGE_KEY = 'pmi_admin_sections_expanded';
 
@@ -674,7 +673,6 @@ export default function AdminPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg">

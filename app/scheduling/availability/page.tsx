@@ -16,7 +16,6 @@ import {
 } from 'lucide-react';
 import { type InstructorAvailability, formatTime, type CurrentUser } from '@/types';
 import { toDateStr, addWeeksToDate } from '@/lib/utils';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 // ─── Suggestion types ───────────────────────────────────────────────────────
 
@@ -582,7 +581,6 @@ export default function MyAvailabilityPage() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <Breadcrumbs className="mt-4 mb-2" />
 
           {/* Title */}
           <div className="flex items-center gap-3">

@@ -17,7 +17,6 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { canEditClinical, canAccessClinical, type Role } from '@/lib/permissions';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 interface ClinicalSite {
   id: string;
@@ -199,7 +198,6 @@ export default function SiteVisitSettingsPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-6">
-          <Breadcrumbs className="mb-2" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-lg">

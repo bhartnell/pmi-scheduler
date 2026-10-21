@@ -22,7 +22,6 @@ import {
 import { toDateStr } from '@/lib/utils';
 import { hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
-import Breadcrumbs from '@/components/Breadcrumbs';
 
 const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MS_PER_DAY = 86_400_000;
@@ -438,7 +437,6 @@ export default function MyUnavailabilityPage() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          <Breadcrumbs className="mt-4 mb-2" />
 
           <div className="flex items-center gap-3">
             <CalendarOff className="w-7 h-7 text-red-500 dark:text-red-400" />

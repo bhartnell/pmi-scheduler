@@ -13,7 +13,6 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import Breadcrumbs from '@/components/Breadcrumbs';
 import {
   TrendingUp, CheckCircle2, Circle, AlertTriangle, Loader2, CalendarDays, ListChecks,
 } from 'lucide-react';
@@ -68,7 +67,6 @@ export default function LVFRProgressPage() {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="bg-gradient-to-r from-red-700 to-red-900 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <Breadcrumbs className="mb-3 [&_*]:!text-red-200 [&_a:hover]:!text-white" />
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/10 rounded-lg"><TrendingUp className="w-6 h-6" /></div>
             <div>
