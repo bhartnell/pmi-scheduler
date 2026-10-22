@@ -23,7 +23,7 @@ import { useEffect, useState, useCallback, useMemo, Suspense } from 'react';
 import { RegionShell, RegionGrid, Region } from '@/components/layout/RegionShell';
 import Link from 'next/link';
 import {
-  ArrowLeft, Loader2, RefreshCw, Printer, CheckCircle2, XCircle, Clock,
+  Loader2, RefreshCw, Printer, CheckCircle2, XCircle, Clock,
   Users, UserCheck, MapPin, CalendarDays, Layers, GraduationCap,
 } from 'lucide-react';
 
@@ -418,12 +418,6 @@ function AclsHubPageContent() {
         {/* Controls (hidden on print) */}
         <div className="print:hidden">
           <div className="flex items-center gap-3 mb-3">
-            <Link href="/calendar?preset=labs" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">
-              <ArrowLeft className="w-4 h-4" /> Calendar
-            </Link>
-            <Link href="/labs/aha-hub" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">
-              AHA Hub (ACLS + PALS)
-            </Link>
             <Link href={cohortIdParam ? `/labs/acls-hub/board?cohortId=${encodeURIComponent(cohortIdParam)}` : '/labs/acls-hub/board'} className="inline-flex items-center gap-1 text-sm font-medium text-emerald-700 hover:text-emerald-800 dark:text-emerald-400">
               Board view (new)
             </Link>

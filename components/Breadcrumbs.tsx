@@ -17,6 +17,10 @@ const ROUTE_LABELS: Record<string, string> = {
   'labs/scenarios': 'Scenarios',
   'labs/scenario-library': 'Scenario Library',
   'labs/skill-drills': 'Skill Drills',
+  'labs/aha-hub': 'AHA Hub',
+  'labs/acls-hub': 'ACLS Hub',
+  'labs/acls-hub/board': 'Board',
+  'labs/pals-hub': 'PALS Hub',
   'labs/templates': 'Templates',
   'labs/seating': 'Seating',
   'labs/grade': 'Grading',
@@ -146,6 +150,11 @@ const ROUTE_LABELS: Record<string, string> = {
   'student': 'Student Portal',
 };
 
+/** Labels for segments that sit under a dynamic id, where the full-path key cannot match. */
+const SEGMENT_LABELS: Record<string, string> = {
+  'acls-coordinator': 'ACLS Coordinator',
+};
+
 /** Check if a segment looks like a UUID or dynamic ID */
 function isDynamicSegment(segment: string): boolean {
   // UUID pattern
@@ -206,6 +215,10 @@ export function buildBreadcrumbItems(
     // Check the lookup map
     else if (ROUTE_LABELS[pathUpToHere]) {
       items.push({ label: ROUTE_LABELS[pathUpToHere], href, isCurrent: isLast });
+    }
+    // Segment-only labels for pages nested under a dynamic id
+    else if (SEGMENT_LABELS[segment]) {
+      items.push({ label: SEGMENT_LABELS[segment], href, isCurrent: isLast });
     }
     // Handle known sub-pages like "new"
     else if (segment === 'new') {
