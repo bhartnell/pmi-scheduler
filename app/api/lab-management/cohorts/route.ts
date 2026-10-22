@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
-import { hasMinRole } from '@/lib/permissions';
 
 export async function GET(request: NextRequest) {
   // Allow volunteer_instructor+ to read cohort data (needed for lab schedule view)
@@ -85,7 +84,7 @@ export async function POST(request: NextRequest) {
         start_date: body.start_date || null,
         expected_end_date: body.expected_end_date || null,
         current_semester: body.current_semester || null,
-        is_test: body.is_test === true && hasMinRole(user.role, 'admin'),
+        is_test: body.is_test === true,
       })
       .select(`
         *,

@@ -3,8 +3,9 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { createEnrollmentForNewStudent } from '@/lib/student-enrollment';
 import { formatCohortNumber } from '@/lib/format-cohort';
-import { TEST_STUDENT_EMAIL_DOMAIN } from '@/lib/test-filter';
 import { logAuditEvent } from '@/lib/audit';
+
+const TEST_STUDENT_EMAIL_DOMAIN = 'test-student.invalid';
 
 /**
  * POST /api/lab-management/cohorts/[id]/test-student

@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import FixTimezonesCard from '@/components/FixTimezonesCard';
 import {
   ChevronRight,
   Home,
@@ -592,6 +593,7 @@ export default function CalendarSyncPage() {
       </div>
 
       <main className="max-w-screen-2xl mx-auto px-4 py-6 space-y-6">
+        <FixTimezonesCard />
         {loading ? (
           <div className="space-y-6 animate-pulse">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
