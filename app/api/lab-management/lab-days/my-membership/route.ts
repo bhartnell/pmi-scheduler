@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
   const email = user.email.toLowerCase();
 
   try {
-    const [rolesRes, stationsRes, signupsRes] = await Promise.all([
+    const [rolesRes, stationsRes, signupsRes, rosterRes, daysRes, optoutsRes] = await Promise.all([
       supabase.from('lab_day_roles').select('id, lab_day_id, role').eq('instructor_id', user.id).in('lab_day_id', ids),
       supabase
         .from('lab_stations')
@@ -65,11 +65,16 @@ export async function GET(request: NextRequest) {
         .in('lab_day_id', ids)
         .eq('signups.status', 'confirmed')
         .eq('signups.instructor_id', user.id),
+      // Default roster (program_default_instructors) programs this user is on,
+      // the program of each lab day, and the user's opt-outs (6/7a-8c).
+      supabase.from('program_default_instructors').select('program:programs!inner(abbreviation)').eq('user_id', user.id),
+      supabase.from('lab_days').select('id, cohort:cohorts(program:programs(abbreviation))').in('id', ids),
+      supabase.from('lab_day_optouts').select('lab_day_id').eq('user_id', user.id).in('lab_day_id', ids),
     ]);
     if (rolesRes.error) throw rolesRes.error;
     if (stationsRes.error) throw stationsRes.error;
 
-    const days: Record<string, { on: boolean; role_ids: string[] }> = {};
+    const days: Record<string, { on: boolean; role_ids: string[]; default?: boolean; opted_out?: boolean }> = {};
     for (const id of ids) days[id] = { on: false, role_ids: [] };
 
     for (const r of rolesRes.data || []) {
@@ -96,6 +101,31 @@ export async function GET(request: NextRequest) {
           si => (si.user_email || '').toLowerCase() === email,
         );
       if (mine) d.on = true;
+    }
+
+    // Default roster: on every lab day of a program the user is rostered for,
+    // unless they removed themselves from that day. Failed reads only narrow
+    // "You're in"; they never block the response.
+    const first = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
+    const rosterPrograms = new Set(
+      ((rosterRes.data || []) as unknown as { program: unknown }[])
+        .map(r => (first(r.program as { abbreviation: string } | null)?.abbreviation || '').toUpperCase())
+        .filter(Boolean),
+    );
+    const optedOut = new Set(((optoutsRes.data || []) as { lab_day_id: string }[]).map(o => o.lab_day_id));
+    for (const ld of (daysRes.data || []) as unknown as { id: string; cohort: unknown }[]) {
+      const d = days[ld.id];
+      if (!d) continue;
+      if (optedOut.has(ld.id)) {
+        d.opted_out = true;
+        continue;
+      }
+      const cohort = first(ld.cohort as { program: unknown } | null);
+      const abbr = (first(cohort?.program as { abbreviation: string } | null)?.abbreviation || '').toUpperCase();
+      if (abbr && rosterPrograms.has(abbr)) {
+        d.default = true;
+        d.on = true;
+      }
     }
 
     return NextResponse.json({ success: true, user_id: user.id, can_sign_up: canSignUp, viewing_as: viewingAs, days });

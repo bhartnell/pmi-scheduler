@@ -157,6 +157,10 @@ function rollUpCourseDays(list: BandEvent[]): BandEvent[] {
 interface Membership {
   on: boolean;
   role_ids: string[];
+  /** On the day through the per-program default roster (no role row). */
+  default?: boolean;
+  /** The user used Remove me on this day. */
+  opted_out?: boolean;
 }
 
 function EventChip({
@@ -197,7 +201,7 @@ function EventChip({
   // faded chip with no button. A person named in the event's instructor list
   // is also in (listed), same as the lab day page's Who's coming.
   const showLabButton = !!labDayId && !!canSignUp && !!membership && (!ended || membership.on || listed);
-  const isIn = !!membership?.on || !!listed;
+  const isIn = membership?.opted_out ? !!membership.on : !!membership?.on || !!listed;
   const body = (
     <div
       className={`rounded-md px-2 py-1 text-xs min-h-[44px] ${open > 0 ? 'border-2 border-dashed' : 'border'}`}
@@ -241,7 +245,7 @@ function EventChip({
       (isIn ? (
         <span className="shrink-0 flex items-center">
           <span className={`${tagShape} bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200`}>You&apos;re in</span>
-          {membership!.role_ids.length > 0 && (
+          {(membership!.role_ids.length > 0 || membership!.default) && (
             <button
               type="button"
               disabled={busy || !!viewingAs}
@@ -301,7 +305,7 @@ function EventChip({
         (isIn ? (
           <div className="mt-0.5 flex items-center gap-2 text-[11px]">
             <span className="inline-flex items-center rounded bg-gray-200 px-1.5 py-0.5 text-[11px] font-bold text-gray-700 dark:bg-gray-700 dark:text-gray-200">You&apos;re in</span>
-            {membership!.role_ids.length > 0 && (
+            {(membership!.role_ids.length > 0 || membership!.default) && (
               <button
                 type="button"
                 disabled={busy || !!viewingAs}
@@ -491,28 +495,26 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
     [events, toast],
   );
 
+  // Remove me: records an opt-out for this day (server removes the user's own
+  // role rows and calendar events) so the default roster does not re-add them.
   const removeSignUp = useCallback(
     async (labDayId: string) => {
-      const ids = membership[labDayId]?.role_ids ?? [];
       setBusyDay(labDayId);
       try {
-        for (const id of ids) {
-          const res = await fetch(`/api/lab-management/lab-day-roles?id=${id}`, { method: 'DELETE' });
-          const data = await res.json();
-          if (!data.success) {
-            toast.error(data.error || 'Could not remove');
-            setBusyDay(null);
-            return;
-          }
+        const res = await fetch(`/api/lab-management/lab-days/${labDayId}/optout`, { method: 'POST' });
+        const data = await res.json();
+        if (!data.success) {
+          toast.error(data.error || 'Could not remove');
+        } else {
+          setMembership(m => ({ ...m, [labDayId]: { on: false, role_ids: [], opted_out: true } }));
+          toast.success('Removed');
         }
-        setMembership(m => ({ ...m, [labDayId]: { on: false, role_ids: [] } }));
-        toast.success('Removed');
       } catch {
         toast.error('Could not remove');
       }
       setBusyDay(null);
     },
-    [membership, toast],
+    [toast],
   );
 
   const chipProps = (e: BandEvent) => {

@@ -408,7 +408,7 @@
 
 #### `program_default_instructors`
 
-Default (pre-assigned) instructor roster per program, admin-editable at `/admin/program-rosters`. Migration `20261021_program_default_instructors.sql`. Not yet read by the calendar sync / Who's coming (wiring pending, see Task Handoff card TRIM 6/7a-8b).
+Default (pre-assigned) instructor roster per program, admin-editable at `/admin/program-rosters`. Migration `20261021_program_default_instructors.sql`. Read by `my-membership` (home Sign up / You're in) and the lab day Who's coming route (TRIM 6/7a-8c); lab days of a rostered program count as default-assigned unless the user has a `lab_day_optouts` row.
 
 | Column | Type | Nullable | Default | Notes |
 |--------|------|----------|---------|-------|
@@ -421,6 +421,20 @@ Default (pre-assigned) instructor roster per program, admin-editable at `/admin/
 
 **Unique:** `(program_id, user_id)`. **RLS:** enabled, `program_default_instructors_service_role` (ALL, service_role).
 Seeded 2026-10-21 from Ben's lists: Paramedic = Ben, Josh, Schafer, Rae, Ryan; EMT = Stacie, Josh, Schafer (8 rows).
+
+#### `lab_day_optouts`
+
+"Remove me" on a lab day (TRIM 6/7a-8c). Migration `20261022_lab_day_optouts.sql`. A row means the user is off that lab day: the default roster, Who's coming and the general-lab calendar default exclude them; signing up again deletes the row.
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| lab_day_id | uuid | NO |  | -> `lab_days.id` ON DELETE CASCADE |
+| user_id | uuid | NO |  | -> `lab_users.id` ON DELETE CASCADE |
+| reason | text | YES |  | optional, max 500 chars |
+| created_at | timestamptz | NO | now() |  |
+
+**Unique:** `(lab_day_id, user_id)`. **RLS:** enabled, `lab_day_optouts_service_role` (ALL, service_role).
 
 #### `cohorts`
 
