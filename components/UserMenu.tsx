@@ -23,7 +23,6 @@
  */
 
 import { useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
 import { ParkAwareLink as Link } from '@/components/ModuleGuard';
 import { useSession, signOut } from 'next-auth/react';
 import RolePreviewSelector from '@/components/RolePreviewSelector';
@@ -60,7 +59,6 @@ function getInitials(name?: string | null, email?: string | null): string {
 
 export default function UserMenu() {
   const { data: session, status } = useSession();
-  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [calendarStatus, setCalendarStatus] = useState<CalendarStatus | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -234,35 +232,6 @@ export default function UserMenu() {
               </Link>
             )}
           </nav>
-
-          {pathname === '/' && (
-            <div className="border-t border-gray-100 dark:border-gray-700 py-1">
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  window.dispatchEvent(new Event('pmi:customize-home'));
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                role="menuitem"
-              >
-                <SettingsIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                Customize home
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setOpen(false);
-                  window.dispatchEvent(new Event('pmi:reset-home'));
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700/50"
-                role="menuitem"
-              >
-                <SettingsIcon className="w-4 h-4 text-gray-500 dark:text-gray-400" />
-                Reset home layout
-              </button>
-            </div>
-          )}
 
           {/* Preview-as-role lives here (admins only; renders nothing otherwise). */}
           <RolePreviewSelector inline onDone={() => setOpen(false)} />

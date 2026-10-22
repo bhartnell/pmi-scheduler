@@ -102,7 +102,6 @@ const ROUTE_LABELS: Record<string, string> = {
   'admin/certifications/compliance': 'Compliance',
   'admin/certifications/verification': 'Verification',
   'admin/config': 'Configuration',
-  'admin/dashboard-defaults': 'Dashboard Defaults',
   'admin/database-tools': 'Database Tools',
   'admin/data-export': 'Data Export',
   'admin/data-exports': 'Data Export',
