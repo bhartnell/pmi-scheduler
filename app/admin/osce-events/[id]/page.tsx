@@ -267,6 +267,13 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
               <ClipboardCheck className="w-3.5 h-3.5" />
               Day-of Checklist
             </button>
+            <a
+              href={`/osce/${event.slug}`}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Evaluator signup page
+            </a>
             <button
               onClick={handleCopyUrl}
               className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
