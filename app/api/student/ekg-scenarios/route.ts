@@ -1,49 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireStudentContext } from '@/lib/view-as-student';
 
 /**
  * GET /api/student/ekg-scenarios
- * Get the current student's EKG scores and scenario participation
- * Students can only view their own data
+ * Get the current student's EKG scores and scenario participation (or, for
+ * an admin viewing as a student, that student's — read-only).
  */
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
-    const session = await getServerSession(authOptions);
+    const auth = await requireStudentContext(request);
+    if (auth instanceof NextResponse) return auth;
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get current user
-    const { data: user, error: userError } = await supabase
-      .from('lab_users')
-      .select('id, email, role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (userError || !user) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
-
-    // Verify this is a student
-    if (user.role !== 'student') {
-      return NextResponse.json({ success: false, error: 'Student access only' }, { status: 403 });
-    }
-
-    // Find the student record by email match
-    const studentEmail = session.user.email;
-
-    // Try to find student by email directly
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('id, first_name, last_name, email, cohort_id')
-      .ilike('email', studentEmail)
-      .single();
-
-    if (studentError || !student) {
+    if (!auth.found) {
       // Student record not found - they might not be in the system yet
       return NextResponse.json({
         success: true,
@@ -70,6 +40,7 @@ export async function GET(request: NextRequest) {
         message: 'Student record not found. Please contact your instructor.'
       });
     }
+    const student = { id: auth.id, first_name: auth.firstName, last_name: auth.lastName, email: auth.email };
 
     // Get EKG scores for this student
     const { data: ekgScores, error: ekgError } = await supabase

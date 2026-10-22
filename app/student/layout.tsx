@@ -31,8 +31,9 @@ import {
   Award,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { isStudent } from '@/lib/permissions';
+import { isStudent, hasMinRole } from '@/lib/permissions';
 import ConsentGate from '@/components/ConsentGate';
+import ViewingAsStudentBanner from '@/components/ViewingAsStudentBanner';
 
 interface StudentUser {
   id: string;
@@ -49,6 +50,7 @@ export default function StudentLayout({
   const { data: session, status } = useSession();
   const router = useRouter();
   const [user, setUser] = useState<StudentUser | null>(null);
+  const [viewingAsName, setViewingAsName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -69,12 +71,35 @@ export default function StudentLayout({
       const res = await fetch('/api/instructor/me');
       const data = await res.json();
       if (data.success && data.user) {
-        if (!isStudent(data.user.role)) {
-          // Non-students get redirected to main dashboard
-          router.push('/');
+        if (isStudent(data.user.role)) {
+          setUser(data.user);
+          setLoading(false);
           return;
         }
-        setUser(data.user);
+
+        // Not a student — the only other way in is admin+ with an active
+        // "View as a student" session (card STUDENT VIEW 3/4). Checked
+        // server-side on every /api/student/* request regardless of what
+        // this check finds; this only decides whether to show the portal.
+        if (hasMinRole(data.user.role, 'admin')) {
+          const viewAsRes = await fetch('/api/admin/view-as/current');
+          const viewAs = await viewAsRes.json().catch(() => null);
+          if (viewAs?.viewingAs && viewAs.student) {
+            setUser({
+              id: viewAs.student.id,
+              name: `${viewAs.student.firstName} ${viewAs.student.lastName}`,
+              email: data.user.email,
+              role: 'student',
+            });
+            setViewingAsName(`${viewAs.student.firstName} ${viewAs.student.lastName}${viewAs.student.isTest ? ' (Test)' : ''}`);
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Non-students with no active view-as get redirected to main dashboard
+        router.push('/');
+        return;
       }
     } catch (error) {
       console.error('Error fetching user:', error);
@@ -110,6 +135,7 @@ export default function StudentLayout({
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-gray-900 dark:to-gray-800">
+      {viewingAsName && <ViewingAsStudentBanner studentName={viewingAsName} />}
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4">

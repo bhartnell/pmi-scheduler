@@ -1,65 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireStudentContext } from '@/lib/view-as-student';
 
 /**
  * GET /api/student/completions
- * Get the current student's station completions
- * Students can only view their own data
+ * Get the current student's station completions (or, for an admin viewing
+ * as a student, that student's — read-only; see lib/view-as-student.ts).
  */
 export async function GET(request: NextRequest) {
   try {
     const supabase = getSupabaseAdmin();
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // Get current user
-    const { data: user, error: userError } = await supabase
-      .from('lab_users')
-      .select('id, email, role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (userError || !user) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
-
-    // Verify this is a student
-    if (user.role !== 'student') {
-      return NextResponse.json({ success: false, error: 'Student access only' }, { status: 403 });
-    }
-
-    // Find the student record by email match
-    // Students use @my.pmi.edu, need to find matching student record
-    const studentEmail = session.user.email;
-
-    // Try to find student by email directly
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('id, first_name, last_name, email, cohort_id')
-      .ilike('email', studentEmail)
-      .single();
-
-    if (studentError || !student) {
-      // Student record not found - they might not be in the system yet
+    const auth = await requireStudentContext(request);
+    if (auth instanceof NextResponse) return auth;
+    if (!auth.found) {
       return NextResponse.json({
         success: true,
         completions: [],
         stations: [],
-        summary: {
-          total_stations: 0,
-          completed: 0,
-          needs_review: 0,
-          not_started: 0,
-          completion_rate: 0
-        },
-        message: 'Student record not found. Please contact your instructor.'
+        summary: { total_stations: 0, completed: 0, needs_review: 0, not_started: 0, completion_rate: 0 },
+        message: 'Student record not found. Please contact your instructor.',
       });
     }
+    const student = { id: auth.id, first_name: auth.firstName, last_name: auth.lastName, email: auth.email };
 
     // Get all active stations (for this student's semester/cohort)
     const { data: stations, error: stationsError } = await supabase

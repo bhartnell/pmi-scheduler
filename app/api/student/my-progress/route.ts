@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireStudentContext } from '@/lib/view-as-student';
 
 /**
  * GET /api/student/my-progress
@@ -20,54 +19,34 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 export async function GET(request: NextRequest) {
   const startTime = Date.now();
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireStudentContext(request);
+    if (auth instanceof NextResponse) return auth;
 
     const supabase = getSupabaseAdmin();
 
     // -----------------------------------------------
-    // 1. Resolve lab_users record by email
+    // Resolve the richer students record (cohort/program) by id, now that
+    // requireStudentContext has settled who we're acting as.
     // -----------------------------------------------
-    const { data: labUser, error: labUserError } = await supabase
-      .from('lab_users')
-      .select('id, email, role, name')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (labUserError || !labUser) {
-      return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    }
-
-    if (labUser.role !== 'student') {
-      return NextResponse.json(
-        { error: 'Access denied: student role required' },
-        { status: 403 }
-      );
-    }
-
-    // -----------------------------------------------
-    // 2. Resolve students record by email
-    // -----------------------------------------------
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        status,
-        cohort_id,
-        cohort:cohorts!students_cohort_id_fkey(
-          id,
-          cohort_number,
-          program:programs(name, abbreviation)
-        )
-      `)
-      .ilike('email', session.user.email)
-      .single();
+    const { data: student, error: studentError } = auth.found
+      ? await supabase
+          .from('students')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            email,
+            status,
+            cohort_id,
+            cohort:cohorts!students_cohort_id_fkey(
+              id,
+              cohort_number,
+              program:programs(name, abbreviation)
+            )
+          `)
+          .eq('id', auth.id)
+          .single()
+      : { data: null, error: null };
 
     if (studentError || !student) {
       // No student record yet - return placeholder empty data

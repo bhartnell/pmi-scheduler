@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireStudentContext } from '@/lib/view-as-student';
 
 /**
  * GET /api/student/available-labs/my-signups
@@ -12,37 +11,16 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const supabase = getSupabaseAdmin();
-
-    // Verify student account
-    const { data: labUser } = await supabase
-      .from('lab_users')
-      .select('id, name, email, role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!labUser || labUser.role !== 'student') {
-      return NextResponse.json({ success: false, error: 'Student access only' }, { status: 403 });
-    }
-
-    // Resolve student record
-    const { data: student } = await supabase
-      .from('students')
-      .select('id')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (!student) {
+    const auth = await requireStudentContext(request);
+    if (auth instanceof NextResponse) return auth;
+    if (!auth.found) {
       return NextResponse.json(
         { success: false, error: 'Student record not found. Contact your instructor.' },
         { status: 404 }
       );
     }
+    const student = { id: auth.id };
+    const supabase = getSupabaseAdmin();
 
     // Fetch all signups for this student
     const { data: signups, error: signupsError } = await supabase

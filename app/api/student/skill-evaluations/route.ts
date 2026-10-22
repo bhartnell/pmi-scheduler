@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { resolveViewAsStudentId } from '@/lib/view-as-student';
 
 /**
  * GET /api/student/skill-evaluations
@@ -36,12 +37,19 @@ export async function GET(request: NextRequest) {
     const queryEvaluationId = request.nextUrl.searchParams.get('evaluation_id');
     const isInstructor = ['instructor', 'admin', 'superadmin'].includes(labUser.role);
 
-    if (labUser.role === 'student') {
+    // View as a student (admin+, read-only) takes the student-perspective
+    // branch below — filtered the same as a real student, never the
+    // unfiltered instructor view.
+    const viewAsStudent = await resolveViewAsStudentId(request, labUser);
+    const actingAsStudent = labUser.role === 'student' || !!viewAsStudent;
+
+    if (actingAsStudent) {
+      const studentEmail = viewAsStudent?.email ?? session.user.email;
       // Find the student record by email
       const { data: student } = await supabase
         .from('students')
         .select('id')
-        .ilike('email', session.user.email)
+        .ilike('email', studentEmail)
         .single();
 
       if (!student) {
@@ -85,7 +93,7 @@ export async function GET(request: NextRequest) {
     // Students only see rows explicitly marked visible AND never NREMT/cert
     // rows (hard-excluded here regardless of visibility_to_student, per Ben
     // 2026-08-07 — those results are Portal/SNHD-delivered, never in-app).
-    const evaluations = labUser.role === 'student'
+    const evaluations = actingAsStudent
       ? (rawEvaluations || []).filter((evaluation) => {
           const skillSheet = Array.isArray(evaluation.skill_sheet) ? evaluation.skill_sheet[0] : evaluation.skill_sheet;
           return evaluation.visibility_to_student === true && skillSheet?.is_nremt !== true;

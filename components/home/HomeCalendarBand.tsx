@@ -5,6 +5,10 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import { platoonBadge, type Platoon } from '@/lib/lvfr-platoon-style';
 import { useToast } from '@/components/Toast';
+import ViewAsStudentPicker from '@/components/ViewAsStudentPicker';
+
+/** Sentinel option value that opens the student picker instead of being a plain "view as" target. */
+const VIEW_AS_STUDENT_OPTION = '__view_as_student__';
 
 /**
  * Home calendar band (TRIM 6/7a-4b, reshaped in 6/7a-5 and 6/7a-7 to mock
@@ -353,6 +357,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
   const [loadedKey, setLoadedKey] = useState('');
   const [instructors, setInstructors] = useState<{ id: string; name: string }[]>([]);
   const [viewAs, setViewAs] = useState('');
+  const [showStudentPicker, setShowStudentPicker] = useState(false);
   const toast = useToast();
   const [membership, setMembership] = useState<Record<string, Membership>>({});
   const [canSignUp, setCanSignUp] = useState(false);
@@ -765,7 +770,13 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
             View as
             <select
               value={viewAs}
-              onChange={e => setViewAs(e.target.value)}
+              onChange={e => {
+                if (e.target.value === VIEW_AS_STUDENT_OPTION) {
+                  setShowStudentPicker(true);
+                  return;
+                }
+                setViewAs(e.target.value);
+              }}
               className="min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 text-[13px]"
             >
               <option value="">Me</option>
@@ -774,9 +785,11 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
                   {i.name}
                 </option>
               ))}
+              <option value={VIEW_AS_STUDENT_OPTION}>View as a student…</option>
             </select>
           </label>
         )}
+        {showStudentPicker && <ViewAsStudentPicker onClose={() => setShowStudentPicker(false)} />}
         <Link href="/calendar" className="ml-auto text-[13px] text-blue-600 dark:text-blue-400 hover:underline">
           Full calendar
         </Link>
