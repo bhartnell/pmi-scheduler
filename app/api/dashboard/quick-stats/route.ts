@@ -82,7 +82,9 @@ export async function GET(_request: NextRequest) {
           .select('id, cohort:cohorts!students_cohort_id_fkey!inner(id)', { count: 'exact', head: true })
           .eq('status', 'active')
           .eq('cohort.status', 'active')
-          .eq('cohort.is_active', true),
+          .eq('cohort.is_active', true)
+          .eq('is_test', false)
+          .eq('cohort.is_test', false),
 
         // Lab days this month.
         supabase

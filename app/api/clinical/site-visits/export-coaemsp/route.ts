@@ -82,6 +82,7 @@ export async function GET(request: NextRequest) {
     const { data: rosterRaw, error: rosterError } = await supabase
       .from('students')
       .select('id, first_name, last_name, status')
+      .eq('is_test', false)
       .eq('cohort_id', cohortId);
 
     if (rosterError) throw rosterError;

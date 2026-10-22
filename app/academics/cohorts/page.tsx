@@ -25,7 +25,7 @@ import {
   Home,
   GraduationCap,
 } from 'lucide-react';
-import { canManageCohorts, type Role } from '@/lib/permissions';
+import { canManageCohorts, hasMinRole, type Role } from '@/lib/permissions';
 
 interface Program {
   id: string;
@@ -76,6 +76,7 @@ export default function CohortManagementPage() {
   const [createEndDate, setCreateEndDate] = useState('');
   const [createSemester, setCreateSemester] = useState<number | ''>('');
   const [creating, setCreating] = useState(false);
+  const [addingTestStudentId, setAddingTestStudentId] = useState<string | null>(null);
   const [autoGenerate, setAutoGenerate] = useState(false);
   const [generateResult, setGenerateResult] = useState<{
     success: boolean;
@@ -241,6 +242,32 @@ export default function CohortManagementPage() {
     setEditSemester(cohort.current_semester ?? '');
     setEditTrackClinical(cohort.track_clinical_hours ?? false);
     setEditIsTest(cohort.is_test ?? false);
+  };
+
+  const handleAddTestStudent = async (cohort: Cohort) => {
+    const label = `${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)}`;
+    let count = 1;
+    if (cohort.is_test) {
+      const raw = prompt(`Generate test roster for ${label}. How many test students?`, '5');
+      if (raw === null) return;
+      count = Math.min(Math.max(parseInt(raw, 10) || 1, 1), 30);
+    } else if (!confirm(`Add one test student to ${label}? It sees this cohort's labs but never counts toward any real total.`)) {
+      return;
+    }
+    setAddingTestStudentId(cohort.id);
+    try {
+      const res = await fetch(`/api/lab-management/cohorts/${cohort.id}/test-student`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count }),
+      });
+      const data = await res.json();
+      if (!data.success) alert('Failed to add test student: ' + (data.error || 'unknown error'));
+      else alert(`Added ${data.students?.length ?? count} test student(s) to ${label}.`);
+    } catch {
+      alert('Failed to add test student');
+    }
+    setAddingTestStudentId(null);
   };
 
   const cancelEdit = () => {
@@ -893,6 +920,16 @@ export default function CohortManagementPage() {
                                 {cohort.is_active ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                               </button>
                             </>
+                          )}
+                          {userRole && hasMinRole(userRole, 'admin') && !cohort.is_archived && (
+                            <button
+                              onClick={() => handleAddTestStudent(cohort)}
+                              disabled={addingTestStudentId === cohort.id}
+                              className="px-2 py-1.5 min-h-[36px] text-xs text-gray-700 dark:text-gray-300 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 whitespace-nowrap"
+                              title={cohort.is_test ? 'Generate test roster' : 'Add test student'}
+                            >
+                              {cohort.is_test ? 'Generate test roster' : 'Add test student'}
+                            </button>
                           )}
                           {userRole && canManageCohorts(userRole) && (
                             <>

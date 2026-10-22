@@ -44,6 +44,7 @@ export async function POST(
     const { data: students, error: studentsError } = await supabase
       .from('students')
       .select('id, first_name, last_name, email')
+      .eq('is_test', false)
       .eq('cohort_id', poll.cohort_id)
       .eq('status', 'active');
 

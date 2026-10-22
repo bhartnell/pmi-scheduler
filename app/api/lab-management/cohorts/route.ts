@@ -24,6 +24,7 @@ export async function GET(request: NextRequest) {
         program:programs(id, name, abbreviation),
         student_count:students!students_cohort_id_fkey(count)
       `)
+      .eq('student_count.is_test', false)
       .order('created_at', { ascending: false });
 
     if (programId) {

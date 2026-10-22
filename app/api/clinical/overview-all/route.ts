@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
           )
         )
       `)
+      .eq('is_test', false)
       .eq('status', 'active')
       .order('last_name')
       .order('first_name');

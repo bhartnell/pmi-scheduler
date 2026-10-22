@@ -13,7 +13,8 @@ export async function fetchScopeStudents(scope: ReportScope): Promise<RosterStud
     return data ? [{ id: data.id, firstName: data.first_name, lastName: data.last_name }] : [];
   }
   const { data } = await supabase.from('students')
-    .select('id, first_name, last_name').eq('cohort_id', scope.cohortId).eq('status', 'active').order('last_name');
+    .select('id, first_name, last_name')
+    .eq('is_test', false).eq('cohort_id', scope.cohortId).eq('status', 'active').order('last_name');
   return (data ?? []).map((s) => ({ id: s.id, firstName: s.first_name, lastName: s.last_name }));
 }
 

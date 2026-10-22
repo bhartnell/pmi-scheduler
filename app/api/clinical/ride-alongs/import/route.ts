@@ -267,6 +267,7 @@ export async function POST(request: NextRequest) {
     const { data: students } = await supabase
       .from('students')
       .select('id, first_name, last_name, email')
+      .eq('is_test', false)
       .order('last_name');
 
     if (!students) {

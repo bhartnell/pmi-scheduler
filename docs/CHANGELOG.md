@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 osce-admin-entry | Testing > OSCE (/osce) sends admins to the coordinator view (straight to the event when exactly one is open/draft), everyone else to evaluator entry as before; "Evaluator signup page" link on coordinator list + event pages; ?evaluator=1 forces evaluator entry. Card 4015cd1c...dd5
 cal-tz-repush | Admin > Calendar sync: Fix event time zones card (Check = dry run, Fix = PATCH start/end timeZone + RDATE TZID to Pacific on future Google events; no deletes, idempotent, per-source_type counts). New POST /api/admin/calendar-sync/fix-timezones (dry_run default true), lib/calendar-tz-repush.ts planner + tests. Not run. Card 4015cd1c...a5b99
+## 2026-10-23
+test-flag-2b-2c | Add test student / Generate test roster (POST /api/lab-management/cohorts/[id]/test-student, admin, placeholder @test-student.invalid email, audit logged) + button on cohort manager; is_test=false filter on stat bar, student counts, student list, cohort student_count, 8 reports, clinical rollups, team-lead rollups; students created in a test cohort inherit the flag. Cards 4015cd1c (2/4b, 2/4c)
 ## 2026-10-22
 is-test-flag | cohorts.is_test + students.is_test (additive, default false, migration 20261022_is_test_flag.sql), lib/test-data.ts notTest() helper, cohort form Test checkbox + Test badge. Card 4015cd1c... (Student view 2/4a); filters follow in 2/4b, 2/4c
 role-preview-removed | Avatar-menu role Preview removed (selector, banner, provider deleted; useEffectiveRole returns the real role; student layout no longer admits admins via preview). View as is the only impersonation. Card 3fe5cd1c...

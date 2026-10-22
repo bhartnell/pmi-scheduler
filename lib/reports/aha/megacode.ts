@@ -96,7 +96,8 @@ export async function fetchMegacodeReport(scope: ReportScope, opts: { course?: '
     if (data) students = [data];
   } else {
     const { data } = await supabase.from('students')
-      .select('id, first_name, last_name').eq('cohort_id', scope.cohortId).eq('status', 'active').order('last_name');
+      .select('id, first_name, last_name')
+      .eq('is_test', false).eq('cohort_id', scope.cohortId).eq('status', 'active').order('last_name');
     students = data ?? [];
   }
   const studentIds = students.map((s) => s.id);
