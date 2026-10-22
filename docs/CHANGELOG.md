@@ -8,6 +8,7 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 osce-admin-entry | Testing > OSCE (/osce) sends admins to the coordinator view (straight to the event when exactly one is open/draft), everyone else to evaluator entry as before; "Evaluator signup page" link on coordinator list + event pages; ?evaluator=1 forces evaluator entry. Card 4015cd1c...dd5
+cal-tz-repush | Admin > Calendar sync: Fix event time zones card (Check = dry run, Fix = PATCH start/end timeZone + RDATE TZID to Pacific on future Google events; no deletes, idempotent, per-source_type counts). New POST /api/admin/calendar-sync/fix-timezones (dry_run default true), lib/calendar-tz-repush.ts planner + tests. Not run. Card 4015cd1c...a5b99
 ## 2026-10-22
 role-preview-removed | Avatar-menu role Preview removed (selector, banner, provider deleted; useEffectiveRole returns the real role; student layout no longer admits admins via preview). View as is the only impersonation. Card 3fe5cd1c...
 osce-cal-5 | OSCE blocks sync to the host calendar automatically: block create makes the event (creator added as guest), edit patches title/time/location, delete cancels it first (block kept and error shown if cancel fails; ?force=1 overrides); failures stored in osce_time_blocks.calendar_error (additive, applied live, 9 rows untouched); Create calendar events button stays as repair. Also fixes tests/osce-calendar.test.ts (relative calendar-timezone import). Card 4015cd1c...bd
