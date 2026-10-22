@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     const { data: students, error: studentsError } = await supabase
       .from('students')
       .select('id, first_name, last_name')
+      .eq('is_test', false)
       .eq('cohort_id', cohortId)
       .eq('status', 'active')
       .order('last_name', { ascending: true });

@@ -19,21 +19,22 @@ export async function GET() {
     const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('students')
-      .select('id, cohort:cohorts!students_cohort_id_fkey(current_semester, status, is_active, program:programs(name, abbreviation))')
+      .select('id, cohort:cohorts!students_cohort_id_fkey(current_semester, status, is_active, is_test, program:programs(name, abbreviation))')
       .eq('status', 'active')
+      .eq('is_test', false)
       .limit(5000);
     if (error) throw error;
 
     const byProgram = new Map<string, { name: string; total: number; semesters: Map<number | null, number> }>();
     type Program = { name: string | null; abbreviation: string | null };
-    type Cohort = { current_semester: number | null; status: string | null; is_active: boolean | null; program: Program | Program[] | null };
+    type Cohort = { current_semester: number | null; status: string | null; is_active: boolean | null; is_test: boolean | null; program: Program | Program[] | null };
     const one = <T,>(v: T | T[] | null | undefined): T | undefined => (Array.isArray(v) ? v[0] : v ?? undefined);
     let total = 0;
     for (const row of data ?? []) {
       const cohort = one(row.cohort as Cohort | Cohort[] | null);
       // A graduated or inactive cohort is not in the current count, even if
       // some of its students are still marked active.
-      if (cohort && (cohort.status === 'graduated' || cohort.is_active === false)) continue;
+      if (cohort && (cohort.status === 'graduated' || cohort.is_active === false || cohort.is_test)) continue;
       total += 1;
       const program = one(cohort?.program);
       const abbr: string = program?.abbreviation || 'Unassigned';

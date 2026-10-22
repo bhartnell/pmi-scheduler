@@ -49,6 +49,11 @@ export async function GET(request: NextRequest) {
       .order('last_name')
       .range(offset, offset + limit - 1);
 
+    // Test students never appear in real rosters; setup views pass includeTest=true.
+    if (searchParams.get('includeTest') !== 'true') {
+      query = query.eq('is_test', false);
+    }
+
     if (cohortId) {
       query = query.eq('cohort_id', cohortId);
     }
@@ -124,10 +129,18 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    
+
+    // Students created inside a test cohort inherit the flag.
+    let inheritTest = false;
+    if (body.cohort_id) {
+      const { data: parent } = await supabase.from('cohorts').select('is_test').eq('id', body.cohort_id).maybeSingle();
+      inheritTest = parent?.is_test === true;
+    }
+
     const { data, error } = await supabase
       .from('students')
       .insert({
+        is_test: inheritTest,
         first_name: body.first_name,
         last_name: body.last_name,
         email: body.email || null,

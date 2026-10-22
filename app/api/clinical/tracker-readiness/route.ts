@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
     const { data: students } = await supabase
       .from('students')
       .select('id, cohort_id')
+      .eq('is_test', false)
       .in('cohort_id', pmCohortIds)
       .eq('status', 'active');
 

@@ -173,6 +173,7 @@ export async function GET(request: NextRequest) {
     const { data: cohortStudents } = await supabase
       .from('students')
       .select('id')
+      .eq('is_test', false)
       .eq('cohort_id', cohortId)
       .eq('status', 'active');
 

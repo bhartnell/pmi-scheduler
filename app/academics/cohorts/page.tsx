@@ -25,7 +25,7 @@ import {
   Home,
   GraduationCap,
 } from 'lucide-react';
-import { canManageCohorts, type Role } from '@/lib/permissions';
+import { canManageCohorts, hasMinRole, type Role } from '@/lib/permissions';
 
 interface Program {
   id: string;
@@ -45,6 +45,7 @@ interface Cohort {
   program: Program;
   current_semester: number | null;
   track_clinical_hours: boolean;
+  is_test?: boolean;
   archived_at: string | null;
   archived_by: string | null;
 }
@@ -73,6 +74,9 @@ export default function CohortManagementPage() {
   const [createCohortNumber, setCreateCohortNumber] = useState('');
   const [createStartDate, setCreateStartDate] = useState('');
   const [createEndDate, setCreateEndDate] = useState('');
+  const [createIsTest, setCreateIsTest] = useState(false);
+  const [editIsTest, setEditIsTest] = useState(false);
+  const [addingTestStudentId, setAddingTestStudentId] = useState<string | null>(null);
   const [createSemester, setCreateSemester] = useState<number | ''>('');
   const [creating, setCreating] = useState(false);
   const [autoGenerate, setAutoGenerate] = useState(false);
@@ -175,6 +179,7 @@ export default function CohortManagementPage() {
           start_date: createStartDate || null,
           expected_end_date: createEndDate || null,
           current_semester: hasTemplates(createProgramId) && createSemester !== '' ? createSemester : null,
+          is_test: createIsTest,
         }),
       });
 
@@ -236,6 +241,33 @@ export default function CohortManagementPage() {
     setEditEndDate(cohort.expected_end_date || '');
     setEditSemester(cohort.current_semester ?? '');
     setEditTrackClinical(cohort.track_clinical_hours ?? false);
+    setEditIsTest(cohort.is_test ?? false);
+  };
+
+  const handleAddTestStudent = async (cohort: Cohort) => {
+    const label = `${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)}`;
+    let count = 1;
+    if (cohort.is_test) {
+      const raw = prompt(`Generate test roster for ${label}. How many test students?`, '5');
+      if (raw === null) return;
+      count = Math.min(Math.max(parseInt(raw, 10) || 1, 1), 30);
+    } else if (!confirm(`Add one test student to ${label}? It sees this cohort's labs but never counts toward any real total.`)) {
+      return;
+    }
+    setAddingTestStudentId(cohort.id);
+    try {
+      const res = await fetch(`/api/lab-management/cohorts/${cohort.id}/test-student`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ count }),
+      });
+      const data = await res.json();
+      if (!data.success) alert('Failed to add test student: ' + (data.error || 'unknown error'));
+      else alert(`Added ${data.students?.length ?? count} test student(s) to ${label}.`);
+    } catch {
+      alert('Failed to add test student');
+    }
+    setAddingTestStudentId(null);
   };
 
   const cancelEdit = () => {
@@ -260,6 +292,7 @@ export default function CohortManagementPage() {
           expected_end_date: editEndDate || null,
           current_semester: isPM && editSemester !== '' ? editSemester : null,
           track_clinical_hours: editTrackClinical,
+          ...(userRole && hasMinRole(userRole, 'admin') ? { is_test: editIsTest } : {}),
         }),
       });
 
@@ -563,6 +596,22 @@ export default function CohortManagementPage() {
                   />
                 </div>
               </div>
+              {userRole && hasMinRole(userRole, 'admin') && (
+                <label className="flex items-start gap-3 p-3 border dark:border-gray-600 rounded-lg cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={createIsTest}
+                    onChange={(e) => setCreateIsTest(e.target.checked)}
+                    className="mt-1 rounded border-gray-300 dark:border-gray-600"
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium text-gray-900 dark:text-white">Test cohort</span>
+                    <span className="text-gray-500 dark:text-gray-400 block mt-0.5">
+                      For dry runs. Never counts toward real totals, reports or exports; still shows in setup pickers with a Test label.
+                    </span>
+                  </span>
+                </label>
+              )}
               {/* Auto-generate lab days checkbox (PM programs with semester and start date) */}
               {hasTemplates(createProgramId) && createSemester !== '' && createStartDate && (
                 <div className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
@@ -726,6 +775,17 @@ export default function CohortManagementPage() {
                             <Activity className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                             <span className="text-gray-700 dark:text-gray-300">Track Clinical</span>
                           </label>
+                          {userRole && hasMinRole(userRole, 'admin') && (
+                            <label className="flex items-center gap-1.5 px-2 py-1 rounded text-sm cursor-pointer select-none whitespace-nowrap">
+                              <input
+                                type="checkbox"
+                                checked={editIsTest}
+                                onChange={(e) => setEditIsTest(e.target.checked)}
+                                className="rounded border-gray-300 dark:border-gray-600"
+                              />
+                              <span className="text-gray-700 dark:text-gray-300">Test cohort</span>
+                            </label>
+                          )}
                         </div>
                         <div className="flex gap-2">
                           <button
@@ -750,6 +810,11 @@ export default function CohortManagementPage() {
                           <div>
                             <div className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                               {program.abbreviation} Group {formatCohortNumber(cohort.cohort_number)}
+                              {cohort.is_test && (
+                                <span className="px-2 py-0.5 border border-dashed border-gray-400 dark:border-gray-500 text-gray-600 dark:text-gray-300 text-xs rounded font-semibold">
+                                  Test
+                                </span>
+                              )}
                               {(program.abbreviation === 'PM' || program.abbreviation === 'PMD') && cohort.current_semester && (
                                 <span className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 text-xs rounded font-semibold">
                                   S{cohort.current_semester}
@@ -863,6 +928,16 @@ export default function CohortManagementPage() {
                                 {cohort.is_active ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                               </button>
                             </>
+                          )}
+                          {userRole && hasMinRole(userRole, 'admin') && !cohort.is_archived && (
+                            <button
+                              onClick={() => handleAddTestStudent(cohort)}
+                              disabled={addingTestStudentId === cohort.id}
+                              className="px-2 py-1.5 min-h-[36px] text-xs text-gray-700 dark:text-gray-300 border dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 whitespace-nowrap"
+                              title={cohort.is_test ? 'Generate test roster' : 'Add test student'}
+                            >
+                              {cohort.is_test ? 'Generate test roster' : 'Add test student'}
+                            </button>
                           )}
                           {userRole && canManageCohorts(userRole) && (
                             <>

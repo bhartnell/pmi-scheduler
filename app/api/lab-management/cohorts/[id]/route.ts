@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { isSuperadmin } from '@/lib/permissions';
+import { isSuperadmin, hasMinRole } from '@/lib/permissions';
 import { requireAuth } from '@/lib/api-auth';
 import { createDeletionRequestIfAbsent } from '@/lib/deletion-requests';
 
@@ -75,6 +75,12 @@ export async function PATCH(
     if (body.description !== undefined) allowedFields.description = body.description;
     if (body.current_semester !== undefined) allowedFields.current_semester = body.current_semester;
     if (body.track_clinical_hours !== undefined) allowedFields.track_clinical_hours = body.track_clinical_hours;
+    if (body.is_test !== undefined) {
+      if (!hasMinRole(user.role, 'admin')) {
+        return NextResponse.json({ error: 'Only admins can change the test flag' }, { status: 403 });
+      }
+      allowedFields.is_test = body.is_test === true;
+    }
 
     if (Object.keys(allowedFields).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

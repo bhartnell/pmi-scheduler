@@ -460,6 +460,7 @@ Seeded 2026-10-21 from Ben's lists: Paramedic = Ben, Josh, Schafer, Rae, Ryan; E
 | is_external_program | boolean | NO | false |  |
 | status | text | NO | 'active' | `'active' \| 'graduated'` (CHECK). Cohort-level — pulls a whole cohort out of the active S1-S4 phase view on `/clinical` into the collapsed Graduated section, still reachable. Distinct from per-student graduation (`students.status`) and from `is_archived` (the separate final "put away" step). Migration `20260701_cohorts_status_graduated.sql`. |
 | display_name | text | YES |  | Optional human-readable override for cohort display (e.g. "LVFR AEMT Group 2"). NULL for every cohort except the imported LVFR AEMT cohort; callers fall back to `Cohort {cohort_number}` when NULL. Migration `20260708_cohorts_display_name.sql`. |
+| is_test | boolean | NO | false | Test/QA cohort (Ben's dry-run lane). Excluded from every real count/rollup via `lib/test-filter.ts`; still shown in setup pickers under a Test label. Admin-set. Migration `20261023_is_test_flag.sql`. |
 
 **Foreign Keys:**
 - `program_id` -> `programs.id` (`cohorts_program_id_fkey`)
@@ -521,6 +522,7 @@ Seeded 2026-10-21 from Ben's lists: Paramedic = Ben, Josh, Schafer, Rae, Ryan; E
 | ferpa_release_agency | text | YES |  |  |
 | emstesting_id | text | YES |  |  |
 | graduation_date | date | YES |  |  |
+| is_test | boolean | NO | false | Test student. Created only by the cohort-page "Add test student" / "Generate test roster" admin action (`POST /api/lab-management/cohorts/[id]/test-student`, placeholder `@test-student.invalid` email) or inherited when a student is created in a test cohort. Excluded from real counts. Migration `20261023_is_test_flag.sql`. |
 
 **Foreign Keys:**
 - `cohort_id` -> `cohorts.id` (`students_cohort_id_fkey`)
