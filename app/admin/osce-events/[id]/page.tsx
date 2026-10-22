@@ -97,6 +97,7 @@ interface TimeBlock {
   max_observers: number;
   sort_order: number;
   observer_count: number;
+  calendar_error?: string | null;
 }
 
 interface ScheduleBlock {
@@ -1588,7 +1589,14 @@ function TimeBlocksTab({ eventId, event, onRefresh }: { eventId: string; event: 
 
   const handleDelete = async (blockId: string) => {
     try {
-      const res = await fetch(`/api/osce/events/${eventId}/time-blocks?id=${blockId}`, { method: 'DELETE' });
+      let res = await fetch(`/api/osce/events/${eventId}/time-blocks?id=${blockId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        // The block is kept when its calendar event could not be cancelled; let the admin retry or force.
+        const data = await res.json().catch(() => ({}));
+        if (data.can_force && window.confirm(`${data.error}\n\nDelete the block anyway? Its calendar event will stay on the calendar and must be removed by hand.`)) {
+          res = await fetch(`/api/osce/events/${eventId}/time-blocks?id=${blockId}&force=1`, { method: 'DELETE' });
+        }
+      }
       if (res.ok) {
         setDeleteConfirm(null);
         fetchBlocks();
@@ -1764,7 +1772,14 @@ function TimeBlocksTab({ eventId, event, onRefresh }: { eventId: string; event: 
                     Day {block.day_number}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">{block.label}</td>
+                <td className="px-4 py-3 text-sm font-medium text-gray-900 dark:text-white">
+                  {block.label}
+                  {block.calendar_error && (
+                    <div className="mt-0.5 text-xs font-normal text-red-600 dark:text-red-400" title={block.calendar_error}>
+                      Calendar event not synced: {block.calendar_error.slice(0, 140)}. Fix the connection, then press Create calendar events.
+                    </div>
+                  )}
+                </td>
                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{block.date}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{block.start_time}</td>
                 <td className="px-4 py-3 text-sm text-gray-600 dark:text-gray-300">{block.end_time}</td>

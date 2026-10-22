@@ -136,3 +136,43 @@ test('standby blocks are marked and the email says received, not confirmed', () 
   assert.match(c.subject, /received/);
   assert.doesNotMatch(c.subject + c.message, /[^\x20-\x7E]/);
 });
+
+// ─── OSCE CAL 5: update / cancel ────────────────────────────────────
+
+import { cancelOsceBlockEvent, updateOsceBlockEvent } from '../lib/osce-calendar.ts';
+
+function fakeFetch(status: number, body = '') {
+  const calls: { url: string; init: RequestInit }[] = [];
+  const impl = (async (url: string, init: RequestInit) => {
+    calls.push({ url, init });
+    return new Response(status === 204 ? null : body, { status });
+  }) as unknown as typeof fetch;
+  return { calls, impl };
+}
+
+test('update patches title/time/location only, never attendees, and notifies guests', async () => {
+  const f = fakeFetch(200, '{}');
+  const r = await updateOsceBlockEvent({ accessToken: 't', eventId: 'ev1', event, block: am, baseUrl, fetchImpl: f.impl });
+  assert.equal(r.status, 'updated');
+  assert.equal(f.calls[0].init.method, 'PATCH');
+  assert.match(f.calls[0].url, /events\/ev1\?sendUpdates=all$/);
+  const sent = JSON.parse(String(f.calls[0].init.body));
+  assert.deepEqual(Object.keys(sent).sort(), ['description', 'end', 'location', 'start', 'summary']);
+  assert.equal(sent.start.dateTime, '2026-11-12T08:30:00');
+});
+
+test('update: 404/410 is gone (not re-created), other failures are errors', async () => {
+  assert.equal((await updateOsceBlockEvent({ accessToken: 't', eventId: 'e', event, block: am, baseUrl, fetchImpl: fakeFetch(404).impl })).status, 'gone');
+  assert.equal((await updateOsceBlockEvent({ accessToken: 't', eventId: 'e', event, block: am, baseUrl, fetchImpl: fakeFetch(410).impl })).status, 'gone');
+  const r = await updateOsceBlockEvent({ accessToken: 't', eventId: 'e', event, block: am, baseUrl, fetchImpl: fakeFetch(403, 'nope').impl });
+  assert.equal(r.status, 'error');
+});
+
+test('cancel: DELETE with sendUpdates=all; already gone counts as success; failure is an error', async () => {
+  const ok = fakeFetch(204);
+  assert.equal((await cancelOsceBlockEvent({ accessToken: 't', eventId: 'ev 1', fetchImpl: ok.impl })).status, 'cancelled');
+  assert.equal(ok.calls[0].init.method, 'DELETE');
+  assert.match(ok.calls[0].url, /events\/ev%201\?sendUpdates=all$/);
+  assert.equal((await cancelOsceBlockEvent({ accessToken: 't', eventId: 'e', fetchImpl: fakeFetch(410).impl })).status, 'gone');
+  assert.equal((await cancelOsceBlockEvent({ accessToken: 't', eventId: 'e', fetchImpl: fakeFetch(500, 'x').impl })).status, 'error');
+});
