@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { getAccessTokenForUser } from '@/lib/google-calendar';
+import { calendarOffsetString } from '@/lib/calendar-timezone';
 
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
 
@@ -56,8 +57,8 @@ export async function GET(request: NextRequest) {
     for (const calId of calendarIds) {
       try {
         const params = new URLSearchParams({
-          timeMin: `${startDate}T00:00:00-07:00`,
-          timeMax: `${endDate}T23:59:59-07:00`,
+          timeMin: `${startDate}T00:00:00${calendarOffsetString(startDate, '00:00')}`,
+          timeMax: `${endDate}T23:59:59${calendarOffsetString(endDate, '23:59')}`,
           singleEvents: 'true',
           orderBy: 'startTime',
           maxResults: '250',

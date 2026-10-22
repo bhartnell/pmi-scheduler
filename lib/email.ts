@@ -4,6 +4,7 @@
 import { Resend } from 'resend';
 import { wrapInEmailTemplate } from '@/lib/email-templates';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
 
 // Lazy initialization to avoid build errors when env vars aren't set
 let resendClient: Resend | null = null;
@@ -451,7 +452,7 @@ export async function isStudentEmailBlackoutToday(): Promise<boolean> {
   try {
     const supabase = getSupabaseAdmin();
     const azDate = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Phoenix', year: 'numeric', month: '2-digit', day: '2-digit',
+      timeZone: CALENDAR_TIMEZONE, year: 'numeric', month: '2-digit', day: '2-digit',
     }).format(new Date());
     const { data, error } = await supabase
       .from('lab_days')
@@ -566,7 +567,7 @@ async function _isNremtTestingActiveToday(): Promise<boolean> {
     // Arizona (MST, no DST) — PMI is in Tucson. Using AZ-local date so a
     // send at 23:30 UTC (16:30 MST) still resolves to "today" correctly.
     const azDate = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/Phoenix',
+      timeZone: CALENDAR_TIMEZONE,
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

@@ -29,11 +29,12 @@ import {
   patchSharedCalendarEvent,
   deleteSharedCalendarEvent,
 } from '@/lib/google-shared-calendar';
+import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
 
 export const LAB_DAY_EVENT_SOURCE_TYPE = 'lab_day_event';
 
 const APP_URL = process.env.NEXTAUTH_URL || 'https://pmiparamedic.tools';
-const TIMEZONE = 'America/Phoenix';
+const TIMEZONE = CALENDAR_TIMEZONE;
 
 export interface LabDayEventPlan {
   dayKey: string;

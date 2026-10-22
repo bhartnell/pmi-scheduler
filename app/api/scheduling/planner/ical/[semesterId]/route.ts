@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { CALENDAR_TIMEZONE, PACIFIC_VTIMEZONE_LINES } from '@/lib/calendar-timezone';
 
 // ICS date format: YYYYMMDDTHHMMSS
 function toICSDate(dateStr: string, time: string): string {
@@ -67,7 +68,7 @@ export async function GET(
         'CALSCALE:GREGORIAN',
         'METHOD:PUBLISH',
         `X-WR-CALNAME:${escapeICS(semester.name)}`,
-        'X-WR-TIMEZONE:America/Phoenix',
+        `X-WR-TIMEZONE:${CALENDAR_TIMEZONE}`,
         'END:VCALENDAR',
       ].join('\r\n');
 
@@ -111,17 +112,8 @@ export async function GET(
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
       `X-WR-CALNAME:${escapeICS(semester.name)}`,
-      'X-WR-TIMEZONE:America/Phoenix',
-      // VTIMEZONE for America/Phoenix (no DST)
-      'BEGIN:VTIMEZONE',
-      'TZID:America/Phoenix',
-      'BEGIN:STANDARD',
-      'DTSTART:19700101T000000',
-      'TZOFFSETFROM:-0700',
-      'TZOFFSETTO:-0700',
-      'TZNAME:MST',
-      'END:STANDARD',
-      'END:VTIMEZONE',
+      `X-WR-TIMEZONE:${CALENDAR_TIMEZONE}`,
+      ...PACIFIC_VTIMEZONE_LINES,
     ];
 
     const semesterStartDate = new Date(semester.start_date + 'T12:00:00');
@@ -173,8 +165,8 @@ export async function GET(
       icsLines.push('BEGIN:VEVENT');
       icsLines.push(`UID:${generateUID(block.id, semesterId)}`);
       icsLines.push(`DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`);
-      icsLines.push(`DTSTART;TZID=America/Phoenix:${dtstart}`);
-      icsLines.push(`DTEND;TZID=America/Phoenix:${dtend}`);
+      icsLines.push(`DTSTART;TZID=${CALENDAR_TIMEZONE}:${dtstart}`);
+      icsLines.push(`DTEND;TZID=${CALENDAR_TIMEZONE}:${dtend}`);
 
       if (block.is_recurring) {
         icsLines.push(`RRULE:FREQ=WEEKLY;BYDAY=${icsDay};UNTIL=${untilDate}`);

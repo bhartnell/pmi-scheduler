@@ -15,6 +15,8 @@ export interface CalendarEvent {
   organizer?: string;
 }
 
+import { calendarOffsetMinutes } from '@/lib/calendar-timezone';
+
 /**
  * Escape special characters per RFC 5545 section 3.3.11
  * Commas, semicolons and backslashes must be escaped.
@@ -160,8 +162,8 @@ export function downloadICS(events: CalendarEvent[], filename: string): void {
 
 /**
  * Parse a date string (YYYY-MM-DD) and optional time string (HH:MM or HH:MM:SS)
- * into a Date object, treating the date as Arizona time (UTC-7, America/Phoenix,
- * no DST).
+ * into a Date object, treating the date as local time in the calendar zone
+ * (America/Los_Angeles, observes DST).
  *
  * @param dateStr - Date string in YYYY-MM-DD format
  * @param timeStr - Optional time string in HH:MM or HH:MM:SS format
@@ -173,9 +175,6 @@ export function parseLocalDate(
   timeStr?: string | null,
   defaultHour = 0
 ): Date {
-  // Arizona is UTC-7 (no daylight saving time)
-  const ARIZONA_OFFSET_HOURS = 7;
-
   let [year, month, day] = dateStr.split('-').map(Number);
   let hours = defaultHour;
   let minutes = 0;
@@ -188,9 +187,9 @@ export function parseLocalDate(
     seconds = parts[2] ?? 0;
   }
 
-  // Convert Arizona local time to UTC by adding the offset
-  const utcDate = new Date(
-    Date.UTC(year, month - 1, day, hours + ARIZONA_OFFSET_HOURS, minutes, seconds)
-  );
-  return utcDate;
+  // Convert calendar-zone local time to UTC using the offset in effect on that date
+  const asUtc = Date.UTC(year, month - 1, day, hours, minutes, seconds);
+  let offsetMin = calendarOffsetMinutes(new Date(asUtc));
+  offsetMin = calendarOffsetMinutes(new Date(asUtc - offsetMin * 60000));
+  return new Date(asUtc - offsetMin * 60000);
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { getAccessTokenForUser } from '@/lib/google-calendar';
+import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
 
 /**
  * POST /api/calendar/create-event
@@ -48,7 +49,7 @@ import { getAccessTokenForUser } from '@/lib/google-calendar';
  */
 
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
-const TIMEZONE = 'America/Phoenix';
+const TIMEZONE = CALENDAR_TIMEZONE;
 
 interface Attendee {
   email: string;

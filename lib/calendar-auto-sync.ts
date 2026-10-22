@@ -24,6 +24,7 @@ import {
   deleteSharedCalendarEvent,
 } from '@/lib/google-shared-calendar';
 import { findBlocksForInstructor, assertOwnsGoogleEvent } from '@/lib/instructor-blocks';
+import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
 
 export type SyncSeriesResult =
   | { status: 'synced'; eventId: string; created: boolean }
@@ -160,7 +161,7 @@ export async function syncSeriesForUser(opts: SeriesKey): Promise<SyncSeriesResu
       const datePart = rdates
         .map((d: string) => `${d.replace(/-/g, '')}T${compactTime}`)
         .join(',');
-      patchRecurrence.push(`RDATE;TZID=America/Phoenix:${datePart}`);
+      patchRecurrence.push(`RDATE;TZID=${CALENDAR_TIMEZONE}:${datePart}`);
     }
     const ok = await patchSharedCalendarEvent({
       calendarId: 'primary',
@@ -172,11 +173,11 @@ export async function syncSeriesForUser(opts: SeriesKey): Promise<SyncSeriesResu
         location: room?.name ?? undefined,
         start: {
           dateTime: `${first.date}T${first.start_time}`,
-          timeZone: 'America/Phoenix',
+          timeZone: CALENDAR_TIMEZONE,
         },
         end: {
           dateTime: `${first.date}T${first.end_time}`,
-          timeZone: 'America/Phoenix',
+          timeZone: CALENDAR_TIMEZONE,
         },
         recurrence: patchRecurrence,
       },

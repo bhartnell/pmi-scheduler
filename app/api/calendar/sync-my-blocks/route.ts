@@ -8,6 +8,7 @@ import {
   patchSharedCalendarEvent,
 } from '@/lib/google-shared-calendar';
 import { findBlocksForInstructor, assertOwnsGoogleEvent } from '@/lib/instructor-blocks';
+import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
 
 /**
  * POST /api/calendar/sync-my-blocks
@@ -203,7 +204,7 @@ export async function POST(request: NextRequest) {
         const datePart = rdates
           .map(d => `${d.replace(/-/g, '')}T${compactTime}`)
           .join(',');
-        patchRecurrence.push(`RDATE;TZID=America/Phoenix:${datePart}`);
+        patchRecurrence.push(`RDATE;TZID=${CALENDAR_TIMEZONE}:${datePart}`);
       }
       const patchBody: Record<string, unknown> = {
         summary,
@@ -211,11 +212,11 @@ export async function POST(request: NextRequest) {
         location: room?.name ?? undefined,
         start: {
           dateTime: `${first.date}T${first.start_time}`,
-          timeZone: 'America/Phoenix',
+          timeZone: CALENDAR_TIMEZONE,
         },
         end: {
           dateTime: `${first.date}T${first.end_time}`,
-          timeZone: 'America/Phoenix',
+          timeZone: CALENDAR_TIMEZONE,
         },
         // Empty recurrence array (no rrule and no rdates) means
         // "this is a single event" — explicitly send so Google
