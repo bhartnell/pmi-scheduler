@@ -96,7 +96,8 @@ function openStations(e: BandEvent): number {
 
 function isMine(e: BandEvent, name: string | null): boolean {
   if (e.event_type === 'volunteer') return true;
-  if (openStations(e) > 0) return true;
+  // Every lab is open to every instructor until its day is over.
+  if (e.event_type === 'lab' && !hasEnded(e, new Date())) return true;
   if (!name) return false;
   const n = name.toLowerCase();
   return (e.instructor_names ?? []).some(i => i.toLowerCase() === n);
@@ -537,10 +538,11 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
   const personName = viewAs || userName;
   const groupByDate = useCallback(
     (filter: Filter, rollUp = false) => {
+      // View as only changes whose name 'mine' matches; Labs and Everyone are not narrowed by it.
       const visible0 =
         filter === 'labs'
-          ? events.filter(e => e.event_type === 'lab' && (!viewAs || isMine(e, personName)))
-          : filter === 'mine' || viewAs
+          ? events.filter(e => e.event_type === 'lab')
+          : filter === 'mine'
             ? events.filter(e => isMine(e, personName))
             : events;
       const visible = rollUp ? rollUpCourseDays(visible0) : visible0;
@@ -552,7 +554,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
       }
       return m;
     },
-    [events, viewAs, personName],
+    [events, personName],
   );
   const weekByDate = useMemo(() => groupByDate(weekFilter), [groupByDate, weekFilter]);
   const monthByDate = useMemo(() => groupByDate(monthFilter, true), [groupByDate, monthFilter]);
@@ -624,11 +626,8 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
         <button
           key={f}
           type="button"
-          className={seg(f === 'all' ? value === 'all' && !viewAs : value === f || (f === 'mine' && !!viewAs && value === 'all'))}
-          onClick={() => {
-            if (f === 'all') setViewAs('');
-            onPick(f);
-          }}
+          className={seg(value === f)}
+          onClick={() => onPick(f)}
         >
           {label}
         </button>

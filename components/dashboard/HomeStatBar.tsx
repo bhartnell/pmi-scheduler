@@ -36,6 +36,9 @@ const STAT_DEFS: StatDef[] = [
 // Needs attention is available under Pick stats but off by default.
 const DEFAULT_STATS: StatKey[] = ['active_students', 'labs_this_week', 'students_by_program', 'next_priority_lab'];
 
+// The bar shows two groups with a divider: lab numbers, then student numbers.
+const STUDENT_KEYS: StatKey[] = ['active_students', 'students_by_program'];
+
 const NEEDS_ATTENTION_TITLE =
   'Counts two things: (1) 1 if any upcoming lab station still needs an instructor, and (2) 1 if there are new feedback reports (admins only). Each number links to its list.';
 
@@ -263,6 +266,9 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
     });
   });
 
+  const labTiles = tiles.filter(t => !STUDENT_KEYS.includes(t.id.split(':')[0] as StatKey));
+  const studentTiles = tiles.filter(t => STUDENT_KEYS.includes(t.id.split(':')[0] as StatKey));
+
   return (
     <div className="mb-6 flex items-stretch gap-3 max-md:flex-col">
       {canLogSiteVisit && (
@@ -275,33 +281,42 @@ export default function HomeStatBar({ isAdmin, canLogSiteVisit }: Props) {
         </Link>
       )}
       <div className="flex-1 flex items-center bg-white dark:bg-gray-800 rounded-xl shadow px-2 min-h-[60px] max-md:flex-wrap">
-        <div className="flex-1 flex items-center flex-wrap gap-x-4 gap-y-2 py-1">
+        <div className="flex-1 flex items-center flex-wrap gap-x-6 gap-y-2 py-1">
           {shown.length === 0 && (
             <span className="px-3 text-sm text-gray-500 dark:text-gray-400">No stats picked.</span>
           )}
-          {tiles.map(tile => (
-            <Link
-              key={tile.id}
-              href={tile.href}
-              title={tile.title}
-              className={`flex flex-col items-start px-3 py-2 min-h-[44px] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 group ${tile.cols ? 'min-w-[230px]' : 'min-w-[150px]'}`}
-            >
-              <span className="text-[22px] font-bold leading-tight text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                {tile.value || <span className="inline-block w-6 h-5 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />}
-              </span>
-              <span className="text-xs whitespace-nowrap text-gray-500 dark:text-gray-400 group-hover:underline">{tile.label}</span>
-              {tile.cols && (
-                <span className="mt-0.5 flex items-start gap-2.5 tabular-nums">
-                  {tile.cols.map(c => (
-                    <span key={c.label} className="flex min-w-[1.5rem] flex-col items-center leading-tight">
-                      <span className="text-[11px] text-gray-500 dark:text-gray-400">{c.label}</span>
-                      <span className="text-[15px] font-semibold text-gray-800 dark:text-gray-200">{c.value}</span>
+          {[labTiles, studentTiles].map((group, gi) =>
+            group.length === 0 ? null : (
+              <div
+                key={gi}
+                className={`flex items-center flex-wrap gap-x-4 gap-y-2 ${gi === 1 && labTiles.length > 0 ? 'pl-6 border-l border-gray-200 dark:border-gray-700 max-md:pl-0 max-md:border-l-0' : ''}`}
+              >
+                {group.map(tile => (
+                <Link
+                  key={tile.id}
+                  href={tile.href}
+                  title={tile.title}
+                  className={`flex flex-col items-start px-3 py-2 min-h-[44px] rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 group ${tile.cols ? 'min-w-[230px]' : 'min-w-[150px]'}`}
+                >
+                  <span className="text-[22px] font-bold leading-tight text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                    {tile.value || <span className="inline-block w-6 h-5 rounded bg-gray-200 dark:bg-gray-700 animate-pulse" />}
+                  </span>
+                  <span className="text-xs whitespace-nowrap text-gray-500 dark:text-gray-400 group-hover:underline">{tile.label}</span>
+                  {tile.cols && (
+                    <span className="mt-0.5 flex items-start gap-2.5 tabular-nums">
+                      {tile.cols.map(c => (
+                        <span key={c.label} className="flex min-w-[1.5rem] flex-col items-center leading-tight">
+                          <span className="text-[11px] text-gray-500 dark:text-gray-400">{c.label}</span>
+                          <span className="text-[15px] font-semibold text-gray-800 dark:text-gray-200">{c.value}</span>
+                        </span>
+                      ))}
                     </span>
-                  ))}
-                </span>
-              )}
-            </Link>
-          ))}
+                  )}
+                </Link>
+              ))}
+              </div>
+            ),
+          )}
         </div>
         <div className="relative" ref={pickerRef}>
           <button
