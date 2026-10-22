@@ -265,6 +265,16 @@ export default function OsceEventsListPage() {
             </p>
           </div>
         </div>
+        <div className="flex items-center gap-3">
+        {events.find(e => e.status === 'open') && (
+          <a
+            href={`/osce/${events.find(e => e.status === 'open')!.slug}`}
+            className="inline-flex items-center gap-2 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            <ExternalLink className="w-4 h-4" />
+            Evaluator signup page
+          </a>
+        )}
         <button
           onClick={() => setShowCreate(true)}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
@@ -272,6 +282,7 @@ export default function OsceEventsListPage() {
           <Plus className="w-4 h-4" />
           Create New Event
         </button>
+        </div>
       </div>
 
       {/* Create Event Modal */}
