@@ -96,7 +96,20 @@ export async function syncGeneralLabDefaults(
       .eq('instructor_id', userId);
     const roleLabDayIds = new Set<string>((roleRows ?? []).map((r) => r.lab_day_id as string));
 
+    // (c) "Remove me" opt-outs (lab_day_optouts, TRIM 6/7a-8c): the user took
+    // themselves off these days, so the default must not re-add the event.
+    const { data: optoutRows } = await supabase
+      .from('lab_day_optouts')
+      .select('lab_day_id')
+      .eq('user_id', userId);
+    const optedOutLabDayIds = new Set<string>((optoutRows ?? []).map((r) => r.lab_day_id as string));
+
     for (const ld of labDays) {
+      if (optedOutLabDayIds.has(ld.id as string)) {
+        await removeGeneralLabDefault({ userEmail: email, labDayId: ld.id as string });
+        counts.skipped++;
+        continue;
+      }
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const cohort = (ld as any).cohort;
       const c = Array.isArray(cohort) ? cohort[0] : cohort;

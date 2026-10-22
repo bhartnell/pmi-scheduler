@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-10-22
+
+trim-6-7a-8c | Remove me on a lab day: lab_day_optouts table + POST/DELETE /lab-days/[id]/optout; default roster shows as You're in with Remove on home calendar, opt-out excluded from my-membership, Who's coming (now lists default roster) and general-lab sync; signing up again clears it. Card 4005cd1c...5c972694f14
+
 ## 2026-10-21
 
 trim-6-7a-10 | Home: 'Your Dashboard' block renders only when a widget is enabled; 'All pages' list removed; Customize home / Reset home layout in the avatar menu (+ 'Customize home' link under Operations Hub row); stat bar tiles min 150/230px, 22px numbers, 12px one-line labels, 16px gaps, wraps instead of crushing, 11px/15px semester columns. Role-default stat set already matched Ben's picks (no change). Card 4005cd1c...fb0e

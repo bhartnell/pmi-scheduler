@@ -93,6 +93,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
+    // Signing up (or being added) again clears a "Remove me" opt-out for this
+    // person on this day (TRIM 6/7a-8c), so the default roster stops excluding them.
+    if (instructor_id) {
+      await supabase.from('lab_day_optouts').delete().eq('lab_day_id', lab_day_id).eq('user_id', instructor_id);
+    }
+
     // Check if role already exists (NULL-instructor "Other" rows are
     // distinct by name, so dedupe those on other_name instead).
     const existingQuery = supabase

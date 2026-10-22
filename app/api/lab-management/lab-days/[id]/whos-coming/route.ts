@@ -42,7 +42,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
   try {
     const { data: labDay, error: labDayError } = await supabase
       .from('lab_days')
-      .select('id, date')
+      .select('id, date, cohort:cohorts(program:programs(abbreviation))')
       .eq('id', labDayId)
       .single();
     if (labDayError || !labDay) {
@@ -168,6 +168,31 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
         if (!v.name) return;
         add(keyFor(v.email, v.name), v.name, v.email || null, 'part_time', 'Volunteer', { fromOther: true });
       });
+    }
+
+    // 5. Default roster for this lab day's program (program_default_instructors),
+    // minus anyone who used "Remove me" on this day (lab_day_optouts).
+    try {
+      const cohort = first<any>((labDay as any).cohort);
+      const abbr = String(first<any>(cohort?.program)?.abbreviation || '');
+      if (abbr) {
+        const [rosterRes, optoutRes] = await Promise.all([
+          supabase
+            .from('program_default_instructors')
+            .select('user:lab_users!inner(id, name, email, role, is_part_time, is_active), program:programs!inner(abbreviation)')
+            .eq('program.abbreviation', abbr),
+          supabase.from('lab_day_optouts').select('user_id').eq('lab_day_id', labDayId),
+        ]);
+        const out = new Set(((optoutRes.data || []) as { user_id: string }[]).map(o => o.user_id));
+        for (const r of (rosterRes.data || []) as any[]) {
+          const u = first<any>(r.user);
+          if (!u || u.is_active === false || out.has(u.id)) continue;
+          add(keyFor(u.email, u.name), u.name || u.email, u.email || null, groupFor(u), 'Default', { fromOther: true });
+        }
+      }
+    } catch (err) {
+      // A failed default read only narrows the list; it never blocks the response.
+      console.error('whos-coming default roster read failed:', err);
     }
 
     const order: Record<WhosComingGroup, number> = { full_time: 0, part_time: 1, other: 2 };
