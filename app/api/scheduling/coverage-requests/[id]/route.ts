@@ -75,7 +75,7 @@ export async function PATCH(
 
     if (req.status !== 'pending') {
       return NextResponse.json(
-        { error: `Cannot ${action} — request is already ${req.status}` },
+        { error: `Cannot ${action} - request is already ${req.status}` },
         { status: 409 }
       );
     }
@@ -214,7 +214,7 @@ export async function PATCH(
         createNotification({
           userEmail: email,
           title: 'New open shift',
-          message: `${shiftTitle} — ${prettyDate} ${timeRange}. Sign up if available.`,
+          message: `${shiftTitle} - ${prettyDate} ${timeRange}. Sign up if available.`,
           type: 'general',
           category: 'scheduling',
           linkUrl: '/scheduling/shifts',

@@ -141,7 +141,7 @@ export function renderMegacodeStudentForm(row: MegacodeReportRow & { instructor?
   if (!a) {
     return `<section class="form"><h2>Megacode Testing Checklist</h2>
       <p class="hdr">Student Name <u>${esc(student)}</u> &nbsp; Date of Test <u>&nbsp;</u></p>
-      <p class="excused">No scorable megacode attempt on file — student excused / certifying separately. No form generated.</p></section>`;
+      <p class="excused">No scorable megacode attempt on file - student excused / certifying separately. No form generated.</p></section>`;
   }
   const variant = row.variant ?? chainToVariant(a.chain);
   const RH: Record<string, string> = { bradycardia: 'Bradycardia', tachycardia: 'Tachycardia', pvt: 'pVT', vf: 'VF', pea: 'PEA', asystole: 'Asystole' };
@@ -154,7 +154,7 @@ export function renderMegacodeStudentForm(row: MegacodeReportRow & { instructor?
   // shared criteria, so the form populates validly section-by-section.
   const sourceNote = variant
     ? ''
-    : `<p class="srcnote">Practice case ${esc(a.caseCode ?? '')} used as testing scenario (AHA-permitted) — scored by rhythm section.</p>`;
+    : `<p class="srcnote">Practice case ${esc(a.caseCode ?? '')} used as testing scenario (AHA-permitted) - scored by rhythm section.</p>`;
   const keys = orderedKeys(a);
   const rendered = keys.map((k) => SECTIONS[k] ? renderSection(SECTIONS[k], a) : { html: '', needs: false });
   const sectionsHtml = rendered.map((r) => r.html).join('');
@@ -174,7 +174,7 @@ export function renderMegacodeStudentForm(row: MegacodeReportRow & { instructor?
       <tbody>${sectionsHtml}</tbody>
     </table>
     <p class="stop">STOP TEST</p>
-    <p class="result">Test Results — check PASS or NR:
+    <p class="result">Test Results - check PASS or NR:
       <span class="pn ${pass ? 'on' : ''}">${box(pass)} PASS</span>
       <span class="pn ${!pass ? 'on' : ''}">${box(!pass)} NR</span>
     </p>
@@ -270,7 +270,7 @@ export function renderBlankMegacodeForm(student: { firstName: string; lastName: 
       <tbody>${rows}</tbody>
     </table>
     <p class="stop">STOP TEST</p>
-    <p class="result">Test Results — check PASS or NR:
+    <p class="result">Test Results - check PASS or NR:
       <span class="pn">${box(false)} PASS</span> <span class="pn">${box(false)} NR</span>
     </p>
     ${renderSignoff({ student: { id: '', firstName: '', lastName: '' }, best: null, variant: null, allAttempts: [], flags: [] }, opts.dateStr ?? '')}

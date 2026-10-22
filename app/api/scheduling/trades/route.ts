@@ -338,7 +338,7 @@ export async function PUT(request: NextRequest) {
           await createNotification({
             userEmail: requesterData.email,
             title: 'Trade request accepted',
-            message: `${currentUser.name} accepted your trade request for "${shiftData?.title || 'shift'}" — awaiting director approval`,
+            message: `${currentUser.name} accepted your trade request for "${shiftData?.title || 'shift'}" - awaiting director approval`,
             type: 'shift_confirmed',
             linkUrl: '/scheduling/shifts?tab=trades',
             referenceType: 'shift_trade_request',
@@ -359,7 +359,7 @@ export async function PUT(request: NextRequest) {
               createNotification({
                 userEmail: admin.email,
                 title: 'Shift trade needs approval',
-                message: `${currentUser.name} accepted a trade from ${requesterData?.name || 'an instructor'} — pending your approval`,
+                message: `${currentUser.name} accepted a trade from ${requesterData?.name || 'an instructor'} - pending your approval`,
                 type: 'shift_available',
                 linkUrl: '/scheduling/shifts?tab=trades',
                 referenceType: 'shift_trade_request',
@@ -484,7 +484,7 @@ export async function PUT(request: NextRequest) {
         if (targetUser?.email) {
           await createNotification({
             userEmail: targetUser.email,
-            title: 'Trade approved — you are now scheduled',
+            title: 'Trade approved - you are now scheduled',
             message: `Your acceptance of the trade for "${shiftData?.title || 'shift'}" was approved. You are now confirmed for this shift.`,
             type: 'shift_confirmed',
             linkUrl: '/scheduling/shifts?filter=mine',

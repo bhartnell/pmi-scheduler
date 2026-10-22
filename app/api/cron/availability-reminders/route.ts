@@ -201,7 +201,7 @@ async function processInstructorWeek(
 
   if (resend) {
     const html = buildReminderEmail(instructor.name, weekLabel);
-    const subject = `[PMI] Availability Reminder — Week of ${weekLabel}`;
+    const subject = `[PMI] Availability Reminder - Week of ${weekLabel}`;
 
     const { error: sendError } = await resend.emails.send({
       from: FROM_EMAIL,

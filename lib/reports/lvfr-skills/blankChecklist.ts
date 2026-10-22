@@ -76,23 +76,23 @@ export function renderBlankChecklistHTML(skills: BlankChecklistSkill[]): string 
     return `<div class="cat"><h2>${esc(g.cat)}</h2><table>${rows}</table></div>`;
   }).join('');
 
-  return `<!doctype html><html><head><meta charset="utf-8"><title>LVFR AEMT Skills — Blank Class Checklist</title><style>${CSS}</style></head>
+  return `<!doctype html><html><head><meta charset="utf-8"><title>LVFR AEMT Skills - Blank Class Checklist</title><style>${CSS}</style></head>
 <body>
   <div class="band">
-    <h1>Pima Medical Institute — LVFR AEMT</h1>
-    <p>Psychomotor Skills — Blank Class Checklist</p>
+    <h1>Pima Medical Institute - LVFR AEMT</h1>
+    <p>Psychomotor Skills - Blank Class Checklist</p>
   </div>
   <div class="fields">
     <div class="fld"><div class="rule"></div><div class="lbl">Class / Cohort</div></div>
     <div class="fld"><div class="rule"></div><div class="lbl">Date range</div></div>
     <div class="fld"><div class="rule"></div><div class="lbl">Instructor</div></div>
   </div>
-  <p class="caption">Check off each skill once it has been covered with the class (class-level — not scored per student). ${skills.length} skills across ${groups.length} categories.</p>
+  <p class="caption">Check off each skill once it has been covered with the class (class-level - not scored per student). ${skills.length} skills across ${groups.length} categories.</p>
   <div class="cols">${groupsHtml}</div>
   <div class="signoff">
     <div class="line"><div class="rule"></div><div class="lbl">Instructor signature</div></div>
     <div class="line" style="max-width:160px;"><div class="rule"></div><div class="lbl">Date</div></div>
   </div>
-  <div class="foot">Generated for printing/hand-off — LVFR AEMT skills checklist</div>
+  <div class="foot">Generated for printing/hand-off - LVFR AEMT skills checklist</div>
 </body></html>`;
 }

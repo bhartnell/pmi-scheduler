@@ -127,7 +127,7 @@ export async function PATCH(
         .single();
       if (current && current.status !== body.status && !canManageStudentRoster(callerRole)) {
         return NextResponse.json(
-          { error: 'Forbidden — lead instructor or above required to change student status' },
+          { error: 'Forbidden - lead instructor or above required to change student status' },
           { status: 403 }
         );
       }

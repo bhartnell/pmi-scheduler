@@ -67,7 +67,7 @@ export async function POST(
   const internship = internships?.[0];
   if (!internship) {
     return NextResponse.json(
-      { success: false, error: 'No internship record found for this student — the written-exam result is tracked on the internship row. Create the internship first.' },
+      { success: false, error: 'No internship record found for this student - the written-exam result is tracked on the internship row. Create the internship first.' },
       { status: 412 },
     );
   }

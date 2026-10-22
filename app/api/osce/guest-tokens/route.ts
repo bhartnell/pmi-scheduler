@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
     if (Array.isArray(body.invites)) {
       const eventId: string | null = body.event_id || await resolveDefaultEventId(supabase);
       if (!eventId) {
-        return NextResponse.json({ success: false, error: 'No OSCE event found — create/select one first' }, { status: 404 });
+        return NextResponse.json({ success: false, error: 'No OSCE event found - create/select one first' }, { status: 404 });
       }
 
       const invites = body.invites as Array<{ name?: string; email?: string; agency?: string; role?: string }>;

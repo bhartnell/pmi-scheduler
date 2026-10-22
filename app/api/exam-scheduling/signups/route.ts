@@ -60,7 +60,7 @@ export async function GET() {
       signup: null,
       isAdmin: isStaff,
       blocked: isStaff
-        ? 'This page is where STUDENTS sign up for their own exam. Director accounts are not on the student roster — to create or manage sessions, use Manage Exam Sessions.'
+        ? 'This page is where STUDENTS sign up for their own exam. Director accounts are not on the student roster - to create or manage sessions, use Manage Exam Sessions.'
         : 'Your account is not linked to a student record yet. Contact an administrator to link your email before signing up.',
     });
   }
@@ -169,7 +169,7 @@ export async function POST(request: NextRequest) {
       );
     }
     if (msg.includes('exam session is full') || msg.includes('no Pima computers left')) {
-      return NextResponse.json({ success: false, error: 'That seat was just taken — pick again.' }, { status: 409 });
+      return NextResponse.json({ success: false, error: 'That seat was just taken - pick again.' }, { status: 409 });
     }
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }

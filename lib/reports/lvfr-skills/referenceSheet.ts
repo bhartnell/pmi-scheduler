@@ -73,7 +73,7 @@ function renderOne(s: ReferenceSheetSkill): string {
   const equip = (s.equipment_needed || []).filter(Boolean);
   return `<div class="page">
     <div class="band">
-      <div class="kicker">PMI LVFR AEMT — Skill Reference &amp; Competency Sheet</div>
+      <div class="kicker">PMI LVFR AEMT - Skill Reference &amp; Competency Sheet</div>
       <h1>${esc(s.name)}${s.nremt_tested ? '<span class="nremt">NREMT</span>' : ''}</h1>
       <div class="cat">${esc(s.category)}</div>
     </div>

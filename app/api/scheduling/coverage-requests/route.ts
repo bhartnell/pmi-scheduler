@@ -175,7 +175,7 @@ export async function POST(request: NextRequest) {
       APPROVER_EMAILS.map((email) =>
         createNotification({
           userEmail: email,
-          title: `${urgencyTag}Coverage request — ${typeLabel}`,
+          title: `${urgencyTag}Coverage request - ${typeLabel}`,
           message: `${user.name} needs coverage ${formattedDate} ${timeRange}. Review to approve or decline.`,
           type: 'general',
           category: 'scheduling',

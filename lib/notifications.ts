@@ -604,7 +604,7 @@ export async function notifyAdminsUnmatchedStudentSignup(
     const notifications = admins.map(admin => ({
       userEmail: admin.email,
       title: 'Student sign-in needs roster review',
-      message: `${newUserInfo.name} (${newUserInfo.email}) signed in with a my.pmi.edu address but matched no roster enrollment. Auto-set to student — review and assign the correct cohort/role.`,
+      message: `${newUserInfo.name} (${newUserInfo.email}) signed in with a my.pmi.edu address but matched no roster enrollment. Auto-set to student - review and assign the correct cohort/role.`,
       type: 'general' as NotificationType,
       linkUrl: '/admin/users',
       referenceType: 'lab_user',

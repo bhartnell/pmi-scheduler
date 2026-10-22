@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
           `<tr>
             <td style="padding: 8px 12px; border-bottom: 1px solid ${EMAIL_COLORS.gray[200]}; font-size: 14px;">Day ${d.day_number}</td>
             <td style="padding: 8px 12px; border-bottom: 1px solid ${EMAIL_COLORS.gray[200]}; font-size: 14px;">${d.date}</td>
-            <td style="padding: 8px 12px; border-bottom: 1px solid ${EMAIL_COLORS.gray[200]}; font-size: 14px;">${d.title || '—'}${d.has_exam ? ' 📝' : ''}${d.has_quiz ? ' ❓' : ''}</td>
+            <td style="padding: 8px 12px; border-bottom: 1px solid ${EMAIL_COLORS.gray[200]}; font-size: 14px;">${d.title || '-'}${d.has_exam ? ' 📝' : ''}${d.has_quiz ? ' ❓' : ''}</td>
           </tr>`
         ).join('')
       : '<tr><td colspan="3" style="padding: 12px; text-align: center; color: #6b7280;">No classes scheduled this week</td></tr>';
@@ -204,7 +204,7 @@ export async function GET(request: NextRequest) {
       try {
         await sendEmail({
           to: agencyUser.email,
-          subject: `LVFR AEMT Weekly Report — ${reportDate}`,
+          subject: `LVFR AEMT Weekly Report - ${reportDate}`,
           template: 'general',
           data: {
             title: 'LVFR AEMT Weekly Progress Report',

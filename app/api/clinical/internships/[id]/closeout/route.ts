@@ -106,7 +106,7 @@ export async function GET(
         manual_override: !!savedOverrides['shifts_completed'],
         details: hasHoursRecord
           ? `${totalHours}/${requiredHours} hours`
-          : `0/${requiredHours} hours — no clinical hours data imported yet`,
+          : `0/${requiredHours} hours - no clinical hours data imported yet`,
       },
       {
         key: 'final_eval_submitted',

@@ -103,7 +103,7 @@ export async function GET(
     <p style="color: #9ca3af; margin-top: 8px;">${escapeHtml(student.first_name)} ${escapeHtml(student.last_name)} has no evaluations for this lab day.</p>
   </div>`;
       const emptyHtml = wrapPrintHtml(
-        `NREMT Results — ${student.first_name} ${student.last_name}`,
+        `NREMT Results - ${student.first_name} ${student.last_name}`,
         emptyBody
       );
       return new NextResponse(emptyHtml, {
@@ -259,7 +259,7 @@ export async function GET(
   ${autoPrintScript}
 `;
     const html = wrapPrintHtml(
-      `NREMT Results — ${student.first_name} ${student.last_name}`,
+      `NREMT Results - ${student.first_name} ${student.last_name}`,
       body
     );
 

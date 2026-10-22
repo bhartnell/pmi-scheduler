@@ -52,7 +52,7 @@ export async function POST(
     const callerRole = await getCallerRole(session.user.email);
     if (!callerRole || !canManageStudentRoster(callerRole)) {
       return NextResponse.json(
-        { error: 'Forbidden — lead instructor or above required' },
+        { error: 'Forbidden - lead instructor or above required' },
         { status: 403 }
       );
     }

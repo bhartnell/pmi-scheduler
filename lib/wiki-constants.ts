@@ -7,7 +7,7 @@ export const WIKI_SECTIONS: { id: WikiSectionId; title: string; description: str
   {
     id: 'running-the-program',
     title: 'Running the program',
-    description: 'Cycle playbooks — the recurring things a program runs: lab days, cohorts, certifications.',
+    description: 'Cycle playbooks - the recurring things a program runs: lab days, cohorts, certifications.',
   },
   {
     id: 'using-the-site',

@@ -91,7 +91,7 @@ export function renderCompletionSheetHTML(a: RenderArgs): string {
       return `<tr>
         <td class="box"><span class="chk${done ? '' : ' empty'}">${done ? '✓' : ''}</span></td>
         <td class="name">${esc(s.name)}${s.nremt_tested ? '<span class="nremt">NREMT</span>' : ''}</td>
-        <td class="date${date ? '' : ' none'}">${date ? esc(date) : '—'}</td>
+        <td class="date${date ? '' : ' none'}">${date ? esc(date) : '-'}</td>
       </tr>`;
     }).join('');
     return `<div class="cat"><h2>${esc(g.cat)}</h2><table>${rows}</table></div>`;
@@ -100,7 +100,7 @@ export function renderCompletionSheetHTML(a: RenderArgs): string {
   return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(completionFilename('', ''))}</title><style>${CSS}</style></head>
 <body>
   <div class="band">
-    <h1>Pima Medical Institute — LVFR AEMT</h1>
+    <h1>Pima Medical Institute - LVFR AEMT</h1>
     <p>Psychomotor Skills Completion Record</p>
   </div>
   <div class="meta">

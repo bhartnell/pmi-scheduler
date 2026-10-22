@@ -287,7 +287,7 @@ export async function notifyDirectorsOfProctor(
       data: {
         subject,
         title: 'Written Exam Scheduling',
-        message: `Heads-up: ${proctor.name} is the proctor for the written exam session on ${fmtSession(session)}. No action needed — this is informational and does not block your calendar.`,
+        message: `Heads-up: ${proctor.name} is the proctor for the written exam session on ${fmtSession(session)}. No action needed - this is informational and does not block your calendar.`,
         actionUrl: `${APP_URL}/admin/exam-sessions`,
         actionText: 'View Sessions',
       },

@@ -104,10 +104,10 @@ export async function POST(
       try {
         const result = await sendEmail({
           to: student.email,
-          subject: `EMT Ride-Along Availability — Please Submit by ${deadlineStr}`,
+          subject: `EMT Ride-Along Availability - Please Submit by ${deadlineStr}`,
           template: 'general',
           data: {
-            subject: `EMT Ride-Along Availability — Please Submit by ${deadlineStr}`,
+            subject: `EMT Ride-Along Availability - Please Submit by ${deadlineStr}`,
             title: 'Ride-Along Availability',
             message: `Hi ${student.first_name},<br><br>Please submit your ride-along availability for the upcoming semester. Click the button below to fill out the form.<br><br><strong>Deadline:</strong> ${deadlineStr}`,
             actionUrl: pollUrl,

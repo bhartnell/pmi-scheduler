@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
     const shapeErrors = validateScenarioShape(body);
     if (shapeErrors.length > 0) {
       return NextResponse.json(
-        { success: false, error: `Scenario JSON shape problem — ${shapeErrors.map(e => e.message).join('; ')}` },
+        { success: false, error: `Scenario JSON shape problem - ${shapeErrors.map(e => e.message).join('; ')}` },
         { status: 400 },
       );
     }

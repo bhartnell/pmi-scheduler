@@ -529,7 +529,7 @@ export async function GET(
       const stationData = c.station as any;
       recentActivity.push({
         type: 'station_completion',
-        description: `Station completed: ${stationData?.station_name || 'Unknown'} — ${c.result.replace('_', ' ')}`,
+        description: `Station completed: ${stationData?.station_name || 'Unknown'} - ${c.result.replace('_', ' ')}`,
         date: c.completed_at,
         icon: c.result === 'pass' ? 'CheckCircle' : 'AlertCircle',
       });
@@ -539,7 +539,7 @@ export async function GET(
     for (const s of scenarioRows.filter(r => r.date >= cutoff).slice(0, 5)) {
       recentActivity.push({
         type: 'scenario_graded',
-        description: `Scenario graded: ${s.scenario_name} — Grade ${s.grade}`,
+        description: `Scenario graded: ${s.scenario_name} - Grade ${s.grade}`,
         date: s.date,
         icon: 'ClipboardCheck',
       });
@@ -549,7 +549,7 @@ export async function GET(
     for (const s of skillAssessmentRows.filter(r => r.date >= cutoff).slice(0, 5)) {
       recentActivity.push({
         type: 'skill_assessed',
-        description: `Skill assessed: ${s.scenario_name} — Score ${s.score}/5`,
+        description: `Skill assessed: ${s.scenario_name} - Score ${s.score}/5`,
         date: s.date,
         icon: 'BookOpen',
       });
