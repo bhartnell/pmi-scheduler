@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-22
 pals-p2a | PALS pass-but-watch: nullable watch + watch_note on pals_test_attempts (applied live, additive); lib/pals-group-result.ts group 2-of-3 rule + tests. Card 4015cd1c...87d4
+text-emdash-api-lib | Em dash to plain hyphen in 93 rendered strings across 49 app/api and lib files (email subjects, report/print headings, error and notification messages). Calendar title builders/parsers, seeds, stored-name matchers, regexes and comments deliberately untouched. Card 3ff5cd1c...9e8
 trim-6-7a-11 | Home: View as no longer narrows Labs/Everyone; every not-yet-ended lab counts as open for Mine; stat bar split into Labs and Students groups. Card 4015cd1c...8125
 fix-workload-status | /api/reports/instructor-workload no longer selects nonexistent lab_days.status (42703); column was never read. Card 4015cd1c...e3de6ec
 

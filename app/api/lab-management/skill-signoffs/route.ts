@@ -183,7 +183,7 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (!userRecord || !hasMinRole(userRecord.role, 'lead_instructor')) {
-      return NextResponse.json({ error: 'Forbidden — lead instructor or above required' }, { status: 403 });
+      return NextResponse.json({ error: 'Forbidden - lead instructor or above required' }, { status: 403 });
     }
 
     const body = await request.json();

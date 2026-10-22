@@ -105,7 +105,7 @@ export async function PUT(
       return NextResponse.json(
         {
           success: false,
-          error: 'Group not found — please refresh and try again.',
+          error: 'Group not found - please refresh and try again.',
           code: 'group_not_found',
           group_id: groupId,
         },
@@ -154,7 +154,7 @@ export async function PUT(
           return NextResponse.json(
             {
               success: false,
-              error: 'Group or student no longer exists — please refresh and try again.',
+              error: 'Group or student no longer exists - please refresh and try again.',
               code: 'fk_violation',
             },
             { status: 404 },
@@ -264,7 +264,7 @@ export async function POST(
         return NextResponse.json(
           {
             success: false,
-            error: 'Group or student no longer exists — please refresh and try again.',
+            error: 'Group or student no longer exists - please refresh and try again.',
             code: 'fk_violation',
           },
           { status: 404 },

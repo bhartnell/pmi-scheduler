@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const title = `Skill Evaluation — ${student.first_name || ''} ${student.last_name || ''} — ${skillSheet.skill_name || ''}`;
+    const title = `Skill Evaluation - ${student.first_name || ''} ${student.last_name || ''} - ${skillSheet.skill_name || ''}`;
     const body = `
   <div class="no-print" style="margin-bottom: 16px; text-align: right;">
     <button onclick="window.print()" style="padding: 8px 20px; background: #2563eb; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 14px;">

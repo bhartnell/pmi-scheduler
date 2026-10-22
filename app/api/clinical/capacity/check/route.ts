@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       message = `OK: ${projected} of ${maxPerDay} student${maxPerDay === 1 ? '' : 's'} (${Math.round((projected / maxPerDay) * 100)}% capacity)`;
     } else {
       const over = projected - maxPerDay;
-      message = `Over capacity: would be ${projected} students (max ${maxPerDay}) — ${over} over limit`;
+      message = `Over capacity: would be ${projected} students (max ${maxPerDay}) - ${over} over limit`;
     }
 
     return NextResponse.json({

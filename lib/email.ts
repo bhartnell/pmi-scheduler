@@ -211,7 +211,7 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
   }),
 
   scenario_feedback: (data) => ({
-    subject: `[PMI] Scenario Feedback — ${data.scenarioTitle}${data.date ? ` (${data.date})` : ''}`,
+    subject: `[PMI] Scenario Feedback - ${data.scenarioTitle}${data.date ? ` (${data.date})` : ''}`,
     html: `
       <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 20px;">
         Scenario Feedback
@@ -263,7 +263,7 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
   }),
 
   skill_evaluation: (data) => ({
-    subject: `[PMI] Skill Evaluation — ${data.skillName}${data.date ? ` (${data.date})` : ''}`,
+    subject: `[PMI] Skill Evaluation - ${data.skillName}${data.date ? ` (${data.date})` : ''}`,
     html: `
       <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 20px;">
         Skill Evaluation Results
@@ -302,13 +302,13 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
         Evaluator: ${data.evaluatorName}
       </p>
       <p style="color: #9ca3af; margin: 8px 0 0 0; font-size: 12px; font-style: italic;">
-        — PMI Paramedic Program
+        - PMI Paramedic Program
       </p>
     `
   }),
 
   osce_invite: (data) => ({
-    subject: `[PMI] OSCE Evaluator Invitation — ${data.eventTitle}`,
+    subject: `[PMI] OSCE Evaluator Invitation - ${data.eventTitle}`,
     html: `
       <h2 style="color: #111827; margin: 0 0 16px 0; font-size: 20px;">
         You're Invited to Evaluate at Our Clinical Capstone
@@ -319,7 +319,7 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
       <p style="color: #374151; margin: 0 0 16px 0; font-size: 14px; line-height: 1.6;">
         On behalf of the Pima Medical Institute Paramedic Program, we would be honored
         to have you join us as an external evaluator for our upcoming Objective
-        Structured Clinical Examination (OSCE) — the summative capstone assessment for
+        Structured Clinical Examination (OSCE) - the summative capstone assessment for
         our graduating paramedic cohort.
       </p>
 
@@ -334,7 +334,7 @@ const templates: Record<EmailTemplate, (data: Record<string, unknown>) => { subj
       </div>
 
       <p style="color: #374151; margin: 0 0 8px 0; font-size: 14px; line-height: 1.6;">
-        Use the button below at any time to enter your personal evaluator access —
+        Use the button below at any time to enter your personal evaluator access -
         no separate login or account is required.
       </p>
 
@@ -727,7 +727,7 @@ export async function sendOsceInviteEmail(
 ) {
   return sendEmail({
     to: toEmail,
-    subject: `[PMI] OSCE Evaluator Invitation — ${data.eventTitle}`,
+    subject: `[PMI] OSCE Evaluator Invitation - ${data.eventTitle}`,
     template: 'osce_invite',
     data: {
       evaluatorName: data.evaluatorName,
@@ -874,7 +874,7 @@ export async function sendSkillEvaluationEmail(
   const { labDayId, ...templateData } = data;
   return sendEmail({
     to: toEmail,
-    subject: `[PMI] Skill Evaluation — ${data.skillName}${data.date ? ` (${data.date})` : ''}`,
+    subject: `[PMI] Skill Evaluation - ${data.skillName}${data.date ? ` (${data.date})` : ''}`,
     template: 'skill_evaluation',
     data: templateData,
     labDayId,
@@ -907,7 +907,7 @@ export async function sendScenarioFeedbackEmail(
   const { labDayId, ...templateData } = data;
   return sendEmail({
     to: toEmail,
-    subject: `[PMI] Scenario Feedback — ${data.scenarioTitle}${data.date ? ` (${data.date})` : ''}`,
+    subject: `[PMI] Scenario Feedback - ${data.scenarioTitle}${data.date ? ` (${data.date})` : ''}`,
     template: 'scenario_feedback',
     data: templateData,
     labDayId,

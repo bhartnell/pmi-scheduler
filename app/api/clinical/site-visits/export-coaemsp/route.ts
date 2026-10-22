@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
     const cohortId = request.nextUrl.searchParams.get('cohortId');
     if (!cohortId) {
       return NextResponse.json(
-        { success: false, error: 'cohortId is required — the CoAEMSP log is one document per cohort' },
+        { success: false, error: 'cohortId is required - the CoAEMSP log is one document per cohort' },
         { status: 400 }
       );
     }

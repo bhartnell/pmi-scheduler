@@ -257,12 +257,12 @@ function generateScenarioPrintHTML(evaluation: any, linkedScenario: any): string
   }
 
   // 5c. SAMPLE History - Always show complete format
-  const sampleS = linkedScenario?.sample_history?.signs_symptoms || linkedScenario?.chief_complaint || '—';
+  const sampleS = linkedScenario?.sample_history?.signs_symptoms || linkedScenario?.chief_complaint || '-';
   const sampleA = linkedScenario?.allergies || 'NKDA';
   const sampleM = linkedScenario?.medications?.length ? linkedScenario.medications.join(', ') : 'None';
   const sampleP = linkedScenario?.medical_history?.length ? linkedScenario.medical_history.join(', ') : 'None';
-  const sampleL = linkedScenario?.sample_history?.last_oral_intake || '—';
-  const sampleE = linkedScenario?.sample_history?.events_leading || '—';
+  const sampleL = linkedScenario?.sample_history?.last_oral_intake || '-';
+  const sampleE = linkedScenario?.sample_history?.events_leading || '-';
 
   // 5d. OPQRST
   const hasOpqrst = linkedScenario?.opqrst && Object.values(linkedScenario.opqrst).some((v) => v);

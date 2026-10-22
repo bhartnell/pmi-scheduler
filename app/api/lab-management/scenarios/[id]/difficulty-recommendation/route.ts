@@ -222,7 +222,7 @@ export async function POST(
     const currentUser = await getCurrentUser(session.user.email);
     if (!currentUser || !hasMinRole(currentUser.role, 'lead_instructor')) {
       return NextResponse.json(
-        { error: 'Insufficient permissions — lead instructor or above required' },
+        { error: 'Insufficient permissions - lead instructor or above required' },
         { status: 403 }
       );
     }

@@ -159,7 +159,7 @@ export async function GET(request: NextRequest) {
       sent: 0,
       skipped: byReporter.size,
       errors: [],
-      note: 'Skipped — NREMT testing active today',
+      note: 'Skipped - NREMT testing active today',
       duration_ms: Date.now() - startTime,
     });
   }

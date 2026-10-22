@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       calendar = { pushed: true };
     } else {
       calendar = { pushed: false, reason: push.reason === 'operator_not_connected'
-        ? 'Your Google Calendar is not connected with events scope — reconnect at /settings/calendar-setup, then re-save this session.'
+        ? 'Your Google Calendar is not connected with events scope - reconnect at /settings/calendar-setup, then re-save this session.'
         : push.reason === 'no_shared_calendar'
           ? 'SHARED_CALENDAR_ID is not configured.'
           : `Google error: ${push.detail ?? 'unknown'}` };

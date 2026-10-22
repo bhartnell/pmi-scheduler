@@ -115,7 +115,7 @@ function renderEvaluationPage(evaluation: any, includePageBreak: boolean = false
           <h2 style="margin: 0; font-size: 15px; color: #111827;">${escapeHtml(skillSheet?.skill_name || 'Skill Evaluation')}</h2>
           ${skillSheet?.source === 'nremt' ? `
             <span style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; background-color: #fef3c7; color: #92400e; border: 1px solid #fde68a; border-radius: 9999px; font-size: 10px; font-weight: 600;">
-              &#10003; NREMT Official${skillSheet?.nremt_code ? ` — Code: ${escapeHtml(skillSheet.nremt_code)}` : ''}
+              &#10003; NREMT Official${skillSheet?.nremt_code ? ` - Code: ${escapeHtml(skillSheet.nremt_code)}` : ''}
             </span>
           ` : ''}
         </div>
@@ -220,7 +220,7 @@ export async function GET(request: NextRequest) {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Lab Day Evaluations — ${labDate}</title>
+  <title>Lab Day Evaluations - ${labDate}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 24px; color: #111827; max-width: 800px; margin: 0 auto; }

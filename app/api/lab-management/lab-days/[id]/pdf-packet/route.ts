@@ -249,7 +249,7 @@ export async function GET(
       // No print bar or auto-print script — server-side rendering
       const body = `${coverSection}\n${evalSections}`;
       const html = wrapPrintHtml(
-        `NREMT Results — ${student.first_name} ${student.last_name}`,
+        `NREMT Results - ${student.first_name} ${student.last_name}`,
         body
       );
 

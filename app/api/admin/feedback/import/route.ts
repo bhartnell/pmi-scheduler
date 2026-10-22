@@ -316,7 +316,7 @@ export async function POST(request: NextRequest) {
           .insert(insertData);
 
         if (insertError) {
-          results.errors.push(`Row ${rowNum}: Failed to insert — ${insertError.message}`);
+          results.errors.push(`Row ${rowNum}: Failed to insert - ${insertError.message}`);
           continue;
         }
 
@@ -365,7 +365,7 @@ export async function POST(request: NextRequest) {
           .upsert(upsertData, { onConflict: 'id' });
 
         if (upsertError) {
-          results.errors.push(`Row ${rowNum}: Failed to insert — ${upsertError.message}`);
+          results.errors.push(`Row ${rowNum}: Failed to insert - ${upsertError.message}`);
           continue;
         }
 
@@ -421,7 +421,7 @@ export async function POST(request: NextRequest) {
         .eq('id', id);
 
       if (updateError) {
-        results.errors.push(`Row ${rowNum}: Failed to update — ${updateError.message}`);
+        results.errors.push(`Row ${rowNum}: Failed to update - ${updateError.message}`);
         continue;
       }
 

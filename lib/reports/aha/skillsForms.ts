@@ -87,13 +87,13 @@ export const INFANT_CPR_FORM: SkillsForm = {
       { text: 'Checks pulse' },
     ], notes: ['Once student shouts for help, instructor says, "Here\'s the barrier device."'] },
     { heading: 'Cycle 1 of CPR (30:2)', note: '*CPR feedback devices are preferred for accuracy', steps: [
-      { text: 'Infant Compressions — performs high-quality compressions:', subs: [
+      { text: 'Infant Compressions - performs high-quality compressions:', subs: [
         'Placement of the heel of 1 hand in the center of the chest, just below the nipple line',
         '30 compressions in no less than 15 and no more than 18 seconds',
         'Compresses at least one third the AP diameter of the chest, approximately 1½ inches (4 cm)',
         'Complete recoil after each compression',
       ] },
-      { text: 'Infant Breaths — gives 2 breaths with a barrier device:', subs: [
+      { text: 'Infant Breaths - gives 2 breaths with a barrier device:', subs: [
         'Each breath given over 1 second', 'Visible chest rise with each breath', 'Resumes compressions in less than 10 seconds',
       ] },
     ] },
@@ -101,18 +101,18 @@ export const INFANT_CPR_FORM: SkillsForm = {
       { text: 'Compressions' }, { text: 'Breaths' }, { text: 'Resumes compressions in less than 10 seconds' },
     ], notes: ['Rescuer 2 arrives with bag-mask device and begins ventilation while Rescuer 1 continues compressions with the 2 thumb-encircling hands technique.'] },
     { heading: 'Cycle 3 of CPR', steps: [
-      { text: 'Rescuer 1: Infant Compressions — performs high-quality compressions:', subs: [
+      { text: 'Rescuer 1: Infant Compressions - performs high-quality compressions:', subs: [
         '15 compressions with the 2 thumb-encircling hands technique',
         '15 compressions in no less than 7 and no more than 9 seconds',
         'Compresses at least one third the AP diameter of the chest, approximately 1½ inches (4 cm)',
         'Complete recoil after each compression',
       ] },
-    ], notes: ['Rescuer 2: Infant Breaths — this rescuer is not evaluated.'] },
+    ], notes: ['Rescuer 2: Infant Breaths - this rescuer is not evaluated.'] },
     { heading: 'Cycle 4 of CPR', steps: [
-      { text: 'Rescuer 1: Infant Breaths — gives 2 breaths with a bag-mask device:', subs: [
+      { text: 'Rescuer 1: Infant Breaths - gives 2 breaths with a bag-mask device:', subs: [
         'Each breath given over 1 second', 'Visible chest rise with each breath', 'Resumes compressions in less than 10 seconds',
       ] },
-    ], notes: ['Rescuer 2: Infant Compressions — this rescuer is not evaluated.'] },
+    ], notes: ['Rescuer 2: Infant Compressions - this rescuer is not evaluated.'] },
   ],
 };
 
@@ -158,7 +158,7 @@ export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStuden
     const notes = sec.notes?.length
       ? sec.notes.map((n) => `<tr class="noterow"><td colspan="2">${esc(n)}</td></tr>`).join('')
       : '';
-    return `<tr class="sec"><td colspan="2">${esc(sec.heading)}${sec.note ? ` <span class="note">— ${esc(sec.note)}</span>` : ''}</td></tr>${steps}${notes}`;
+    return `<tr class="sec"><td colspan="2">${esc(sec.heading)}${sec.note ? ` <span class="note">- ${esc(sec.note)}</span>` : ''}</td></tr>${steps}${notes}`;
   }).join('');
   const scen = form.scenarios?.length ? `<div class="scen">${form.scenarios.map((s) => `<p>${esc(s)}</p>`).join('')}</div>` : '';
   return `<section class="form">
@@ -169,7 +169,7 @@ export function renderSkillsStudentSheet(form: SkillsForm, student: RosterStuden
     <table class="ck"><thead><tr><th>Critical Performance Steps</th><th class="chk">Done<br>correctly</th></tr></thead><tbody>${sections}</tbody></table>
     <p class="stop">STOP TEST</p>
     <p class="result"><span class="pn ${isBlank ? '' : 'on'}"><span class="bx">${isBlank ? '' : '✓'}</span> PASS</span><span class="pn"><span class="bx"></span> NR</span></p>
-    ${isBlank ? '' : `<p class="autocap">Auto-completed as PASS — documenting competency verified live during the course (these skills are not scored in-app; failures are handled live).</p>`}
+    ${isBlank ? '' : `<p class="autocap">Auto-completed as PASS - documenting competency verified live during the course (these skills are not scored in-app; failures are handled live).</p>`}
     ${signoff(ins, dateStr)}
   </section>`;
 }

@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
   }
   if (!body.uses_own_computer && usage.pima_used >= examSession.pima_computers) {
     return NextResponse.json(
-      { success: false, error: 'All Pima computers for this session are taken — pick bring-your-own or another session.' },
+      { success: false, error: 'All Pima computers for this session are taken - pick bring-your-own or another session.' },
       { status: 409 },
     );
   }
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
       );
     }
     if (msg.includes('exam session is full') || msg.includes('no Pima computers left')) {
-      return NextResponse.json({ success: false, error: 'That seat was just taken — pick again.' }, { status: 409 });
+      return NextResponse.json({ success: false, error: 'That seat was just taken - pick again.' }, { status: 409 });
     }
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }
@@ -142,6 +142,6 @@ export async function POST(request: NextRequest) {
     success: true,
     signup,
     studentNotified: !!student.email,
-    ...(student.email ? {} : { warning: 'Student has no roster email — no confirmation email was sent. Notify them directly.' }),
+    ...(student.email ? {} : { warning: 'Student has no roster email - no confirmation email was sent. Notify them directly.' }),
   });
 }

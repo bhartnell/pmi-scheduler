@@ -54,19 +54,19 @@ function buildEmailContent(
   switch (notificationType) {
     case '90_day':
       return {
-        subject: `[PMI] Certification Expiration Notice — ${certName}`,
+        subject: `[PMI] Certification Expiration Notice - ${certName}`,
         title: 'Certification Expiration Notice',
         message: `Your <strong>${certName}</strong> expires on <strong>${formattedDate}</strong>. Please begin the renewal process.`,
       };
     case '30_day':
       return {
-        subject: `[PMI] URGENT: Certification Expiring Soon — ${certName}`,
+        subject: `[PMI] URGENT: Certification Expiring Soon - ${certName}`,
         title: 'URGENT: Certification Expiring Soon',
         message: `Your <strong>${certName}</strong> expires in 30 days (<strong>${formattedDate}</strong>). Immediate action required.`,
       };
     case 'expired':
       return {
-        subject: `[PMI] Certification Expired — ${certName}`,
+        subject: `[PMI] Certification Expired - ${certName}`,
         title: 'Certification Expired',
         message: `Your <strong>${certName}</strong> expired on <strong>${formattedDate}</strong>. Please update your certification immediately.`,
       };

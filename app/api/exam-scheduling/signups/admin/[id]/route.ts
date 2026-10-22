@@ -105,7 +105,7 @@ export async function PATCH(
   if (error || !updated) {
     const msg = error?.message ?? 'update failed';
     if (msg.includes('exam session is full') || msg.includes('no Pima computers left')) {
-      return NextResponse.json({ success: false, error: 'That seat was just taken — pick again.' }, { status: 409 });
+      return NextResponse.json({ success: false, error: 'That seat was just taken - pick again.' }, { status: 409 });
     }
     return NextResponse.json({ success: false, error: msg }, { status: 500 });
   }

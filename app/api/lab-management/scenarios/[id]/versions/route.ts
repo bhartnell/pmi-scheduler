@@ -139,7 +139,7 @@ export async function PUT(
 
     const currentUser = await getCurrentUser(session.user.email);
     if (!currentUser || !hasMinRole(currentUser.role, 'lead_instructor')) {
-      return NextResponse.json({ error: 'Insufficient permissions — lead instructor or above required' }, { status: 403 });
+      return NextResponse.json({ error: 'Insufficient permissions - lead instructor or above required' }, { status: 403 });
     }
 
     const body = await request.json();
@@ -191,7 +191,7 @@ export async function PUT(
       version_number: nextVersion,
       data: currentScenario,
       created_by: session.user.email,
-      change_summary: `Restored from version ${targetVersion.version_number} — current state auto-saved`,
+      change_summary: `Restored from version ${targetVersion.version_number} - current state auto-saved`,
     });
 
     // Apply restored content to the scenarios table

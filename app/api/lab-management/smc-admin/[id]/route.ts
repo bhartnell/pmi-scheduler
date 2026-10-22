@@ -68,7 +68,7 @@ export async function PATCH(
     if (error) {
       if ((error as any).code === '23505') {
         return NextResponse.json(
-          { success: false, error: 'Duplicate — a row with that program/semester/name already exists' },
+          { success: false, error: 'Duplicate - a row with that program/semester/name already exists' },
           { status: 409 }
         );
       }
