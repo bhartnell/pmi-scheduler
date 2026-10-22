@@ -101,7 +101,7 @@ export default function StudentHomePage() {
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Hi, {first}</h1>
         {data?.student?.cohortNumber && (
-          <p className="text-sm text-gray-500 dark:text-gray-400">Paramedic Group {data.student.cohortNumber.replace(/\.0$/, '')}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400">Paramedic Group {String(data.student.cohortNumber).replace(/\.0$/, '')}</p>
         )}
       </div>
 

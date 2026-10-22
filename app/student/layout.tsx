@@ -17,8 +17,6 @@ import {
   User,
   LayoutDashboard,
   CheckSquare,
-  Activity,
-  BookOpen,
   BookOpenCheck,
   TrendingUp,
   Menu,
@@ -123,8 +121,8 @@ export default function StudentLayout({
     { href: '/student/completions', label: 'Stations', icon: CheckSquare },
     { href: '/student/skill-sheets', label: 'Skill Sheets', icon: ClipboardCheck },
     { href: '/student/skill-evaluations', label: 'Skill Results', icon: Award },
-    { href: '/student/ekg', label: 'EKG Progress', icon: Activity },
-    { href: '/student/scenarios', label: 'Scenarios', icon: BookOpen },
+    // EKG Progress, Scenarios removed — no page exists at /student/ekg or
+    // /student/scenarios (dangling links, found during STUDENT VIEW 3/4 live check)
     { href: '/cases', label: 'Case Studies', icon: BookOpenCheck },
     { href: '/student/available-labs', label: 'Lab Sign-Ups', icon: CalendarCheck },
     { href: '/student/labs', label: 'Lab History', icon: Calendar },

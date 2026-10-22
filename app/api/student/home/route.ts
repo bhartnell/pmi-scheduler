@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { buildStudentHome, type StudentLabDayRow, type StudentLeadRow } from '@/lib/student-home';
 import { requireStudentContext } from '@/lib/view-as-student';
+import { formatCohortNumber } from '@/lib/format-cohort';
 
 /**
  * GET /api/student/home
@@ -50,10 +51,13 @@ export async function GET(request: NextRequest) {
     });
 
     const home = buildStudentHome(leadRows, (days ?? []) as StudentLabDayRow[], today);
-    const cohort = one(student.cohort as { cohort_number: string; program: unknown } | { cohort_number: string; program: unknown }[] | null);
+    const cohort = one(student.cohort as { cohort_number: number | string; program: unknown } | { cohort_number: number | string; program: unknown }[] | null);
     return NextResponse.json({
       success: true,
-      student: { firstName: student.first_name, cohortNumber: cohort?.cohort_number ?? null },
+      student: {
+        firstName: student.first_name,
+        cohortNumber: cohort?.cohort_number != null ? formatCohortNumber(cohort.cohort_number) : null,
+      },
       home,
     });
   } catch (e) {
