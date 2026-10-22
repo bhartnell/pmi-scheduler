@@ -11981,7 +11981,7 @@ migrated (8 practice + 6 testing); the 3 `*_cert_tier_check` constraints now rea
 - **`pals_test_attempts`** — one graded run of the selected Team Leader (per
   student). `checklist_id` FK, `scenario_id` FK, `student_id` FK (the TL),
   `instructor_id`/`lab_day_id`/`lab_station_id`/`lab_group_id` FKs, `discipline`
-  (scope snapshot), `result` (`PASS|NR` CHECK), `remediation_notes`,
+  (scope snapshot), `result` (`PASS|NR` CHECK), `watch` boolean NULL + `watch_note` text NULL (pass-but-watch, added 2026-10-22, migration `20261022_pals_attempt_watch.sql`), `remediation_notes`,
   `instructor_initials`/`instructor_number`, `retest_of` self-FK,
   `remediation_due_at` (30-day clock), `client_uuid` UNIQUE (offline dedup),
   `synced_at`.
