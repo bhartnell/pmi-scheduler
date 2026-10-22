@@ -368,6 +368,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 | Component | File | Props | Description |
 |-----------|------|-------|-------------|
 | `CalendarAvailabilityDot` | `components/CalendarAvailabilityDot.tsx` | `{ status: 'free'\|'partial'\|'busy'\|'disconnected'; events?; size? }` | Color-coded dot indicating Google Calendar availability with tooltip. |
+| `FixTimezonesCard` | `components/FixTimezonesCard.tsx` | none | Admin Calendar sync card: Check (dry run) then Fix, re-tags future Google events from Arizona to Pacific time; per-source_type counts. |
 | `LabCalendarPanel` | `components/LabCalendarPanel.tsx` | `LabCalendarPanelProps { cohortId?, onDateSelect?, selectedDate? }` | Calendar panel for lab day scheduling with date selection. |
 | `LabDayTemplateSelector` | `components/LabDayTemplateSelector.tsx` | `LabDayTemplateSelectorProps { onSelect, selectedId?, programId? }` | Template picker for creating new lab days from saved templates. |
 
