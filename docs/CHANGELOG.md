@@ -7,6 +7,7 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+osce-admin-entry | Testing > OSCE (/osce) sends admins to the coordinator view (straight to the event when exactly one is open/draft), everyone else to evaluator entry as before; "Evaluator signup page" link on coordinator list + event pages; ?evaluator=1 forces evaluator entry. Card 4015cd1c...dd5
 ## 2026-10-22
 reports-dup-crumb | Reports index page: remove inline Home > Reports breadcrumb that duplicated the shell breadcrumb line (TRIM 6/7 fact 4). Card 3fb5cd1c...1e233
 pals-p2a | PALS pass-but-watch: nullable watch + watch_note on pals_test_attempts (applied live, additive); lib/pals-group-result.ts group 2-of-3 rule + tests. Card 4015cd1c...87d4
