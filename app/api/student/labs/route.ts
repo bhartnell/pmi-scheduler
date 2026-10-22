@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireStudentContext } from '@/lib/view-as-student';
 
 /**
  * GET /api/student/labs
@@ -17,37 +16,10 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const auth = await requireStudentContext(request);
+    if (auth instanceof NextResponse) return auth;
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const supabase = getSupabaseAdmin();
-
-    // 1. Verify user is a student
-    const { data: labUser, error: labUserError } = await supabase
-      .from('lab_users')
-      .select('id, email, role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (labUserError || !labUser) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
-
-    if (labUser.role !== 'student') {
-      return NextResponse.json({ success: false, error: 'Student access only' }, { status: 403 });
-    }
-
-    // 2. Resolve student record
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select('id, first_name, last_name, email, cohort_id')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (studentError || !student) {
+    if (!auth.found) {
       return NextResponse.json({
         success: true,
         studentFound: false,
@@ -57,6 +29,8 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const supabase = getSupabaseAdmin();
+    const student = { id: auth.id, first_name: auth.firstName, last_name: auth.lastName };
     const studentId = student.id;
 
     // 3. Fetch all attendance records for this student, joined with lab day info

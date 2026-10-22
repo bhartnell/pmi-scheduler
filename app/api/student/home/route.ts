@@ -1,19 +1,20 @@
-import { NextResponse } from 'next/server';
-import { requireAuth } from '@/lib/api-auth';
+import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { buildStudentHome, type StudentLabDayRow, type StudentLeadRow } from '@/lib/student-home';
+import { requireStudentContext } from '@/lib/view-as-student';
 
 /**
  * GET /api/student/home
  * Student view home (mock v3): the signed-in student's own team-lead progress,
- * scenario results list and cohort lab days. Read-only; scoped to the student
- * resolved from the session email. Never returns notes, criteria or watch flags.
+ * scenario results list and cohort lab days (or, for an admin viewing as a
+ * student via card STUDENT VIEW 3/4, that student's — read-only). Never
+ * returns notes, criteria or watch flags.
  */
-export async function GET() {
-  const auth = await requireAuth();
+export async function GET(request: NextRequest) {
+  const auth = await requireStudentContext(request);
   if (auth instanceof NextResponse) return auth;
-  if (auth.user.role !== 'student') {
-    return NextResponse.json({ success: false, error: 'Student access only' }, { status: 403 });
+  if (!auth.found) {
+    return NextResponse.json({ success: true, student: null, message: 'Student record not found. Please contact your instructor.' });
   }
 
   try {
@@ -21,7 +22,7 @@ export async function GET() {
     const { data: student, error: sErr } = await sb
       .from('students')
       .select('id, first_name, last_name, cohort_id, cohort:cohorts!students_cohort_id_fkey(cohort_number, program:programs(name, abbreviation))')
-      .ilike('email', auth.user.email)
+      .eq('id', auth.id)
       .maybeSingle();
     if (sErr) throw new Error(`student lookup: ${sErr.message}`);
     if (!student) {

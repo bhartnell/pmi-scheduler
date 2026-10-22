@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireStudentContext } from '@/lib/view-as-student';
 
 /**
  * GET /api/student/skill-sheets
@@ -16,46 +15,30 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  */
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-
-    if (!session?.user?.email) {
-      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireStudentContext(request);
+    if (auth instanceof NextResponse) return auth;
 
     const supabase = getSupabaseAdmin();
 
-    // 1. Verify user is a student
-    const { data: labUser, error: labUserError } = await supabase
-      .from('lab_users')
-      .select('id, email, role')
-      .ilike('email', session.user.email)
-      .single();
-
-    if (labUserError || !labUser) {
-      return NextResponse.json({ success: false, error: 'User not found' }, { status: 404 });
-    }
-
-    if (labUser.role !== 'student') {
-      return NextResponse.json({ success: false, error: 'Student access only' }, { status: 403 });
-    }
-
-    // 2. Resolve student record
-    const { data: student, error: studentError } = await supabase
-      .from('students')
-      .select(`
-        id,
-        first_name,
-        last_name,
-        email,
-        cohort_id,
-        cohort:cohorts!students_cohort_id_fkey(
-          id,
-          cohort_number,
-          program:programs(name, abbreviation)
-        )
-      `)
-      .ilike('email', session.user.email)
-      .single();
+    // Resolve the richer students record (cohort/program) by id.
+    const { data: student, error: studentError } = auth.found
+      ? await supabase
+          .from('students')
+          .select(`
+            id,
+            first_name,
+            last_name,
+            email,
+            cohort_id,
+            cohort:cohorts!students_cohort_id_fkey(
+              id,
+              cohort_number,
+              program:programs(name, abbreviation)
+            )
+          `)
+          .eq('id', auth.id)
+          .single()
+      : { data: null, error: null };
 
     if (studentError || !student) {
       return NextResponse.json({

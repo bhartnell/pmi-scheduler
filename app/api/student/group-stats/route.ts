@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { requireStudentContext } from '@/lib/view-as-student';
 
 /**
  * GET /api/student/group-stats
@@ -15,33 +14,19 @@ import { getSupabaseAdmin } from '@/lib/supabase';
  * (resolved from their lab_group_members row). A student can't request another
  * group's stats.
  */
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.email) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireStudentContext(request);
+    if (auth instanceof NextResponse) return auth;
+    if (!auth.found) return NextResponse.json({ success: true, group: null });
 
     const supabase = getSupabaseAdmin();
-
-    const { data: labUser } = await supabase
-      .from('lab_users')
-      .select('id, role')
-      .ilike('email', session.user.email)
-      .single();
-    if (!labUser) return NextResponse.json({ error: 'User not found' }, { status: 404 });
-    if (labUser.role !== 'student') return NextResponse.json({ error: 'Access denied' }, { status: 403 });
-
-    const { data: student } = await supabase
-      .from('students')
-      .select('id')
-      .ilike('email', session.user.email)
-      .single();
-    if (!student) return NextResponse.json({ success: true, group: null });
 
     // The caller's lab group (a student is in exactly one — unique on student_id).
     const { data: membership } = await supabase
       .from('lab_group_members')
       .select('lab_group_id, lab_group:lab_groups(id, name)')
-      .eq('student_id', student.id)
+      .eq('student_id', auth.id)
       .maybeSingle();
     if (!membership?.lab_group_id) return NextResponse.json({ success: true, group: null });
 
