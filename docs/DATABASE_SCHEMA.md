@@ -4455,6 +4455,7 @@ Students tab).
 | sort_order | integer | YES | 0 |  |
 | event_id | uuid | NO |  |  |
 | google_event_id | text | YES |  | Google Calendar event for this block on the host calendar (migration 20261021, OSCE CAL 1/4); NULL until created |
+| calendar_error | text | YES |  | Last automatic calendar create/update/cancel failure for this block; cleared on next success (migration 20261022_osce_time_blocks_calendar_error, OSCE CAL 5) |
 
 **Foreign Keys:**
 - `event_id` -> `osce_events.id` (`osce_time_blocks_event_id_fkey`)

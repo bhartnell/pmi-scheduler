@@ -1,15 +1,14 @@
 /**
  * OSCE evaluator calendar: one Google Calendar event per OSCE time block.
  *
- * Pure builders + a thin create helper. Nothing here is called from a route
- * yet (OSCE CAL 2/4 wires signup/cancel). The description template is
+ * Pure builders + thin Google helpers (create, update, cancel, guests). The description template is
  * per-event (event label + slug), never hardcoded to one cohort.
  *
  * Time zone is the OSCE location's (Las Vegas), NOT the lab-sync default of
  * America/Phoenix: in November Phoenix is an hour off Pacific.
  */
 
-import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
+import { CALENDAR_TIMEZONE } from './calendar-timezone.ts';
 
 export const OSCE_CAL_TIMEZONE = CALENDAR_TIMEZONE;
 /** Account whose primary calendar hosts the block events (must hold the 'events' scope). */
@@ -127,6 +126,66 @@ export async function createOsceBlockEvent(opts: {
     const data = (await res.json()) as { id?: string };
     if (!data.id) return { status: 'error', error: 'Google response missing event id' };
     return { status: 'created', eventId: data.id };
+  } catch (err) {
+    return { status: 'error', error: err instanceof Error ? err.message : 'network error' };
+  }
+}
+
+export type OsceBlockSyncResult =
+  | { status: 'updated' | 'cancelled' | 'gone' }
+  | { status: 'error'; error: string };
+
+/**
+ * Update an existing block event's title, time and location in place
+ * (OSCE CAL 5). Attendees are left untouched (PATCH). sendUpdates=all so
+ * signed-up evaluators hear about a time change. A 404/410 means the event
+ * was removed on the calendar side: reported as 'gone', never re-created
+ * here. Never throws, no retry loop.
+ */
+export async function updateOsceBlockEvent(opts: {
+  accessToken: string;
+  eventId: string;
+  event: OsceCalEvent;
+  block: OsceCalBlock;
+  baseUrl: string;
+  timeZone?: string;
+  fetchImpl?: typeof fetch;
+}): Promise<OsceBlockSyncResult> {
+  const { accessToken, eventId, event, block, baseUrl, timeZone, fetchImpl = fetch } = opts;
+  const { summary, description, location, start, end } = buildOsceBlockEventBody({ event, block, baseUrl, timeZone });
+  try {
+    const res = await fetchImpl(`${GOOGLE_CALENDAR_API}/calendars/primary/events/${encodeURIComponent(eventId)}?sendUpdates=all`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ summary, description, location, start, end }),
+    });
+    if (res.status === 404 || res.status === 410) return { status: 'gone' };
+    if (!res.ok) return { status: 'error', error: `Google ${res.status}: ${(await res.text()).slice(0, 300)}` };
+    return { status: 'updated' };
+  } catch (err) {
+    return { status: 'error', error: err instanceof Error ? err.message : 'network error' };
+  }
+}
+
+/**
+ * Cancel a block's event when the block itself is deleted (OSCE CAL 5).
+ * sendUpdates=all so signed-up evaluators receive the cancellation. Already
+ * gone (404/410) counts as success. Never throws, no retry loop.
+ */
+export async function cancelOsceBlockEvent(opts: {
+  accessToken: string;
+  eventId: string;
+  fetchImpl?: typeof fetch;
+}): Promise<OsceBlockSyncResult> {
+  const { accessToken, eventId, fetchImpl = fetch } = opts;
+  try {
+    const res = await fetchImpl(`${GOOGLE_CALENDAR_API}/calendars/primary/events/${encodeURIComponent(eventId)}?sendUpdates=all`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (res.status === 404 || res.status === 410) return { status: 'gone' };
+    if (!res.ok) return { status: 'error', error: `Google ${res.status}: ${(await res.text()).slice(0, 300)}` };
+    return { status: 'cancelled' };
   } catch (err) {
     return { status: 'error', error: err instanceof Error ? err.message : 'network error' };
   }

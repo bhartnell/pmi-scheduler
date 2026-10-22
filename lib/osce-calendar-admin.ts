@@ -2,6 +2,9 @@
  * OSCE calendar admin actions (OSCE CAL 4/4): per-event "create block events"
  * and "send pending invites", plus the status read model for the admin panel.
  *
+ * (OSCE CAL 5 adds the automatic per-block create/update/cancel used by the
+ * block routes; the button stays as the repair action.)
+ *
  * Both actions reuse the 1/4 and 2/4 code paths (createOsceBlockEvent,
  * inviteObserverToBlocks); there is no second implementation. They are only
  * ever called from an admin route when an admin presses the button, are
@@ -11,18 +14,21 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { createOsceBlockEvent, osceEventLabel, registrantState, type OsceCalEvent } from '@/lib/osce-calendar';
+import {
+  OSCE_CAL_HOST_EMAIL, addOsceGuest, cancelOsceBlockEvent, createOsceBlockEvent, osceEventLabel, registrantState,
+  updateOsceBlockEvent, type OsceCalEvent,
+} from '@/lib/osce-calendar';
 import { inviteObserverToBlocks } from '@/lib/osce-invites';
 
 export interface BlockEventOutcome {
   block_id: string;
   label: string;
-  status: 'created' | 'exists' | 'linked_other' | 'error';
+  status: 'created' | 'updated' | 'cancelled' | 'gone' | 'exists' | 'linked_other' | 'error';
   error?: string;
 }
 
 interface EventRow { title: string; subtitle: string | null; slug: string; location: string | null }
-interface BlockRow { id: string; label: string; date: string; start_time: string; end_time: string; google_event_id: string | null }
+interface BlockRow { id: string; label: string; date: string; start_time: string; end_time: string; google_event_id: string | null; calendar_error?: string | null }
 
 function toCalEvent(e: EventRow): OsceCalEvent {
   return { slug: e.slug, label: osceEventLabel(e), location: e.location };
@@ -38,7 +44,7 @@ async function loadEvent(supabase: SupabaseClient, eventId: string) {
   if (!event) return null;
   const { data: blocks, error: bErr } = await supabase
     .from('osce_time_blocks')
-    .select('id, label, date, start_time, end_time, google_event_id')
+    .select('id, label, date, start_time, end_time, google_event_id, calendar_error')
     .eq('event_id', eventId)
     .order('sort_order');
   if (bErr) throw new Error(bErr.message);
@@ -56,6 +62,13 @@ async function legacyMappedBlocks(supabase: SupabaseClient, blockIds: string[]):
   return new Set((data ?? []).map((r: { source_id: string }) => r.source_id));
 }
 
+
+/** Record (or clear, with null) the last automatic calendar failure on the block. Never throws. */
+async function setBlockError(supabase: SupabaseClient, blockId: string, message: string | null) {
+  const { error } = await supabase.from('osce_time_blocks').update({ calendar_error: message }).eq('id', blockId);
+  if (error) console.error('[osce-calendar-admin] could not record calendar_error on block', blockId, error.message);
+}
+
 /**
  * Create the host-calendar event for every block of the event that has none.
  * Blocks with a google_event_id are reported as 'exists'; blocks the older
@@ -64,10 +77,17 @@ async function legacyMappedBlocks(supabase: SupabaseClient, blockIds: string[]):
  */
 export async function createPendingBlockEvents(
   supabase: SupabaseClient,
-  opts: { eventId: string; accessToken: string; baseUrl: string; fetchImpl?: typeof fetch },
+  opts: {
+    eventId: string; accessToken: string; baseUrl: string; fetchImpl?: typeof fetch;
+    /** Only these blocks (automatic sync on create/edit); default is every block of the event. */
+    blockIds?: string[];
+    /** Added as a guest on each newly created event so it lands on their calendar (skipped when it is the host). */
+    creatorEmail?: string | null;
+  },
 ): Promise<BlockEventOutcome[] | null> {
   const loaded = await loadEvent(supabase, opts.eventId);
   if (!loaded) return null;
+  if (opts.blockIds) loaded.blocks = loaded.blocks.filter((b) => opts.blockIds!.includes(b.id));
   const calEvent = toCalEvent(loaded.event);
   const legacy = await legacyMappedBlocks(supabase, loaded.blocks.map((b) => b.id));
   const out: BlockEventOutcome[] = [];
@@ -79,7 +99,11 @@ export async function createPendingBlockEvents(
     const res = await createOsceBlockEvent({
       accessToken: opts.accessToken, event: calEvent, block, baseUrl: opts.baseUrl, fetchImpl: opts.fetchImpl,
     });
-    if (res.status === 'error') { out.push({ block_id: block.id, label: block.label, status: 'error', error: res.error }); continue; }
+    if (res.status === 'error') {
+      await setBlockError(supabase, block.id, res.error);
+      out.push({ block_id: block.id, label: block.label, status: 'error', error: res.error });
+      continue;
+    }
     if (res.status === 'exists') { out.push({ block_id: block.id, label: block.label, status: 'exists' }); continue; }
 
     // Guarded write: only fills an empty id, so a concurrent press cannot overwrite a stored one.
@@ -91,11 +115,111 @@ export async function createPendingBlockEvents(
     if (error) {
       // The calendar event exists but its id was not stored: say so with the id so it can be linked by hand.
       out.push({ block_id: block.id, label: block.label, status: 'error', error: `Event created (${res.eventId}) but id not saved: ${error.message}` });
-    } else {
-      out.push({ block_id: block.id, label: block.label, status: 'created' });
+      continue;
     }
+    let guestNote: string | null = null;
+    const creator = opts.creatorEmail?.trim();
+    if (creator && creator.toLowerCase() !== OSCE_CAL_HOST_EMAIL.toLowerCase()) {
+      const g = await addOsceGuest({ accessToken: opts.accessToken, eventId: res.eventId, email: creator, fetchImpl: opts.fetchImpl });
+      if (g.status === 'error') guestNote = `Event created, but ${creator} was not added as a guest: ${g.error}`;
+    }
+    await setBlockError(supabase, block.id, guestNote);
+    out.push(guestNote ? { block_id: block.id, label: block.label, status: 'created', error: guestNote } : { block_id: block.id, label: block.label, status: 'created' });
   }
   return out;
+}
+
+// ─── Automatic sync from the block routes (OSCE CAL 5) ───────────────
+
+export interface AutoSyncOpts {
+  eventId: string;
+  getToken: () => Promise<string | null>;
+  baseUrl: string;
+  /** The admin making the change; added as a guest on newly created events. */
+  creatorEmail?: string | null;
+  fetchImpl?: typeof fetch;
+}
+
+const NO_TOKEN = `The calendar connection for ${OSCE_CAL_HOST_EMAIL} is missing or lacks write access. Reconnect it in Settings, then press Create calendar events.`;
+
+/**
+ * After blocks are created or edited: create the event for any of these blocks
+ * that has none, or update title/time/location of the ones that do. Idempotent
+ * on osce_time_blocks.google_event_id. Never throws and never blocks the block
+ * write itself: failures are stored on the block (calendar_error) and returned.
+ */
+export async function syncBlocksToCalendar(supabase: SupabaseClient, blockIds: string[], opts: AutoSyncOpts): Promise<BlockEventOutcome[]> {
+  try {
+    const loaded = await loadEvent(supabase, opts.eventId);
+    if (!loaded) return [];
+    const blocks = loaded.blocks.filter((b) => blockIds.includes(b.id));
+    if (blocks.length === 0) return [];
+    const accessToken = await opts.getToken();
+    if (!accessToken) {
+      for (const b of blocks) await setBlockError(supabase, b.id, NO_TOKEN);
+      return blocks.map((b) => ({ block_id: b.id, label: b.label, status: 'error' as const, error: NO_TOKEN }));
+    }
+    const out: BlockEventOutcome[] = [];
+    const needCreate = blocks.filter((b) => !b.google_event_id).map((b) => b.id);
+    if (needCreate.length > 0) {
+      const created = await createPendingBlockEvents(supabase, {
+        eventId: opts.eventId, accessToken, baseUrl: opts.baseUrl, fetchImpl: opts.fetchImpl,
+        blockIds: needCreate, creatorEmail: opts.creatorEmail,
+      });
+      out.push(...(created ?? []));
+    }
+    const calEvent = toCalEvent(loaded.event);
+    for (const block of blocks.filter((b) => b.google_event_id)) {
+      const res = await updateOsceBlockEvent({
+        accessToken, eventId: block.google_event_id!, event: calEvent, block, baseUrl: opts.baseUrl, fetchImpl: opts.fetchImpl,
+      });
+      if (res.status === 'error') {
+        await setBlockError(supabase, block.id, res.error);
+        out.push({ block_id: block.id, label: block.label, status: 'error', error: res.error });
+      } else if (res.status === 'gone') {
+        const msg = 'The calendar event was removed on the calendar side. It was not re-created automatically.';
+        await setBlockError(supabase, block.id, msg);
+        out.push({ block_id: block.id, label: block.label, status: 'gone', error: msg });
+      } else {
+        await setBlockError(supabase, block.id, null);
+        out.push({ block_id: block.id, label: block.label, status: 'updated' });
+      }
+    }
+    return out;
+  } catch (err) {
+    console.error('[osce-calendar-admin] syncBlocksToCalendar failed:', err);
+    return [];
+  }
+}
+
+export type BlockCancelOutcome =
+  | { ok: true; status: 'no_event' | 'cancelled' | 'gone' }
+  | { ok: false; error: string };
+
+/**
+ * Before a block is deleted: cancel its event on the host calendar. A block
+ * with no event of its own (or only an older-invite mapping) needs nothing.
+ * On any failure the caller must NOT delete the block (log and abort, the
+ * admin can retry or force); the error is stored on the block. Never throws.
+ */
+export async function cancelBlockCalendarEvent(
+  supabase: SupabaseClient,
+  opts: { eventId: string; blockId: string; getToken: () => Promise<string | null>; fetchImpl?: typeof fetch },
+): Promise<BlockCancelOutcome> {
+  try {
+    const { data, error } = await supabase
+      .from('osce_time_blocks').select('google_event_id').eq('id', opts.blockId).eq('event_id', opts.eventId).maybeSingle();
+    if (error) return { ok: false, error: error.message };
+    const eventId = data?.google_event_id as string | null | undefined;
+    if (!eventId) return { ok: true, status: 'no_event' };
+    const accessToken = await opts.getToken();
+    if (!accessToken) { await setBlockError(supabase, opts.blockId, NO_TOKEN); return { ok: false, error: NO_TOKEN }; }
+    const res = await cancelOsceBlockEvent({ accessToken, eventId, fetchImpl: opts.fetchImpl });
+    if (res.status === 'error') { await setBlockError(supabase, opts.blockId, res.error); return { ok: false, error: res.error }; }
+    return { ok: true, status: res.status === 'gone' ? 'gone' : 'cancelled' };
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : 'unexpected error' };
+  }
 }
 
 export interface InviteSummary { observers: number; rows_pending: number; }
@@ -132,7 +256,7 @@ export async function sendPendingInvites(
 // ─── Status read model ───────────────────────────────────────────────
 
 export interface OsceCalendarStatus {
-  blocks: { id: string; label: string; date: string; linked: boolean; source: 'event' | 'older_invite' | null }[];
+  blocks: { id: string; label: string; date: string; linked: boolean; source: 'event' | 'older_invite' | null; calendar_error: string | null }[];
   registrants: {
     observer_id: string;
     name: string;
@@ -148,6 +272,7 @@ export async function getOsceCalendarStatus(supabase: SupabaseClient, eventId: s
     id: b.id, label: b.label, date: b.date,
     linked: !!b.google_event_id || legacy.has(b.id),
     source: b.google_event_id ? ('event' as const) : legacy.has(b.id) ? ('older_invite' as const) : null,
+    calendar_error: b.calendar_error ?? null,
   }));
   const labelOf = new Map(loaded.blocks.map((b) => [b.id, b.label]));
 

@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { getAccessTokenForUser } from '@/lib/google-calendar';
+import { OSCE_CAL_HOST_EMAIL } from '@/lib/osce-calendar';
+import { cancelBlockCalendarEvent, syncBlocksToCalendar } from '@/lib/osce-calendar-admin';
+
+const BASE_URL = process.env.NEXTAUTH_URL || 'https://www.pmiparamedic.tools';
+const hostToken = () => getAccessTokenForUser(OSCE_CAL_HOST_EMAIL);
 
 // GET - Admin: list time blocks for this event with observer counts
 export async function GET(
@@ -131,7 +137,13 @@ export async function POST(
       );
     }
 
-    return NextResponse.json({ success: true, blocks: data });
+    // OSCE CAL 5: create each block's host-calendar event right away (creator added as guest).
+    // Never fails the block create; failures are stored on the block and returned.
+    const calendar = await syncBlocksToCalendar(supabase, (data ?? []).map((b) => b.id), {
+      eventId: id, getToken: hostToken, baseUrl: BASE_URL, creatorEmail: auth.user.email,
+    });
+
+    return NextResponse.json({ success: true, blocks: data, calendar });
   } catch (error) {
     if (error instanceof Error && error.message.includes('requires')) {
       return NextResponse.json(
@@ -210,7 +222,12 @@ export async function PUT(
       );
     }
 
-    return NextResponse.json({ success: true, block: data });
+    // OSCE CAL 5: push a changed title/time to the block's calendar event (or create it if none yet).
+    const calendar = await syncBlocksToCalendar(supabase, [data.id], {
+      eventId, getToken: hostToken, baseUrl: BASE_URL, creatorEmail: auth.user.email,
+    });
+
+    return NextResponse.json({ success: true, block: data, calendar });
   } catch (error) {
     console.error('Error updating time block:', error);
     return NextResponse.json(
@@ -253,6 +270,18 @@ export async function DELETE(
     }
 
     const supabase = getSupabaseAdmin();
+
+    // OSCE CAL 5: cancel the block's calendar event first. If that fails the block is kept
+    // (log and abort, nothing is lost) so the admin can retry; ?force=1 deletes anyway.
+    if (url.searchParams.get('force') !== '1') {
+      const cancel = await cancelBlockCalendarEvent(supabase, { eventId, blockId, getToken: hostToken });
+      if (!cancel.ok) {
+        return NextResponse.json(
+          { success: false, error: `The block was not deleted because its calendar event could not be cancelled: ${cancel.error}`, can_force: true },
+          { status: 502 }
+        );
+      }
+    }
 
     const { error } = await supabase
       .from('osce_time_blocks')
