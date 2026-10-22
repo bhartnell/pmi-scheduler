@@ -3,10 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import {
-  Home,
-  ChevronRight,
   BarChart3,
   Download,
   RefreshCw,
@@ -299,26 +296,6 @@ export default function ScenarioAnalyticsPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-6">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2 overflow-x-auto whitespace-nowrap">
-            <Link
-              href="/"
-              className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1"
-            >
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <ChevronRight className="w-4 h-4 flex-shrink-0" />
-            <Link
-              href="/reports"
-              className="hover:text-blue-600 dark:hover:text-blue-400"
-            >
-              Reports
-            </Link>
-            <ChevronRight className="w-4 h-4 flex-shrink-0" />
-            <span className="text-gray-900 dark:text-white">Scenario Analytics</span>
-          </div>
-
           <div className="flex items-center gap-3">
             <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
               <Target className="w-6 h-6 text-purple-600 dark:text-purple-400" />
