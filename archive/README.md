@@ -162,3 +162,22 @@ After reverting any entry above, also re-check the dangling-link fixes listed in
 `docs/CHANGELOG.md` for that same commit — several were edited (not just
 deleted), so bringing a page back usually means re-adding its hub card / nav
 entry / widget link too, not only moving the file back.
+
+## TRIM 6/7a-12 - 2026-10-22 (bring-back unlikely)
+
+Home-page "Your Dashboard" widget grid removed (Ben, 2026-10-22: "just remove it").
+No database tables or rows touched (`user_preferences`, `dashboard_layouts`,
+`dashboard_layout_defaults` left as-is; `/api/dashboard/layout` kept for the calendar band).
+
+| Moved | To revert |
+|---|---|
+| `components/dashboard/widgets` | `git mv archive/components/dashboard/widgets components/dashboard/widgets` |
+| `components/dashboard/CustomizeModal.tsx` | `git mv archive/components/dashboard/CustomizeModal.tsx components/dashboard/CustomizeModal.tsx` |
+| `components/dashboard/DraggableWidgetGrid.tsx` | `git mv archive/components/dashboard/DraggableWidgetGrid.tsx components/dashboard/DraggableWidgetGrid.tsx` |
+| `components/dashboard/ResizableWidget.tsx` | `git mv archive/components/dashboard/ResizableWidget.tsx components/dashboard/ResizableWidget.tsx` |
+| `components/dashboard/WidgetCard.tsx` | `git mv archive/components/dashboard/WidgetCard.tsx components/dashboard/WidgetCard.tsx` |
+| `app/admin/dashboard-defaults` | `git mv archive/app/admin/dashboard-defaults app/admin/dashboard-defaults` |
+| `app/api/admin/dashboard-defaults` | `git mv archive/app/api/admin/dashboard-defaults app/api/admin/dashboard-defaults` |
+
+Reverting also means restoring the home page block, the avatar-menu items, the Admin hub
+card and the Breadcrumbs label (see the commit diff).

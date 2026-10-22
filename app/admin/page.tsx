@@ -193,13 +193,6 @@ function buildSections(pendingAccessRequests: number): AdminSection[] {
         // Email Templates - archived, hidden from nav (TRIM 3/5)
         // Program Requirements - archived, hidden from nav (TRIM 3/5)
         {
-          href: '/admin/dashboard-defaults',
-          icon: Layout,
-          title: 'Dashboard Defaults',
-          description: 'Configure which widgets appear by default on the dashboard for each role',
-          color: 'bg-indigo-500',
-        },
-        {
           href: '/admin/program-rosters',
           icon: Users,
           title: 'Default Rosters',
