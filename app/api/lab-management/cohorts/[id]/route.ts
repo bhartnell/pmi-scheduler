@@ -75,6 +75,7 @@ export async function PATCH(
     if (body.description !== undefined) allowedFields.description = body.description;
     if (body.current_semester !== undefined) allowedFields.current_semester = body.current_semester;
     if (body.track_clinical_hours !== undefined) allowedFields.track_clinical_hours = body.track_clinical_hours;
+    if (typeof body.is_test === 'boolean') allowedFields.is_test = body.is_test;
 
     if (Object.keys(allowedFields).length === 0) {
       return NextResponse.json({ error: 'No valid fields to update' }, { status: 400 });

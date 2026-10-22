@@ -45,6 +45,7 @@ interface Cohort {
   program: Program;
   current_semester: number | null;
   track_clinical_hours: boolean;
+  is_test?: boolean;
   archived_at: string | null;
   archived_by: string | null;
 }
@@ -89,6 +90,8 @@ export default function CohortManagementPage() {
   const [editEndDate, setEditEndDate] = useState('');
   const [editSemester, setEditSemester] = useState<number | ''>('');
   const [editTrackClinical, setEditTrackClinical] = useState(false);
+  const [editIsTest, setEditIsTest] = useState(false);
+  const [createIsTest, setCreateIsTest] = useState(false);
   const [saving, setSaving] = useState(false);
   const [userRole, setUserRole] = useState<Role | null>(null);
 
@@ -175,6 +178,7 @@ export default function CohortManagementPage() {
           start_date: createStartDate || null,
           expected_end_date: createEndDate || null,
           current_semester: hasTemplates(createProgramId) && createSemester !== '' ? createSemester : null,
+          is_test: createIsTest,
         }),
       });
 
@@ -236,6 +240,7 @@ export default function CohortManagementPage() {
     setEditEndDate(cohort.expected_end_date || '');
     setEditSemester(cohort.current_semester ?? '');
     setEditTrackClinical(cohort.track_clinical_hours ?? false);
+    setEditIsTest(cohort.is_test ?? false);
   };
 
   const cancelEdit = () => {
@@ -244,6 +249,7 @@ export default function CohortManagementPage() {
     setEditEndDate('');
     setEditSemester('');
     setEditTrackClinical(false);
+    setEditIsTest(false);
   };
 
   const handleSaveEdit = async (cohortId: string) => {
@@ -260,6 +266,7 @@ export default function CohortManagementPage() {
           expected_end_date: editEndDate || null,
           current_semester: isPM && editSemester !== '' ? editSemester : null,
           track_clinical_hours: editTrackClinical,
+          is_test: editIsTest,
         }),
       });
 
@@ -563,6 +570,15 @@ export default function CohortManagementPage() {
                   />
                 </div>
               </div>
+              <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={createIsTest}
+                  onChange={(e) => setCreateIsTest(e.target.checked)}
+                  className="rounded border-gray-300 dark:border-gray-600 text-amber-600"
+                />
+                Test cohort (for testing only, not real students)
+              </label>
               {/* Auto-generate lab days checkbox (PM programs with semester and start date) */}
               {hasTemplates(createProgramId) && createSemester !== '' && createStartDate && (
                 <div className="flex items-start gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-lg">
@@ -588,7 +604,7 @@ export default function CohortManagementPage() {
               <div className="flex gap-2">
                 <button
                   type="button"
-                  onClick={() => { setShowCreateForm(false); setGenerateResult(null); }}
+                  onClick={() => { setShowCreateForm(false); setGenerateResult(null); setCreateIsTest(false); }}
                   className="px-4 py-2 border dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
                 >
                   Cancel
@@ -726,6 +742,15 @@ export default function CohortManagementPage() {
                             <Activity className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                             <span className="text-gray-700 dark:text-gray-300">Track Clinical</span>
                           </label>
+                          <label className="flex items-center gap-1.5 px-2 py-1 rounded text-sm cursor-pointer select-none whitespace-nowrap">
+                            <input
+                              type="checkbox"
+                              checked={editIsTest}
+                              onChange={(e) => setEditIsTest(e.target.checked)}
+                              className="rounded border-gray-300 dark:border-gray-600 text-amber-600"
+                            />
+                            <span className="text-gray-700 dark:text-gray-300">Test cohort</span>
+                          </label>
                         </div>
                         <div className="flex gap-2">
                           <button
@@ -792,6 +817,11 @@ export default function CohortManagementPage() {
                                     Internship
                                   </span>
                                 )}
+                              {cohort.is_test && (
+                                <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 text-xs rounded font-semibold">
+                                  Test
+                                </span>
+                              )}
                               {!cohort.is_active && !cohort.is_archived && (
                                 <span className="px-2 py-0.5 bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 text-xs rounded">
                                   Inactive
