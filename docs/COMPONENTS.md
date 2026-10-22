@@ -319,9 +319,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 | `HomeStatBar` | `components/dashboard/HomeStatBar.tsx` | `{ isAdmin, canLogSiteVisit }` | One-row home stat bar (labs this week, active students, open spots, needs attention, open feedback, days to next cert day); each stat links; Pick stats saved to `dashboard_layouts.layout.stat_bar_stats`; large Log Site Visit button. |
 | `HomeCalendarBand` | `components/home/HomeCalendarBand.tsx` | `{ userName, defaultMine, canViewAs, todaySlot?, sectionsSlot? }` | Home calendar: `todaySlot` (TodayBand tile) + This week tile (1fr day columns) on row 1, Month tile (3fr) beside `sectionsSlot` (compact SectionTiles, 2fr) on row 2, month rolls cert course days up to one chip with an inline Sign up tag; reads /api/calendar/unified + /api/scheduling/lvfr-platoons; per-tile Mine / Everyone / Labs only filters saved to `dashboard_layouts.layout.calendar_band` (`week_filter`, `month_filter`); phone agenda list. |
 | `TodayBand` | `components/home/TodayBand.tsx` | none | Home Today strip: today's lab days from /api/lab-management/my-labs, station tiles with Grade, open stations dashed, Who's coming, Still open, Ask for help. Read-only; Start Timer links to the lab day page. |
-| `DraggableWidgetGrid` | `components/dashboard/DraggableWidgetGrid.tsx` | `DraggableWidgetGridProps { widgets, onReorder, renderWidget }` | Drag-and-drop grid layout for dashboard widgets. |
-| `ResizableWidget` | `components/dashboard/ResizableWidget.tsx` | `ResizableWidgetProps { widgetId, children, defaultSize? }` | Resizable container for dashboard widgets. Also exports `useWidgetSizes` hook. |
-| `WidgetCard` | `components/dashboard/WidgetCard.tsx` | `WidgetCardProps { title, icon?, actions?, loading?, error?, children }` | Standard card wrapper for dashboard widgets. Also exports `WidgetEmpty`. |
+| _Archived 2026-10-22 (TRIM 6/7a-12)_ | `archive/components/dashboard/` | | `DraggableWidgetGrid`, `ResizableWidget`, `WidgetCard`, `CustomizeModal` and all Dashboard Widgets below moved to archive/ when the home Your Dashboard block was removed. See `archive/README.md`. |
 
 #### Dashboard Widgets
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useSession, signIn, signOut } from 'next-auth/react';
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useState } from 'react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { ParkAwareLink as Link } from '@/components/ModuleGuard';
 import {
@@ -32,83 +32,27 @@ import { canAccessAdmin, canAccessClinical, canAccessScheduling, canAccessAffili
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import SectionTiles, { OperationsHubRow } from '@/components/home/SectionTiles';
-import CustomizeModal from '@/components/dashboard/CustomizeModal';
-import DraggableWidgetGrid from '@/components/dashboard/DraggableWidgetGrid';
 import HomeStatBar from '@/components/dashboard/HomeStatBar';
 import HomeCalendarBand from '@/components/home/HomeCalendarBand';
 import TodayBand from '@/components/home/TodayBand';
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
-import {
-  NotificationsWidget,
-  MyLabsWidget,
-  QuickLinksWidget,
-  NeedsAttentionWidget,
-  OverviewStatsWidget,
-  OpenStationsWidget,
-  RecentFeedbackWidget,
-  OnboardingWidget,
-  OverdueTasksWidget,
-  RecentActivityWidget,
-  QuickStatsWidget,
-  MyTasksWidget,
-  CertExpiryWidget,
-  AtRiskStudentsWidget,
-  MyCohortWidget,
-  ProgramSnapshotWidget,
-  ROLE_DEFAULTS,
-  WIDGET_DEFINITIONS,
-  filterWidgetsByRole,
-  getWidgetWhitelist,
-  QUICK_LINK_WHITELIST,
-} from '@/components/dashboard/widgets';
 import AnnouncementBanner from '@/components/dashboard/AnnouncementBanner';
 import CalendarConnectBanner from '@/components/dashboard/CalendarConnectBanner';
-import ResizableWidget, { useWidgetSizes } from '@/components/dashboard/ResizableWidget';
-import { useToast } from '@/components/Toast';
-import HelpTooltip from '@/components/HelpTooltip';
 import { SkeletonStats, SkeletonCard } from '@/components/ui';
 import type { CurrentUser as CurrentUserType } from '@/types';
 
-interface DashboardPreferences {
-  dashboard_widgets: string[];
-  quick_links: string[];
-}
-
 export default function HomePage() {
   const { data: session, status } = useSession();
-  const toast = useToast();
-  const { resetAll: resetWidgetSizes } = useWidgetSizes();
   const [currentUser, setCurrentUser] = useState<CurrentUserType | null>(null);
-  const [preferences, setPreferences] = useState<DashboardPreferences | null>(null);
-  const [showCustomize, setShowCustomize] = useState(false);
-  const [hasOnboarding, setHasOnboarding] = useState(false);
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [resetting, setResetting] = useState(false);
   const effectiveRole = useEffectiveRole(currentUser?.role ?? null);
-  // Edit mode state — local widget order until "Done" is clicked
-  const [editMode, setEditMode] = useState(false);
-  const [editWidgets, setEditWidgets] = useState<string[]>([]);
 
   // React Query hook for current user (cached & shared across components)
   const { data: cachedUser } = useCurrentUser({
     enabled: !!session?.user?.email,
   });
 
-  // Sync layout to DB (fire-and-forget, called whenever prefs change)
-  const syncLayoutToDB = useCallback(async (widgets: string[], quickLinks: string[]) => {
-    try {
-      await fetch('/api/dashboard/layout', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ layout: { dashboard_widgets: widgets, quick_links: quickLinks } }),
-      });
-    } catch {
-      // Silent — layout sync is best-effort
-    }
-  }, []);
-
-  // When cached user arrives, handle redirect logic and fetch preferences/onboarding
+  // When cached user arrives, handle redirect logic
   useEffect(() => {
     if (!cachedUser && !session?.user?.email) return;
 
@@ -125,7 +69,7 @@ export default function HomePage() {
       }
 
       // PMI users with pending role: set user so we can render the
-      // "access pending" screen, but do not load preferences or widgets.
+      // "access pending" screen.
       if (user.role === 'pending') {
         setCurrentUser(user);
         return;
@@ -138,35 +82,6 @@ export default function HomePage() {
       }
 
       setCurrentUser(user);
-
-      // Fetch preferences and onboarding status in parallel
-      Promise.all([
-        fetch('/api/user/preferences').then(res => res.json()),
-        fetch('/api/onboarding/dashboard').then(res => res.json()).catch(() => null)
-      ]).then(([prefsData, onboardingData]) => {
-        // Show onboarding card/widget ONLY if user has an active onboarding assignment
-        const hasActiveOnboarding = onboardingData?.success && onboardingData?.hasActiveAssignment;
-        setHasOnboarding(!!hasActiveOnboarding);
-
-        if (prefsData.success && prefsData.preferences) {
-          setPreferences(prefsData.preferences);
-          // On first load, if preferences came from DB, also sync them into dashboard_layouts
-          // so the new layout table is populated for cross-device use.
-          if (!prefsData.isDefault) {
-            syncLayoutToDB(
-              prefsData.preferences.dashboard_widgets,
-              prefsData.preferences.quick_links,
-            ).catch(() => {});
-          }
-        } else {
-          // Use role defaults if no preferences
-          const defaults = ROLE_DEFAULTS[user.role] || ROLE_DEFAULTS.instructor;
-          setPreferences({
-            dashboard_widgets: defaults.widgets,
-            quick_links: defaults.quickLinks,
-          });
-        }
-      }).catch(console.error);
     } else if (session?.user?.email) {
       // cachedUser is null (not found) - redirect non-PMI users to request access
       const email = session.user.email;
@@ -175,179 +90,7 @@ export default function HomePage() {
         window.location.href = '/request-access';
       }
     }
-  }, [cachedUser, session, syncLayoutToDB]);
-
-  const handleSavePreferences = async (widgets: string[], quickLinks: string[]) => {
-    try {
-      const res = await fetch('/api/user/preferences', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          dashboard_widgets: widgets,
-          quick_links: quickLinks,
-        }),
-      });
-      if (res.ok) {
-        setPreferences({ dashboard_widgets: widgets, quick_links: quickLinks });
-        // Mirror the change to dashboard_layouts for cross-device sync
-        syncLayoutToDB(widgets, quickLinks);
-      }
-    } catch (error) {
-      console.error('Error saving preferences:', error);
-    }
-  };
-
-  const handleResetPreferences = async () => {
-    try {
-      await fetch('/api/user/preferences', { method: 'DELETE' });
-      // Also clear the layout DB entry so DB fallback returns the role default
-      await fetch('/api/dashboard/layout', { method: 'DELETE' }).catch(() => {});
-      const prefsRes = await fetch('/api/user/preferences', { cache: 'no-store' });
-      const prefsData = await prefsRes.json();
-      if (prefsData.success) {
-        setPreferences(prefsData.preferences);
-      }
-    } catch (error) {
-      console.error('Error resetting preferences:', error);
-    }
-  };
-
-  const handleResetToDefault = async () => {
-    setResetting(true);
-    try {
-      // Delete both preference records so the user gets their role default
-      await Promise.all([
-        fetch('/api/user/preferences', { method: 'DELETE' }),
-        fetch('/api/dashboard/layout', { method: 'DELETE' }),
-      ]);
-      // Also clear locally-persisted widget sizes
-      resetWidgetSizes();
-      // Re-fetch fresh preferences (will return role default)
-      const prefsRes = await fetch('/api/user/preferences', { cache: 'no-store' });
-      const prefsData = await prefsRes.json();
-      if (prefsData.success && prefsData.preferences) {
-        setPreferences(prefsData.preferences);
-      }
-      toast.success('Dashboard reset to default layout');
-      setShowResetConfirm(false);
-      // Exit edit mode if active
-      setEditMode(false);
-    } catch (error) {
-      console.error('Error resetting to default:', error);
-      toast.error('Failed to reset dashboard layout');
-    }
-    setResetting(false);
-  };
-
-  const resetHomeRef = useRef<() => void>(() => {});
-  resetHomeRef.current = handleResetToDefault;
-
-  // Avatar menu (UserMenu) triggers Customize / Reset for the home page.
-  useEffect(() => {
-    const onCustomize = () => setShowCustomize(true);
-    const onReset = () => {
-      if (window.confirm('Reset your home layout to the role default?')) resetHomeRef.current();
-    };
-    window.addEventListener('pmi:customize-home', onCustomize);
-    window.addEventListener('pmi:reset-home', onReset);
-    return () => {
-      window.removeEventListener('pmi:customize-home', onCustomize);
-      window.removeEventListener('pmi:reset-home', onReset);
-    };
-  }, []);
-
-  // Enter edit mode: snapshot current widget order into editWidgets
-  const handleEnterEditMode = () => {
-    setEditWidgets(preferences?.dashboard_widgets ?? []);
-    setEditMode(true);
-  };
-
-  // Finish edit mode: persist the edited widget list, then exit
-  const handleDoneEditing = async () => {
-    const quickLinks = preferences?.quick_links ?? [];
-    await handleSavePreferences(editWidgets, quickLinks);
-    setEditMode(false);
-  };
-
-  // Cancel edit mode without saving
-  const handleCancelEditMode = () => {
-    setEditMode(false);
-    setEditWidgets([]);
-  };
-
-  // Compute widgets NOT currently displayed (available to add)
-  // Filter by role whitelist so users only see widgets they're allowed to have
-  // Also hide 'onboarding' widget unless user has an active onboarding assignment
-  const roleWhitelist = getWidgetWhitelist(effectiveRole || 'guest');
-  const isWidgetAllowed = (id: string) => roleWhitelist.includes(id) && (id !== 'onboarding' || hasOnboarding);
-  const allWidgetIds = Object.keys(WIDGET_DEFINITIONS).filter(isWidgetAllowed);
-  const activeWidgets = editMode
-    ? editWidgets.filter(isWidgetAllowed)
-    : filterWidgetsByRole(preferences?.dashboard_widgets ?? [], effectiveRole || 'guest').filter(isWidgetAllowed);
-  const availableWidgets = allWidgetIds.filter(id => !activeWidgets.includes(id));
-
-  // Render a widget by ID, wrapped in ResizableWidget
-  const renderWidget = (widgetId: string) => {
-    const quickLinks = preferences?.quick_links || ['scenarios', 'students', 'schedule'];
-    let content: React.ReactNode = null;
-    switch (widgetId) {
-      case 'notifications':
-        content = <NotificationsWidget />;
-        break;
-      case 'my_labs':
-        content = <MyLabsWidget />;
-        break;
-      case 'quick_links':
-        content = <QuickLinksWidget links={quickLinks} />;
-        break;
-      case 'needs_attention':
-        content = <NeedsAttentionWidget />;
-        break;
-      case 'overview_stats':
-        content = <OverviewStatsWidget />;
-        break;
-      case 'open_stations':
-        content = <OpenStationsWidget />;
-        break;
-      case 'recent_feedback':
-        content = <RecentFeedbackWidget />;
-        break;
-      case 'onboarding':
-        content = <OnboardingWidget />;
-        break;
-      case 'overdue_tasks':
-        content = <OverdueTasksWidget />;
-        break;
-      case 'recent_activity':
-        content = <RecentActivityWidget />;
-        break;
-      case 'quick_stats':
-        content = <QuickStatsWidget />;
-        break;
-      case 'my_tasks':
-        content = <MyTasksWidget />;
-        break;
-      case 'cert_expiry':
-        content = <CertExpiryWidget />;
-        break;
-      case 'at_risk_students':
-        content = <AtRiskStudentsWidget />;
-        break;
-      case 'my_cohort':
-        content = <MyCohortWidget />;
-        break;
-      case 'program_snapshot':
-        content = <ProgramSnapshotWidget />;
-        break;
-      default:
-        return null;
-    }
-    return (
-      <ResizableWidget key={widgetId} widgetId={widgetId} editMode={editMode}>
-        {content}
-      </ResizableWidget>
-    );
-  };
+  }, [cachedUser, session]);
 
   // Loading state with skeleton UI
   if (status === 'loading') {
@@ -539,14 +282,6 @@ export default function HomePage() {
                     <SectionTiles role={effectiveRole} compact />
                   </ErrorBoundary>
                   <OperationsHubRow role={effectiveRole} />
-                  <button
-                    type="button"
-                    onClick={() => setShowCustomize(true)}
-                    className="mt-2 min-h-[44px] inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 print:hidden"
-                  >
-                    <Settings className="w-4 h-4" />
-                    Customize home
-                  </button>
                 </div>
               }
               todaySlot={
@@ -560,110 +295,6 @@ export default function HomePage() {
           </ErrorBoundary>
         )}
 
-        {/* Customizable Dashboard Widgets - First thing instructors see */}
-        {preferences && (editMode || activeWidgets.length > 0) && (
-          <ErrorBoundary>
-          <div className="mb-10">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-1">
-                Your Dashboard
-                {!editMode && (
-                  <HelpTooltip text="Quick Stats shows counts of active students, upcoming labs, and open tasks. Widgets can be customized using the Customize button." />
-                )}
-              </h3>
-              <div className="flex items-center gap-2 print:hidden">
-                {editMode ? (
-                  /* Edit mode toolbar */
-                  <>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 hidden sm:inline">
-                      Drag to reorder, X to remove
-                    </span>
-                    <button
-                      onClick={handleCancelEditMode}
-                      className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handleDoneEditing}
-                      className="flex items-center gap-2 px-3 py-1.5 text-sm bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-                    >
-                      <Check className="w-4 h-4" />
-                      Done
-                    </button>
-                  </>
-                ) : (
-                  /* Normal mode toolbar */
-                  <>
-                    {/* Reset to Default */}
-                    {showResetConfirm ? (
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm text-gray-600 dark:text-gray-400">Reset to default?</span>
-                        <button
-                          onClick={handleResetToDefault}
-                          disabled={resetting}
-                          className="px-3 py-1.5 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50 transition-colors"
-                        >
-                          {resetting ? 'Resetting...' : 'Yes, Reset'}
-                        </button>
-                        <button
-                          onClick={() => setShowResetConfirm(false)}
-                          disabled={resetting}
-                          className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-400 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        onClick={() => setShowResetConfirm(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                        title="Reset dashboard to role default"
-                      >
-                        <RotateCcw className="w-4 h-4" />
-                        Reset
-                      </button>
-                    )}
-                    {/* Edit Layout */}
-                    {!showResetConfirm && (
-                      <button
-                        onClick={handleEnterEditMode}
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                        title="Drag and drop to rearrange widgets"
-                      >
-                        <LayoutGrid className="w-4 h-4" />
-                        Edit Layout
-                      </button>
-                    )}
-                    {/* Customize (detailed modal) */}
-                    {!showResetConfirm && (
-                      <button
-                        onClick={() => setShowCustomize(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <Settings className="w-4 h-4" />
-                        Customize
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Widget grid — DraggableWidgetGrid handles both edit and normal modes */}
-            <DraggableWidgetGrid
-              widgets={activeWidgets}
-              editMode={editMode}
-              onReorder={setEditWidgets}
-              onRemove={(widgetId) => setEditWidgets(prev => prev.filter(id => id !== widgetId))}
-              onAdd={(widgetId) => setEditWidgets(prev => [...prev, widgetId])}
-              renderWidget={renderWidget}
-              availableWidgets={availableWidgets}
-            />
-          </div>
-          </ErrorBoundary>
-        )}
-
         {/* Section tiles (TRIM 6/7a-1): beside the Month for calendar users (6/7a-7), here otherwise */}
         {!(currentUser && effectiveRole && hasMinRole(effectiveRole, 'volunteer_instructor')) && (
           <ErrorBoundary>
@@ -674,17 +305,6 @@ export default function HomePage() {
 
         </PageErrorBoundary>
       </main>
-
-      {/* Customize Modal */}
-      <CustomizeModal
-        isOpen={showCustomize}
-        onClose={() => setShowCustomize(false)}
-        widgets={activeWidgets}
-        quickLinks={preferences?.quick_links || []}
-        onSave={handleSavePreferences}
-        onReset={handleResetPreferences}
-        role={effectiveRole || undefined}
-      />
 
       {/* Footer */}
       <footer className="mt-12 py-6 text-center text-sm text-gray-500 dark:text-gray-400 print:hidden">
