@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { createLabDedupTracker, trackScheduleBlockForLabDedup, isLabDayDeduped } from '@/lib/calendar-lab-dedup';
+import { CALENDAR_TIMEZONE, PACIFIC_VTIMEZONE_LINES } from '@/lib/calendar-timezone';
 
 /**
  * GET /api/calendar/feed.ics?token=X
@@ -140,8 +141,8 @@ function buildVEVENT(opts: {
   } else {
     const start = start_time ?? end_time ?? '00:00:00';
     const end = end_time ?? start_time ?? '00:00:00';
-    lines.push(`DTSTART;TZID=America/Phoenix:${toICSDate(date, start)}`);
-    lines.push(`DTEND;TZID=America/Phoenix:${toICSDate(date, end)}`);
+    lines.push(`DTSTART;TZID=${CALENDAR_TIMEZONE}:${toICSDate(date, start)}`);
+    lines.push(`DTEND;TZID=${CALENDAR_TIMEZONE}:${toICSDate(date, end)}`);
   }
 
   lines.push(`SUMMARY:${escapeICS(title)}`);
@@ -264,17 +265,9 @@ export async function GET(request: NextRequest) {
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
       'X-WR-CALNAME:PMI Paramedic Schedule',
-      'X-WR-TIMEZONE:America/Phoenix',
+      `X-WR-TIMEZONE:${CALENDAR_TIMEZONE}`,
       'X-PUBLISHED-TTL:PT1H',
-      'BEGIN:VTIMEZONE',
-      'TZID:America/Phoenix',
-      'BEGIN:STANDARD',
-      'DTSTART:19700101T000000',
-      'TZOFFSETFROM:-0700',
-      'TZOFFSETTO:-0700',
-      'TZNAME:MST',
-      'END:STANDARD',
-      'END:VTIMEZONE',
+      ...PACIFIC_VTIMEZONE_LINES,
     ];
 
     // Schedule blocks

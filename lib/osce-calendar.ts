@@ -9,7 +9,9 @@
  * America/Phoenix: in November Phoenix is an hour off Pacific.
  */
 
-export const OSCE_CAL_TIMEZONE = 'America/Los_Angeles';
+import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
+
+export const OSCE_CAL_TIMEZONE = CALENDAR_TIMEZONE;
 /** Account whose primary calendar hosts the block events (must hold the 'events' scope). */
 export const OSCE_CAL_HOST_EMAIL = 'bhartnell@pmi.edu';
 export const OSCE_CAL_COLOR = '5'; // Banana, same as the admin invite route

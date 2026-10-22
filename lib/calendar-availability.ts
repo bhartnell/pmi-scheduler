@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase';
 import type { BusyPeriod, InstructorAvailability } from '@/types/calendar';
+import { CALENDAR_TIMEZONE, calendarOffsetString } from '@/lib/calendar-timezone';
 
 // In-memory cache with 15-minute TTL
 const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
@@ -99,7 +100,7 @@ async function queryFreeBusy(
       body: JSON.stringify({
         timeMin,
         timeMax,
-        timeZone: 'America/Phoenix',
+        timeZone: CALENDAR_TIMEZONE,
         items,
       }),
     }
@@ -165,9 +166,9 @@ export async function checkInstructorAvailability(
   const supabase = getSupabaseAdmin();
   const results: Record<string, InstructorAvailability> = {};
 
-  // Build time window in Arizona timezone (no DST)
-  const timeMin = `${date}T${startTime}:00-07:00`;
-  const timeMax = `${date}T${endTime}:00-07:00`;
+  // Build time window in the calendar timezone (Pacific, observes DST)
+  const timeMin = `${date}T${startTime}:00${calendarOffsetString(date, startTime)}`;
+  const timeMax = `${date}T${endTime}:00${calendarOffsetString(date, endTime)}`;
   const windowStart = new Date(timeMin);
   const windowEnd = new Date(timeMax);
 

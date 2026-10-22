@@ -21,7 +21,9 @@
  */
 
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
-const TIMEZONE = 'America/Phoenix';
+import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
+
+const TIMEZONE = CALENDAR_TIMEZONE;
 
 // ─── RRULE generation ──────────────────────────────────────────────
 
@@ -178,7 +180,7 @@ export function buildRecurrence(
   const recurrence: string[] = [];
   if (rrule) recurrence.push(rrule);
   if (rdates && rdates.length > 0) {
-    // Format: RDATE;TZID=America/Phoenix:YYYYMMDDTHHMMSS,YYYYMMDDTHHMMSS,...
+    // Format: RDATE;TZID=${TIMEZONE}:YYYYMMDDTHHMMSS,YYYYMMDDTHHMMSS,...
     const compactTime = startTime.replace(/:/g, '').slice(0, 6);
     const datePart = rdates
       .map(d => `${d.replace(/-/g, '')}T${compactTime}`)

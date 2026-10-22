@@ -8,6 +8,7 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 ## 2026-10-22
+cal-tz | Calendar time zone: one CALENDAR_TIMEZONE (America/Los_Angeles) in lib/calendar-timezone.ts replaces hard-coded America/Phoenix in every Google/ICS/availability/display path, Pacific VTIMEZONE with DST rules, DST-aware offsets. Code half only; re-push of existing future events NOT done. Card 4015cd1c...a5b99
 reports-dup-crumb | Reports index page: remove inline Home > Reports breadcrumb that duplicated the shell breadcrumb line (TRIM 6/7 fact 4). Card 3fb5cd1c...1e233
 pals-p2a | PALS pass-but-watch: nullable watch + watch_note on pals_test_attempts (applied live, additive); lib/pals-group-result.ts group 2-of-3 rule + tests. Card 4015cd1c...87d4
 text-emdash-api-lib | Em dash to plain hyphen in 93 rendered strings across 49 app/api and lib files (email subjects, report/print headings, error and notification messages). Calendar title builders/parsers, seeds, stored-name matchers, regexes and comments deliberately untouched. Card 3ff5cd1c...9e8

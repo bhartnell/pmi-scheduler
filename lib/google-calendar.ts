@@ -10,9 +10,10 @@
 
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { refreshAccessTokenWithReason } from '@/lib/calendar-availability';
+import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
 
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';
-const TIMEZONE = 'America/Phoenix';
+const TIMEZONE = CALENDAR_TIMEZONE;
 
 // Google Calendar color IDs
 const COLOR_LAB_STATION = '9';   // Blueberry

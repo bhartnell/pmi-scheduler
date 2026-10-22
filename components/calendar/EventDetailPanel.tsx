@@ -15,6 +15,7 @@ import {
   Loader2,
   CalendarPlus,
 } from 'lucide-react';
+import { CALENDAR_TIMEZONE, PACIFIC_VTIMEZONE_LINES } from '@/lib/calendar-timezone';
 
 interface CalendarEvent {
   id: string;
@@ -127,21 +128,13 @@ function downloadSingleEventICS(event: CalendarEvent) {
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'X-WR-CALNAME:PMI Event',
-    'X-WR-TIMEZONE:America/Phoenix',
-    'BEGIN:VTIMEZONE',
-    'TZID:America/Phoenix',
-    'BEGIN:STANDARD',
-    'DTSTART:19700101T000000',
-    'TZOFFSETFROM:-0700',
-    'TZOFFSETTO:-0700',
-    'TZNAME:MST',
-    'END:STANDARD',
-    'END:VTIMEZONE',
+    `X-WR-TIMEZONE:${CALENDAR_TIMEZONE}`,
+      ...PACIFIC_VTIMEZONE_LINES,
     'BEGIN:VEVENT',
     `UID:${event.id}@pmi-scheduler`,
     `DTSTAMP:${new Date().toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
-    `DTSTART;TZID=America/Phoenix:${toICSDate(event.date, event.start_time)}`,
-    `DTEND;TZID=America/Phoenix:${toICSDate(event.date, event.end_time)}`,
+    `DTSTART;TZID=${CALENDAR_TIMEZONE}:${toICSDate(event.date, event.start_time)}`,
+    `DTEND;TZID=${CALENDAR_TIMEZONE}:${toICSDate(event.date, event.end_time)}`,
     `SUMMARY:${escapeICSText(event.title)}`,
   ];
 

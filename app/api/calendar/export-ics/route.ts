@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
+import { CALENDAR_TIMEZONE, PACIFIC_VTIMEZONE_LINES } from '@/lib/calendar-timezone';
 
 interface UnifiedEvent {
   id: string;
@@ -118,8 +119,8 @@ function buildVEVENT(event: UnifiedEvent): string[] | null {
     // the data was incomplete.
     const start = event.start_time ?? event.end_time ?? '00:00:00';
     const end = event.end_time ?? event.start_time ?? '00:00:00';
-    lines.push(`DTSTART;TZID=America/Phoenix:${toICSDate(event.date, start)}`);
-    lines.push(`DTEND;TZID=America/Phoenix:${toICSDate(event.date, end)}`);
+    lines.push(`DTSTART;TZID=${CALENDAR_TIMEZONE}:${toICSDate(event.date, start)}`);
+    lines.push(`DTEND;TZID=${CALENDAR_TIMEZONE}:${toICSDate(event.date, end)}`);
   }
 
   lines.push(`SUMMARY:${escapeICS(title)}`);
@@ -236,17 +237,8 @@ export async function GET(request: NextRequest) {
       'CALSCALE:GREGORIAN',
       'METHOD:PUBLISH',
       'X-WR-CALNAME:PMI Calendar Export',
-      'X-WR-TIMEZONE:America/Phoenix',
-      // VTIMEZONE for America/Phoenix (no DST)
-      'BEGIN:VTIMEZONE',
-      'TZID:America/Phoenix',
-      'BEGIN:STANDARD',
-      'DTSTART:19700101T000000',
-      'TZOFFSETFROM:-0700',
-      'TZOFFSETTO:-0700',
-      'TZNAME:MST',
-      'END:STANDARD',
-      'END:VTIMEZONE',
+      `X-WR-TIMEZONE:${CALENDAR_TIMEZONE}`,
+      ...PACIFIC_VTIMEZONE_LINES,
     ];
 
     let skippedCount = 0;

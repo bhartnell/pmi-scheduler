@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { canAccessClinical, type Role } from '@/lib/permissions';
 import SiteVisitAlerts from '@/components/SiteVisitAlerts';
+import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
 
 interface ClinicalSite {
   id: string;
@@ -716,7 +717,7 @@ export default function SiteVisitsPage() {
                             year: 'numeric',
                             month: 'short',
                             day: 'numeric',
-                            timeZone: 'America/Phoenix'
+                            timeZone: CALENDAR_TIMEZONE
                           })}
                         </div>
                         {visit.visit_time && (
