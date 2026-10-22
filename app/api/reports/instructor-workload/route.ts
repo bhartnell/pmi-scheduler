@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
     // Lab days in date range
     let labDaysQuery = supabase
       .from('lab_days')
-      .select('id, date, cohort_id, status')
+      .select('id, date, cohort_id')
       .gte('date', startDate)
       .lte('date', endDate)
       .order('date', { ascending: false });

@@ -8,6 +8,8 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 ## 2026-10-22
+fix-workload-status | /api/reports/instructor-workload no longer selects nonexistent lab_days.status (42703); column was never read. Card 4015cd1c...e3de6ec
+
 
 trim-6-7a-8c | Remove me on a lab day: lab_day_optouts table + POST/DELETE /lab-days/[id]/optout; default roster shows as You're in with Remove on home calendar, opt-out excluded from my-membership, Who's coming (now lists default roster) and general-lab sync; signing up again clears it. Card 4005cd1c...5c972694f14
 
