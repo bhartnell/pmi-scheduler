@@ -10,7 +10,6 @@ import { ActivityTracker } from '@/components/ActivityTracker';
 import OnboardingTourWrapper from '@/components/OnboardingTourWrapper';
 import { OfflineProvider } from '@/components/OfflineProvider';
 import WhatsNewWrapper from '@/components/WhatsNewWrapper';
-import RolePreviewBanner from '@/components/RolePreviewBanner';
 import UserMenu from '@/components/UserMenu';
 import FloatingDock from '@/components/FloatingDock';
 import ModuleGuard from '@/components/ModuleGuard';
@@ -39,7 +38,6 @@ export default function RootLayout({
         </a>
         <Providers>
           <OfflineProvider>
-            <RolePreviewBanner />
             <GlobalTimerBanner />
             <ModuleGuard>
               <AppChrome />

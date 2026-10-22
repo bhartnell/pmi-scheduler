@@ -477,9 +477,6 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 
 | Component | File | Props | Description |
 |-----------|------|-------|-------------|
-| `RolePreviewProvider` | `components/RolePreviewProvider.tsx` | `{ children }` | Context provider for role preview mode. Exports `useRolePreview` hook. |
-| `RolePreviewBanner` | `components/RolePreviewBanner.tsx` | _(none)_ | Warning banner shown when the user is in role preview mode. |
-| `RolePreviewSelector` | `components/RolePreviewSelector.tsx` | `inline?`, `onDone?` | Role list for entering/exiting role preview. `inline` renders it as a section of the avatar menu (UserMenu); no longer in the floating dock. |
 
 ### Security
 
@@ -529,7 +526,7 @@ originals (`api-auth`, `audit`, `auth`, `auth-helpers`, `config`,
 | `useCalendarAvailability` | `hooks/useCalendarAvailability.ts` | `useCalendarAvailability(date: string, emails: string[])` | Fetches Google Calendar free/busy status for given date and instructor emails. Returns availability map. |
 | `useCohorts` | `hooks/useCohorts.ts` | `useCohorts(options?: UseCohortOptions): { cohorts, loading, error }` | Fetches cohorts from API with optional `programId` filter. |
 | `useCurrentUser` | `hooks/useCurrentUser.ts` | `useCurrentUser(options?: { enabled? }): { user, loading, error }` | Fetches the current user's profile from `/api/me`. |
-| `useEffectiveRole` | `hooks/useEffectiveRole.ts` | `useEffectiveRole(realRole: Role \| string \| null): Role \| string \| null` | Returns effective role considering role preview mode from `useRolePreview`. |
+| `useEffectiveRole` | `hooks/useEffectiveRole.ts` | `useEffectiveRole(realRole: Role \| string \| null): Role \| string \| null` | Returns the real role (role preview removed 2026-10-22; View as is the only impersonation). Kept so existing callers still work. |
 | `useKeyboardShortcuts` | `hooks/useKeyboardShortcuts.ts` | `useKeyboardShortcuts(shortcuts: KeyboardShortcut[], enabled?: boolean): void` | Registers global keyboard shortcuts with key combo matching. |
 | `useLabDays` | `hooks/useLabDays.ts` | `useLabDays(options?: UseLabDaysOptions): { labDays, loading, error, refetch }` | Fetches lab days with filtering by cohort, date range, and status. |
 | `useLocations` | `hooks/useLocations.ts` | `useLocations(options?: { type?, enabled? }): { locations, loading, error }` | Fetches location data with optional type filter. |
