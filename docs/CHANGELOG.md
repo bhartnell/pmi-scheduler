@@ -8,6 +8,7 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 ## 2026-10-22
+trim-6-7a-11 | Home: View as no longer narrows Labs/Everyone; every not-yet-ended lab counts as open for Mine; stat bar split into Labs and Students groups. Card 4015cd1c...8125
 fix-workload-status | /api/reports/instructor-workload no longer selects nonexistent lab_days.status (42703); column was never read. Card 4015cd1c...e3de6ec
 
 
