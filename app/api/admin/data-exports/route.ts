@@ -120,12 +120,12 @@ export async function POST(request: NextRequest) {
     // Define queries - filter by cohort_id if provided
     const tables = [
       { name: 'students', query: () => {
-        let q = supabase.from('students').select('id, first_name, last_name, email, cohort_id, status, agency, created_at');
+        let q = supabase.from('students').select('id, first_name, last_name, email, cohort_id, status, agency, created_at').eq('is_test', false);
         if (body.cohort_id) q = q.eq('cohort_id', body.cohort_id);
         return q;
       }},
       { name: 'cohorts', query: () => {
-        let q = supabase.from('cohorts').select('*, program:programs(name, abbreviation)');
+        let q = supabase.from('cohorts').select('*, program:programs(name, abbreviation)').eq('is_test', false);
         if (body.cohort_id) q = q.eq('id', body.cohort_id);
         return q;
       }},
