@@ -7,6 +7,7 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+trim-6-7-crumb-dupes | TRIM 6/7: removed the duplicate hand-rolled Home > ... breadcrumb block (and unused imports) from 15 pages under the app-wide sub-nav line (scheduling x4, admin x5, skill-sheets x2, academics skill-sheets, feedback my-submissions, clinical capacity, instructor my-stats, resources medications, help). Pages whose crumb shows a record name (cohort, task, skill sheet, poll, portfolio) and /student, /poll pages left as is. Card 3fb5cd1c...e1a4
 trim-6-7-grader-crumb | TRIM 6/7: station grader crumb reads Labs > lab day (links to it) > Station n instead of dead Grading/Station/Detail links; BreadcrumbNames gains customHrefs, empty custom label drops a crumb. Card 3fb5cd1c...e1a4
 test-flag-calendar | Student view 2/4c: test-cohort lab days get a Test badge on the home calendar, are excluded from labs-this-week/month and the Needs-instructors ring, and are never synced to the shared Google calendar (planLabDayEvent returns 'test-cohort'). Card 4015cd1c...7e3c
 test-flag-exports | Student view 2/4c: admin data export, data-exports and scheduled report emails skip is_test cohorts/students (nightly backup export and graduate writes deliberately unfiltered). Card 4015cd1c...7e3c

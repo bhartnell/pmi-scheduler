@@ -7,8 +7,6 @@ import { useSkillSheets } from '@/hooks/useSkillSheets';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import Link from 'next/link';
 import {
-  Home,
-  ChevronRight,
   Search,
   FileText,
   Filter,
@@ -143,14 +141,6 @@ export default function SkillSheetsBrowsePage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-6">
-          <Link href="/" className="hover:text-gray-700 dark:hover:text-gray-200">
-            <Home className="w-4 h-4" />
-          </Link>
-          <ChevronRight className="w-3 h-3" />
-          <span className="text-gray-900 dark:text-white font-medium">Skill Sheets</span>
-        </nav>
 
         {/* Header */}
         <div className="mb-6">

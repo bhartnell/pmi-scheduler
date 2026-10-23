@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { parseDateSafe } from '@/lib/utils';
 import {
   Home,
-  ChevronRight,
   MessageSquare,
   Bug,
   Lightbulb,
@@ -354,15 +353,6 @@ export default function MySubmissionsPage() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-3xl mx-auto px-4 py-6">
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-3">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-gray-900 dark:text-white">My Feedback</span>
-          </div>
 
           {/* Title row */}
           <div className="flex items-center justify-between gap-4">
