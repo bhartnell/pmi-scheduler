@@ -3,9 +3,10 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { formatCohortNumber } from '@/lib/format-cohort';
 import {
   AccessError, createPreinternshipService,
-  type Actor, type ResponseData, type ReviewData, type Store, type StoredResponse,
+  type Actor, type CohortWindow, type ResponseData, type ReviewData, type Store, type StoredResponse,
 } from '@/lib/preinternship';
 
 type Row = {
@@ -108,10 +109,52 @@ export function createSupabaseStore(): Store {
       fail(error, 'check window');
       return (data?.length ?? 0) > 0;
     },
+    async getWindowCloseDate(cohortId) {
+      if (!cohortId) return null;
+      const { data, error } = await sb.from('preinternship_windows').select('closes_at')
+        .eq('cohort_id', cohortId).maybeSingle();
+      fail(error, 'get window close date');
+      return data?.closes_at ?? null;
+    },
     async softDeleteReview(recordKey) {
       const { data, error } = await sb.from('preinternship_reviews')
         .update({ deleted_at: new Date().toISOString() }).eq('record_key', recordKey).is('deleted_at', null).select('id');
       fail(error, 'delete review');
+      return (data?.length ?? 0) > 0;
+    },
+    async listCohortWindows() {
+      const { data: cohorts, error: cErr } = await sb.from('cohorts')
+        .select('id, cohort_number, display_name, is_test, program:programs(abbreviation)')
+        .eq('is_archived', false)
+        .order('cohort_number', { ascending: false });
+      fail(cErr, 'list cohorts');
+
+      const { data: windows, error: wErr } = await sb.from('preinternship_windows')
+        .select('cohort_id, opens_at, closes_at');
+      fail(wErr, 'list windows');
+      const byCohort = new Map((windows ?? []).map((w) => [w.cohort_id, w]));
+
+      return (cohorts ?? []).map((c): CohortWindow => {
+        const program = Array.isArray(c.program) ? c.program[0] : c.program;
+        const label = c.display_name || `${program?.abbreviation ?? ''} Group ${formatCohortNumber(c.cohort_number)}`.trim();
+        const w = byCohort.get(c.id);
+        return {
+          cohortId: c.id, cohortLabel: label, isTest: c.is_test === true,
+          opensAt: w?.opens_at ?? null, closesAt: w?.closes_at ?? null,
+        };
+      });
+    },
+    async openWindow(cohortId, closesAt, createdBy) {
+      const { error } = await sb.from('preinternship_windows').upsert(
+        { cohort_id: cohortId, opens_at: new Date().toISOString(), closes_at: closesAt, created_by: createdBy },
+        { onConflict: 'cohort_id' },
+      );
+      fail(error, 'open window');
+    },
+    async setWindowCloseDate(cohortId, closesAt) {
+      const { data, error } = await sb.from('preinternship_windows')
+        .update({ closes_at: closesAt }).eq('cohort_id', cohortId).select('id');
+      fail(error, 'set window close date');
       return (data?.length ?? 0) > 0;
     },
   };

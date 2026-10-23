@@ -13,6 +13,7 @@ import Link from 'next/link';
 import { ArrowLeft, Copy, Download, Lock, Unlock, RefreshCw, FileSpreadsheet, Trash2, CheckCircle } from 'lucide-react';
 import { SA_DOMAINS, SA_LEVELS, SA_PREFS, SA_REFLECT } from '@/lib/preinternship-content';
 import { SA_STORAGE } from '@/lib/preinternship-storage';
+import WindowsStrip from '@/components/preinternship/WindowsStrip';
 import {
   autoSummary, blankEdit, buildCsv, calibration, fmtDate, gapInfo, isFullyRated, scenarioScore, slug,
   summaryPlain, summaryStandalone, type SaEdit, type SaRecord, type Tone,
@@ -184,6 +185,10 @@ export default function PreInternshipReviewPage() {
       <p className="text-gray-600 dark:text-gray-400 mt-1 mb-5">
         Compare each student&apos;s self-ratings with yours and build the one-page summary for their agency. Summaries are download-and-send; nothing is emailed from here.
       </p>
+
+      <div className="mb-6">
+        <WindowsStrip />
+      </div>
 
       {toast && <div role="status" className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-lg bg-gray-900 text-white shadow-lg">{toast}</div>}
 

@@ -57,6 +57,14 @@ export interface StoredResponse {
   data: ResponseData;
 }
 
+export interface CohortWindow {
+  cohortId: string;
+  cohortLabel: string;
+  isTest: boolean;
+  opensAt: string | null; // null = no window row for this cohort = closed
+  closesAt: string | null; // null = open-ended
+}
+
 export interface Store {
   getResponse(userId: string): Promise<StoredResponse | null>;
   upsertResponse(userId: string, cohortId: string | null, data: ResponseData): Promise<void>;
@@ -68,6 +76,14 @@ export interface Store {
   softDeleteReview(recordKey: string): Promise<boolean>;
   /** True when the cohort has an open pre-internship window right now. No window row = closed. */
   isWindowOpen(cohortId: string | null): Promise<boolean>;
+  /** The open window's closes_at for a cohort (null = no close date, or no window row). */
+  getWindowCloseDate(cohortId: string | null): Promise<string | null>;
+  /** One row per active cohort (not just cohorts with a window) for the instructor Windows strip. */
+  listCohortWindows(): Promise<CohortWindow[]>;
+  /** Opens (or reopens) a cohort's window: opens_at = now, closes_at as given (null = open-ended). */
+  openWindow(cohortId: string, closesAt: string | null, createdBy: string | null): Promise<void>;
+  /** Changes closes_at on an existing window row (a past/now value closes it immediately). */
+  setWindowCloseDate(cohortId: string, closesAt: string | null): Promise<boolean>;
 }
 
 export class AccessError extends Error {
@@ -170,9 +186,12 @@ export function createPreinternshipService(store: Store) {
     async getMyStatus(actor: Actor) {
       requireStudent(actor);
       const open = await store.isWindowOpen(actor.cohortId ?? null);
-      if (!open) return { response: null, locked: false, open };
-      const r = await store.getResponse(actor.id);
-      return { response: r ? r.data : null, locked: !!r?.locked, open };
+      if (!open) return { response: null, locked: false, open, closesAt: null };
+      const [r, closesAt] = await Promise.all([
+        store.getResponse(actor.id),
+        store.getWindowCloseDate(actor.cohortId ?? null),
+      ]);
+      return { response: r ? r.data : null, locked: !!r?.locked, open, closesAt };
     },
 
     async saveMyResponse(actor: Actor, input: unknown): Promise<void> {
@@ -233,6 +252,27 @@ export function createPreinternshipService(store: Store) {
       if (!r) throw new AccessError(404, 'Response not found');
       const reviews = await store.listReviews();
       return { id: r.id, response: agencySafeResponse(r.data), review: reviews[recordKeyFor(id)] ?? null };
+    },
+
+    async listWindows(actor: Actor) {
+      requireInstructor(actor);
+      return store.listCohortWindows();
+    },
+
+    async openWindow(actor: Actor, cohortId: string, closesAt: string | null) {
+      requireInstructor(actor);
+      if (!cohortId) throw new AccessError(400, 'cohortId is required');
+      if (closesAt !== null && Number.isNaN(Date.parse(closesAt))) throw new AccessError(400, 'Invalid close date');
+      await store.openWindow(cohortId, closesAt, actor.email ?? actor.name ?? null);
+    },
+
+    async setWindowCloseDate(actor: Actor, cohortId: string, closesAt: string | null) {
+      requireInstructor(actor);
+      if (!cohortId) throw new AccessError(400, 'cohortId is required');
+      if (closesAt !== null && Number.isNaN(Date.parse(closesAt))) throw new AccessError(400, 'Invalid close date');
+      if (!(await store.setWindowCloseDate(cohortId, closesAt))) {
+        throw new AccessError(404, 'No open window for this cohort yet');
+      }
     },
   };
 }

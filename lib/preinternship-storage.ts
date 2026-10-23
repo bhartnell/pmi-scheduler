@@ -14,8 +14,9 @@ export const SA_STORAGE = {
     const r = await call<{ response: unknown | null }>('/api/preinternship/my-response');
     return r.response;
   },
-  /** Also exposes lock state so the form can explain a reviewed (locked) response. */
-  getMyStatus: () => call<{ response: unknown | null; locked: boolean; open: boolean }>('/api/preinternship/my-response'),
+  /** Also exposes lock state and the window's close date so the form can explain a reviewed (locked) response or a closing-soon window. */
+  getMyStatus: () =>
+    call<{ response: unknown | null; locked: boolean; open: boolean; closesAt: string | null }>('/api/preinternship/my-response'),
   saveMyResponse: (response: unknown) =>
     call<null>('/api/preinternship/my-response', { method: 'PUT', body: JSON.stringify(response) }),
   listResponses: () => call<{ id: string; data: unknown; locked: boolean }[]>('/api/preinternship/responses'),
@@ -30,4 +31,14 @@ export const SA_STORAGE = {
     call<null>(`/api/preinternship/reviews/${encodeURIComponent(recordKey)}`, { method: 'DELETE' }),
   /** Instructor only: response with reflections r1/r2 removed, for agency output. */
   getAgencyView: (id: string) => call<unknown>(`/api/preinternship/responses/${encodeURIComponent(id)}/agency`),
+
+  /** Instructor only: one row per active cohort, for the review page's Windows strip. */
+  listWindows: () =>
+    call<{ cohortId: string; cohortLabel: string; isTest: boolean; opensAt: string | null; closesAt: string | null }[]>(
+      '/api/preinternship/windows',
+    ),
+  openWindow: (cohortId: string, closesAt: string | null) =>
+    call<null>('/api/preinternship/windows', { method: 'POST', body: JSON.stringify({ cohortId, closesAt }) }),
+  setWindowCloseDate: (cohortId: string, closesAt: string | null) =>
+    call<null>('/api/preinternship/windows', { method: 'PATCH', body: JSON.stringify({ cohortId, closesAt }) }),
 };
