@@ -61,6 +61,7 @@ export default function SelfAssessmentPage() {
   const { data: session } = useSession();
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(true);
+  const [closesAt, setClosesAt] = useState<string | null>(null);
   const [locked, setLocked] = useState(false);
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [form, setForm] = useState<Form>(blank());
@@ -75,6 +76,7 @@ export default function SelfAssessmentPage() {
       try {
         const st = await SA_STORAGE.getMyStatus();
         setOpen(st.open);
+        setClosesAt(st.closesAt);
         setLocked(st.locked);
         if (st.response) {
           const d = st.response as Saved;
@@ -131,6 +133,7 @@ export default function SelfAssessmentPage() {
       const d = st.response as Saved | null;
       setSubmittedAt(d?.submittedAt || new Date().toISOString());
       setLocked(st.locked);
+      setClosesAt(st.closesAt);
       setJustSaved(true);
       try { localStorage.removeItem(DRAFT_KEY); } catch { /* ignore */ }
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -164,6 +167,9 @@ export default function SelfAssessmentPage() {
         </div>
       ) : (
         <form onSubmit={submit} noValidate className="space-y-8">
+          {closesAt && (
+            <p className="text-sm text-gray-500 dark:text-gray-400 -mt-4">Closes {fmtDate(closesAt)}.</p>
+          )}
           {submittedAt && (
             <div className="flex gap-3 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-300 dark:border-green-700 text-green-900 dark:text-green-200" role="status">
               <CheckCircle className="w-5 h-5 shrink-0 mt-0.5" />

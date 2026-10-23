@@ -2,12 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   AccessError, createPreinternshipService, isPreinternshipInstructor, recordKeyFor,
-  type Actor, type ResponseData, type ReviewData, type Store, type StoredResponse,
+  type Actor, type CohortWindow, type ResponseData, type ReviewData, type Store, type StoredResponse,
 } from '../lib/preinternship.ts';
 
-function memStore(open = true): Store {
+function memStore(open = true, closesAt: string | null = null): Store {
   const responses = new Map<string, StoredResponse & { deleted?: boolean }>();
   const reviews = new Map<string, ReviewData & { userId: string }>();
+  const windows = new Map<string, { opensAt: string; closesAt: string | null }>();
   return {
     async getResponse(id) { const r = responses.get(id); return r && !r.deleted ? r : null; },
     async upsertResponse(id, cohortId, data) {
@@ -21,6 +22,19 @@ function memStore(open = true): Store {
     async upsertReview(key, userId, review) { reviews.set(key, { ...review, userId }); },
     async softDeleteReview(key) { return reviews.delete(key); },
     async isWindowOpen() { return open; },
+    async getWindowCloseDate() { return open ? closesAt : null; },
+    async listCohortWindows(): Promise<CohortWindow[]> {
+      return [...windows].map(([cohortId, w]) => ({
+        cohortId, cohortLabel: cohortId, isTest: false, opensAt: w.opensAt, closesAt: w.closesAt,
+      }));
+    },
+    async openWindow(cohortId, closeDate) { windows.set(cohortId, { opensAt: new Date().toISOString(), closesAt: closeDate }); },
+    async setWindowCloseDate(cohortId, closeDate) {
+      const w = windows.get(cohortId);
+      if (!w) return false;
+      w.closesAt = closeDate;
+      return true;
+    },
   };
 }
 
@@ -146,8 +160,39 @@ test('deleted response disappears from lists and cannot be reviewed', async () =
 test('closed window: students cannot save and see nothing; open window works', async () => {
   const closed = createPreinternshipService(memStore(false));
   await deny(closed.saveMyResponse(student('A'), good()), 403);
-  assert.deepEqual(await closed.getMyStatus(student('A')), { response: null, locked: false, open: false });
+  assert.deepEqual(await closed.getMyStatus(student('A')), { response: null, locked: false, open: false, closesAt: null });
   const open = createPreinternshipService(memStore(true));
   await open.saveMyResponse(student('A'), good());
   assert.equal((await open.getMyStatus(student('A'))).open, true);
+});
+
+test('getMyStatus surfaces the window close date only while open', async () => {
+  const withClose = createPreinternshipService(memStore(true, '2026-12-01T00:00:00.000Z'));
+  assert.equal((await withClose.getMyStatus(student('A'))).closesAt, '2026-12-01T00:00:00.000Z');
+  const noClose = createPreinternshipService(memStore(true, null));
+  assert.equal((await noClose.getMyStatus(student('A'))).closesAt, null);
+  const closed = createPreinternshipService(memStore(false, '2026-12-01T00:00:00.000Z'));
+  assert.equal((await closed.getMyStatus(student('A'))).closesAt, null);
+});
+
+test('windows: only instructors can list/open/change close date; open then close-date-change round-trips', async () => {
+  const store = memStore();
+  const svc = createPreinternshipService(store);
+  const s = student('A');
+  await deny(svc.listWindows(s), 403);
+  await deny(svc.openWindow(s, 'c1', null), 403);
+  await deny(svc.setWindowCloseDate(s, 'c1', null), 403);
+
+  await svc.openWindow(instructor, 'c1', '2026-12-01T00:00:00.000Z');
+  const rows = await svc.listWindows(instructor);
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].cohortId, 'c1');
+  assert.equal(rows[0].closesAt, '2026-12-01T00:00:00.000Z');
+
+  await svc.setWindowCloseDate(instructor, 'c1', '2026-12-15T00:00:00.000Z');
+  assert.equal((await svc.listWindows(instructor))[0].closesAt, '2026-12-15T00:00:00.000Z');
+
+  await deny(svc.setWindowCloseDate(instructor, 'never-opened', null), 404);
+  await deny(svc.openWindow(instructor, '', null), 400);
+  await deny(svc.openWindow(instructor, 'c1', 'not-a-date'), 400);
 });
