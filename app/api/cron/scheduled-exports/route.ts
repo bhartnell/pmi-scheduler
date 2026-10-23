@@ -83,6 +83,7 @@ async function generateCohortProgressReport(
       status,
       program:programs(name, abbreviation)
     `)
+    .eq('is_test', false)
     .eq('status', 'active')
     .order('cohort_number');
 
@@ -100,6 +101,7 @@ async function generateCohortProgressReport(
       .from('students')
       .select('id', { count: 'exact', head: true })
       .eq('cohort_id', cohort.id)
+      .eq('is_test', false)
       .eq('status', 'active');
 
     const { count: labDayCount } = await supabase
@@ -129,6 +131,7 @@ async function generateClinicalHoursReport(
       status,
       cohort:cohorts!students_cohort_id_fkey(cohort_number, program:programs(abbreviation))
     `)
+    .eq('is_test', false)
     .eq('status', 'active')
     .order('last_name');
 
@@ -189,6 +192,7 @@ async function generateLabCompletionReport(
       cohort_number,
       program:programs(abbreviation)
     `)
+    .eq('is_test', false)
     .eq('status', 'active')
     .order('cohort_number');
 
@@ -245,6 +249,7 @@ async function generateStudentStatusReport(
       status,
       cohort:cohorts!students_cohort_id_fkey(cohort_number, program:programs(abbreviation))
     `)
+    .eq('is_test', false)
     .order('last_name');
 
   if (!students || students.length === 0) {

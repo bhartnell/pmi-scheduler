@@ -3,6 +3,7 @@ import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
 import { logRecordAccess } from '@/lib/ferpa';
+import { notTest } from '@/lib/test-data';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -49,6 +50,7 @@ async function fetchCohortData(supabase: ReturnType<typeof getSupabaseAdmin>, co
       students!students_cohort_id_fkey(id, first_name, last_name, email, status, agency)
     `)
     .order('created_at', { ascending: false });
+  query = notTest(query);
 
   if (cohortId) {
     query = query.eq('id', cohortId);
@@ -79,6 +81,7 @@ async function fetchStudentsData(
       cohort:cohorts!students_cohort_id_fkey(id, cohort_number, program:programs(name, abbreviation))
     `)
     .order('last_name', { ascending: true });
+  query = notTest(query);
 
   if (cohortId) {
     query = query.eq('cohort_id', cohortId);

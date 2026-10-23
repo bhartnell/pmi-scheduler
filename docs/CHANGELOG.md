@@ -7,6 +7,7 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+test-flag-exports | Student view 2/4c: admin data export, data-exports and scheduled report emails skip is_test cohorts/students (nightly backup export and graduate writes deliberately unfiltered). Card 4015cd1c...7e3c
 osce-admin-entry | Testing > OSCE (/osce) sends admins to the coordinator view (straight to the event when exactly one is open/draft), everyone else to evaluator entry as before; "Evaluator signup page" link on coordinator list + event pages; ?evaluator=1 forces evaluator entry. Card 4015cd1c...dd5
 cal-tz-repush | Admin > Calendar sync: Fix event time zones card (Check = dry run, Fix = PATCH start/end timeZone + RDATE TZID to Pacific on future Google events; no deletes, idempotent, per-source_type counts). New POST /api/admin/calendar-sync/fix-timezones (dry_run default true), lib/calendar-tz-repush.ts planner + tests. Not run. Card 4015cd1c...a5b99
 ## 2026-10-23
