@@ -51,7 +51,7 @@ export default function SubNavLine({ pathname }: { pathname: string }) {
       </>
     );
   } else {
-    const items = buildBreadcrumbItems(pathname, names.entityTitle, names.customSegments).slice(1);
+    const items = buildBreadcrumbItems(pathname, names.entityTitle, names.customSegments, names.customHrefs).slice(1);
     content = (
       <ol className="flex items-center gap-1">
         {items.map((item, i) => (
