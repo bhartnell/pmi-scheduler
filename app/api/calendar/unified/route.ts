@@ -208,7 +208,7 @@ export async function GET(request: NextRequest) {
           .select(`
             id, date, title, start_time, end_time, section_number, section_label,
             cohort:cohorts(
-              id, cohort_number,
+              id, cohort_number, is_test,
               program:programs(id, name, abbreviation)
             ),
             stations:lab_stations(id, instructor_name)
@@ -289,6 +289,7 @@ export async function GET(request: NextRequest) {
                 open_station_count: stations.filter(s => !s.instructor_name).length,
                 section_number: ldSec,
                 section_label: ldSecLabel || undefined,
+                ...(cohort?.is_test ? { is_test: true } : {}),
               },
             });
           }

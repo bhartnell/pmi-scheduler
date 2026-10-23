@@ -73,6 +73,14 @@ export async function GET(_request: NextRequest) {
       openTasksQuery = openTasksQuery.eq('assigned_to', user.id);
     }
 
+    // Lab days of test cohorts (Student view 2/4) stay visible but are not counted.
+    const { data: testCohorts } = await supabase.from('cohorts').select('id').eq('is_test', true);
+    const testCohortIds = (testCohorts ?? []).map((c: { id: string }) => c.id);
+    const notTestLab = <T extends { or(filter: string): T }>(q: T): T =>
+      testCohortIds.length > 0
+        ? q.or(`cohort_id.is.null,cohort_id.not.in.(${testCohortIds.join(',')})`)
+        : q;
+
     const [studentsRes, labsMonthRes, labsWeekRes, openTasksRes] =
       await Promise.all([
         // Active students count (head-only count), excluding students of
@@ -87,18 +95,22 @@ export async function GET(_request: NextRequest) {
           .eq('cohort.is_test', false),
 
         // Lab days this month.
-        supabase
-          .from('lab_days')
-          .select('id', { count: 'exact', head: true })
-          .gte('date', startOfMonth)
-          .lte('date', endOfMonth),
+        notTestLab(
+          supabase
+            .from('lab_days')
+            .select('id', { count: 'exact', head: true })
+            .gte('date', startOfMonth)
+            .lte('date', endOfMonth)
+        ),
 
         // Lab days this week.
-        supabase
-          .from('lab_days')
-          .select('id', { count: 'exact', head: true })
-          .gte('date', startOfWeek)
-          .lte('date', endOfWeek),
+        notTestLab(
+          supabase
+            .from('lab_days')
+            .select('id', { count: 'exact', head: true })
+            .gte('date', startOfWeek)
+            .lte('date', endOfWeek)
+        ),
 
         // Resolved open-tasks query with inclusive filter.
         openTasksQuery,

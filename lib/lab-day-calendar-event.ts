@@ -53,7 +53,7 @@ export interface LabDayEventPlan {
 export type LabDayEventResult =
   | { status: 'planned'; plan: LabDayEventPlan }
   | { status: 'created' | 'updated'; plan: LabDayEventPlan; eventId: string }
-  | { status: 'no-lab-days' | 'no-times' | 'no-attendees' }
+  | { status: 'no-lab-days' | 'no-times' | 'no-attendees' | 'test-cohort' }
   | { status: 'failed'; error: string };
 
 export function labDayEventKey(cohortId: string, date: string): string {
@@ -72,19 +72,24 @@ export async function planLabDayEvent(
   cohortId: string,
   date: string,
   supabase: SupabaseClient = getSupabaseAdmin()
-): Promise<LabDayEventPlan | { status: 'no-lab-days' | 'no-times' | 'no-attendees' }> {
+): Promise<LabDayEventPlan | { status: 'no-lab-days' | 'no-times' | 'no-attendees' | 'test-cohort' }> {
   const { data: days, error: daysErr } = await supabase
     .from('lab_days')
     .select(
       `id, title, start_time, end_time, section_number, section_label, cert_course,
        is_adv_cert_testing,
-       cohort:cohorts!lab_days_cohort_id_fkey(cohort_number, program:programs(abbreviation))`
+       cohort:cohorts!lab_days_cohort_id_fkey(cohort_number, is_test, program:programs(abbreviation))`
     )
     .eq('cohort_id', cohortId)
     .eq('date', date)
     .eq('is_archived', false);
   if (daysErr) throw new Error(daysErr.message);
   if (!days || days.length === 0) return { status: 'no-lab-days' };
+
+  // Test cohorts (Student view 2/4) run end to end in the app but never reach a real calendar.
+  if (days.some(d => first(d.cohort as { is_test?: boolean } | { is_test?: boolean }[] | null)?.is_test)) {
+    return { status: 'test-cohort' };
+  }
 
   // Chronological, not by section number.
   const sections = [...days].sort(
