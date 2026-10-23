@@ -3,10 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
-import Link from 'next/link';
 import {
-  Home,
-  ChevronRight,
   BookOpen,
   Plus,
   Pencil,
@@ -1143,17 +1140,6 @@ export default function LabTemplatesPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <ChevronRight className="w-3 h-3" />
-            <Link href="/admin" className="hover:text-blue-600 dark:hover:text-blue-400">Admin</Link>
-            <ChevronRight className="w-3 h-3" />
-            <span className="text-gray-900 dark:text-white">Lab Template Library</span>
-          </div>
 
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">

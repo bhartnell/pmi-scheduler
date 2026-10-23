@@ -12,8 +12,6 @@ import {
   TrendingUp,
   TrendingDown,
   Award,
-  ChevronRight,
-  Home,
   Users,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
@@ -381,19 +379,6 @@ export default function MyStatsPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mb-2 overflow-x-auto whitespace-nowrap">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3.5 h-3.5" />
-              Home
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
-            <Link href="/instructor" className="hover:text-blue-600 dark:hover:text-blue-400">
-              Instructor Portal
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="text-gray-900 dark:text-white">My Stats</span>
-          </div>
 
           {/* Title row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

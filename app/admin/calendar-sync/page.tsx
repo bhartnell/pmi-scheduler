@@ -6,8 +6,6 @@ import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import FixTimezonesCard from '@/components/FixTimezonesCard';
 import {
-  ChevronRight,
-  Home,
   Calendar,
   RefreshCw,
   Bell,
@@ -552,19 +550,6 @@ export default function CalendarSyncPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-6">
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <Link href="/" className="hover:text-blue-600 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/admin" className="hover:text-blue-600">
-              Admin
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900 dark:text-white">Calendar Sync Status</span>
-          </div>
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
