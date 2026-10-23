@@ -1,7 +1,8 @@
 // Server glue for the Pre-Internship Self-Assessment API routes: resolves the
 // signed-in actor, builds the Supabase-backed store, maps errors to responses.
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
+import { requireStudentContext } from '@/lib/view-as-student';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { formatCohortNumber } from '@/lib/format-cohort';
 import {
@@ -63,7 +64,22 @@ export function createSupabaseStore(): Store {
       const { data, error } = await sb.from('preinternship_responses').select(COLS)
         .is('deleted_at', null).order('submitted_at', { ascending: false });
       fail(error, 'list responses');
-      return ((data ?? []) as Row[]).map(toStored);
+      const rows = (data ?? []) as Row[];
+
+      // Flag test-student submissions (students.is_test), matched by the
+      // response's own saved email — no FK links preinternship_responses
+      // back to students, so this mirrors the .ilike('email', ...) pattern
+      // used everywhere else in this codebase.
+      const emails = [...new Set(rows.map((r) => r.email).filter((e): e is string => !!e))];
+      const testEmails = new Set<string>();
+      if (emails.length) {
+        const { data: testStudents, error: tsErr } = await sb
+          .from('students').select('email').eq('is_test', true).in('email', emails);
+        fail(tsErr, 'list test students');
+        for (const s of testStudents ?? []) testEmails.add(s.email.toLowerCase());
+      }
+
+      return rows.map((r) => ({ ...toStored(r), isTest: !!r.email && testEmails.has(r.email.toLowerCase()) }));
     },
     async softDeleteResponse(userId) {
       const { data, error } = await sb.from('preinternship_responses')
@@ -173,6 +189,69 @@ export async function withPreinternship<T>(
       const { data } = await sb.from('students').select('cohort_id').ilike('email', auth.user.email).maybeSingle();
       actor.cohortId = data?.cohort_id ?? null;
     }
+    const result = await fn(createPreinternshipService(createSupabaseStore()), actor);
+    return NextResponse.json({ success: true, data: result ?? null });
+  } catch (e) {
+    if (e instanceof AccessError) return NextResponse.json({ success: false, error: e.message }, { status: e.status });
+    console.error('[preinternship]', e);
+    return NextResponse.json({ success: false, error: 'Internal error' }, { status: 500 });
+  }
+}
+
+/**
+ * `preinternship_responses.user_id` is a NOT NULL, UNIQUE foreign key to
+ * `lab_users(id)` — every real student already has a lab_users row (they
+ * sign in with it), but a test student (`students.is_test`) deliberately
+ * has none (its placeholder email on the .invalid domain can't sign in).
+ * This creates, on first use, the lab_users row a test student's own
+ * response is saved against — same shape a real student's account has,
+ * just never reachable by Google sign-in. Idempotent: looks up by email
+ * first, so repeat calls (and any pre-existing row) just reuse the id.
+ */
+async function resolveStudentLabUserId(email: string, isTest: boolean, name: string): Promise<string | null> {
+  const sb = getSupabaseAdmin();
+  const { data: existing } = await sb.from('lab_users').select('id').ilike('email', email).maybeSingle();
+  if (existing) return existing.id;
+  if (!isTest) return null;
+  const { data: created, error } = await sb
+    .from('lab_users')
+    .insert({ email, name, role: 'student', is_active: true, status: 'active' })
+    .select('id')
+    .single();
+  if (error) {
+    console.error('[preinternship] could not create test-student lab_users row', error);
+    return null;
+  }
+  return created.id;
+}
+
+/**
+ * Run a "my-*" service call as the EFFECTIVE student — a real student
+ * acting for themselves, or (STUDENT VIEW 4/4 item c) an admin+ viewing as
+ * a student, resolved through the same view-as helper the /api/student
+ * routes use. A real student under view-as stays read-only (403, enforced
+ * by requireStudentContext); a test student's writes go through and save
+ * against its own identity.
+ */
+export async function withPreinternshipAsStudent<T>(
+  request: NextRequest,
+  fn: (svc: ReturnType<typeof createPreinternshipService>, actor: Actor) => Promise<T>,
+): Promise<NextResponse> {
+  const ctx = await requireStudentContext(request);
+  if (ctx instanceof NextResponse) return ctx;
+  if (!ctx.found) {
+    // No linked students row yet — same soft "nothing to do" shape the old
+    // auth.user.email lookup produced when it found no cohort.
+    return NextResponse.json({ success: true, data: null });
+  }
+
+  const labUserId = await resolveStudentLabUserId(ctx.email, ctx.isTest, `${ctx.firstName} ${ctx.lastName}`);
+  if (!labUserId) {
+    return NextResponse.json({ success: false, error: 'Could not resolve student account' }, { status: 500 });
+  }
+
+  try {
+    const actor: Actor = { id: labUserId, role: 'student', email: ctx.email, cohortId: ctx.cohortId };
     const result = await fn(createPreinternshipService(createSupabaseStore()), actor);
     return NextResponse.json({ success: true, data: result ?? null });
   } catch (e) {

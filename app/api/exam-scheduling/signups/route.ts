@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
+import { resolveActingStudentEmail } from '@/lib/view-as-student';
 import {
   getRosterStudent,
   getSeatUsage,
@@ -14,12 +15,16 @@ import {
 /**
  * Student signup endpoints — scoped by ROSTER MEMBERSHIP, not role.
  *
- * A signer is eligible iff their session email matches a `students` row
- * (spec §2). This admits a roster student whose lab_users role happens to be
- * 'instructor' (they teach a class), while never exposing instructor/admin
- * surfaces — those gate on the DB role elsewhere. No role check here means
- * no role bypass here: these endpoints only read/write the caller's OWN
- * signup, keyed to the roster row resolved from their session email.
+ * A signer is eligible iff their EFFECTIVE email matches a `students` row
+ * (spec §2) — their own session email, or (STUDENT VIEW 4/4 item c) the
+ * picked student's email while an admin+ is viewing as them, resolved via
+ * the same view-as helper the /api/student routes use. This admits a
+ * roster student whose lab_users role happens to be 'instructor' (they
+ * teach a class), while never exposing instructor/admin surfaces — those
+ * gate on the DB role elsewhere. No role check here means no role bypass
+ * here: these endpoints only read/write the caller's OWN signup, keyed to
+ * the roster row resolved from the effective email. Writes while viewing
+ * as a non-test student are blocked (403) inside resolveActingStudentEmail.
  *
  * GET  /api/exam-scheduling/signups → { student, signup } for the caller
  *      (student: null → "account not linked" UI, never silent failure)
@@ -36,13 +41,15 @@ const SIGNUP_SELECT = `
   )
 `;
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
   }
+  const acting = await resolveActingStudentEmail(request);
+  if (acting instanceof NextResponse) return acting;
 
-  const student = await getRosterStudent(session.user.email);
+  const student = await getRosterStudent(acting.email);
   if (!student) {
     // Spec §3: unlinked email → explicit blocked state, not a silent failure.
     // Staff hit this state by design (they're not on the student roster) —
@@ -88,12 +95,10 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-  }
+  const acting = await resolveActingStudentEmail(request);
+  if (acting instanceof NextResponse) return acting;
 
-  const student = await getRosterStudent(session.user.email);
+  const student = await getRosterStudent(acting.email);
   if (!student) {
     return NextResponse.json(
       { success: false, error: 'Your account is not linked to a student record yet. Contact an administrator.' },

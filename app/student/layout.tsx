@@ -25,6 +25,7 @@ import {
   Users,
   CalendarCheck,
   ClipboardCheck,
+  ClipboardList,
   Calendar,
   Award,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { isStudent, hasMinRole } from '@/lib/permissions';
 import ConsentGate from '@/components/ConsentGate';
 import ViewingAsStudentBanner from '@/components/ViewingAsStudentBanner';
+import { SA_STORAGE } from '@/lib/preinternship-storage';
 
 interface StudentUser {
   id: string;
@@ -51,6 +53,7 @@ export default function StudentLayout({
   const [viewingAsName, setViewingAsName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showSelfAssessmentNav, setShowSelfAssessmentNav] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -63,6 +66,16 @@ export default function StudentLayout({
       fetchUser();
     }
   }, [session]);
+
+  // Nav entry shows while a self-assessment window is open OR the student
+  // already has a submission (so they can still open/review it after it
+  // closes) — STUDENT VIEW 4/4 item (b).
+  useEffect(() => {
+    if (!user) return;
+    SA_STORAGE.getMyStatus()
+      .then((st) => setShowSelfAssessmentNav(st.open || !!st.response))
+      .catch(() => setShowSelfAssessmentNav(false));
+  }, [user]);
 
   const fetchUser = async () => {
     try {
@@ -123,6 +136,9 @@ export default function StudentLayout({
     { href: '/student/skill-evaluations', label: 'Skill Results', icon: Award },
     // EKG Progress, Scenarios removed — no page exists at /student/ekg or
     // /student/scenarios (dangling links, found during STUDENT VIEW 3/4 live check)
+    ...(showSelfAssessmentNav
+      ? [{ href: '/student/self-assessment', label: 'Self-Assessment', icon: ClipboardList }]
+      : []),
     { href: '/cases', label: 'Case Studies', icon: BookOpenCheck },
     { href: '/student/available-labs', label: 'Lab Sign-Ups', icon: CalendarCheck },
     { href: '/student/labs', label: 'Lab History', icon: Calendar },

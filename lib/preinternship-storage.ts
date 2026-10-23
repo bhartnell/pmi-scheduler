@@ -19,7 +19,7 @@ export const SA_STORAGE = {
     call<{ response: unknown | null; locked: boolean; open: boolean; closesAt: string | null }>('/api/preinternship/my-response'),
   saveMyResponse: (response: unknown) =>
     call<null>('/api/preinternship/my-response', { method: 'PUT', body: JSON.stringify(response) }),
-  listResponses: () => call<{ id: string; data: unknown; locked: boolean }[]>('/api/preinternship/responses'),
+  listResponses: () => call<{ id: string; data: unknown; locked: boolean; isTest: boolean }[]>('/api/preinternship/responses'),
   deleteResponse: (id: string) =>
     call<null>(`/api/preinternship/responses/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   unlockResponse: (id: string) =>
