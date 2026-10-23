@@ -128,7 +128,7 @@ export async function saveTestAttempt(
 
   const attemptedAt = new Date();
   const remediationDueAt =
-    input.result === 'NR'
+    input.result === 'NR' && input.phase !== 'practice'
       ? new Date(attemptedAt.getTime() + REMEDIATION_WINDOW_DAYS * 24 * 60 * 60 * 1000).toISOString()
       : null;
 
@@ -148,6 +148,8 @@ export async function saveTestAttempt(
       instructor_initials: input.instructor_initials || null,
       instructor_number: input.instructor_number || null,
       retest_of: input.retest_of || null,
+      watch: input.watch ?? null,
+      watch_note: input.watch_note || null,
       remediation_due_at: remediationDueAt,
       attempted_at: attemptedAt.toISOString(),
       client_uuid: input.client_uuid || null,
@@ -201,9 +203,9 @@ export async function saveTestAttempt(
         scenario_id: input.scenario_id || null,
         date: day.date,
         course: 'PALS',
-        phase: 'testing',
+        phase: input.phase ?? 'testing',
         result: input.result === 'PASS' ? 'pass' : 'fail',
-        notes: `PALS testing checklist — ${input.result}`,
+        notes: `PALS ${input.phase ?? 'testing'} checklist — ${input.result}`,
       });
       if (tlErr) {
         console.error('[team_lead_log] DROPPED (pals): insert failed', {
