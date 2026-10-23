@@ -93,9 +93,22 @@ function fmtTime(t: string | null): string {
   return m ? `${h12}:${String(m).padStart(2, '0')}${ap}` : `${h12}${ap}`;
 }
 
+/** Events of a test cohort (Student view 2/4): shown with a Test badge, never counted. */
+function isTestEvent(e: BandEvent): boolean {
+  return e.metadata?.is_test === true;
+}
+
 function openStations(e: BandEvent): number {
   const n = e.metadata?.open_station_count;
-  return e.event_type === 'lab' && typeof n === 'number' ? n : 0;
+  return e.event_type === 'lab' && !isTestEvent(e) && typeof n === 'number' ? n : 0;
+}
+
+function TestBadge() {
+  return (
+    <span className="ml-1 inline-block rounded bg-gray-200 px-1 py-0.5 align-middle text-[10px] font-bold uppercase leading-none text-gray-700 dark:bg-gray-700 dark:text-gray-200">
+      Test
+    </span>
+  );
 }
 
 function isMine(e: BandEvent, name: string | null): boolean {
@@ -219,6 +232,7 @@ function EventChip({
     >
       <div className="font-semibold truncate" style={{ color: e.color }}>
         {draft ? `${e.title} (draft)` : e.title}
+        {isTestEvent(e) && <TestBadge />}
       </div>
       <div className="text-gray-600 dark:text-gray-300 truncate">
         {time}
@@ -277,6 +291,7 @@ function EventChip({
       <div className="min-w-0 flex-1 font-semibold truncate" style={{ color: e.color }}>
         {e.start_time ? `${fmtTime(e.start_time)} ` : ''}
         {draft ? `${e.title} (draft)` : e.title}
+        {isTestEvent(e) && <TestBadge />}
       </div>
     );
     return (
