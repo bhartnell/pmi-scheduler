@@ -19,7 +19,7 @@ import {
   summaryPlain, summaryStandalone, type SaEdit, type SaRecord, type Tone,
 } from '@/lib/preinternship-review';
 
-interface Row { id: string; data: SaRecord; locked: boolean }
+interface Row { id: string; data: SaRecord; locked: boolean; isTest: boolean }
 
 const TAG: Record<Tone, string> = {
   bad: 'border-red-600 text-red-700 dark:text-red-400',
@@ -92,7 +92,10 @@ export default function PreInternshipReviewPage() {
   const cohorts = useMemo(() => [...new Set(records.map((r) => r.data.cohort).filter(Boolean))].sort() as string[], [records]);
   const shown = records.filter((r) =>
     (!cohort || r.data.cohort === cohort) && (!q || (r.data.name || '').toLowerCase().includes(q.toLowerCase())));
-  const reviewedCount = records.filter((r) => isFullyRated(reviews[`r-${r.id}`])).length;
+  // Test-student submissions (students.is_test) stay visible with a Test tag
+  // but never count toward the roster's reviewed/total tally (STUDENT VIEW 4/4 item d).
+  const nonTestRecords = useMemo(() => records.filter((r) => !r.isTest), [records]);
+  const reviewedCount = nonTestRecords.filter((r) => isFullyRated(reviews[`r-${r.id}`])).length;
   const current = records.find((r) => r.id === selected) || null;
 
   const openRecord = (id: string, recs: Row[], revs: Record<string, SaEdit>) => {
@@ -154,7 +157,8 @@ export default function PreInternshipReviewPage() {
   };
 
   const exportCsv = () => {
-    const csv = buildCsv(records.map((r) => ({ rec: r.data, edit: reviews[`r-${r.id}`] || null })));
+    // Agency-bound bulk export — test-student rows never belong in it (item d).
+    const csv = buildCsv(records.filter((r) => !r.isTest).map((r) => ({ rec: r.data, edit: reviews[`r-${r.id}`] || null })));
     download(`pre-internship-self-assessments-${new Date().toISOString().slice(0, 10)}.csv`, csv, 'text/csv');
   };
 
@@ -196,7 +200,7 @@ export default function PreInternshipReviewPage() {
         <aside className={`${card} space-y-3 lg:sticky lg:top-20`}>
           <div className="flex items-center justify-between">
             <h2 className="font-bold text-gray-900 dark:text-white">Students</h2>
-            <Tag>{reviewedCount}/{records.length} reviewed</Tag>
+            <Tag>{reviewedCount}/{nonTestRecords.length} reviewed</Tag>
           </div>
           <input className={input} placeholder="Search by name" aria-label="Search students" value={q} onChange={(e) => setQ(e.target.value)} />
           <select className={input} aria-label="Filter by cohort" value={cohort} onChange={(e) => setCohort(e.target.value)}>
@@ -214,6 +218,7 @@ export default function PreInternshipReviewPage() {
                   <span className="block font-semibold text-gray-900 dark:text-white">{r.data.name || 'Unnamed'}</span>
                   <span className="flex flex-wrap gap-1 mt-1">
                     <Tag>{r.data.cohort || 'No cohort'}</Tag>
+                    {r.isTest && <Tag tone="warn">Test</Tag>}
                     {done ? <Tag tone="ok">Reviewed</Tag> : <Tag>Awaiting review</Tag>}
                     {c && done && <Tag tone={c.cls}>{c.label}</Tag>}
                     {r.locked && <Tag tone="info">Locked</Tag>}

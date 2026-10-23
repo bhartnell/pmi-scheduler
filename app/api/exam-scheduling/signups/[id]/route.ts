@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { resolveActingStudentEmail } from '@/lib/view-as-student';
 import {
   getRosterStudent,
   getSeatUsage,
@@ -11,6 +10,9 @@ import {
 
 /**
  * Owner-only signup management (roster-scoped — see ../route.ts header).
+ * Same view-as substitution as ../route.ts: the acting email is resolved
+ * via resolveActingStudentEmail, which blocks (403) a write made while
+ * viewing as a real (non-test) student.
  *
  * PATCH /api/exam-scheduling/signups/[id] — reschedule
  *   Body: { session_id, uses_own_computer? }
@@ -48,12 +50,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-  }
+  const acting = await resolveActingStudentEmail(request);
+  if (acting instanceof NextResponse) return acting;
   const { id } = await params;
-  const own = await loadOwnSignup(id, session.user.email);
+  const own = await loadOwnSignup(id, acting.email);
   if ('error' in own) return own.error;
   const { student, signup } = own;
 
@@ -130,15 +130,13 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
-  }
+  const acting = await resolveActingStudentEmail(request);
+  if (acting instanceof NextResponse) return acting;
   const { id } = await params;
-  const own = await loadOwnSignup(id, session.user.email);
+  const own = await loadOwnSignup(id, acting.email);
   if ('error' in own) return own.error;
   const { student, signup } = own;
 

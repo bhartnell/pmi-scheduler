@@ -55,6 +55,8 @@ export interface StoredResponse {
   cohortId: string | null;
   locked: boolean;
   data: ResponseData;
+  /** True when the submitting student is a test student (students.is_test). Set by listResponses only. */
+  isTest?: boolean;
 }
 
 export interface CohortWindow {
@@ -209,7 +211,7 @@ export function createPreinternshipService(store: Store) {
 
     async listResponses(actor: Actor) {
       requireInstructor(actor);
-      return (await store.listResponses()).map((r) => ({ id: r.id, data: r.data, locked: r.locked }));
+      return (await store.listResponses()).map((r) => ({ id: r.id, data: r.data, locked: r.locked, isTest: !!r.isTest }));
     },
 
     async deleteResponse(actor: Actor, id: string) {
