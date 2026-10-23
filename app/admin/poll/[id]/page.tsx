@@ -6,8 +6,9 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
-import { ArrowLeft, Home, ChevronRight, BarChart3 } from 'lucide-react';
+import { ArrowLeft, BarChart3 } from 'lucide-react';
 import Scheduler from '@/components/scheduler';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 
 export default function AdminPollPage() {
   const params = useParams();
@@ -74,21 +75,7 @@ export default function AdminPollPage() {
       {/* Navigation Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-2">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/scheduling/polls" className="hover:text-blue-600 dark:hover:text-blue-400">
-              Scheduler
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900 dark:text-white truncate max-w-[200px] sm:max-w-none">
-              {poll.title}
-            </span>
-          </div>
+          <BreadcrumbNames entityTitle={poll.title} />
 
           {/* Back Link & Title */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">

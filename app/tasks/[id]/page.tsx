@@ -16,7 +16,7 @@ import {
   CheckCircle2,
   XCircle,
   Send,
-  Home,
+  
   ClipboardList
 } from 'lucide-react';
 import {
@@ -29,6 +29,7 @@ import {
   STATUS_LABELS,
   PRIORITY_LABELS
 } from '@/types/tasks';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 
 interface LabUser {
   id: string;
@@ -278,20 +279,7 @@ export default function TaskDetailPage() {
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          {/* Breadcrumbs */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mt-4">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <span className="text-gray-400">/</span>
-            <Link href="/tasks" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <ClipboardList className="w-3 h-3" />
-              Tasks
-            </Link>
-            <span className="text-gray-400">/</span>
-            <span className="text-gray-900 dark:text-white truncate max-w-[200px]">{task.title}</span>
-          </div>
+          <BreadcrumbNames entityTitle={task.title} />
         </div>
       </header>
 

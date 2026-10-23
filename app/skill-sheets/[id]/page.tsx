@@ -5,8 +5,8 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { useEffect, useState, useCallback, Suspense } from 'react';
 import Link from 'next/link';
 import {
-  Home,
-  ChevronRight,
+  
+  
   Printer,
   FileText,
   Package,
@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { openPrintWindow, printHeader, printFooter, escapeHtml } from '@/lib/print-utils';
 import { formatInstructorName } from '@/lib/format-name';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -684,21 +685,7 @@ function SkillSheetDetailContent() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm no-print">
         <div className="max-w-screen-2xl mx-auto px-4 py-4">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3.5 h-3.5" />
-              Home
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/academics/skill-sheets" className="hover:text-blue-600 dark:hover:text-blue-400">
-              Skill Sheets
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900 dark:text-white font-medium truncate max-w-[200px]">
-              {sheet.skill_name}
-            </span>
-          </nav>
+          <BreadcrumbNames entityTitle={sheet.skill_name} />
 
           {/* Title & Badges */}
           <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
