@@ -5,8 +5,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  Home,
-  ChevronRight,
+  
+  
   GraduationCap,
   AlertCircle,
   Download,
@@ -17,6 +17,7 @@ import {
   Users,
   BarChart3,
 } from 'lucide-react';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 
 // -----------------------------------------------
 // Types
@@ -350,30 +351,7 @@ export default function CohortCompletionPage() {
       {/* Header */}
       <div className="bg-white dark:bg-gray-800 shadow-sm">
         <div className="max-w-screen-2xl mx-auto px-4 py-6">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-4 overflow-x-auto whitespace-nowrap">
-            <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-              <Home className="w-3 h-3" />
-              Home
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">
-              Lab Management
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link href="/academics/cohorts" className="hover:text-blue-600 dark:hover:text-blue-400">
-              Cohorts
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <Link
-              href={`/academics/cohorts/${cohortId}`}
-              className="hover:text-blue-600 dark:hover:text-blue-400"
-            >
-              {cohort.label}
-            </Link>
-            <ChevronRight className="w-4 h-4" />
-            <span className="text-gray-900 dark:text-white font-medium">Completion</span>
-          </div>
+          <BreadcrumbNames entityTitle={cohort.label} />
 
           {/* Title row */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

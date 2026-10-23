@@ -9,7 +9,7 @@ import {
   ChevronLeft,
   Calendar as CalendarIcon,
   Clock,
-  Home,
+  
   GraduationCap,
   AlertCircle,
   Download,
@@ -17,6 +17,7 @@ import {
   MapPin,
 } from 'lucide-react';
 import { downloadICS, parseLocalDate } from '@/lib/ics-export';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 
 // -----------------------------------------------
 // Types
@@ -467,34 +468,7 @@ export default function CohortCalendarPage() {
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              {/* Breadcrumb */}
-              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1 overflow-x-auto whitespace-nowrap">
-                <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1">
-                  <Home className="w-3 h-3" />
-                  Home
-                </Link>
-                <ChevronRight className="w-4 h-4 flex-shrink-0" />
-                <Link href="/labs" className="hover:text-blue-600 dark:hover:text-blue-400">
-                  Lab Management
-                </Link>
-                <ChevronRight className="w-4 h-4 flex-shrink-0" />
-                <Link href="/academics/cohorts" className="hover:text-blue-600 dark:hover:text-blue-400">
-                  Cohorts
-                </Link>
-                <ChevronRight className="w-4 h-4 flex-shrink-0" />
-                {cohort ? (
-                  <Link
-                    href={`/academics/cohorts/${cohortId}`}
-                    className="hover:text-blue-600 dark:hover:text-blue-400"
-                  >
-                    {cohortLabel}
-                  </Link>
-                ) : (
-                  <span>...</span>
-                )}
-                <ChevronRight className="w-4 h-4 flex-shrink-0" />
-                <span>Calendar</span>
-              </div>
+              <BreadcrumbNames entityTitle={cohortLabel || undefined} />
 
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg hidden sm:block">

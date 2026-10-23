@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import {
-  ChevronRight,
+  
   ChevronDown,
   ChevronUp,
   Printer,
@@ -23,6 +23,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import { parseDateSafe } from '@/lib/utils';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 
 // ============================================================
 // Types
@@ -371,18 +372,7 @@ export default function StudentPortfolioPage() {
 
       <div className="max-w-screen-2xl mx-auto px-4 py-6 print-full-width">
 
-        {/* Breadcrumb - hidden on print */}
-        <nav className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 mb-6 print-hide" aria-label="Breadcrumb">
-          <Link href="/" className="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">Home</Link>
-          <ChevronRight className="w-4 h-4" />
-          <Link href="/labs" className="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">Labs</Link>
-          <ChevronRight className="w-4 h-4" />
-          <Link href="/academics/students" className="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">Students</Link>
-          <ChevronRight className="w-4 h-4" />
-          <Link href={`/academics/students/${studentId}`} className="hover:text-gray-700 dark:hover:text-gray-200 transition-colors">{studentName}</Link>
-          <ChevronRight className="w-4 h-4" />
-          <span className="text-gray-700 dark:text-gray-200 font-medium">Portfolio</span>
-        </nav>
+        <BreadcrumbNames entityTitle={studentName} />
 
         {/* Page actions - hidden on print */}
         <div className="flex items-center justify-between mb-6 print-hide">
