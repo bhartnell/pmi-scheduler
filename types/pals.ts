@@ -65,6 +65,11 @@ export interface SavePalsAttemptInput {
   instructor_initials?: string | null;
   instructor_number?: string | null;
   retest_of?: string | null;
+  /** Pass-but-watch flag + typed note (practice attempts); NULL = not assessed. */
+  watch?: boolean | null;
+  watch_note?: string | null;
+  /** Team-lead log phase; defaults to 'testing'. */
+  phase?: 'practice' | 'testing';
   criterion_results: PalsCriterionResultInput[];
   team_member_ids?: string[]; // non-graded team members (pals_attempt_students)
   /** Offline idempotency key — minted client-side, deduped server-side. */
@@ -86,6 +91,8 @@ export interface PalsTestAttempt {
   instructor_initials: string | null;
   instructor_number: string | null;
   retest_of: string | null;
+  watch: boolean | null;
+  watch_note: string | null;
   remediation_due_at: string | null;
   attempted_at: string;
   client_uuid: string | null;
