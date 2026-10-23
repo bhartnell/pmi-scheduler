@@ -192,6 +192,7 @@ export function buildBreadcrumbItems(
   pathname: string,
   entityTitle?: string,
   customSegments?: Record<string, string>,
+  customHrefs?: Record<string, string>,
 ): BreadcrumbItem[] {
   const segments = pathname.split('/').filter(Boolean);
   const items: BreadcrumbItem[] = [];
@@ -202,10 +203,14 @@ export function buildBreadcrumbItems(
   // Build up breadcrumb items for each path segment
   for (let i = 0; i < segments.length; i++) {
     const pathUpToHere = segments.slice(0, i + 1).join('/');
-    const href = '/' + pathUpToHere;
+    const href = customHrefs?.[pathUpToHere] ?? '/' + pathUpToHere;
     const isLast = i === segments.length - 1;
     const segment = segments[i];
 
+    // An empty custom label drops a crumb whose path is not a page of its own
+    if (customSegments?.[pathUpToHere] === '') {
+      continue;
+    }
     // Check custom segments first (by full path or segment name)
     if (customSegments?.[pathUpToHere]) {
       items.push({ label: customSegments[pathUpToHere], href, isCurrent: isLast });

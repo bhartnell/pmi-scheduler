@@ -5,6 +5,8 @@ import { useEffect, useSyncExternalStore } from 'react';
 export interface BreadcrumbNameState {
   entityTitle?: string;
   customSegments?: Record<string, string>;
+  /** Overrides the link target of a crumb, keyed by its path without the leading slash. */
+  customHrefs?: Record<string, string>;
 }
 
 const EMPTY: BreadcrumbNameState = {};
@@ -35,11 +37,16 @@ export function useBreadcrumbNames(): BreadcrumbNameState {
  * name of the record it shows (e.g. the lab day title) in place of "Detail".
  * Replaces the per-page Breadcrumbs component.
  */
-export default function BreadcrumbNames({ entityTitle, customSegments }: BreadcrumbNameState) {
+export default function BreadcrumbNames({ entityTitle, customSegments, customHrefs }: BreadcrumbNameState) {
   const segKey = customSegments ? JSON.stringify(customSegments) : '';
+  const hrefKey = customHrefs ? JSON.stringify(customHrefs) : '';
   useEffect(() => {
-    publish({ entityTitle, customSegments: segKey ? JSON.parse(segKey) : undefined });
+    publish({
+      entityTitle,
+      customSegments: segKey ? JSON.parse(segKey) : undefined,
+      customHrefs: hrefKey ? JSON.parse(hrefKey) : undefined,
+    });
     return () => publish(EMPTY);
-  }, [entityTitle, segKey]);
+  }, [entityTitle, segKey, hrefKey]);
   return null;
 }

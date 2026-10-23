@@ -17,6 +17,7 @@ import NremtCandidateInstructions from '@/components/NremtCandidateInstructions'
 import NremtTimer, { isDualStation } from '@/components/NremtTimer';
 import type { NremtTimerHandle } from '@/components/NremtTimer';
 import NremtStickyNotesPanel from '@/components/NremtStickyNotesPanel';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 import LabDayChat from '@/components/lab-day/LabDayChat';
 import SkillDrillReference from '@/components/lab-day/SkillDrillReference';
 import { useToast } from '@/components/Toast';
@@ -1272,6 +1273,18 @@ export default function GradeStationPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      {/* Crumbs: Labs > lab day (links to it) > Station n. /labs/grade and /labs/grade/station are not pages. */}
+      {station?.lab_day?.id && (
+        <BreadcrumbNames
+          entityTitle={`Station ${station.station_number}`}
+          customSegments={{
+            'labs/grade': station.lab_day.title || `Lab day ${station.lab_day.date}`,
+            'labs/grade/station': '',
+          }}
+          customHrefs={{ 'labs/grade': `/labs/schedule/${station.lab_day.id}` }}
+        />
+      )}
+
       {/* Timer Banner — FIX 4: Hidden on NREMT testing days (rotation timer irrelevant) */}
       {station?.lab_day?.id && !station?.lab_day?.is_nremt_testing && (
         <TimerBanner

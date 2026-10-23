@@ -7,6 +7,7 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+trim-6-7-grader-crumb | TRIM 6/7: station grader crumb reads Labs > lab day (links to it) > Station n instead of dead Grading/Station/Detail links; BreadcrumbNames gains customHrefs, empty custom label drops a crumb. Card 3fb5cd1c...e1a4
 test-flag-calendar | Student view 2/4c: test-cohort lab days get a Test badge on the home calendar, are excluded from labs-this-week/month and the Needs-instructors ring, and are never synced to the shared Google calendar (planLabDayEvent returns 'test-cohort'). Card 4015cd1c...7e3c
 test-flag-exports | Student view 2/4c: admin data export, data-exports and scheduled report emails skip is_test cohorts/students (nightly backup export and graduate writes deliberately unfiltered). Card 4015cd1c...7e3c
 osce-admin-entry | Testing > OSCE (/osce) sends admins to the coordinator view (straight to the event when exactly one is open/draft), everyone else to evaluator entry as before; "Evaluator signup page" link on coordinator list + event pages; ?evaluator=1 forces evaluator entry. Card 4015cd1c...dd5
