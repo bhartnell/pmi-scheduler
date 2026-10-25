@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
 
     const { data: stations } = await supabase
       .from('lab_stations')
-      .select('id, station_number, scenario_id, instructor_name, instructor_id, room, custom_title, station_notes')
+      .select('id, station_number, scenario_id, instructor_name, instructor_id, room, custom_title, station_notes, skill_name, skill_sheet_url, instructions_url, rotation_minutes')
       .eq('lab_day_id', labDayId)
       .order('station_number', { ascending: true });
 

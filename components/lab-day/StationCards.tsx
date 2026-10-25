@@ -348,6 +348,8 @@ export default function StationCards({
                   ? certCourse === 'pals'
                     ? `/labs/pals/grade?labDayId=${labDayId}&stationId=${station.id}`
                     : `/labs/adv-cert/grade?labDayId=${labDayId}&stationId=${station.id}`
+                  : certCourse === 'pals'
+                  ? `/labs/pals/practice?labDayId=${labDayId}&stationId=${station.id}`
                   : `/labs/grade/station/${station.id}`}
                 className={`flex-1 min-w-[100px] inline-flex items-center justify-center gap-2 px-3 py-2 text-sm text-white rounded-lg ${isAdvCertMegacode ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700'}`}
               >
