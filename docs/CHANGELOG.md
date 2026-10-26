@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-26
 
+pals-p5c-2a | PALS P5c-2a: new table course_agenda_lines (migration 20261026_course_agenda_lines.sql, applied to prod: 32 PALS rows seeded from lib/pals-day-structure.ts, RLS on) + lib/course-agenda-plan.ts / lib/course-agenda-generator.ts (dry-run-first generator writing pmi_schedule_blocks for any cohort's course days; section blocks take times + link from the cohort's lab_days; default status draft). No cohort data written (that is P5c-2b). Revert: git revert + DROP TABLE course_agenda_lines.
 pals-p3c | PALS P3c/4: temporary regroup now saved. New table pals_group_moves (overlay, lab_group_members untouched, ended_at instead of delete), POST/PATCH /api/adv-cert/pals-moves, pals-hub returns active moves, coordinator chips get a 'return' action. Migration 20261026_pals_group_moves.sql applied (additive, empty table).
 pals-p5d | PALS P5d: per-day Course notes card on the PALS/ACLS coordinator and collapsed on the hub header; new table adv_cert_course_notes (additive, RLS, rollback) + /api/adv-cert/course-notes + components/aha/CourseNotesCard.tsx.
 student-view-5d | STUDENT VIEW 5d: student layout header, home, My Progress and Self-Assessment follow docs/LAYOUT.md (clamp gutters, no max-w-7xl/6xl/3xl wrappers; self-assessment form capped at 1800px as a content page). Class changes only, no DB writes.
