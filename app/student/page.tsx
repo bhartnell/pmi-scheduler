@@ -139,6 +139,7 @@ export default function StudentHomePage() {
                 <div className="min-w-0">
                   <div className="text-gray-900 dark:text-white truncate">{fmtDate(c.date)}, {c.title}</div>
                   {c.room && <div className="text-xs text-gray-500 dark:text-gray-400">{c.room}</div>}
+                  {c.notesToStudent && <div className="mt-1 text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">Notes from your instructor: {c.notesToStudent}</div>}
                 </div>
                 <span className={`text-[11px] rounded px-2 py-0.5 whitespace-nowrap ${PILL[c.result]}`}>
                   {c.result === 'pass' ? 'pass' : c.result === 'needs_rep' ? 'needs another rep' : 'led'}
@@ -146,7 +147,7 @@ export default function StudentHomePage() {
               </div>
             )) : <p className="text-sm text-gray-500 dark:text-gray-400">No team-lead cases yet.</p>}
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              A list of results only. Criteria and instructor notes stay with your instructors.
+              Results and your instructor&apos;s notes to you. Criteria and instructor-only notes stay with your instructors.
             </p>
           </Card>
         </div>

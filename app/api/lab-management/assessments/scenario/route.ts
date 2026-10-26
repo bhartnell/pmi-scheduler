@@ -114,6 +114,8 @@ export async function POST(request: NextRequest) {
       // Comments and scores
       overall_comments: body.overall_comments || null,
       scenario_notes: body.scenario_notes || null,
+      // Instructor-only; student endpoints must never select this column.
+      instructor_notes: body.instructor_notes || null,
       overall_score: body.overall_score ?? body.satisfactory_count ?? 0,
 
       // Flagging fields
