@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-26
 
+pals-p5c-2a | PALS P5c-2a: new table course_agenda_lines (migration 20261026_course_agenda_lines.sql, applied to prod: 32 PALS rows seeded from lib/pals-day-structure.ts, RLS on) + lib/course-agenda-plan.ts / lib/course-agenda-generator.ts (dry-run-first generator writing pmi_schedule_blocks for any cohort's course days; section blocks take times + link from the cohort's lab_days; default status draft). No cohort data written (that is P5c-2b). Revert: git revert + DROP TABLE course_agenda_lines.
 home-cal-2 | HOME CAL 2: /api/calendar/unified gains include=osce (osce_time_blocks, own yellow color; admin+ see all, others only blocks of events they host or observe); home week/month request it. Read-only, no schema change.
 pals-p5c-item3 | PALS P5c item 3: hub Stations region renders Day 1 and Day 2 as two separate bordered cards, each with its own dated header (components/aha/CertBoard.tsx, ACLS board too). Code only, no DB writes. Items 2 (internal schedule rows) split out, see card.
 
