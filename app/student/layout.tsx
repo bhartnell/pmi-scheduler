@@ -8,7 +8,7 @@
  */
 
 import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { ParkAwareLink as Link } from '@/components/ModuleGuard';
 import {
@@ -16,24 +16,28 @@ import {
   LogOut,
   User,
   LayoutDashboard,
-  CheckSquare,
-  BookOpenCheck,
   TrendingUp,
   Menu,
   X,
-  UserCircle,
-  Users,
-  CalendarCheck,
-  ClipboardCheck,
   ClipboardList,
-  Calendar,
-  Award,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { isStudent, hasMinRole } from '@/lib/permissions';
 import ConsentGate from '@/components/ConsentGate';
 import ViewingAsStudentBanner from '@/components/ViewingAsStudentBanner';
 import { SA_STORAGE } from '@/lib/preinternship-storage';
+
+// STUDENT VIEW 5: pages students no longer reach. The page files stay (archive,
+// don't delete; bring-back: peer evals, skill sheets) but are unreachable.
+const HIDDEN_STUDENT_PATHS = [
+  '/student/completions',
+  '/student/skill-sheets',
+  '/student/skill-evaluations',
+  '/student/available-labs',
+  '/student/labs',
+  '/student/peer-eval',
+  '/student/profile',
+];
 
 interface StudentUser {
   id: string;
@@ -49,6 +53,7 @@ export default function StudentLayout({
 }) {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<StudentUser | null>(null);
   const [viewingAsName, setViewingAsName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -76,6 +81,12 @@ export default function StudentLayout({
       .then((st) => setShowSelfAssessmentNav(st.open || !!st.response))
       .catch(() => setShowSelfAssessmentNav(false));
   }, [user]);
+
+  useEffect(() => {
+    if (pathname && HIDDEN_STUDENT_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) {
+      router.replace('/student');
+    }
+  }, [pathname, router]);
 
   const fetchUser = async () => {
     try {
@@ -128,23 +139,14 @@ export default function StudentLayout({
 
   if (!session || !user) return null;
 
+  // STUDENT VIEW 5: Home, My Progress (cases, clinical hours, compliance docs),
+  // and Self-Assessment only while its window is open or a submission exists.
   const navLinks = [
-    { href: '/student', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/student', label: 'Home', icon: LayoutDashboard },
     { href: '/student/my-progress', label: 'My Progress', icon: TrendingUp },
-    { href: '/student/completions', label: 'Stations', icon: CheckSquare },
-    { href: '/student/skill-sheets', label: 'Skill Sheets', icon: ClipboardCheck },
-    { href: '/student/skill-evaluations', label: 'Skill Results', icon: Award },
-    // EKG Progress, Scenarios removed — no page exists at /student/ekg or
-    // /student/scenarios (dangling links, found during STUDENT VIEW 3/4 live check)
     ...(showSelfAssessmentNav
       ? [{ href: '/student/self-assessment', label: 'Self-Assessment', icon: ClipboardList }]
       : []),
-    { href: '/cases', label: 'Case Studies', icon: BookOpenCheck },
-    { href: '/student/available-labs', label: 'Lab Sign-Ups', icon: CalendarCheck },
-    { href: '/student/labs', label: 'Lab History', icon: Calendar },
-    // Documents, Attendance Appeals - archived, hidden from nav (TRIM 3/5)
-    { href: '/student/peer-eval', label: 'Peer Evals', icon: Users },
-    { href: '/student/profile', label: 'My Profile', icon: UserCircle },
   ];
 
   return (

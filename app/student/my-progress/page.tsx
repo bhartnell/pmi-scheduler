@@ -25,11 +25,8 @@ import {
   Clock,
   AlertCircle,
   Activity,
-  Calendar,
   FileCheck,
   Stethoscope,
-  BookOpen,
-  MapPin,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react';
@@ -159,16 +156,6 @@ function formatDate(dateStr: string | null): string {
     day: 'numeric',
     year: 'numeric',
   });
-}
-
-function formatTime(timeStr: string | null): string {
-  if (!timeStr) return '';
-  // time is "HH:MM:SS" or "HH:MM"
-  const [h, m] = timeStr.split(':');
-  const hour = parseInt(h, 10);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${displayHour}:${m} ${ampm}`;
 }
 
 function ProgressBar({
@@ -332,20 +319,8 @@ export default function MyProgressPage() {
     );
   }
 
-  const { student, overview, skills, scenarios, clinicalHours, attendance, compliance, upcomingLabs } =
+  const { student, overview, scenarios, clinicalHours, compliance } =
     data;
-
-  // ─── Skill categories ────────────────────────────────────────────────────
-  const skillsByCategory = (skills || []).reduce<Record<string, Skill[]>>(
-    (acc, skill) => {
-      const cat = skill.category || 'other';
-      if (!acc[cat]) acc[cat] = [];
-      acc[cat].push(skill);
-      return acc;
-    },
-    {}
-  );
-  const sortedCategories = Object.keys(skillsByCategory).sort();
 
   // ─── Clinical hours rows ─────────────────────────────────────────────────
   const clinicalDepts = clinicalHours
@@ -362,14 +337,6 @@ export default function MyProgressPage() {
         { label: 'EMS Ride-Along', hours: clinicalHours.ems_ridealong_hours || 0, shifts: clinicalHours.ems_ridealong_shifts || 0 },
       ].filter((d) => d.hours > 0)
     : [];
-
-  // ─── Attendance status config ─────────────────────────────────────────────
-  const attendanceConfig: Record<string, { label: string; color: string; bg: string; iconColor: string }> = {
-    present: { label: 'Present', color: 'text-green-700 dark:text-green-400', bg: 'bg-green-100 dark:bg-green-900/30', iconColor: 'text-green-600 dark:text-green-400' },
-    late: { label: 'Late', color: 'text-yellow-700 dark:text-yellow-400', bg: 'bg-yellow-100 dark:bg-yellow-900/30', iconColor: 'text-yellow-600 dark:text-yellow-400' },
-    excused: { label: 'Excused', color: 'text-blue-700 dark:text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30', iconColor: 'text-blue-600 dark:text-blue-400' },
-    absent: { label: 'Absent', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-100 dark:bg-red-900/30', iconColor: 'text-red-600 dark:text-red-400' },
-  };
 
   // ─── Compliance status config ─────────────────────────────────────────────
   const complianceConfig: Record<string, { label: string; color: string; bg: string }> = {
@@ -542,81 +509,6 @@ export default function MyProgressPage() {
         </div>
       </SectionCard>
 
-      {/* ── Section 2: Skills Completion ── */}
-      <SectionCard
-        title="Skills Completion"
-        icon={CheckCircle}
-        iconColor="bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400"
-        defaultOpen={false}
-      >
-        {sortedCategories.length === 0 ? (
-          <EmptyState message="No skills data available yet." icon={CheckCircle} />
-        ) : (
-          <div className="space-y-6">
-            {sortedCategories.map((category) => {
-              const catSkills = skillsByCategory[category];
-              const catCompleted = catSkills.filter((s) => s.completed).length;
-              return (
-                <div key={category}>
-                  {/* Category header */}
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 capitalize">
-                      {category.replace(/_/g, ' ')}
-                    </h3>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      {catCompleted} / {catSkills.length}
-                    </span>
-                  </div>
-
-                  {/* Skills list */}
-                  <div className="space-y-1.5">
-                    {catSkills.map((skill) => (
-                      <div
-                        key={skill.id}
-                        className={`flex items-center justify-between p-3 rounded-lg border ${
-                          skill.completed
-                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                            : 'bg-gray-50 dark:bg-gray-700/30 border-gray-200 dark:border-gray-700'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                          {skill.completed ? (
-                            <CheckCircle className="w-4 h-4 text-green-600 dark:text-green-400 shrink-0" />
-                          ) : (
-                            <Clock className="w-4 h-4 text-gray-400 shrink-0" />
-                          )}
-                          <span
-                            className={`text-sm font-medium truncate ${
-                              skill.completed
-                                ? 'text-green-800 dark:text-green-200'
-                                : 'text-gray-700 dark:text-gray-300'
-                            }`}
-                          >
-                            {skill.name}
-                          </span>
-                        </div>
-                        {skill.completed && (
-                          <div className="text-right ml-3 shrink-0">
-                            <p className="text-xs text-green-700 dark:text-green-400">
-                              {formatDate(skill.signedOffAt)}
-                            </p>
-                            {skill.signedOffBy && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
-                                {skill.signedOffBy.split('@')[0]}
-                              </p>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </SectionCard>
-
       {/* ── Section 3: Scenario Assessment History ── */}
       <SectionCard
         title="Scenario Assessment History"
@@ -769,78 +661,6 @@ export default function MyProgressPage() {
         )}
       </SectionCard>
 
-      {/* ── Section 5: Attendance Record ── */}
-      <SectionCard
-        title="Attendance Record"
-        icon={Calendar}
-        iconColor="bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
-        defaultOpen={false}
-      >
-        {(attendance || []).length === 0 ? (
-          <EmptyState message="No attendance records found yet." icon={Calendar} />
-        ) : (
-          <>
-            {/* Summary bar */}
-            <div className="flex items-center gap-6 mb-5 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-amber-700 dark:text-amber-300">
-                  {overview?.attendanceRate ?? 0}%
-                </p>
-                <p className="text-xs text-amber-600 dark:text-amber-400">Attendance Rate</p>
-              </div>
-              <div className="flex-1">
-                <ProgressBar
-                  value={overview?.attendancePresent || 0}
-                  max={overview?.attendanceTotal || 1}
-                  colorClass={
-                    (overview?.attendanceRate || 0) >= 90
-                      ? 'bg-green-500'
-                      : (overview?.attendanceRate || 0) >= 75
-                      ? 'bg-yellow-500'
-                      : 'bg-red-500'
-                  }
-                />
-                <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                  {overview?.attendancePresent || 0} present / {overview?.attendanceTotal || 0} total
-                </p>
-              </div>
-            </div>
-
-            {/* Attendance list */}
-            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
-              {attendance!.map((record) => {
-                const cfg = attendanceConfig[record.status] || attendanceConfig.absent;
-                return (
-                  <div
-                    key={record.id}
-                    className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 dark:bg-gray-700/30"
-                  >
-                    <span
-                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color} shrink-0`}
-                    >
-                      {cfg.label}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {record.labTitle || 'Lab Day'}
-                      </p>
-                      {record.notes && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                          {record.notes}
-                        </p>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 shrink-0">
-                      {formatDate(record.labDate || record.markedAt)}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </SectionCard>
-
       {/* ── Section 6: Compliance Documents ── */}
       <SectionCard
         title="Compliance Documents"
@@ -928,54 +748,6 @@ export default function MyProgressPage() {
         )}
       </SectionCard>
 
-      {/* ── Section 7: Upcoming Labs ── */}
-      <SectionCard
-        title="Upcoming Labs"
-        icon={BookOpen}
-        iconColor="bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
-        defaultOpen
-      >
-        {(upcomingLabs || []).length === 0 ? (
-          <EmptyState message="No upcoming labs scheduled." icon={BookOpen} />
-        ) : (
-          <div className="space-y-3">
-            {upcomingLabs!.map((lab) => (
-              <div
-                key={lab.id}
-                className="flex items-start gap-4 p-4 rounded-lg bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800"
-              >
-                {/* Date badge */}
-                <div className="shrink-0 text-center bg-indigo-600 text-white rounded-lg px-3 py-2 min-w-[52px]">
-                  <p className="text-xs uppercase font-medium leading-none">
-                    {new Date(lab.date + 'T00:00:00').toLocaleDateString('en-US', { month: 'short' })}
-                  </p>
-                  <p className="text-xl font-bold leading-tight">
-                    {new Date(lab.date + 'T00:00:00').getDate()}
-                  </p>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-indigo-900 dark:text-indigo-100">
-                    {lab.title || 'Lab Day'}
-                  </p>
-                  {(lab.startTime || lab.endTime) && (
-                    <p className="text-sm text-indigo-700 dark:text-indigo-300">
-                      {lab.startTime ? formatTime(lab.startTime) : ''}
-                      {lab.startTime && lab.endTime ? ' - ' : ''}
-                      {lab.endTime ? formatTime(lab.endTime) : ''}
-                    </p>
-                  )}
-                  {lab.location && (
-                    <p className="flex items-center gap-1 text-xs text-indigo-600 dark:text-indigo-400 mt-0.5">
-                      <MapPin className="w-3 h-3" />
-                      {lab.location}
-                    </p>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </SectionCard>
     </div>
   );
 }
