@@ -360,6 +360,7 @@ Student-facing portal. 12 pages.
 | `/student/documents` | Documents |
 | `/student/labs` | Lab schedule (student view) |
 | `/student/my-progress` | Progress dashboard |
+| `/student/open-lab` | Open lab (STUDENT VIEW 5b). Upcoming open lab sessions only (never scheduled lab days); sign up / remove reuse `/api/open-lab/signup`. Student nav entry. |
 | `/student/peer-eval` | Peer eval workflow |
 | `/student/profile` | Profile |
 | `/student/self-assessment` | Pre-Internship Self-Assessment (Rae's tool, RAE R2/3). Student only; gated per cohort by `preinternship_windows` (closed = "Not open for your cohort yet"); submit, return, update until an instructor review locks it. Entry: To-do card on `/student`. |
