@@ -89,7 +89,7 @@ export default function StudentHomePage() {
   const pals = home && statusText(home.pals.status, home.pals.date);
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="px-[clamp(16px,2.75vw,96px)] py-6">
       <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Hi, {first}</h1>
         {data?.student?.cohortNumber && (
