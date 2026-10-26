@@ -44,10 +44,9 @@ export const PALS_2025_DAY1_AGENDA: PalsAgendaBlock[] = [
   { id: 'd1-l9b', start: '13:55', durationMinutes: 25, label: 'L9B — Arrhythmia Video Case Discussions', type: 'lecture' },
   { id: 'd1-l10', start: '14:20', durationMinutes: 15, label: 'L10 — Management of Post-Cardiac Arrest Care', type: 'lecture' },
   { id: 'd1-break2', start: '14:35', durationMinutes: 10, label: 'Break', type: 'break' },
-  { id: 'd1-sectiona', start: '14:45', durationMinutes: 60, label: 'Section A — Learning Stations (3 stations x 20 min)', type: 'lab' },
-  { id: 'd1-break3', start: '15:45', durationMinutes: 5, label: 'Break', type: 'break' },
-  { id: 'd1-sectionb', start: '15:50', durationMinutes: 100, label: 'Section B — Case Scenario Practice (4 cases)', type: 'lab' },
-  { id: 'd1-end', start: '17:30', durationMinutes: 0, label: 'End of Day 1', type: 'lecture' },
+  { id: 'd1-sectiona', start: '14:45', durationMinutes: 80, label: 'Section A — Learning Stations (4 stations x 20 min)', type: 'lab' },
+  { id: 'd1-sectionb', start: '16:05', durationMinutes: 100, label: 'Section B — Case Scenario Practice (4 cases)', type: 'lab' },
+  { id: 'd1-end', start: '17:45', durationMinutes: 0, label: 'End of Day 1', type: 'lecture' },
 ];
 
 export const PALS_2025_DAY2_AGENDA: PalsAgendaBlock[] = [
