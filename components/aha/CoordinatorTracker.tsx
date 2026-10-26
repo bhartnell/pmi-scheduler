@@ -28,6 +28,7 @@ import {
   FileArchive, Download, ChevronDown, ChevronRight, Eye, X,
 } from 'lucide-react';
 import RoomsPanel from '@/components/aha/RoomsPanel';
+import CourseNotesCard from '@/components/aha/CourseNotesCard';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 import type { LabDay, Station as LabStation, Instructor, InstructorAvailabilityEntry } from '@/components/lab-day/types';
@@ -456,6 +457,7 @@ function AclsBody({
             </section>
 
             <HowFinalTested course="acls" />
+            <CourseNotesCard cohortId={day?.cohort_id} course="acls" dates={day?.date ? [String(day.date).slice(0, 10)] : []} />
             <RoomsPanel days={[{ id: fullLabDay.id, date: String(fullLabDay.date).slice(0, 10) }]} refreshTick={refreshTick} onChanged={load} />
             <WhatDiffers />
           </div>
@@ -655,6 +657,8 @@ function PalsBody({ fullLabDay, refreshTick }: { fullLabDay: LabDay; refreshTick
       </div>
 
       <HowFinalTested course="pals" />
+
+      <CourseNotesCard cohortId={cohortId} course="pals" dates={hub?.dates || []} initialDate={String(fullLabDay.date).slice(0, 10)} />
 
       <section className="print:hidden">
         <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1"><Users className="w-4 h-4" /> Groups - final rounds and practice history</h2>
