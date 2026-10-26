@@ -18,7 +18,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { withReturnTo } from '@/lib/return-to';
 import { useEffect, useState, useCallback, useMemo, useRef, Suspense } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, ChevronUp, ChevronDown, ChevronRight, Timer, Users } from 'lucide-react';
+import { Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, ChevronUp, ChevronDown, ChevronRight, Timer, Users } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
@@ -134,7 +134,6 @@ function BoardContent({ course }: { course: CertCourse }) {
 
   interface Cohort { id: string; cohort_number?: number | null; program?: { abbreviation?: string | null } | null }
   const [cohort, setCohort] = useState<Cohort | null>(null);
-  const [courseOptions, setCourseOptions] = useState<{ id: string; label: string }[]>([]);
   const [dates, setDates] = useState<string[]>([]);
   const [labDays, setLabDays] = useState<LabDay[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
@@ -222,11 +221,6 @@ function BoardContent({ course }: { course: CertCourse }) {
 
   useEffect(() => {
     if (status !== 'authenticated') return;
-    fetch('/api/adv-cert/aha-hub').then(r => r.json()).then(d => {
-      if (!d.success) return;
-      setCourseOptions((d.courses?.[course] || []).filter((c: { cohort?: { id?: string } }) => c.cohort?.id)
-        .map((c: { cohort: { id: string; cohort_number?: number; program?: { abbreviation?: string } } }) => ({ id: c.cohort.id, label: `${c.cohort.program?.abbreviation || ''} G${c.cohort.cohort_number ?? ''}`.trim() })));
-    }).catch(() => {});
     fetch('/api/lab-management/instructors').then(r => r.json()).then(d => {
       if (d.success) { setInstructorOpts(d.instructors || []); setFullInstructors(d.instructors || []); }
     }).catch(() => {});
@@ -867,28 +861,21 @@ function BoardContent({ course }: { course: CertCourse }) {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="w-full px-4 py-3">
         <div className="print:hidden">
-          <div className="flex items-center gap-3 mb-3">
-            <Link href="/labs/aha-hub" className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400"><ArrowLeft className="w-4 h-4" /> AHA Hub (ACLS + PALS)</Link>
-          </div>
           <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{course === 'acls' ? 'ACLS Board' : 'PALS Hub'}</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">{cohortLabel}{dates.length ? ` · ${dates.map(prettyDate).join(' + ')}` : ''}</p>
             </div>
             <div className="flex items-center gap-2">
+              {visibleLabDays.length > 0 && (
+                <Link href={`/labs/schedule/${visibleLabDays[0].id}/acls-coordinator`} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700">
+                  <Users className="w-3.5 h-3.5" /> Coordinator
+                </Link>
+              )}
               <button onClick={load} disabled={loading} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"><RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh</button>
               <button onClick={printHandout} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-md border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"><Printer className="w-3.5 h-3.5" /> Print</button>
             </div>
           </div>
-          {courseOptions.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2 mb-3">
-              <span className="text-xs text-gray-500 dark:text-gray-400">Course:</span>
-              {courseOptions.map(c => (
-                <Link key={c.id} href={`${cfg.boardPath}?cohortId=${c.id}`}
-                  className={`px-3 min-h-[36px] inline-flex items-center rounded-md text-sm border ${cohort?.id === c.id ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'}`}>{c.label}</Link>
-              ))}
-            </div>
-          )}
           <div className="flex flex-wrap items-center gap-3 mb-3">
             {dates.length > 1 && (
               <div className="flex gap-1">

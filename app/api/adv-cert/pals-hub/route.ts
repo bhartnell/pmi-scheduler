@@ -139,7 +139,7 @@ export async function GET(request: NextRequest) {
       const { data: att } = await supabase
         .from('pals_test_attempts')
         .select(`
-          id, lab_day_id, lab_group_id, result, attempted_at, discipline,
+          id, lab_day_id, lab_group_id, result, attempted_at, discipline, watch, watch_note,
           team_lead:students!pals_test_attempts_student_id_fkey(id, first_name, last_name),
           scenario:scenarios!pals_test_attempts_scenario_id_fkey(id, name:title, case_code)
         `)
