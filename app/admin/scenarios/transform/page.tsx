@@ -284,14 +284,6 @@ export default function ScenarioTransformPage() {
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="flex-1 min-w-0">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400 mb-1">
-            <Link href="/admin" className="hover:text-gray-700 dark:hover:text-gray-200">Admin</Link>
-            <ChevronRight className="h-3 w-3" />
-            <Link href="/admin/scenarios/audit" className="hover:text-gray-700 dark:hover:text-gray-200">Scenarios</Link>
-            <ChevronRight className="h-3 w-3" />
-            <span className="text-gray-700 dark:text-gray-300">Transform Structure</span>
-          </div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Wand2 className="h-6 w-6 text-amber-500" />
             Scenario Structure Transform
