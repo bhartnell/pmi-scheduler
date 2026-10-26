@@ -12055,3 +12055,5 @@ Unofficial ACLS learning-station tracker. Not a certification record.
 - Uniqueness: partial unique (station_id, student_id) WHERE student_id IS NOT NULL; partial unique (station_id, lab_group_id) WHERE lab_group_id IS NOT NULL (old constraint dropped; PostgREST upsert cannot target these, API does update-or-insert)
 - Index on lab_day_id; RLS enabled, no policies (service-role API only). Snapshot: `_backup_acls_learning_marks_20261006_pre_group`
 - Last updated: 2026-10-06 (PR #270)
+
+- **`pals_group_moves`** (PALS P3c/4, 2026-10-26, migration `20261026_pals_group_moves.sql`) — temporary regroup overlay on PALS days: `cohort_id`, `student_id`, `from_group_id`, `to_group_id` (FKs to cohorts/students/lab_groups), `duration` ('round'|'today'|'course'), `move_date`, `created_by` (lab_users), `created_at`, `ended_at`. Active = `ended_at IS NULL` and (`duration <> 'today'` or `move_date` = today). `lab_group_members` is never changed. RLS on, service role only.
