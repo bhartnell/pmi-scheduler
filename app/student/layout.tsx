@@ -20,6 +20,8 @@ import {
   Menu,
   X,
   ClipboardList,
+  FlaskConical,
+  CalendarCheck,
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { isStudent, hasMinRole } from '@/lib/permissions';
@@ -59,6 +61,7 @@ export default function StudentLayout({
   const [loading, setLoading] = useState(true);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [showSelfAssessmentNav, setShowSelfAssessmentNav] = useState(false);
+  const [showExamSignupNav, setShowExamSignupNav] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -80,6 +83,24 @@ export default function StudentLayout({
     SA_STORAGE.getMyStatus()
       .then((st) => setShowSelfAssessmentNav(st.open || !!st.response))
       .catch(() => setShowSelfAssessmentNav(false));
+  }, [user]);
+
+  // Exam signup shows only while an exam session is open for signup (future
+  // date) or the student already holds a slot — STUDENT VIEW 5b.
+  useEffect(() => {
+    if (!user) return;
+    Promise.all([
+      fetch('/api/exam-scheduling/sessions').then((r) => r.json()),
+      fetch('/api/exam-scheduling/signups').then((r) => r.json()),
+    ])
+      .then(([sess, me]) => {
+        const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
+        const anyOpen = (sess?.sessions ?? []).some(
+          (s: { status: string; date: string }) => s.status === 'open' && s.date >= today
+        );
+        setShowExamSignupNav(anyOpen || !!me?.signup);
+      })
+      .catch(() => setShowExamSignupNav(false));
   }, [user]);
 
   useEffect(() => {
@@ -144,8 +165,12 @@ export default function StudentLayout({
   const navLinks = [
     { href: '/student', label: 'Home', icon: LayoutDashboard },
     { href: '/student/my-progress', label: 'My Progress', icon: TrendingUp },
+    { href: '/student/open-lab', label: 'Open Lab', icon: FlaskConical },
     ...(showSelfAssessmentNav
       ? [{ href: '/student/self-assessment', label: 'Self-Assessment', icon: ClipboardList }]
+      : []),
+    ...(showExamSignupNav
+      ? [{ href: '/exam-scheduling', label: 'Exam Signup', icon: CalendarCheck }]
       : []),
   ];
 
