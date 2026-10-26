@@ -2014,6 +2014,7 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | email_status | text | YES | 'pending'::text |  |
 | status | text | YES | 'complete'::text |  |
 | scenario_notes | text | YES |  |  |
+| instructor_notes | text | YES |  | Instructor-only; never returned by student endpoints (migration `20261026_scenario_assessments_instructor_notes.sql`, applied; 3178 rows, all NULL at apply) |
 
 **Foreign Keys:**
 - `cohort_id` -> `cohorts.id` (`scenario_assessments_cohort_id_fkey`)

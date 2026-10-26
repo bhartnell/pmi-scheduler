@@ -77,6 +77,7 @@ export default function GradeStationPage() {
   const [criticalActions, setCriticalActions] = useState<Record<string, boolean>>({});
   const [criteriaRatings, setCriteriaRatings] = useState<CriteriaRating[]>([]);
   const [overallComments, setOverallComments] = useState('');
+  const [instructorNotes, setInstructorNotes] = useState('');
   const [scenarioNotes, setScenarioNotes] = useState('');
   const [showScenarioDetails, setShowScenarioDetails] = useState(true);
 
@@ -779,6 +780,7 @@ export default function GradeStationPage() {
         criteria_ratings: criteriaRatings,
         overall_comments: overallComments,
         scenario_notes: scenarioNotes || null,
+        instructor_notes: instructorNotes || null,
         overall_score: satisfactoryCount,
         issue_level: issueLevel,
         flag_categories: flagCategories.length > 0 ? flagCategories : null,
@@ -895,6 +897,7 @@ export default function GradeStationPage() {
           });
           setCriteriaRatings(buildInitialCriteriaRatings());
           setOverallComments('');
+          setInstructorNotes('');
           setScenarioNotes('');
           setExaminerNotes('');
           setIssueLevel('none');
@@ -939,6 +942,7 @@ export default function GradeStationPage() {
         criteria_ratings: criteriaRatings,
         overall_comments: overallComments,
         scenario_notes: scenarioNotes || null,
+        instructor_notes: instructorNotes || null,
         overall_score: satisfactoryCount,
         issue_level: issueLevel,
         flag_categories: flagCategories.length > 0 ? flagCategories : null,
@@ -979,6 +983,7 @@ export default function GradeStationPage() {
     selectedGroupId,
     criteriaRatings,
     overallComments,
+    instructorNotes,
     satisfactoryCount,
     issueLevel,
     flagCategories,
@@ -1177,20 +1182,37 @@ export default function GradeStationPage() {
           onUpdateSubItems={updateSubItems}
         />}
 
-        {/* Overall Comments — ONLY for scenario stations */}
+        {/* Notes — ONLY for scenario stations */}
         {!isSkillsStation && (
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
-            <h2 className="font-semibold text-gray-900 dark:text-white mb-3">Overall Comments</h2>
-            <textarea
-              value={overallComments}
-              onChange={(e) => {
-                setOverallComments(e.target.value);
-                triggerAutoSave();
-              }}
-              placeholder="Additional comments, feedback, or observations..."
-              rows={4}
-              className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
-            />
+          <div className="grid grid-cols-2 max-md:grid-cols-1 gap-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <h2 className="font-semibold text-gray-900 dark:text-white mb-1">Notes to the student</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Shown to the team lead on My cases.</p>
+              <textarea
+                value={overallComments}
+                onChange={(e) => {
+                  setOverallComments(e.target.value);
+                  triggerAutoSave();
+                }}
+                placeholder="What this student should work on, feedback, observations..."
+                rows={4}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-4">
+              <h2 className="font-semibold text-gray-900 dark:text-white mb-1">Instructor notes</h2>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Never shown to students.</p>
+              <textarea
+                value={instructorNotes}
+                onChange={(e) => {
+                  setInstructorNotes(e.target.value);
+                  triggerAutoSave();
+                }}
+                placeholder="For instructors only..."
+                rows={4}
+                className="w-full px-3 py-2 border dark:border-gray-600 rounded-lg text-gray-900 dark:text-white bg-white dark:bg-gray-700"
+              />
+            </div>
           </div>
         )}
 

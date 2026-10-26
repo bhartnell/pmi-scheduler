@@ -8,8 +8,9 @@ import { formatCohortNumber } from '@/lib/format-cohort';
  * GET /api/student/home
  * Student view home (mock v3): the signed-in student's own team-lead progress,
  * scenario results list and cohort lab days (or, for an admin viewing as a
- * student via card STUDENT VIEW 3/4, that student's — read-only). Never
- * returns notes, criteria or watch flags.
+ * student via card STUDENT VIEW 3/4, that student's — read-only). Returns the
+ * student-visible notes only (overall_comments); never instructor_notes,
+ * criteria or watch flags.
  */
 export async function GET(request: NextRequest) {
   const auth = await requireStudentContext(request);
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     const { data: logs, error: lErr } = await sb
       .from('team_lead_log')
-      .select('date, course, phase, result, scenario:scenarios(title), station:lab_stations(custom_title, room)')
+      .select('date, course, phase, result, scenario:scenarios(title), station:lab_stations(custom_title, room), assessment:scenario_assessments!team_lead_log_scenario_assessment_id_fkey(overall_comments)')
       .eq('student_id', student.id);
     if (lErr) throw new Error(`team lead log: ${lErr.message}`);
 
@@ -47,7 +48,8 @@ export async function GET(request: NextRequest) {
     const leadRows: StudentLeadRow[] = (logs ?? []).map((r) => {
       const scenario = one(r.scenario as { title: string | null } | { title: string | null }[] | null);
       const station = one(r.station as { custom_title: string | null; room: string | null } | { custom_title: string | null; room: string | null }[] | null);
-      return { date: r.date, course: r.course, phase: r.phase, result: r.result, title: scenario?.title ?? station?.custom_title ?? null, room: station?.room ?? null };
+      const assessment = one(r.assessment as { overall_comments: string | null } | { overall_comments: string | null }[] | null);
+      return { date: r.date, course: r.course, phase: r.phase, result: r.result, title: scenario?.title ?? station?.custom_title ?? null, room: station?.room ?? null, notesToStudent: assessment?.overall_comments ?? null };
     });
 
     const home = buildStudentHome(leadRows, (days ?? []) as StudentLabDayRow[], today);

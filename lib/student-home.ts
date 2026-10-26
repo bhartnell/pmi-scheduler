@@ -6,6 +6,8 @@ export interface StudentLeadRow extends TeamLeadLogRow {
   date: string;
   title: string | null;
   room: string | null;
+  /** Graded sheet's student-visible comments (overall_comments). Never instructor_notes. */
+  notesToStudent?: string | null;
 }
 
 export interface StudentLabDayRow {
@@ -30,7 +32,7 @@ export interface StudentHome {
   };
   acls: { status: CourseStatus; date: string | null };
   pals: { status: CourseStatus; date: string | null; upcomingStart: string | null; upcomingEnd: string | null };
-  cases: Array<{ date: string; title: string; room: string | null; result: 'pass' | 'needs_rep' | 'led' }>;
+  cases: Array<{ date: string; title: string; room: string | null; result: 'pass' | 'needs_rep' | 'led'; notesToStudent: string | null }>;
   comingUp: Array<{ date: string; title: string; startTime: string | null; kind: 'lab' | 'cert' }>;
 }
 
@@ -80,6 +82,7 @@ export function buildStudentHome(
     },
     cases: sorted.slice(0, maxCases).map((r) => ({
       date: r.date, title: r.title ?? 'Scenario', room: r.room,
+      notesToStudent: r.notesToStudent?.trim() || null,
       result: norm(r.result) === 'pass' ? 'pass' : norm(r.result) === 'fail' ? 'needs_rep' : 'led',
     })),
     comingUp: perDate.slice(0, maxUpcoming).map((d) => ({
