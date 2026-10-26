@@ -21,6 +21,7 @@ import Link from 'next/link';
 import { Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, ChevronUp, ChevronDown, ChevronRight, Timer, Users } from 'lucide-react';
 import LabTimer from '@/components/LabTimer';
 import EditStationModal from '@/components/lab-day/EditStationModal';
+import CourseNotesCard from '@/components/aha/CourseNotesCard';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 import type { LabDay as FullLabDay, Station as FullStation, Instructor, InstructorAvailabilityEntry } from '@/components/lab-day/types';
 
@@ -898,6 +899,7 @@ function BoardContent({ course }: { course: CertCourse }) {
               ))}
             </div>
           </div>
+          <div className="mb-3"><CourseNotesCard cohortId={cohort?.id} course={course} dates={dates} initialDate={activeDate !== 'all' ? activeDate : null} defaultOpen={false} /></div>
           {saveError && <div role="alert" className="mb-3 rounded-md border border-red-300 bg-red-50 dark:bg-red-900/20 dark:border-red-800 px-3 py-2 text-sm text-red-700 dark:text-red-300">{saveError}</div>}
         </div>
 

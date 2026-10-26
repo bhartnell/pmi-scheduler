@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-26
 
+pals-p5d | PALS P5d: per-day Course notes card on the PALS/ACLS coordinator and collapsed on the hub header; new table adv_cert_course_notes (additive, RLS, rollback) + /api/adv-cert/course-notes + components/aha/CourseNotesCard.tsx.
 pals-p5c-item3 | PALS P5c item 3: hub Stations region renders Day 1 and Day 2 as two separate bordered cards, each with its own dated header (components/aha/CertBoard.tsx, ACLS board too). Code only, no DB writes. Items 2 (internal schedule rows) split out, see card.
 student-view-5b | STUDENT VIEW 5b: new /student/open-lab page (GET /api/student/open-lab; sign up/remove reuse /api/open-lab/signup) plus Open Lab and Exam Signup (only while a session is open or the student holds a slot) in the student nav. Code only, no DB writes.
 home-cal-1 | HOME CAL item 1: month '+n more' expands the day in place (Show less to fold), no longer navigates to /calendar. components/home/HomeCalendarBand.tsx only.
