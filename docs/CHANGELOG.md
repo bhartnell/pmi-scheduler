@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-26
 
+home-cal-2 | HOME CAL 2: /api/calendar/unified gains include=osce (osce_time_blocks, own yellow color; admin+ see all, others only blocks of events they host or observe); home week/month request it. Read-only, no schema change.
 pals-p5c-item3 | PALS P5c item 3: hub Stations region renders Day 1 and Day 2 as two separate bordered cards, each with its own dated header (components/aha/CertBoard.tsx, ACLS board too). Code only, no DB writes. Items 2 (internal schedule rows) split out, see card.
 
 home-cal-5 | HOME CAL 5 (dropdown half): Today tile open station rows show an Assign instructor select (Me first, then roster from /api/lab-management/instructors) that saves through the existing PATCH stations/[id]; falls back to the old text if the roster fails to load. Code only, no DB writes. Who's-coming/week-tile agreement not touched.
