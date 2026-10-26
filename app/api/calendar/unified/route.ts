@@ -33,6 +33,7 @@ const PROGRAM_COLORS: Record<string, string> = {
   exam: '#EF4444',
   volunteer: '#14B8A6',
   other: '#6B7280',
+  course: '#E11D48',
 };
 
 function mapProgramAbbr(abbr: string | undefined | null): CalendarEvent['program'] {
@@ -43,6 +44,17 @@ function mapProgramAbbr(abbr: string | undefined | null): CalendarEvent['program
   if (lower === 'aemt' || lower === 'ae') return 'aemt';
   if (lower === 'lvfr' || lower === 'lv') return 'lvfr';
   return 'other';
+}
+
+/**
+ * A lab day is a flagged course day (ACLS / PALS / NREMT / testing) when the
+ * data says so: priority_flag set, cert_course set, or a testing title. Never
+ * decided by date (HOME CAL 4).
+ */
+function isFlaggedCourseDay(ld: { priority_flag?: string | null; cert_course?: string | null; title?: string | null }): boolean {
+  if (ld.cert_course) return true;
+  if (ld.priority_flag && ld.priority_flag !== 'normal') return true;
+  return /nremt|testing/i.test(ld.title ?? '');
 }
 
 function getColor(program: CalendarEvent['program'], eventType: CalendarEvent['event_type']): string {
@@ -207,6 +219,7 @@ export async function GET(request: NextRequest) {
           .from('lab_days')
           .select(`
             id, date, title, start_time, end_time, section_number, section_label,
+            priority_flag, cert_course,
             cohort:cohorts(
               id, cohort_number, is_test,
               program:programs(id, name, abbreviation)
@@ -270,6 +283,9 @@ export async function GET(request: NextRequest) {
             // (the overwhelming majority) read unchanged.
             const sectionSuffix = ldSec > 1 ? ` · ${ldSecLabel || `Section ${ldSec}`}` : '';
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const courseDay = isFlaggedCourseDay(ld as any);
+            const openStationCount = stations.filter(s => !s.instructor_name).length;
             events.push({
               id: `lab-${ld.id}`,
               source: 'lab_day',
@@ -278,7 +294,7 @@ export async function GET(request: NextRequest) {
               start_time: ld.start_time ?? null,
               end_time: ld.end_time ?? null,
               program,
-              color: getColor(program, 'lab'),
+              color: courseDay ? PROGRAM_COLORS.course : getColor(program, 'lab'),
               cohort_number: cohort?.cohort_number,
               instructor_names: instructorNames,
               linked_id: ld.id,
@@ -286,7 +302,10 @@ export async function GET(request: NextRequest) {
               event_type: 'lab',
               metadata: {
                 station_count: stations.length,
-                open_station_count: stations.filter(s => !s.instructor_name).length,
+                // A flagged course day with nobody on it still needs instructors
+                // even when it has no stations (NREMT testing day).
+                open_station_count: courseDay && instructorNames.length === 0 ? Math.max(openStationCount, 1) : openStationCount,
+                ...(courseDay ? { course_day: true } : {}),
                 section_number: ldSec,
                 section_label: ldSecLabel || undefined,
                 ...(cohort?.is_test ? { is_test: true } : {}),

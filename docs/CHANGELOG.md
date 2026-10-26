@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-26
 
+home-cal-4-course-days | HOME CAL 4: /api/calendar/unified marks a lab day as a course day from its data (cert_course set, priority_flag not normal, or an NREMT/testing title - never by date), colors it in the AHA/NREMT type color and counts a staffless course day as needing instructors so the home chip gets the dashed ring; real start/end already passed through. app/api/calendar/unified/route.ts only. No DB writes. Card 4055cd1c...e443
+
 student-view-5b | STUDENT VIEW 5b: new /student/open-lab page (GET /api/student/open-lab; sign up/remove reuse /api/open-lab/signup) plus Open Lab and Exam Signup (only while a session is open or the student holds a slot) in the student nav. Code only, no DB writes.
 home-cal-1 | HOME CAL item 1: month '+n more' expands the day in place (Show less to fold), no longer navigates to /calendar. components/home/HomeCalendarBand.tsx only.
 nav-6-7-transform-crumb | TRIM 6/7 slice: removed the hand-rolled Admin > Scenarios > Transform breadcrumb from app/admin/scenarios/transform/page.tsx (the app-wide line already renders it). Code only. Remaining 6/7 work: nine section landings (6/7b-2, Claude AI).
