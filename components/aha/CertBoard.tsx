@@ -689,8 +689,11 @@ function BoardContent({ course }: { course: CertCourse }) {
         const secs = visibleLabDays.filter(d => d.date === date && !skillsRow(d) && d.stations.length > 0)
           .sort((a, b) => (layout.rows[eventForSection.get(a.id) || '']?.at ?? toMin(a.start_time)) - (layout.rows[eventForSection.get(b.id) || '']?.at ?? toMin(b.start_time)));
         return (
-          <section key={date} className="space-y-3">
-            {visibleDates.length > 1 && <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">Day {dayNo(date)}</h3>}
+          <section key={date} aria-label={`Day ${dayNo(date)} stations`} className="space-y-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-3">
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 pb-2">
+              <h3 className="text-sm font-bold text-gray-800 dark:text-gray-100">Day {dayNo(date)} - {prettyDate(date)}</h3>
+              <span className="text-xs text-gray-500 dark:text-gray-400">{secs.length} {secs.length === 1 ? 'section' : 'sections'}</span>
+            </div>
             {secs.length === 0 && <div className="text-xs text-gray-400">No station sections for this day.</div>}
             {secs.map(d => (
               <div key={d.id} onClick={() => setSelectedSection(s => (s === d.id ? null : d.id))}
