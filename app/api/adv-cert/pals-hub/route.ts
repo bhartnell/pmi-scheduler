@@ -17,7 +17,7 @@ import { requireAuth } from '@/lib/api-auth';
  *              chosen cohort's PALS days.
  *
  * Returns: { cohort, dates[], labDays[] (with stations), groups[] (with
- *            members), attempts[] (across all those lab_days, with the
+ *            members), moves[] (active temporary regroups), attempts[] (across all those lab_days, with the
  *            tested student as the team lead) }.
  */
 export async function GET(request: NextRequest) {
@@ -148,6 +148,16 @@ export async function GET(request: NextRequest) {
       attempts = att || [];
     }
 
+    // Active temporary regroups (PALS P3c/4): overlay only, lab_group_members untouched.
+    // 'today' moves lapse on their own after the day they were made.
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const { data: movesRaw } = await supabase
+      .from('pals_group_moves')
+      .select('id, student_id, from_group_id, to_group_id, duration, move_date')
+      .eq('cohort_id', cohortId)
+      .is('ended_at', null);
+    const moves = (movesRaw || []).filter((m) => m.duration !== 'today' || m.move_date === todayStr);
+
     const cohort = (labDays[0] as any)?.cohort ?? null;
     const dates = [...new Set(labDays.map((d) => d.date))].sort();
 
@@ -158,6 +168,7 @@ export async function GET(request: NextRequest) {
       labDays: labDaysWithStations,
       groups: groupsWithMembers,
       attempts,
+      moves,
     });
   } catch (error) {
     console.error('Error loading PALS hub:', error);
