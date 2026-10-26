@@ -4,10 +4,12 @@
  * primary plus station_instructors co-instructors) and confirmed shift
  * signups, de-duplicated by email (name when there is no email). "Still open"
  * is the number of stations with no instructor. Pure: callers pass rows in.
+ * People on the program's default roster (minus opt-outs) are on the day too,
+ * the same membership the home week tile's You're in reads (HOME CAL 5).
  * The lab day page's Who's coming block (card 4005cd1c...882e) reuses this.
  */
 
-export type AttendeeSource = 'role' | 'station' | 'signup';
+export type AttendeeSource = 'role' | 'station' | 'signup' | 'default';
 
 export interface AttendeeInput {
   roles: { role: string; name: string | null; email?: string | null; is_part_time?: boolean | null }[];
@@ -18,6 +20,8 @@ export interface AttendeeInput {
     co_instructors?: { name: string | null; email?: string | null }[];
   }[];
   signups: string[];
+  /** Default roster for the day's program, already minus anyone who used Remove me. */
+  defaults?: { name: string | null; email?: string | null; is_part_time?: boolean | null }[];
 }
 
 export interface Attendee {
@@ -70,6 +74,7 @@ export function resolveLabDayAttendees(input: AttendeeInput): { attendees: Atten
     for (const c of s.co_instructors ?? []) add(c.name, c.email, label);
   }
   for (const n of input.signups) add(n, null, 'signed up');
+  for (const d of input.defaults ?? []) add(d.name, d.email, 'default roster', d.is_part_time);
 
   const attendees = [...new Set(byKey.values())];
   const open = input.stations.filter(s => !s.instructor_name && !s.instructor_email).length;

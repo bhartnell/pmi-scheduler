@@ -129,9 +129,43 @@ export async function GET(request: NextRequest) {
         });
       });
     }
+
+    // Default roster per program minus Remove-me opt-outs (same rule as
+    // my-membership and the lab day Who's coming). A failed read only narrows
+    // the list; it never blocks the response.
+    const defaultsByProgram: Record<string, { id: string; name: string | null; email: string | null; is_part_time: boolean | null }[]> = {};
+    const optedOut = new Set<string>();
+    try {
+      const dayIds = days.map(d => d.id);
+      const [rosterRes, optoutRes] = await Promise.all([
+        supabase
+          .from('program_default_instructors')
+          .select('user:lab_users!inner(id, name, email, is_part_time, is_active), program:programs!inner(abbreviation)'),
+        dayIds.length > 0
+          ? supabase.from('lab_day_optouts').select('lab_day_id, user_id').in('lab_day_id', dayIds)
+          : Promise.resolve({ data: [] as { lab_day_id: string; user_id: string }[] }),
+      ]);
+      const one = <T,>(v: T | T[] | null | undefined): T | null => (Array.isArray(v) ? v[0] ?? null : v ?? null);
+      type RosterUser = { id: string; name: string | null; email: string | null; is_part_time: boolean | null; is_active: boolean | null };
+      for (const r of (rosterRes.data || []) as unknown as { user: RosterUser | RosterUser[] | null; program: { abbreviation: string } | { abbreviation: string }[] | null }[]) {
+        const u = one(r.user);
+        const abbr = String(one(r.program)?.abbreviation || '').toUpperCase();
+        if (!u || u.is_active === false || !abbr) continue;
+        (defaultsByProgram[abbr] ||= []).push({ id: u.id, name: u.name || null, email: u.email || null, is_part_time: u.is_part_time ?? null });
+      }
+      for (const o of (optoutRes.data || []) as { lab_day_id: string; user_id: string }[]) {
+        optedOut.add(`${o.lab_day_id}|${o.user_id}`);
+      }
+    } catch (err) {
+      console.error('my-labs default roster read failed:', err);
+    }
+
     const withSignups = days.map(({ station_people, ...d }) => {
       const signups = signupsByDate[d.date] || [];
-      const { attendees, open } = resolveLabDayAttendees({ roles: d.roles, stations: station_people, signups });
+      const defaults = (defaultsByProgram[String(d.program || '').toUpperCase()] || []).filter(
+        u => !optedOut.has(`${d.id}|${u.id}`),
+      );
+      const { attendees, open } = resolveLabDayAttendees({ roles: d.roles, stations: station_people, signups, defaults });
       return { ...d, signups, attendees, open_stations: open };
     });
 
