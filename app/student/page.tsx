@@ -24,18 +24,11 @@ interface HomeResponse {
 
 const fmtDate = (iso: string, opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', opts);
-const fmtLong = (iso: string) => fmtDate(iso, { weekday: 'short', month: 'short', day: 'numeric' });
-const fmtTime = (t: string | null) => {
-  if (!t) return '';
-  const [h, m] = t.split(':').map(Number);
-  return `, ${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
-};
 
-function statusText(s: CourseStatus, date: string | null, upcoming?: string): { v: string; sub: string; tone: string } {
+function statusText(s: CourseStatus, date: string | null): { v: string; sub: string; tone: string } {
   switch (s) {
     case 'passed': return { v: 'Passed', sub: date ? fmtDate(date) : '', tone: 'text-green-700 dark:text-green-400' };
     case 'needs_retest': return { v: 'Retest', sub: 'needs another try', tone: 'text-amber-700 dark:text-amber-400' };
-    case 'coming_up': return { v: upcoming ?? 'Scheduled', sub: 'coming up', tone: 'text-amber-700 dark:text-amber-400' };
     default: return { v: 'Not yet', sub: 'not tested', tone: 'text-gray-500 dark:text-gray-400' };
   }
 }
@@ -92,9 +85,8 @@ export default function StudentHomePage() {
   const home = data?.home;
   const first = data?.student?.firstName || session?.user?.name?.split(' ')[0] || 'there';
   const acls = home && statusText(home.acls.status, home.acls.date);
-  const pals = home && statusText(home.pals.status, home.pals.date,
-    home.pals.upcomingStart ? (home.pals.upcomingEnd && home.pals.upcomingEnd !== home.pals.upcomingStart
-      ? `${fmtDate(home.pals.upcomingStart)} to ${fmtDate(home.pals.upcomingEnd, { day: 'numeric' })}` : fmtDate(home.pals.upcomingStart)) : undefined);
+  // STUDENT VIEW 5: never a scheduled lab day on the student side, so no upcoming dates.
+  const pals = home && statusText(home.pals.status, home.pals.date);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6">
@@ -141,18 +133,6 @@ export default function StudentHomePage() {
         </div>
 
         <div className="space-y-3">
-          <Card title="Coming up">
-            {home && home.comingUp.length > 0 ? home.comingUp.map((d) => (
-              <div key={d.date} className="flex items-center justify-between gap-3 min-h-[44px] border-t first:border-t-0 border-gray-100 dark:border-gray-700 text-sm">
-                <div className="min-w-0">
-                  <div className="text-gray-900 dark:text-white">{fmtLong(d.date)}{fmtTime(d.startTime)}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{d.title}</div>
-                </div>
-                <span className={`text-[11px] rounded px-2 py-0.5 ${PILL[d.kind]}`}>{d.kind}</span>
-              </div>
-            )) : <p className="text-sm text-gray-500 dark:text-gray-400">No lab days scheduled yet.</p>}
-          </Card>
-
           <Card title="My cases as team lead">
             {home && home.cases.length > 0 ? home.cases.map((c, i) => (
               <div key={`${c.date}-${i}`} className="flex items-center justify-between gap-3 min-h-[44px] border-t first:border-t-0 border-gray-100 dark:border-gray-700 text-sm">
