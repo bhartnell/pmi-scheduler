@@ -76,7 +76,7 @@ const DIFF_ROWS: { spot: string; acls: string; pals: string }[] = [
   { spot: 'Graded by', acls: 'Already stored', pals: 'Already stored' },
   { spot: 'Station timing', acls: 'Rotation minutes per station', pals: 'Per AHA case timing (sim + debrief); no per-station prebrief' },
   { spot: 'Printed at the end', acls: 'One megacode sheet per student', pals: 'Three final rounds per student, carrying the group result' },
-  { spot: 'Temporary regroup', acls: 'Not built', pals: 'Board renders this PR; write path is P3c' },
+  { spot: 'Temporary regroup', acls: 'Not built', pals: 'Saved: the move is shared with every instructor and can be returned' },
   { spot: 'Student tap', acls: 'Opens the attempt record page', pals: 'Opens the student overlay (Today + Readiness)' },
   { spot: 'Regroup', acls: 'Not built', pals: 'This round / rest of today / rest of the course' },
   { spot: 'Access', acls: 'Any instructor', pals: 'Any instructor' },
@@ -474,6 +474,7 @@ interface PalsHubResponse {
   labDays: PalsCoordLabDay[];
   groups: PalsGroup[];
   attempts: PalsCoordAttempt[];
+  moves?: { id: string; student_id: string; from_group_id: string; to_group_id: string; duration: MoveDuration }[];
 }
 
 function HowFinalTested({ course }: { course: Course }) {
@@ -515,13 +516,12 @@ function WhatDiffers() {
 }
 
 type MoveDuration = 'round' | 'today' | 'course';
-interface TempMove { studentId: string; fromGroupId: string; toGroupId: string; duration: MoveDuration }
+interface TempMove { id: string; studentId: string; fromGroupId: string; toGroupId: string; duration: MoveDuration }
 
 function PalsBody({ fullLabDay, refreshTick }: { fullLabDay: LabDay; refreshTick: number }) {
   const [hub, setHub] = useState<PalsHubResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [regroupOpen, setRegroupOpen] = useState(false);
-  const [moves, setMoves] = useState<TempMove[]>([]);
   const [moveDialog, setMoveDialog] = useState<{ studentId: string; studentName: string; fromGroupId: string; toGroupId: string; toGroupName: string } | null>(null);
   const [resultOverlay, setResultOverlay] = useState<{ group: PalsGroup; round: number } | null>(null);
   const [studentOverlay, setStudentOverlay] = useState<{ student: { id: string; first_name: string; last_name: string }; group: PalsGroup } | null>(null);
@@ -543,6 +543,29 @@ function PalsBody({ fullLabDay, refreshTick }: { fullLabDay: LabDay; refreshTick
   const labDays = hub?.labDays ?? [];
   const groups = hub?.groups ?? [];
   const attempts = hub?.attempts ?? [];
+  const moves: TempMove[] = useMemo(
+    () => (hub?.moves ?? []).map((m) => ({ id: m.id, studentId: m.student_id, fromGroupId: m.from_group_id, toGroupId: m.to_group_id, duration: m.duration })),
+    [hub?.moves],
+  );
+
+  const saveMove = useCallback(async (d: { studentId: string; fromGroupId: string; toGroupId: string }, duration: MoveDuration) => {
+    try {
+      const res = await fetch('/api/adv-cert/pals-moves', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cohortId, ...d, duration }),
+      });
+      const json = await res.json();
+      if (!json.success) window.alert(json.error || 'Could not save the move');
+    } catch { window.alert('Could not save the move'); }
+    await load();
+  }, [cohortId, load]);
+
+  const endMove = useCallback(async (id: string) => {
+    try {
+      await fetch('/api/adv-cert/pals-moves', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
+    } catch { /* reload shows the real state */ }
+    await load();
+  }, [load]);
 
   const handleDropStudent = useCallback((studentId: string, fromGroupId: string, toGroupId: string) => {
     if (fromGroupId === toGroupId) return;
@@ -643,6 +666,7 @@ function PalsBody({ fullLabDay, refreshTick }: { fullLabDay: LabDay; refreshTick
               onOpenRound={(round) => setResultOverlay({ group: g, round })}
               onOpenStudent={(student) => setStudentOverlay({ student, group: g })}
               onDropStudent={handleDropStudent}
+              onEndMove={endMove}
               movesOut={moves.filter((m) => m.fromGroupId === g.id)}
               movesIn={moves.filter((m) => m.toGroupId === g.id)}
             />
@@ -675,10 +699,7 @@ function PalsBody({ fullLabDay, refreshTick }: { fullLabDay: LabDay; refreshTick
           dialog={moveDialog}
           onCancel={() => setMoveDialog(null)}
           onPick={(duration) => {
-            setMoves((prev) => [
-              ...prev.filter((m) => m.studentId !== moveDialog.studentId),
-              { studentId: moveDialog.studentId, fromGroupId: moveDialog.fromGroupId, toGroupId: moveDialog.toGroupId, duration },
-            ]);
+            void saveMove(moveDialog, duration);
             setMoveDialog(null);
           }}
         />
@@ -707,11 +728,12 @@ function BlankSheetsMenu({ cohortId }: { cohortId?: string }) {
 }
 
 function GroupCard({
-  group, groups, roundSlots, testingAttempts, practiceAttempts, onOpenRound, onOpenStudent, onDropStudent, movesOut, movesIn,
+  group, groups, roundSlots, testingAttempts, practiceAttempts, onOpenRound, onOpenStudent, onDropStudent, onEndMove, movesOut, movesIn,
 }: {
   group: PalsGroup; groups: PalsGroup[]; roundSlots: RoundSlot[]; testingAttempts: PalsCoordAttempt[]; practiceAttempts: PalsCoordAttempt[];
   onOpenRound: (round: number) => void; onOpenStudent: (student: { id: string; first_name: string; last_name: string }) => void;
   onDropStudent: (studentId: string, fromGroupId: string, toGroupId: string) => void;
+  onEndMove: (id: string) => void;
   movesOut: TempMove[]; movesIn: TempMove[];
 }) {
   const { outcomes, groupResult } = groupFinalStatus(group.id, testingAttempts, roundSlots);
@@ -810,6 +832,7 @@ function GroupCard({
             return (
               <span key={m.studentId} className="text-[11px] px-2 py-1 rounded-full border border-dashed border-blue-400 text-blue-700 dark:text-blue-300">
                 {student ? `${student.first_name} ${student.last_name} ` : ''}from {fromGroup?.name ?? 'another group'} · {durationLabel}
+                <button type="button" onClick={() => onEndMove(m.id)} className="ml-1 underline">return</button>
               </span>
             );
           })}

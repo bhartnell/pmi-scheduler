@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-26
 
+pals-p3c | PALS P3c/4: temporary regroup now saved. New table pals_group_moves (overlay, lab_group_members untouched, ended_at instead of delete), POST/PATCH /api/adv-cert/pals-moves, pals-hub returns active moves, coordinator chips get a 'return' action. Migration 20261026_pals_group_moves.sql applied (additive, empty table).
 pals-p5c-item3 | PALS P5c item 3: hub Stations region renders Day 1 and Day 2 as two separate bordered cards, each with its own dated header (components/aha/CertBoard.tsx, ACLS board too). Code only, no DB writes. Items 2 (internal schedule rows) split out, see card.
 student-view-5b | STUDENT VIEW 5b: new /student/open-lab page (GET /api/student/open-lab; sign up/remove reuse /api/open-lab/signup) plus Open Lab and Exam Signup (only while a session is open or the student holds a slot) in the student nav. Code only, no DB writes.
 home-cal-1 | HOME CAL item 1: month '+n more' expands the day in place (Show less to fold), no longer navigates to /calendar. components/home/HomeCalendarBand.tsx only.
