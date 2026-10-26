@@ -276,6 +276,7 @@ export default function HomePage() {
               userName={currentUser.name ?? null}
               defaultMine={effectiveRole === 'volunteer_instructor'}
               canViewAs={hasMinRole(effectiveRole, 'admin')}
+              canEdit={hasMinRole(effectiveRole, 'admin')}
               sectionsSlot={
                 <div className="min-w-0">
                   <ErrorBoundary>

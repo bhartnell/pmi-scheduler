@@ -57,6 +57,8 @@ interface Props {
   defaultMine: boolean;
   /** Directors and admins get the View-as switch. */
   canViewAs: boolean;
+  /** Admin and up get Edit (instructor, times) on the event popover. */
+  canEdit?: boolean;
   /** The Today tile (left of This week on the top row). Omitted: This week takes the row. */
   todaySlot?: ReactNode;
   /** Right of the Month tile on row 2 (the compact section tiles). Omitted: Month is centered alone. */
@@ -192,6 +194,7 @@ function EventChip({
   viewingAs,
   onSignUp,
   onRemove,
+  onOpen,
 }: {
   e: BandEvent;
   compact?: boolean;
@@ -206,12 +209,13 @@ function EventChip({
   viewingAs?: string;
   onSignUp?: (labDayId: string) => void;
   onRemove?: (labDayId: string) => void;
+  /** Tapping the chip body opens the event popover (details, and Edit for admin+). */
+  onOpen?: (e: BandEvent) => void;
 }) {
   const open = openStations(e);
   const draft = e.status === 'draft';
   const time = [fmtTime(e.start_time), fmtTime(e.end_time)].filter(Boolean).join('-');
   const labDayId = labDayIdOf(e);
-  const href = hrefFor(e);
   const volunteer = e.event_type === 'volunteer';
   // Every lab gets a Sign up for anyone not already on the day; "needs
   // instructors" is only the dashed emphasis, never the condition.
@@ -305,19 +309,24 @@ function EventChip({
           }}
           title={[e.title, time, e.room, (e.instructor_names ?? []).join(', ')].filter(Boolean).join(' · ')}
         >
-          {href ? (
-            <Link href={href} className="flex min-w-0 flex-1 items-center self-stretch">
-              {label}
-            </Link>
-          ) : (
-            label
-          )}
+          <button
+            type="button"
+            onClick={() => onOpen?.(e)}
+            aria-haspopup="dialog"
+            className="flex min-w-0 flex-1 items-center self-stretch text-left"
+          >
+            {label}
+          </button>
           {tag}
         </div>
       </div>
     );
   }
-  const content = href ? <Link href={href}>{body}</Link> : body;
+  const content = (
+    <button type="button" onClick={() => onOpen?.(e)} aria-haspopup="dialog" className="block w-full text-left">
+      {body}
+    </button>
+  );
   return (
     <div className="[--chip-surface:#ffffff] dark:[--chip-surface:#1f2937]">
       {content}
@@ -352,6 +361,213 @@ function EventChip({
   );
 }
 
+const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '');
+
+/**
+ * Event popover (HOME CAL 3): details for any event on the home calendar, with a
+ * link to the event's own page. Admin and up can Edit: a class block's
+ * instructor and times save through the planner block PUT, a lab day's times
+ * through the lab day PATCH (both already fire the calendar sync). A lab day's
+ * instructors are per station, so those are changed on the lab day page.
+ */
+function EventPopover({
+  e,
+  canEdit,
+  instructors,
+  onClose,
+  onSaved,
+}: {
+  e: BandEvent;
+  canEdit: boolean;
+  instructors: { id: string; name: string }[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const toast = useToast();
+  const href = hrefFor(e);
+  const isBlock = e.source === 'planner';
+  const isLabDay = e.source === 'lab_day';
+  const editable = canEdit && (isBlock || isLabDay);
+  const [editing, setEditing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [start, setStart] = useState(hhmm(e.start_time));
+  const [end, setEnd] = useState(hhmm(e.end_time));
+  const currentInstructorId = (e.metadata?.instructor_id as string | null | undefined) ?? '';
+  const [instructorId, setInstructorId] = useState<string>(currentInstructorId);
+  const time = [fmtTime(e.start_time), fmtTime(e.end_time)].filter(Boolean).join(' - ');
+  const names = (e.instructor_names ?? []).join(', ');
+
+  const save = async () => {
+    if (start && end && end <= start) {
+      toast.error('End time must be after the start time.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const body: Record<string, unknown> = {};
+      if (start !== hhmm(e.start_time)) body.start_time = start || null;
+      if (end !== hhmm(e.end_time)) body.end_time = end || null;
+      let res: Response;
+      if (isBlock) {
+        if (instructorId !== currentInstructorId) {
+          body.instructor_id = instructorId || null;
+          body.instructor_ids = instructorId ? [instructorId] : [];
+        }
+        if (Object.keys(body).length === 0) {
+          setEditing(false);
+          return;
+        }
+        res = await fetch(`/api/scheduling/planner/blocks/${e.linked_id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      } else {
+        if (Object.keys(body).length === 0) {
+          setEditing(false);
+          return;
+        }
+        res = await fetch(`/api/lab-management/lab-days/${e.linked_id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+      }
+      if (!res.ok) {
+        const j = await res.json().catch(() => null);
+        toast.error(j?.error || 'Could not save the change.');
+        return;
+      }
+      toast.success('Saved.');
+      onSaved();
+      onClose();
+    } catch {
+      toast.error('Could not save the change.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const row = (label: string, value: ReactNode) =>
+    value ? (
+      <div className="flex gap-2 text-sm">
+        <dt className="w-24 shrink-0 text-gray-500 dark:text-gray-400">{label}</dt>
+        <dd className="min-w-0 break-words text-gray-900 dark:text-gray-100">{value}</dd>
+      </div>
+    ) : null;
+  const field =
+    'min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 text-sm';
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={ev => {
+        if (ev.target === ev.currentTarget) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={e.title}
+        className="w-full max-w-md rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-4 shadow-xl"
+      >
+        <div className="flex items-start gap-2">
+          <h2 className="min-w-0 flex-1 text-base font-semibold" style={{ color: e.color }}>
+            {e.title}
+            {isTestEvent(e) && <TestBadge />}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close"
+            className="min-h-[44px] min-w-[44px] text-xl leading-none text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
+          >
+            &times;
+          </button>
+        </div>
+        {!editing ? (
+          <dl className="mt-2 space-y-1.5">
+            {row('Date', new Date(`${e.date}T00:00:00`).toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' }))}
+            {row('Time', time)}
+            {row('Room', e.room)}
+            {row('Cohort', e.cohort_number ? `Cohort ${e.cohort_number}` : null)}
+            {row('Instructors', names || 'None assigned')}
+          </dl>
+        ) : (
+          <div className="mt-3 space-y-3">
+            <div className="flex gap-3">
+              <label className="flex-1 text-sm">
+                <span className="block text-gray-500 dark:text-gray-400">Start</span>
+                <input type="time" value={start} onChange={ev => setStart(ev.target.value)} className={`${field} w-full`} />
+              </label>
+              <label className="flex-1 text-sm">
+                <span className="block text-gray-500 dark:text-gray-400">End</span>
+                <input type="time" value={end} onChange={ev => setEnd(ev.target.value)} className={`${field} w-full`} />
+              </label>
+            </div>
+            {isBlock ? (
+              <label className="block text-sm">
+                <span className="block text-gray-500 dark:text-gray-400">Instructor</span>
+                <select value={instructorId} onChange={ev => setInstructorId(ev.target.value)} className={`${field} w-full`}>
+                  <option value="">None</option>
+                  {instructors.map(i => (
+                    <option key={i.id} value={i.id}>
+                      {i.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                A lab day&apos;s instructors are set per station on the lab day page.
+              </p>
+            )}
+          </div>
+        )}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {href && !editing && (
+            <Link href={href} className="inline-flex min-h-[44px] items-center text-sm text-blue-600 dark:text-blue-400 hover:underline">
+              {isLabDay || e.event_type === 'lab' ? 'Open lab day' : 'Open page'}
+            </Link>
+          )}
+          <span className="ml-auto flex gap-2">
+            {editing ? (
+              <>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => setEditing(false)}
+                  className="min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 px-3 text-sm disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={save}
+                  className="min-h-[44px] rounded-lg bg-blue-600 px-4 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {saving ? 'Saving...' : 'Save'}
+                </button>
+              </>
+            ) : (
+              editable && (
+                <button
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  className="min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 px-4 text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700"
+                >
+                  Edit
+                </button>
+              )
+            )}
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** True once the event's day is over (today counts until its end time; no end time = through the day). */
 function hasEnded(e: BandEvent, now: Date): boolean {
   const today = ymd(now);
@@ -362,7 +578,7 @@ function hasEnded(e: BandEvent, now: Date): boolean {
   return now.getHours() * 60 + now.getMinutes() >= h * 60 + (m || 0);
 }
 
-export default function HomeCalendarBand({ userName, defaultMine, canViewAs, todaySlot, sectionsSlot }: Props) {
+export default function HomeCalendarBand({ userName, defaultMine, canViewAs, canEdit = false, todaySlot, sectionsSlot }: Props) {
   const [weekFilter, setWeekFilter] = useState<Filter>(defaultMine ? 'mine' : 'all');
   const [monthFilter, setMonthFilter] = useState<Filter>(defaultMine ? 'mine' : 'all');
   const [weekAnchor, setWeekAnchor] = useState<Date>(() => new Date());
@@ -373,6 +589,8 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
   const [instructors, setInstructors] = useState<{ id: string; name: string }[]>([]);
   const [viewAs, setViewAs] = useState('');
   const [showStudentPicker, setShowStudentPicker] = useState(false);
+  const [popoverEvent, setPopoverEvent] = useState<BandEvent | null>(null);
+  const [reloadTick, setReloadTick] = useState(0);
   // Month days opened in place by "+n more" (the row grows; nothing navigates).
   const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
   const toggleDayExpanded = (key: string) =>
@@ -423,12 +641,12 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
   };
 
   useEffect(() => {
-    if (!canViewAs) return;
+    if (!canViewAs && !canEdit) return;
     fetch('/api/lab-management/instructors')
       .then(r => (r.ok ? r.json() : null))
       .then(j => setInstructors((j?.instructors ?? []).map((i: { id: string; name: string }) => ({ id: i.id, name: i.name }))))
       .catch(() => {});
-  }, [canViewAs]);
+  }, [canViewAs, canEdit]);
 
   // Week range (Mon-Fri) and month range (whole Mon-Fri weeks); one fetch covers both.
   const weekRange = useMemo(() => {
@@ -467,7 +685,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
     return () => {
       cancelled = true;
     };
-  }, [startKey, endKey]);
+  }, [startKey, endKey, reloadTick]);
 
   // Which lab days the signed-in user is already on (drives Sign up / You're in).
   const labDayIdsKey = useMemo(
@@ -560,6 +778,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
       viewingAs: viewAs || undefined,
       onSignUp: signUp,
       onRemove: removeSignUp,
+      onOpen: setPopoverEvent,
     };
   };
 
@@ -816,6 +1035,15 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
           </label>
         )}
         {showStudentPicker && <ViewAsStudentPicker onClose={() => setShowStudentPicker(false)} />}
+        {popoverEvent && (
+          <EventPopover
+            e={popoverEvent}
+            canEdit={canEdit}
+            instructors={instructors}
+            onClose={() => setPopoverEvent(null)}
+            onSaved={() => setReloadTick(t => t + 1)}
+          />
+        )}
         <Link href="/calendar" className="ml-auto text-[13px] text-blue-600 dark:text-blue-400 hover:underline">
           Full calendar
         </Link>
