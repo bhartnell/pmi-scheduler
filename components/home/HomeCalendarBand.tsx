@@ -373,6 +373,15 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
   const [instructors, setInstructors] = useState<{ id: string; name: string }[]>([]);
   const [viewAs, setViewAs] = useState('');
   const [showStudentPicker, setShowStudentPicker] = useState(false);
+  // Month days opened in place by "+n more" (the row grows; nothing navigates).
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+  const toggleDayExpanded = (key: string) =>
+    setExpandedDays(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
   const toast = useToast();
   const [membership, setMembership] = useState<Record<string, Membership>>({});
   const [canSignUp, setCanSignUp] = useState(false);
@@ -755,16 +764,18 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
             >
               {dayHeader(d, () => setWeekAnchor(d))}
               <div className="mt-1 space-y-1">
-                {list.slice(0, 3).map(e => (
+                {(expandedDays.has(key) ? list : list.slice(0, 3)).map(e => (
                   <EventChip key={e.id} e={e} compact {...chipProps(e)} />
                 ))}
                 {list.length > 3 && (
-                  <Link
-                    href={`/calendar`}
-                    className="block text-xs text-blue-600 dark:text-blue-400 hover:underline min-h-[24px]"
+                  <button
+                    type="button"
+                    aria-expanded={expandedDays.has(key)}
+                    onClick={() => toggleDayExpanded(key)}
+                    className="block min-h-[44px] w-full text-left text-xs text-blue-600 dark:text-blue-400 hover:underline"
                   >
-                    +{list.length - 3} more
-                  </Link>
+                    {expandedDays.has(key) ? 'Show less' : `+${list.length - 3} more`}
+                  </button>
                 )}
               </div>
             </div>
