@@ -26,6 +26,7 @@ import {
   Loader2, RefreshCw, CheckCircle2, XCircle, Clock, Users, UserCheck, MapPin, Printer, Pencil,
   FileArchive, Download, ChevronDown, ChevronRight, Eye, X,
 } from 'lucide-react';
+import RoomsPanel from '@/components/aha/RoomsPanel';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 import type { LabDay, Station as LabStation, Instructor, InstructorAvailabilityEntry } from '@/components/lab-day/types';
@@ -70,7 +71,7 @@ const DIFF_ROWS: { spot: string; acls: string; pals: string }[] = [
   { spot: 'Practice cases', acls: 'Not a distinct phase', pals: 'Day 1 Section B + Day 2 Sections C/D, graded per TL' },
   { spot: 'Skill stations', acls: 'BLS / Airway, graded skills', pals: 'Learning stations, not graded — timer and reference sheet only' },
   { spot: 'Stats row', acls: 'Groups / Groups tested / Passed / Failed / Pending / Team-led', pals: 'Practice run / Students graded / Team-led / Watch flags / Final rounds / Groups ready' },
-  { spot: 'Rooms', acls: 'P2c (not built this PR)', pals: 'P2c (not built this PR)' },
+  { spot: 'Rooms', acls: 'This lab day, scenario stations by room', pals: 'Day 1 / Day 2 pickers, scenario stations by room' },
   { spot: 'Graded by', acls: 'Already stored', pals: 'Already stored' },
   { spot: 'Station timing', acls: 'Rotation minutes per station', pals: 'Per AHA case timing (sim + debrief); no per-station prebrief' },
   { spot: 'Printed at the end', acls: 'One megacode sheet per student', pals: 'Three final rounds per student, carrying the group result' },
@@ -444,6 +445,7 @@ function AclsBody({
             </section>
 
             <HowFinalTested course="acls" />
+            <RoomsPanel days={[{ id: fullLabDay.id, date: String(fullLabDay.date).slice(0, 10) }]} refreshTick={refreshTick} onChanged={load} />
             <WhatDiffers />
           </div>
         )}
@@ -642,6 +644,8 @@ function PalsBody({ fullLabDay, refreshTick }: { fullLabDay: LabDay; refreshTick
           Grade in the PALS grader; this view reflects saved results.
         </p>
       </section>
+
+      <RoomsPanel days={labDays.map((d) => ({ id: d.id, date: d.date }))} refreshTick={refreshTick} onChanged={load} />
 
       <section className={`${card} print:hidden`}>
         <div className="flex items-center justify-between">
