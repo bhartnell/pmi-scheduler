@@ -205,8 +205,11 @@ function BoardContent({ course }: { course: CertCourse }) {
         .then(entries => setAbsentByLabDay(Object.fromEntries(entries)))
         .catch(() => setAbsentByLabDay({}));
       if (hub.cohort?.id && (hub.dates || []).length) {
-        const u = await (await fetch(`/api/calendar/unified?cohort_id=${hub.cohort.id}&start=${hub.dates[0]}&end=${hub.dates[hub.dates.length - 1]}&include=classes,labs,exams`)).json();
-        setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date) && e.status !== 'cancelled'));
+        // Not awaited: the unified calendar is the slowest call and only decorates the board,
+        // so the spinner clears on the hub data and the calendar events fill in when they land.
+        fetch(`/api/calendar/unified?cohort_id=${hub.cohort.id}&start=${hub.dates[0]}&end=${hub.dates[hub.dates.length - 1]}&include=classes,labs,exams`).then(r => r.json())
+          .then((u: { events?: CalEvent[] }) => setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date) && e.status !== 'cancelled')))
+          .catch(() => setEvents([]));
       } else setEvents([]);
     } catch { /* non-blocking */ } finally { setLoading(false); }
   }, [cohortIdParam, cfg.hubApi, course]);

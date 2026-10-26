@@ -125,8 +125,19 @@ export default function ClinicalDashboardPage() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      // Fetch current user
-      const userRes = await fetch('/api/instructor/me');
+      // One parallel batch: the role check, the stats sources and the phase
+      // rollup sources do not depend on each other, so they no longer queue
+      // up as three sequential round trips behind the full-page spinner.
+      const [userRes, preceptorsRes, clinicalSitesRes, internshipAgenciesRes, internshipsRes, cohortsRes, readinessRes] = await Promise.all([
+        fetch('/api/instructor/me'),
+        fetch('/api/clinical/preceptors?activeOnly=true'),
+        fetch('/api/clinical/agencies?type=hospital'),
+        fetch('/api/clinical/agencies?type=ems'),
+        fetch('/api/clinical/internships'),
+        fetch('/api/cohorts'),
+        fetch('/api/clinical/tracker-readiness'),
+      ]);
+
       const userData = await userRes.json();
       if (userData.success && userData.user) {
         setUserRole(userData.user.role);
@@ -138,18 +149,12 @@ export default function ClinicalDashboardPage() {
         }
       }
 
-      // Fetch stats — fetch clinical sites (hospitals) and internship agencies (EMS) separately
-      const [preceptorsRes, clinicalSitesRes, internshipAgenciesRes, internshipsRes] = await Promise.all([
-        fetch('/api/clinical/preceptors?activeOnly=true'),
-        fetch('/api/clinical/agencies?type=hospital'),
-        fetch('/api/clinical/agencies?type=ems'),
-        fetch('/api/clinical/internships'),
+      const [preceptorsData, clinicalSitesData, internshipAgenciesData, internshipsData] = await Promise.all([
+        preceptorsRes.json(),
+        clinicalSitesRes.json(),
+        internshipAgenciesRes.json(),
+        internshipsRes.json(),
       ]);
-
-      const preceptorsData = await preceptorsRes.json();
-      const clinicalSitesData = await clinicalSitesRes.json();
-      const internshipAgenciesData = await internshipAgenciesRes.json();
-      const internshipsData = await internshipsRes.json();
 
       const internships = internshipsData.internships || [];
       const inPhase1 = internships.filter((i: any) => i.current_phase === 'phase_1_mentorship').length;
@@ -179,7 +184,7 @@ export default function ClinicalDashboardPage() {
         internshipsByCohort.set(i.cohort_id, entry);
       });
 
-      await fetchPhaseData(internshipsByCohort);
+      await applyPhaseData(internshipsByCohort, cohortsRes, readinessRes);
     } catch (error) {
       console.error('Error fetching data:', error);
     }
@@ -195,15 +200,13 @@ export default function ClinicalDashboardPage() {
   // entirely and surfaced separately in the collapsed Graduated section.
   // Replaces the old raw preceptor/site counts as the at-a-glance
   // "what's actionable" view Ben lands on.
-  const fetchPhaseData = async (
-    internshipsByCohort: Map<string, { phase1: number; phase2: number; atRisk: number }>
+  const applyPhaseData = async (
+    internshipsByCohort: Map<string, { phase1: number; phase2: number; atRisk: number }>,
+    cohortsRes: Response,
+    readinessRes: Response
   ) => {
     setPhaseLoading(true);
     try {
-      const [cohortsRes, readinessRes] = await Promise.all([
-        fetch('/api/cohorts'),
-        fetch('/api/clinical/tracker-readiness'),
-      ]);
       const cohortsData = await cohortsRes.json();
       const readinessData = await readinessRes.json();
 
