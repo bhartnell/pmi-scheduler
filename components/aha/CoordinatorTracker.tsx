@@ -22,6 +22,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import Link from 'next/link';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 import {
   Loader2, RefreshCw, CheckCircle2, XCircle, Clock, Users, UserCheck, MapPin, Printer, Pencil,
   FileArchive, Download, ChevronDown, ChevronRight, Eye, X,
@@ -160,10 +161,20 @@ export default function CoordinatorTracker() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-5">
-        <nav className="text-xs text-gray-500 dark:text-gray-400 mb-2 print:hidden">
-          Testing and certification / {courseLabel} Hub /{' '}
-          {fullLabDay.cohort?.program?.abbreviation} {fullLabDay.cohort?.cohort_number ? `G${fullLabDay.cohort.cohort_number}` : ''} / Coordinator
-        </nav>
+        {/* App-wide crumb: Testing and certification > <course> Hub > Coordinator (PALS P5 item 4);
+            the old Labs > Schedule > Detail trail and the inline duplicate line are gone. */}
+        <BreadcrumbNames
+          customSegments={{
+            labs: 'Testing and certification',
+            'labs/schedule': '',
+            [`labs/schedule/${labDayId}`]: `${courseLabel} Hub`,
+            [`labs/schedule/${labDayId}/acls-coordinator`]: 'Coordinator',
+          }}
+          customHrefs={{
+            labs: '/labs/aha-hub',
+            [`labs/schedule/${labDayId}`]: course === 'pals' ? '/labs/pals-hub' : '/labs/acls-hub',
+          }}
+        />
 
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4 print:hidden">
           <div>
@@ -172,7 +183,7 @@ export default function CoordinatorTracker() {
               {printDate(fullLabDay.date)}
               {fullLabDay.cohort?.cohort_number ? ` · Cohort G${fullLabDay.cohort.cohort_number}` : ''}
               {fullLabDay.section_label ? ` · ${fullLabDay.section_label}` : ''}
-              {' '}— progress tracker and adjustments; the hub is where the day runs
+              {' '}- progress tracker and adjustments; the hub is where the day runs
             </p>
           </div>
           <div className="flex items-center gap-2">
