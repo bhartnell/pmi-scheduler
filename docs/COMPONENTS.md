@@ -19,6 +19,19 @@
 
 ### Major additions
 
+**`components/aha/CoordinatorTracker.tsx`** (2026-10-26, PALS P2b/4) —
+Course-parameterized (`acls`/`pals`, read from the lab day's `cert_course`)
+coordinator page, replacing the old ACLS-only
+`app/labs/schedule/[id]/acls-coordinator/page.tsx` (now a thin wrapper).
+ACLS keeps its original single-lab-day aggregation
+(`/api/adv-cert/grading-context` + `/api/adv-cert/attempts`); PALS
+aggregates the whole cohort+course via `/api/adv-cert/pals-hub` (both days,
+every section) since its stats and group cards are cross-section by design.
+Final-round grouping (Section E, group passes 2 of 3 synchronized rounds)
+is pure logic in `lib/pals-coordinator.ts`, built on
+`lib/pals-group-result.ts`. Reachable from a "Coordinator" link in
+`components/aha/CertBoard.tsx`'s header.
+
 **`components/wiki/WikiArticleLink.tsx`** (2026-09-22) — Small reusable
 inline link from a feature page to its Help Wiki article (Task Handoff
 Queue "[WIKI v1] Build the in-app help wiki shell"). Embedded on
