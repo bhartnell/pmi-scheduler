@@ -449,7 +449,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
     const params = new URLSearchParams({
       start_date: startKey,
       end_date: endKey,
-      include: 'classes,labs,clinical,lvfr,exams,volunteers',
+      include: 'classes,labs,clinical,lvfr,exams,volunteers,osce',
     });
     Promise.all([
       fetch(`/api/calendar/unified?${params}`).then(r => (r.ok ? r.json() : null)).catch(() => null),
