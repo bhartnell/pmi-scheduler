@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-26
 
+home-cal-5 | HOME CAL 5 (dropdown half): Today tile open station rows show an Assign instructor select (Me first, then roster from /api/lab-management/instructors) that saves through the existing PATCH stations/[id]; falls back to the old text if the roster fails to load. Code only, no DB writes. Who's-coming/week-tile agreement not touched.
+
 student-view-5b | STUDENT VIEW 5b: new /student/open-lab page (GET /api/student/open-lab; sign up/remove reuse /api/open-lab/signup) plus Open Lab and Exam Signup (only while a session is open or the student holds a slot) in the student nav. Code only, no DB writes.
 home-cal-1 | HOME CAL item 1: month '+n more' expands the day in place (Show less to fold), no longer navigates to /calendar. components/home/HomeCalendarBand.tsx only.
 nav-6-7-transform-crumb | TRIM 6/7 slice: removed the hand-rolled Admin > Scenarios > Transform breadcrumb from app/admin/scenarios/transform/page.tsx (the app-wide line already renders it). Code only. Remaining 6/7 work: nine section landings (6/7b-2, Claude AI).
