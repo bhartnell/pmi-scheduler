@@ -18,6 +18,9 @@ export interface GenerateCourseAgendaInput {
   // day_index -> calendar date (YYYY-MM-DD)
   dayDates: Record<number, string>;
   dryRun: boolean;
+  // Required when the cohort has more than one active program schedule (G15 has
+  // two); must be one of the cohort's active schedules.
+  programScheduleId?: string;
   // Defaults to 'draft' so a generated agenda never syncs to calendars unseen.
   status?: 'draft' | 'published';
 }
@@ -54,11 +57,15 @@ export async function generateCourseAgendaForCohort(
     .eq('cohort_id', cohortId)
     .eq('is_active', true);
   if (psError) throw new Error(psError.message);
-  if (!schedules || schedules.length !== 1) {
-    errors.push(`Expected exactly one active program schedule for cohort ${cohortId}, found ${schedules?.length ?? 0}.`);
+  const programSchedule = input.programScheduleId
+    ? (schedules ?? []).find((s) => s.id === input.programScheduleId)
+    : schedules?.length === 1 ? schedules[0] : undefined;
+  if (!programSchedule) {
+    errors.push(input.programScheduleId
+      ? `Program schedule ${input.programScheduleId} is not an active schedule of cohort ${cohortId}.`
+      : `Expected exactly one active program schedule for cohort ${cohortId}, found ${schedules?.length ?? 0}; pass programScheduleId.`);
     return result;
   }
-  const programSchedule = schedules[0];
 
   const { data: lineRows, error: lineError } = await supabase
     .from('course_agenda_lines')
