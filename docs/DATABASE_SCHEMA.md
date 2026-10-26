@@ -12011,6 +12011,11 @@ migrated (8 practice + 6 testing); the 3 `*_cert_tier_check` constraints now rea
   (CASCADE), `date`, `block_id` text (matches `PalsAgendaBlock.id`),
   `instructor_name`. UNIQUE `(cohort_id, date, block_id)`. No
   calendar/availability side effects — same pattern as the station picker.
+- **`adv_cert_course_notes`** (added 2026-10-26, PALS P5d) — instructor-written
+  notes per AHA course day. `cohort_id` FK (CASCADE), `cert_course`
+  (`acls|pals`), `note_date`, `content`, `updated_by` (email), timestamps.
+  UNIQUE `(cohort_id, cert_course, note_date)`. RLS on, authenticated SELECT;
+  writes via `/api/adv-cert/course-notes` (service role).
 
 **Content loaded (importer `scripts/import-pals-seed.js` from
 `docs/pals/pals_scenario_seed.json`):** 12 checklists · 150 criteria · 32

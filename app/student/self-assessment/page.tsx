@@ -153,7 +153,7 @@ export default function SelfAssessmentPage() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 pb-20">
+    <div className="px-[clamp(16px,2.75vw,96px)] py-6 pb-20 max-w-[1800px]">
       <Link href="/student" className="inline-flex items-center gap-1 text-sm text-cyan-700 dark:text-cyan-400 mb-4">
         <ArrowLeft className="w-4 h-4" /> Student dashboard
       </Link>

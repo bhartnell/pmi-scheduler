@@ -285,7 +285,7 @@ export default function MyProgressPage() {
 
   if (error) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-12">
+      <div className="px-[clamp(16px,2.75vw,96px)] py-12">
         <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 flex items-start gap-4">
           <AlertCircle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
           <div>
@@ -302,7 +302,7 @@ export default function MyProgressPage() {
   // ─── Student not in system yet ───────────────────────────────────────────
   if (!data.studentFound) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-12">
+      <div className="px-[clamp(16px,2.75vw,96px)] py-12">
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 flex items-start gap-4">
           <AlertCircle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
           <div>
@@ -360,7 +360,7 @@ export default function MyProgressPage() {
       : 0;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8 space-y-6">
+    <div className="px-[clamp(16px,2.75vw,96px)] py-8 space-y-6">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
         <Link href="/" className="flex items-center gap-1 hover:text-cyan-600 dark:hover:text-cyan-400">

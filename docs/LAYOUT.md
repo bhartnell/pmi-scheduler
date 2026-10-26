@@ -72,7 +72,7 @@ The old Stacked / Side by side switch is gone; a saved `layout` key is ignored.
 
 ## Part A (width-cap pass) exceptions, left narrow on purpose
 
-- `app/student/**` (phone-first Student view)
+- `app/student/**` (phone-first Student view) - NOT an exception since STUDENT VIEW 5d: kept student pages use the clamp gutter and no width cap
 - Public token pages: `app/volunteer*`, `app/preceptor`, `app/open-lab`,
   `app/osce-scenario`, `app/ride-along-poll`
 - `app/lvfr-aemt/**` (being archived)
