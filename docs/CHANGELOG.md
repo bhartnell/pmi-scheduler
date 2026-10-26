@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-26
 
+pals-p5d | PALS P5d: per-day Course notes card on the PALS/ACLS coordinator and collapsed on the hub header; new table adv_cert_course_notes (additive, RLS, rollback) + /api/adv-cert/course-notes + components/aha/CourseNotesCard.tsx.
 student-view-5d | STUDENT VIEW 5d: student layout header, home, My Progress and Self-Assessment follow docs/LAYOUT.md (clamp gutters, no max-w-7xl/6xl/3xl wrappers; self-assessment form capped at 1800px as a content page). Class changes only, no DB writes.
 home-cal-4-course-days | HOME CAL 4: /api/calendar/unified marks a lab day as a course day from its data (cert_course set, priority_flag not normal, or an NREMT/testing title - never by date), colors it in the AHA/NREMT type color and counts a staffless course day as needing instructors so the home chip gets the dashed ring; real start/end already passed through. app/api/calendar/unified/route.ts only. No DB writes. Card 4055cd1c...e443
 home-cal-2 | HOME CAL 2: /api/calendar/unified gains include=osce (osce_time_blocks, own yellow color; admin+ see all, others only blocks of events they host or observe); home week/month request it. Read-only, no schema change.
