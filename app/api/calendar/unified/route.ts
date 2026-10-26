@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { hasMinRole } from '@/lib/permissions';
+import { OSCE_CAL_HOST_EMAIL } from '@/lib/osce-calendar';
 import { createLabDedupTracker, trackScheduleBlockForLabDedup, isLabDayDeduped } from '@/lib/calendar-lab-dedup';
 
 export interface CalendarEvent {
   id: string;
-  source: 'planner' | 'lab_day' | 'lvfr' | 'clinical' | 'shift' | 'meeting' | 'ride_along' | 'exam' | 'volunteer';
+  source: 'planner' | 'lab_day' | 'lvfr' | 'clinical' | 'shift' | 'meeting' | 'ride_along' | 'exam' | 'volunteer' | 'osce';
   title: string;
   date: string;
   start_time: string | null;
@@ -17,7 +19,7 @@ export interface CalendarEvent {
   room?: string;
   linked_id?: string;
   linked_url?: string;
-  event_type: 'class' | 'lab' | 'exam' | 'clinical' | 'shift' | 'meeting' | 'volunteer' | 'other';
+  event_type: 'class' | 'lab' | 'exam' | 'clinical' | 'shift' | 'meeting' | 'volunteer' | 'osce' | 'other';
   status?: 'draft' | 'published' | 'cancelled';
   content_notes?: string;
   linked_lab_day_id?: string;
@@ -32,6 +34,7 @@ const PROGRAM_COLORS: Record<string, string> = {
   clinical: '#8B5CF6',
   exam: '#EF4444',
   volunteer: '#14B8A6',
+  osce: '#EAB308',
   other: '#6B7280',
 };
 
@@ -49,6 +52,7 @@ function getColor(program: CalendarEvent['program'], eventType: CalendarEvent['e
   if (eventType === 'clinical') return PROGRAM_COLORS.clinical;
   if (eventType === 'exam') return PROGRAM_COLORS.exam;
   if (eventType === 'volunteer') return PROGRAM_COLORS.volunteer;
+  if (eventType === 'osce') return PROGRAM_COLORS.osce;
   return PROGRAM_COLORS[program || 'other'] || PROGRAM_COLORS.other;
 }
 
@@ -655,6 +659,64 @@ export async function GET(request: NextRequest) {
         }
       } catch (err) {
         console.error('Error fetching volunteer events:', err);
+      }
+    }
+
+    // 9. OSCE time blocks (HOME CAL 2). Own store (osce_time_blocks), previously
+    //    absent from the home and master calendars though the blocks are on Google.
+    //    Admin+ and the host account see every block; an evaluator sees only the
+    //    blocks they signed up for (osce_observer_blocks, matched on the address
+    //    they registered with). Opt-in via include=osce so existing callers are unchanged.
+    if (include.has('osce') && !cohortId && (!programFilter || programFilter.has('other'))) {
+      try {
+        const email = (auth.user.email || '').toLowerCase();
+        const seesAll = hasMinRole(auth.user.role, 'admin') || email === OSCE_CAL_HOST_EMAIL.toLowerCase();
+
+        const { data: blocks } = await supabase
+          .from('osce_time_blocks')
+          .select('id, label, date, start_time, end_time, event_id, event:osce_events!osce_time_blocks_event_id_fkey(id, title, slug, location, status)')
+          .gte('date', startDate)
+          .lte('date', endDate)
+          .order('date')
+          .order('start_time');
+
+        let allowed: Set<string> | null = null;
+        if (!seesAll && email) {
+          const { data: mine } = await supabase
+            .from('osce_observers')
+            .select('id, osce_observer_blocks(block_id)')
+            .or(`email.ilike.${email},contact_email.ilike.${email}`);
+          allowed = new Set<string>();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          for (const o of (mine ?? []) as any[]) {
+            for (const b of o.osce_observer_blocks ?? []) allowed.add(b.block_id);
+          }
+        }
+
+        for (const b of blocks ?? []) {
+          if (!b.date) continue;
+          if (allowed && !allowed.has(b.id)) continue;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const ev = b.event as any;
+          if (ev?.status === 'archived' || ev?.status === 'draft') continue;
+          events.push({
+            id: `osce-${b.id}`,
+            source: 'osce',
+            title: `OSCE: ${b.label}`,
+            date: b.date,
+            start_time: b.start_time ?? null,
+            end_time: b.end_time ?? null,
+            program: 'other',
+            color: getColor('other', 'osce'),
+            room: ev?.location || undefined,
+            linked_id: b.id,
+            linked_url: seesAll ? `/admin/osce-events/${b.event_id}` : ev?.slug ? `/osce/${ev.slug}` : undefined,
+            event_type: 'osce',
+            metadata: { osce_event_id: b.event_id, osce_event_title: ev?.title },
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching OSCE blocks:', err);
       }
     }
 

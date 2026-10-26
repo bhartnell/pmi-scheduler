@@ -113,6 +113,8 @@ function TestBadge() {
 
 function isMine(e: BandEvent, name: string | null): boolean {
   if (e.event_type === 'volunteer') return true;
+  // The feed only returns OSCE blocks this person may see (admin+, host, or their own sign-ups).
+  if (e.event_type === 'osce') return true;
   // Every lab is open to every instructor until its day is over.
   if (e.event_type === 'lab' && !hasEnded(e, new Date())) return true;
   if (!name) return false;
@@ -449,7 +451,7 @@ export default function HomeCalendarBand({ userName, defaultMine, canViewAs, tod
     const params = new URLSearchParams({
       start_date: startKey,
       end_date: endKey,
-      include: 'classes,labs,clinical,lvfr,exams,volunteers',
+      include: 'classes,labs,clinical,lvfr,exams,volunteers,osce',
     });
     Promise.all([
       fetch(`/api/calendar/unified?${params}`).then(r => (r.ok ? r.json() : null)).catch(() => null),
