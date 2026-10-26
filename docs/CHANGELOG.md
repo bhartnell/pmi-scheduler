@@ -10,6 +10,7 @@ Format: `commit-hash | brief description`
 ## 2026-10-26
 
 student-view-5b | STUDENT VIEW 5b: new /student/open-lab page (GET /api/student/open-lab; sign up/remove reuse /api/open-lab/signup) plus Open Lab and Exam Signup (only while a session is open or the student holds a slot) in the student nav. Code only, no DB writes.
+home-cal-1 | HOME CAL item 1: month '+n more' expands the day in place (Show less to fold), no longer navigates to /calendar. components/home/HomeCalendarBand.tsx only.
 nav-6-7-transform-crumb | TRIM 6/7 slice: removed the hand-rolled Admin > Scenarios > Transform breadcrumb from app/admin/scenarios/transform/page.tsx (the app-wide line already renders it). Code only. Remaining 6/7 work: nine section landings (6/7b-2, Claude AI).
 pals-p2c-rooms | PALS P2c/4: coordinator Rooms panel (components/aha/RoomsPanel.tsx, collapsed by default) on both the PALS and ACLS coordinator. Reads the same lab_stations rows as the hub (scenario stations only) via new read-only GET /api/adv-cert/room-stations, grouped by room, Day 1 / Day 2 picker for PALS; each room's instructor picker writes through the existing PATCH /api/lab-management/stations/[id] (notification + station_instructors + calendar sync unchanged) and skips stations that already have a graded attempt (pals_test_attempts / adv_cert_test_attempts by lab_station_id). No second store, no schema change, no DB writes in the build. lib/rooms.ts groupByRoom + test. Per-row Print not built (no per-station print target exists). Card 4015cd1c-bc9b-8111-9a76-c4420c72b68d
 
