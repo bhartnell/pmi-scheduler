@@ -179,7 +179,7 @@ export default function StudentLayout({
       {viewingAsName && <ViewingAsStudentBanner studentName={viewingAsName} />}
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4">
+        <div className="px-[clamp(16px,2.75vw,96px)]">
           <div className="flex items-center justify-between h-16">
             {/* Logo & Brand */}
             <Link href="/student" className="flex items-center gap-3">
