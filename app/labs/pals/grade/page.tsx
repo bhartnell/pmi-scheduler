@@ -9,6 +9,7 @@ import { ArrowLeft, CheckCircle2, XCircle, Loader2, Save, WifiOff, RefreshCw, Cr
 import { useToast } from '@/components/Toast';
 import { useOffline } from '@/components/OfflineProvider';
 import PalsCaseCard, { type PalsCard } from '@/components/pals/PalsCaseCard';
+import DualPaneGrading from '@/components/grading/DualPaneGrading';
 import PrintOriginalPdfButton from '@/components/PrintOriginalPdfButton';
 import {
   mintClientUuid, saveDraft, loadDraft, clearDraft,
@@ -462,7 +463,10 @@ export default function PalsGradePage() {
       {loadingScenario && <div className="flex justify-center py-8"><Loader2 className="animate-spin text-gray-400" /></div>}
 
       {scenario && !loadingScenario && (
-        <div className="space-y-4">
+        <DualPaneGrading
+          scenarioLabel="Scenario"
+          scoringLabel="Checklist"
+          scenario={
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border-l-4 border-red-500">
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-base font-bold text-gray-900 dark:text-white">
@@ -484,7 +488,9 @@ export default function PalsGradePage() {
             </div>
             <PalsCaseCard card={(scenario.pals_narrative as { card?: PalsCard } | null)?.card} />
           </div>
-
+          }
+          scoring={
+          <div className="space-y-4">
           {!scenario.checklist && (
             <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4 text-sm text-yellow-800 dark:text-yellow-300">
               This scenario has no checklist linked yet - cannot be graded.
@@ -571,7 +577,9 @@ export default function PalsGradePage() {
               </div>
             </div>
           )}
-        </div>
+          </div>
+          }
+        />
       )}
     </div>
   );

@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, XCircle, Eye, Loader2, Save, Crown, Play, Pause, RotateCcw, Flag, ExternalLink } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { safeReturnTo } from '@/lib/return-to';
+import DualPaneGrading from '@/components/grading/DualPaneGrading';
+import PalsCaseCard, { type PalsCard } from '@/components/pals/PalsCaseCard';
 import { mintClientUuid } from '@/lib/pals-offline';
 
 interface StudentOpt { id: string; first_name: string; last_name: string }
@@ -16,7 +18,7 @@ interface StationOpt {
   custom_title: string | null; skill_name: string | null; skill_sheet_url: string | null;
   instructions_url: string | null; rotation_minutes: number | null; room: string | null;
 }
-interface ScenarioInfo { id: string; title: string; case_code: string | null; checklist: { id: string } | null }
+interface ScenarioInfo { id: string; title: string; case_code: string | null; checklist: { id: string } | null; pals_narrative?: Record<string, unknown> | null }
 
 function fmt(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60);
@@ -241,8 +243,10 @@ export default function PalsPracticeStationPage() {
       {station && !station.scenario_id && <SkillStationPanel station={station} />}
 
       {station?.scenario_id && (
-        <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] max-md:grid-cols-1 gap-4">
-          <div className="space-y-4">
+        <DualPaneGrading
+          scenarioLabel="Scenario"
+          scoringLabel="Grade"
+          scenario={
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 border-l-4 border-indigo-500">
               <div className="text-base font-bold text-gray-900 dark:text-white">
                 {scenario ? `${scenario.case_code ? `[${scenario.case_code}] ` : ''}${scenario.title}` : title}
@@ -253,8 +257,11 @@ export default function PalsPracticeStationPage() {
                 </p>
               )}
               {savedCount > 0 && <p className="mt-2 text-xs text-gray-400">{savedCount} saved at this station this visit</p>}
+              <PalsCaseCard card={(scenario?.pals_narrative as { card?: PalsCard } | null)?.card} />
             </div>
-
+          }
+          scoring={
+          <div className="space-y-4">
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Group</label>
               <select value={groupId} onChange={(e) => { setGroupId(e.target.value); setTeamLeadId(''); }}
@@ -290,9 +297,8 @@ export default function PalsPracticeStationPage() {
                 </div>
               )}
             </div>
-          </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 space-y-4 self-start">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <button type="button" onClick={() => setResult(result === 'PASS' ? '' : 'PASS')}
                 className={`min-h-[56px] rounded-lg text-base font-bold inline-flex items-center justify-center gap-2 border ${
@@ -331,7 +337,9 @@ export default function PalsPracticeStationPage() {
               Save
             </button>
           </div>
-        </div>
+          </div>
+          }
+        />
       )}
     </div>
   );
