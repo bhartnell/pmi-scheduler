@@ -99,7 +99,7 @@ export async function PUT(
     const { id } = await params;
     blockId = id;
     const body = await request.json();
-    const { update_mode } = body; // 'this' | 'this_and_future' | 'all'
+    const { update_mode } = body; // 'this' | 'this_and_future' | 'this_and_following' | 'all'
 
     const updates: Record<string, unknown> = { updated_at: new Date().toISOString() };
 
@@ -244,7 +244,7 @@ export async function PUT(
     }
 
     // Handle batch updates for recurring blocks
-    if (update_mode === 'this_and_future' || update_mode === 'all') {
+    if (update_mode === 'this_and_future' || update_mode === 'this_and_following' || update_mode === 'all') {
       // First get the target block to find its recurring_group_id and date
       const { data: targetBlock, error: fetchError } = await supabase
         .from('pmi_schedule_blocks')
@@ -280,7 +280,10 @@ export async function PUT(
         delete batchUpdates.week_number;
         delete batchUpdates.specific_date;
         const skippedFields: string[] = [];
-        if (update_mode === 'all') {
+        // 'this_and_following' (every day of the series from this date forward)
+        // is share-only like 'all': per-day times and weekly titles stay.
+        const shareOnly = update_mode === 'all' || update_mode === 'this_and_following';
+        if (shareOnly) {
           for (const key of Object.keys(batchUpdates)) {
             if (!ALL_MODE_SHARED_FIELDS.includes(key)) {
               skippedFields.push(key);
@@ -302,6 +305,11 @@ export async function PUT(
             .gte('date', targetBlock.date)
             .eq('day_of_week', targetBlock.day_of_week);
         }
+        if (update_mode === 'this_and_following' && targetBlock.date) {
+          // Every weekday of the series, but only dates on/after the clicked one.
+          // Rows keep their recurring_group_id (no re-key), so nothing orphans.
+          batchQuery = batchQuery.gte('date', targetBlock.date);
+        }
         // 'all' mode: no additional filters — updates every block with this recurring_group_id
 
         const { data: batchResult, error: batchError } = await batchQuery.select('id');
@@ -309,7 +317,7 @@ export async function PUT(
 
         // 'all' mode skipped per-instance fields for the rest of the series;
         // still apply the full edit to the instance the user actually opened.
-        if (update_mode === 'all' && skippedFields.length > 0) {
+        if (shareOnly && skippedFields.length > 0) {
           const { error: selfError } = await supabase
             .from('pmi_schedule_blocks')
             .update(updates)

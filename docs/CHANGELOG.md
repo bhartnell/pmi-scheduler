@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-27
 
+event-edit-4-5 | EVENT-EDIT 4/5: planner scope prompt gets 'This and all following days' (update_mode this_and_following): every weekday of the series from the clicked date on, share-only fields (room, instructor, color, block_type); per-day times/titles and past rows untouched; no re-key. Edit/move only, hidden for delete. Code only, no DB writes. Revert: git revert.
 pals-p5d-rooms-dual | PALS P5d: removed the coordinator Rooms panel, GET /api/adv-cert/room-stations, lib/rooms.ts and its test (Ben: half done, remove not patch); PALS testing grader and practice grader now use DualPaneGrading (scenario card left, grading right, independent scroll). Code only, no DB writes. Revert: git revert.
 cal-guests | CAL 1/3: day-level lab event planner guest list now matches my-membership (adds confirmed shift signups + program default roster minus opt-outs; no roster on AHA course days; failed reads throw instead of dropping guests). Still off behind LAB_DAY_EVENT_SYNC, dry-run only, no live effect. Revert: git revert.
 
