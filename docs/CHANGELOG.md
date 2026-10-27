@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-10-27
+
+flagged-items-fix | BUG: /api/lab-management/flagged-items embedded scenarios directly on scenario_assessments (no FK, PGRST200); now embeds scenarios via lab_stations!lab_stations_scenario_id_fkey and maps item.scenario so the flags page is unchanged. Code only. Revert: git revert.
+
 ## 2026-10-26
 
 pals-p5c-2b | PALS P5c-2b: course agenda template corrected to Ben's sheet (Section A 4x20 ending 16:05, B from 16:05, no break between, Day 1 ends 17:45; lib/pals-day-structure.ts + course_agenda_lines), generator takes programScheduleId (G15 has two active schedules), 29 draft agenda blocks written to G15 Nov 2/3 (tag agenda-line:pals:*, backup _backup_pmi_schedule_blocks_g15_palsagenda_20261026). Revert: delete rows with that tag, restore course_agenda_lines from _backup_course_agenda_lines_20261026, git revert.

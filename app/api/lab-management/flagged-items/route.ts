@@ -24,10 +24,10 @@ export async function GET(request: NextRequest) {
       .from('scenario_assessments')
       .select(`
         *,
-        scenario:scenarios(id, title, category),
         station:lab_stations!scenario_assessments_lab_station_id_fkey(
           id,
           station_number,
+          scenario:scenarios!lab_stations_scenario_id_fkey(id, title, category),
           lab_day:lab_days(id, date)
         ),
         lab_group:lab_groups(id, name),
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       query = query.or('flag_resolved.is.null,flag_resolved.eq.false');
     }
 
-    const { data, error } = await query;
+    const { data: rows, error } = await query;
 
     if (error) {
       console.error('Supabase error:', error);
@@ -60,6 +60,12 @@ export async function GET(request: NextRequest) {
       }
       throw error;
     }
+
+    // scenario_assessments has no scenario_id; the scenario lives on the station
+    const data = (rows || []).map((item: any) => ({
+      ...item,
+      scenario: item.station?.scenario ?? null,
+    }));
 
     // Separate into needs attention and positive recognition
     const needsAttention = (data || []).filter((item) =>
