@@ -182,6 +182,15 @@ export default function LabDayPage() {
   useEffect(() => { if (status === 'unauthenticated') router.push('/auth/signin'); }, [status, router]);
   useEffect(() => { if (session && labDayId) { fetchLabDay(); fetchScenarioParticipation(); fetchCurrentUserRole(); fetchSkillsForSignoffs(); fetchAllCohorts(); } }, [session, labDayId]);
   useEffect(() => { if (labDay?.cohort?.id) fetchCohortStudents(); }, [labDay?.cohort?.id]);
+  // PALS sections are hub-internal: the PALS hub is the only PALS pathway, so a direct
+  // lab day URL for a PALS section lands on the hub with that cohort and day selected.
+  useEffect(() => {
+    if (labDay?.cert_course !== 'pals') return;
+    const qs = new URLSearchParams();
+    if (labDay.cohort?.id) qs.set('cohortId', labDay.cohort.id);
+    if (labDay.date) qs.set('date', labDay.date);
+    router.replace(`/labs/pals-hub${qs.toString() ? `?${qs}` : ''}`);
+  }, [labDay?.cert_course, labDay?.cohort?.id, labDay?.date, router]);
 
   // Calendar availability
   const allInstructorEmails = (() => {

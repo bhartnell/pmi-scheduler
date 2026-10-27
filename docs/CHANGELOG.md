@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-26
 
+pals-p6-8 | PALS P6 item 8: a PALS section's lab day URL redirects to the hub with cohort and day selected (app/labs/schedule/[id]/page.tsx); Labs page drops the PALS Testing Grading card (hub is the only PALS entry); PALS practice grader Back defaults to the hub. Code only, no DB writes. Revert: git revert.
 pals-p5c-2b | PALS P5c-2b: course agenda template corrected to Ben's sheet (Section A 4x20 ending 16:05, B from 16:05, no break between, Day 1 ends 17:45; lib/pals-day-structure.ts + course_agenda_lines), generator takes programScheduleId (G15 has two active schedules), 29 draft agenda blocks written to G15 Nov 2/3 (tag agenda-line:pals:*, backup _backup_pmi_schedule_blocks_g15_palsagenda_20261026). Revert: delete rows with that tag, restore course_agenda_lines from _backup_course_agenda_lines_20261026, git revert.
 home-cal-5b | HOME CAL 5 (Who's coming): Today tile attendees now include the program default roster minus Remove-me opt-outs (my-labs + lib/lab-day-attendees), same membership as the week tile; Still open stays a separate number. No DB writes. Revert: git revert.
 home-cal-3 | HOME CAL 3: every home calendar event (week, month) opens a details popover (title, date, time, room, cohort, instructors, link to its page); admin+ get Edit for a class block's instructor and times (planner block PUT) and a lab day's times (lab day PATCH). No new write paths, no DB writes. Revert: git revert.

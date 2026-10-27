@@ -217,7 +217,7 @@ export default function PalsPracticeStationPage() {
     return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin" /></div>;
   }
 
-  const backHref = returnTo || (labDayId ? `/labs/schedule/${labDayId}` : '/labs/pals-hub');
+  const backHref = returnTo || '/labs/pals-hub';
   const title = station?.custom_title || station?.skill_name || (station ? `Station ${station.station_number}` : 'Station');
 
   return (
