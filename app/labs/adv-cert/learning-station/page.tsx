@@ -5,6 +5,8 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { safeReturnTo } from '@/lib/return-to';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
+import { advCertCrumbs, courseHubHref } from '@/lib/aha-hub-nav';
 import { ArrowLeft, Eye, CheckCircle2, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import TimerBanner from '@/components/TimerBanner';
@@ -42,6 +44,7 @@ export default function AclsLearningStationPage() {
   const [groups, setGroups] = useState<GroupOpt[]>([]);
   const [stations, setStations] = useState<StationOpt[]>([]);
   const [numRotations, setNumRotations] = useState<number | null>(null);
+  const [dayCtx, setDayCtx] = useState<{ course: string | null; cohortId: string | null; date: string | null }>({ course: 'acls', cohortId: null, date: null });
   const [caseTitle, setCaseTitle] = useState('');
   const [fullScenario, setFullScenario] = useState<any>(null);
   const [marks, setMarks] = useState<Mark[]>([]);
@@ -70,7 +73,7 @@ export default function AclsLearningStationPage() {
         fetch(`/api/adv-cert/grading-context?labDayId=${labDayId}`).then((r) => r.json()),
         fetch(`/api/adv-cert/learning-marks?labDayId=${labDayId}`).then((r) => r.json()),
       ]);
-      if (ctx.success) { setGroups(ctx.groups || []); setStations(ctx.stations || []); setNumRotations(ctx.day?.num_rotations ?? null); }
+      if (ctx.success) { setGroups(ctx.groups || []); setStations(ctx.stations || []); setNumRotations(ctx.day?.num_rotations ?? null); setDayCtx({ course: ctx.day?.cert_course ?? 'acls', cohortId: ctx.day?.cohort_id ?? null, date: ctx.day?.date ?? null }); }
       if (mk.success) setMarks(mk.marks || []);
     } catch {
       toast.error('Failed to load tracker');
@@ -81,6 +84,7 @@ export default function AclsLearningStationPage() {
 
   useEffect(() => { if (session) load(); }, [session, load]);
 
+  const hubHref = courseHubHref(dayCtx.course, dayCtx.cohortId, dayCtx.date);
   const station = stations.find((s) => s.id === stationId);
   const group = groups.find((g) => g.id === groupId);
 
@@ -141,8 +145,9 @@ export default function AclsLearningStationPage() {
           numRotations={numRotations || groups.length || stations.length || 4}
         />
       )}
-      <Link href={returnTo || (labDayId ? `/labs/schedule/${labDayId}` : '/labs/acls-hub/board')} className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:underline mb-3">
-        <ArrowLeft className="w-4 h-4" /> {returnTo ? 'Back' : 'Back to lab day'}
+      <BreadcrumbNames {...advCertCrumbs(dayCtx.course, 'learning-station', 'Learning Station', hubHref)} />
+      <Link href={returnTo || hubHref} className="inline-flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400 hover:underline mb-3">
+        <ArrowLeft className="w-4 h-4" /> {returnTo ? 'Back' : `Back to ${dayCtx.course === 'pals' ? 'PALS' : 'ACLS'} Hub`}
       </Link>
       <h1 className="text-2xl font-bold text-gray-900 dark:text-white">ACLS Learning Station Tracker</h1>
       <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">

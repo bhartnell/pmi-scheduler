@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Check, X, Loader2 } from 'lucide-react';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
+import { advCertCrumbs, courseHubHref } from '@/lib/aha-hub-nav';
 
 interface Criterion { id: string; text: string; is_critical: boolean | null; met: boolean }
 interface Segment { id: string; name: string; result: string | null; comments: string | null; criteria: Criterion[] }
@@ -43,6 +45,10 @@ export default function AttemptRecordPage() {
 
   return (
     <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4 text-gray-900 dark:text-gray-100">
+      {(() => {
+        const c = advCertCrumbs(rec?.attempt.cert_course, `attempt/${id}`, 'Attempt record', courseHubHref(rec?.attempt.cert_course));
+        return <BreadcrumbNames customSegments={{ ...c.customSegments, 'labs/adv-cert/attempt': '' }} customHrefs={c.customHrefs} />;
+      })()}
       <button type="button" onClick={() => router.back()} className="inline-flex items-center gap-1 text-sm text-blue-700 dark:text-blue-300 min-h-[44px]">
         <ArrowLeft className="w-4 h-4" /> Back
       </button>
