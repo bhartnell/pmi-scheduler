@@ -7,6 +7,9 @@
  * Reuses the shared-calendar path classes and exams already use
  * (lib/google-shared-calendar.ts) — no new attendee mechanism.
  *
+ * Guests = day roles + station instructors + confirmed shift signups + the
+ * program default roster minus opt-outs (same sources as my-membership).
+ *
  * ADDITIVE and OFF BY DEFAULT: nothing here is called from the existing
  * per-instructor sync paths, and the per-instructor events they produced
  * (station_assignment / general_lab / lab_day_role) are untouched. Retiring
@@ -158,6 +161,39 @@ export async function planLabDayEvent(
   }
   for (const si of stationInstructors ?? []) if (si.user_id) userIds.add(si.user_id);
   for (const r of roles ?? []) if (r.instructor_id) userIds.add(r.instructor_id);
+  // Same membership the home calendar's Sign up button and Who's coming read
+  // (my-membership route): confirmed shift signups, plus the program default
+  // roster minus opt-outs. AHA course days keep their own entry, so no roster there.
+  const programAbbr = (
+    first(first(sections[0].cohort as { program?: unknown } | null | undefined)?.program as
+      | { abbreviation?: string }
+      | null
+      | undefined)?.abbreviation || ''
+  ).toUpperCase();
+  const [signupRes, rosterRes, optoutRes] = await Promise.all([
+    supabase
+      .from('open_shifts')
+      .select('lab_day_id, signups:shift_signups!inner(instructor_id, status)')
+      .eq('is_cancelled', false)
+      .in('lab_day_id', labDayIds)
+      .eq('signups.status', 'confirmed'),
+    sections.some(s => s.cert_course) || !programAbbr
+      ? Promise.resolve({ data: [] as unknown[], error: null })
+      : supabase.from('program_default_instructors').select('user_id, program:programs!inner(abbreviation)'),
+    supabase.from('lab_day_optouts').select('lab_day_id, user_id').in('lab_day_id', labDayIds),
+  ]);
+  // A failed read must never silently drop guests from a live event.
+  if (signupRes.error) throw new Error(`signups read failed: ${signupRes.error.message}`);
+  if (rosterRes.error) throw new Error(`default roster read failed: ${rosterRes.error.message}`);
+  if (optoutRes.error) throw new Error(`opt-outs read failed: ${optoutRes.error.message}`);
+  for (const sh of (signupRes.data ?? []) as unknown as { signups: { instructor_id: string | null }[] | { instructor_id: string | null } }[]) {
+    for (const su of Array.isArray(sh.signups) ? sh.signups : [sh.signups]) if (su?.instructor_id) userIds.add(su.instructor_id);
+  }
+  const optedOut = new Set(((optoutRes.data ?? []) as { user_id: string }[]).map(o => o.user_id));
+  for (const r of (rosterRes.data ?? []) as unknown as { user_id: string | null; program: unknown }[]) {
+    const abbr = (first(r.program as { abbreviation?: string } | null)?.abbreviation || '').toUpperCase();
+    if (r.user_id && abbr === programAbbr && !optedOut.has(r.user_id)) userIds.add(r.user_id);
+  }
   const { data: users } = userIds.size
     ? await supabase.from('lab_users').select('id, name, email').in('id', [...userIds])
     : { data: [] as { id: string; name: string | null; email: string }[] };

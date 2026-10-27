@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-27
 
+cal-guests | CAL 1/3: day-level lab event planner guest list now matches my-membership (adds confirmed shift signups + program default roster minus opt-outs; no roster on AHA course days; failed reads throw instead of dropping guests). Still off behind LAB_DAY_EVENT_SYNC, dry-run only, no live effect. Revert: git revert.
+
 megacode-watch | MEGACODE GRADER: pass-but-watch on ACLS-engine megacode attempts. Additive nullable adv_cert_test_attempts.watch + watch_note (migration 20261027, applied live, no rows touched, no backfill); grader shows an optional 'Pass, but watch' checkbox + note on a pass (never a third result); coordinator stats row gets a 'Pass, watch' tile and a watch tag on recorded attempts. Revert: git revert; column drop in migration ROLLBACK block.
 
 flagged-items-fix | BUG: /api/lab-management/flagged-items embedded scenarios directly on scenario_assessments (no FK, PGRST200); now embeds scenarios via lab_stations!lab_stations_scenario_id_fkey and maps item.scenario so the flags page is unchanged. Code only. Revert: git revert.
