@@ -9,6 +9,7 @@
  */
 
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { isHubInternalLabDay } from '@/lib/hub-internal';
 import { refreshAccessTokenWithReason } from '@/lib/calendar-availability';
 import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
 
@@ -414,6 +415,22 @@ function buildDateTimes(
 
 // ─── High-Level Sync Functions ───────────────────────────────────────
 
+/**
+ * ACLS / PALS section lab days are hub-internal (PALS P6 item 7): instructors are
+ * assigned on the hub and Google carries one all-day-block entry per course day
+ * (syncPalsDayEvents), so the per-instructor station / role events are not
+ * created for them. Only blocks NEW creation; events already on calendars are
+ * left alone. A failed lookup returns false (sync proceeds as before).
+ */
+async function isHubInternalLabDayId(labDayId: string): Promise<boolean> {
+  try {
+    const { data } = await getSupabaseAdmin().from('lab_days').select('cert_course').eq('id', labDayId).maybeSingle();
+    return isHubInternalLabDay({ cert_course: data?.cert_course as string | null | undefined });
+  } catch {
+    return false;
+  }
+}
+
 // --- Lab Station Assignments ---
 
 interface StationAssignmentParams {
@@ -435,6 +452,7 @@ interface StationAssignmentParams {
 export async function syncLabStationAssignment(params: StationAssignmentParams): Promise<void> {
   try {
     if (!(await shouldSyncForUser(params.userEmail, 'sync_lab_assignments'))) return;
+    if (await isHubInternalLabDayId(params.labDayId)) return;
 
     // Idempotency: this can be reached from two call sites for the same
     // assignment (stations/[id] PATCH and station-instructors POST) — an
@@ -844,6 +862,7 @@ interface LabDayRoleParams {
 export async function syncLabDayRole(params: LabDayRoleParams): Promise<void> {
   try {
     if (!(await shouldSyncForUser(params.userEmail, 'sync_lab_roles'))) return;
+    if (await isHubInternalLabDayId(params.labDayId)) return;
 
     const accessToken = await getAccessTokenForUser(params.userEmail);
     if (!accessToken) return;

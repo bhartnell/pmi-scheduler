@@ -125,6 +125,8 @@ function isMine(e: BandEvent, name: string | null): boolean {
 /** The lab day an event stands for: a lab_days event, or a planner block linked to one. */
 function labDayIdOf(e: BandEvent): string | null {
   if (e.event_type !== 'lab') return null;
+  // A hub course day (ACLS / PALS) is assigned on the hub: no Sign up / You're in.
+  if (e.metadata?.hub_url) return null;
   if (e.source === 'lab_day') return e.linked_id ?? e.id.replace(/^lab-/, '');
   return e.linked_lab_day_id ?? null;
 }
@@ -135,6 +137,7 @@ function labDayIdOf(e: BandEvent): string | null {
  * reached from Schedule / settings).
  */
 function hrefFor(e: BandEvent): string | null {
+  if (typeof e.metadata?.hub_url === 'string') return e.metadata.hub_url;
   const labDayId = labDayIdOf(e);
   if (labDayId) return `/labs/schedule/${labDayId}`;
   if (e.source === 'planner' || e.source === 'lvfr') return null;

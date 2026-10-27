@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
       start_date,
       end_date,
       include: 'classes,labs,clinical,lvfr,shifts',
+      hub_internal: '1',
     });
 
     const calRes = await fetch(`${baseUrl}/api/calendar/unified?${params}`, {

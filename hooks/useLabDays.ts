@@ -4,6 +4,8 @@ interface UseLabDaysOptions {
   startDate?: string;
   endDate?: string;
   cohortId?: string;
+  /** Leave out ACLS / PALS section lab days (hub-internal). */
+  excludeHubInternal?: boolean;
   enabled?: boolean;
 }
 
@@ -75,6 +77,7 @@ async function fetchLabDays(opts: UseLabDaysOptions): Promise<LabDay[]> {
   if (opts.startDate) params.set('startDate', opts.startDate);
   if (opts.endDate) params.set('endDate', opts.endDate);
   if (opts.cohortId) params.set('cohortId', opts.cohortId);
+  if (opts.excludeHubInternal) params.set('excludeHubInternal', 'true');
 
   const res = await fetch(`/api/lab-management/lab-days?${params}`);
   const data = await res.json();
@@ -85,10 +88,10 @@ async function fetchLabDays(opts: UseLabDaysOptions): Promise<LabDay[]> {
 }
 
 export function useLabDays(options?: UseLabDaysOptions) {
-  const { startDate, endDate, cohortId, enabled } = options || {};
+  const { startDate, endDate, cohortId, excludeHubInternal, enabled } = options || {};
   return useQuery({
-    queryKey: ['lab-days', { startDate, endDate, cohortId }],
-    queryFn: () => fetchLabDays({ startDate, endDate, cohortId }),
+    queryKey: ['lab-days', { startDate, endDate, cohortId, excludeHubInternal: !!excludeHubInternal }],
+    queryFn: () => fetchLabDays({ startDate, endDate, cohortId, excludeHubInternal }),
     staleTime: 30_000,
     enabled: enabled !== false && !!startDate && !!endDate,
   });
