@@ -462,7 +462,7 @@ function RecurringActionDialog({
   blockDate: string | null;
   dayOfWeek?: number;
   courseName?: string | null;
-  onChoice: (mode: 'this' | 'this_and_future' | 'all') => void;
+  onChoice: (mode: 'this' | 'this_and_future' | 'this_and_following' | 'all') => void;
   onClose: () => void;
 }) {
   const dateLabel = blockDate || 'this date';
@@ -493,6 +493,15 @@ function RecurringActionDialog({
             <div className="font-medium">This and all future {dayName}s</div>
             <div className="text-xs text-gray-500 dark:text-gray-400">Affects {dateLabel} and every {dayName} after</div>
           </button>
+          {action !== 'delete' && (
+            <button
+              onClick={() => onChoice('this_and_following')}
+              className="w-full px-4 py-2.5 text-left text-sm rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
+            >
+              <div className="font-medium">This and all following days</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Every day of {courseName || 'this course'} from {dateLabel} on. Shared fields only (room, instructor, color); per-day times and titles stay.</div>
+            </button>
+          )}
           <button
             onClick={() => onChoice('all')}
             className="w-full px-4 py-2.5 text-left text-sm rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-gray-100"
@@ -550,9 +559,9 @@ function BlockEditModal({
   instructors: { id: string; name: string; email: string }[];
   semesterId: string;
   semesters: PmiSemester[];
-  onSave: (data: Record<string, unknown>, mode?: 'this' | 'this_and_future' | 'all') => void;
+  onSave: (data: Record<string, unknown>, mode?: 'this' | 'this_and_future' | 'this_and_following' | 'all') => void;
   onSaveRecurring: (data: Record<string, unknown>) => void;
-  onDelete?: (mode?: 'this' | 'this_and_future' | 'all') => void;
+  onDelete?: (mode?: 'this' | 'this_and_future' | 'this_and_following' | 'all') => void;
   onClose: () => void;
   saving: boolean;
 }) {
@@ -2800,7 +2809,7 @@ function SemesterPlannerPage() {
     });
   }, []);
 
-  const handleSaveBlock = useCallback(async (formData: Record<string, unknown>, updateMode?: 'this' | 'this_and_future' | 'all') => {
+  const handleSaveBlock = useCallback(async (formData: Record<string, unknown>, updateMode?: 'this' | 'this_and_future' | 'this_and_following' | 'all') => {
     if (!selectedSemesterId) return;
     setSaving(true);
 
@@ -2865,7 +2874,7 @@ function SemesterPlannerPage() {
     }
   }, [loadSemesterData]);
 
-  const handleDeleteBlock = useCallback(async (mode?: 'this' | 'this_and_future' | 'all') => {
+  const handleDeleteBlock = useCallback(async (mode?: 'this' | 'this_and_future' | 'this_and_following' | 'all') => {
     if (!editingBlock?.id || !selectedSemesterId) return;
     setSaving(true);
 
