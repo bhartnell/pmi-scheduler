@@ -240,7 +240,7 @@ interface Group { id: string; name: string; members: Student[] }
 interface AclsDay { id: string; date: string; cohort_id?: string; cert_course: string | null; is_adv_cert_testing: boolean; cohort?: { cohort_number: number } | null }
 interface AclsStation { id: string; station_number: number; instructor_name: string | null; room: string | null; custom_title: string | null; station_notes: string | null }
 interface AclsAttempt {
-  id: string; lab_group_id: string; overall_result: string; comments: string | null; started_at: string;
+  id: string; lab_group_id: string; overall_result: string; comments: string | null; started_at: string; watch?: boolean | null; watch_note?: string | null;
   team_lead?: { id: string; first_name: string; last_name: string } | null;
   scenario?: { id: string; name: string; case_code: string | null } | null;
   students?: { student_id: string }[];
@@ -293,7 +293,8 @@ function AclsBody({
     const ledStudentIds = new Set(attempts.map((a) => a.team_lead?.id).filter(Boolean) as string[]);
     const allStudents = groups.flatMap((g) => g.members);
     const ledCount = allStudents.filter((s) => ledStudentIds.has(s.id)).length;
-    return { passed, failed, groupsTested, pending, ledStudentIds, totalStudents: allStudents.length, ledCount };
+    const watchAttemptCount = attempts.filter((a) => a.overall_result === 'pass' && a.watch === true).length;
+    return { watchAttemptCount, passed, failed, groupsTested, pending, ledStudentIds, totalStudents: allStudents.length, ledCount };
   }, [attempts, groups]);
 
   return (
@@ -384,6 +385,7 @@ function AclsBody({
               <Tile label="Groups tested" value={`${stats.groupsTested}/${groups.length}`} />
               <Tile label="Passed" value={stats.passed} tone="text-green-600 dark:text-green-400" />
               <Tile label="Failed" value={stats.failed} tone="text-red-600 dark:text-red-400" />
+              <Tile label="Pass, watch" value={stats.watchAttemptCount} tone="text-amber-600 dark:text-amber-400" />
               <Tile label="Pending" value={stats.pending} tone="text-amber-600 dark:text-amber-400" />
               <Tile label="Team-led" value={`${stats.ledCount}/${stats.totalStudents}`} />
             </div>
@@ -433,6 +435,7 @@ function AclsBody({
                           {gAttempts.map((a) => (
                             <Link key={a.id} href={`/labs/adv-cert/attempt/${a.id}`} className="text-[11px] text-gray-600 dark:text-gray-400 flex flex-wrap items-center gap-2 min-h-[44px] px-1 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50">
                               <span className={a.overall_result === 'pass' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>{a.overall_result.toUpperCase()}</span>
+                              {a.watch === true && <span className="text-amber-600 dark:text-amber-400" title={a.watch_note || undefined}>watch</span>}
                               <span>{a.scenario?.case_code ? `[${a.scenario.case_code}] ` : ''}{a.scenario?.name || 'scenario'}</span>
                               <span className="inline-flex items-center gap-0.5"><UserCheck className="w-3 h-3" /> TL: {sname(a.team_lead)}</span>
                             </Link>

@@ -140,6 +140,9 @@ export async function saveAttempt(
     cert_course: course,
     overall_result: input.overall_result,
     comments: input.comments || null,
+    // Pass-but-watch is additive and only meaningful on a pass; never a third result.
+    watch: input.overall_result === 'pass' ? (input.watch ?? null) : null,
+    watch_note: input.overall_result === 'pass' && input.watch ? (input.watch_note?.trim() || null) : null,
     client_uuid: input.client_uuid || null,
     synced_at: input.client_uuid ? new Date().toISOString() : null,
   };

@@ -101,6 +101,9 @@ export interface SaveAttemptInput {
   cert_course?: CertCourse;
   overall_result: AdvCertResult;
   comments?: string | null;
+  /** Pass-but-watch: optional, kept only when overall_result is pass. */
+  watch?: boolean | null;
+  watch_note?: string | null;
   student_ids: string[]; // team members tested
   segment_results: AdvCertSegmentResultInput[];
   /** Offline idempotency key — set on the tablet, deduped server-side. */
@@ -121,6 +124,8 @@ export interface AdvCertTestAttempt {
   overall_result: AdvCertResult;
   started_at: string;
   comments: string | null;
+  watch?: boolean | null;
+  watch_note?: string | null;
   client_uuid: string | null;
   synced_at: string | null;
   ccf?: import('@/lib/ccf').CcfRecord | null;
