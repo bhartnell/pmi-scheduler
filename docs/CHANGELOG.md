@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-10-27
+
+flagged-items-fix | BUG: /api/lab-management/flagged-items embedded scenarios directly on scenario_assessments (no FK, PGRST200); now embeds scenarios via lab_stations!lab_stations_scenario_id_fkey and maps item.scenario so the flags page is unchanged. Code only. Revert: git revert.
+
 ## 2026-10-26
 
 pals-p6-8 | PALS P6 item 8: a PALS section's lab day URL redirects to the hub with cohort and day selected (app/labs/schedule/[id]/page.tsx); Labs page drops the PALS Testing Grading card (hub is the only PALS entry); PALS practice grader Back defaults to the hub. Code only, no DB writes. Revert: git revert.
