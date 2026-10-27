@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
       const { data: att } = await supabase
         .from('adv_cert_test_attempts')
         .select(`
-          id, lab_day_id, lab_group_id, overall_result, comments, started_at,
+          id, lab_day_id, lab_group_id, overall_result, comments, started_at, watch, watch_note,
           team_lead:students!adv_cert_test_attempts_team_lead_id_fkey(id, first_name, last_name),
           scenario:scenarios!adv_cert_test_attempts_scenario_id_fkey(id, name:title, case_code),
           students:adv_cert_attempt_students(student_id),

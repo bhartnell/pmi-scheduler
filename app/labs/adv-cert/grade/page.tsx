@@ -58,6 +58,8 @@ export default function AdvCertGradePage() {
   // Manual pass/fail at the bottom is an OVERRIDE of the autoscore (empty = use the score).
   const [overrideResult, setOverrideResult] = useState<'pass' | 'fail' | ''>('');
   const [overallComments, setOverallComments] = useState('');
+  const [watch, setWatch] = useState(false);
+  const [watchNote, setWatchNote] = useState('');
   // CCF: filled by the timer or typed by hand; always editable, never required to save.
   const [ccf, setCcf] = useState<CcfRecord | null>(null);
   const [ccfKey, setCcfKey] = useState(0);
@@ -190,7 +192,7 @@ export default function AdvCertGradePage() {
 
   function resetGrading() {
     setCriteriaMet({}); setSegResult({}); setSegComments({});
-    setOverrideResult(''); setOverallComments('');
+    setOverrideResult(''); setOverallComments(''); setWatch(false); setWatchNote('');
     setCcf(null); setCcfKey((k) => k + 1);
   }
 
@@ -276,6 +278,8 @@ export default function AdvCertGradePage() {
       cert_course: course,
       overall_result: finalOverall,
       comments: overallComments || null,
+      watch: finalOverall === 'pass' ? watch : null,
+      watch_note: finalOverall === 'pass' && watch ? watchNote || null : null,
       student_ids: Array.from(new Set([teamLeadId, ...memberIds])),
       segment_results,
       // offline-readiness: stable idempotency key minted client-side
@@ -611,6 +615,19 @@ export default function AdvCertGradePage() {
               value={overallComments} onChange={(e) => setOverallComments(e.target.value)}
               className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm" />
 
+            {overall === 'pass' && (
+              <div className="mt-3 rounded-md border border-amber-300 dark:border-amber-700 bg-amber-50/60 dark:bg-amber-900/10 p-3">
+                <label className="flex items-center gap-2 min-h-[44px] text-sm font-medium text-amber-900 dark:text-amber-200">
+                  <input type="checkbox" checked={watch} onChange={(e) => setWatch(e.target.checked)} className="w-5 h-5" />
+                  Pass, but watch this team lead (optional)
+                </label>
+                {watch && (
+                  <textarea placeholder="What to watch (optional)" rows={2} value={watchNote} onChange={(e) => setWatchNote(e.target.value)}
+                    className="mt-2 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm" />
+                )}
+                <p className="mt-1 text-xs text-gray-500">Program-only tag. The AHA result stays Pass.</p>
+              </div>
+            )}
             <button type="button" onClick={handleSave} disabled={saving}
               className="mt-4 inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-md text-sm font-medium">
               {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}

@@ -11848,6 +11848,8 @@ themselves on a repeat visit instead of re-registering.
 | client_uuid | uuid | YES |  |  |
 | synced_at | timestamp with time zone | YES |  |  |
 | ccf | jsonb | YES |  | CCF record (seconds, percent, source, intervals, original); migration 20261002 |
+| watch | boolean | YES |  | Pass-but-watch flag (only kept on a pass); migration 20261027 |
+| watch_note | text | YES |  | Instructor note for the watch flag; migration 20261027 |
 | created_at | timestamp with time zone | NO | now() |  |
 | updated_at | timestamp with time zone | NO | now() |  |
 
