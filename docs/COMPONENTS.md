@@ -19,7 +19,7 @@
 
 ### Major additions
 
-**`components/aha/RoomsPanel.tsx`** (2026-10-26, PALS P2c/4) — Collapsed "Rooms" section on the shared coordinator (ACLS and PALS). Props: `days` (`{id,date}[]`; distinct dates become the Day 1 / Day 2 picker), `refreshTick`, `onChanged`. Not a second store: reads scenario `lab_stations` via read-only `GET /api/adv-cert/room-stations`, grouped by room (`lib/rooms.ts` `groupByRoom`), and the per-room instructor picker PATCHes each ungraded station through the existing `/api/lab-management/stations/[id]`. Stations with a graded attempt are skipped and keep their grader. Remove the one `<RoomsPanel>` line in each body if it ever fights the hub (Ben: optional).
+**`components/aha/RoomsPanel.tsx`** — REMOVED 2026-10-27 (PALS P5d, Ben: rather remove than patch). Rooms and instructors stay per station on the hub.
 
 **`components/aha/CourseNotesCard.tsx`** (2026-10-26, PALS P5d) — Per-day instruction notes for an ACLS/PALS course. Props: `cohortId`, `course`, `dates`, `initialDate`, `defaultOpen`. Day tabs, textarea, Save; reads/writes `/api/adv-cert/course-notes` (table `adv_cert_course_notes`). Expanded on the coordinator (both bodies), collapsed in the CertBoard (hub) header.
 

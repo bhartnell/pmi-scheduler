@@ -27,7 +27,6 @@ import {
   Loader2, RefreshCw, CheckCircle2, XCircle, Clock, Users, UserCheck, MapPin, Printer, Pencil,
   FileArchive, Download, ChevronDown, ChevronRight, Eye, X,
 } from 'lucide-react';
-import RoomsPanel from '@/components/aha/RoomsPanel';
 import CourseNotesCard from '@/components/aha/CourseNotesCard';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
@@ -461,7 +460,6 @@ function AclsBody({
 
             <HowFinalTested course="acls" />
             <CourseNotesCard cohortId={day?.cohort_id} course="acls" dates={day?.date ? [String(day.date).slice(0, 10)] : []} />
-            <RoomsPanel days={[{ id: fullLabDay.id, date: String(fullLabDay.date).slice(0, 10) }]} refreshTick={refreshTick} onChanged={load} />
             <WhatDiffers />
           </div>
         )}
@@ -687,7 +685,6 @@ function PalsBody({ fullLabDay, refreshTick }: { fullLabDay: LabDay; refreshTick
         </p>
       </section>
 
-      <RoomsPanel days={labDays.map((d) => ({ id: d.id, date: d.date }))} refreshTick={refreshTick} onChanged={load} />
 
       <section className={`${card} print:hidden`}>
         <div className="flex items-center justify-between">

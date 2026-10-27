@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-27
 
+pals-p5d-rooms-dual | PALS P5d: removed the coordinator Rooms panel, GET /api/adv-cert/room-stations, lib/rooms.ts and its test (Ben: half done, remove not patch); PALS testing grader and practice grader now use DualPaneGrading (scenario card left, grading right, independent scroll). Code only, no DB writes. Revert: git revert.
 cal-guests | CAL 1/3: day-level lab event planner guest list now matches my-membership (adds confirmed shift signups + program default roster minus opt-outs; no roster on AHA course days; failed reads throw instead of dropping guests). Still off behind LAB_DAY_EVENT_SYNC, dry-run only, no live effect. Revert: git revert.
 
 pending | PALS P5 item 10: ACLS/PALS megacode grader, learning-station tracker and attempt record carry the crumb Testing and certification > <course> Hub > <page>; Back returns to that hub with cohort and day selected (lib/aha-hub-nav.ts). Code only, no DB writes. Revert: git revert.
