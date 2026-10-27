@@ -52,6 +52,12 @@ export async function GET(request: NextRequest) {
       query = query.eq('cohort_id', cohortId);
     }
 
+    // ACLS / PALS section lab days are hub-internal (PALS P6 item 7): the lab
+    // schedule list asks to leave them out; the planner and other readers keep them.
+    if (searchParams.get('excludeHubInternal') === 'true') {
+      query = query.is('cert_course', null);
+    }
+
     if (startDate) {
       query = query.gte('date', startDate);
     }

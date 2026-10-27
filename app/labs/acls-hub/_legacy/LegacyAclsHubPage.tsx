@@ -135,7 +135,7 @@ function AclsHubPageContent() {
         if (hub.cohort?.id && (hub.dates || []).length) {
           const start = hub.dates[0];
           const end = hub.dates[hub.dates.length - 1];
-          const uRes = await fetch(`/api/calendar/unified?cohort_id=${hub.cohort.id}&start=${start}&end=${end}&include=classes,labs,exams`);
+          const uRes = await fetch(`/api/calendar/unified?cohort_id=${hub.cohort.id}&start=${start}&end=${end}&include=classes,labs,exams&hub_internal=1`);
           const u = await uRes.json();
           setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date) && e.status !== 'cancelled'));
         } else {

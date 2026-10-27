@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-27
 
+pals-p6-item7 | PALS P6 item 7: ACLS/PALS hub-internal rows (lib/hub-internal.ts). /api/calendar/unified drops section lab_days (cert_course set) and 'agenda-line:' blocks unless hub_internal=1 (hubs, find-conflicts, find-slots keep the full set); the umbrella 'PALS (Day n of 2)' block (or a built entry when none) is the one calendar entry and opens the hub; home calendar: no Sign up / You're in on it. Lab schedule list excludes cert lab days (excludeHubInternal). Google: syncLabStationAssignment / syncLabDayRole no longer create per-instructor events for cert lab days (existing events untouched). Code only, no DB writes. Revert: git revert.
+
 megacode-watch | MEGACODE GRADER: pass-but-watch on ACLS-engine megacode attempts. Additive nullable adv_cert_test_attempts.watch + watch_note (migration 20261027, applied live, no rows touched, no backfill); grader shows an optional 'Pass, but watch' checkbox + note on a pass (never a third result); coordinator stats row gets a 'Pass, watch' tile and a watch tag on recorded attempts. Revert: git revert; column drop in migration ROLLBACK block.
 
 flagged-items-fix | BUG: /api/lab-management/flagged-items embedded scenarios directly on scenario_assessments (no FK, PGRST200); now embeds scenarios via lab_stations!lab_stations_scenario_id_fkey and maps item.scenario so the flags page is unchanged. Code only. Revert: git revert.

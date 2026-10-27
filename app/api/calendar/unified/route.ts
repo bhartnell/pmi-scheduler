@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { hasMinRole } from '@/lib/permissions';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { hubCourseOf, hubUrlFor, isAgendaBlock, type HubCourse } from '@/lib/hub-internal';
 import { createLabDedupTracker, trackScheduleBlockForLabDedup, isLabDayDeduped } from '@/lib/calendar-lab-dedup';
 
 export interface CalendarEvent {
@@ -95,6 +96,54 @@ export async function GET(request: NextRequest) {
     // date/cohort/section fallback) shared with the ICS feed reader.
     const labDedup = createLabDedupTracker();
 
+    // Hub-internal course rows (PALS P6 item 7): the ACLS / PALS hubs own their
+    // section lab_days and agenda blocks. Every other view gets ONE entry per
+    // course day (the umbrella planner block) that opens the hub. The hubs
+    // themselves, and availability checks that must still see every
+    // commitment, pass hub_internal=1 to get the full set.
+    const hubInternal = searchParams.get('hub_internal') === '1';
+    type CertDay = {
+      course: HubCourse;
+      cohortId: string | null;
+      date: string;
+      start: string | null;
+      end: string | null;
+      cohort: { id?: string; cohort_number?: number; is_test?: boolean; program?: { abbreviation?: string } | null } | null;
+    };
+    const certDays = new Map<string, CertDay>();
+    if (!hubInternal && (include.has('classes') || include.has('labs'))) {
+      try {
+        let certQuery = supabase
+          .from('lab_days')
+          .select('id, date, cohort_id, start_time, end_time, cert_course, cohort:cohorts(id, cohort_number, is_test, program:programs(abbreviation))')
+          .not('cert_course', 'is', null)
+          .eq('is_archived', false)
+          .gte('date', startDate)
+          .lte('date', endDate);
+        if (cohortId) certQuery = certQuery.eq('cohort_id', cohortId);
+        const { data: certRows } = await certQuery;
+        for (const r of certRows ?? []) {
+          const course = hubCourseOf(r.cert_course as string | null);
+          if (!course || !r.date) continue;
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const cohortRaw = r.cohort as any;
+          certDays.set(r.id as string, {
+            course,
+            cohortId: (r.cohort_id as string | null) ?? null,
+            date: r.date as string,
+            start: (r.start_time as string | null) ?? null,
+            end: (r.end_time as string | null) ?? null,
+            cohort: Array.isArray(cohortRaw) ? cohortRaw[0] ?? null : cohortRaw ?? null,
+          });
+        }
+      } catch (err) {
+        console.error('Error fetching hub course days:', err);
+      }
+    }
+    // Course days that already have their one umbrella entry (planner block).
+    const umbrellaKeys = new Set<string>();
+    const courseDayKey = (course: string, cohort: string | null | undefined, date: string) => `${course}:${cohort ?? ''}:${date}`;
+
     // 1. Schedule blocks (classes/exams) from pmi_schedule_blocks
     if (include.has('classes')) {
       try {
@@ -159,6 +208,9 @@ export async function GET(request: NextRequest) {
               if (!hasInstructor) continue;
             }
 
+            // Agenda lines belong to the hub's internal schedule, not the calendar.
+            if (!hubInternal && isAgendaBlock(block.content_notes as string | null)) continue;
+
             const blockType = (block.block_type || 'class') as string;
             const eventType: CalendarEvent['event_type'] =
               blockType === 'exam' ? 'exam' :
@@ -180,6 +232,11 @@ export async function GET(request: NextRequest) {
               cohortId: cohort?.id,
             });
 
+            // The one entry per course day: a planner block linked to a hub
+            // section lab day opens the hub, never a lab day page.
+            const hubDay = block.linked_lab_day_id ? certDays.get(block.linked_lab_day_id as string) : undefined;
+            if (hubDay) umbrellaKeys.add(courseDayKey(hubDay.course, hubDay.cohortId, hubDay.date));
+
             events.push({
               id: `planner-${block.id}`,
               source: 'planner',
@@ -193,7 +250,7 @@ export async function GET(request: NextRequest) {
               instructor_names: instructorNames,
               room: roomData?.name,
               linked_id: block.id,
-              linked_url: '/scheduling/planner',
+              linked_url: hubDay ? hubUrlFor(hubDay.course, hubDay.cohortId, hubDay.date) : '/scheduling/planner',
               event_type: eventType,
               status: blockStatus,
               content_notes: (block.content_notes as string) || undefined,
@@ -206,6 +263,7 @@ export async function GET(request: NextRequest) {
                 actual_start_time: (block.actual_start_time as string | null) ?? null,
                 is_parked: (block.is_parked as boolean | null) ?? false,
                 linked_section_number: (block.linked_section_number as number | null) ?? null,
+                ...(hubDay ? { hub_url: hubUrlFor(hubDay.course, hubDay.cohortId, hubDay.date), hub_course: hubDay.course } : {}),
               },
             });
           }
@@ -250,6 +308,8 @@ export async function GET(request: NextRequest) {
           );
           for (const ld of labDays) {
             if (!ld.date) continue;
+            // Hub-internal section lab days never appear as calendar events.
+            if (certDays.has(ld.id)) continue;
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             if (((ld as any).section_number ?? 1) === 1 && sectionedDates.has(ld.date)) continue;
 
@@ -318,6 +378,62 @@ export async function GET(request: NextRequest) {
         }
       } catch (err) {
         console.error('Error fetching lab days:', err);
+      }
+    }
+
+    // 2b. A hub course day with no umbrella planner block still gets its one
+    // entry, built from the real section rows (earliest start, latest end).
+    if (certDays.size > 0 && include.has('labs') && !instructorId) {
+      try {
+        const groups = new Map<string, CertDay[]>();
+        for (const d of certDays.values()) {
+          const k = courseDayKey(d.course, d.cohortId, d.date);
+          if (umbrellaKeys.has(k)) continue;
+          groups.set(k, [...(groups.get(k) ?? []), d]);
+        }
+        for (const [, rows] of groups) {
+          const first = rows[0];
+          const program = mapProgramAbbr(first.cohort?.program?.abbreviation);
+          if (programFilter && !programFilter.has(program!)) continue;
+          const starts = rows.map(r => r.start).filter(Boolean).sort() as string[];
+          const ends = rows.map(r => r.end).filter(Boolean).sort() as string[];
+          // Day n of N = position among this cohort's course dates.
+          let dayLabel = '';
+          if (first.cohortId) {
+            const { data: allDays } = await supabase
+              .from('lab_days')
+              .select('date')
+              .eq('cohort_id', first.cohortId)
+              .eq('cert_course', first.course)
+              .eq('is_archived', false);
+            const dates = [...new Set((allDays ?? []).map(r => r.date as string))].sort();
+            const idx = dates.indexOf(first.date);
+            if (idx >= 0) dayLabel = ` (Day ${idx + 1} of ${dates.length})`;
+          }
+          const hubUrl = hubUrlFor(first.course, first.cohortId, first.date);
+          events.push({
+            id: `course-day-${first.course}-${first.cohortId ?? 'x'}-${first.date}`,
+            source: 'planner',
+            title: `${first.course.toUpperCase()}${dayLabel}`,
+            date: first.date,
+            start_time: starts[0] ?? null,
+            end_time: ends[ends.length - 1] ?? null,
+            program,
+            color: PROGRAM_COLORS.course,
+            cohort_number: first.cohort?.cohort_number,
+            instructor_names: [],
+            linked_url: hubUrl,
+            event_type: 'lab',
+            metadata: {
+              course_day: true,
+              hub_url: hubUrl,
+              hub_course: first.course,
+              ...(first.cohort?.is_test ? { is_test: true } : {}),
+            },
+          });
+        }
+      } catch (err) {
+        console.error('Error building hub course-day entries:', err);
       }
     }
 

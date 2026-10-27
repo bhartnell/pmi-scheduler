@@ -232,6 +232,7 @@ const [debriefNoteCounts, setDebriefNoteCounts] = useState<Record<string, number
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
     cohortId: selectedCohort || undefined,
+    excludeHubInternal: true,
     enabled: !!session,
   });
 
