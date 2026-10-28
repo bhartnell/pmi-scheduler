@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-10-28
+
+pals-p5c-timer | PALS P5c: Rotation timer opens preloaded per section (title 'PALS Day 1 - Section B - Practice (Respiratory)', debrief alert from station debrief_minutes); hub APIs return debrief_minutes. DB (backups _backup_{lab_days,lab_stations,lab_template_stations}_p5c_20261028, RLS on): pool notes nulled on 12 G15 stations + 12 template stations, G15 rotation_duration A=20 / B-E=25, Section E num_rotations 3, debrief_minutes 10 on 15 B-E stations. Revert: git revert + restore from backups.
+
 ## 2026-10-27
 
 event-edit-4-5 | EVENT-EDIT 4/5: planner scope prompt gets 'This and all following days' (update_mode this_and_following): every weekday of the series from the clicked date on, share-only fields (room, instructor, color, block_type); per-day times/titles and past rows untouched; no re-key. Edit/move only, hidden for delete. Code only, no DB writes. Revert: git revert.

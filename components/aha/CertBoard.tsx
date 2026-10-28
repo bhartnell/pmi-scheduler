@@ -30,7 +30,7 @@ interface Group { id: string; name: string; members: Member[] }
 interface Station {
   id: string; lab_day_id: string; station_number: number; custom_title: string | null;
   room: string | null; instructor_name: string | null; station_notes: string | null;
-  rotation_minutes?: number | null;
+  rotation_minutes?: number | null; debrief_minutes?: number | null;
   scenario?: { id: string; title: string; case_code: string | null; cert_tier?: string | null; category?: string | null } | null;
 }
 interface LabDay {
@@ -40,6 +40,24 @@ interface LabDay {
   lab_mode: string | null; is_adv_cert_testing: boolean; stations: Station[];
 }
 export type CertCourse = 'acls' | 'pals';
+
+// "PALS Day 1 - Section B - Practice (Respiratory)": course, day, section, kind, and the category when every scenario station shares one.
+function timerDebriefSeconds(d: LabDay): number | undefined {
+  const m = d.stations.find(st => st.debrief_minutes != null)?.debrief_minutes;
+  return m != null ? m * 60 : undefined;
+}
+
+function timerTitle(courseLabel: string, d: LabDay): string {
+  const t = d.title || '';
+  const day = t.match(/Day\s*(\d+)/i)?.[1];
+  const section = (d.section_label || t).match(/Section\s*([A-Z])/i)?.[1]?.toUpperCase();
+  const paren = t.match(/\(([^)]+)\)/)?.[1] || '';
+  const kind = /practice/i.test(paren) ? 'Practice' : /testing/i.test(paren) ? 'Testing' : paren;
+  const cats = Array.from(new Set(d.stations.map(st => st.scenario?.category).filter(Boolean)));
+  const cat = cats.length === 1 ? ` (${String(cats[0]).replace(/^./, c => c.toUpperCase())})` : '';
+  const parts = [day ? `${courseLabel} Day ${day}` : courseLabel, section ? `Section ${section}` : null, kind ? `${kind}${cat}` : null].filter(Boolean);
+  return parts.join(' - ');
+}
 
 const COURSE_CFG: Record<CertCourse, {
   label: string; boardPath: string; hubApi: string; gradeBase: string; resultCol: string;
@@ -935,7 +953,10 @@ function BoardContent({ course }: { course: CertCourse }) {
       )}
 
       {timerFor && (
-        <LabTimer labDayId={timerFor.id} numRotations={timerFor.num_rotations || timerFor.stations.length || 1} rotationMinutes={timerFor.rotation_duration || 10} onClose={() => setTimerFor(null)} isController={true} />
+        <LabTimer labDayId={timerFor.id} numRotations={timerFor.num_rotations || timerFor.stations.length || 1} rotationMinutes={timerFor.rotation_duration || 10}
+          title={timerTitle(cfg.label, timerFor)}
+          defaultDebriefSeconds={timerDebriefSeconds(timerFor)}
+          onClose={() => setTimerFor(null)} isController={true} />
       )}
       {editing && (
         <EditStationModal
