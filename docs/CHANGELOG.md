@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-28
 
+cal-2-3a | CAL 2/3a: shared-calendar writer (system.shared_calendar_writer, default bhartnell@pmi.edu; lib/shared-calendar-writer.ts) now signs every day-level lab event write instead of the caller's token; lib/lab-day-event-replan.ts (replanLabDayEvent, off unless LAB_DAY_EVENT_SYNC=1, queues on missing token/failure, never deletes); migration 20261028_lab_day_event_replan_queue.sql (NOT YET APPLIED to prod: DDL needs approval). No triggers wired yet. Revert: git revert.
 pals-p5c-timer | PALS P5c: Rotation timer opens preloaded per section (title 'PALS Day 1 - Section B - Practice (Respiratory)', debrief alert from station debrief_minutes); hub APIs return debrief_minutes. DB (backups _backup_{lab_days,lab_stations,lab_template_stations}_p5c_20261028, RLS on): pool notes nulled on 12 G15 stations + 12 template stations, G15 rotation_duration A=20 / B-E=25, Section E num_rotations 3, debrief_minutes 10 on 15 B-E stations. Revert: git revert + restore from backups.
 
 ## 2026-10-27
