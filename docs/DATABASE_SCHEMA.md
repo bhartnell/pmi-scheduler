@@ -8425,6 +8425,24 @@ Counts and last write measured live 2026-10-19. "Our code" = any `.from()`/`rpc(
 **RLS Policies:**
 - `Allow all for system_settings` (ALL, permissive, roles: {public})
 
+#### `lab_day_event_replan_queue`
+
+Last updated: 2026-10-28 (CAL 2/3a; migration file committed, NOT YET APPLIED to live DB - verify before relying on it).
+
+| Column | Type | Nullable | Default | Notes |
+|--------|------|----------|---------|-------|
+| id | uuid | NO | gen_random_uuid() | PK |
+| cohort_id | uuid | NO |  |  |
+| date | date | NO |  |  |
+| reason | text | YES |  |  |
+| status | text | NO | 'pending' | pending / done |
+| attempts | integer | NO | 0 |  |
+| last_error | text | YES |  |  |
+| created_at | timestamptz | NO | now() |  |
+| updated_at | timestamptz | NO | now() |  |
+
+Unique pending row per (cohort_id, date). Service-role RLS only.
+
 #### `attendance_appeals`
 
 | Column | Type | Nullable | Default | Notes |

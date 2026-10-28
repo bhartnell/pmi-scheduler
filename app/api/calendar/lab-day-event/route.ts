@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
-import { getAccessTokenForUser } from '@/lib/google-calendar';
+import { getSharedCalendarWriter } from '@/lib/shared-calendar-writer';
 import { syncLabDayEvent } from '@/lib/lab-day-calendar-event';
 
 /**
@@ -16,7 +16,9 @@ import { syncLabDayEvent } from '@/lib/lab-day-calendar-event';
  *
  * dry_run defaults to TRUE and makes no Google calls and no writes. A live
  * run additionally requires LAB_DAY_EVENT_SYNC=1 (off by default) and
- * SHARED_CALENDAR_ID. Max 31 days per call.
+ * SHARED_CALENDAR_ID. Writes use the shared calendar writer's token
+ * (system.shared_calendar_writer, default the calendar owner), never the caller's.
+ * Max 31 days per call.
  */
 export async function POST(request: NextRequest) {
   const auth = await requireAuth();
@@ -48,14 +50,20 @@ export async function POST(request: NextRequest) {
     if (process.env.LAB_DAY_EVENT_SYNC !== '1') {
       return NextResponse.json({ error: 'Live day-level lab event sync is disabled (LAB_DAY_EVENT_SYNC != 1). Use dry_run.' }, { status: 412 });
     }
-    calendarId = process.env.SHARED_CALENDAR_ID ?? '';
-    if (!calendarId) {
-      return NextResponse.json({ error: 'SHARED_CALENDAR_ID env var is not set.' }, { status: 412 });
+    const writer = await getSharedCalendarWriter();
+    if (!writer.ok) {
+      return NextResponse.json(
+        {
+          error:
+            writer.reason === 'no_shared_calendar'
+              ? 'SHARED_CALENDAR_ID env var is not set.'
+              : `The shared calendar writer (${writer.email}) is not connected with events scope. Reconnect it; no other account is used.`,
+        },
+        { status: 412 }
+      );
     }
-    accessToken = (await getAccessTokenForUser(user.email)) ?? '';
-    if (!accessToken) {
-      return NextResponse.json({ error: 'Your Google Calendar is not connected with events scope.' }, { status: 412 });
-    }
+    calendarId = writer.calendarId;
+    accessToken = writer.accessToken;
   }
 
   const supabase = getSupabaseAdmin();
