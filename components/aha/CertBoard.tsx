@@ -639,6 +639,11 @@ function BoardContent({ course }: { course: CertCourse }) {
             {category && <span className="self-start text-[10px] lowercase px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300">{category}</span>}
             <div className="text-sm font-medium text-gray-900 dark:text-white leading-snug">{caseName}</div>
             <div className="text-[11px] text-gray-500 dark:text-gray-400">{[mins ? `${mins} min` : null, st.station_notes].filter(Boolean).join(' · ') || ' '}</div>
+            {st.scenario?.id && (
+              <Link href={`/labs/scenarios/${st.scenario.id}`} className="self-start text-[11px] underline text-blue-700 dark:text-blue-300">
+                Open scenario (print there)
+              </Link>
+            )}
             <select aria-label={`Room for station ${st.station_number}`} value={st.room || ''}
               onChange={ev => saveStation(st, { room: ev.target.value || null })}
               className="text-xs min-h-[36px] rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-1">
