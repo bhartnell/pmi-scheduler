@@ -43,6 +43,8 @@ interface LabTimerProps {
    *  timer for this lab day. Sourced from a per-station debrief_minutes
    *  preset (see EditStationModal); falls back to 300s (5 min) when unset. */
   defaultDebriefSeconds?: number;
+  /** Shown in the controller header in place of the generic "Lab Timer" label. */
+  title?: string;
 }
 
 interface TimerState {
@@ -86,7 +88,8 @@ export default function LabTimer({
   rotationMinutes,
   onClose,
   isController = true,
-  defaultDebriefSeconds
+  defaultDebriefSeconds,
+  title
 }: LabTimerProps) {
   const [isConnected, setIsConnected] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -783,7 +786,7 @@ export default function LabTimer({
         <div className="flex items-center gap-4">
           <Clock className="w-6 h-6" />
           <span className="text-lg font-medium">
-            {isController ? 'Lab Timer (Controller)' : 'Lab Timer'}
+            {title || (isController ? 'Lab Timer (Controller)' : 'Lab Timer')}
           </span>
           <div className={`flex items-center gap-1 text-sm ${isConnected ? 'text-green-400' : 'text-red-400'}`}>
             {isConnected ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
