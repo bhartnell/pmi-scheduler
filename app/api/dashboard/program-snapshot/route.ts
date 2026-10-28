@@ -51,7 +51,8 @@ export async function GET() {
            programs(id, name, abbreviation)
          )`
       )
-      .eq('status', 'active');
+      .eq('status', 'active')
+      .eq('is_test', false);
 
     if (stuErr) {
       console.error('[program-snapshot] students query', stuErr);
