@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const [usersRes, scenariosRes, studentsRes, labDaysRes, certsRes] = await Promise.all([
       supabase.from('lab_users').select('id', { count: 'exact', head: true }),
       supabase.from('scenarios').select('id', { count: 'exact', head: true }),
-      supabase.from('students').select('id', { count: 'exact', head: true }),
+      supabase.from('students').select('id', { count: 'exact', head: true }).eq('is_test', false),
       supabase.from('lab_days').select('id', { count: 'exact', head: true }),
       supabase.from('certifications').select('id', { count: 'exact', head: true })
     ]);

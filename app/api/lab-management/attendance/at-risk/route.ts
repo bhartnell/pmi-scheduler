@@ -60,6 +60,9 @@ export async function GET(request: NextRequest) {
 
     if (cohortIdFilter) {
       cohortQuery = cohortQuery.eq('id', cohortIdFilter);
+    } else {
+      // Cross-cohort sweep: test cohorts never count (a direct cohort_id request still works)
+      cohortQuery = cohortQuery.eq('is_test', false);
     }
 
     const { data: cohorts, error: cohortsError } = await cohortQuery;
