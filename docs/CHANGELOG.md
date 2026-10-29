@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-29
 
+pals-dry-run-3-8-10 | Course Schedule panel drops the cohort's regular class block and takes times from each row's own start (no duration chain); PALS course generation marks the cohort's recurring class instances cancelled on course days (lib/course-day-class-hold.ts); G15 EMS 182 on 11/2 + 11/3 set cancelled (backup _backup_pmi_schedule_blocks_20261029); cohort manager list fetched fresh (edge-cached list re-filled the Test cohort box). Revert: git revert; restore status from the backup table.
+
 pals-dry-run-456 | PALS templates carry section times/rotations (migration 20261029_pals_template_section_times.sql, seeded from sheet + Ben's Section B 20-min decision); AHA course generator copies them onto lab_days/lab_stations and runs the PALS agenda-line generator (draft). PM G1 test rows re-applied (backups _backup_lab_days_20261029, _backup_lab_stations_20261029). Revert: git revert + migration ROLLBACK.
 pals-dry-run-1-2b | Admin > Calendar sync: 'Re-sync PALS days' and 'Remove test-cohort PALS events' buttons + /api/admin/calendar-sync/pals-days (GET report, POST resync/remove-test; mapping row deleted only after Google confirms; audited). Revert: git revert.
 pals-dry-run-1 | PALS day-event sync skips test cohorts (lib/pals-all-day-sync.ts); students API shows a test cohort's own test students when cohortId is that test cohort (fixes empty groups page/grader picker). Code only. Revert: git revert.
