@@ -47,14 +47,14 @@ import { syncPalsDayEvent, removePalsAllDayEvent } from '@/lib/google-calendar';
  */
 export async function syncPalsDayEvents(
   supabase: ReturnType<typeof getSupabaseAdmin>,
-  opts: { targetEmail?: string; labDayId?: string } = {},
+  opts: { targetEmail?: string; labDayId?: string; skipReconcile?: boolean } = {},
 ): Promise<{ created: number; removed: number; instructors: number; palsDays: number }> {
   const counts = { created: 0, removed: 0, instructors: 0, palsDays: 0 };
   const today = new Date().toISOString().split('T')[0];
 
   // ── 1. RECONCILE — remove the deprecated per-section all-day events. ──
   // Skipped when scoped to a single new lab day (nothing to reconcile there).
-  if (!opts.labDayId) {
+  if (!opts.labDayId && !opts.skipReconcile) {
     let oldQuery = supabase
       .from('google_calendar_events')
       .select('user_email, source_id')

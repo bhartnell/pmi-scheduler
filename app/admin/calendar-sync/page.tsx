@@ -191,6 +191,8 @@ export default function CalendarSyncPage() {
   const [cleaningUp, setCleaningUp] = useState(false);
   const [cleanupPreview, setCleanupPreview] = useState<CleanupResult | null>(null);
   const [confirmingCleanup, setConfirmingCleanup] = useState(false);
+  // PALS day events: re-sync missing days, and remove test-cohort events.
+  const [palsBusy, setPalsBusy] = useState<string | null>(null);
 
   // ── Auth guard ──────────────────────────────────────────────────────────
 
@@ -363,6 +365,72 @@ export default function CalendarSyncPage() {
       toast.error(err instanceof Error ? err.message : 'Cleanup request failed');
     } finally {
       setConfirmingCleanup(false);
+    }
+  };
+
+  // ── PALS day events ──────────────────────────────────────────
+  // Re-sync creates any missing PALS day event (idempotent). Removal of
+  // test-cohort events previews first, then asks before touching Google.
+  const callPalsDay = async (body: Record<string, unknown>) => {
+    const res = await fetch('/api/admin/calendar-sync/pals-day', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  };
+
+  const handlePalsResync = async () => {
+    setPalsBusy('resync');
+    try {
+      const data = await callPalsDay({ action: 'resync' });
+      if (data.success) {
+        const lines = Object.entries(data.upcoming_pals_day_events ?? {})
+          .map(([k, v]) => `${k}: ${v}`)
+          .join('\n');
+        toast.success(`PALS days synced: ${data.counts?.palsDays ?? 0} day(s) checked`);
+        window.alert(`Upcoming PALS day events on Google (per day):\n\n${lines || 'none'}`);
+        fetchData();
+      } else {
+        toast.error(data.error || 'PALS re-sync failed');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'PALS re-sync failed');
+    } finally {
+      setPalsBusy(null);
+    }
+  };
+
+  const handleRemoveTestPals = async () => {
+    setPalsBusy('remove');
+    try {
+      const preview = await callPalsDay({ action: 'remove_test_cohort_events', dry_run: true });
+      if (!preview.success) {
+        toast.error(preview.error || 'Preview failed');
+        return;
+      }
+      if (!preview.matched) {
+        toast.success('No test-cohort PALS events found');
+        return;
+      }
+      const ok = window.confirm(
+        `Remove ${preview.matched} test-cohort PALS event(s) from instructors' Google calendars? Each is deleted from its owner's own calendar using the stored event id.`
+      );
+      if (!ok) return;
+      const data = await callPalsDay({ action: 'remove_test_cohort_events', dry_run: false });
+      if (data.success) {
+        toast.success(`Removed ${data.removed} of ${data.matched} test-cohort PALS events`);
+        if (data.removed < data.matched) {
+          console.error('[pals-day remove] not all removed:', data.results);
+        }
+        fetchData();
+      } else {
+        toast.error(data.error || 'Removal failed');
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Removal failed');
+    } finally {
+      setPalsBusy(null);
     }
   };
 
@@ -656,6 +724,24 @@ export default function CalendarSyncPage() {
                   <Trash2 className="w-4 h-4" />
                 )}
                 {cleaningUp ? 'Scanning…' : 'Clean up duplicates'}
+              </button>
+              <button
+                onClick={handlePalsResync}
+                disabled={palsBusy !== null}
+                title="Create any missing PALS day event (Day 1 / Day 2) for upcoming PALS courses"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 ${palsBusy === 'resync' ? 'animate-spin' : ''}`} />
+                {palsBusy === 'resync' ? 'Syncing PALS…' : 'Re-sync PALS days'}
+              </button>
+              <button
+                onClick={handleRemoveTestPals}
+                disabled={palsBusy !== null}
+                title="Remove PALS day events that were pushed for test cohorts"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {palsBusy === 'remove' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                {palsBusy === 'remove' ? 'Removing…' : 'Remove test-cohort PALS events'}
               </button>
             </div>
 

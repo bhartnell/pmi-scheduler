@@ -739,7 +739,10 @@ export async function syncPalsDayEvent(params: PalsDayParams): Promise<void> {
     if (existing) return;
 
     const accessToken = await getAccessTokenForUser(params.userEmail);
-    if (!accessToken) return;
+    if (!accessToken) {
+      console.error(`[gcal] PALS day ${params.sourceId}: no usable access token for ${params.userEmail}; event not created`);
+      return;
+    }
 
     const { startDateTime, endDateTime } = buildDateTimes(
       params.date,

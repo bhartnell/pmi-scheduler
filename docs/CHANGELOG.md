@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-29
 
+pals-dry-run-1-2b | Admin > Calendar sync: 'Re-sync PALS days' and 'Remove test-cohort PALS events' buttons (POST /api/admin/calendar-sync/pals-day; removal previews first, deletes mapping only after Google confirms, rows audit-logged); syncPalsDayEvent now logs when no token. Code only. Revert: git revert.
 pals-dry-run-1 | PALS day-event sync skips test cohorts (lib/pals-all-day-sync.ts); students API shows a test cohort's own test students when cohortId is that test cohort (fixes empty groups page/grader picker). Code only. Revert: git revert.
 tl-readiness-3 | Team-lead report shows Lab / ACLS / PALS lead counts per student; untagged (course NULL) turns count as lab; no data rewritten (app/api/reports/team-leads, app/reports/team-leads). Code only. Revert: git revert.
 
