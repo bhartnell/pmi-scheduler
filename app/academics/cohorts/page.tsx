@@ -148,8 +148,11 @@ export default function CohortManagementPage() {
       // Fetch cohorts - include archived if toggled (archived cohorts are always inactive).
       // include_external=true so external-program cohorts (e.g. LVFR) remain
       // manageable here even though they're hidden from PMI-facing pickers.
+      // fresh=<now> + no-store: the list API is edge-cached (s-maxage=300), and a stale
+      // list re-fills the edit form with the old is_test, so a second save undoes the first.
       const cohortsRes = await fetch(
-        `/api/lab-management/cohorts?activeOnly=${!showInactive && !showArchived}&include_archived=${showArchived}&include_external=true`
+        `/api/lab-management/cohorts?activeOnly=${!showInactive && !showArchived}&include_archived=${showArchived}&include_external=true&fresh=${Date.now()}`,
+        { cache: 'no-store' }
       );
       const cohortsData = await cohortsRes.json();
       if (cohortsData.success) {

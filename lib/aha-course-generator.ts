@@ -473,6 +473,18 @@ export async function generateAhaCourseForCohort(
     }
   }
 
+  // The cohort's regular class is not held on its PALS course days (Ben, 2026-10-29).
+  if (certCourse === 'pals' && plan.some((p) => p.created_lab_day_id)) {
+    try {
+      const { holdRegularClassesOnCourseDays } = await import('@/lib/course-day-class-hold');
+      const dates = Array.from(new Set(plan.filter((p) => p.created_lab_day_id).map((p) => p.date)));
+      const hold = await holdRegularClassesOnCourseDays(supabase, { cohortId, dates, reason: 'PALS course day' });
+      errors.push(...hold.errors);
+    } catch (e) {
+      errors.push(`class hold failed: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
   return {
     cohort_id: cohortId,
     cert_course: certCourse,

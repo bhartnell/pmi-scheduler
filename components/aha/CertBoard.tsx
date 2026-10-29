@@ -22,6 +22,7 @@ import { Loader2, RefreshCw, Printer, GripVertical, ParkingSquare, ChevronUp, Ch
 import LabTimer from '@/components/LabTimer';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import CourseNotesCard from '@/components/aha/CourseNotesCard';
+import { isAgendaBlock } from '@/lib/hub-internal';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 import type { LabDay as FullLabDay, Station as FullStation, Instructor, InstructorAvailabilityEntry } from '@/components/lab-day/types';
 
@@ -42,6 +43,13 @@ interface LabDay {
 export type CertCourse = 'acls' | 'pals';
 
 // "PALS Day 1 - Section B - Practice (Respiratory)": course, day, section, kind, and the category when every scenario station shares one.
+// The cohort's own regular class (e.g. EMS 182 Pediatrics) is not held on a course day, so it never belongs in
+// the course Schedule panel. Course rows are agenda lines, hub sections (linked lab day) and non-class events;
+// other programs' events are not in this cohort-scoped feed at all. Decided by data, never by title or date.
+function isRegularClassBlock(e: CalEvent): boolean {
+  return e.source === 'planner' && e.event_type === 'class' && !e.linked_lab_day_id && !isAgendaBlock(e.content_notes);
+}
+
 function timerDebriefSeconds(d: LabDay): number | undefined {
   const m = d.stations.find(st => st.debrief_minutes != null)?.debrief_minutes;
   return m != null ? m * 60 : undefined;
@@ -226,7 +234,7 @@ function BoardContent({ course }: { course: CertCourse }) {
         // Not awaited: the unified calendar is the slowest call and only decorates the board,
         // so the spinner clears on the hub data and the calendar events fill in when they land.
         fetch(`/api/calendar/unified?cohort_id=${hub.cohort.id}&start=${hub.dates[0]}&end=${hub.dates[hub.dates.length - 1]}&include=classes,labs,exams&hub_internal=1`).then(r => r.json())
-          .then((u: { events?: CalEvent[] }) => setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date) && e.status !== 'cancelled')))
+          .then((u: { events?: CalEvent[] }) => setEvents((u.events || []).filter((e: CalEvent) => hub.dates.includes(e.date) && e.status !== 'cancelled' && !isRegularClassBlock(e))))
           .catch(() => setEvents([]));
       } else setEvents([]);
     } catch { /* non-blocking */ } finally { setLoading(false); }
@@ -340,16 +348,20 @@ function BoardContent({ course }: { course: CertCourse }) {
       const ord = orderFor(d);
       const live = ord.filter(i => !parked.has(i)); const park = ord.filter(i => parked.has(i));
       const firstStart = events.filter(e => e.date === d && !containerIds.has(e.id)).map(e => toMin(e.start_time)).sort((a, b) => a - b)[0] ?? 0;
-      let clock = firstStart, shift = 0;
+      let clock = firstStart, shift = 0, dayEnd = firstStart;
       for (const i of live) {
-        const act = eventById.get(i)?.metadata?.actual_start_time;
-        if (act) { shift = toMin(act) - clock; clock = toMin(act); }
+        // A row sits at its own stored start (or its live actual start); the clock never carries one
+        // row's duration into the next, so a stray or overlapping row cannot shift the rest of the day.
+        const ev = eventById.get(i);
+        const act = ev?.metadata?.actual_start_time;
+        const own = toMin(ev?.start_time);
+        if (act) { shift = toMin(act) - own; clock = toMin(act); } else { clock = own + shift; } // running late carries forward
         out[i] = { at: clock, delta: shift, parked: false };
-        clock += DUR(i);
+        dayEnd = Math.max(dayEnd, clock + DUR(i));
       }
-      let pc = clock;
+      let pc = dayEnd;
       for (const i of park) { out[i] = { at: pc, delta: 0, parked: true }; pc += DUR(i); }
-      ends[d] = clock;
+      ends[d] = dayEnd;
     }
     return { rows: out, ends };
   }, [dates, orderFor, parked, events, eventById, DUR, containerIds]);
