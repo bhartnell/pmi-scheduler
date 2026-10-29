@@ -77,7 +77,7 @@ export async function syncPalsDayEvents(
     .from('lab_days')
     .select(`
       id, date, cohort_id,
-      cohort:cohorts!inner(cohort_number, program:programs!inner(abbreviation))
+      cohort:cohorts!inner(cohort_number, is_test, program:programs!inner(abbreviation))
     `)
     .eq('cert_course', 'pals')
     .eq('is_archived', false)
@@ -134,11 +134,13 @@ export async function syncPalsDayEvents(
     const dayKey = `${ld.cohort_id}:${ld.date}`;
     if (seenDayKey.has(dayKey)) continue; // one block per (cohort, date), not per section
     seenDayKey.add(dayKey);
-    counts.palsDays++;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cohort = (ld as any).cohort;
     const c = Array.isArray(cohort) ? cohort[0] : cohort;
+    // Test cohorts never reach real calendars (STUDENT VIEW 2/4c, #414).
+    if (c?.is_test) continue;
+    counts.palsDays++;
     const program = c?.program ? (Array.isArray(c.program) ? c.program[0] : c.program) : null;
     const cohortLabel = c && program?.abbreviation ? `${program.abbreviation} G${c.cohort_number}` : undefined;
 
