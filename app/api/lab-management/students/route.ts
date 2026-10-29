@@ -50,7 +50,19 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     // Test students never appear in real rosters; setup views pass includeTest=true.
-    if (searchParams.get('includeTest') !== 'true') {
+    // Inside a test cohort's own pages (cohortId is itself a test cohort) its test
+    // students show: the filter keeps them out of real counts, not out of their own
+    // groups page, grader picker or hub.
+    let includeTest = searchParams.get('includeTest') === 'true';
+    if (!includeTest && cohortId) {
+      const { data: scopeCohort } = await supabase
+        .from('cohorts')
+        .select('is_test')
+        .eq('id', cohortId)
+        .maybeSingle();
+      includeTest = scopeCohort?.is_test === true;
+    }
+    if (!includeTest) {
       query = query.eq('is_test', false);
     }
 
