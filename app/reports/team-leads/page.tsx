@@ -45,6 +45,9 @@ interface TeamLeadsData {
     id: string;
     name: string;
     rotationCount: number;
+    labLeads: number;
+    aclsLeads: number;
+    palsLeads: number;
     lastRotationDate: string | null;
     needsMore: boolean;
   }>;
@@ -156,9 +159,9 @@ export default function TeamLeadsReportPage() {
     csv += `Students with Zero,${reportData.summary.studentsWithZero}\n\n`;
 
     csv += 'Student Breakdown\n';
-    csv += 'Name,Rotations,Last Rotation,Needs More\n';
+    csv += 'Name,Rotations,Lab Leads,ACLS Leads,PALS Leads,Last Rotation,Needs More\n';
     reportData.studentBreakdown.forEach(student => {
-      csv += `${student.name},${student.rotationCount},${student.lastRotationDate || 'Never'},${student.needsMore ? 'Yes' : 'No'}\n`;
+      csv += `${student.name},${student.rotationCount},${student.labLeads},${student.aclsLeads},${student.palsLeads},${student.lastRotationDate || 'Never'},${student.needsMore ? 'Yes' : 'No'}\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -413,6 +416,9 @@ export default function TeamLeadsReportPage() {
                       <tr>
                         <th className="px-4 py-3 text-left font-medium text-gray-600 dark:text-gray-400">Student</th>
                         <th className="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">Rotations</th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">Lab Leads</th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">ACLS Leads</th>
+                        <th className="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">PALS Leads</th>
                         <th className="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">Last Rotation</th>
                         <th className="px-4 py-3 text-center font-medium text-gray-600 dark:text-gray-400">Status</th>
                       </tr>
@@ -427,6 +433,9 @@ export default function TeamLeadsReportPage() {
                               {student.rotationCount}
                             </span>
                           </td>
+                          <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">{student.labLeads}</td>
+                          <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">{student.aclsLeads}</td>
+                          <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">{student.palsLeads}</td>
                           <td className="px-4 py-3 text-center text-gray-600 dark:text-gray-400">
                             {student.lastRotationDate ? new Date(student.lastRotationDate + 'T12:00:00').toLocaleDateString() : 'Never'}
                           </td>

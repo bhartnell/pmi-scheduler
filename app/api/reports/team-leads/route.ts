@@ -54,6 +54,7 @@ export async function GET(request: NextRequest) {
         id,
         student_id,
         date,
+        course,
         scenario:scenarios(title)
       `)
       .in('student_id', studentIds)
@@ -69,15 +70,20 @@ export async function GET(request: NextRequest) {
     const { data: tlLogs } = await tlQuery;
 
     // Build student TL map
-    const studentTlMap: Record<string, { count: number; lastDate: string | null; rotations: any[] }> = {};
+    const studentTlMap: Record<string, { count: number; lastDate: string | null; rotations: any[]; lab: number; acls: number; pals: number }> = {};
     studentIds.forEach(id => {
-      studentTlMap[id] = { count: 0, lastDate: null, rotations: [] };
+      studentTlMap[id] = { count: 0, lastDate: null, rotations: [], lab: 0, acls: 0, pals: 0 };
     });
 
     tlLogs?.forEach((log) => {
       if (studentTlMap[log.student_id]) {
         studentTlMap[log.student_id].count++;
         studentTlMap[log.student_id].rotations.push(log);
+        // Untagged turns (course NULL) count as general lab leads (Ben, 2026-10-19). Nothing is rewritten.
+        const course = (log as any).course?.toUpperCase();
+        if (course === 'ACLS') studentTlMap[log.student_id].acls++;
+        else if (course === 'PALS') studentTlMap[log.student_id].pals++;
+        else studentTlMap[log.student_id].lab++;
         const currentLastDate = studentTlMap[log.student_id].lastDate;
         if (!currentLastDate || log.date > currentLastDate) {
           studentTlMap[log.student_id].lastDate = log.date;
@@ -110,6 +116,9 @@ export async function GET(request: NextRequest) {
         id: student.id,
         name: `${student.first_name} ${student.last_name}`,
         rotationCount: tlData.count,
+        labLeads: tlData.lab,
+        aclsLeads: tlData.acls,
+        palsLeads: tlData.pals,
         lastRotationDate: tlData.lastDate,
         needsMore,
       });
