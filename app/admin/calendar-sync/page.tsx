@@ -188,6 +188,7 @@ export default function CalendarSyncPage() {
     per_user?: CleanupPerUser[];
     error?: string;
   }
+  const [palsBusy, setPalsBusy] = useState<null | 'resync' | 'remove-test'>(null);
   const [cleaningUp, setCleaningUp] = useState(false);
   const [cleanupPreview, setCleanupPreview] = useState<CleanupResult | null>(null);
   const [confirmingCleanup, setConfirmingCleanup] = useState(false);
@@ -293,6 +294,54 @@ export default function CalendarSyncPage() {
       toast.error('Sync request failed');
     } finally {
       setSyncingAll(false);
+    }
+  };
+
+  // ── PALS day events (PALS DRY RUN 1/2b) ───────────────────────────────
+  const handlePalsDays = async (action: 'resync' | 'remove-test') => {
+    if (action === 'remove-test') {
+      const ok = window.confirm(
+        'Remove the PALS day events that test cohorts pushed onto real calendars?\n\n' +
+          'Only events for cohorts marked as test are deleted, each from its owner\'s own calendar. ' +
+          'Real cohorts are not touched.',
+      );
+      if (!ok) return;
+    }
+    setPalsBusy(action);
+    try {
+      const res = await fetch('/api/admin/calendar-sync/pals-days', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error || 'PALS day action failed');
+        return;
+      }
+      if (action === 'resync') {
+        const days = (data.days ?? []) as { source_id: string; users: string[]; is_test: boolean }[];
+        const perDate = days
+          .filter((d) => !d.is_test)
+          .map((d) => `${d.source_id.split(':')[1]}: ${d.users.length}`)
+          .join(', ');
+        toast.success(`PALS days synced (${data.counts?.created ?? 0} checked). Events per date: ${perDate || 'none'}`);
+      } else {
+        const kept = (data.kept ?? []).length;
+        const msg = `Removed ${data.removed} of ${data.found} test-cohort PALS events` + (kept ? `; ${kept} kept (see console)` : '');
+        if (kept) {
+          console.error('[pals-days] kept rows:', data.kept);
+          toast.error(msg);
+        } else {
+          toast.success(msg);
+        }
+      }
+      fetchData();
+    } catch (err) {
+      console.error('PALS day action error:', err);
+      toast.error('PALS day request failed');
+    } finally {
+      setPalsBusy(null);
     }
   };
 
@@ -656,6 +705,24 @@ export default function CalendarSyncPage() {
                   <Trash2 className="w-4 h-4" />
                 )}
                 {cleaningUp ? 'Scanning…' : 'Clean up duplicates'}
+              </button>
+              <button
+                onClick={() => handlePalsDays('resync')}
+                disabled={palsBusy !== null}
+                title="Create any missing PALS course-day events (all PALS days, real cohorts only)"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-4 h-4 ${palsBusy === 'resync' ? 'animate-spin' : ''}`} />
+                {palsBusy === 'resync' ? 'Syncing PALS…' : 'Re-sync PALS days'}
+              </button>
+              <button
+                onClick={() => handlePalsDays('remove-test')}
+                disabled={palsBusy !== null}
+                title="Delete PALS day events that test cohorts pushed onto real calendars"
+                className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Trash2 className="w-4 h-4" />
+                {palsBusy === 'remove-test' ? 'Removing…' : 'Remove test-cohort PALS events'}
               </button>
             </div>
 
