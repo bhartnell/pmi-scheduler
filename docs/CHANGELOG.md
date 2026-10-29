@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-10-29
+
+tl-readiness-3 | Team-lead report shows Lab / ACLS / PALS lead counts per student; untagged (course NULL) turns count as lab; no data rewritten (app/api/reports/team-leads, app/reports/team-leads). Code only. Revert: git revert.
+
 ## 2026-10-28
 
 pals-p5-scn-link | PALS P5: hub station card gets an Open scenario link (components/aha/CertBoard.tsx); print lives on the scenario page. Code only. Revert: git revert.
