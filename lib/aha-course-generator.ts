@@ -44,6 +44,12 @@ export interface AhaTemplateDayPlan {
   date: string;
   is_adv_cert_testing: boolean;
   lab_mode: string | null;
+  // Section timing carried on the template (all null = leave DB defaults).
+  start_time: string | null;
+  end_time: string | null;
+  rotation_minutes: number | null;
+  num_rotations: number | null;
+  debrief_minutes: number | null;
   stations: AhaTemplateStationPlan[];
   action: 'create' | 'skip_existing';
   existing_lab_day_id?: string;
@@ -59,6 +65,8 @@ export interface GenerateAhaCourseResult {
   created_count: number;
   skipped_count: number;
   errors: string[];
+  // PALS only, real (non-dry) runs: agenda lines written for the Schedule panel.
+  agenda?: { created: number; skipped: number; notes: string[] };
 }
 
 export interface GenerateAhaCourseInput {
@@ -283,6 +291,7 @@ export async function generateAhaCourseForCohort(
     .from('lab_day_templates')
     .select(
       `id, name, day_number, section_number, section_label, is_adv_cert_testing, lab_mode,
+       start_time, end_time, rotation_minutes, num_rotations, debrief_minutes,
        stations:lab_template_stations(id, sort_order, station_type, station_name, scenario_id, scenario_title, notes, metadata, skill_sheet_id)`
     )
     .eq('category', 'certification')
@@ -346,6 +355,11 @@ export async function generateAhaCourseForCohort(
       date,
       is_adv_cert_testing: !!t.is_adv_cert_testing,
       lab_mode: t.lab_mode ?? null,
+      start_time: t.start_time ?? null,
+      end_time: t.end_time ?? null,
+      rotation_minutes: t.rotation_minutes ?? null,
+      num_rotations: t.num_rotations ?? null,
+      debrief_minutes: t.debrief_minutes ?? null,
       stations: stationPlans,
       action: existing ? 'skip_existing' : 'create',
       existing_lab_day_id: existing?.id,
@@ -381,6 +395,11 @@ export async function generateAhaCourseForCohort(
         is_adv_cert_testing: dayPlan.is_adv_cert_testing,
         lab_mode: dayPlan.lab_mode || 'group_rotations',
         source_template_id: dayPlan.template_id,
+        // Timing only when the template carries it; otherwise DB defaults stay.
+        ...(dayPlan.start_time ? { start_time: dayPlan.start_time } : {}),
+        ...(dayPlan.end_time ? { end_time: dayPlan.end_time } : {}),
+        ...(dayPlan.rotation_minutes ? { rotation_duration: dayPlan.rotation_minutes } : {}),
+        ...(dayPlan.num_rotations ? { num_rotations: dayPlan.num_rotations } : {}),
       })
       .select('id')
       .single();
@@ -400,6 +419,9 @@ export async function generateAhaCourseForCohort(
         station_notes: s.notes,
         metadata: s.metadata || {},
         skill_sheet_id: s.skill_sheet_id,
+        ...(dayPlan.rotation_minutes ? { rotation_minutes: dayPlan.rotation_minutes } : {}),
+        ...(dayPlan.num_rotations ? { num_rotations: dayPlan.num_rotations } : {}),
+        ...(dayPlan.debrief_minutes ? { debrief_minutes: dayPlan.debrief_minutes } : {}),
       }));
       const { error: stationsError } = await supabase.from('lab_stations').insert(stationRows);
       if (stationsError) {
@@ -432,6 +454,25 @@ export async function generateAhaCourseForCohort(
     console.error('[aha-course-generator] calendar autosync error', e);
   }
 
+  // PALS agenda lines (the hub Schedule panel rows). Runs after the lab days
+  // exist because section lines take their times from them. Additive and
+  // idempotent (existing tags are skipped); written as 'draft' so nothing
+  // syncs to calendars unseen. Notes are informational, never fatal.
+  let agenda: GenerateAhaCourseResult['agenda'];
+  if (certCourse === 'pals') {
+    try {
+      const { generateCourseAgendaForCohort } = await import('@/lib/course-agenda-generator');
+      const r = await generateCourseAgendaForCohort({ cohortId, course: 'pals', dayDates, dryRun: false });
+      agenda = {
+        created: r.created_count,
+        skipped: r.skipped_count,
+        notes: [...r.errors, ...r.days.flatMap((d) => d.plan.warnings.map((w) => `${d.date}: ${w.detail}`))],
+      };
+    } catch (e) {
+      agenda = { created: 0, skipped: 0, notes: [`Agenda generation failed: ${e instanceof Error ? e.message : String(e)}`] };
+    }
+  }
+
   return {
     cohort_id: cohortId,
     cert_course: certCourse,
@@ -441,5 +482,6 @@ export async function generateAhaCourseForCohort(
     created_count: plan.filter((p) => p.created_lab_day_id).length,
     skipped_count: plan.filter((p) => p.action === 'skip_existing').length,
     errors,
+    agenda,
   };
 }

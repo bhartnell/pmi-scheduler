@@ -21,6 +21,7 @@
 > Last updated: 2026-09-14 -- new table `osce_walkup_evaluators` (migration `20260914_osce_walkup_evaluators.sql`, Task Handoff Queue "OSCE walk-up evaluator login"): self-reported evaluators who show up on event day without being pre-invited. See `osce_walkup_evaluators` below.
 > Last updated: 2026-09-14 -- repeatable OSCE creation flow (migration `20260914_osce_repeatable_setup.sql`, Task Handoff Queue "OSCE event creation in the UI — make it repeatable per cohort"): added `osce_events.cohort_id` (FK -> cohorts) + `osce_events.minutes_per_student` (capacity default, 32), and new table `osce_day_scenarios` (per-day A-F scenario assignment). See both below.
 > Last updated: 2026-09-14 -- G15 ACLS regeneration (migration `20260914_g15_acls_regen.sql`, Task Handoff Queue "G15's ACLS days were generated from the SUPERSEDED March placeholder template"): no column/table shape changes. See `lab_day_templates` below for full detail.
+> Last updated: 2026-10-29 -- `lab_day_templates` gained nullable section timing columns (`start_time`, `end_time`, `rotation_minutes`, `num_rotations`, `debrief_minutes`), migration `20261029_pals_template_section_times.sql` (PALS DRY RUN 4/5/6). Verified against live DB.
 > Last updated: 2026-10-26 -- G15 PALS rebuild + Section A fix + cert_course switch-over (migration `20261026_pals_g15_rebuild.sql`, PALS P4/4): no column/table shape changes, data + one `lab_template_stations` content split only. See `lab_day_templates` below for full detail.
 
 ## Summary
@@ -2389,6 +2390,11 @@ clinical-tasks routes still read them as a frozen historical snapshot).
 | section_label | text | YES |  | Optional display label for the section, copied onto the generated `lab_days.section_label` |
 | is_adv_cert_testing | boolean | NO | false | Copied onto the generated `lab_days.is_adv_cert_testing` |
 | lab_mode | text | YES |  | Copied onto the generated `lab_days.lab_mode` (e.g. `group_rotations`\|`individual_testing`) |
+| start_time | time | YES |  | Section start; copied onto generated `lab_days.start_time` (migration `20261029_pals_template_section_times.sql`; seeded for the 5 PALS section templates only) |
+| end_time | time | YES |  | Section end; copied onto `lab_days.end_time` |
+| rotation_minutes | integer | YES |  | Copied onto `lab_days.rotation_duration` and each generated `lab_stations.rotation_minutes` |
+| num_rotations | integer | YES |  | Copied onto `lab_days.num_rotations` and each generated `lab_stations.num_rotations` |
+| debrief_minutes | integer | YES |  | Copied onto each generated `lab_stations.debrief_minutes` (NULL = single segment) |
 
 **Check Constraints:**
 - `lab_day_templates_category_check`: `((category = ANY (ARRAY['orientation'::text, 'skills_lab'::text, 'scenario_lab'::text, 'assessment'::text, 'capstone'::text, 'certification'::text, 'mixed'::text, 'field_trip'::text, 'other'::text])))`
