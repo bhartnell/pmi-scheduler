@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-30
 
+pals-step-lists | PALS per-case step lists: 15 case checklists (152 criteria, AHA Debriefing Tool wording) added to pals_checklists/pals_checklist_criteria, scenarios.pals_checklist_id repointed for those 15 cases only; subtype checklists untouched. Backups _backup_pals_checklists_20261030, _backup_pals_checklist_criteria_20261030, _backup_scenarios_pals_20261030 (RLS on). Migration 20261030_pals_per_case_step_lists.sql. Revert: restore scenarios.pals_checklist_id from backup, deactivate case_pals_* checklists.
+
 pals-dry-run-11 | G15 Nov 2 Day 1 Section B to 20-min rotations, ends 17:25: lib/pals-day-structure.ts d1-sectionb 80 min + d1-end 17:25; data fix on 1 lab_days, 4 lab_stations, 2 course_agenda_lines, 1 pmi_schedule_blocks (backups _backup_*_20261030). Revert: git revert + restore from backups.
 schedule-a-non-instructional | pmi_schedule_blocks.block_type accepts non_instructional (check constraint widened, migration 20261030_schedule_block_type_non_instructional.sql, no rows changed); planner, academics planner and template pickers + workspace color know it. Revert: git revert; ROLLBACK block in migration.
 
