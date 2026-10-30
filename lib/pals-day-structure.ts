@@ -45,8 +45,8 @@ export const PALS_2025_DAY1_AGENDA: PalsAgendaBlock[] = [
   { id: 'd1-l10', start: '14:20', durationMinutes: 15, label: 'L10 — Management of Post-Cardiac Arrest Care', type: 'lecture' },
   { id: 'd1-break2', start: '14:35', durationMinutes: 10, label: 'Break', type: 'break' },
   { id: 'd1-sectiona', start: '14:45', durationMinutes: 80, label: 'Section A — Learning Stations (4 stations x 20 min)', type: 'lab' },
-  { id: 'd1-sectionb', start: '16:05', durationMinutes: 100, label: 'Section B — Case Scenario Practice (4 cases)', type: 'lab' },
-  { id: 'd1-end', start: '17:45', durationMinutes: 0, label: 'End of Day 1', type: 'lecture' },
+  { id: 'd1-sectionb', start: '16:05', durationMinutes: 80, label: 'Section B — Case Scenario Practice (4 cases)', type: 'lab' },
+  { id: 'd1-end', start: '17:25', durationMinutes: 0, label: 'End of Day 1', type: 'lecture' },
 ];
 
 export const PALS_2025_DAY2_AGENDA: PalsAgendaBlock[] = [
