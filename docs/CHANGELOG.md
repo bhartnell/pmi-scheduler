@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-10-30
 
+pals-dry-run-11 | G15 Nov 2 Day 1 Section B to 20-min rotations, ends 17:25: lib/pals-day-structure.ts d1-sectionb 80 min + d1-end 17:25; data fix on 1 lab_days, 4 lab_stations, 2 course_agenda_lines, 1 pmi_schedule_blocks (backups _backup_*_20261030). Revert: git revert + restore from backups.
 schedule-a-non-instructional | pmi_schedule_blocks.block_type accepts non_instructional (check constraint widened, migration 20261030_schedule_block_type_non_instructional.sql, no rows changed); planner, academics planner and template pickers + workspace color know it. Revert: git revert; ROLLBACK block in migration.
 
 ## 2026-10-29
