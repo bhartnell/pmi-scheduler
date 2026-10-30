@@ -108,7 +108,7 @@ function programLabel(p: WsProgram | undefined): string {
 }
 const TYPE_COLORS: Record<string, string> = {
   lab: '#8B5CF6', exam: '#EF4444', lecture: '#3B82F6', class: '#3B82F6',
-  admin: '#6B7280', meeting: '#6B7280', clinical: '#0EA5E9', other: '#6B7280',
+  admin: '#6B7280', meeting: '#6B7280', clinical: '#0EA5E9', other: '#6B7280', non_instructional: '#9CA3AF',
 };
 
 export default function PlanningWorkspacePage() {

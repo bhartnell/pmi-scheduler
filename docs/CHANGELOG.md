@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-10-30
+
+schedule-a-non-instructional | pmi_schedule_blocks.block_type accepts non_instructional (check constraint widened, migration 20261030_schedule_block_type_non_instructional.sql, no rows changed); planner, academics planner and template pickers + workspace color know it. Revert: git revert; ROLLBACK block in migration.
+
 ## 2026-10-29
 
 pals-dry-run-3-8-10 | Course Schedule panel drops the cohort's regular class block and takes times from each row's own start (no duration chain); PALS course generation marks the cohort's recurring class instances cancelled on course days (lib/course-day-class-hold.ts); G15 EMS 182 on 11/2 + 11/3 set cancelled (backup _backup_pmi_schedule_blocks_20261029); cohort manager list fetched fresh (edge-cached list re-filled the Test cohort box). Revert: git revert; restore status from the backup table.

@@ -34,6 +34,7 @@ const BLOCK_TYPE_OPTIONS: { value: ScheduleBlockType; label: string }[] = [
   { value: 'admin', label: 'Admin' },
   { value: 'meeting', label: 'Meeting' },
   { value: 'other', label: 'Other' },
+  { value: 'non_instructional', label: 'Non-instructional' },
 ];
 
 const ROOM_TYPE_LABELS: Record<string, string> = {

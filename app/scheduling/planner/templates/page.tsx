@@ -20,6 +20,7 @@ const BLOCK_TYPE_OPTIONS = [
   { value: 'clinical', label: 'Clinical' },
   { value: 'exam', label: 'Exam' },
   { value: 'other', label: 'Other' },
+  { value: 'non_instructional', label: 'Non-instructional' },
 ];
 
 const DURATION_TYPES = [
