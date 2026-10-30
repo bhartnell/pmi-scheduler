@@ -58,7 +58,7 @@ export interface PmiProgramSchedule {
   semester?: PmiSemester;
 }
 
-export type ScheduleBlockType = 'class' | 'lecture' | 'lab' | 'clinical' | 'exam' | 'study' | 'admin' | 'meeting' | 'other';
+export type ScheduleBlockType = 'class' | 'lecture' | 'lab' | 'clinical' | 'exam' | 'study' | 'admin' | 'meeting' | 'other' | 'non_instructional';
 
 export interface PmiScheduleBlock {
   id: string;
