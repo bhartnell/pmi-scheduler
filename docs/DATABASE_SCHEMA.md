@@ -4,7 +4,7 @@
 > Reconciled to live database -- June 8, 2026 (see "Schema Reconciliation Additions")
 > Check constraints re-verified against live -- June 10, 2026 (all 146 documented CHECK definitions normalized to exact pg_get_constraintdef output; 4 had real value-list drift)
 > Check-constraint coverage completed -- June 11, 2026: ALL 251 live CHECK constraints now documented byte-exact (added the 105 missing entries, mostly on the Schema Reconciliation Additions tables + exam tables)
-> Last updated: 2026-10-30 -- `pmi_schedule_blocks.block_type` check widened with `non_instructional` (migration `20261030_schedule_block_type_non_instructional.sql`, applied live; no rows changed)
+> Last updated: 2026-10-31 -- 14 ACLS break/lunch/end-of-day `pmi_schedule_blocks` rows now `non_instructional` (live counts: other 67, meeting 0, admin 2, non_instructional 14). Previous: 2026-10-30 -- `pmi_schedule_blocks.block_type` check widened with `non_instructional` (migration `20261030_schedule_block_type_non_instructional.sql`, applied live; no rows changed)
 > Last updated: 2026-10-21 -- `lab_day_roles`: added nullable `other_name` and role `attending` (migration `20261021_lab_day_roles_attending_other.sql`, applied live; lab day Who's coming block)
 > Last updated: 2026-10-01 -- `lab_users.signature_face` now 'script' (embedded Dancing Script); legacy 'classic'/'formal'/'casual' still valid, render as script (no schema change)
 > Last updated: 2026-09-29 -- added `scenarios.assessment_{x..e}_action` (Scenario Format v2); `phases` jsonb gains optional keys changes/triggers/modifiers/branch

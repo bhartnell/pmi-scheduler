@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-10-31
+
+schedule-b | SCHEDULE B: 14 verified ACLS break/lunch/end-of-day pmi_schedule_blocks rows moved other/meeting to non_instructional (backup _backup_pmi_schedule_blocks_20261031, RLS on); ACLS/PALS board overview tile no longer counts them; agenda generator emits non_instructional for break/lunch lines. Revert: git revert + restore block_type from backup.
+
 ## 2026-10-30
 
 pals-step-lists | PALS per-case step lists: 15 case checklists (152 criteria, AHA Debriefing Tool wording) added to pals_checklists/pals_checklist_criteria, scenarios.pals_checklist_id repointed for those 15 cases only; subtype checklists untouched. Backups _backup_pals_checklists_20261030, _backup_pals_checklist_criteria_20261030, _backup_scenarios_pals_20261030 (RLS on). Migration 20261030_pals_per_case_step_lists.sql. Revert: restore scenarios.pals_checklist_id from backup, deactivate case_pals_* checklists.

@@ -88,7 +88,7 @@ interface CalEvent {
   id: string; title: string; date: string; start_time: string | null; end_time: string | null;
   event_type: string; instructor_names?: string[]; room?: string; status?: string;
   source?: string; linked_id?: string; linked_lab_day_id?: string; content_notes?: string;
-  metadata?: { is_parked?: boolean; actual_start_time?: string | null; instructor_id?: string | null; additional_instructor_id?: string | null; linked_section_number?: number | null };
+  metadata?: { block_type?: string | null; is_parked?: boolean; actual_start_time?: string | null; instructor_id?: string | null; additional_instructor_id?: string | null; linked_section_number?: number | null };
 }
 interface InstructorOpt { id: string; name: string }
 interface WatchMark {
@@ -461,7 +461,8 @@ function BoardContent({ course }: { course: CertCourse }) {
   const overview = useMemo(() => {
     const scoped = events.filter(e => visibleDates.includes(e.date) && !containerIds.has(e.id) && !layout.rows[e.id]?.parked);
     const endOf = (e: CalEvent) => (layout.rows[e.id]?.at ?? toMin(e.start_time)) + DUR(e.id);
-    const cls = scoped.filter(e => e.event_type !== 'lab');
+    // Non-instructional blocks (breaks, lunch, end of day) occupy the day but are not instruction, so no tile counts them.
+    const cls = scoped.filter(e => e.event_type !== 'lab' && e.metadata?.block_type !== 'non_instructional');
     const lab = scoped.filter(e => e.event_type === 'lab');
     let rotTotal = 0, rotDone = 0;
     for (const e of lab) {
