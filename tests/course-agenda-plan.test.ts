@@ -49,7 +49,7 @@ test('plain lines use template times; titles use hyphen not em dash', () => {
   const lunch = blocks.find((b) => b.line_key === 'd1-lunch')!;
   assert.equal(lunch.start_time, '12:00');
   assert.equal(lunch.end_time, '13:00');
-  assert.equal(lunch.block_type, 'other');
+  assert.equal(lunch.block_type, 'non_instructional');
   const a = blocks.find((b) => b.line_key === 'd1-sectiona')!;
   assert.equal(a.title, 'PALS LAB · Section A - Learning Stations');
   assert.ok(blocks.every((b) => !b.title.includes('—')));

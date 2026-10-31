@@ -72,8 +72,8 @@ const BLOCK_TYPE: Record<AgendaLineType, string> = {
   practice: 'lab',
   lab: 'lab',
   testing: 'exam',
-  break: 'other',
-  lunch: 'other',
+  break: 'non_instructional',
+  lunch: 'non_instructional',
 };
 
 export const agendaTag = (course: AgendaCourse, lineKey: string) => `agenda-line:${course}:${lineKey}`;
