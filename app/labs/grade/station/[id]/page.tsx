@@ -29,6 +29,7 @@ import EvaluationCriteria from '@/components/grading/EvaluationCriteria';
 import StudentSelection from '@/components/grading/StudentSelection';
 import DualPaneGrading from '@/components/grading/DualPaneGrading';
 import FlaggingPanel from '@/components/grading/FlaggingPanel';
+import { fetchAbsentStudentIds } from '@/lib/absent-students';
 import ScenarioReferencePanel from '@/components/grading/ScenarioReferencePanel';
 
 // Types and constants from shared module
@@ -72,6 +73,7 @@ export default function GradeStationPage() {
   // Grading state
   const [selectedGroupId, setSelectedGroupId] = useState<string>('');
   const [teamLeaderId, setTeamLeaderId] = useState<string>('');
+  const [absentStudentIds, setAbsentStudentIds] = useState<Set<string>>(new Set());
   const [selectedStudentId, setSelectedStudentId] = useState<string>(''); // For skills stations
   const [rotationNumber, setRotationNumber] = useState<number>(1);
   const [criticalActions, setCriticalActions] = useState<Record<string, boolean>>({});
@@ -250,6 +252,15 @@ export default function GradeStationPage() {
       fetchStation();
     }
   }, [session, stationId]);
+
+  // Hub-board absence for this station's lab day (read-only; display only, never blocks a pick).
+  useEffect(() => {
+    const labDayId = station?.lab_day?.id;
+    if (!labDayId) return;
+    let cancelled = false;
+    fetchAbsentStudentIds([labDayId]).then(ids => { if (!cancelled) setAbsentStudentIds(ids); });
+    return () => { cancelled = true; };
+  }, [station?.lab_day?.id]);
 
   useEffect(() => {
     if (station?.lab_day?.cohort?.id) {
@@ -1118,6 +1129,7 @@ export default function GradeStationPage() {
           triggerAutoSave={triggerAutoSave}
           evaluatedStudents={evaluatedStudents}
           inProgressStudents={inProgressStudents}
+          absentStudentIds={absentStudentIds}
         />
 
         {/* Critical Actions — ONLY for scenario stations */}
@@ -1458,6 +1470,7 @@ export default function GradeStationPage() {
               triggerAutoSave={triggerAutoSave}
               evaluatedStudents={evaluatedStudents}
               inProgressStudents={inProgressStudents}
+              absentStudentIds={absentStudentIds}
             />
           </div>
 
