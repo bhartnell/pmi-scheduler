@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { Users, Star, CheckCircle, Clock } from 'lucide-react';
 import StudentPicker from '@/components/StudentPicker';
+import { ABSENT_NAME_CLASS } from '@/lib/absent-students';
 import type { Student, LabGroup, Station } from './types';
 
 interface StudentSelectionProps {
@@ -24,6 +25,8 @@ interface StudentSelectionProps {
   evaluatedStudents?: Record<string, string>;
   /** Map of student ID -> evaluation ID for in-progress evaluations */
   inProgressStudents?: Record<string, string>;
+  /** Students marked absent on the hub board for this lab day: shown struck through, still selectable. */
+  absentStudentIds?: Set<string>;
 }
 
 export default function StudentSelection({
@@ -43,7 +46,9 @@ export default function StudentSelection({
   triggerAutoSave,
   evaluatedStudents = {},
   inProgressStudents = {},
+  absentStudentIds,
 }: StudentSelectionProps) {
+  const isAbsent = (id: string) => !!absentStudentIds?.has(id);
   const selectedGroup = labGroups.find(g => g.id === selectedGroupId);
   const completedCount = Object.keys(evaluatedStudents).length;
   const inProgressCount = Object.keys(inProgressStudents).length;
@@ -236,7 +241,7 @@ export default function StudentSelection({
                 }`}
               >
                 <div className="font-medium text-gray-900 dark:text-white">{group.name}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{group.members?.length || 0} students</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{(() => { const t = group.members?.length || 0; const n = (group.members || []).filter(m => isAbsent(m.student.id)).length; return n > 0 ? `${t - n} of ${t} students` : `${t} students`; })()}</div>
               </button>
             ))}
           </div>
@@ -275,7 +280,8 @@ export default function StudentSelection({
                 </div>
                 <div className="text-left">
                   <div className="font-medium text-gray-900 dark:text-white text-sm">
-                    {member.student.first_name} {member.student.last_name}
+                    <span className={isAbsent(member.student.id) ? ABSENT_NAME_CLASS : ''}>{member.student.first_name} {member.student.last_name}</span>
+                    {isAbsent(member.student.id) && <span className="ml-1 text-xs font-normal text-gray-500 dark:text-gray-400">absent</span>}
                   </div>
                   {teamLeaderId === member.student.id && (
                     <div className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center gap-1">

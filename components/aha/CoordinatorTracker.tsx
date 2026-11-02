@@ -21,6 +21,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import { fetchAbsentStudentIds, ABSENT_NAME_CLASS } from '@/lib/absent-students';
 import Link from 'next/link';
 import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 import {
@@ -245,6 +246,11 @@ interface AclsAttempt {
   students?: { student_id: string }[];
 }
 const sname = (s?: { first_name: string; last_name: string } | null) => (s ? `${s.first_name} ${s.last_name}` : '-');
+// '4 of 5' when someone is marked absent on the hub board, plain total otherwise.
+const presentOfTotal = (members: { id: string }[], absent: Set<string>) => {
+  const n = members.filter((m) => absent.has(m.id)).length;
+  return n > 0 ? `${members.length - n} of ${members.length}` : String(members.length);
+};
 
 function AclsBody({
   labDayId, fullLabDay, instructors, calendarAvailability, instructorAvailability, editingStation, setEditingStation, refreshTick,
@@ -259,6 +265,7 @@ function AclsBody({
   const [groups, setGroups] = useState<Group[]>([]);
   const [stations, setStations] = useState<AclsStation[]>([]);
   const [attempts, setAttempts] = useState<AclsAttempt[]>([]);
+  const [absentIds, setAbsentIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -273,6 +280,7 @@ function AclsBody({
       const att = await attRes.json();
       if (ctx.success) { setDay(ctx.day); setGroups(ctx.groups || []); setStations(ctx.stations || []); }
       if (att.success) setAttempts(att.attempts || []);
+      setAbsentIds(await fetchAbsentStudentIds([labDayId]));
     } catch { /* non-blocking */ } finally { setLoading(false); }
   }, [labDayId]);
 
@@ -342,7 +350,7 @@ function AclsBody({
             return (
               <div key={g.id} className="mb-4" style={{ breakInside: 'avoid' }}>
                 <div className="font-bold text-sm border-b border-black mb-1">
-                  {g.name} ({g.members.length})
+                  {g.name} ({presentOfTotal(g.members, absentIds)})
                   {gAttempts.length > 0 && <span className="font-normal">{' - recorded: '}{gAttempts.map((a) => `${a.overall_result.toUpperCase()} (TL ${sname(a.team_lead)})`).join(', ')}</span>}
                 </div>
                 <table className="w-full text-xs border-collapse">
@@ -356,7 +364,7 @@ function AclsBody({
                   <tbody>
                     {g.members.map((m) => (
                       <tr key={m.id}>
-                        <td className="border border-black px-1 py-1">{m.last_name}, {m.first_name}{stats.ledStudentIds.has(m.id) ? ' ✓' : ''}</td>
+                        <td className="border border-black px-1 py-1"><span className={absentIds.has(m.id) ? 'line-through' : ''}>{m.last_name}, {m.first_name}</span>{absentIds.has(m.id) ? ' (absent)' : ''}{stats.ledStudentIds.has(m.id) ? ' ✓' : ''}</td>
                         <td className="border border-black px-1 py-1">☐</td>
                         <td className="border border-black px-1 py-1" />
                         <td className="border border-black px-1 py-1">P / F</td>
@@ -421,7 +429,7 @@ function AclsBody({
                   return (
                     <div key={g.id} className={card}>
                       <div className="flex items-center justify-between">
-                        <div className="font-medium text-gray-800 dark:text-gray-100">{g.name} <span className="text-xs text-gray-400">({g.members.length})</span></div>
+                        <div className="font-medium text-gray-800 dark:text-gray-100">{g.name} <span className="text-xs text-gray-400">({presentOfTotal(g.members, absentIds)})</span></div>
                         {day?.cohort_id && (
                           <a href={`/api/reports/aha/zip?cohortId=${day.cohort_id}&course=${day.cert_course === 'pals' ? 'pals' : 'acls'}&labGroupId=${g.id}&grouping=student`} title={`PDF zip for ${g.name}`} className="inline-flex items-center justify-center min-h-[44px] min-w-[44px] text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 print:hidden"><FileArchive className="w-4 h-4" /></a>
                         )}
@@ -445,8 +453,8 @@ function AclsBody({
                         {g.members.map((m) => {
                           const led = stats.ledStudentIds.has(m.id);
                           return (
-                            <a key={m.id} href={`/api/reports/aha?template=megacode&studentId=${m.id}&course=${day?.cert_course === 'pals' ? 'pals' : 'acls'}&print=1`} target="_blank" rel="noreferrer" title={`Print ${m.first_name} ${m.last_name} results`} className={`text-[10px] px-1.5 py-0.5 rounded-full hover:underline ${led ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}>
-                              {led ? '✓ ' : ''}{m.first_name} {m.last_name}
+                            <a key={m.id} href={`/api/reports/aha?template=megacode&studentId=${m.id}&course=${day?.cert_course === 'pals' ? 'pals' : 'acls'}&print=1`} target="_blank" rel="noreferrer" title={`Print ${m.first_name} ${m.last_name} results`} className={`text-[10px] px-1.5 py-0.5 rounded-full hover:underline ${led ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'} ${absentIds.has(m.id) ? ABSENT_NAME_CLASS : ''}`}>
+                              {led ? '✓ ' : ''}{m.first_name} {m.last_name}{absentIds.has(m.id) ? ' (absent)' : ''}
                             </a>
                           );
                         })}
@@ -523,6 +531,7 @@ interface TempMove { id: string; studentId: string; fromGroupId: string; toGroup
 
 function PalsBody({ fullLabDay, refreshTick }: { fullLabDay: LabDay; refreshTick: number }) {
   const [hub, setHub] = useState<PalsHubResponse | null>(null);
+  const [absentIds, setAbsentIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [regroupOpen, setRegroupOpen] = useState(false);
   const [moveDialog, setMoveDialog] = useState<{ studentId: string; studentName: string; fromGroupId: string; toGroupId: string; toGroupName: string } | null>(null);
@@ -537,9 +546,15 @@ function PalsBody({ fullLabDay, refreshTick }: { fullLabDay: LabDay; refreshTick
     try {
       const res = await fetch(`/api/adv-cert/pals-hub?cohortId=${encodeURIComponent(cohortId)}`);
       const data = await res.json();
-      if (data.success) setHub(data);
+      if (data.success) {
+        setHub(data);
+        // Hub-board absence for this course day: same any-day rule as the board, scoped to this lab day's date.
+        const day = String(fullLabDay.date).slice(0, 10);
+        const ids = ((data.labDays || []) as { id: string; date: string }[]).filter((d) => String(d.date).slice(0, 10) === day).map((d) => d.id);
+        setAbsentIds(await fetchAbsentStudentIds(ids.length ? ids : [fullLabDay.id]));
+      }
     } catch { /* non-blocking */ } finally { setLoading(false); }
-  }, [cohortId]);
+  }, [cohortId, fullLabDay.date, fullLabDay.id]);
 
   useEffect(() => { load(); }, [load, refreshTick]);
 
@@ -674,6 +689,7 @@ function PalsBody({ fullLabDay, refreshTick }: { fullLabDay: LabDay; refreshTick
               onEndMove={endMove}
               movesOut={moves.filter((m) => m.fromGroupId === g.id)}
               movesIn={moves.filter((m) => m.toGroupId === g.id)}
+              absentIds={absentIds}
             />
           ))}
           {groups.length === 0 && <p className="text-xs text-gray-400">No lab groups for this cohort yet.</p>}
@@ -693,7 +709,7 @@ function PalsBody({ fullLabDay, refreshTick }: { fullLabDay: LabDay; refreshTick
             {regroupOpen ? 'Close regroup' : 'Open regroup'}
           </button>
         </div>
-        {regroupOpen && <RegroupBoard groups={groups} attempts={attempts} moves={moves} onDropStudent={handleDropStudent} />}
+        {regroupOpen && <RegroupBoard groups={groups} attempts={attempts} moves={moves} onDropStudent={handleDropStudent} absentIds={absentIds} />}
       </section>
 
       <WhatDiffers />
@@ -732,13 +748,13 @@ function BlankSheetsMenu({ cohortId }: { cohortId?: string }) {
 }
 
 function GroupCard({
-  group, groups, roundSlots, testingAttempts, practiceAttempts, onOpenRound, onOpenStudent, onDropStudent, onEndMove, movesOut, movesIn,
+  group, groups, roundSlots, testingAttempts, practiceAttempts, onOpenRound, onOpenStudent, onDropStudent, onEndMove, movesOut, movesIn, absentIds,
 }: {
   group: PalsGroup; groups: PalsGroup[]; roundSlots: RoundSlot[]; testingAttempts: PalsCoordAttempt[]; practiceAttempts: PalsCoordAttempt[];
   onOpenRound: (round: number) => void; onOpenStudent: (student: { id: string; first_name: string; last_name: string }) => void;
   onDropStudent: (studentId: string, fromGroupId: string, toGroupId: string) => void;
   onEndMove: (id: string) => void;
-  movesOut: TempMove[]; movesIn: TempMove[];
+  movesOut: TempMove[]; movesIn: TempMove[]; absentIds: Set<string>;
 }) {
   const { outcomes, groupResult } = groupFinalStatus(group.id, testingAttempts, roundSlots);
   const verdict = groupResult.status === 'pass'
@@ -769,7 +785,7 @@ function GroupCard({
       style={dragOver ? { outline: '2px dashed #0891b2', outlineOffset: '2px' } : undefined}
     >
       <div className="flex items-center justify-between">
-        <div className="font-semibold text-gray-900 dark:text-white">{group.name} <span className="text-xs text-gray-400 font-normal">({group.members.length})</span></div>
+        <div className="font-semibold text-gray-900 dark:text-white">{group.name} <span className="text-xs text-gray-400 font-normal">({presentOfTotal(group.members, absentIds)})</span></div>
         <Tag tone={verdict.tone}>{verdict.label}</Tag>
       </div>
 
@@ -825,7 +841,8 @@ function GroupCard({
               onClick={() => onOpenStudent(m)}
               className={`text-[11px] px-2 py-1 rounded-full border ${ledStudentIds.has(m.id) ? 'bg-green-100 dark:bg-green-900/30 border-green-300 dark:border-green-700 text-green-700 dark:text-green-300' : 'bg-gray-50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300'}`}
             >
-              {m.first_name} {m.last_name}
+              <span className={absentIds.has(m.id) ? ABSENT_NAME_CLASS : ''}>{m.first_name} {m.last_name}</span>
+              {absentIds.has(m.id) && <span className="ml-1 text-[10px] text-gray-500 dark:text-gray-400">absent</span>}
               {watchStudentIds.has(m.id) && <span className="ml-1 text-amber-600 dark:text-amber-400">watch</span>}
             </button>
           ))}
@@ -847,8 +864,9 @@ function GroupCard({
 }
 
 function RegroupBoard({
-  groups, attempts, moves, onDropStudent,
+  groups, attempts, moves, onDropStudent, absentIds,
 }: {
+  absentIds: Set<string>;
   groups: PalsGroup[]; attempts: PalsCoordAttempt[]; moves: TempMove[];
   onDropStudent: (studentId: string, fromGroupId: string, toGroupId: string) => void;
 }) {
@@ -874,7 +892,7 @@ function RegroupBoard({
               }}
             >
               <div className="font-semibold text-sm text-gray-800 dark:text-gray-100">{g.name}</div>
-              <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">{members.length} students · {failCount} fail · {members.length} led</div>
+              <div className="text-[11px] text-gray-500 dark:text-gray-400 mb-2">{presentOfTotal(members, absentIds)} students · {failCount} fail · {members.length} led</div>
               <div className="space-y-1">
                 {members.map((m) => (
                   <div
@@ -882,7 +900,7 @@ function RegroupBoard({
                     onDragStart={(e) => { e.dataTransfer.setData('text/plain', m.id); e.dataTransfer.setData('application/x-group-id', g.id); }}
                     className="text-xs px-2 py-1.5 min-h-[32px] rounded bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 cursor-grab"
                   >
-                    {m.last_name}, {m.first_name}
+                    <span className={absentIds.has(m.id) ? ABSENT_NAME_CLASS : ''}>{m.last_name}, {m.first_name}</span>{absentIds.has(m.id) && <span className="ml-1 text-[10px] text-gray-500 dark:text-gray-400">absent</span>}
                   </div>
                 ))}
               </div>

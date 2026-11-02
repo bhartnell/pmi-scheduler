@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-02
 
+pals-absence-1 | PALS ABSENCE 1: students marked absent on the hub board show struck through with an 'absent' tag on the ACLS/PALS coordinator (group cards, print table, regroup board; counts read '4 of 5') and in the station grader's group/team-lead picker (still selectable, never preselected). New lib/absent-students.ts reads the existing lab-day attendance route (any-day absent rule). Read-only, no schema change. Groups page unchanged (cohort-level editor, no per-day member list). Revert: git revert.
+
 home-today-1 | HOME TODAY 1: every station on the home Today band gets the instructor dropdown (current preselected, Clear); days with more than two sections collapse to header lines (first open, state in localStorage); AHA course days roll into one card with Open hub. my-labs adds instructor_email, cert_course, cohort_id, course_day; stations PATCH with empty instructor_email clears (station_instructors primary un-flagged, not deleted). No schema change. Revert: git revert.
 
 ## 2026-10-31
