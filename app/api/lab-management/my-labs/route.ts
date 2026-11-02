@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       .from('lab_days')
       .select(`
         id, date, title, start_time, section_label, num_rotations, rotation_duration,
-        priority_flag,
+        priority_flag, cert_course, cohort_id,
         cohort:cohorts(id, cohort_number, program:programs(abbreviation)),
         stations:lab_stations(
           id, station_number, custom_title, instructor_name, instructor_email,
@@ -75,6 +75,7 @@ export async function GET(request: NextRequest) {
             station_number: s.station_number,
             title: s.custom_title || s.scenario?.title || null,
             instructor_name: s.instructor_name || null,
+            instructor_email: s.instructor_email || null,
             is_mine: !!s.instructor_email && s.instructor_email.toLowerCase() === myEmail,
           }))
           .sort((a, b) => Number(b.is_mine) - Number(a.is_mine) || (a.station_number || 0) - (b.station_number || 0));
@@ -91,6 +92,8 @@ export async function GET(request: NextRequest) {
           num_rotations: ld.num_rotations ?? null,
           rotation_duration: ld.rotation_duration ?? null,
           priority_flag: ld.priority_flag ?? null,
+          cert_course: ld.cert_course ?? null,
+          cohort_id: ld.cohort_id ?? null,
           roles: (ld.roles || []).map((r: any) => ({
             role: r.role,
             name: r.instructor?.name || r.instructor?.email?.split('@')[0] || null,
@@ -169,7 +172,35 @@ export async function GET(request: NextRequest) {
       return { ...d, signups, attendees, open_stations: open };
     });
 
-    return NextResponse.json({ success: true, today: start, labDays: withSignups });
+    // AHA course day position ("Day 2 of 2"): distinct dates of the same
+    // cohort + course. Read failure just drops the "Day n of m" suffix.
+    const courseDays: Record<string, string[]> = {};
+    try {
+      const cohortIds = [...new Set(withSignups.filter(d => d.cert_course && d.cohort_id).map(d => d.cohort_id as string))];
+      if (cohortIds.length > 0) {
+        const { data: cd } = await supabase
+          .from('lab_days')
+          .select('cohort_id, cert_course, date')
+          .in('cohort_id', cohortIds)
+          .not('cert_course', 'is', null)
+          .eq('is_archived', false);
+        for (const r of (cd || []) as { cohort_id: string; cert_course: string; date: string }[]) {
+          const k = `${r.cohort_id}|${r.cert_course}`;
+          const arr = (courseDays[k] ||= []);
+          if (!arr.includes(r.date)) arr.push(r.date);
+        }
+        Object.values(courseDays).forEach(a => a.sort());
+      }
+    } catch (err) {
+      console.error('my-labs course day read failed:', err);
+    }
+    const withCourse = withSignups.map(d => {
+      const dates = d.cert_course && d.cohort_id ? courseDays[`${d.cohort_id}|${d.cert_course}`] : null;
+      const idx = dates ? dates.indexOf(d.date) : -1;
+      return { ...d, course_day: idx >= 0 && dates ? idx + 1 : null, course_days_total: dates && idx >= 0 ? dates.length : null };
+    });
+
+    return NextResponse.json({ success: true, today: start, labDays: withCourse });
   } catch (error) {
     console.error('Error fetching my labs:', error);
     return NextResponse.json({ success: false, error: 'Failed to fetch labs' }, { status: 500 });
