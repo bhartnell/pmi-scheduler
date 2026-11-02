@@ -206,7 +206,11 @@ export default function TodayBand() {
               </Link>
             )}
             <Link
-              href={`/labs/schedule/${day.id}`}
+              href={
+                day.cert_course && day.cohort_id
+                  ? `${courseHubHref(day.cert_course, day.cohort_id, day.date)}&timer=${encodeURIComponent(day.id)}`
+                  : `/labs/schedule/${day.id}`
+              }
               className="h-9 inline-flex items-center gap-2 px-3 rounded-lg bg-green-600 hover:bg-green-700 text-white text-[13px] font-medium"
             >
               <Timer className="w-4 h-4" aria-hidden="true" />
