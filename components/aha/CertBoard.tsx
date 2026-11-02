@@ -241,6 +241,19 @@ function BoardContent({ course }: { course: CertCourse }) {
   }, [cohortIdParam, cfg.hubApi, course]);
   useEffect(() => { if (status === 'authenticated') load(); }, [load, status]);
 
+  // Home "Start Timer" deep link: ?timer=<labDayId> opens that section's rotation timer once the
+  // hub data is loaded, then strips the param so a refresh does not reopen it.
+  const timerParam = searchParams.get('timer');
+  useEffect(() => {
+    if (!timerParam || labDays.length === 0) return;
+    const d = labDays.find(ld => ld.id === timerParam);
+    if (d) setTimerFor(d);
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete('timer');
+    const q = next.toString();
+    router.replace(q ? `?${q}` : '?', { scroll: false });
+  }, [timerParam, labDays, searchParams, router]);
+
   useEffect(() => {
     const dateParam = searchParams.get('date');
     if (dateParam && dates.includes(dateParam)) setActiveDate(dateParam);
