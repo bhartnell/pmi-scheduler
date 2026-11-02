@@ -308,6 +308,17 @@ export async function PATCH(
       }
     }
 
+    // Clear (HOME TODAY 1): an explicit empty instructor_email empties the
+    // station's instructor. Un-flag the primary row instead of deleting it so
+    // the clear is reversible. No notification and no Google Calendar delete.
+    if (isNewAssignment && !body.instructor_email) {
+      try {
+        await supabase.from('station_instructors').update({ is_primary: false }).eq('station_id', id);
+      } catch (siError) {
+        console.error('Failed to clear station_instructors primary:', siError);
+      }
+    }
+
     return NextResponse.json({ success: true, station: data });
   } catch (error) {
     console.error('Error updating station:', error);
