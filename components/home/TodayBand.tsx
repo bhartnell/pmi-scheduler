@@ -20,6 +20,7 @@ interface Station {
   instructor_name: string | null;
   instructor_email?: string | null;
   is_mine: boolean;
+  is_learning?: boolean;
 }
 
 interface LabDay {
@@ -33,6 +34,7 @@ interface LabDay {
   rotation_duration: number | null;
   priority_flag: string | null;
   cert_course?: string | null;
+  is_adv_cert_testing?: boolean;
   cohort_id?: string | null;
   course_day?: number | null;
   course_days_total?: number | null;
@@ -277,7 +279,11 @@ export default function TodayBand() {
                     </span>
                   )}
                   <Link
-                    href={`/labs/grade/station/${st.id}`}
+                    href={
+                      day.cert_course === 'pals' && !st.is_learning && !day.is_adv_cert_testing
+                        ? `/labs/pals/practice?labDayId=${day.id}&stationId=${st.id}`
+                        : `/labs/grade/station/${st.id}`
+                    }
                     className="relative h-9 flex items-center px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[13px] flex-shrink-0 before:absolute before:inset-x-0 before:-inset-y-1 before:content-['']"
                   >
                     Grade

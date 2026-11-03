@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-02
 
+grade-link | GRADE LINK: PALS hub (CertBoard) and home Today Grade buttons send practice stations (section not testing, not a learning station) to /labs/pals/practice (team lead, pass / not yet, watch + note); testing sections keep /labs/pals/grade, learning stations and ACLS unchanged. my-labs API now returns is_adv_cert_testing per day and is_learning per station. Revert: git revert.
+
 timer-grader-banner | TIMER: PALS grade, PALS practice and ACLS/PALS adv-cert grade pages render the station grader's TimerBanner keyed to the page's labDayId (and added to GlobalTimerBanner's hasOwnTimerComponent so only one timer shows); GlobalTimerBanner now refetches a full snapshot (no version param) when a timer is held but its labDay is missing/different, closing the 'timer started after page load never shows' gap. useLabTimerState.refetch takes {full}. No timer API/controller/table changes. Revert: git revert.
 
 pals-absence-1 | PALS ABSENCE 1: students marked absent on the hub board show struck through with an 'absent' tag on the ACLS/PALS coordinator (group cards, print table, regroup board; counts read '4 of 5') and in the station grader's group/team-lead picker (still selectable, never preselected). New lib/absent-students.ts reads the existing lab-day attendance route (any-day absent rule). Read-only, no schema change. Groups page unchanged (cohort-level editor, no per-day member list). Revert: git revert.

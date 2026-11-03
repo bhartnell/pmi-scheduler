@@ -49,11 +49,11 @@ export async function GET(request: NextRequest) {
       .from('lab_days')
       .select(`
         id, date, title, start_time, section_label, num_rotations, rotation_duration,
-        priority_flag, cert_course, cohort_id,
+        priority_flag, cert_course, cohort_id, is_adv_cert_testing,
         cohort:cohorts(id, cohort_number, program:programs(abbreviation)),
         stations:lab_stations(
           id, station_number, custom_title, instructor_name, instructor_email,
-          scenario:scenarios(id, title),
+          scenario:scenarios(id, title, cert_tier),
           co_instructors:station_instructors(user_name, user_email)
         ),
         roles:lab_day_roles(role, instructor_id, instructor:lab_users!lab_day_roles_instructor_id_fkey(name, email, is_part_time))
@@ -74,6 +74,7 @@ export async function GET(request: NextRequest) {
             id: s.id,
             station_number: s.station_number,
             title: s.custom_title || s.scenario?.title || null,
+            is_learning: s.scenario?.cert_tier === 'learning_station',
             instructor_name: s.instructor_name || null,
             instructor_email: s.instructor_email || null,
             is_mine: !!s.instructor_email && s.instructor_email.toLowerCase() === myEmail,
@@ -93,6 +94,7 @@ export async function GET(request: NextRequest) {
           rotation_duration: ld.rotation_duration ?? null,
           priority_flag: ld.priority_flag ?? null,
           cert_course: ld.cert_course ?? null,
+          is_adv_cert_testing: !!ld.is_adv_cert_testing,
           cohort_id: ld.cohort_id ?? null,
           roles: (ld.roles || []).map((r: any) => ({
             role: r.role,

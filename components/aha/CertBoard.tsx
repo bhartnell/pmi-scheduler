@@ -651,7 +651,9 @@ function BoardContent({ course }: { course: CertCourse }) {
         // Single contract: lab_days.rotation_duration is authoritative (the timer reads it); lab_stations.rotation_minutes is only a mirror and is never shown.
         const mins = d.rotation_duration;
         const qs = searchParams.toString();
-        const href = withReturnTo(learning && course === 'acls' ? `/labs/adv-cert/learning-station?labDayId=${d.id}&stationId=${st.id}` : `${cfg.gradeBase}?labDayId=${d.id}&stationId=${st.id}`, `${cfg.boardPath}${qs ? `?${qs}` : ''}`);
+        const href = withReturnTo(learning && course === 'acls' ? `/labs/adv-cert/learning-station?labDayId=${d.id}&stationId=${st.id}` :
+          // PALS practice sections (not testing, not a learning station) grade on the practice grader (team lead, pass / not yet, watch); testing keeps the checklist grader.
+          course === 'pals' && !learning && !d.is_adv_cert_testing ? `/labs/pals/practice?labDayId=${d.id}&stationId=${st.id}` : `${cfg.gradeBase}?labDayId=${d.id}&stationId=${st.id}`, `${cfg.boardPath}${qs ? `?${qs}` : ''}`);
         return (
           <div key={st.id} className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2.5 flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
