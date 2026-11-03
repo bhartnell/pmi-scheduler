@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-03
 
+pals-result-edit | PALS RESULT EDIT: Edit result control on /labs/pals/attempt/[id] + PATCH /api/pals/attempts/[id] (instructor+; result, watch, watch note, performance/remediation notes; NR->PASS clears remediation clock; each edit audit-logged with who/when/before/after). No schema change. Revert: git revert.
 pals-result-record | PALS RESULT RECORD: new read-only /labs/pals/attempt/[id] score sheet + GET /api/pals/attempts/[id]; CertBoard pals chips and Coordinator practice rows/round/student overlays open it. No writes, no schema change. Revert: git revert.
 
 practice-grader-steps | PALS PRACTICE GRADER: case step list as checkable checklist saved as criterion results (result still judged by instructor), 'Not yet' relabelled 'Fail' (stored NR), Pass-but-watch always visible, case-card teaching notes open by default on practice + testing graders. No schema change. Revert: git revert.
