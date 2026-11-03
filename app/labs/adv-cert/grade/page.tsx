@@ -8,6 +8,7 @@ import { ArrowLeft, CheckCircle2, XCircle, Loader2, Save, Crown } from 'lucide-r
 import { useToast } from '@/components/Toast';
 import ScenarioFullDisplay from '@/components/scenario/ScenarioFullDisplay';
 import DualPaneGrading from '@/components/grading/DualPaneGrading';
+import TimerBanner from '@/components/TimerBanner';
 import CcfTimer from '@/components/grading/CcfTimer';
 import { CcfRecord, applyEdit } from '@/lib/ccf';
 import { safeReturnTo, withReturnTo } from '@/lib/return-to';
@@ -328,6 +329,15 @@ export default function AdvCertGradePage() {
 
   return (
     <div className="w-full max-w-none mx-auto p-4 sm:p-6">
+      {labDayId && (
+        <TimerBanner
+          labDayId={labDayId}
+          stationId={stationId || undefined}
+          userEmail={session?.user?.email || undefined}
+          userName={session?.user?.name || undefined}
+          numRotations={4}
+        />
+      )}
       <BreadcrumbNames {...advCertCrumbs(course, 'grade', 'Megacode Grading', hubHref)} />
       <Link href={returnTo || hubHref} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-4">
         <ArrowLeft className="w-4 h-4" /> {returnTo ? 'Back' : `Back to ${course === 'pals' ? 'PALS' : 'ACLS'} Hub`}

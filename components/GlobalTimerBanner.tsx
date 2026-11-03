@@ -33,7 +33,10 @@ export default function GlobalTimerBanner() {
   // Pages that already have their own dedicated timer component (LabTimer, TimerBanner)
   // GlobalTimerBanner should NOT render on these pages to avoid showing two timers
   const hasOwnTimerComponent = pathname.startsWith('/labs/schedule/') ||
-    pathname.startsWith('/labs/grade/');
+    pathname.startsWith('/labs/grade/') ||
+    pathname.startsWith('/labs/pals/grade') ||
+    pathname.startsWith('/labs/pals/practice') ||
+    pathname.startsWith('/labs/adv-cert/grade');
 
   const handleResponse = useCallback(({ status, body }: { status: number; body: any }) => { // eslint-disable-line @typescript-eslint/no-explicit-any
     // Stop on 401 / stop_polling: session expired (prevents wasting Vercel invocations)
@@ -60,9 +63,15 @@ export default function GlobalTimerBanner() {
   // A realtime row for a different lab day than the one we have a name for:
   // fetch the active timer's labDay info.
   const labDayMismatch = !!timer && !!labDay && labDay.id !== timer.lab_day_id;
+  // A timer that started after the first fetch arrives by realtime with no
+  // labDay name, and the versioned heartbeat replies not_modified (no labDay),
+  // so ask for a full snapshot (no version param) whenever the name is missing
+  // or belongs to another lab day.
+  const timerLabDayId = timer?.lab_day_id ?? null;
+  const needsLabDay = !!timerLabDayId && (!labDay || labDayMismatch);
   useEffect(() => {
-    if (labDayMismatch) refetch();
-  }, [labDayMismatch, refetch]);
+    if (needsLabDay) refetch({ full: true });
+  }, [needsLabDay, timerLabDayId, refetch]);
 
   const isDismissed = !!timer && dismissedRotation === timer.rotation_number;
 
