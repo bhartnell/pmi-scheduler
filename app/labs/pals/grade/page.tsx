@@ -501,7 +501,7 @@ export default function PalsGradePage() {
                 </span>
               )}
             </div>
-            <PalsCaseCard card={(scenario.pals_narrative as { card?: PalsCard } | null)?.card} />
+            <PalsCaseCard card={(scenario.pals_narrative as { card?: PalsCard } | null)?.card} teachingNotesOpen />
           </div>
           }
           scoring={

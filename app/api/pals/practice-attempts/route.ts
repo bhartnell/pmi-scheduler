@@ -9,6 +9,7 @@ interface Body extends PalsPracticeInput {
   lab_station_id?: string | null;
   lab_group_id?: string | null;
   client_uuid?: string | null;
+  criterion_results?: { criterion_id?: string; state?: string; note?: string | null }[] | null;
 }
 
 // POST /api/pals/practice-attempts -> one practice case graded for one student as team lead
@@ -42,6 +43,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Step list (optional): only criteria of this case's own checklist, with a known state.
+    // It is a record for the instructor; the result is whatever the grader pressed.
+    const criterionResults: { criterion_id: string; state: 'checked' | 'not_checked' | 'na'; note: string | null }[] = [];
+    if (Array.isArray(body.criterion_results) && body.criterion_results.length > 0) {
+      const { data: crit, error: cErr } = await getSupabaseAdmin()
+        .from('pals_checklist_criteria')
+        .select('id')
+        .eq('checklist_id', scenario.pals_checklist_id);
+      if (cErr) throw cErr;
+      const valid = new Set((crit || []).map((c: { id: string }) => c.id));
+      const seen = new Set<string>();
+      for (const c of body.criterion_results) {
+        const st = c.state;
+        if (!c.criterion_id || !valid.has(c.criterion_id) || seen.has(c.criterion_id) ||
+            (st !== 'checked' && st !== 'not_checked' && st !== 'na')) {
+          return NextResponse.json({ success: false, error: 'criterion_results has an unknown step or state' }, { status: 400 });
+        }
+        seen.add(c.criterion_id);
+        criterionResults.push({ criterion_id: c.criterion_id, state: st, note: c.note ? String(c.note).slice(0, 300) : null });
+      }
+    }
+
     const result = await saveTestAttempt(
       {
         checklist_id: scenario.pals_checklist_id,
@@ -55,7 +78,7 @@ export async function POST(request: NextRequest) {
         watch_note: v.value.watch_note,
         performance_notes: v.value.performance_notes,
         phase: 'practice',
-        criterion_results: [],
+        criterion_results: criterionResults,
         client_uuid: body.client_uuid,
       },
       user.id

@@ -74,7 +74,7 @@ function PhaseBand({
   );
 }
 
-export default function PalsCaseCard({ card }: { card: PalsCard | null | undefined }) {
+export default function PalsCaseCard({ card, teachingNotesOpen = false }: { card: PalsCard | null | undefined; teachingNotesOpen?: boolean }) {
   const settings = Object.keys(card?.lead_in || {});
   const [setting, setSetting] = useState(card?.default_setting && settings.includes(card.default_setting) ? card.default_setting : settings[0]);
 
@@ -157,7 +157,7 @@ export default function PalsCaseCard({ card }: { card: PalsCard | null | undefin
       {/* 4. Teaching / instructor-only meta — de-emphasized, collapsed by default */}
       {(card.overview || (card.objectives && card.objectives.length > 0) || card.instructor_note || card.debrief_question ||
         (card.paramedic_scope_na_candidates && card.paramedic_scope_na_candidates.length > 0)) && (
-        <details className="text-sm border-t border-gray-200 dark:border-gray-700 pt-2">
+        <details open={teachingNotesOpen || undefined} className="text-sm border-t border-gray-200 dark:border-gray-700 pt-2">
           <summary className="cursor-pointer text-xs font-semibold text-gray-500 dark:text-gray-400">Instructor / teaching notes</summary>
           <div className="mt-2 space-y-2.5">
             {card.overview && (
