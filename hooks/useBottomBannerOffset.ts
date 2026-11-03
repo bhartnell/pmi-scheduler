@@ -17,9 +17,14 @@ export function useBottomBannerOffset() {
     const root = document.documentElement;
     if (!el) {
       root.style.setProperty('--bottom-banner-h', '0px');
+      document.body.style.paddingBottom = '';
       return;
     }
-    const publish = () => root.style.setProperty('--bottom-banner-h', `${el.offsetHeight}px`);
+    // The banner takes its own space: pad the page bottom by its height so Save is never covered.
+    const publish = () => {
+      root.style.setProperty('--bottom-banner-h', `${el.offsetHeight}px`);
+      document.body.style.paddingBottom = `${el.offsetHeight}px`;
+    };
     publish();
     if (typeof ResizeObserver !== 'undefined') {
       observerRef.current = new ResizeObserver(publish);

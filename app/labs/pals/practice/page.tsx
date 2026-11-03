@@ -186,7 +186,12 @@ export default function PalsPracticeStationPage() {
   }, [scenario?.id]);
 
   function setCriterionState(criterionId: string, state: PalsCriterionState) {
-    setCriterionStates((prev) => ({ ...prev, [criterionId]: prev[criterionId] === state ? 'not_checked' : state }));
+    // Same mark again clears it. Absent key = untouched (saves as not done); 'not_checked' key = explicit Not done.
+    setCriterionStates((prev) => {
+      const next = { ...prev };
+      if (prev[criterionId] === state) delete next[criterionId]; else next[criterionId] = state;
+      return next;
+    });
   }
 
   const selectedGroup = groups.find((g) => g.id === groupId);
@@ -336,28 +341,31 @@ export default function PalsPracticeStationPage() {
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Critical Performance Steps</h3>
-                <span className="text-[11px] text-gray-400">Tap to check or mark N/A. You still choose Pass or Fail.</span>
+                <span className="text-[11px] text-gray-400">Mark each step done, not done, or N/A. You choose Pass or Fail.</span>
               </div>
               <ul className="space-y-2">
                 {criteria.map((c, i) => {
-                  const st = criterionStates[c.id] || 'not_checked';
+                  const st = criterionStates[c.id]; // undefined = untouched
                   return (
                     <li key={c.id} className="flex items-start gap-2">
                       <div className="flex gap-1 shrink-0 mt-0.5">
-                        {(['checked', 'na'] as const).map((opt) => (
+                        {(['checked', 'not_checked', 'na'] as const).map((opt) => (
                           <button key={opt} type="button" onClick={() => setCriterionState(c.id, opt)}
-                            aria-label={`${opt === 'checked' ? 'Check' : 'Mark N/A'} step ${i + 1}`}
+                            aria-label={`${opt === 'checked' ? 'Done' : opt === 'not_checked' ? 'Not done' : 'Not applicable'} step ${i + 1}`}
+                            aria-pressed={st === opt}
                             className={`w-11 h-11 rounded text-xs font-bold border ${
                               st === opt
-                                ? opt === 'checked' ? 'bg-green-600 text-white border-green-600' : 'bg-gray-400 text-white border-gray-400'
+                                ? opt === 'checked' ? 'bg-green-600 text-white border-green-600'
+                                  : opt === 'not_checked' ? 'bg-red-600 text-white border-red-600'
+                                  : 'bg-gray-400 text-white border-gray-400'
                                 : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600'
                             }`}>
-                            {opt === 'checked' ? '✓' : 'N/A'}
+                            {opt === 'checked' ? '\u2713' : opt === 'not_checked' ? 'x' : 'N/A'}
                           </button>
                         ))}
                       </div>
                       <div className="flex-1 pt-2">
-                        <span className={`text-sm ${st === 'not_checked' ? 'text-gray-700 dark:text-gray-200' : st === 'checked' ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through'}`}>
+                        <span className={`text-sm ${st === 'na' ? 'text-gray-400 line-through' : st === 'checked' ? 'text-gray-900 dark:text-white' : st === 'not_checked' ? 'text-red-700 dark:text-red-300' : 'text-gray-700 dark:text-gray-200'}`}>
                           {i + 1}. {c.text}
                           {c.is_critical && <span className="ml-1.5 text-[10px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">CRITICAL</span>}
                         </span>

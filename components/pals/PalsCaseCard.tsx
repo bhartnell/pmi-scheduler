@@ -35,10 +35,17 @@ function fmtKey(k: string) {
   return k.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+// Clinical order for keyed blocks (ABCDE, PAT); unknown keys keep their stored order after the known ones.
+const CLINICAL_ORDER = ['appearance', 'airway', 'breathing', 'circulation', 'disability', 'exposure'];
+function clinicalSort(entries: [string, string][]) {
+  const rank = (k: string) => { const i = CLINICAL_ORDER.indexOf(k.toLowerCase()); return i === -1 ? CLINICAL_ORDER.length : i; };
+  return entries.map((e, idx) => ({ e, idx })).sort((a, b) => rank(a.e[0]) - rank(b.e[0]) || a.idx - b.idx).map((x) => x.e);
+}
+
 function KeyValueGrid({ data }: { data: Record<string, string> }) {
   return (
     <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-1.5">
-      {Object.entries(data).map(([k, v]) => (
+      {clinicalSort(Object.entries(data)).map(([k, v]) => (
         <div key={k}>
           <dt className="text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500">{fmtKey(k)}</dt>
           <dd className="text-sm text-gray-800 dark:text-gray-100">{String(v)}</dd>
