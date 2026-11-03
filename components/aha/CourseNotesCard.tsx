@@ -2,7 +2,7 @@
 
 /**
  * CourseNotesCard (PALS P5d) — the day's instruction notes for an ACLS/PALS course,
- * one note per course day, editable by any instructor. Used expanded on the
+ * one note per course day, editable by any instructor. Opens by default when a note exists (remembered per browser). Used expanded on the
  * coordinator and collapsed on the hub header.
  */
 
@@ -23,7 +23,27 @@ export default function CourseNotesCard({
   initialDate?: string | null;
   defaultOpen?: boolean;
 }) {
+  const prefKey = `course-notes-open:${course}:${cohortId || ''}`;
+  const readPref = (): boolean | null => {
+    try {
+      const v = window.localStorage.getItem(prefKey);
+      return v === '1' ? true : v === '0' ? false : null;
+    } catch { return null; }
+  };
   const [open, setOpen] = useState(defaultOpen);
+  const [pref, setPref] = useState<boolean | null>(null);
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    setPref(next);
+    try { window.localStorage.setItem(prefKey, next ? '1' : '0'); } catch { /* ignore */ }
+  };
+  useEffect(() => {
+    const p = readPref();
+    setPref(p);
+    if (p !== null) setOpen(p);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefKey]);
   const [notes, setNotes] = useState<Record<string, Note>>({});
   const [active, setActive] = useState<string>(initialDate && dates.includes(initialDate) ? initialDate : dates[0] || '');
   const [draft, setDraft] = useState('');
@@ -47,6 +67,8 @@ export default function CourseNotesCard({
       for (const n of json.notes as Note[]) map[String(n.note_date).slice(0, 10)] = n;
       setNotes(map);
       setError(null);
+      // Open by default whenever the cohort has a saved note, unless this browser chose otherwise.
+      if (readPref() === null && Object.values(map).some((n) => n.content.trim())) setOpen(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load notes');
     } finally {
@@ -93,10 +115,14 @@ export default function CourseNotesCard({
 
   return (
     <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 print:hidden">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300 w-full text-left min-h-[44px]" aria-expanded={open}>
+      <button type="button" onClick={toggle} className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300 w-full text-left min-h-[44px]" aria-expanded={open}>
         {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         <NotebookPen className="w-4 h-4" /> Course notes
-        {anyNotes && !open && <span className="ml-1 text-[11px] font-normal text-blue-600 dark:text-blue-400">has notes</span>}
+        {!open && (
+          <span className={`ml-1 text-[11px] font-normal ${anyNotes ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400'}`}>
+            {anyNotes ? 'has notes - click to read' : 'Add notes'}
+          </span>
+        )}
         {loading && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />}
       </button>
       {open && (
