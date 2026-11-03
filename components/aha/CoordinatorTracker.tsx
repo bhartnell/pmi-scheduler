@@ -819,13 +819,13 @@ function GroupCard({
           <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">Practice cases, graded per student</div>
           <div className="space-y-1 mt-1">
             {myPractice.map((a) => (
-              <div key={a.id} className="flex items-center justify-between text-[11px]">
+              <Link key={a.id} href={`/labs/pals/attempt/${a.id}`} className="flex items-center justify-between text-[11px] min-h-[44px] px-1 rounded hover:bg-gray-50 dark:hover:bg-gray-700/50">
                 <span className="text-gray-700 dark:text-gray-300 truncate">{a.scenario?.title || a.scenario?.case_code || 'case'}</span>
                 <span className="flex items-center gap-1 font-mono">
                   <span className={a.result === 'PASS' ? 'text-green-700 dark:text-green-400' : 'text-red-700 dark:text-red-400'}>TL {sname(a.team_lead)} {a.result === 'PASS' ? 'pass' : 'fail'}</span>
                   {a.watch && <Tag tone="warn">watch</Tag>}
                 </span>
-              </div>
+              </Link>
             ))}
             {myPractice.filter((a) => a.performance_notes).map((a) => (
               <div key={`pn-${a.id}`} className="text-[11px] text-gray-600 dark:text-gray-400">
@@ -958,7 +958,7 @@ function ResultOverlay({
       <div className="text-xs flex flex-wrap gap-3 mb-3">
         <span>Result <strong className={outcome.result === 'PASS' ? 'text-green-600' : 'text-red-600'}>{outcome.result === 'PASS' ? 'PASS' : 'FAIL'}</strong></span>
       </div>
-      <p className="text-xs text-gray-500 dark:text-gray-400">Criterion-level detail and the instructor debrief note open from the attempt record in the PALS grader.</p>
+      <Link href={`/labs/pals/attempt/${a.id}`} className="inline-flex items-center min-h-[44px] text-sm text-blue-700 dark:text-blue-300 underline">Open score sheet</Link>
     </Modal>
   );
 }
@@ -981,7 +981,7 @@ function StudentOverlay({
               <tbody>
                 {mine.map((a) => (
                   <tr key={a.id} className="border-t border-gray-100 dark:border-gray-700">
-                    <td className="py-1 pr-2">{a.scenario?.title || a.scenario?.case_code}</td>
+                    <td className="py-1 pr-2"><Link href={`/labs/pals/attempt/${a.id}`} className="underline inline-flex items-center min-h-[44px]">{a.scenario?.title || a.scenario?.case_code}</Link></td>
                     <td className={`py-1 pr-2 font-semibold ${a.result === 'PASS' ? 'text-green-600' : 'text-red-600'}`}>{a.result}</td>
                     {a.watch && <td className="py-1"><Tag tone="warn">watch</Tag></td>}
                   </tr>

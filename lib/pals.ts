@@ -259,3 +259,78 @@ export async function listOpenRetestCandidates(studentId: string, checklistId: s
   if (error) throw error;
   return data || [];
 }
+
+/**
+ * Read-only record of one PALS attempt (practice or testing) with its checklist
+ * steps in order. Separate id lookups instead of embeds so no FK hint is needed.
+ */
+export async function getPalsAttemptRecord(attemptId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data: a, error } = await supabase
+    .from('pals_test_attempts')
+    .select('*')
+    .eq('id', attemptId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!a) return null;
+
+  const one = async <T,>(table: string, cols: string, id: string | null | undefined): Promise<T | null> => {
+    if (!id) return null;
+    const { data, error: e } = await supabase.from(table).select(cols).eq('id', id).maybeSingle();
+    if (e) throw e;
+    return (data as T | null) ?? null;
+  };
+
+  const [student, grader, scenario, group, station, labDay, checklist] = await Promise.all([
+    one<{ id: string; first_name: string; last_name: string }>('students', 'id, first_name, last_name', a.student_id),
+    one<{ id: string; name: string }>('lab_users', 'id, name', a.instructor_id),
+    one<{ id: string; title: string; case_code: string | null; category: string | null }>('scenarios', 'id, title, case_code, category', a.scenario_id),
+    one<{ id: string; name: string }>('lab_groups', 'id, name', a.lab_group_id),
+    one<{ id: string; station_number: number | null; custom_title: string | null }>('lab_stations', 'id, station_number, custom_title', a.lab_station_id),
+    one<{ id: string; date: string; title: string | null; section_label: string | null }>('lab_days', 'id, date, title, section_label', a.lab_day_id),
+    one<{ id: string; category: string | null; subtype: string | null }>('pals_checklists', 'id, category, subtype', a.checklist_id),
+  ]);
+
+  const { data: crit, error: cErr } = await supabase
+    .from('pals_checklist_criteria')
+    .select('id, display_order, text, is_critical')
+    .eq('checklist_id', a.checklist_id)
+    .order('display_order', { ascending: true });
+  if (cErr) throw cErr;
+
+  const { data: res, error: rErr } = await supabase
+    .from('pals_criterion_results')
+    .select('criterion_id, state, note')
+    .eq('attempt_id', attemptId);
+  if (rErr) throw rErr;
+  const byCrit = new Map((res || []).map((r: any) => [r.criterion_id, r]));
+
+  const { data: team, error: tErr } = await supabase
+    .from('pals_attempt_students')
+    .select('student_id')
+    .eq('attempt_id', attemptId);
+  if (tErr) throw tErr;
+  const teamIds = (team || []).map((t: any) => t.student_id).filter((id: string) => id !== a.student_id);
+  let teamMembers: { id: string; first_name: string; last_name: string }[] = [];
+  if (teamIds.length) {
+    const { data: ms, error: mErr } = await supabase.from('students').select('id, first_name, last_name').in('id', teamIds);
+    if (mErr) throw mErr;
+    teamMembers = ms || [];
+  }
+
+  const steps = (crit || []).map((c: any) => {
+    const r: any = byCrit.get(c.id);
+    return { id: c.id, order: c.display_order, text: c.text, is_critical: c.is_critical === true, state: (r?.state ?? 'not_recorded') as string, note: (r?.note ?? null) as string | null };
+  });
+
+  return {
+    attempt: {
+      id: a.id, result: a.result as string, attempted_at: a.attempted_at as string,
+      watch: a.watch === true, watch_note: (a.watch_note ?? null) as string | null,
+      performance_notes: (a.performance_notes ?? null) as string | null,
+      remediation_notes: (a.remediation_notes ?? null) as string | null,
+      lab_day_id: a.lab_day_id as string | null,
+    },
+    team_lead: student, grader, scenario, group, station, lab_day: labDay, checklist, team_members: teamMembers, steps,
+  };
+}
