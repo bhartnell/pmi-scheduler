@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-03
 
+grader-groups | GRADER GROUPS: new lib/pals-effective-groups.ts (withdrawn hidden + active pals_group_moves applied); /api/pals/grading-context uses it so PALS practice + testing graders match the coordinator; pals-hub uses the shared active-move filter. No data writes. Revert: git revert.
+
 pals-practice-grader-2 | PALS PRACTICE GRADER 2: three marks per step (Done / Not done / N/A, tap again clears, untouched saves not done; no new stored value), hint text; ABCDE + PAT shown in clinical order on the case card; bottom timer banner now pads the page so Save is never covered. Revert: git revert.
 
 pals-result-edit | PALS RESULT EDIT: Edit result control on /labs/pals/attempt/[id] + PATCH /api/pals/attempts/[id] (instructor+; result, watch, watch note, performance/remediation notes; NR->PASS clears remediation clock; each edit audit-logged with who/when/before/after). No schema change. Revert: git revert.

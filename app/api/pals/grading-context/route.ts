@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { applyGroupMoves, loadActiveMoves } from '@/lib/pals-effective-groups';
 
 // GET /api/pals/grading-context
 //   (no labDayId)  -> candidate PALS testing days for the picker (cert_course='pals'
@@ -76,15 +77,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Effective membership: hide withdrawn students and apply the active
+    // coordinator regroups (pals_group_moves) so the pickers match the coordinator.
+    const moves = await loadActiveMoves(supabase, day.cohort_id);
+    const effective = applyGroupMoves(membersByGroup as any, moves);
+
     return NextResponse.json({
       success: true,
       day,
       stations: stations || [],
       groups: (groups || []).map((g: any) => ({
         ...g,
-        members: (membersByGroup[g.id] || []).sort((a, b) =>
-          `${a.last_name}${a.first_name}`.localeCompare(`${b.last_name}${b.first_name}`)
-        ),
+        members: effective[g.id] || [],
       })),
     });
   } catch (error) {
