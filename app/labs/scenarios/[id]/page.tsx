@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
+import PalsCaseCard, { type PalsCard } from '@/components/pals/PalsCaseCard';
 import Link from 'next/link';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import AutoSaveIndicator from '@/components/AutoSaveIndicator';
@@ -825,6 +826,14 @@ export default function ScenarioEditorPage() {
   const params = useParams();
   const scenarioId = params?.id as string | undefined;
   const isEditing = !!scenarioId && scenarioId !== 'new';
+  // PALS cases keep their content in pals_narrative / pals_case_meta, not the generic
+  // scenario fields, so the generic editor shows nothing useful. Render the PALS card instead.
+  const [palsView, setPalsView] = useState<{
+    title: string;
+    case_code?: string | null;
+    meta: Record<string, unknown> | null;
+    card: PalsCard | null;
+  } | null>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -923,6 +932,15 @@ export default function ScenarioEditorPage() {
       if (data.success && data.scenario) {
         // Detect old format: phases null/empty AND vitals populated as array
         const s = data.scenario;
+        if (s.cert_course === 'pals') {
+          setPalsView({
+            title: s.title || s.case_code || 'PALS case',
+            case_code: s.case_code ?? null,
+            meta: (s.pals_case_meta as Record<string, unknown> | null) ?? null,
+            card: (s.pals_narrative as { card?: PalsCard } | null)?.card ?? null,
+          });
+          return;
+        }
         const phasesEmpty = !s.phases || (Array.isArray(s.phases) && s.phases.length === 0);
         const hasVitalsArray = Array.isArray(s.vitals) && s.vitals.length > 0;
         const hasCriticalStrings = Array.isArray(s.critical_actions) && s.critical_actions.length > 0 && typeof s.critical_actions[0] === 'string';
@@ -1579,6 +1597,34 @@ export default function ScenarioEditorPage() {
       [field]: (scenario[field] as string[]).filter((_, i) => i !== index)
     });
   };
+
+  if (palsView) {
+    const metaEntries = Object.entries(palsView.meta || {}).filter(([, v]) => v !== null && v !== '' && typeof v !== 'object');
+    return (
+      <div className="px-[clamp(16px,2.75vw,96px)] py-4 space-y-3">
+        <button type="button" onClick={() => router.back()} className="min-h-[44px] text-sm text-blue-600 dark:text-blue-400">&larr; Back</button>
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">{palsView.title}</h1>
+          {palsView.case_code && <div className="text-xs text-gray-500 dark:text-gray-400">{palsView.case_code}</div>}
+          {metaEntries.length > 0 && (
+            <dl className="mt-2 flex flex-wrap gap-x-6 gap-y-1">
+              {metaEntries.map(([k, v]) => (
+                <div key={k}>
+                  <dt className="text-[10px] uppercase tracking-wide text-gray-400">{k.replace(/_/g, ' ')}</dt>
+                  <dd className="text-sm text-gray-800 dark:text-gray-100">{String(v)}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
+          {palsView.card ? (
+            <PalsCaseCard card={palsView.card} />
+          ) : (
+            <p className="mt-3 text-sm text-gray-500 dark:text-gray-400">This PALS case has no card content yet.</p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (status === 'loading' || loading) {
     return (
