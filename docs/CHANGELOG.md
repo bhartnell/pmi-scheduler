@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-03
 
+pals-practice-grader-2 | PALS PRACTICE GRADER 2: three marks per step (Done / Not done / N/A, tap again clears, untouched saves not done; no new stored value), hint text; ABCDE + PAT shown in clinical order on the case card; bottom timer banner now pads the page so Save is never covered. Revert: git revert.
+
 pals-result-edit | PALS RESULT EDIT: Edit result control on /labs/pals/attempt/[id] + PATCH /api/pals/attempts/[id] (instructor+; result, watch, watch note, performance/remediation notes; NR->PASS clears remediation clock; each edit audit-logged with who/when/before/after). No schema change. Revert: git revert.
 pals-result-record | PALS RESULT RECORD: new read-only /labs/pals/attempt/[id] score sheet + GET /api/pals/attempts/[id]; CertBoard pals chips and Coordinator practice rows/round/student overlays open it. No writes, no schema change. Revert: git revert.
 
