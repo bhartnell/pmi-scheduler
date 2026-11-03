@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-03
 
+pals-result-record | PALS RESULT RECORD: new read-only /labs/pals/attempt/[id] score sheet + GET /api/pals/attempts/[id]; CertBoard pals chips and Coordinator practice rows/round/student overlays open it. No writes, no schema change. Revert: git revert.
+
 practice-grader-steps | PALS PRACTICE GRADER: case step list as checkable checklist saved as criterion results (result still judged by instructor), 'Not yet' relabelled 'Fail' (stored NR), Pass-but-watch always visible, case-card teaching notes open by default on practice + testing graders. No schema change. Revert: git revert.
 pals-grader-notes | PALS GRADER NOTES: per-step note on the testing grader, always-visible Performance notes on testing + practice graders, shown on coordinator student modal and practice list. Additive migration 20261103_pals_grader_notes.sql (pals_criterion_results.note, pals_test_attempts.performance_notes). PASS/NR logic untouched. Revert: git revert + migration ROLLBACK (columns only).
 

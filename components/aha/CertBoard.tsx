@@ -73,9 +73,9 @@ const COURSE_CFG: Record<CertCourse, {
 }> = {
   acls: { label: 'ACLS', boardPath: '/labs/acls-hub/board', hubApi: '/api/adv-cert/acls-hub', gradeBase: '/labs/adv-cert/grade',
     resultCol: 'Megacode result', passKey: 'pass', failKey: 'fail', failedTile: 'Failed', recordPath: id => `/labs/adv-cert/attempt/${id}` },
-  // PALS attempts are per team lead, graded PASS or NR (pals_test_attempts.result). No record page exists yet.
+  // PALS attempts are per team lead, graded PASS or NR (pals_test_attempts.result). Record page: /labs/pals/attempt/[id].
   pals: { label: 'PALS', boardPath: '/labs/pals-hub', hubApi: '/api/adv-cert/pals-hub', gradeBase: '/labs/pals/grade',
-    resultCol: 'Practice result', passKey: 'PASS', failKey: 'NR', failedTile: 'NR (practice)', recordPath: null },
+    resultCol: 'Practice result', passKey: 'PASS', failKey: 'NR', failedTile: 'NR (practice)', recordPath: id => `/labs/pals/attempt/${id}` },
 };
 
 interface Attempt {
