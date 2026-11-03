@@ -4,13 +4,14 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle2, XCircle, Eye, Loader2, Save, Crown, Play, Pause, RotateCcw, Flag, ExternalLink } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Eye, Loader2, Save, Crown, Play, Pause, RotateCcw, Flag, ExternalLink, StickyNote } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { safeReturnTo } from '@/lib/return-to';
 import TimerBanner from '@/components/TimerBanner';
 import DualPaneGrading from '@/components/grading/DualPaneGrading';
 import PalsCaseCard, { type PalsCard } from '@/components/pals/PalsCaseCard';
 import { mintClientUuid } from '@/lib/pals-offline';
+import type { PalsChecklistWithCriteria, PalsCriterionState } from '@/types/pals';
 
 interface StudentOpt { id: string; first_name: string; last_name: string }
 interface GroupOpt { id: string; name: string; members: StudentOpt[] }
@@ -19,7 +20,7 @@ interface StationOpt {
   custom_title: string | null; skill_name: string | null; skill_sheet_url: string | null;
   instructions_url: string | null; rotation_minutes: number | null; room: string | null;
 }
-interface ScenarioInfo { id: string; title: string; case_code: string | null; checklist: { id: string } | null; pals_narrative?: Record<string, unknown> | null }
+interface ScenarioInfo { id: string; title: string; case_code: string | null; checklist: PalsChecklistWithCriteria | null; pals_narrative?: Record<string, unknown> | null }
 
 function fmt(totalSeconds: number) {
   const m = Math.floor(totalSeconds / 60);
@@ -133,6 +134,10 @@ export default function PalsPracticeStationPage() {
   const [watch, setWatch] = useState(false);
   const [watchNote, setWatchNote] = useState('');
   const [performanceNotes, setPerformanceNotes] = useState('');
+  // Step list is a reference/record for the instructor; it never computes the result (practice is a judgment).
+  const [criterionStates, setCriterionStates] = useState<Record<string, PalsCriterionState>>({});
+  const [stepNotes, setStepNotes] = useState<Record<string, string>>({});
+  const [openNotes, setOpenNotes] = useState<Record<string, boolean>>({});
   const [clientUuid, setClientUuid] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
@@ -173,17 +178,29 @@ export default function PalsPracticeStationPage() {
       .catch(() => toast.error('Failed to load the case'));
   }, [session, station?.scenario_id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const criteria = scenario?.checklist?.criteria || [];
+
+  // A different case means a different step list: start it clean.
+  useEffect(() => {
+    setCriterionStates({}); setStepNotes({}); setOpenNotes({});
+  }, [scenario?.id]);
+
+  function setCriterionState(criterionId: string, state: PalsCriterionState) {
+    setCriterionStates((prev) => ({ ...prev, [criterionId]: prev[criterionId] === state ? 'not_checked' : state }));
+  }
+
   const selectedGroup = groups.find((g) => g.id === groupId);
 
   function resetForNextStudent() {
     setTeamLeadId(''); setResult(''); setWatch(false); setWatchNote(''); setPerformanceNotes('');
+    setCriterionStates({}); setStepNotes({}); setOpenNotes({});
     setClientUuid(mintClientUuid());
   }
 
   async function handleSave() {
     if (!station?.scenario_id) return;
     if (!teamLeadId) return toast.error('Tap the team lead');
-    if (!result) return toast.error('Mark pass or not yet');
+    if (!result) return toast.error('Mark pass or fail');
     setSaving(true);
     try {
       const res = await fetch('/api/pals/practice-attempts', {
@@ -198,13 +215,18 @@ export default function PalsPracticeStationPage() {
           result: result === 'PASS' ? 'pass' : 'fail',
           watch: result === 'PASS' ? watch : null,
           watch_note: result === 'PASS' && watch ? watchNote : null,
+          criterion_results: criteria.map((c) => ({
+            criterion_id: c.id,
+            state: criterionStates[c.id] || 'not_checked',
+            note: (stepNotes[c.id] || '').trim() || null,
+          })),
           performance_notes: performanceNotes.trim() || null,
           client_uuid: clientUuid,
         }),
       });
       const data = await res.json();
       if (data.success) {
-        toast.success(`Saved - ${result === 'PASS' ? 'pass' : 'not yet'}${result === 'PASS' && watch ? ' (watch)' : ''}`);
+        toast.success(`Saved - ${result === 'PASS' ? 'pass' : 'fail'}${result === 'PASS' && watch ? ' (watch)' : ''}`);
         setSavedCount((n) => n + 1);
         resetForNextStudent();
       } else {
@@ -269,7 +291,7 @@ export default function PalsPracticeStationPage() {
                 </p>
               )}
               {savedCount > 0 && <p className="mt-2 text-xs text-gray-400">{savedCount} saved at this station this visit</p>}
-              <PalsCaseCard card={(scenario?.pals_narrative as { card?: PalsCard } | null)?.card} />
+              <PalsCaseCard card={(scenario?.pals_narrative as { card?: PalsCard } | null)?.card} teachingNotesOpen />
             </div>
           }
           scoring={
@@ -310,6 +332,56 @@ export default function PalsPracticeStationPage() {
               )}
             </div>
 
+          {criteria.length > 0 && (
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Critical Performance Steps</h3>
+                <span className="text-[11px] text-gray-400">Tap to check or mark N/A. You still choose Pass or Fail.</span>
+              </div>
+              <ul className="space-y-2">
+                {criteria.map((c, i) => {
+                  const st = criterionStates[c.id] || 'not_checked';
+                  return (
+                    <li key={c.id} className="flex items-start gap-2">
+                      <div className="flex gap-1 shrink-0 mt-0.5">
+                        {(['checked', 'na'] as const).map((opt) => (
+                          <button key={opt} type="button" onClick={() => setCriterionState(c.id, opt)}
+                            aria-label={`${opt === 'checked' ? 'Check' : 'Mark N/A'} step ${i + 1}`}
+                            className={`w-11 h-11 rounded text-xs font-bold border ${
+                              st === opt
+                                ? opt === 'checked' ? 'bg-green-600 text-white border-green-600' : 'bg-gray-400 text-white border-gray-400'
+                                : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-400 border-gray-300 dark:border-gray-600'
+                            }`}>
+                            {opt === 'checked' ? '✓' : 'N/A'}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="flex-1 pt-2">
+                        <span className={`text-sm ${st === 'not_checked' ? 'text-gray-700 dark:text-gray-200' : st === 'checked' ? 'text-gray-900 dark:text-white' : 'text-gray-400 line-through'}`}>
+                          {i + 1}. {c.text}
+                          {c.is_critical && <span className="ml-1.5 text-[10px] px-1 py-0.5 rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">CRITICAL</span>}
+                        </span>
+                        {(openNotes[c.id] || (stepNotes[c.id] || '').length > 0) && (
+                          <input type="text" aria-label={`Note on step ${i + 1}`} placeholder="Note on this step"
+                            value={stepNotes[c.id] || ''} maxLength={300}
+                            onChange={(e) => setStepNotes((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                            className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1.5 text-xs" />
+                        )}
+                      </div>
+                      <button type="button" aria-label={`Add note to step ${i + 1}`} title="Add a note to this step"
+                        onClick={() => setOpenNotes((prev) => ({ ...prev, [c.id]: !prev[c.id] }))}
+                        className={`shrink-0 w-11 h-11 inline-flex items-center justify-center rounded-md ${
+                          (stepNotes[c.id] || '').length > 0 ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
+                        }`}>
+                        <StickyNote className="w-4 h-4" />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <button type="button" onClick={() => setResult(result === 'PASS' ? '' : 'PASS')}
@@ -322,25 +394,23 @@ export default function PalsPracticeStationPage() {
                 className={`min-h-[56px] rounded-lg text-base font-bold inline-flex items-center justify-center gap-2 border ${
                   result === 'NR' ? 'bg-red-600 text-white border-red-600' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
                 }`}>
-                <XCircle className="w-5 h-5" /> Not yet
+                <XCircle className="w-5 h-5" /> Fail
               </button>
             </div>
 
-            {result === 'PASS' && (
-              <div>
-                <button type="button" onClick={() => setWatch((w) => !w)}
-                  className={`min-h-[44px] px-4 rounded-md text-sm font-medium inline-flex items-center gap-2 border ${
-                    watch ? 'bg-amber-500 text-white border-amber-500' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
-                  }`}>
-                  <Eye className="w-4 h-4" /> Pass but watch
-                </button>
-                {watch && (
-                  <textarea rows={2} value={watchNote} onChange={(e) => setWatchNote(e.target.value)}
-                    placeholder="Optional note: what to watch for next time"
-                    className="mt-3 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm" />
-                )}
-              </div>
-            )}
+            <div>
+              <button type="button" onClick={() => setWatch((w) => !w)} disabled={result === 'NR'}
+                className={`min-h-[44px] px-4 rounded-md text-sm font-medium inline-flex items-center gap-2 border disabled:opacity-50 ${
+                  watch ? 'bg-amber-500 text-white border-amber-500' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
+                }`}>
+                <Eye className="w-4 h-4" /> Pass but watch
+              </button>
+              {watch && (
+                <textarea rows={2} value={watchNote} onChange={(e) => setWatchNote(e.target.value)}
+                  placeholder="Optional note: what to watch for next time"
+                  className="mt-3 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm" />
+              )}
+            </div>
 
             <div>
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Performance notes</label>
