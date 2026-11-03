@@ -83,6 +83,7 @@ interface Attempt {
   team_lead?: { id: string; first_name: string; last_name: string } | null;
   students?: { student_id: string }[];
   scenario?: { id: string; name: string; case_code: string | null } | null;
+  watch?: boolean | null; // PALS: PASS with watch flag
 }
 interface CalEvent {
   id: string; title: string; date: string; start_time: string | null; end_time: string | null;
@@ -797,6 +798,47 @@ function BoardContent({ course }: { course: CertCourse }) {
   })();
   const openRecord = (a: Attempt) => { if (cfg.recordPath) router.push(cfg.recordPath(a.id)); };
 
+  // PALS attempts strip: every attempt the student led, whole course (independent of the Day filter), time order, nothing collapsed.
+  const testingDayIds = new Set(labDays.filter(d => d.is_adv_cert_testing).map(d => d.id));
+  const practiceSectionCount = labDays.filter(d => !d.is_adv_cert_testing && !skillsRow(d) && d.stations.length > 0).length;
+  const palsAttemptsFor = (studentId: string) => attempts
+    .filter(a => a.team_lead?.id === studentId)
+    .sort((x, y) => String(x.started_at).localeCompare(String(y.started_at)));
+  const caseShort = (a: Attempt) => {
+    const code = a.scenario?.case_code || '';
+    const n = code.match(/(\d+)\D*$/)?.[1];
+    const kind = testingDayIds.has(a.lab_day_id) || /TEST/i.test(code) ? 'T' : 'P';
+    return n ? `${kind}${n.padStart(2, '0')}` : (a.scenario?.name || kind).slice(0, 6);
+  };
+  const palsNrCount = groups.flatMap(g => g.members).filter(m => !absentIds.has(m.id) && palsAttemptsFor(m.id).some(a => a.overall_result === cfg.failKey)).length;
+  const AttemptChip = ({ a }: { a: Attempt }) => {
+    const nr = a.overall_result === cfg.failKey;
+    const watch = !nr && !!a.watch;
+    const cls = nr ? 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/40 dark:text-red-200 dark:border-red-700'
+      : watch ? 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-700'
+      : 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/40 dark:text-green-200 dark:border-green-700';
+    const label = nr ? 'NR' : watch ? 'PASS watch' : 'PASS';
+    return (
+      <button type="button" onClick={() => openRecord(a)} title={`${a.scenario?.name || caseShort(a)} - ${label}`} aria-label={`Open ${caseShort(a)} ${label}`}
+        className={`inline-flex items-center gap-1 min-h-[32px] px-2 rounded-full border text-xs font-medium ${cls}`}>
+        {caseShort(a)}{watch ? <span aria-hidden>{'\u{1F441}'}</span> : null}<span className="sr-only">{label}</span>
+      </button>
+    );
+  };
+  const renderPalsStrip = (studentId: string) => {
+    const list = palsAttemptsFor(studentId);
+    if (list.length === 0) return <Chip state="none" />;
+    const practice = list.filter(a => !testingDayIds.has(a.lab_day_id));
+    const finals = list.filter(a => testingDayIds.has(a.lab_day_id));
+    return (
+      <div className="flex flex-wrap items-center gap-1">
+        {practice.map(a => <AttemptChip key={a.id} a={a} />)}
+        {finals.length > 0 && <span className="mx-1 self-stretch border-l border-gray-300 dark:border-gray-600" aria-hidden />}
+        {finals.map(a => <AttemptChip key={a.id} a={a} />)}
+      </div>
+    );
+  };
+
   const renderProgress = () => {
     const rows = groups.flatMap(g => g.members.map(m => ({ m, g })));
     return (
@@ -842,7 +884,7 @@ function BoardContent({ course }: { course: CertCourse }) {
           {absentError && <div role="alert" className="mb-2 text-xs text-red-700 dark:text-red-300">{absentError}</div>}
           <table className="w-full text-sm">
             <thead><tr className="text-left text-[11px] uppercase text-gray-500 dark:text-gray-400">
-              <th className="py-1 pr-2">Student</th><th className="py-1 pr-2 whitespace-nowrap">Grp</th><th className="py-1 pr-2 whitespace-nowrap">Attend</th><th className="py-1 whitespace-nowrap">{cfg.resultCol}</th>
+              <th className="py-1 pr-2">Student</th><th className="py-1 pr-2 whitespace-nowrap">Grp</th><th className="py-1 pr-2 whitespace-nowrap">Attend</th><th className="py-1 whitespace-nowrap">{course === 'pals' ? `Attempts${palsNrCount > 0 ? ` (${palsNrCount} with NR)` : ''}` : cfg.resultCol}</th>
             </tr></thead>
             <tbody>
               {rows.map(({ m, g }) => {
@@ -851,6 +893,7 @@ function BoardContent({ course }: { course: CertCourse }) {
                 return (
                   <tr key={m.id} className="border-t border-gray-100 dark:border-gray-700">
                     <td className={`py-1 pr-2 ${absent ? 'text-gray-400 line-through' : 'text-gray-800 dark:text-gray-100'}`}>{fullName(m)}
+                      {course === 'pals' && <span className="ml-2 text-[11px] text-gray-500 dark:text-gray-400 no-underline" title="Practice cases led / practice sections on the course">led {palsAttemptsFor(m.id).filter(a => !testingDayIds.has(a.lab_day_id)).length} of {practiceSectionCount}</span>}
                       {!absent && watchN(m.id) > 0 && <span title="Learning-station watch marks (Pass/Watch tracker)" className="ml-2 no-underline"><Chip state="watch" /> <span className="text-[11px] text-amber-700 dark:text-amber-300">{watchN(m.id)}</span></span>}
                     </td>
                     <td className="py-1 pr-2 text-xs text-gray-500 whitespace-nowrap">{g.name.replace(/^group\s*/i, '')}</td>
@@ -861,8 +904,8 @@ function BoardContent({ course }: { course: CertCourse }) {
                         {absent ? 'Absent' : 'Here'}
                       </button>
                     </td>
-                    <td className="py-1 whitespace-nowrap">
-                      {r.list.length === 0 ? <Chip state="none" /> : !cfg.recordPath ? <Chip state={r.state} /> : (
+                    <td className={course === 'pals' ? 'py-1' : 'py-1 whitespace-nowrap'}>
+                      {course === 'pals' ? renderPalsStrip(m.id) : r.list.length === 0 ? <Chip state="none" /> : !cfg.recordPath ? <Chip state={r.state} /> : (
                         <button type="button" onClick={() => (r.list.length === 1 ? openRecord(r.list[0]) : setAttemptPicker({ studentId: m.id, list: r.list }))} aria-label={`Open grading record for ${fullName(m)}`}>
                           <Chip state={r.state} />
                         </button>
