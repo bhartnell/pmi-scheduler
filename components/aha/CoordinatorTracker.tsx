@@ -827,6 +827,11 @@ function GroupCard({
                 </span>
               </div>
             ))}
+            {myPractice.filter((a) => a.performance_notes).map((a) => (
+              <div key={`pn-${a.id}`} className="text-[11px] text-gray-600 dark:text-gray-400">
+                <span className="font-semibold">{sname(a.team_lead)}:</span> {a.performance_notes}
+              </div>
+            ))}
           </div>
         </div>
       )}
@@ -979,6 +984,16 @@ function StudentOverlay({
                     <td className="py-1 pr-2">{a.scenario?.title || a.scenario?.case_code}</td>
                     <td className={`py-1 pr-2 font-semibold ${a.result === 'PASS' ? 'text-green-600' : 'text-red-600'}`}>{a.result}</td>
                     {a.watch && <td className="py-1"><Tag tone="warn">watch</Tag></td>}
+                  </tr>
+                ))}
+                {mine.filter((a) => a.performance_notes || a.step_notes?.length).map((a) => (
+                  <tr key={`n-${a.id}`}>
+                    <td colSpan={3} className="pb-2 text-gray-600 dark:text-gray-400">
+                      {a.performance_notes && <div><span className="font-semibold">Performance notes:</span> {a.performance_notes}</div>}
+                      {a.step_notes?.map((n, i) => (
+                        <div key={i}><span className="font-semibold">Step {n.step ?? '?'}:</span> {n.note}</div>
+                      ))}
+                    </td>
                   </tr>
                 ))}
               </tbody>

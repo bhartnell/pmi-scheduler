@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-03
+
+pals-grader-notes | PALS GRADER NOTES: per-step note on the testing grader, always-visible Performance notes on testing + practice graders, shown on coordinator student modal and practice list. Additive migration 20261103_pals_grader_notes.sql (pals_criterion_results.note, pals_test_attempts.performance_notes). PASS/NR logic untouched. Revert: git revert + migration ROLLBACK (columns only).
+
 ## 2026-11-02
 
 day1-feedback | PALS DAY 1 FEEDBACK: Course notes card opens by default when a saved note exists, shows 'Add notes' label when collapsed, remembers open/closed per browser (localStorage); /labs/scenarios/[id] renders the PALS case card (pals_narrative + pals_case_meta) for cert_course=pals instead of the empty generic editor. No data changes. Revert: git revert.

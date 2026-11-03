@@ -150,6 +150,7 @@ export async function saveTestAttempt(
       retest_of: input.retest_of || null,
       watch: input.watch ?? null,
       watch_note: input.watch_note || null,
+      performance_notes: input.performance_notes?.trim() || null,
       remediation_due_at: remediationDueAt,
       attempted_at: attemptedAt.toISOString(),
       client_uuid: input.client_uuid || null,
@@ -175,6 +176,7 @@ export async function saveTestAttempt(
         attempt_id: attempt.id,
         criterion_id: c.criterion_id,
         state: c.state,
+        note: c.note?.trim() || null,
       }))
     );
     if (crErr) throw crErr;

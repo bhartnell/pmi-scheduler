@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         result: v.value.result,
         watch: v.value.watch,
         watch_note: v.value.watch_note,
+        performance_notes: v.value.performance_notes,
         phase: 'practice',
         criterion_results: [],
         client_uuid: body.client_uuid,

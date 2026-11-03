@@ -139,13 +139,21 @@ export async function GET(request: NextRequest) {
       const { data: att } = await supabase
         .from('pals_test_attempts')
         .select(`
-          id, lab_day_id, lab_group_id, result, attempted_at, discipline, watch, watch_note,
+          id, lab_day_id, lab_group_id, result, attempted_at, discipline, watch, watch_note, performance_notes,
+          step_notes:pals_criterion_results(note, criterion:pals_checklist_criteria(display_order, text)),
           team_lead:students!pals_test_attempts_student_id_fkey(id, first_name, last_name),
           scenario:scenarios!pals_test_attempts_scenario_id_fkey(id, name:title, case_code)
         `)
         .in('lab_day_id', labDayIds)
         .order('attempted_at', { ascending: false });
-      attempts = att || [];
+      // Keep only steps that carry a note, in checklist order, so the payload stays small.
+      attempts = (att || []).map((a: any) => ({
+        ...a,
+        step_notes: (a.step_notes || [])
+          .filter((r: any) => r.note && String(r.note).trim())
+          .sort((x: any, y: any) => (x.criterion?.display_order ?? 0) - (y.criterion?.display_order ?? 0))
+          .map((r: any) => ({ step: r.criterion?.display_order ?? null, text: r.criterion?.text ?? '', note: r.note })),
+      }));
     }
 
     // Active temporary regroups (PALS P3c/4): overlay only, lab_group_members untouched.

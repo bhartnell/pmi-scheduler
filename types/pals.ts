@@ -50,6 +50,8 @@ export interface PalsScenarioWithChecklist {
 export interface PalsCriterionResultInput {
   criterion_id: string;
   state: PalsCriterionState;
+  /** Optional one-line instructor note on this step. */
+  note?: string | null;
 }
 
 export interface SavePalsAttemptInput {
@@ -68,6 +70,8 @@ export interface SavePalsAttemptInput {
   /** Pass-but-watch flag + typed note (practice attempts); NULL = not assessed. */
   watch?: boolean | null;
   watch_note?: string | null;
+  /** Always-available free-text performance notes (PASS or NR). */
+  performance_notes?: string | null;
   /** Team-lead log phase; defaults to 'testing'. */
   phase?: 'practice' | 'testing';
   criterion_results: PalsCriterionResultInput[];
@@ -93,6 +97,7 @@ export interface PalsTestAttempt {
   retest_of: string | null;
   watch: boolean | null;
   watch_note: string | null;
+  performance_notes?: string | null;
   remediation_due_at: string | null;
   attempted_at: string;
   client_uuid: string | null;

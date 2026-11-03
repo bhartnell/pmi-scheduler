@@ -34,6 +34,8 @@ export interface PalsCoordAttempt {
   attempted_at: string;
   watch?: boolean | null;
   watch_note?: string | null;
+  performance_notes?: string | null;
+  step_notes?: { step: number | null; text: string; note: string }[];
   scenario?: { id: string; title: string; case_code: string | null } | null;
   team_lead?: { id: string; first_name: string; last_name: string } | null;
 }

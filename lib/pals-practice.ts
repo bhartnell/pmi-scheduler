@@ -10,6 +10,7 @@ export interface PalsPracticeInput {
   result?: string | null;
   watch?: boolean | null;
   watch_note?: string | null;
+  performance_notes?: string | null;
 }
 
 export interface PalsPracticeClean {
@@ -19,6 +20,7 @@ export interface PalsPracticeClean {
   result: PalsRoundResult;
   watch: boolean | null;
   watch_note: string | null;
+  performance_notes: string | null;
 }
 
 export type PalsPracticeValidation =
@@ -51,6 +53,7 @@ export function validatePalsPractice(input: PalsPracticeInput): PalsPracticeVali
       result,
       watch,
       watch_note: watch === true && note ? note : null,
+      performance_notes: (input.performance_notes ?? '').trim() || null,
     },
   };
 }
