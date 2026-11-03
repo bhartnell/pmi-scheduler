@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { ArrowLeft, CheckCircle2, XCircle, Eye, Loader2, Save, Crown, Play, Pause, RotateCcw, Flag, ExternalLink } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { safeReturnTo } from '@/lib/return-to';
+import TimerBanner from '@/components/TimerBanner';
 import DualPaneGrading from '@/components/grading/DualPaneGrading';
 import PalsCaseCard, { type PalsCard } from '@/components/pals/PalsCaseCard';
 import { mintClientUuid } from '@/lib/pals-offline';
@@ -224,6 +225,15 @@ export default function PalsPracticeStationPage() {
 
   return (
     <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4">
+      {labDayId && (
+        <TimerBanner
+          labDayId={labDayId}
+          stationId={stationId || undefined}
+          userEmail={session?.user?.email || undefined}
+          userName={session?.user?.name || undefined}
+          numRotations={4}
+        />
+      )}
       <Link href={backHref} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 mb-4">
         <ArrowLeft className="w-4 h-4" /> Back to lab day
       </Link>

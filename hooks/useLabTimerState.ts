@@ -46,9 +46,10 @@ export function useLabTimerState({ url, labDayId, enabled = true, subscribe = tr
     setSnapshot(next);
   }, []);
 
-  const refetch = useCallback(async () => {
+  // full: skip the version param so the reply is a full snapshot (carries labDay) rather than not_modified.
+  const refetch = useCallback(async (opts?: { full?: boolean }) => {
     try {
-      const q = versionQuery(snapRef.current);
+      const q = opts?.full === true ? '' : versionQuery(snapRef.current);
       const full = q ? `${url}${url.includes('?') ? '&' : '?'}${q}` : url;
       const res = await fetch(full, { cache: 'no-store' });
       let parsed = null;

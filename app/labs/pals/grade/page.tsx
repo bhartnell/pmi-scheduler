@@ -8,6 +8,7 @@ import { safeReturnTo } from '@/lib/return-to';
 import { ArrowLeft, CheckCircle2, XCircle, Loader2, Save, WifiOff, RefreshCw, Crown } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useOffline } from '@/components/OfflineProvider';
+import TimerBanner from '@/components/TimerBanner';
 import PalsCaseCard, { type PalsCard } from '@/components/pals/PalsCaseCard';
 import DualPaneGrading from '@/components/grading/DualPaneGrading';
 import PrintOriginalPdfButton from '@/components/PrintOriginalPdfButton';
@@ -317,6 +318,15 @@ export default function PalsGradePage() {
 
   return (
     <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4">
+      {labDayId && (
+        <TimerBanner
+          labDayId={labDayId}
+          stationId={stationId || undefined}
+          userEmail={session?.user?.email || undefined}
+          userName={session?.user?.name || undefined}
+          numRotations={4}
+        />
+      )}
       <div className="flex items-center justify-between mb-4">
         <Link href={returnTo || '/labs/pals-hub'} className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400">
           <ArrowLeft className="w-4 h-4" /> Back to PALS Hub
