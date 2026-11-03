@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-03
 
+pals-board-progress | PALS BOARD PROGRESS: CertBoard Student progress (PALS only) lists every attempt per team lead as a chip (P02/T06; PASS green, PASS watch amber+eye, NR red), whole course regardless of Day filter, 'led x of y' practice count, Section E after a divider, NR-student count in column header. Display only. Revert: git revert.
+
 grader-groups | GRADER GROUPS: new lib/pals-effective-groups.ts (withdrawn hidden + active pals_group_moves applied); /api/pals/grading-context uses it so PALS practice + testing graders match the coordinator; pals-hub uses the shared active-move filter. No data writes. Revert: git revert.
 
 pals-practice-grader-2 | PALS PRACTICE GRADER 2: three marks per step (Done / Not done / N/A, tap again clears, untouched saves not done; no new stored value), hint text; ABCDE + PAT shown in clinical order on the case card; bottom timer banner now pads the page so Save is never covered. Revert: git revert.
