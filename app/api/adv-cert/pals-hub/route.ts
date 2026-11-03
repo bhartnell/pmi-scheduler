@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { loadActiveMoves } from '@/lib/pals-effective-groups';
 
 /**
  * GET /api/adv-cert/pals-hub?cohortId=&start=&end=
@@ -158,13 +159,7 @@ export async function GET(request: NextRequest) {
 
     // Active temporary regroups (PALS P3c/4): overlay only, lab_group_members untouched.
     // 'today' moves lapse on their own after the day they were made.
-    const todayStr = new Date().toISOString().slice(0, 10);
-    const { data: movesRaw } = await supabase
-      .from('pals_group_moves')
-      .select('id, student_id, from_group_id, to_group_id, duration, move_date')
-      .eq('cohort_id', cohortId)
-      .is('ended_at', null);
-    const moves = (movesRaw || []).filter((m) => m.duration !== 'today' || m.move_date === todayStr);
+    const moves = await loadActiveMoves(supabase, cohortId).catch(() => []);
 
     const cohort = (labDays[0] as any)?.cohort ?? null;
     const dates = [...new Set(labDays.map((d) => d.date))].sort();
