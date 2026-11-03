@@ -12019,12 +12019,12 @@ migrated (8 practice + 6 testing); the 3 `*_cert_tier_check` constraints now rea
   (scope snapshot), `result` (`PASS|NR` CHECK), `watch` boolean NULL + `watch_note` text NULL (pass-but-watch, added 2026-10-22, migration `20261022_pals_attempt_watch.sql`; written by `POST /api/pals/practice-attempts` for practice cases, which keeps watch only on PASS and the note only when watch is true), `remediation_notes`,
   `instructor_initials`/`instructor_number`, `retest_of` self-FK,
   `remediation_due_at` (30-day clock), `client_uuid` UNIQUE (offline dedup),
-  `synced_at`.
+  `synced_at`, `performance_notes` text NULL (always-available free-text notes on any result, both graders; migration `20261103_pals_grader_notes.sql`).
 - **`pals_attempt_students`** — team roster on the attempt. PK
   `(attempt_id, student_id)`, `team_role`.
 - **`pals_criterion_results`** — three-state per-criterion result: `state`
   (`checked | not_checked | na` CHECK). UNIQUE `(attempt_id, criterion_id)`.
-  N/A (out-of-scope) is NOT a blank and NOT a failure.
+  N/A (out-of-scope) is NOT a blank and NOT a failure. `note` text NULL: optional one-line instructor note on the step (testing grader; migration `20261103_pals_grader_notes.sql`).
 - **`pals_skill_completions`** — skills competency attestation (NOT tap-through
   graded). `student_id` FK, `skill_key`, `cert_course`, `status`
   (`pass|fail|remediated`), `verified_by`, `verified_at`,

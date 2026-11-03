@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { safeReturnTo } from '@/lib/return-to';
-import { ArrowLeft, CheckCircle2, XCircle, Loader2, Save, WifiOff, RefreshCw, Crown } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Loader2, Save, WifiOff, RefreshCw, Crown, StickyNote } from 'lucide-react';
 import { useToast } from '@/components/Toast';
 import { useOffline } from '@/components/OfflineProvider';
 import TimerBanner from '@/components/TimerBanner';
@@ -38,7 +38,7 @@ interface RetestCandidate { id: string; attempted_at: string; result: string; re
 interface Draft {
   clientUuid: string; labDayId: string; groupId: string; stationId: string; scenarioId: string;
   teamLeadId: string; memberIds: string[]; criterionStates: Record<string, PalsCriterionState>;
-  remediationNotes: string; instructorInitials: string; instructorNumber: string; retestOf: string;
+  remediationNotes: string; performanceNotes?: string; stepNotes?: Record<string, string>; instructorInitials: string; instructorNumber: string; retestOf: string;
 }
 
 export default function PalsGradePage() {
@@ -64,6 +64,10 @@ export default function PalsGradePage() {
 
   const [criterionStates, setCriterionStates] = useState<Record<string, PalsCriterionState>>({});
   const [remediationNotes, setRemediationNotes] = useState('');
+  const [performanceNotes, setPerformanceNotes] = useState('');
+  // One-line note per step (criterion id -> text); an open box is shown when the note is non-empty or the icon is tapped.
+  const [stepNotes, setStepNotes] = useState<Record<string, string>>({});
+  const [openNotes, setOpenNotes] = useState<Record<string, boolean>>({});
   const [instructorInitials, setInstructorInitials] = useState('');
   const [instructorNumber, setInstructorNumber] = useState('');
   const [retestOf, setRetestOf] = useState('');
@@ -107,7 +111,7 @@ export default function PalsGradePage() {
     setGroupId(draft.groupId); setStationId(draft.stationId); setScenarioId(draft.scenarioId);
     setTeamLeadId(draft.teamLeadId); setMemberIds(draft.memberIds || []);
     setCriterionStates(draft.criterionStates || {});
-    setRemediationNotes(draft.remediationNotes || ''); setInstructorInitials(draft.instructorInitials || '');
+    setRemediationNotes(draft.remediationNotes || ''); setPerformanceNotes(draft.performanceNotes || ''); setStepNotes(draft.stepNotes || {}); setInstructorInitials(draft.instructorInitials || '');
     setInstructorNumber(draft.instructorNumber || ''); setRetestOf(draft.retestOf || '');
     toast.info('Restored an in-progress grading draft.');
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -210,15 +214,15 @@ export default function PalsGradePage() {
   // Persist an in-progress draft on every meaningful change (survives reload).
   useEffect(() => {
     if (!clientUuid || typeof window === 'undefined') return;
-    const hasAnyProgress = !!(labDayId || groupId || scenarioId || teamLeadId || remediationNotes);
+    const hasAnyProgress = !!(labDayId || groupId || scenarioId || teamLeadId || remediationNotes || performanceNotes);
     if (!hasAnyProgress) return;
     const draft: Draft = {
       clientUuid, labDayId, groupId, stationId, scenarioId, teamLeadId, memberIds,
-      criterionStates, remediationNotes, instructorInitials, instructorNumber, retestOf,
+      criterionStates, remediationNotes, performanceNotes, stepNotes, instructorInitials, instructorNumber, retestOf,
     };
     saveDraft(clientUuid, draft);
     window.localStorage.setItem(ACTIVE_DRAFT_KEY, clientUuid);
-  }, [clientUuid, labDayId, groupId, stationId, scenarioId, teamLeadId, memberIds, criterionStates, remediationNotes, instructorInitials, instructorNumber, retestOf]);
+  }, [clientUuid, labDayId, groupId, stationId, scenarioId, teamLeadId, memberIds, criterionStates, remediationNotes, performanceNotes, stepNotes, instructorInitials, instructorNumber, retestOf]);
 
   function resetForNextStudent() {
     setTeamLeadId(''); setMemberIds([]); setCriterionStates(() => {
@@ -226,7 +230,7 @@ export default function PalsGradePage() {
       for (const c of criteria) next[c.id] = 'not_checked';
       return next;
     });
-    setRemediationNotes(''); setRetestOf('');
+    setRemediationNotes(''); setPerformanceNotes(''); setStepNotes({}); setOpenNotes({}); setRetestOf('');
     if (clientUuid) { clearDraft(clientUuid); }
     if (typeof window !== 'undefined') window.localStorage.removeItem(ACTIVE_DRAFT_KEY);
     lastResetScenarioRef.current = ''; // allow the next scenario pick to re-seed states cleanly
@@ -279,10 +283,11 @@ export default function PalsGradePage() {
       discipline: (teamLead?.discipline as Discipline | undefined) || null,
       result: computedResult,
       remediation_notes: remediationNotes || null,
+      performance_notes: performanceNotes.trim() || null,
       instructor_initials: instructorInitials.trim(),
       instructor_number: instructorNumber.trim(),
       retest_of: retestOf || null,
-      criterion_results: criteria.map((c) => ({ criterion_id: c.id, state: criterionStates[c.id] || 'not_checked' })),
+      criterion_results: criteria.map((c) => ({ criterion_id: c.id, state: criterionStates[c.id] || 'not_checked', note: (stepNotes[c.id] || '').trim() || null })),
       team_member_ids: memberIds.filter((id) => id !== teamLeadId),
       client_uuid: clientUuid,
     };
@@ -541,7 +546,20 @@ export default function PalsGradePage() {
                             If not verbalized, prompt ({c.prompt_kind || 'question'}): &ldquo;{c.instructor_prompt}&rdquo;
                           </p>
                         )}
+                        {(openNotes[c.id] || (stepNotes[c.id] || '').length > 0) && (
+                          <input type="text" aria-label={`Note on step ${i + 1}`} placeholder="Note on this step"
+                            value={stepNotes[c.id] || ''} maxLength={300}
+                            onChange={(e) => setStepNotes((prev) => ({ ...prev, [c.id]: e.target.value }))}
+                            className="mt-1 w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-2 py-1.5 text-xs" />
+                        )}
                       </div>
+                      <button type="button" aria-label={`Add note to step ${i + 1}`} title="Add a note to this step"
+                        onClick={() => setOpenNotes((prev) => ({ ...prev, [c.id]: !prev[c.id] }))}
+                        className={`shrink-0 w-11 h-11 -my-2 inline-flex items-center justify-center rounded-md ${
+                          (stepNotes[c.id] || '').length > 0 ? 'text-blue-600' : 'text-gray-400 hover:text-gray-600'
+                        }`}>
+                        <StickyNote className="w-4 h-4" />
+                      </button>
                     </li>
                   );
                 })}
@@ -558,6 +576,13 @@ export default function PalsGradePage() {
                     {inScopeCriteria.filter((c) => criterionStates[c.id] === 'checked').length}/{inScopeCriteria.length} in-scope checked
                     {uncheckedCriticalCount > 0 ? ` • ${uncheckedCriticalCount} critical step(s) not checked` : ''}
                   </span>
+                </div>
+
+                <div className="mb-3">
+                  <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Performance notes</label>
+                  <textarea placeholder="How the team lead performed - strengths, what to work on (optional, any result)" rows={3}
+                    value={performanceNotes} onChange={(e) => setPerformanceNotes(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm" />
                 </div>
 
                 {computedResult === 'NR' && (

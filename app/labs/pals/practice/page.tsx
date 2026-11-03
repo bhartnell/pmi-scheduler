@@ -132,6 +132,7 @@ export default function PalsPracticeStationPage() {
   const [result, setResult] = useState<'PASS' | 'NR' | ''>('');
   const [watch, setWatch] = useState(false);
   const [watchNote, setWatchNote] = useState('');
+  const [performanceNotes, setPerformanceNotes] = useState('');
   const [clientUuid, setClientUuid] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedCount, setSavedCount] = useState(0);
@@ -175,7 +176,7 @@ export default function PalsPracticeStationPage() {
   const selectedGroup = groups.find((g) => g.id === groupId);
 
   function resetForNextStudent() {
-    setTeamLeadId(''); setResult(''); setWatch(false); setWatchNote('');
+    setTeamLeadId(''); setResult(''); setWatch(false); setWatchNote(''); setPerformanceNotes('');
     setClientUuid(mintClientUuid());
   }
 
@@ -197,6 +198,7 @@ export default function PalsPracticeStationPage() {
           result: result === 'PASS' ? 'pass' : 'fail',
           watch: result === 'PASS' ? watch : null,
           watch_note: result === 'PASS' && watch ? watchNote : null,
+          performance_notes: performanceNotes.trim() || null,
           client_uuid: clientUuid,
         }),
       });
@@ -339,6 +341,13 @@ export default function PalsPracticeStationPage() {
                 )}
               </div>
             )}
+
+            <div>
+              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Performance notes</label>
+              <textarea rows={3} value={performanceNotes} onChange={(e) => setPerformanceNotes(e.target.value)}
+                placeholder="How the team lead performed - strengths, what to work on (optional, any result)"
+                className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm" />
+            </div>
 
             <button type="button" onClick={handleSave}
               disabled={saving || !teamLeadId || !result || (scenario != null && !scenario.checklist)}
