@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import FixTimezonesCard from '@/components/FixTimezonesCard';
+import SharedCalendarWriterCard from '@/components/SharedCalendarWriterCard';
 import {
   Calendar,
   RefreshCw,
@@ -627,6 +628,7 @@ export default function CalendarSyncPage() {
       </div>
 
       <main className="max-w-screen-2xl mx-auto px-4 py-6 space-y-6">
+        <SharedCalendarWriterCard />
         <FixTimezonesCard />
         {loading ? (
           <div className="space-y-6 animate-pulse">
