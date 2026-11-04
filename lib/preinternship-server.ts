@@ -79,7 +79,27 @@ export function createSupabaseStore(): Store {
         for (const s of testStudents ?? []) testEmails.add(s.email.toLowerCase());
       }
 
-      return rows.map((r) => ({ ...toStored(r), isTest: !!r.email && testEmails.has(r.email.toLowerCase()) }));
+      // Cohort label comes from cohort_id (the legacy free-text `cohort` column is
+      // no longer filled by the student form); the text value is only a fallback
+      // for old rows with no cohort_id.
+      const cohortIds = [...new Set(rows.map((r) => r.cohort_id).filter((c): c is string => !!c))];
+      const labels = new Map<string, string>();
+      if (cohortIds.length) {
+        const { data: cohortRows, error: cErr } = await sb.from('cohorts')
+          .select('id, cohort_number, display_name, program:programs(abbreviation)').in('id', cohortIds);
+        fail(cErr, 'list response cohorts');
+        for (const c of (cohortRows ?? []) as unknown as Array<{ id: string; cohort_number: number; display_name: string | null; program: { abbreviation: string | null } | { abbreviation: string | null }[] | null }>) {
+          const program = Array.isArray(c.program) ? c.program[0] : c.program;
+          labels.set(c.id, c.display_name || `${program?.abbreviation ?? ''} Group ${formatCohortNumber(c.cohort_number)}`.trim());
+        }
+      }
+
+      return rows.map((r) => {
+        const stored = toStored(r);
+        const label = r.cohort_id ? labels.get(r.cohort_id) : undefined;
+        if (label) stored.data.cohort = label;
+        return { ...stored, isTest: !!r.email && testEmails.has(r.email.toLowerCase()) };
+      });
     },
     async softDeleteResponse(userId) {
       const { data, error } = await sb.from('preinternship_responses')
