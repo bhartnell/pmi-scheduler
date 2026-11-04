@@ -23,6 +23,7 @@ import LabTimer from '@/components/LabTimer';
 import EditStationModal from '@/components/lab-day/EditStationModal';
 import CourseNotesCard from '@/components/aha/CourseNotesCard';
 import { isAgendaBlock } from '@/lib/hub-internal';
+import { groupResultFor } from '@/lib/pals-attempt-members';
 import { useCalendarAvailability } from '@/hooks/useCalendarAvailability';
 import type { LabDay as FullLabDay, Station as FullStation, Instructor, InstructorAvailabilityEntry } from '@/components/lab-day/types';
 
@@ -82,6 +83,7 @@ interface Attempt {
   id: string; lab_day_id: string; lab_group_id: string; overall_result: string; started_at: string;
   team_lead?: { id: string; first_name: string; last_name: string } | null;
   students?: { student_id: string }[];
+  member_ids?: string[]; // PALS: everyone who carried the round (lead + group members present)
   scenario?: { id: string; name: string; case_code: string | null } | null;
   watch?: boolean | null; // PALS: PASS with watch flag
 }
@@ -801,8 +803,9 @@ function BoardContent({ course }: { course: CertCourse }) {
   // PALS attempts strip: every attempt the student led, whole course (independent of the Day filter), time order, nothing collapsed.
   const testingDayIds = new Set(labDays.filter(d => d.is_adv_cert_testing).map(d => d.id));
   const practiceSectionCount = labDays.filter(d => !d.is_adv_cert_testing && !skillsRow(d) && d.stations.length > 0).length;
+  // Practice cases: the cases they led. Final rounds: every round their group carried (lead or member).
   const palsAttemptsFor = (studentId: string) => attempts
-    .filter(a => a.team_lead?.id === studentId)
+    .filter(a => a.team_lead?.id === studentId || (testingDayIds.has(a.lab_day_id) && (a.member_ids || []).includes(studentId)))
     .sort((x, y) => String(x.started_at).localeCompare(String(y.started_at)));
   const caseShort = (a: Attempt) => {
     const code = a.scenario?.case_code || '';
@@ -811,7 +814,7 @@ function BoardContent({ course }: { course: CertCourse }) {
     return n ? `${kind}${n.padStart(2, '0')}` : (a.scenario?.name || kind).slice(0, 6);
   };
   const palsNrCount = groups.flatMap(g => g.members).filter(m => !absentIds.has(m.id) && palsAttemptsFor(m.id).some(a => a.overall_result === cfg.failKey)).length;
-  const AttemptChip = ({ a }: { a: Attempt }) => {
+  const AttemptChip = ({ a, hollow = false }: { a: Attempt; hollow?: boolean }) => {
     const nr = a.overall_result === cfg.failKey;
     const watch = !nr && !!a.watch;
     const cls = nr ? 'bg-red-100 text-red-800 border-red-300 dark:bg-red-900/40 dark:text-red-200 dark:border-red-700'
@@ -819,8 +822,8 @@ function BoardContent({ course }: { course: CertCourse }) {
       : 'bg-green-100 text-green-800 border-green-300 dark:bg-green-900/40 dark:text-green-200 dark:border-green-700';
     const label = nr ? 'NR' : watch ? 'PASS watch' : 'PASS';
     return (
-      <button type="button" onClick={() => openRecord(a)} title={`${a.scenario?.name || caseShort(a)} - ${label}`} aria-label={`Open ${caseShort(a)} ${label}`}
-        className={`inline-flex items-center gap-1 min-h-[32px] px-2 rounded-full border text-xs font-medium ${cls}`}>
+      <button type="button" onClick={() => openRecord(a)} title={`${a.scenario?.name || caseShort(a)} - ${label}${hollow ? ` (group round, led by ${a.team_lead ? `${a.team_lead.first_name} ${a.team_lead.last_name}` : 'a group member'})` : ''}`} aria-label={`Open ${caseShort(a)} ${label}${hollow ? ' group round' : ''}`}
+        className={`inline-flex items-center gap-1 min-h-[32px] px-2 rounded-full border text-xs font-medium ${hollow ? 'bg-transparent dark:bg-transparent border-dashed' : ''} ${cls}`}>
         {caseShort(a)}{watch ? <span aria-hidden>{'\u{1F441}'}</span> : null}<span className="sr-only">{label}</span>
       </button>
     );
@@ -834,7 +837,15 @@ function BoardContent({ course }: { course: CertCourse }) {
       <div className="flex flex-wrap items-center gap-1">
         {practice.map(a => <AttemptChip key={a.id} a={a} />)}
         {finals.length > 0 && <span className="mx-1 self-stretch border-l border-gray-300 dark:border-gray-600" aria-hidden />}
-        {finals.map(a => <AttemptChip key={a.id} a={a} />)}
+        {finals.map(a => <AttemptChip key={a.id} a={a} hollow={a.team_lead?.id !== studentId} />)}
+        {finals.length > 0 && (() => {
+          // Group result: 2 of 3 synchronized final rounds; every member carries it.
+          const gr = groupResultFor(finals.map(a => ({ id: a.id, lab_group_id: a.lab_group_id, scenario_id: a.scenario?.id ?? null, result: a.overall_result, attempted_at: a.started_at })));
+          const cls = gr.status === 'pass' ? 'bg-green-600 text-white' : gr.status === 'fail' ? 'bg-red-600 text-white' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-200';
+          return <span title={`Group final: ${gr.passedRounds} of 3 rounds passed`} className={`ml-1 inline-flex items-center min-h-[24px] px-2 rounded text-[11px] font-semibold ${cls}`}>
+            Group {gr.status === 'pass' ? 'PASS' : gr.status === 'fail' ? 'NR' : 'pending'} {gr.passedRounds}/3
+          </span>;
+        })()}
       </div>
     );
   };

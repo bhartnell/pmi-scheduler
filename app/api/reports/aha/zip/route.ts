@@ -5,7 +5,8 @@ import { formatCohortNumber } from '@/lib/format-cohort';
 import { fetchMegacodeReport } from '@/lib/reports/aha/megacode';
 import { renderMegacodeDocument, type SignoffInstructor } from '@/lib/reports/aha/megacodeForm';
 import { renderSkillsDocument, SKILLS_FORMS } from '@/lib/reports/aha/skillsForms';
-import { composeStudentPacketHTML, packetFilename } from '@/lib/reports/aha/packet';
+import { fetchPalsGroupReport, renderPalsDocument } from '@/lib/reports/aha/palsGroupResult';
+import { composeStudentPacketHTML, composePalsStudentPacketHTML, packetFilename } from '@/lib/reports/aha/packet';
 import { fetchCourseDate, type RosterStudent } from '@/lib/reports/roster';
 import JSZip from 'jszip';
 import puppeteer from 'puppeteer-core';
@@ -71,7 +72,16 @@ export async function GET(request: NextRequest) {
 
     // Build the list of (filename, html) docs to render.
     const docs: Array<{ filename: string; html: string }> = [];
-    if (grouping === 'student') {
+    if (course === 'pals') {
+      // PALS: group-result sheets from pals_test_attempts (the megacode report reads the ACLS table).
+      const keep = new Set(report.rows.map((r) => r.student.id));
+      const palsRows = (await fetchPalsGroupReport({ kind: 'cohort', cohortId })).filter((r) => keep.has(r.student.id) && r.rounds.length > 0);
+      if (grouping === 'student') {
+        for (const r of palsRows) docs.push({ filename: packetFilename(r.student.lastName, r.student.firstName, course), html: composePalsStudentPacketHTML(r, instructor, courseDate) });
+      } else {
+        docs.push({ filename: 'PALS_GroupResults_AllStudents.pdf', html: renderPalsDocument(palsRows) });
+      }
+    } else if (grouping === 'student') {
       for (const row of report.rows) {
         if (!row.best) continue; // skip excused / no scorable attempt — no student file
         docs.push({

@@ -5,6 +5,7 @@ import type { ReportScope } from '@/lib/reports/engine';
 import { fetchMegacodeReport, AHA_MEGACODE_VARIANTS } from '@/lib/reports/aha/megacode';
 import { renderMegacodeDocument, renderBlankMegacodeDocument, type SignoffInstructor } from '@/lib/reports/aha/megacodeForm';
 import { fetchScopeStudents, fetchCourseDate } from '@/lib/reports/roster';
+import { fetchPalsGroupReport, renderPalsDocument } from '@/lib/reports/aha/palsGroupResult';
 import { SKILLS_FORMS, renderSkillsDocument } from '@/lib/reports/aha/skillsForms';
 
 /**
@@ -85,6 +86,13 @@ export async function GET(request: NextRequest) {
         signatureText: data.signature_text, signatureFace: data.signature_face,
       };
     }
+  }
+
+  // PALS final testing: group result sheets (all three final rounds per student), from pals_test_attempts.
+  if (course === 'pals' && (template === 'megacode' || template === 'pals_group')) {
+    const rows = await fetchPalsGroupReport(scope);
+    if (rows.length === 0) return NextResponse.json({ success: false, error: 'no students in scope' }, { status: 404 });
+    return new Response(renderPalsDocument(rows, { autoPrint }), { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
   }
 
   if (template === 'megacode') {

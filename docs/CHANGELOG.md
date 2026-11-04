@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-04
+
+pals-group-result | PALS GROUP RESULT: every group member carries all three final rounds. lib/pals-attempt-members.ts resolves round members (recorded pals_attempt_students, else effective group minus absent that day); pals-hub returns member_ids; board shows lead chip solid / member chip dashed plus Group PASS/NR badge; /api/reports/aha (course=pals) and the zip export print all three rounds with leads and the group result (lib/reports/aha/palsGroupResult.ts); testing grader pre-ticks present members so pals_attempt_students is recorded going forward. No DB writes to existing attempts. Revert: git revert.
+
 ## 2026-11-03
 
 pals-board-progress | PALS BOARD PROGRESS: CertBoard Student progress (PALS only) lists every attempt per team lead as a chip (P02/T06; PASS green, PASS watch amber+eye, NR red), whole course regardless of Day filter, 'led x of y' practice count, Section E after a divider, NR-student count in column header. Display only. Revert: git revert.
