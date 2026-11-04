@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-04
+
+pals-practice-watch | PALS PRACTICE GRADER: 'Pass but watch' now selects Pass too (it left Save disabled with no result chosen); un-passing clears watch. Client only, no stored-data change. Revert: git revert.
+
 ## 2026-11-03
 
 pals-board-progress | PALS BOARD PROGRESS: CertBoard Student progress (PALS only) lists every attempt per team lead as a chip (P02/T06; PASS green, PASS watch amber+eye, NR red), whole course regardless of Day filter, 'led x of y' practice count, Section E after a divider, NR-student count in column header. Display only. Revert: git revert.
