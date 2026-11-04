@@ -409,8 +409,29 @@ export default function CohortManagementPage() {
     }
   };
 
+  // Admin-only, test cohorts only: dry run for exact counts, confirm, then one-transaction purge (archived first).
+  const handleClearTestData = async (cohort: Cohort) => {
+    const label = `${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)}`;
+    try {
+      const dry = await (await fetch(`/api/lab-management/cohorts/${cohort.id}/clear-test-data`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ dry_run: true }),
+      })).json();
+      if (!dry.success) { alert(dry.error || 'Could not check this cohort'); return; }
+      const lines = Object.entries(dry.counts as Record<string, number>).map(([t, n]) => `  ${n} ${t.replace(/_/g, ' ')}`).join('\n');
+      if (!confirm(`Remove ${label} and everything under it?\n\n${lines || '  (no rows)'}\n\nA copy of every removed row is kept in the deleted-records archive. Google Calendar is not touched.`)) return;
+      const res = await (await fetch(`/api/lab-management/cohorts/${cohort.id}/clear-test-data`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({}),
+      })).json();
+      if (res.success) setCohorts(prev => prev.filter(c => c.id !== cohort.id));
+      else alert(res.error || 'Failed to clear test data');
+    } catch (error) {
+      console.error('Error clearing test data:', error);
+      alert('Failed to clear test data');
+    }
+  };
+
   const handleDelete = async (cohort: Cohort) => {
-    if (cohort.student_count > 0) {
+    if (cohort.student_count > 0 && !cohort.is_test) {
       alert(`Cannot delete ${cohort.program.abbreviation} Group ${formatCohortNumber(cohort.cohort_number)} because it has ${cohort.student_count} students. Remove students first or mark as inactive.`);
       return;
     }
@@ -923,6 +944,15 @@ export default function CohortManagementPage() {
                                 {cohort.is_active ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
                               </button>
                             </>
+                          )}
+                          {userRole && hasMinRole(userRole, 'admin') && cohort.is_test && (
+                            <button
+                              onClick={() => handleClearTestData(cohort)}
+                              className="px-2 py-1.5 min-h-[36px] text-xs text-red-700 dark:text-red-300 border border-red-300 dark:border-red-700 rounded hover:bg-red-50 dark:hover:bg-red-900/30 whitespace-nowrap"
+                              title="Remove this test cohort and everything under it"
+                            >
+                              Clear test data
+                            </button>
                           )}
                           {userRole && hasMinRole(userRole, 'admin') && !cohort.is_archived && (
                             <button
