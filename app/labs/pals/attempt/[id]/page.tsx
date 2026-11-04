@@ -55,6 +55,17 @@ export default function PalsAttemptRecordPage() {
     } catch { setSaveMsg('Save failed'); } finally { setSaving(false); }
   };
 
+  const deleteAttempt = async () => {
+    const reason = window.prompt('Delete this attempt? It is archived first. Reason (required):');
+    if (!reason || !reason.trim()) return;
+    try {
+      const r = await fetch(`/api/pals/attempts/${id}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
+      const j = await r.json();
+      if (!j.success) { setSaveMsg(j.error || 'Delete failed'); return; }
+      router.push(hubHref);
+    } catch { setSaveMsg('Delete failed'); }
+  };
+
   const name = (p: Person) => `${p.first_name} ${p.last_name}`;
   const a = rec?.attempt;
   const pass = a?.result === 'PASS';
@@ -75,6 +86,11 @@ export default function PalsAttemptRecordPage() {
           {rec && !editing && (
             <button type="button" onClick={startEdit} className="inline-flex items-center gap-1 text-sm min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600">
               <Pencil className="w-4 h-4" /> Edit result
+            </button>
+          )}
+          {rec && !editing && (
+            <button type="button" onClick={deleteAttempt} className="inline-flex items-center gap-1 text-sm min-h-[44px] px-3 rounded-lg border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300">
+              Delete this attempt
             </button>
           )}
           {rec && (

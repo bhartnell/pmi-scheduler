@@ -127,15 +127,20 @@ export async function DELETE(
   try {
     const supabase = getSupabaseAdmin();
 
-    const { count } = await supabase
-      .from('students')
-      .select('*', { count: 'exact', head: true })
-      .eq('cohort_id', id);
-
-    if (count && count > 0) {
-      return NextResponse.json({ 
-        success: false, 
-        error: `Cannot delete cohort with ${count} students. Remove students first.` 
+    const [{ count: students }, { count: labDays }] = await Promise.all([
+      supabase.from('students').select('*', { count: 'exact', head: true }).eq('cohort_id', id),
+      supabase.from('lab_days').select('*', { count: 'exact', head: true }).eq('cohort_id', id),
+    ]);
+    const blockers = [
+      students ? `${students} student${students === 1 ? '' : 's'}` : null,
+      labDays ? `${labDays} lab day${labDays === 1 ? '' : 's'}` : null,
+    ].filter(Boolean);
+    if (blockers.length > 0) {
+      const { data: c } = await supabase.from('cohorts').select('is_test').eq('id', id).maybeSingle();
+      return NextResponse.json({
+        success: false,
+        error: `Cannot delete this cohort: it still has ${blockers.join(' and ')}.` +
+          (c?.is_test ? ' Use "Clear test data" to remove a test cohort in one step.' : ' Remove them first.'),
       }, { status: 400 });
     }
 

@@ -12085,3 +12085,7 @@ Unofficial ACLS learning-station tracker. Not a certification record.
 - Last updated: 2026-10-06 (PR #270)
 
 - **`pals_group_moves`** (PALS P3c/4, 2026-10-26, migration `20261026_pals_group_moves.sql`) — temporary regroup overlay on PALS days: `cohort_id`, `student_id`, `from_group_id`, `to_group_id` (FKs to cohorts/students/lab_groups), `duration` ('round'|'today'|'course'), `move_date`, `created_by` (lab_users), `created_at`, `ended_at`. Active = `ended_at IS NULL` and (`duration <> 'today'` or `move_date` = today). `lab_group_members` is never changed. RLS on, service role only.
+
+
+### deleted_records_archive (migration `20261104_clear_test_cohort.sql`, NOT YET APPLIED to production as of 2026-11-04)
+Restore copy of rows removed by "Clear test data" (test cohorts) and "Delete this attempt" (PALS). `batch_id`, `table_name`, `row_data` jsonb (the full row), `reason`, `deleted_by`, `source`, `deleted_at`. RLS on, no policies (service role only). Functions `clear_test_cohort(cohort_id, by, dry)` and `_purge_rows(...)`: downward FK walk, archive then delete in one transaction, is_test cohorts only, refuses if any non-test student. Last updated: 2026-11-04.
