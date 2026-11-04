@@ -561,6 +561,12 @@ export default function CoordinatorViewPage() {
       const res = await fetch(`/api/lab-management/lab-days/${labDayId}`);
       const data = await res.json();
       if (data.success && data.labDay) {
+        // AHA course days (ACLS / PALS) use the course coordinator, not this
+        // NREMT-style station coordinator.
+        if (data.labDay.cert_course === 'acls' || data.labDay.cert_course === 'pals') {
+          router.replace(`/labs/schedule/${labDayId}/acls-coordinator`);
+          return;
+        }
         setLabDayInfo({
           id: data.labDay.id,
           title: data.labDay.title,
@@ -575,7 +581,7 @@ export default function CoordinatorViewPage() {
     } catch (err) {
       console.error('Error fetching lab day info:', err);
     }
-  }, [labDayId]);
+  }, [labDayId, router]);
 
   // Fetch grid data
   const fetchGridData = useCallback(async (showRefreshing = false) => {

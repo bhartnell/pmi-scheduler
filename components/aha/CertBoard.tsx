@@ -638,7 +638,7 @@ function BoardContent({ course }: { course: CertCourse }) {
   const renderStationTiles = (d: LabDay) => (
     <>
     <div className="flex items-center justify-end gap-2 mt-3">
-      <Link href={`/labs/schedule/${d.id}/coordinator`} className="inline-flex items-center gap-1.5 text-xs font-medium px-3 min-h-[36px] rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
+      <Link href={`/labs/schedule/${d.id}/acls-coordinator`} className="inline-flex items-center gap-1.5 text-xs font-medium px-3 min-h-[36px] rounded border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700">
         <Users className="w-4 h-4" /> Coordinator - {d.section_label || d.title || 'section'}
       </Link>
       <button type="button" onClick={() => setTimerFor(d)} className="inline-flex items-center gap-1.5 text-xs font-medium px-3 min-h-[36px] rounded border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-900/20">
