@@ -19,9 +19,15 @@ export const authOptions: NextAuthOptions = {
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       authorization: {
         params: {
-          scope: 'openid email profile https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/gmail.send',
-          access_type: 'offline',
-          prompt: 'consent',
+          // Sign-in asks ONLY for non-sensitive scopes. calendar.events and
+          // gmail.send are sensitive; requesting them here made Google show
+          // "hasn't verified this app" to anyone outside the pmi.edu Workspace
+          // (my.pmi.edu students, gmail part-timers). Calendar access is
+          // granted separately via /api/calendar/connect (instructor and up),
+          // which stores its own refresh token in lab_users. Nothing reads the
+          // sign-in access/refresh token for Google APIs. Existing stored
+          // calendar tokens are unaffected.
+          scope: 'openid email profile',
         },
       },
     }),
