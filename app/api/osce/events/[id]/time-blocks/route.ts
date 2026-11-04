@@ -141,6 +141,7 @@ export async function POST(
     // Never fails the block create; failures are stored on the block and returned.
     const calendar = await syncBlocksToCalendar(supabase, (data ?? []).map((b) => b.id), {
       eventId: id, getToken: hostToken, baseUrl: BASE_URL, creatorEmail: auth.user.email,
+      user: { id: auth.user.id, email: auth.user.email, role: auth.user.role },
     });
 
     return NextResponse.json({ success: true, blocks: data, calendar });
@@ -225,6 +226,7 @@ export async function PUT(
     // OSCE CAL 5: push a changed title/time to the block's calendar event (or create it if none yet).
     const calendar = await syncBlocksToCalendar(supabase, [data.id], {
       eventId, getToken: hostToken, baseUrl: BASE_URL, creatorEmail: auth.user.email,
+      user: { id: auth.user.id, email: auth.user.email, role: auth.user.role },
     });
 
     return NextResponse.json({ success: true, block: data, calendar });
