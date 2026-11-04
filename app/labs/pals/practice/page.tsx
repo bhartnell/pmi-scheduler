@@ -407,7 +407,7 @@ export default function PalsPracticeStationPage() {
             </div>
 
             <div>
-              <button type="button" onClick={() => setWatch((w) => !w)} disabled={result === 'NR'}
+              <button type="button" onClick={() => { if (watch) { setWatch(false); return; } setResult('PASS'); setWatch(true); }} disabled={result === 'NR'}
                 className={`min-h-[44px] px-4 rounded-md text-sm font-medium inline-flex items-center gap-2 border disabled:opacity-50 ${
                   watch ? 'bg-amber-500 text-white border-amber-500' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
                 }`}>
