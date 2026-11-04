@@ -82,9 +82,18 @@ export async function GET(request: NextRequest) {
     const moves = await loadActiveMoves(supabase, day.cohort_id);
     const effective = applyGroupMoves(membersByGroup as any, moves);
 
+    // Students marked absent on this day, so the grader pre-selects only who was present.
+    const { data: absentRows } = await supabase
+      .from('lab_day_attendance')
+      .select('student_id')
+      .eq('lab_day_id', labDayId)
+      .eq('status', 'absent');
+    const absentIds = (absentRows || []).map((r: any) => r.student_id);
+
     return NextResponse.json({
       success: true,
       day,
+      absentIds,
       stations: stations || [],
       groups: (groups || []).map((g: any) => ({
         ...g,

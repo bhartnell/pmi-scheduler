@@ -12021,7 +12021,7 @@ migrated (8 practice + 6 testing); the 3 `*_cert_tier_check` constraints now rea
   `remediation_due_at` (30-day clock), `client_uuid` UNIQUE (offline dedup),
   `synced_at`, `performance_notes` text NULL (always-available free-text notes on any result, both graders; migration `20261103_pals_grader_notes.sql`).
 - **`pals_attempt_students`** — team roster on the attempt. PK
-  `(attempt_id, student_id)`, `team_role`.
+  `(attempt_id, student_id)`, `team_role`. Often EMPTY for G15 Section E (saved against the lead only); readers derive members via `lib/pals-attempt-members.ts` (recorded roster, else effective group minus absent that day). The testing grader now pre-ticks present group members so new attempts record it (2026-11-04). Last updated: 2026-11-04.
 - **`pals_criterion_results`** — three-state per-criterion result: `state`
   (`checked | not_checked | na` CHECK). UNIQUE `(attempt_id, criterion_id)`.
   N/A (out-of-scope) is NOT a blank and NOT a failure. `note` text NULL: optional one-line instructor note on the step (testing grader; migration `20261103_pals_grader_notes.sql`).

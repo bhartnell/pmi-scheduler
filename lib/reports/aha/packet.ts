@@ -10,6 +10,8 @@ import { renderMegacodeStudentForm, MEGACODE_CSS, type SignoffInstructor } from 
 import { renderSkillsStudentSheet, SKILLS_CSS, AIRWAY_FORM, ADULT_BLS_FORM, INFANT_CPR_FORM } from '@/lib/reports/aha/skillsForms';
 
 /** Drag-ready filename: LastName_FirstName_<ACLS|PALS>_Results.pdf (sanitized). */
+import { renderPalsStudentSheet, PALS_GROUP_CSS, type PalsGroupReportRow } from '@/lib/reports/aha/palsGroupResult';
+
 export function packetFilename(lastName: string, firstName: string, course: 'acls' | 'pals' = 'acls'): string {
   const clean = (s: string) => String(s ?? '').replace(/[^A-Za-z0-9]+/g, '').trim() || 'Unknown';
   return `${clean(lastName)}_${clean(firstName)}_${course.toUpperCase()}_Results.pdf`;
@@ -26,4 +28,15 @@ export function composeStudentPacketHTML(row: MegacodeReportRow, instructor: Sig
   const css = `${MEGACODE_CSS}\n${SKILLS_CSS}\n.form:last-child{page-break-after:auto;}`;
   return `<!doctype html><html><head><meta charset="utf-8"><title>${packetFilename(row.student.lastName, row.student.firstName, course)}</title><style>${css}</style></head>
 <body class="doc">${megacode}${airway}${adultBls}${infant}</body></html>`;
+}
+
+/** PALS packet for one student: the group-result sheet (all three final rounds) + the skills sheets. */
+export function composePalsStudentPacketHTML(row: PalsGroupReportRow, instructor: SignoffInstructor | null, courseDate?: string | null): string {
+  const student = { id: row.student.id, firstName: row.student.firstName, lastName: row.student.lastName };
+  const airway = renderSkillsStudentSheet(AIRWAY_FORM, student, instructor, courseDate, 'pals');
+  const adultBls = renderSkillsStudentSheet(ADULT_BLS_FORM, student, instructor, courseDate, 'pals');
+  const infant = renderSkillsStudentSheet(INFANT_CPR_FORM, student, instructor, courseDate, 'pals');
+  const css = `${PALS_GROUP_CSS}\n${SKILLS_CSS}\n.form:last-child{page-break-after:auto;}`;
+  return `<!doctype html><html><head><meta charset="utf-8"><title>${packetFilename(row.student.lastName, row.student.firstName, 'pals')}</title><style>${css}</style></head>
+<body class="doc">${renderPalsStudentSheet(row)}${airway}${adultBls}${infant}</body></html>`;
 }

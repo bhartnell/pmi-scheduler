@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
-import { loadActiveMoves } from '@/lib/pals-effective-groups';
+import { applyGroupMoves, loadActiveMoves } from '@/lib/pals-effective-groups';
+import { resolveAttemptMembers } from '@/lib/pals-attempt-members';
 
 /**
  * GET /api/adv-cert/pals-hub?cohortId=&start=&end=
@@ -160,6 +161,39 @@ export async function GET(request: NextRequest) {
     // Active temporary regroups (PALS P3c/4): overlay only, lab_group_members untouched.
     // 'today' moves lapse on their own after the day they were made.
     const moves = await loadActiveMoves(supabase, cohortId).catch(() => []);
+
+    // Members of every attempt: the whole group carries a round, not only the team lead.
+    // Recorded pals_attempt_students wins; otherwise effective group membership minus
+    // students absent on that lab day. Read-only: nothing is written to existing attempts.
+    if (attempts.length) {
+      const recordedByAttempt: Record<string, string[]> = {};
+      const { data: recRows } = await supabase
+        .from('pals_attempt_students')
+        .select('attempt_id, student_id')
+        .in('attempt_id', attempts.map((a) => a.id));
+      for (const r of recRows || []) (recordedByAttempt[(r as any).attempt_id] ??= []).push((r as any).student_id);
+      const absentByDay: Record<string, Set<string>> = {};
+      const { data: absRows } = await supabase
+        .from('lab_day_attendance')
+        .select('lab_day_id, student_id')
+        .in('lab_day_id', labDayIds)
+        .eq('status', 'absent');
+      for (const r of absRows || []) (absentByDay[(r as any).lab_day_id] ??= new Set()).add((r as any).student_id);
+      const effective = applyGroupMoves(
+        Object.fromEntries(groupsWithMembers.map((g) => [g.id, g.members.map((m: any) => ({ ...m }))])) as any,
+        moves,
+      );
+      attempts = attempts.map((a) => ({
+        ...a,
+        member_ids: resolveAttemptMembers({
+          leadId: a.team_lead?.id,
+          recordedIds: recordedByAttempt[a.id],
+          groupMemberIds: (effective[a.lab_group_id] || []).map((m: any) => m.id),
+          absentIds: absentByDay[a.lab_day_id],
+        }),
+        members_recorded: (recordedByAttempt[a.id] || []).length > 0,
+      }));
+    }
 
     const cohort = (labDays[0] as any)?.cohort ?? null;
     const dates = [...new Set(labDays.map((d) => d.date))].sort();

@@ -54,6 +54,7 @@ export default function PalsGradePage() {
   const [returnTo, setReturnTo] = useState<string | null>(null);
   const [groups, setGroups] = useState<GroupOpt[]>([]);
   const [stations, setStations] = useState<StationOpt[]>([]);
+  const [absentIds, setAbsentIds] = useState<string[]>([]);
   const [groupId, setGroupId] = useState('');
   const [stationId, setStationId] = useState('');
   const [teamLeadId, setTeamLeadId] = useState('');
@@ -151,7 +152,7 @@ export default function PalsGradePage() {
     if (!session || !labDayId) { setGroups([]); setStations([]); return; }
     fetch(`/api/pals/grading-context?labDayId=${labDayId}`)
       .then((r) => r.json())
-      .then((d) => { if (d.success) { setGroups(d.groups || []); setStations(d.stations || []); } })
+      .then((d) => { if (d.success) { setGroups(d.groups || []); setStations(d.stations || []); setAbsentIds(d.absentIds || []); } })
       .catch(() => toast.error('Failed to load day context'));
     if (prevLabDayIdRef.current !== labDayId) {
       setGroupId(''); setStationId(''); setTeamLeadId(''); setMemberIds([]);
@@ -196,6 +197,12 @@ export default function PalsGradePage() {
       .then((d) => { if (d.success) setRetestCandidates(d.candidates || []); })
       .catch(() => {});
   }, [session, teamLeadId, scenario?.checklist?.id]);
+
+  // Present members of a group (absent that day excluded): the default roster recorded for a final round.
+  function presentMemberIds(gid: string): string[] {
+    const g = groups.find((x) => x.id === gid);
+    return (g?.members || []).map((m) => m.id).filter((id) => !absentIds.includes(id));
+  }
 
   function toggleMember(id: string) {
     setMemberIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
@@ -288,6 +295,7 @@ export default function PalsGradePage() {
       instructor_number: instructorNumber.trim(),
       retest_of: retestOf || null,
       criterion_results: criteria.map((c) => ({ criterion_id: c.id, state: criterionStates[c.id] || 'not_checked', note: (stepNotes[c.id] || '').trim() || null })),
+      // Members are pre-ticked to the present group on group pick (editable above), so the round's roster is recorded.
       team_member_ids: memberIds.filter((id) => id !== teamLeadId),
       client_uuid: clientUuid,
     };
@@ -362,7 +370,7 @@ export default function PalsGradePage() {
         </div>
         <div>
           <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Group</label>
-          <select value={groupId} onChange={(e) => { setGroupId(e.target.value); setTeamLeadId(''); setMemberIds([]); }}
+          <select value={groupId} onChange={(e) => { setGroupId(e.target.value); setTeamLeadId(''); setMemberIds(presentMemberIds(e.target.value)); }}
             disabled={!labDayId}
             className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-sm disabled:opacity-50">
             <option value="">Select a group…</option>
