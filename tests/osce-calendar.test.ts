@@ -150,15 +150,57 @@ function fakeFetch(status: number, body = '') {
   return { calls, impl };
 }
 
-test('update patches title/time/location only, never attendees, and notifies guests', async () => {
-  const f = fakeFetch(200, '{}');
+/** Fake Google: GET returns the stored event; PATCH records the call. */
+function googleFake(stored: Record<string, unknown>) {
+  const calls: { url: string; method: string; body?: string }[] = [];
+  const impl = (async (url: string, init?: RequestInit) => {
+    const method = init?.method ?? 'GET';
+    calls.push({ url, method, body: init?.body as string | undefined });
+    return new Response(method === 'GET' ? JSON.stringify(stored) : '{}', { status: 200 });
+  }) as unknown as typeof fetch;
+  return { calls, impl };
+}
+const storedFor = (b: typeof am) => {
+  const body = buildOsceBlockEventBody({ event, block: b, baseUrl });
+  return {
+    summary: body.summary, description: body.description, location: body.location,
+    start: { dateTime: `${b.date}T${b.start_time.slice(0, 5)}:00-08:00`, timeZone: body.start.timeZone },
+    end: { dateTime: `${b.date}T${b.end_time.slice(0, 5)}:00-08:00`, timeZone: body.end.timeZone },
+  };
+};
+
+test('update: nothing changed -> no PATCH at all, no guest mail', async () => {
+  const f = googleFake(storedFor(am));
   const r = await updateOsceBlockEvent({ accessToken: 't', eventId: 'ev1', event, block: am, baseUrl, fetchImpl: f.impl });
+  assert.equal(r.status, 'unchanged');
+  assert.deepEqual(f.calls.map((c) => c.method), ['GET']);
+});
+
+test('update: label-only change PATCHes with sendUpdates=none, never attendees', async () => {
+  const f = googleFake(storedFor(am));
+  const r = await updateOsceBlockEvent({ accessToken: 't', eventId: 'ev1', event, block: { ...am, label: 'Renamed' }, baseUrl, fetchImpl: f.impl });
   assert.equal(r.status, 'updated');
-  assert.equal(f.calls[0].init.method, 'PATCH');
-  assert.match(f.calls[0].url, /events\/ev1\?sendUpdates=all$/);
-  const sent = JSON.parse(String(f.calls[0].init.body));
-  assert.deepEqual(Object.keys(sent).sort(), ['description', 'end', 'location', 'start', 'summary']);
-  assert.equal(sent.start.dateTime, '2026-11-12T08:30:00');
+  const patch = f.calls[1];
+  assert.equal(patch.method, 'PATCH');
+  assert.match(patch.url, /events\/ev1\?sendUpdates=none$/);
+  assert.deepEqual(Object.keys(JSON.parse(patch.body!)).sort(), ['description', 'end', 'location', 'start', 'summary']);
+  if (r.status === 'updated') assert.ok(!r.changed.includes('time'));
+});
+
+test('update: date or time change PATCHes with sendUpdates=all', async () => {
+  const f = googleFake(storedFor(am));
+  const r = await updateOsceBlockEvent({ accessToken: 't', eventId: 'ev1', event, block: { ...am, start_time: '09:00' }, baseUrl, fetchImpl: f.impl });
+  assert.equal(r.status, 'updated');
+  assert.match(f.calls[1].url, /events\/ev1\?sendUpdates=all$/);
+  assert.equal(JSON.parse(f.calls[1].body!).start.dateTime, '2026-11-12T09:00:00');
+  if (r.status === 'updated') assert.ok(r.changed.includes('time'));
+});
+
+test('update: failed read writes nothing', async () => {
+  const f = fakeFetch(500, 'x');
+  const r = await updateOsceBlockEvent({ accessToken: 't', eventId: 'e', event, block: am, baseUrl, fetchImpl: f.impl });
+  assert.equal(r.status, 'error');
+  assert.equal(f.calls.length, 1);
 });
 
 test('update: 404/410 is gone (not re-created), other failures are errors', async () => {

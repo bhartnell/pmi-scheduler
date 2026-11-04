@@ -132,15 +132,49 @@ export async function createOsceBlockEvent(opts: {
 }
 
 export type OsceBlockSyncResult =
-  | { status: 'updated' | 'cancelled' | 'gone' }
+  | { status: 'updated'; changed: string[]; sendUpdates: 'all' | 'none' }
+  | { status: 'unchanged' | 'cancelled' | 'gone' }
   | { status: 'error'; error: string };
 
+interface GoogleEventFields {
+  summary?: string;
+  description?: string;
+  location?: string;
+  start?: { dateTime?: string; timeZone?: string };
+  end?: { dateTime?: string; timeZone?: string };
+}
+
+/** Wall-clock minute ("YYYY-MM-DDTHH:MM") of a Google dateTime, ignoring seconds and offset. */
+const wallMinute = (dt?: string) => (dt ?? '').slice(0, 16);
+
 /**
- * Update an existing block event's title, time and location in place
- * (OSCE CAL 5). Attendees are left untouched (PATCH). sendUpdates=all so
- * signed-up evaluators hear about a time change. A 404/410 means the event
- * was removed on the calendar side: reported as 'gone', never re-created
- * here. Never throws, no retry loop.
+ * Which calendar-carried fields differ between the stored Google event and the
+ * body we would write. Pure. 'time' covers date, start and end; the rest are
+ * title/location/description. Only 'time' warrants notifying guests.
+ */
+export function diffOsceBlockEvent(current: GoogleEventFields, next: GoogleEventFields): string[] {
+  const changed: string[] = [];
+  const tzSame = (a?: { timeZone?: string }, b?: { timeZone?: string }) => !a?.timeZone || !b?.timeZone || a.timeZone === b.timeZone;
+  if (
+    wallMinute(current.start?.dateTime) !== wallMinute(next.start?.dateTime) ||
+    wallMinute(current.end?.dateTime) !== wallMinute(next.end?.dateTime) ||
+    !tzSame(current.start, next.start) || !tzSame(current.end, next.end)
+  ) changed.push('time');
+  if ((current.summary ?? '').trim() !== (next.summary ?? '').trim()) changed.push('title');
+  if ((current.location ?? '').trim() !== (next.location ?? '').trim()) changed.push('location');
+  if ((current.description ?? '').trim() !== (next.description ?? '').trim()) changed.push('description');
+  return changed;
+}
+
+/**
+ * Update an existing block event in place (OSCE CAL 5). Reads the event first
+ * and PATCHes only when something the calendar carries actually changed:
+ * nothing changed -> no PATCH at all ('unchanged'); only title/location/
+ * description changed -> sendUpdates=none (no guest mail); date or time
+ * changed -> sendUpdates=all so signed-up evaluators hear about it. Attendees
+ * are left untouched (PATCH). A 404/410 means the event was removed on the
+ * calendar side: reported as 'gone', never re-created here. If the read
+ * fails, nothing is written. Never throws, no retry loop.
  */
 export async function updateOsceBlockEvent(opts: {
   accessToken: string;
@@ -153,15 +187,26 @@ export async function updateOsceBlockEvent(opts: {
 }): Promise<OsceBlockSyncResult> {
   const { accessToken, eventId, event, block, baseUrl, timeZone, fetchImpl = fetch } = opts;
   const { summary, description, location, start, end } = buildOsceBlockEventBody({ event, block, baseUrl, timeZone });
+  const url = `${GOOGLE_CALENDAR_API}/calendars/primary/events/${encodeURIComponent(eventId)}`;
   try {
-    const res = await fetchImpl(`${GOOGLE_CALENDAR_API}/calendars/primary/events/${encodeURIComponent(eventId)}?sendUpdates=all`, {
+    const getRes = await fetchImpl(url, { headers: { Authorization: `Bearer ${accessToken}` } });
+    if (getRes.status === 404 || getRes.status === 410) return { status: 'gone' };
+    if (!getRes.ok) return { status: 'error', error: `Google ${getRes.status} reading event: ${(await getRes.text()).slice(0, 300)}` };
+    const current = (await getRes.json()) as GoogleEventFields & { status?: string };
+    if (current.status === 'cancelled') return { status: 'gone' };
+
+    const changed = diffOsceBlockEvent(current, { summary, description, location, start, end });
+    if (changed.length === 0) return { status: 'unchanged' };
+    const sendUpdates = changed.includes('time') ? 'all' : 'none';
+
+    const res = await fetchImpl(`${url}?sendUpdates=${sendUpdates}`, {
       method: 'PATCH',
       headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ summary, description, location, start, end }),
     });
     if (res.status === 404 || res.status === 410) return { status: 'gone' };
     if (!res.ok) return { status: 'error', error: `Google ${res.status}: ${(await res.text()).slice(0, 300)}` };
-    return { status: 'updated' };
+    return { status: 'updated', changed, sendUpdates };
   } catch (err) {
     return { status: 'error', error: err instanceof Error ? err.message : 'network error' };
   }

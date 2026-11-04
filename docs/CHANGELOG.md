@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-04
 
+osce-cal-no-renotify | OSCE CAL: saving a time block no longer re-mails evaluators. updateOsceBlockEvent reads the Google event first; no calendar-carried change -> no PATCH; title/location/description only -> sendUpdates=none; date/time change -> sendUpdates=all; every PATCH written to audit_log (resource calendar_sync) with who saved. Cancel and guest add/remove unchanged. Revert: git revert.
+
 pals-group-result | PALS GROUP RESULT: every group member carries all three final rounds. lib/pals-attempt-members.ts resolves round members (recorded pals_attempt_students, else effective group minus absent that day); pals-hub returns member_ids; board shows lead chip solid / member chip dashed plus Group PASS/NR badge; /api/reports/aha (course=pals) and the zip export print all three rounds with leads and the group result (lib/reports/aha/palsGroupResult.ts); testing grader pre-ticks present members so pals_attempt_students is recorded going forward. No DB writes to existing attempts. Revert: git revert.
 pals-practice-watch-fix | PALS PRACTICE GRADER: tapping 'Pass but watch' now also marks Pass (it only toggled the flag, so Save stayed disabled when it was the only button tapped). UI only, stored values unchanged. Revert: git revert.
 

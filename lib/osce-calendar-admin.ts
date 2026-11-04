@@ -19,11 +19,12 @@ import {
   updateOsceBlockEvent, type OsceCalEvent,
 } from '@/lib/osce-calendar';
 import { inviteObserverToBlocks } from '@/lib/osce-invites';
+import { logAuditEvent } from '@/lib/audit';
 
 export interface BlockEventOutcome {
   block_id: string;
   label: string;
-  status: 'created' | 'updated' | 'cancelled' | 'gone' | 'exists' | 'linked_other' | 'error';
+  status: 'created' | 'updated' | 'unchanged' | 'cancelled' | 'gone' | 'exists' | 'linked_other' | 'error';
   error?: string;
 }
 
@@ -137,6 +138,8 @@ export interface AutoSyncOpts {
   baseUrl: string;
   /** The admin making the change; added as a guest on newly created events. */
   creatorEmail?: string | null;
+  /** Who saved; recorded on the audit_log row for every PATCH. */
+  user?: { id?: string; email?: string; role?: string };
   fetchImpl?: typeof fetch;
 }
 
@@ -180,8 +183,20 @@ export async function syncBlocksToCalendar(supabase: SupabaseClient, blockIds: s
         const msg = 'The calendar event was removed on the calendar side. It was not re-created automatically.';
         await setBlockError(supabase, block.id, msg);
         out.push({ block_id: block.id, label: block.label, status: 'gone', error: msg });
-      } else {
+      } else if (res.status === 'unchanged') {
+        // Nothing the calendar carries changed: no PATCH was sent, so no guest mail.
         await setBlockError(supabase, block.id, null);
+        out.push({ block_id: block.id, label: block.label, status: 'unchanged' });
+      } else if (res.status === 'updated') {
+        await setBlockError(supabase, block.id, null);
+        await logAuditEvent({
+          user: opts.user ?? (opts.creatorEmail ? { email: opts.creatorEmail } : undefined),
+          action: 'update',
+          resourceType: 'calendar_sync',
+          resourceId: block.id,
+          resourceDescription: `OSCE block event PATCH (${block.label}): ${res.changed.join(', ')}; sendUpdates=${res.sendUpdates}`,
+          metadata: { osce_event_id: opts.eventId, google_event_id: block.google_event_id, changed: res.changed, sendUpdates: res.sendUpdates },
+        });
         out.push({ block_id: block.id, label: block.label, status: 'updated' });
       }
     }
