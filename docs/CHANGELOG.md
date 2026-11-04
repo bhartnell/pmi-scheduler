@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-04
 
+test-cohort-cleanup-2 | Follow-up migration 20261104b_clear_test_cohort_override.sql: clear_test_cohort sets transaction-local app.allow_critical_delete so the students/cohorts delete-guard triggers allow the archived purge (dry run on PM Group 1 returned exact expected counts). Apply after 20261104. Revert: re-apply original function body.
 test-cohort-cleanup | Clear test data for is_test cohorts (POST /api/lab-management/cohorts/[id]/clear-test-data, dry run + one-transaction archived purge), cohort delete error names what blocks, admin Delete on PALS attempt record (DELETE /api/pals/attempts/[id], archived, audit-logged). Migration 20261104_clear_test_cohort.sql must be applied first. Revert: git revert; DROP FUNCTION clear_test_cohort.
 cal-2-3c | CAL 2/3c: Admin > Calendar sync shows a banner when the shared calendar writer is not connected or lab day re-plans are queued, plus a control to set the writer (GET/PUT /api/admin/calendar-sync/writer, audit-logged; read-only status, no token refresh). Tolerates the retry-queue table not yet being applied. No schema/data changes. Revert: git revert.
 hub-coordinator-link | HUB: per-section 'Coordinator - Section X' button on the AHA cert board now opens the course coordinator (/labs/schedule/{id}/acls-coordinator); the generic /labs/schedule/{id}/coordinator page redirects there when the lab day has cert_course acls or pals. No data changes. Revert: git revert.
