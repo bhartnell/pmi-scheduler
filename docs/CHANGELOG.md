@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-05
+
+lvfr-notes-export | docs/lvfr-debrief-notes-2026.md: read-only export of every free-text notes field across lvfr_* tables for Ben's debrief (card LVFR - ISOLATE AND ARCHIVE, item 4). Doc only. Revert: git revert.
+
 ## 2026-11-04
 
 test-cohort-cleanup-2 | Follow-up migration 20261104b_clear_test_cohort_override.sql: clear_test_cohort sets transaction-local app.allow_critical_delete so the students/cohorts delete-guard triggers allow the archived purge (dry run on PM Group 1 returned exact expected counts). Apply after 20261104. Revert: re-apply original function body.
