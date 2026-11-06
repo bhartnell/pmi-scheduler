@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { notifyInstructorAssigned } from '@/lib/notifications';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { resolveRoomId } from '@/lib/lab-rooms';
+import { replanForLabDay } from '@/lib/lab-day-event-replan';
 import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import type { VolunteerTokenResult } from '@/lib/api-auth';
 
@@ -318,6 +319,9 @@ export async function PATCH(
         console.error('Failed to clear station_instructors primary:', siError);
       }
     }
+
+    // CAL 2/3b: instructor changes re-plan the day-level event (no-op while LAB_DAY_EVENT_SYNC is unset).
+    if (isNewAssignment) await replanForLabDay(data?.lab_day?.id);
 
     return NextResponse.json({ success: true, station: data });
   } catch (error) {

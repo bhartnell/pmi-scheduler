@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-06
 
+cal-2-3b-replan-triggers | CAL 2/3b: re-plan triggers (replanForLabDay/replanForStation/queueReplanForLabDay/drainReplanQueue in lib/lab-day-event-replan.ts) wired into station-instructors POST/DELETE, stations/[id] PATCH, lab-day-roles POST/DELETE, lab-days/[id]/optout POST/DELETE; new cron /api/cron/lab-day-replan-drain (every 30 min). All no-ops while LAB_DAY_EVENT_SYNC is unset. No Google or DB writes at deploy. Revert: git revert.
+
 lvfr-archive-flag | LVFR archive (card LVFR - ISOLATE AND ARCHIVE, item 1): parking /lvfr-aemt now hides the command-palette entry and keeps /lvfr-aemt/pharm/practice live (PARK_EXEMPT_PATHS in lib/module-flags.ts); test tests/module-flags-park.test.ts. No DB write, flag not flipped. Revert: git revert.
 
 ## 2026-11-05

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { replanForLabDay, queueReplanForLabDay } from '@/lib/lab-day-event-replan';
 
 export interface LabDayRole {
   id: string;
@@ -198,6 +199,9 @@ export async function POST(request: NextRequest) {
       console.error('Failed to sync lab day role to calendar:', syncError);
     }
 
+    // CAL 2/3b: re-plan the day-level event (no-op while LAB_DAY_EVENT_SYNC is unset).
+    await replanForLabDay(lab_day_id);
+
     return NextResponse.json({ success: true, role: processedRole });
   } catch (error) {
     console.error('Error adding role:', error);
@@ -226,7 +230,7 @@ export async function DELETE(request: NextRequest) {
       // Query role record before deleting (need instructor email for calendar cleanup)
       const { data: roleRecord } = await supabase
         .from('lab_day_roles')
-        .select('id, instructor:instructor_id(email)')
+        .select('id, lab_day_id, instructor:instructor_id(email)')
         .eq('id', roleId)
         .single();
 
@@ -251,6 +255,8 @@ export async function DELETE(request: NextRequest) {
         } catch (err) {
           console.error('[lab-day-roles] role event removal failed:', err);
         }
+        // CAL 2/3b: re-plan the day-level event (no-op while LAB_DAY_EVENT_SYNC is unset).
+        await replanForLabDay((roleRecord as { lab_day_id?: string }).lab_day_id);
       }
     } else if (labDayId) {
       // Query all roles before deleting (need instructor emails for calendar cleanup)
@@ -281,6 +287,9 @@ export async function DELETE(request: NextRequest) {
           console.error('[lab-day-roles] role events removal failed:', err);
         }
       }
+      // CAL 2/3b: the edit page deletes then re-inserts; defer to the cron drain
+      // so guests are not dropped and re-added mid-edit.
+      await queueReplanForLabDay(labDayId, 'membership_change: bulk role clear');
     } else {
       return NextResponse.json({ success: false, error: 'Either id or lab_day_id is required' }, { status: 400 });
     }

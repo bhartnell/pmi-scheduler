@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { replanForLabDay } from '@/lib/lab-day-event-replan';
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -58,6 +59,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       console.error('[optout] calendar cleanup failed:', err);
     }
 
+    // CAL 2/3b: re-plan the day-level event (no-op while LAB_DAY_EVENT_SYNC is unset).
+    await replanForLabDay(labDayId);
+
     return NextResponse.json({ success: true, removed_role_ids: roleIds });
   } catch (error) {
     console.error('Error recording lab day opt-out:', error);
@@ -78,6 +82,7 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
       .eq('lab_day_id', labDayId)
       .eq('user_id', auth.user.id);
     if (error) throw error;
+    await replanForLabDay(labDayId);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error clearing lab day opt-out:', error);
