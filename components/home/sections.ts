@@ -45,14 +45,14 @@ export const HOME_SECTIONS: HomeSection[] = [
     title: 'Schedule',
     short: 'Schedule',
     description: 'Calendar, lab days, planner and availability.',
-    href: '/calendar',
+    href: '/schedule',
     icon: CalendarDays,
     color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400',
     chips: [
-      { label: 'Calendar', href: '/calendar' },
+      { label: 'Master calendar', href: '/calendar' },
       { label: 'Lab days', href: '/labs/schedule' },
-      { label: 'Planner', href: '/academics/planner' },
-      { label: 'Workload', href: '/reports/instructor-workload' },
+      { label: 'Availability', href: '/scheduling/availability' },
+      { label: 'Instructor workload', href: '/reports/instructor-workload' },
     ],
     visible: instructorUp,
   },
@@ -65,9 +65,11 @@ export const HOME_SECTIONS: HomeSection[] = [
     icon: FlaskConical,
     color: 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/30 dark:text-emerald-400',
     chips: [
-      { label: 'Lab schedule', href: '/labs/schedule' },
+      { label: 'Lab days', href: '/labs/schedule' },
       { label: 'Scenarios', href: '/labs/scenarios' },
       { label: 'Skill sheets', href: '/skill-sheets' },
+      { label: 'Groups and seating', href: '/labs/groups' },
+      { label: 'Timer', href: '/admin/timer-displays' },
     ],
     visible: instructorUp,
   },
@@ -76,13 +78,15 @@ export const HOME_SECTIONS: HomeSection[] = [
     title: 'Testing & certification',
     short: 'Testing',
     description: 'AHA ACLS and PALS, OSCE and exam scheduling.',
-    href: '/labs/aha-hub',
+    href: '/testing',
     icon: Award,
     color: 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400',
     chips: [
-      { label: 'AHA Hub', href: '/labs/aha-hub' },
-      { label: 'OSCE', href: '/osce' },
-      { label: 'Exams', href: '/exam-scheduling' },
+      { label: 'AHA hub', href: '/labs/aha-hub' },
+      { label: 'ACLS board', href: '/labs/acls-hub/board' },
+      { label: 'PALS hub', href: '/labs/pals-hub' },
+      { label: 'OSCE', href: '/admin/osce-events' },
+      { label: 'NREMT', href: '/admin/skill-sheets/import' },
     ],
     visible: instructorUp,
   },
@@ -196,15 +200,27 @@ export function visibleSections(role: Role | string | null | undefined): HomeSec
   return HOME_SECTIONS.filter((s) => s.visible(role));
 }
 
-/** Section whose landing, chip or sub-path contains this pathname (null on Home or no match). */
+/**
+ * Section whose landing, chip or sub-path contains this pathname (null on Home or no match).
+ * Rule (TRIM 6/7b-2a): a page highlights the section it is listed under. The
+ * longest matching section href or chip wins; on a tie the section whose own
+ * href is a prefix of the path wins (so /labs/schedule is Labs, not Schedule).
+ */
 export function sectionForPath(pathname: string): HomeSection | null {
   if (pathname === '/') return null;
   const inside = (href: string) => pathname === href || pathname.startsWith(href + '/');
-  return (
-    HOME_SECTIONS.find((s) => pathname === s.href || s.chips.some((c) => pathname === c.href)) ??
-    HOME_SECTIONS.find((s) => inside(s.href) || s.chips.some((c) => inside(c.href))) ??
-    null
-  );
+  let best: { section: HomeSection; len: number; own: boolean } | null = null;
+  for (const s of HOME_SECTIONS) {
+    const own = inside(s.href);
+    for (const base of [s.href, ...s.chips.map((c) => c.href)]) {
+      if (!inside(base)) continue;
+      const len = base.length + (pathname === base ? 1000 : 0);
+      if (!best || len > best.len || (len === best.len && own && !best.own)) {
+        best = { section: s, len, own };
+      }
+    }
+  }
+  return best?.section ?? null;
 }
 
 export function activeSectionKey(pathname: string): string | null {
