@@ -82,6 +82,9 @@ export default function ScenariosPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  // TRIM 6/7b-2a: audit and bulk import sit behind an Admin expander (admin+).
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
 
   // React Query hook for scenarios
   const { data: scenarios = [], isLoading: loading } = useScenarios({
@@ -175,6 +178,11 @@ export default function ScenariosPage() {
         const levels: Record<string, number> = { superadmin: 5, admin: 4, lead_instructor: 3, instructor: 2 };
         const level = levels[data.user.role as string] || 0;
         if (level < 2) router.push('/');
+        if (level >= 4) {
+          setIsAdminUser(true);
+          // /admin/scenarios redirects here with ?admin=1 so the expander opens.
+          if (new URLSearchParams(window.location.search).get('admin') === '1') setAdminOpen(true);
+        }
       }
     });
   }, [session, router]);
@@ -394,6 +402,26 @@ export default function ScenariosPage() {
       </div>
 
       <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {isAdminUser && (
+          <div className="bg-white rounded-lg shadow mb-6 dark:bg-gray-800">
+            <button
+              type="button"
+              onClick={() => setAdminOpen((v) => !v)}
+              aria-expanded={adminOpen}
+              className="w-full min-h-[44px] flex items-center justify-between px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200"
+            >
+              <span>Admin</span>
+              <ChevronRight className={`w-4 h-4 transition-transform ${adminOpen ? 'rotate-90' : ''}`} />
+            </button>
+            {adminOpen && (
+              <div className="flex flex-wrap gap-2 px-4 pb-4">
+                <Link href="/admin/scenarios/audit" className="px-3 py-2 min-h-[44px] inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 hover:border-blue-400">Scenario audit</Link>
+                <Link href="/admin/scenarios/transform" className="px-3 py-2 min-h-[44px] inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 hover:border-blue-400">Scenario transform</Link>
+                <Link href="/admin/scenarios/bulk-import" className="px-3 py-2 min-h-[44px] inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 text-sm text-gray-700 dark:text-gray-200 hover:border-blue-400">Bulk import</Link>
+              </div>
+            )}
+          </div>
+        )}
         {/* Search and Filters */}
         <div className="bg-white rounded-lg shadow mb-6 dark:bg-gray-800">
           <div className="p-4">

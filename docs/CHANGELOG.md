@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-06
 
+trim-6-7b-2a-pr1 | TRIM 6/7b-2a PR 1: Schedule (/schedule), Labs (/labs) and Testing (/testing) landings from one SectionLanding component + components/landing/landings.ts; sections.ts hrefs/chips repointed and sectionForPath now longest-match (/labs/schedule highlights Labs); /labs/scenarios gets an Admin expander (audit, transform, bulk import) and /admin/scenarios redirects to it. No DB writes. Part-timer shifts pages NOT yet parked (module-flags rows pending). Revert: git revert.
+
 cal-2-3b-replan-triggers | CAL 2/3b: re-plan triggers (replanForLabDay/replanForStation/queueReplanForLabDay/drainReplanQueue in lib/lab-day-event-replan.ts) wired into station-instructors POST/DELETE, stations/[id] PATCH, lab-day-roles POST/DELETE, lab-days/[id]/optout POST/DELETE; new cron /api/cron/lab-day-replan-drain (every 30 min). All no-ops while LAB_DAY_EVENT_SYNC is unset. No Google or DB writes at deploy. Revert: git revert.
 
 lvfr-archive-flag | LVFR archive (card LVFR - ISOLATE AND ARCHIVE, item 1): parking /lvfr-aemt now hides the command-palette entry and keeps /lvfr-aemt/pharm/practice live (PARK_EXEMPT_PATHS in lib/module-flags.ts); test tests/module-flags-park.test.ts. No DB write, flag not flipped. Revert: git revert.
