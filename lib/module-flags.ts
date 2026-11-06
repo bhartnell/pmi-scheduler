@@ -11,8 +11,20 @@ export function normalizeFlagKey(key: string): string {
   return k.startsWith('/') ? k : `/${k}`;
 }
 
+/**
+ * Paths that stay live even when a parent module is parked. The LVFR pharmacology practice
+ * page is student-facing, needs no login and only borrows the hosting (Ben, 2026-09-29), so
+ * parking /lvfr-aemt (archive) must never take it down.
+ */
+export const PARK_EXEMPT_PATHS = ['/lvfr-aemt/pharm/practice'];
+
+export function isParkExempt(pathname: string): boolean {
+  return PARK_EXEMPT_PATHS.some(p => pathname === p || pathname.startsWith(`${p}/`));
+}
+
 /** Returns the parked flag covering this pathname (exact or prefix at a segment boundary), if any. */
 export function findParkedFlag(pathname: string, flags: ModuleFlag[]): ModuleFlag | null {
+  if (isParkExempt(pathname)) return null;
   let best: ModuleFlag | null = null;
   for (const f of flags) {
     if (f.enabled) continue;

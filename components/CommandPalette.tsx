@@ -31,6 +31,7 @@ import { useSession } from 'next-auth/react';
 import { parseDateSafe } from '@/lib/utils';
 import { hasMinRole, canAccessClinical, canAccessAffiliations, canAccessScheduling } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import { isHrefParked, type ModuleFlag } from '@/lib/module-flags';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -284,6 +285,21 @@ export default function CommandPalette() {
     }
   }, [isOpen, query]);
 
+  // Parked modules (e.g. archived LVFR) drop out of the palette. Fails open: no flags until loaded.
+  const [parkedFlags, setParkedFlags] = useState<ModuleFlag[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetch('/api/module-flags')
+      .then(r => (r.ok ? r.json() : null))
+      .then(d => {
+        if (!cancelled && Array.isArray(d?.flags)) setParkedFlags(d.flags);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Build command list
   const commands: Command[] = useMemo(
     () => [
@@ -470,11 +486,13 @@ export default function CommandPalette() {
         case 'nav-calendar':
         case 'nav-schedule':
           return canAccessScheduling(effectiveRole);
+        case 'nav-lvfr':
+          return !isHrefParked('/lvfr-aemt', parkedFlags);
         default:
           return true;
       }
     }),
-    [router, effectiveRole]
+    [router, effectiveRole, parkedFlags]
   );
 
   // ── Search API call (debounced) ────────────────────────────────────────────
