@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-06
+
+lvfr-archive-flag | LVFR archive (card LVFR - ISOLATE AND ARCHIVE, item 1): parking /lvfr-aemt now hides the command-palette entry and keeps /lvfr-aemt/pharm/practice live (PARK_EXEMPT_PATHS in lib/module-flags.ts); test tests/module-flags-park.test.ts. No DB write, flag not flipped. Revert: git revert.
+
 ## 2026-11-05
 
 lvfr-notes-export | docs/lvfr-debrief-notes-2026.md: read-only export of every free-text notes field across lvfr_* tables for Ben's debrief (card LVFR - ISOLATE AND ARCHIVE, item 4). Doc only. Revert: git revert.
