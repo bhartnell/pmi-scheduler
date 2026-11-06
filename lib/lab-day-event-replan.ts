@@ -70,3 +70,76 @@ export async function replanLabDayEvent(cohortId: string, date: string): Promise
   }
   return { status: 'skipped', result: r.status };
 }
+
+/**
+ * Trigger helpers for membership-change routes (CAL 2/3b). All are safe to
+ * call from any route: they are a no-op while LAB_DAY_EVENT_SYNC is unset,
+ * never throw, and are awaited by callers (Vercel freezes on response).
+ */
+export async function replanForLabDay(labDayId: string | null | undefined): Promise<ReplanOutcome | null> {
+  if (process.env.LAB_DAY_EVENT_SYNC !== '1' || !labDayId) return null;
+  try {
+    const { data: day } = await getSupabaseAdmin()
+      .from('lab_days')
+      .select('cohort_id, date')
+      .eq('id', labDayId)
+      .maybeSingle();
+    if (!day?.cohort_id || !day?.date) return null;
+    return await replanLabDayEvent(day.cohort_id as string, day.date as string);
+  } catch (err) {
+    console.error('[lab-day-replan] trigger failed:', err);
+    return null;
+  }
+}
+
+export async function replanForStation(stationId: string | null | undefined): Promise<ReplanOutcome | null> {
+  if (process.env.LAB_DAY_EVENT_SYNC !== '1' || !stationId) return null;
+  try {
+    const { data: st } = await getSupabaseAdmin()
+      .from('lab_stations')
+      .select('lab_day_id')
+      .eq('id', stationId)
+      .maybeSingle();
+    return await replanForLabDay(st?.lab_day_id as string | undefined);
+  } catch (err) {
+    console.error('[lab-day-replan] station trigger failed:', err);
+    return null;
+  }
+}
+
+/** Retry pending queue rows (cron). Never deletes anything; stops on first writer failure. */
+export async function drainReplanQueue(limit = 20): Promise<{ attempted: number; synced: number; stillQueued: number }> {
+  if (process.env.LAB_DAY_EVENT_SYNC !== '1') return { attempted: 0, synced: 0, stillQueued: 0 };
+  const { data: rows } = await getSupabaseAdmin()
+    .from('lab_day_event_replan_queue')
+    .select('cohort_id, date')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true })
+    .limit(limit);
+  let synced = 0;
+  let stillQueued = 0;
+  for (const r of rows ?? []) {
+    const out = await replanLabDayEvent(r.cohort_id as string, r.date as string);
+    if (out.status === 'synced') synced++;
+    else if (out.status === 'queued') {
+      stillQueued++;
+      if (out.reason.includes('writer_not_connected') || out.reason.includes('no_shared_calendar')) break;
+    }
+  }
+  return { attempted: rows?.length ?? 0, synced, stillQueued };
+}
+
+/** Defer a re-plan to the cron drain (used when a route deletes then re-inserts membership). */
+export async function queueReplanForLabDay(labDayId: string | null | undefined, reason: string): Promise<void> {
+  if (process.env.LAB_DAY_EVENT_SYNC !== '1' || !labDayId) return;
+  try {
+    const { data: day } = await getSupabaseAdmin()
+      .from('lab_days')
+      .select('cohort_id, date')
+      .eq('id', labDayId)
+      .maybeSingle();
+    if (day?.cohort_id && day?.date) await enqueueLabDayReplan(day.cohort_id as string, day.date as string, reason);
+  } catch (err) {
+    console.error('[lab-day-replan] queue failed:', err);
+  }
+}

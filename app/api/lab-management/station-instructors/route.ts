@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { replanForStation } from '@/lib/lab-day-event-replan';
 
 // GET - Get instructors for a station
 export async function GET(request: NextRequest) {
@@ -200,6 +201,9 @@ export async function POST(request: NextRequest) {
       // Calendar sync is best-effort
     }
 
+    // CAL 2/3b: re-plan the day-level event (no-op while LAB_DAY_EVENT_SYNC is unset).
+    await replanForStation(stationId);
+
     return NextResponse.json({ success: true, instructor: data });
   } catch (error) {
     console.error('Error adding station instructor:', error);
@@ -242,6 +246,9 @@ export async function DELETE(request: NextRequest) {
     } catch {
       // Calendar sync is best-effort
     }
+
+    // CAL 2/3b: re-plan the day-level event (no-op while LAB_DAY_EVENT_SYNC is unset).
+    await replanForStation(stationId);
 
     return NextResponse.json({ success: true });
   } catch (error) {
