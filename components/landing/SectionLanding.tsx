@@ -8,6 +8,7 @@ import { PageLoader } from '@/components/ui';
 import { HOME_SECTIONS } from '@/components/home/sections';
 import { hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
+import ViewAsStudentPicker from '@/components/ViewAsStudentPicker';
 import type { CurrentUser } from '@/types';
 import type { Landing } from './landings';
 
@@ -23,6 +24,7 @@ export default function SectionLanding({ landing }: { landing: Landing }) {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showStudentPicker, setShowStudentPicker] = useState(false);
   const effectiveRole = useEffectiveRole(currentUser?.role ?? null);
 
   useEffect(() => {
@@ -68,12 +70,9 @@ export default function SectionLanding({ landing }: { landing: Landing }) {
             <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-[18px] max-sm:gap-4">
               {g.cards.map((c) => {
                 const CardIcon = c.icon;
-                return (
-                  <Link
-                    key={c.href + c.name}
-                    href={c.href}
-                    className="flex items-start gap-3 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3.5 hover:border-blue-400 dark:hover:border-blue-500 transition-colors"
-                  >
+                const cls = 'flex items-start gap-3 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3.5 hover:border-blue-400 dark:hover:border-blue-500 transition-colors text-left w-full';
+                const inner = (
+                  <>
                     <span className={`shrink-0 w-9 h-9 rounded-lg flex items-center justify-center ${color}`}>
                       <CardIcon className="w-5 h-5" aria-hidden="true" />
                     </span>
@@ -81,6 +80,18 @@ export default function SectionLanding({ landing }: { landing: Landing }) {
                       <span className="block text-[15px] font-bold text-gray-900 dark:text-white">{c.name}</span>
                       <span className="block text-[13px] text-gray-600 dark:text-gray-400">{c.description}</span>
                     </span>
+                  </>
+                );
+                if (c.action === 'view-as-student') {
+                  return (
+                    <button key={c.name} type="button" onClick={() => setShowStudentPicker(true)} className={cls}>
+                      {inner}
+                    </button>
+                  );
+                }
+                return (
+                  <Link key={c.href + c.name} href={c.href} className={cls}>
+                    {inner}
                   </Link>
                 );
               })}
@@ -88,6 +99,7 @@ export default function SectionLanding({ landing }: { landing: Landing }) {
           </section>
         ))}
       </div>
+      {showStudentPicker && <ViewAsStudentPicker onClose={() => setShowStudentPicker(false)} />}
     </div>
   );
 }

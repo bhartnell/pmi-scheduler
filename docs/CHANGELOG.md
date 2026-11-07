@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-07
+
+trim-6-7b-2a-pr2 | TRIM 6/7b-2a PR 2: Cohorts (/cohorts), Student view (/student-view) and Me (/me) landings from SectionLanding; landing cards can carry an action (View as a student opens the existing ViewAsStudentPicker, admin); sections.ts hrefs/chips repointed. Student-role cards use minRole student. No DB writes. Revert: git revert.
+
 ## 2026-11-06
 
 trim-6-7b-2a-pr1 | TRIM 6/7b-2a PR 1: Schedule (/schedule), Labs (/labs) and Testing (/testing) landings from one SectionLanding component + components/landing/landings.ts; sections.ts hrefs/chips repointed and sectionForPath now longest-match (/labs/schedule highlights Labs); /labs/scenarios gets an Admin expander (audit, transform, bulk import) and /admin/scenarios redirects to it. No DB writes. Part-timer shifts pages NOT yet parked (module-flags rows pending). Revert: git revert.
