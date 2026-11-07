@@ -3,6 +3,7 @@ import {
   FlaskConical, BookOpen, FileText, Zap, Grid3x3, Timer, MessageSquare, Boxes, Target, ListChecks,
   Flag, FolderOpen, DoorOpen, Award, HeartPulse, Stethoscope, Eye, BarChart3, Hash, FileUp,
   Activity, PenLine, UserPlus, Layers,
+  GraduationCap, TrendingUp, LayoutDashboard, CalendarCheck, User, Bell, CheckSquare, LifeBuoy, Pill, MessageSquareWarning, CalendarRange,
   type LucideIcon,
 } from 'lucide-react';
 import type { Role } from '@/lib/permissions';
@@ -18,6 +19,8 @@ export interface LandingCard {
   icon: LucideIcon;
   /** Lowest role that can open the target page. Cards above the viewer's role are hidden. Default instructor. */
   minRole?: Role;
+  /** Card opens a built-in action instead of navigating (href is ignored). */
+  action?: 'view-as-student';
 }
 
 export interface LandingGroup {
@@ -137,9 +140,94 @@ export const TESTING_LANDING: Landing = {
   ],
 };
 
+export const COHORTS_LANDING: Landing = {
+  key: 'cohorts',
+  title: 'Cohorts',
+  groups: [
+    {
+      heading: 'This semester',
+      cards: [
+        { name: 'Cohorts', href: '/academics/cohorts', icon: Users, description: 'Every cohort by program and semester; open one for roster, progress and links.' },
+        { name: 'Students', href: '/academics/students', icon: GraduationCap, description: 'All students; open one for their record, progress and portfolio.' },
+        { name: 'Groups', href: '/labs/groups', icon: Layers, description: 'Lab groups and team-lead rotation per cohort.' },
+        { name: 'Student progress', href: '/reports/student-progress', icon: TrendingUp, description: 'One student: scenarios, skills, trend against the cohort.' },
+        { name: 'Cohort dashboard', href: '/reports/student-dashboard', icon: LayoutDashboard, description: 'One cohort: attendance, skills completed, clinical hours per student.' },
+      ],
+    },
+    {
+      heading: 'Every semester',
+      cards: [
+        { name: 'Graduate a cohort', href: '/academics/cohorts', icon: Award, description: 'On the cohort page: closes the cohort and completes its students; mark one student complete from their page.' },
+        { name: 'Add students', href: '/academics/students/new', icon: UserPlus, description: 'New student or import a roster.' },
+      ],
+    },
+    {
+      heading: 'Setup',
+      cards: [
+        { name: 'Semesters', href: '/admin/semesters', icon: CalendarRange, minRole: 'admin', description: 'Semester dates per cohort (moves into the year setup wizard).' },
+        { name: 'Program rosters', href: '/admin/program-rosters', icon: Users, minRole: 'admin', description: 'Default instructor roster per program.' },
+      ],
+    },
+  ],
+};
+
+export const STUDENT_LANDING: Landing = {
+  key: 'student',
+  title: 'Student view',
+  groups: [
+    {
+      heading: 'What a student sees',
+      cards: [
+        { name: 'Student home', href: '/student', icon: GraduationCap, minRole: 'student', description: 'Their schedule, their labs, what they owe.' },
+        { name: 'My progress', href: '/student/my-progress', icon: TrendingUp, minRole: 'student', description: 'Skills checked, scenarios run, where they stand.' },
+        { name: 'My labs', href: '/student/labs', icon: FlaskConical, minRole: 'student', description: 'Upcoming lab days and available open labs.' },
+        { name: 'Pre-internship self-assessment', href: '/student/self-assessment', icon: CheckSquare, minRole: 'student', description: "Rae's ten behaviors, scenarios and reflections; opens per cohort with a due date." },
+        { name: 'Final exam signup', href: '/exam-scheduling', icon: CalendarCheck, minRole: 'student', description: 'Internship-semester students pick their exam day (the student side of exam scheduling).' },
+        { name: 'Skill sheets and evaluations', href: '/student/skill-sheets', icon: ClipboardList, minRole: 'student', description: 'Their sheets and recorded skill evaluations.' },
+        { name: 'Profile', href: '/student/profile', icon: User, minRole: 'student', description: 'Name, cohort, contact.' },
+      ],
+    },
+    {
+      heading: 'For instructors',
+      cards: [
+        { name: 'View as a student', href: '/student', icon: Eye, minRole: 'admin', action: 'view-as-student', description: 'Open the student home as a chosen student would see it, read-only (admin).' },
+      ],
+    },
+  ],
+};
+
+export const ME_LANDING: Landing = {
+  key: 'me',
+  title: 'Me',
+  groups: [
+    {
+      heading: 'Mine',
+      cards: [
+        { name: 'My settings', href: '/settings', icon: Settings, minRole: 'student', description: 'Profile, theme, home layout (Customize), density.' },
+        { name: 'Calendar setup', href: '/settings/calendar-setup', icon: CalendarDays, description: 'Connect Google Calendar; what syncs to it.' },
+        { name: 'AHA credentials', href: '/settings/aha-credentials', icon: Hash, description: 'My AHA instructor numbers.' },
+        { name: 'Notifications', href: '/notifications', icon: Bell, minRole: 'student', description: 'Everything addressed to me.' },
+        { name: 'Tasks', href: '/tasks', icon: CheckSquare, description: 'My tasks.' },
+        { name: 'My stats', href: '/instructor/my-stats', icon: BarChart3, description: 'My labs, stations and evaluations.' },
+        { name: 'My feedback', href: '/feedback/my-submissions', icon: MessageSquareWarning, minRole: 'student', description: 'Reports I have filed and their status.' },
+      ],
+    },
+    {
+      heading: 'Help',
+      cards: [
+        { name: 'Help and wiki', href: '/help', icon: LifeBuoy, minRole: 'student', description: 'How-to pages and keyboard shortcuts.' },
+        { name: 'Resources', href: '/resources', icon: Pill, description: 'Medication references and protocol links.' },
+      ],
+    },
+  ],
+};
+
 export const LANDINGS: Record<string, Landing> = {
   schedule: SCHEDULE_LANDING,
   labs: LABS_LANDING,
   testing: TESTING_LANDING,
+  cohorts: COHORTS_LANDING,
+  student: STUDENT_LANDING,
+  me: ME_LANDING,
 };
 
