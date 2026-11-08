@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-08
+
+trim-6-7b-2a-pr3 | TRIM 6/7b-2a PR 3: Reports (/reports) and Admin (/admin) hub bodies replaced by SectionLanding (REPORTS_LANDING, ADMIN_LANDING from mock v4). Admin pages the spec omits are kept reachable under an extra 'More admin tools' group, and /reports/onboarding-status under Clinical and AHA, so no page loses its only entry point. No DB writes. Revert: git revert.
+
 ## 2026-11-07
 
 trim-6-7b-2a-pr2 | TRIM 6/7b-2a PR 2: Cohorts (/cohorts), Student view (/student-view) and Me (/me) landings from SectionLanding; landing cards can carry an action (View as a student opens the existing ViewAsStudentPicker, admin); sections.ts hrefs/chips repointed. Student-role cards use minRole student. No DB writes. Revert: git revert.
