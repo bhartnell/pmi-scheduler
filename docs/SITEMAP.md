@@ -323,7 +323,7 @@ Canonical home for lab day operations. 40 pages.
 ## Reports
 
 Canonical reports hub. 24 pages, including 6 moved from `/lab-management/reports/`
-on 2026-05-23 (now linked from the hub's new "Cohort Progress" section).
+on 2026-05-23. As of 2026-11-08 (TRIM 6/7b-2a PR 3) `/reports` and `/admin` render from `SectionLanding` (`components/landing/landings.ts`: REPORTS_LANDING, ADMIN_LANDING); every previously linked report and admin page is still a card.
 
 | Section | Pages |
 |---------|-------|

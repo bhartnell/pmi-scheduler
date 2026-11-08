@@ -3,6 +3,7 @@ import {
   FlaskConical, BookOpen, FileText, Zap, Grid3x3, Timer, MessageSquare, Boxes, Target, ListChecks,
   Flag, FolderOpen, DoorOpen, Award, HeartPulse, Stethoscope, Eye, BarChart3, Hash, FileUp,
   Activity, PenLine, UserPlus, Layers,
+  Shield, Wrench, Download, Upload, Webhook, Trash2, KeyRound, ScrollText, ClipboardCheck, Building2,
   GraduationCap, TrendingUp, LayoutDashboard, CalendarCheck, User, Bell, CheckSquare, LifeBuoy, Pill, MessageSquareWarning, CalendarRange,
   type LucideIcon,
 } from 'lucide-react';
@@ -222,6 +223,110 @@ export const ME_LANDING: Landing = {
   ],
 };
 
+export const REPORTS_LANDING: Landing = {
+  key: 'reports',
+  title: 'Reports',
+  groups: [
+    {
+      heading: 'One student',
+      cards: [
+        { name: 'Student progress', href: '/reports/student-progress', icon: TrendingUp, description: 'Scenarios, skills, trend against the cohort.' },
+      ],
+    },
+    {
+      heading: 'One cohort',
+      cards: [
+        { name: 'Lab progress', href: '/reports/lab-progress', icon: FlaskConical, description: 'Average scenario scores, skills progress, attendance.' },
+        { name: 'Cohort dashboard', href: '/reports/student-dashboard', icon: LayoutDashboard, description: 'Per-student table: attendance, skills, hours.' },
+        { name: 'Team leads', href: '/reports/team-leads', icon: Users, description: 'Team-lead rotations: lab, ACLS, PALS counts per student.' },
+      ],
+    },
+    {
+      heading: 'Across cohorts and time',
+      cards: [
+        { name: 'Cohort comparison', href: '/reports/cohort-comparison', icon: BarChart3, description: 'Scenarios, skills and hours across cohorts.' },
+        { name: 'Skill trends', href: '/reports/skill-trends', icon: TrendingUp, description: 'Skills improving or declining over time.' },
+        { name: 'Scenario analytics', href: '/reports/scenario-analytics', icon: Target, description: 'Pass rates, hardest and easiest scenarios.' },
+        { name: 'Scenario usage', href: '/reports/scenario-usage', icon: ListChecks, description: 'Which scenarios have run and when.' },
+        { name: 'Program overview', href: '/reports/program-overview', icon: LayoutDashboard, description: 'The whole program at a glance.' },
+      ],
+    },
+    {
+      heading: 'Instructors',
+      cards: [
+        { name: 'Instructor workload', href: '/reports/instructor-workload', icon: BarChart3, description: 'Lab days, LVFR days, station types, last lab, most and least assigned.' },
+        { name: 'Availability patterns', href: '/reports/availability-patterns', icon: UserCheck, description: 'When instructors tend to be available.' },
+      ],
+    },
+    {
+      heading: 'Clinical and AHA',
+      cards: [
+        { name: 'Clinical hours', href: '/reports/clinical-hours', icon: Activity, description: 'Hours by student and department.' },
+        { name: 'Clinical placements', href: '/reports/clinical-placements', icon: Building2, description: 'Who is placed where.' },
+        { name: 'Internship status', href: '/reports/internship-status', icon: ClipboardCheck, description: 'Internship progress across the cohort.' },
+        { name: 'AHA report', href: '/reports/aha', icon: HeartPulse, description: 'Course completion records.' },
+        { name: 'Onboarding status', href: '/reports/onboarding-status', icon: ClipboardList, description: 'Onboarding progress across the cohort.' },
+        { name: 'Report builder', href: '/reports/builder', icon: FileText, description: 'Build a custom table.' },
+      ],
+    },
+  ],
+};
+
+export const ADMIN_LANDING: Landing = {
+  key: 'admin',
+  title: 'Admin',
+  groups: [
+    {
+      heading: 'Users and access',
+      cards: [
+        { name: 'Users and roles', href: '/admin/users', icon: Users, minRole: 'admin', description: 'Accounts, roles, program tags, part-time and volunteer flags.' },
+        { name: 'Access and deletion requests', href: '/admin/access-requests', icon: KeyRound, minRole: 'admin', description: 'Approve volunteer self-signups and deletion requests.' },
+        { name: 'Guest access', href: '/admin/guests', icon: UserPlus, minRole: 'admin', description: 'Temporary access for outside evaluators.' },
+      ],
+    },
+    {
+      heading: 'Templates and setup',
+      cards: [
+        { name: 'Year setup (coming)', href: '/admin/semesters', icon: CalendarRange, minRole: 'admin', description: 'Semester dates, program starts, cohort names, templates, high-priority days, holidays: one wizard.' },
+        { name: 'Lab templates', href: '/admin/lab-templates', icon: Layers, minRole: 'admin', description: 'Weekly lab templates and import.' },
+        { name: 'AHA course setup', href: '/admin/aha-courses', icon: HeartPulse, minRole: 'admin', description: 'Generate ACLS and PALS days.' },
+        { name: 'Default lab rosters', href: '/admin/program-rosters', icon: Users, minRole: 'admin', description: 'Default instructors per program.' },
+        { name: 'Scenario admin', href: '/labs/scenarios?admin=1', icon: BookOpen, minRole: 'admin', description: 'Audit and bulk import, on the Scenarios page.' },
+        { name: 'Module settings', href: '/admin/module-flags', icon: Wrench, minRole: 'admin', description: 'Park or unpark a module (the TRIM switch).' },
+        { name: 'Calendar sync', href: '/admin/calendar-sync', icon: RefreshCw, minRole: 'admin', description: 'Connections and sync status.' },
+        { name: 'Timer displays', href: '/admin/timer-displays', icon: Timer, minRole: 'admin', description: 'Register station display screens.' },
+      ],
+    },
+    {
+      heading: 'Data and oversight',
+      cards: [
+        { name: 'Feedback', href: '/admin/feedback', icon: MessageSquareWarning, minRole: 'admin', description: 'Reports from the feedback button, triage status.' },
+        { name: 'Audit log and user activity', href: '/admin/audit-log', icon: ScrollText, minRole: 'admin', description: 'Who changed what; who opened what.' },
+        { name: 'Data export and import', href: '/admin/data-export', icon: Download, minRole: 'admin', description: 'CSV and JSON exports, scheduled exports, student import.' },
+        { name: 'FERPA compliance', href: '/admin/ferpa-compliance', icon: Shield, minRole: 'admin', description: 'Student data handling record.' },
+        { name: 'Settings and config', href: '/admin/settings', icon: Settings, minRole: 'admin', description: 'Site settings, webhooks, dashboard defaults.' },
+      ],
+    },
+    {
+      heading: 'More admin tools',
+      cards: [
+        { name: 'Roles', href: '/admin/roles', icon: Shield, minRole: 'admin', description: 'Role definitions and permissions.' },
+        { name: 'Site config', href: '/admin/config', icon: Settings, minRole: 'admin', description: 'Configuration values.' },
+        { name: 'Data import', href: '/admin/data-import', icon: Upload, minRole: 'admin', description: 'Import data files.' },
+        { name: 'Scheduled exports', href: '/admin/scheduled-exports', icon: Download, minRole: 'admin', description: 'Exports that run on a schedule.' },
+        { name: 'Deletion requests', href: '/admin/deletion-requests', icon: Trash2, minRole: 'admin', description: 'Requests waiting for superadmin approval.' },
+        { name: 'User activity', href: '/admin/user-activity', icon: Activity, minRole: 'admin', description: 'Who opened what.' },
+        { name: 'Exam sessions', href: '/admin/exam-sessions', icon: ClipboardCheck, minRole: 'admin', description: 'Exam session setup.' },
+        { name: 'OSCE tokens', href: '/admin/osce-tokens', icon: KeyRound, minRole: 'admin', description: 'Access tokens for OSCE evaluators.' },
+        { name: 'Open labs', href: '/admin/open-labs', icon: DoorOpen, minRole: 'admin', description: 'Open lab session setup.' },
+        { name: 'Volunteer events', href: '/admin/volunteer-events', icon: Users, minRole: 'admin', description: 'Volunteer event setup.' },
+        { name: 'Webhooks', href: '/admin/webhooks', icon: Webhook, minRole: 'admin', description: 'Outgoing webhooks.' },
+        { name: 'Seed availability', href: '/admin/seed-availability', icon: UserCheck, minRole: 'admin', description: 'Seed default availability.' },
+      ],
+    },
+  ],
+};
+
 export const LANDINGS: Record<string, Landing> = {
   schedule: SCHEDULE_LANDING,
   labs: LABS_LANDING,
@@ -229,5 +334,7 @@ export const LANDINGS: Record<string, Landing> = {
   cohorts: COHORTS_LANDING,
   student: STUDENT_LANDING,
   me: ME_LANDING,
+  reports: REPORTS_LANDING,
+  admin: ADMIN_LANDING,
 };
 
