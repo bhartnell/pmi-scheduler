@@ -392,7 +392,7 @@ export default function PalsPracticeStationPage() {
 
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 space-y-4">
             <div className="grid grid-cols-2 gap-3">
-              <button type="button" onClick={() => setResult(result === 'PASS' ? '' : 'PASS')}
+              <button type="button" onClick={() => { if (result === 'PASS') { setResult(''); setWatch(false); setWatchNote(''); } else setResult('PASS'); }}
                 className={`min-h-[56px] rounded-lg text-base font-bold inline-flex items-center justify-center gap-2 border ${
                   result === 'PASS' ? 'bg-green-600 text-white border-green-600' : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-300 dark:border-gray-600'
                 }`}>
