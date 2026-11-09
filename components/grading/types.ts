@@ -132,6 +132,8 @@ export interface CustomSkill {
   name: string;
 }
 
+import type { PalsCard } from '@/components/pals/PalsCaseCard';
+
 export interface Station {
   id: string;
   station_number: number;
@@ -147,6 +149,10 @@ export interface Station {
   scenario: {
     id: string;
     title: string;
+    // PALS cases keep their content in pals_narrative.card, not the generic fields.
+    cert_course?: string | null;
+    case_code?: string | null;
+    pals_narrative?: { card?: PalsCard } | null;
     category: string;
     subcategory: string | null;
     difficulty: string;
