@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-09
 
+osce-student-slot-invites | OSCE: 'Send student slot invites' on /admin/osce-events/[id] Students tab (preview + confirm + per-student result), first-slot offset setting, per-student host-calendar events (deterministic id, idempotent, evaluators never touched), minutes_per_student default/fallback 30. Migration 20261109_osce_student_invites.sql UNAPPLIED (hand to Claude AI/Ben). Revert: git revert.
 lab-day-page-xl-reserve | Lab day page (/labs/schedule/[id]): reserve right padding at xl+ so the fixed staffing panel no longer overlaps content when browser zoom shrinks the viewport. Layout-only, no DB writes. Revert: git revert.
 
 pals-station-grade-case-card | Station grade page now shows the PALS case card for PALS scenarios (station API also returns cert_course, case_code, pals_narrative); fixes empty scenario body on PALS stations. No DB writes. Revert: git revert.

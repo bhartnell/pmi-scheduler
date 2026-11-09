@@ -80,6 +80,7 @@ export async function PUT(
       event_pin,
       cohort_id,
       minutes_per_student,
+      first_slot_offset_min,
     } = body;
 
     // Build update object with only provided fields
@@ -97,6 +98,13 @@ export async function PUT(
     if (event_pin !== undefined) updates.event_pin = event_pin?.trim() || null;
     if (cohort_id !== undefined) updates.cohort_id = cohort_id || null;
     if (minutes_per_student !== undefined) updates.minutes_per_student = minutes_per_student;
+    // null = not chosen yet (send stays disabled); only written when the client sends the key.
+    if (first_slot_offset_min !== undefined) {
+      if (first_slot_offset_min !== null && !(Number.isInteger(first_slot_offset_min) && first_slot_offset_min >= 0 && first_slot_offset_min <= 120)) {
+        return NextResponse.json({ success: false, error: 'first_slot_offset_min must be a whole number of minutes from 0 to 120' }, { status: 400 });
+      }
+      updates.first_slot_offset_min = first_slot_offset_min;
+    }
 
     const supabase = getSupabaseAdmin();
 
