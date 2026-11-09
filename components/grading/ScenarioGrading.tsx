@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import type { Station, ScenarioPhase } from './types';
 import { toArray } from './types';
+import PalsCaseCard from '@/components/pals/PalsCaseCard';
 import ScenarioFullDisplay from '@/components/scenario/ScenarioFullDisplay';
 import LeveledActionList from '@/components/scenario/LeveledActionList';
 import { useFeedbackScenario } from '@/lib/feedback-context';
@@ -513,7 +514,23 @@ export default function ScenarioGrading({
       )}
 
       {/* Scenario Info — Improved Layout */}
-      {scenario ? (
+      {scenario && scenario.cert_course === 'pals' ? (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3">
+            <h2 className="font-bold text-lg">{scenario.title}</h2>
+            {scenario.case_code && <p className="text-blue-100 text-sm">{scenario.case_code}</p>}
+          </div>
+          <div className="p-4">
+            {scenario.pals_narrative?.card ? (
+              <PalsCaseCard card={scenario.pals_narrative.card} />
+            ) : (
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                This PALS case has no card text loaded yet. Use the PALS practice grader for scoring.
+              </p>
+            )}
+          </div>
+        </div>
+      ) : scenario ? (
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
           {/* === ALWAYS VISIBLE: Scenario Header === */}
           <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-4 py-3">
