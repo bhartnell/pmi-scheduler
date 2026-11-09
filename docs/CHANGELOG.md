@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-09
 
+lab-day-page-xl-reserve | Lab day page (/labs/schedule/[id]): reserve right padding at xl+ so the fixed staffing panel no longer overlaps content when browser zoom shrinks the viewport. Layout-only, no DB writes. Revert: git revert.
+
 pals-station-grade-case-card | Station grade page now shows the PALS case card for PALS scenarios (station API also returns cert_course, case_code, pals_narrative); fixes empty scenario body on PALS stations. No DB writes. Revert: git revert.
 pals-practice-pass-toggle | PALS practice grader: tapping Pass while 'Pass but watch' is on now clears the watch flag and note too, so Save no longer stays disabled with a hidden watch state. UI only, no DB writes. Revert: git revert.
 
