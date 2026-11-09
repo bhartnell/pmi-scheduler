@@ -58,6 +58,7 @@ interface OsceEvent {
   block_count: number;
   cohort_id: string | null;
   minutes_per_student: number;
+  first_slot_offset_min?: number | null;
 }
 
 interface ObserverBlock {
@@ -361,7 +362,7 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
       {activeTab === 'schedule' && <ScheduleTab eventId={eventId} />}
       {activeTab === 'agencies' && <AgenciesTab eventId={eventId} />}
       {activeTab === 'blocks' && <TimeBlocksTab eventId={eventId} event={event} onRefresh={fetchEvent} />}
-      {activeTab === 'students' && <StudentsTab eventId={eventId} event={event} />}
+      {activeTab === 'students' && (<><StudentInvitesPanel eventId={eventId} event={event} /><StudentsTab eventId={eventId} event={event} /></>)}
       {activeTab === 'results' && <ResultsTab eventId={eventId} />}
       {activeTab === 'settings' && <SettingsTab event={event} onRefresh={fetchEvent} />}
     </div>
@@ -2344,6 +2345,166 @@ function ResultsTab({ eventId }: { eventId: string }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Student slot invites: one calendar invite per student for their own slot.
+// Sends ONLY from the button below after the confirm dialog. Never touches the
+// evaluator block events.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+interface InvitePreviewRow {
+  id: string;
+  student_name: string;
+  slot_number: number;
+  block_label: string | null;
+  date: string | null;
+  email: string | null;
+  resolved_as: string | null;
+  unresolved_reason: string | null;
+  time_offset_0: { start: string; end: string } | null;
+  time_offset_15: { start: string; end: string } | null;
+  time_saved: { start: string; end: string } | null;
+  state: 'sent' | 'pending' | 'failed';
+  invite_error: string | null;
+}
+
+interface InviteSendResult {
+  id: string;
+  student_name: string;
+  email: string | null;
+  time: string | null;
+  result: string;
+  detail?: string;
+}
+
+function StudentInvitesPanel({ eventId, event }: { eventId: string; event: OsceEvent }) {
+  const [preview, setPreview] = useState<{
+    migrated: boolean;
+    cohort_set: boolean;
+    first_slot_offset_min: number | null;
+    minutes_per_student: number;
+    rows: InvitePreviewRow[];
+    counts: { total: number; resolved: number; unresolved: number; sent: number };
+  } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [results, setResults] = useState<{ counts: Record<string, number>; results: InviteSendResult[] } | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [open, setOpen] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/osce/events/${eventId}/student-invites`);
+      const data = await res.json();
+      if (data.success) { setPreview(data); setLoadError(null); }
+      else setLoadError(data.error || 'Failed to load');
+    } catch { setLoadError('Failed to load'); }
+  }, [eventId]);
+
+  useEffect(() => { load(); }, [load, event.first_slot_offset_min, event.minutes_per_student]);
+
+  if (loadError) return <div className="mb-6 p-3 text-sm text-red-600 dark:text-red-400">Student invites: {loadError}</div>;
+  if (!preview || preview.rows.length === 0) return null;
+
+  const offsetSet = preview.first_slot_offset_min !== null;
+  const dates = Array.from(new Set(preview.rows.map(r => r.date).filter(Boolean)));
+  const disabledReason = !preview.migrated
+    ? 'Database update pending'
+    : !preview.cohort_set
+      ? 'Set a cohort in Settings first'
+      : !offsetSet
+        ? 'Set the first-slot offset in Settings first'
+        : null;
+  const fmt = (t: { start: string; end: string } | null) => (t ? t.start : '-');
+
+  const send = async () => {
+    const ok = window.confirm(
+      `Send ${preview.counts.resolved} student calendar invites for ${dates.join(' and ')}? ` +
+      `${preview.counts.unresolved} unresolved will be skipped. Students receive an email from the host calendar.`
+    );
+    if (!ok) return;
+    setSending(true); setSendError(null); setResults(null);
+    try {
+      const res = await fetch(`/api/osce/events/${eventId}/student-invites`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }),
+      });
+      const data = await res.json();
+      if (data.success) setResults(data); else setSendError(data.error || 'Send failed');
+      await load();
+    } catch { setSendError('Send failed'); }
+    setSending(false);
+  };
+
+  return (
+    <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-4">
+      <div className="flex items-center justify-between gap-4 max-md:flex-col max-md:items-start">
+        <div>
+          <h3 className="text-base font-semibold text-gray-900 dark:text-white">Student slot invites</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            {preview.counts.total} students, {preview.counts.resolved} with a resolved email, {preview.counts.unresolved} unresolved, {preview.counts.sent} already invited.
+            Slot length {preview.minutes_per_student} min. Evaluators are never on these events. A student removed from the roster is not auto-cancelled.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setOpen(o => !o)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 min-h-[44px]">
+            {open ? 'Hide preview' : 'Preview times'}
+          </button>
+          <button onClick={send} disabled={sending || !!disabledReason || preview.counts.resolved === 0}
+            className="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50 min-h-[44px]">
+            {sending ? 'Sending...' : 'Send student slot invites'}
+          </button>
+        </div>
+      </div>
+      {disabledReason && <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">{disabledReason}.</p>}
+      {sendError && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{sendError}</p>}
+
+      {open && (
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-gray-500 dark:text-gray-400">
+                <th className="py-1 pr-3">Student</th><th className="pr-3">Email</th><th className="pr-3">Block</th><th className="pr-3">Slot</th>
+                <th className="pr-3">Start if 0</th><th className="pr-3">Start if 15</th><th className="pr-3">Saved</th><th>State</th>
+              </tr>
+            </thead>
+            <tbody>
+              {preview.rows.map(r => (
+                <tr key={r.id} className="border-t border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200">
+                  <td className="py-1 pr-3">{r.student_name}{r.resolved_as ? ` (${r.resolved_as})` : ''}</td>
+                  <td className="pr-3">{r.email ?? <span className="text-red-600 dark:text-red-400">{r.unresolved_reason}</span>}</td>
+                  <td className="pr-3">{r.date} {r.block_label}</td>
+                  <td className="pr-3">{r.slot_number}</td>
+                  <td className="pr-3">{fmt(r.time_offset_0)}</td>
+                  <td className="pr-3">{fmt(r.time_offset_15)}</td>
+                  <td className="pr-3">{fmt(r.time_saved)}</td>
+                  <td>{r.state}{r.invite_error ? `: ${r.invite_error.slice(0, 80)}` : ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {results && (
+        <div className="mt-3">
+          <p className="text-sm text-gray-800 dark:text-gray-200">
+            {Object.entries(results.counts).map(([k, v]) => `${k} ${v}`).join(' | ')}
+          </p>
+          <table className="w-full text-xs mt-1">
+            <tbody>
+              {results.results.map(r => (
+                <tr key={r.id} className="border-t border-gray-100 dark:border-gray-700 text-gray-800 dark:text-gray-200">
+                  <td className="py-1 pr-3">{r.student_name}</td><td className="pr-3">{r.email ?? '-'}</td><td className="pr-3">{r.time ?? '-'}</td>
+                  <td className="pr-3">{r.result}</td><td>{r.detail ?? ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // TAB 7: Settings
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -2369,6 +2530,7 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
     event_pin: event.event_pin || '',
     cohort_id: event.cohort_id || '',
     minutes_per_student: event.minutes_per_student,
+    first_slot_offset_min: event.first_slot_offset_min == null ? '' : String(event.first_slot_offset_min),
   });
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -2409,6 +2571,10 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
           event_pin: form.event_pin.trim() || null,
           cohort_id: form.cohort_id || null,
           minutes_per_student: form.minutes_per_student,
+          // Only sent when changed so Settings still saves before the invite migration is applied.
+          ...(form.first_slot_offset_min !== (event.first_slot_offset_min == null ? '' : String(event.first_slot_offset_min))
+            ? { first_slot_offset_min: form.first_slot_offset_min === '' ? null : parseInt(form.first_slot_offset_min, 10) }
+            : {}),
         }),
       });
       if (!res.ok) {
@@ -2537,10 +2703,18 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Minutes Per Student</label>
-              <input type="number" min={5} max={120} value={form.minutes_per_student} onChange={e => setForm(p => ({ ...p, minutes_per_student: parseInt(e.target.value) || 32 }))}
+              <input type="number" min={5} max={120} value={form.minutes_per_student} onChange={e => setForm(p => ({ ...p, minutes_per_student: parseInt(e.target.value) || 30 }))}
                 className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
               <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">Capacity default used to derive slots per time block (block length ÷ this).</p>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">First student starts __ minutes after the block start</label>
+            <input type="number" min={0} max={120} value={form.first_slot_offset_min} placeholder="Not set"
+              onChange={e => setForm(p => ({ ...p, first_slot_offset_min: e.target.value }))}
+              className="w-full max-w-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">0 = on the block start, 15 = after the evaluator briefing. Used for student slot invites; invites stay disabled until this is set.</p>
           </div>
 
           <div className="flex justify-end pt-2">

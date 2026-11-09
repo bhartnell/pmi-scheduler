@@ -4406,7 +4406,8 @@ Sibling of `recurring_availability_templates`, but `end_date` is nullable to sup
 | event_pin | text | YES | 'OSCE2026'::text |  |
 | checklist_state | jsonb | YES | '{}'::jsonb |  |
 | cohort_id | uuid | YES |  | FK -> cohorts.id. Added 2026-09-14 for the repeatable creation-flow (roster auto-populate). Nullable — older events predating this column have no cohort link. |
-| minutes_per_student | integer | NO | 32 | Added 2026-09-14. Editable capacity default the roster-generation flow uses to derive per-block student capacity (block duration ÷ this value). See `osce_day_scenarios` below for the companion per-day scenario assignment. |
+| minutes_per_student | integer | NO | 32 (30 after 20261109_osce_student_invites.sql is applied) | Added 2026-09-14. Editable capacity default the roster-generation flow uses to derive per-block student capacity (block duration ÷ this value). See `osce_day_scenarios` below for the companion per-day scenario assignment. |
+| first_slot_offset_min | integer | YES |  | PENDING migration `20261109_osce_student_invites.sql` (unapplied as of 2026-11-09). Minutes after block start that the first student's slot begins (0 or 15); NULL = not chosen, student invites disabled. |
 
 **Foreign Keys:**
 - `cohort_id` -> `cohorts.id` (`osce_events_cohort_id_fkey`)
@@ -4572,6 +4573,9 @@ Ben-editable map from the free-text spellings in `students.agency` to a canonica
 | slot_number | integer | NO |  |  |
 | created_at | timestamptz | YES | now() |  |
 | event_id | uuid | NO |  |  |
+| google_event_id | text | YES |  | PENDING migration `20261109_osce_student_invites.sql`. Student's own calendar event on the OSCE host calendar. |
+| invite_sent_at | timestamptz | YES |  | PENDING, same migration. |
+| invite_error | text | YES |  | PENDING, same migration. |
 
 **Foreign Keys:**
 - `event_id` -> `osce_events.id` (`osce_student_schedule_event_id_fkey`)
