@@ -2535,6 +2535,7 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
   const [saving, setSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveWarning, setSaveWarning] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
@@ -2553,6 +2554,7 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
   const handleSave = async () => {
     setSaving(true);
     setSaveError(null);
+    setSaveWarning(null);
     setSaveSuccess(false);
     try {
       const res = await fetch(`/api/osce/events/${event.id}`, {
@@ -2581,6 +2583,8 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
         const data = await res.json().catch(() => ({}));
         setSaveError(data.error || 'Failed to save');
       } else {
+        const data = await res.json().catch(() => ({}));
+        setSaveWarning(data.warning || null);
         setSaveSuccess(true);
         onRefresh();
         setTimeout(() => setSaveSuccess(false), 3000);
@@ -2616,6 +2620,9 @@ function SettingsTab({ event, onRefresh }: { event: OsceEvent; onRefresh: () => 
 
         {saveError && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-700 dark:text-red-300">{saveError}</div>
+        )}
+        {saveWarning && (
+          <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-sm text-amber-800 dark:text-amber-300">{saveWarning}</div>
         )}
         {saveSuccess && (
           <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-300">

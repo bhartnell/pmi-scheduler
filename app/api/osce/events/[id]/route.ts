@@ -136,7 +136,22 @@ export async function PUT(
       );
     }
 
-    return NextResponse.json({ success: true, event });
+    // Warn (never block) when another open event already uses this code. Sign-in
+    // picks by date window, so it still works, but organizers should know.
+    let warning: string | undefined;
+    if (event.event_pin) {
+      const { data: sameCode } = await supabase
+        .from('osce_events')
+        .select('title')
+        .eq('event_pin', event.event_pin)
+        .eq('status', 'open')
+        .neq('id', id);
+      if (sameCode && sameCode.length > 0) {
+        warning = `Another open event already uses this code (${sameCode.map((e) => e.title).join(', ')}). Sign-in picks the event whose dates include today, but a unique code is safer.`;
+      }
+    }
+
+    return NextResponse.json({ success: true, event, ...(warning ? { warning } : {}) });
   } catch (error) {
     console.error('Error updating event:', error);
     return NextResponse.json(

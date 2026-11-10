@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-10
 
+osce-pin | OSCE sign-in: event code lookup no longer uses .single(); picks the event whose date window (OSCE time zone) contains today when several share a code (validate-pin, walkup-evaluators); Settings save warns on a duplicate open code. No schema change. Revert: git revert.
+
 withdrawn-pr3 | Withdrawn students PR 3: Withdraw route archives (deleted_records_archive, source student_withdraw) then clears FUTURE station assignments, pending/confirmed exam signups and OSCE slots (cancels the student's own OSCE invite); GET preview feeds the confirm dialog. Past rows and lab_group_members untouched. No schema change. Revert: git revert.
 
 withdrawn-pr2 | Withdrawn students PR 2: adv-cert grading-context pickers, scenario send-email recipients and student group-stats counts now exclude withdrawn students (station-assignments, auto-assign, checkoff-status, acls-hub, pals-hub, pals grading-context already filtered). Read-only, no DB writes. Revert: git revert.
