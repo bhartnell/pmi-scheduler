@@ -45,6 +45,29 @@ export async function POST(
         .eq('time_block_id', blockId);
     }
 
+    // Keep each student's assessment in step with their new slot, but only while it
+    // has no evaluator scores (a scored assessment is never touched).
+    const { data: rows } = await supabase
+      .from('osce_student_schedule')
+      .select('student_name, slot_number')
+      .eq('event_id', id)
+      .eq('time_block_id', blockId);
+    for (const r of rows || []) {
+      const { data: found } = await supabase
+        .from('osce_assessments')
+        .select('id, slot_number')
+        .eq('event_id', id)
+        .ilike('student_name', r.student_name.trim());
+      if (!found || found.length !== 1 || found[0].slot_number === r.slot_number) continue;
+      const { count } = await supabase
+        .from('osce_evaluator_scores')
+        .select('id', { count: 'exact', head: true })
+        .eq('assessment_id', found[0].id);
+      if ((count || 0) === 0) {
+        await supabase.from('osce_assessments').update({ slot_number: r.slot_number }).eq('id', found[0].id);
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error reordering students:', error);

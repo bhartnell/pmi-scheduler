@@ -1223,7 +1223,6 @@ function WalkupEvaluatorsPanel({ eventId }: { eventId: string }) {
 function ScheduleTab({ eventId }: { eventId: string }) {
   const [schedule, setSchedule] = useState<ScheduleBlock[]>([]);
   const [loading, setLoading] = useState(true);
-
   const fetchSchedule = useCallback(async () => {
     try {
       const res = await fetch(`/api/osce/events/${eventId}/schedule`);
@@ -2005,6 +2004,24 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
   const [schedule, setSchedule] = useState<ScheduleBlock[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [scenarioRows, setScenarioRows] = useState<Record<string, { scenario: string; locked: boolean } | null>>({});
+  const [scenarioOptions, setScenarioOptions] = useState<{ letter: string; title: string }[]>([]);
+  const [scenarioMsg, setScenarioMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [savingScenario, setSavingScenario] = useState<string | null>(null);
+
+  const fetchScenarios = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/osce/events/${eventId}/student-scenarios`);
+      if (res.ok) {
+        const data = await res.json();
+        const map: Record<string, { scenario: string; locked: boolean } | null> = {};
+        for (const r of data.rows || []) map[r.schedule_id] = r.assessment ? { scenario: r.assessment.scenario, locked: r.assessment.locked } : null;
+        setScenarioRows(map);
+        setScenarioOptions(data.scenarios || []);
+      }
+    } catch { /* ignore */ }
+  }, [eventId]);
+
   const fetchSchedule = useCallback(async () => {
     try {
       const res = await fetch(`/api/osce/events/${eventId}/schedule`);
@@ -2013,8 +2030,49 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
         setSchedule(data.schedule || []);
       }
     } catch { /* ignore */ }
+    fetchScenarios();
     setLoading(false);
-  }, [eventId]);
+  }, [eventId, fetchScenarios]);
+
+  const handleSetScenario = async (scheduleId: string, scenario: string) => {
+    if (!scenario) return;
+    setSavingScenario(scheduleId);
+    setScenarioMsg(null);
+    try {
+      const res = await fetch(`/api/osce/events/${eventId}/student-scenarios`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedule_id: scheduleId, scenario }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) setScenarioMsg({ ok: false, text: data.error || 'Failed to save scenario' });
+    } catch {
+      setScenarioMsg({ ok: false, text: 'Network error' });
+    }
+    setSavingScenario(null);
+    fetchScenarios();
+  };
+
+  const handleFillEmpty = async () => {
+    if (!window.confirm("Assign scenarios to every student who has none yet, using this event's day scenarios in round-robin order? Students who already have a scenario are not changed.")) return;
+    setScenarioMsg(null);
+    try {
+      const res = await fetch(`/api/osce/events/${eventId}/student-scenarios`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'fill_empty' }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setScenarioMsg({ ok: true, text: `Assigned ${data.created} student${data.created === 1 ? '' : 's'}${data.skippedNoDayScenarios ? `; ${data.skippedNoDayScenarios} skipped (no day scenarios set for their day)` : ''}.` });
+      } else {
+        setScenarioMsg({ ok: false, text: data.error || 'Failed to fill' });
+      }
+    } catch {
+      setScenarioMsg({ ok: false, text: 'Network error' });
+    }
+    fetchScenarios();
+  };
 
   useEffect(() => {
     fetchSchedule();
@@ -2058,8 +2116,25 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
     return <RosterSetupPanel eventId={eventId} event={event} onGenerated={fetchSchedule} />;
   }
 
+  const totalStudents = blocksWithStudents.reduce((n, b) => n + b.students.length, 0);
+  const withScenario = blocksWithStudents.reduce((n, b) => n + b.students.filter(st => scenarioRows[st.id]).length, 0);
+
   return (
     <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4 flex-wrap bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-3">
+        <p className="text-sm text-gray-700 dark:text-gray-300">
+          <strong>{withScenario} of {totalStudents}</strong> have a scenario; evaluators can only score students with a scenario.
+        </p>
+        <button
+          onClick={handleFillEmpty}
+          className="px-3 py-2 min-h-[44px] text-sm font-medium rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+        >
+          Fill empty from the day&apos;s scenarios
+        </button>
+      </div>
+      {scenarioMsg && (
+        <div className={`p-3 rounded-lg text-sm border ${scenarioMsg.ok ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300' : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'}`}>{scenarioMsg.text}</div>
+      )}
       {blocksWithStudents.map(block => (
         <div key={block.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
@@ -2083,6 +2158,25 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
                   </span>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{student.name}</span>
                 </div>
+                <div className="flex items-center gap-3">
+                  {scenarioRows[student.id]?.locked ? (
+                    <span className="text-xs text-gray-500 dark:text-gray-400" title="Scores have been entered, so the scenario is locked">
+                      Scenario {scenarioRows[student.id]?.scenario} (scored, locked)
+                    </span>
+                  ) : (
+                    <select
+                      value={scenarioRows[student.id]?.scenario || ''}
+                      disabled={savingScenario === student.id}
+                      onChange={e => handleSetScenario(student.id, e.target.value)}
+                      aria-label={`Scenario for ${student.name}`}
+                      className="min-h-[36px] px-2 py-1 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                    >
+                      <option value="">No scenario</option>
+                      {scenarioOptions.map(o => (
+                        <option key={o.letter} value={o.letter}>{o.letter} - {o.title}</option>
+                      ))}
+                    </select>
+                  )}
                 <div className="flex items-center gap-0.5">
                   <button
                     onClick={() => handleReorder(block.id, block.students, idx, 'up')}
@@ -2102,6 +2196,7 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
                   >
                     <ArrowDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </button>
+                </div>
                 </div>
               </div>
             ))}

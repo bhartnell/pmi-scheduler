@@ -31,6 +31,22 @@ export async function GET(req: NextRequest) {
     const { data: assessments, error } = await query;
     if (error) throw error;
 
+    // Event context so the evaluator dashboard can show day tabs from the event's
+    // blocks and each student's start time (nothing about the event is hardcoded).
+    let context: Record<string, unknown> = {};
+    if (eventId) {
+      const [{ data: blocks }, { data: roster }, { data: ev }] = await Promise.all([
+        supabase.from('osce_time_blocks').select('id, day_number, label, date, start_time, end_time, sort_order').eq('event_id', eventId).order('sort_order'),
+        supabase.from('osce_student_schedule').select('student_name, time_block_id, slot_number').eq('event_id', eventId),
+        supabase.from('osce_events').select('minutes_per_student, first_slot_offset_min').eq('id', eventId).maybeSingle(),
+      ]);
+      context = {
+        blocks: blocks || [],
+        roster: roster || [],
+        timing: { minutes_per_student: ev?.minutes_per_student ?? null, first_slot_offset_min: ev?.first_slot_offset_min ?? null },
+      };
+    }
+
     // If evaluator name provided, attach their score status
     if (evaluatorName && assessments) {
       const assessmentIds = assessments.map(a => a.id);
@@ -46,10 +62,10 @@ export async function GET(req: NextRequest) {
         evaluator_score: scoreMap.get(a.id) || null,
       }));
 
-      return NextResponse.json({ success: true, assessments: enriched });
+      return NextResponse.json({ success: true, assessments: enriched, ...context });
     }
 
-    return NextResponse.json({ success: true, assessments });
+    return NextResponse.json({ success: true, assessments, ...context });
   } catch (err) {
     console.error('Error fetching assessments:', err);
     return NextResponse.json({ success: false, error: 'Failed to fetch assessments' }, { status: 500 });
