@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { chooseEventForPin, todayInOsceZone } from '@/lib/osce-event-pin';
 
 // POST - Public: self-register as a walk-up evaluator (not on the pre-invited list)
 // Requires the same event PIN as validate-pin — the PIN is what scopes this to one event,
@@ -25,26 +26,27 @@ export async function POST(req: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    const { data: event, error: eventError } = await supabase
+    // Several events may share a code (Spring + Fall): fetch them all and pick the
+    // one whose date window contains today in the OSCE time zone (nearest start).
+    const { data: candidates, error: eventError } = await supabase
       .from('osce_events')
       .select('id, title, subtitle, start_date, end_date, status')
       .eq('event_pin', pin.trim())
-      .in('status', ['open', 'closed'])
-      .single();
+      .in('status', ['open', 'closed']);
 
-    if (eventError || !event) {
-      return NextResponse.json({ success: false, error: 'Invalid event code' }, { status: 404 });
+    if (eventError || !candidates || candidates.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Invalid event code' },
+        { status: 404 }
+      );
     }
 
-    // PIN valid only within the event's date window (inclusive, with a 1-day grace
-    // on each side for time zone slop between the server and whoever is on-site).
-    const today = new Date().toISOString().split('T')[0];
-    const windowStart = new Date(event.start_date);
-    windowStart.setDate(windowStart.getDate() - 1);
-    const windowEnd = new Date(event.end_date);
-    windowEnd.setDate(windowEnd.getDate() + 1);
-    if (new Date(today) < windowStart || new Date(today) > windowEnd) {
-      return NextResponse.json({ success: false, error: 'This event code is not active right now' }, { status: 400 });
+    const event = chooseEventForPin(candidates, todayInOsceZone());
+    if (!event) {
+      return NextResponse.json(
+        { success: false, error: 'This event code is not active right now' },
+        { status: 400 }
+      );
     }
 
     const { data: walkup, error: insertError } = await supabase
