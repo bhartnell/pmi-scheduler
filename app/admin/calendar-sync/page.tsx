@@ -193,6 +193,7 @@ export default function CalendarSyncPage() {
   const [cleaningUp, setCleaningUp] = useState(false);
   const [cleanupPreview, setCleanupPreview] = useState<CleanupResult | null>(null);
   const [confirmingCleanup, setConfirmingCleanup] = useState(false);
+  const [retireBusy, setRetireBusy] = useState(false);
 
   // ── Auth guard ──────────────────────────────────────────────────────────
 
@@ -295,6 +296,50 @@ export default function CalendarSyncPage() {
       toast.error('Sync request failed');
     } finally {
       setSyncingAll(false);
+    }
+  };
+
+  // ── Retire per-instructor lab events (CAL 3/3, one-time) ─────────────
+  const handleRetireLabEvents = async (canary: boolean) => {
+    setRetireBusy(true);
+    try {
+      const dry = await (await fetch('/api/admin/calendar-sync/retire-lab-events')).json();
+      if (!dry.success) {
+        toast.error(dry.error || 'Dry run failed');
+        return;
+      }
+      const kinds = Object.entries(dry.by_kind as Record<string, number>)
+        .map(([k, n]) => `${k}: ${n}`)
+        .join(', ');
+      if (dry.total === 0) {
+        toast.success('Nothing left to remove: 0 future per-instructor lab events. This button can come out.');
+        return;
+      }
+      if (!dry.backup_exists || dry.backup_missing_rows > 0) {
+        toast.error('The restore-point backup table is not in place yet (migration 20261110_cal_retire_backup). Nothing was changed.');
+        return;
+      }
+      const target = canary ? 'bhartnell@pmi.edu only (canary)' : 'ALL users';
+      const ok = window.confirm(
+        `Remove ${dry.total} future per-instructor lab events (${kinds}) from Google Calendar?\n\n` +
+          `Scope now: ${target}. No emails or notifications are sent. Past events stay. ` +
+          `Backup table: ${dry.backup_table}.`,
+      );
+      if (!ok) return;
+      const res = await fetch('/api/admin/calendar-sync/retire-lab-events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: true, ...(canary ? { user_email: 'bhartnell@pmi.edu' } : {}) }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error || 'Removal failed');
+        return;
+      }
+      toast.success(`Removed ${data.removed} of ${data.attempted}; ${data.failed} failed; ${data.future_remaining} future left overall.`);
+      if (data.failed > 0) console.error('[retire-lab-events] failures:', data.failures);
+    } finally {
+      setRetireBusy(false);
     }
   };
 
@@ -692,6 +737,39 @@ export default function CalendarSyncPage() {
                 <Bell className={`w-4 h-4 ${reminding ? 'animate-pulse' : ''}`} />
                 {reminding ? 'Sending...' : 'Remind Unconnected'}
               </button>
+              {/* Incident and one-time tools (MAINTENANCE BUTTON RULE): superadmin-only,
+                  off the main row. Each line says what it does and why it exists. */}
+              {currentUser?.role === 'superadmin' && (
+                <details className="w-full rounded-lg border border-red-200 dark:border-red-800 p-3">
+                  <summary className="cursor-pointer text-sm font-semibold text-red-700 dark:text-red-300">
+                    Incident and one-time tools (superadmin)
+                  </summary>
+                  <div className="mt-3 flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={() => handleRetireLabEvents(true)}
+                        disabled={retireBusy}
+                        className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium disabled:opacity-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        {retireBusy ? 'Working…' : 'Remove old per-instructor lab events: canary (Ben only)'}
+                      </button>
+                      <button
+                        onClick={() => handleRetireLabEvents(false)}
+                        disabled={retireBusy}
+                        className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium disabled:opacity-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Remove old per-instructor lab events: everyone
+                      </button>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 max-w-xl">
+                        One lab = one calendar event now. Removes the future station, general-lab and role events created before that rule, shows the count first, sends no mail, keeps a backup. Comes out once the future count is 0.
+                      </p>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
+                      Clean up duplicates: built for the 2026-05-06 duplicate incident; deletes every app-created event on connected calendars. Re-sync PALS days and Remove test-cohort PALS events: one-time buttons from the 2026-10-29 PALS dry run.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-3">
               {/* Duplicate cleanup — opens a modal with the dry-run
                   preview, then a Confirm button to actually delete.
                   Red border to signal this is a destructive op. */}
@@ -726,6 +804,10 @@ export default function CalendarSyncPage() {
                 <Trash2 className="w-4 h-4" />
                 {palsBusy === 'remove-test' ? 'Removing…' : 'Remove test-cohort PALS events'}
               </button>
+                    </div>
+                  </div>
+                </details>
+              )}
             </div>
 
             {/* ── Sync Freshness by Type ──────────────────────────────────
