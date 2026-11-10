@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { liveEmbeddedStudents } from '@/lib/live-students';
 
 export async function GET(
   request: NextRequest,
@@ -40,7 +41,8 @@ export async function GET(
           first_name,
           last_name,
           agency,
-          photo_url
+          photo_url,
+          status
         )
       `)
       .eq('lab_group_id', id);
@@ -50,7 +52,7 @@ export async function GET(
     return NextResponse.json({
       success: true,
       group,
-      members: assignments?.map(a => a.student) || [],
+      members: liveEmbeddedStudents(assignments),
     });
   } catch (error) {
     console.error('Error fetching group:', error);
