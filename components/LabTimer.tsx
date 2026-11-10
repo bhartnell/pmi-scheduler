@@ -26,7 +26,8 @@ import {
   Link2,
   ExternalLink,
   Plus,
-  Minus
+  Minus,
+  ArrowLeft
 } from 'lucide-react';
 import { useVisibilityPolling } from '@/hooks/useVisibilityPolling';
 import { useLabTimerState } from '@/hooks/useLabTimerState';
@@ -784,6 +785,16 @@ export default function LabTimer({
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-700">
         <div className="flex items-center gap-4">
+          {isController && (
+            <button
+              onClick={handleClose}
+              className="flex items-center gap-1.5 px-3 min-h-[44px] rounded-lg bg-gray-700 hover:bg-gray-600 text-sm text-gray-200"
+              title="Back to the lab day (the timer keeps running)"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to lab day
+            </button>
+          )}
           <Clock className="w-6 h-6" />
           <span className="text-lg font-medium">
             {title || (isController ? 'Lab Timer (Controller)' : 'Lab Timer')}
