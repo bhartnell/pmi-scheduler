@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-10
 
+withdrawn-pr3 | Withdrawn students PR 3: Withdraw route archives (deleted_records_archive, source student_withdraw) then clears FUTURE station assignments, pending/confirmed exam signups and OSCE slots (cancels the student's own OSCE invite); GET preview feeds the confirm dialog. Past rows and lab_group_members untouched. No schema change. Revert: git revert.
+
 withdrawn-pr2 | Withdrawn students PR 2: adv-cert grading-context pickers, scenario send-email recipients and student group-stats counts now exclude withdrawn students (station-assignments, auto-assign, checkoff-status, acls-hub, pals-hub, pals grading-context already filtered). Read-only, no DB writes. Revert: git revert.
 
 ## 2026-11-09
