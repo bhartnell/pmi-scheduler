@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-10
 
+cal-2-3d | CAL 2/3d: one calendar event per lab day. Creation of per-instructor station_assignment / general_lab / lab_day_role Google events switched off (removers kept for CAL 3/3); station PATCH no longer sends the in-app assignment notification; day event title uses plain hyphens and NREMT days are titled 'NREMT Psychomotor Testing Day - {cohort}'. No schema change, no Google deletes. Revert: git revert.
+
 osce-day-of-2 | OSCE day-of 2/2: Students tab gets a per-student Scenario dropdown (creates/updates the assessment, locks once scored), count line and confirm-gated "Fill empty from the day's scenarios" (new student-scenarios route); reorder keeps unscored assessments in step; evaluator dashboard day tabs, block order, slot start times come from the event (no hardcoded dates). No schema change. Revert: git revert.
 
 osce-pin | OSCE sign-in: event code lookup no longer uses .single(); picks the event whose date window (OSCE time zone) contains today when several share a code (validate-pin, walkup-evaluators); Settings save warns on a duplicate open code. No schema change. Revert: git revert.
