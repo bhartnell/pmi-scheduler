@@ -447,9 +447,19 @@ interface StationAssignmentParams {
 }
 
 /**
+ * Ben 2026-11-10: "We just need one, not two." Creation of per-instructor
+ * station_assignment / general_lab / lab_day_role events is off. Removal
+ * helpers stay live so existing events can still be retired (CAL 3/3).
+ */
+const PER_INSTRUCTOR_LAB_EVENTS_RETIRED = true;
+
+/**
  * Create a Google Calendar event for a station assignment.
  */
 export async function syncLabStationAssignment(params: StationAssignmentParams): Promise<void> {
+  // RETIRED 2026-11-10 (Ben: one calendar event per lab day per person, no per-station events).
+  // The day-level lab_day_event (lib/lab-day-calendar-event.ts) is the only lab calendar artifact.
+  if (PER_INSTRUCTOR_LAB_EVENTS_RETIRED) return;
   try {
     if (!(await shouldSyncForUser(params.userEmail, 'sync_lab_assignments'))) return;
     if (await isHubInternalLabDayId(params.labDayId)) return;
@@ -543,6 +553,8 @@ export type GeneralLabSyncResult =
   | 'failed';
 
 export async function syncGeneralLabDefault(params: GeneralLabParams): Promise<GeneralLabSyncResult> {
+  // RETIRED 2026-11-10: the day-level lab_day_event replaces general_lab events.
+  if (PER_INSTRUCTOR_LAB_EVENTS_RETIRED) return 'skipped_preference';
   try {
     if (!(await shouldSyncForUser(params.userEmail, 'sync_lab_assignments'))) return 'skipped_preference';
 
@@ -860,6 +872,8 @@ interface LabDayRoleParams {
  * keep the old "PMI Lab:" prefix for backwards compatibility.
  */
 export async function syncLabDayRole(params: LabDayRoleParams): Promise<void> {
+  // RETIRED 2026-11-10: the day-level lab_day_event replaces lab_day_role events.
+  if (PER_INSTRUCTOR_LAB_EVENTS_RETIRED) return;
   try {
     if (!(await shouldSyncForUser(params.userEmail, 'sync_lab_roles'))) return;
     if (await isHubInternalLabDayId(params.labDayId)) return;

@@ -80,7 +80,7 @@ export async function planLabDayEvent(
     .from('lab_days')
     .select(
       `id, title, start_time, end_time, section_number, section_label, cert_course,
-       is_adv_cert_testing,
+       is_adv_cert_testing, is_nremt_testing,
        cohort:cohorts!lab_days_cohort_id_fkey(cohort_number, is_test, program:programs(abbreviation))`
     )
     .eq('cohort_id', cohortId)
@@ -218,7 +218,13 @@ export async function planLabDayEvent(
   const isAcls = sections.some(s => s.cert_course === 'acls');
   const isPals = sections.some(s => s.cert_course === 'pals');
   const dayTitle = sections.find(s => s.title)?.title || (isAcls ? 'ACLS' : isPals ? 'PALS' : 'Lab Day');
-  const summary = cohortLabel ? `Lab — ${cohortLabel} · ${dayTitle}` : `Lab — ${dayTitle}`;
+  const isNremt = days.some(d => (d as { is_nremt_testing?: boolean }).is_nremt_testing === true);
+  // Plain hyphens only (no em dash or middle dot), per Ben 2026-11-10.
+  const summary = isNremt
+    ? `NREMT Psychomotor Testing Day${cohortLabel ? ` - ${cohortLabel}` : ''}`
+    : cohortLabel
+      ? `Lab - ${cohortLabel} - ${dayTitle}`
+      : `Lab - ${dayTitle}`;
 
   const lines: string[] = [];
   if (cohortLabel) lines.push(`Cohort: ${cohortLabel}`);

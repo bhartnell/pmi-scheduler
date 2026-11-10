@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { notifyInstructorAssigned } from '@/lib/notifications';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { resolveRoomId } from '@/lib/lab-rooms';
 import { replanForLabDay } from '@/lib/lab-day-event-replan';
@@ -243,22 +242,8 @@ export async function PATCH(
 
     // Send notification if instructor was assigned (and it's a different instructor)
     if (isNewAssignment && body.instructor_email && body.instructor_email !== previousInstructor) {
-      try {
-        const cohort = data.lab_day?.cohort;
-        const cohortName = cohort
-          ? `${cohort.program?.abbreviation || 'PM'} Group ${cohort.cohort_number}`
-          : 'Lab';
-
-        await notifyInstructorAssigned(body.instructor_email, {
-          stationId: id,
-          stationTitle: data.custom_title || data.scenario?.title || `Station ${data.station_number}`,
-          labDate: data.lab_day?.date || '',
-          cohortName,
-        });
-      } catch (notifyError) {
-        // Don't fail the request if notification fails
-        console.error('Failed to send assignment notification:', notifyError);
-      }
+      // Notification removed 2026-11-10 (Ben: stations are not notifications). Station
+      // assignment sends no in-app notification and no email.
 
       // Also upsert into station_instructors table for multi-instructor support
       try {
