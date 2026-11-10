@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isNotWithdrawn } from '@/lib/live-students';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 
@@ -74,7 +75,7 @@ export async function GET(request: NextRequest) {
         .in('lab_group_id', groupIds);
       for (const m of members || []) {
         const s: any = (m as any).student;
-        if (!s) continue;
+        if (!s || !isNotWithdrawn(s.status)) continue;
         (membersByGroup[(m as any).lab_group_id] ??= []).push(s);
       }
     }

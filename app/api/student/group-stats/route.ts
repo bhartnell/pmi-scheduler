@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isNotWithdrawn } from '@/lib/live-students';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireStudentContext } from '@/lib/view-as-student';
 
@@ -33,9 +34,12 @@ export async function GET(request: NextRequest) {
     const groupId = membership.lab_group_id;
     const { data: members } = await supabase
       .from('lab_group_members')
-      .select('student_id')
+      .select('student_id, student:students!lab_group_members_student_id_fkey(status)')
       .eq('lab_group_id', groupId);
-    const memberIds = (members || []).map(m => m.student_id);
+    // Withdrawn students are not counted in the group averages.
+    const memberIds = (members || [])
+      .filter(m => isNotWithdrawn((m as any).student?.status))
+      .map(m => m.student_id);
     const memberCount = memberIds.length;
     if (memberCount === 0) return NextResponse.json({ success: true, group: null });
 

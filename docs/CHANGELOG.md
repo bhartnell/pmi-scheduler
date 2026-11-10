@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-10
+
+withdrawn-pr2 | Withdrawn students PR 2: adv-cert grading-context pickers, scenario send-email recipients and student group-stats counts now exclude withdrawn students (station-assignments, auto-assign, checkoff-status, acls-hub, pals-hub, pals grading-context already filtered). Read-only, no DB writes. Revert: git revert.
+
 ## 2026-11-09
 
 withdrawn-pr1 | Withdrawn students PR 1: shared lib/live-students.ts (isNotWithdrawn, liveEmbeddedStudents; isLiveStudent moved + re-exported for PALS); lab groups list, group detail and group members readers hide withdrawn students. Read-only, no DB writes. Revert: git revert.
