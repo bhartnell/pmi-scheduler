@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isNotWithdrawn } from '@/lib/live-students';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { sendScenarioFeedbackEmail } from '@/lib/email';
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       const { data: groupMembers } = await supabase
         .from('lab_group_members')
         .select(`
-          student:students!lab_group_members_student_id_fkey(id, first_name, last_name, email)
+          student:students!lab_group_members_student_id_fkey(id, first_name, last_name, email, status)
         `)
         .eq('cohort_id', assessment.cohort_id);
 
@@ -124,6 +125,7 @@ export async function POST(request: NextRequest) {
       if (groupMembers) {
         for (const member of groupMembers) {
           const student = member.student as any;
+          if (student && !isNotWithdrawn(student.status)) continue; // withdrawn students get no email
           if (student?.email) {
             recipients.push({ email: student.email, firstName: student.first_name });
           } else if (student?.id) {
