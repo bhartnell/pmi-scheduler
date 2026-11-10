@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { UserMinus, Loader2, X, AlertTriangle } from 'lucide-react';
 
 /**
@@ -29,6 +29,16 @@ export default function WithdrawModal({
   const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [placements, setPlacements] = useState<Array<{ label: string }> | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch(`/api/students/${studentId}/withdraw`)
+      .then((r) => r.json())
+      .then((j) => { if (live && j?.success) setPlacements(j.placements || []); })
+      .catch(() => { if (live) setPlacements(null); });
+    return () => { live = false; };
+  }, [studentId]);
 
   const submit = async () => {
     setError(null);
@@ -94,8 +104,22 @@ export default function WithdrawModal({
             This <strong>preserves</strong> the student&apos;s file - cohort, labs, skills,
             clinical, and team-lead history all stay intact. They&apos;re just excluded from
             the active roster and completion stats. Fully reversible any time via
-            <strong> Re-enroll</strong>. This does <strong>not</strong> delete anything.
+            <strong> Re-enroll</strong>. Past records are never touched.
           </p>
+
+          <div className="text-[11px] rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-2 text-gray-700 dark:text-gray-200">
+            <p className="font-medium mb-1">Future placements that will be cleared (copied to an archive first):</p>
+            {placements === null ? (
+              <p>Checking...</p>
+            ) : placements.length === 0 ? (
+              <p>None found.</p>
+            ) : (
+              <ul className="list-disc pl-4">
+                {placements.map((p, i) => <li key={i}>{p.label}</li>)}
+              </ul>
+            )}
+            <p className="mt-1">Re-enroll does <strong>not</strong> restore cleared future placements; they must be re-added by hand. A student with an OSCE invite gets a cancellation email.</p>
+          </div>
 
           {error && (
             <div className="flex items-start gap-2 text-sm text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-2">

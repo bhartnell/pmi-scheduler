@@ -3,6 +3,20 @@ import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { canManageStudentRoster } from '@/lib/permissions';
 import { logAuditEvent } from '@/lib/audit';
+import { getAccessTokenForUser } from '@/lib/google-calendar';
+import { OSCE_CAL_HOST_EMAIL } from '@/lib/osce-calendar';
+import { planFuturePlacements, clearFuturePlacements } from '@/lib/withdraw-future';
+
+/** Cancel a student's own OSCE invite on the host calendar; only that student is a guest. */
+async function cancelOsceInvite(googleEventId: string): Promise<boolean> {
+  const token = await getAccessTokenForUser(OSCE_CAL_HOST_EMAIL);
+  if (!token) throw new Error('no host token');
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(googleEventId)}?sendUpdates=all`,
+    { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } },
+  );
+  return res.ok || res.status === 404 || res.status === 410;
+}
 
 /**
  * POST /api/students/[id]/withdraw
@@ -40,6 +54,25 @@ async function getCallerRole(email: string | null | undefined) {
   return data?.role ?? null;
 }
 
+/** GET = read-only preview of the future placements a withdrawal would clear (shown in the confirm dialog). */
+export async function GET(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAuth('instructor');
+  if (auth instanceof NextResponse) return auth;
+  try {
+    const { id } = await params;
+    const supabase = getSupabaseAdmin();
+    const { data: st } = await supabase.from('students').select('id, first_name, last_name, email, cohort_id').eq('id', id).single();
+    if (!st) return NextResponse.json({ error: 'Student not found' }, { status: 404 });
+    const plan = await planFuturePlacements(supabase, st);
+    return NextResponse.json({ success: true, placements: plan.rows.map((r) => ({ table: r.table, label: r.label, date: r.date })) });
+  } catch (e) {
+    return NextResponse.json({ error: e instanceof Error ? e.message : 'Unknown error' }, { status: 500 });
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -65,7 +98,7 @@ export async function POST(
 
     const { data: student, error: studentErr } = await supabase
       .from('students')
-      .select('id, first_name, last_name, cohort_id, status')
+      .select('id, first_name, last_name, email, cohort_id, status')
       .eq('id', studentId)
       .single();
 
@@ -138,6 +171,19 @@ export async function POST(
       }
     }
 
+    // Clear FUTURE placements (station assignments, exam signup, OSCE slot). Archive-first; failures are
+    // reported but never undo the withdrawal itself.
+    let cleared: Awaited<ReturnType<typeof clearFuturePlacements>> | null = null;
+    try {
+      const plan = await planFuturePlacements(supabase, student as any);
+      cleared = await clearFuturePlacements({
+        supabase, plan, by: user.email, reason: reason?.trim() || null, cancelInvite: cancelOsceInvite,
+      });
+    } catch (clearErr) {
+      console.error('[withdraw POST] clearing future placements failed', clearErr);
+      cleared = { cleared: [], failed: ['Could not clear future placements; clear them by hand'], batch_id: null, invites_cancelled: 0 };
+    }
+
     try {
       await logAuditEvent({
         user: { email: user.email, role: callerRole },
@@ -150,13 +196,15 @@ export async function POST(
           previous_status: student.status,
           new_status: 'withdrawn',
           notes: reason || null,
+          cleared_placements: cleared?.cleared.length ?? 0,
+          archive_batch_id: cleared?.batch_id ?? null,
         },
       });
     } catch {
       /* best-effort */
     }
 
-    return NextResponse.json({ success: true, student: updated });
+    return NextResponse.json({ success: true, student: updated, cleared });
   } catch (e) {
     console.error('[withdraw POST] error', e);
     return NextResponse.json(
