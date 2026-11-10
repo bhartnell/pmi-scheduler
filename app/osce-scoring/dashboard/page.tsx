@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { buildDayTabs, pickActiveDay, groupDayAssessments, type DashBlock, type DashRosterRow } from '@/lib/osce-dashboard';
+import { todayInOsceZone } from '@/lib/osce-event-pin';
 
 interface Assessment {
   id: string;
@@ -37,6 +39,9 @@ export default function EvaluatorDashboard() {
   const [activeDay, setActiveDay] = useState<number>(1);
   const [isTestMode, setIsTestMode] = useState(false);
   const [eventTitle, setEventTitle] = useState<string>('');
+  const [blocks, setBlocks] = useState<DashBlock[]>([]);
+  const [roster, setRoster] = useState<DashRosterRow[]>([]);
+  const [timing, setTiming] = useState<{ minutes_per_student: number | null; first_slot_offset_min: number | null }>({ minutes_per_student: null, first_slot_offset_min: null });
 
   useEffect(() => {
     const saved = localStorage.getItem('osce_evaluator');
@@ -63,10 +68,6 @@ export default function EvaluatorDashboard() {
       } catch { /* ignore */ }
     }
 
-    // Determine which day based on date
-    const today = new Date().toISOString().split('T')[0];
-    if (today === '2026-03-31') setActiveDay(2);
-
     fetchAssessments(ev.name, eventId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -79,6 +80,12 @@ export default function EvaluatorDashboard() {
       const data = await res.json();
       if (data.success) {
         setAssessments(data.assessments);
+        const b: DashBlock[] = data.blocks || [];
+        setBlocks(b);
+        setRoster(data.roster || []);
+        if (data.timing) setTiming(data.timing);
+        // Select today's tab (OSCE time zone), else the next upcoming day.
+        setActiveDay(pickActiveDay(buildDayTabs(b, data.assessments || []), todayInOsceZone()));
       }
     } catch (err) {
       console.error('Failed to fetch assessments:', err);
@@ -94,7 +101,9 @@ export default function EvaluatorDashboard() {
     router.push('/osce-scoring/enter');
   }
 
-  const dayAssessments = assessments.filter(a => a.day_number === activeDay);
+  const dayTabs = buildDayTabs(blocks, assessments);
+  const groups = groupDayAssessments(activeDay, assessments, roster, blocks, timing);
+  const dayHasRoster = roster.some(r => blocks.find(b => b.id === r.time_block_id)?.day_number === activeDay);
 
   const scenarioColors: Record<string, string> = {
     A: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
@@ -141,7 +150,7 @@ export default function EvaluatorDashboard() {
       {/* Day tabs */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
         <div className="max-w-3xl mx-auto flex">
-          {[1, 2].map(day => (
+          {dayTabs.map(({ day, label }) => (
             <button
               key={day}
               onClick={() => setActiveDay(day)}
@@ -151,7 +160,7 @@ export default function EvaluatorDashboard() {
                   : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
               }`}
             >
-              Day {day} &mdash; March {day === 1 ? '30' : '31'}
+              {label}
             </button>
           ))}
         </div>
@@ -161,10 +170,14 @@ export default function EvaluatorDashboard() {
       <div className="max-w-3xl mx-auto p-4 space-y-3">
         {loading ? (
           <div className="text-center py-12 text-slate-500">Loading assessments...</div>
-        ) : dayAssessments.length === 0 ? (
-          <div className="text-center py-12 text-slate-500">No assessments for Day {activeDay}</div>
+        ) : groups.length === 0 ? (
+          <div className="text-center py-12 text-slate-500">
+            {dayHasRoster ? 'Scenarios have not been assigned yet. See the coordinator.' : `No assessments for Day ${activeDay}`}
+          </div>
         ) : (
-          dayAssessments.map(a => {
+          groups.flatMap(g => [
+            ...(g.blockLabel ? [<h2 key={`h-${g.blockId}`} className="pt-2 text-sm font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{g.blockLabel}</h2>] : []),
+            ...g.items.map(({ assessment: a, startTime }) => {
             const isSubmitted = !!a.evaluator_score?.submitted_at;
             const readiness = a.evaluator_score?.readiness;
             const hasStarted = !!a.evaluator_score;
@@ -181,7 +194,7 @@ export default function EvaluatorDashboard() {
                     </span>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-lg">{a.student_name}</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Slot {a.slot_number}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{startTime ?? `Slot ${a.slot_number}`}</p>
                     </div>
                   </div>
                   {isSubmitted && (
@@ -224,7 +237,8 @@ export default function EvaluatorDashboard() {
                 </div>
               </div>
             );
-          })
+            }),
+          ])
         )}
       </div>
     </div>
