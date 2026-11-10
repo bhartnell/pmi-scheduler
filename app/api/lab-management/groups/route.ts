@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
+import { isNotWithdrawn } from '@/lib/live-students';
 
 // Belt-and-suspenders against the App Router edge / route cache. The
 // route is implicitly dynamic (reads searchParams), but after the
@@ -73,7 +74,8 @@ export async function GET(request: NextRequest) {
             first_name,
             last_name,
             agency,
-            photo_url
+            photo_url,
+            status
           )
         `)
         .in('lab_group_id', groupIds);
@@ -87,7 +89,7 @@ export async function GET(request: NextRequest) {
         if (!membersByGroup.has(gid)) {
           membersByGroup.set(gid, []);
         }
-        if (assignment.student) {
+        if (assignment.student && isNotWithdrawn((assignment.student as { status?: string | null }).status)) {
           membersByGroup.get(gid)!.push(assignment.student);
         }
       }

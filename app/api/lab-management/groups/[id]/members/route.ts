@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { liveEmbeddedStudents } from '@/lib/live-students';
 
 // Force dynamic + no-store. Saves go through here and the response
 // returns the resolved roster; if anything cached the response, a
@@ -47,7 +48,8 @@ export async function GET(
           first_name,
           last_name,
           agency,
-          photo_url
+          photo_url,
+          status
         )
       `)
       .eq('lab_group_id', groupId);
@@ -56,7 +58,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      members: data?.map(a => a.student) || [],
+      members: liveEmbeddedStudents(data),
     }, { headers: NO_CACHE_HEADERS });
   } catch (error) {
     console.error('Error fetching members:', error);

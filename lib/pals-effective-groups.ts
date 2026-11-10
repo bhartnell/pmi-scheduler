@@ -1,3 +1,4 @@
+import { isLiveStudent } from '@/lib/live-students';
 // Effective PALS group membership for a course day.
 // lab_group_members is never changed: the coordinator regroup writes overlay
 // rows to pals_group_moves, and every reader (graders, coordinator, record
@@ -29,11 +30,7 @@ export function filterActiveMoves<T extends GroupMoveRow>(moves: T[], today: str
   return (moves || []).filter((m) => m.duration !== 'today' || m.move_date === today);
 }
 
-/** A student is live unless explicitly withdrawn/dropped/inactive. */
-export function isLiveStudent(status: string | null | undefined): boolean {
-  if (!status) return true;
-  return status === 'active';
-}
+export { isLiveStudent };
 
 /**
  * Pure: base members per group -> effective members per group.
