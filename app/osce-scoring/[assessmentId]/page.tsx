@@ -361,6 +361,10 @@ export default function ScoringPage() {
   const pendingChangesRef = useRef<Record<string, unknown>>({});
   const saveQueueRef = useRef<Record<string, unknown>[]>([]);
   const isSubmitted = !!score?.submitted_at;
+  // Editing a submitted evaluation: only after the explicit confirm (no hard locks).
+  const [editing, setEditing] = useState(false);
+  const editingRef = useRef(false);
+  const locked = isSubmitted && !editing;
 
   // Online/offline detection
   useEffect(() => {
@@ -471,6 +475,7 @@ export default function ScoringPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           evaluator_name: evaluator.name,
+          ...(editingRef.current ? { edit_after_submit: true } : {}),
           ...merged,
         }),
       });
@@ -495,6 +500,7 @@ export default function ScoringPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           evaluator_name: evaluator.name,
+          ...(editingRef.current ? { edit_after_submit: true } : {}),
           ...dataToSave,
         }),
       });
@@ -516,7 +522,7 @@ export default function ScoringPage() {
   }, [assessmentId, evaluator]);
 
   function handleChange(field: string, value: string | null) {
-    if (isSubmitted) return;
+    if (locked) return;
     setScore(prev => prev ? { ...prev, [field]: value } as Score : prev);
     pendingChangesRef.current[field] = value;
 
@@ -599,6 +605,12 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
     setTimeout(() => printWindow.print(), 300);
   }
 
+  function handleStartEdit() {
+    if (!window.confirm('This evaluation has already been submitted. Are you sure you want to edit it?')) return;
+    editingRef.current = true;
+    setEditing(true);
+  }
+
   async function handleSubmit() {
     if (!evaluator || !score?.readiness) return;
 
@@ -612,11 +624,13 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
       const res = await fetch(`/api/osce/scores/${assessmentId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ evaluator_name: evaluator.name }),
+        body: JSON.stringify({ evaluator_name: evaluator.name, ...(editingRef.current ? { edit_after_submit: true } : {}) }),
       });
       const data = await res.json();
       if (data.success) {
         setScore(data.score);
+        editingRef.current = false;
+        setEditing(false);
       } else {
         alert(data.error || 'Submit failed');
       }
@@ -663,19 +677,33 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
   // Scoring content extracted as a variable for reuse in both mobile and desktop layouts
   const scoringContent = (
     <>
-      {isOnline && !isSubmitted && (
+      {isOnline && !locked && (
         <div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400 mb-2 print:hidden">
           <span className="inline-block w-1.5 h-1.5 bg-green-500 rounded-full" />
           Connected
         </div>
       )}
 
-      {isSubmitted && (
+      {isSubmitted && editing && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 rounded-xl p-4 mb-4">
+          <p className="text-amber-800 dark:text-amber-200 font-medium text-sm">
+            Editing a submitted evaluation. Changes save automatically and are recorded. Press Save changes when you are done.
+          </p>
+        </div>
+      )}
+
+      {locked && (
         <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl p-4 mb-4">
           <p className="text-green-800 dark:text-green-200 font-medium text-sm">
-            This score was submitted and locked on {new Date(score.submitted_at!).toLocaleString()}.
-            Scores cannot be modified after submission.
+            This score was submitted on {new Date(score.submitted_at!).toLocaleString()}.
+            You can still change it with Edit this evaluation.
           </p>
+          <button
+            onClick={handleStartEdit}
+            className="mt-3 w-full py-3 bg-amber-500 text-white font-bold rounded-xl hover:bg-amber-600 active:scale-[0.98] transition-all text-base"
+          >
+            Edit this evaluation
+          </button>
           <button
             onClick={() => router.push('/osce-scoring/dashboard')}
             className="mt-3 w-full py-3 bg-blue-600 text-white font-bold rounded-xl hover:bg-blue-700 active:scale-[0.98] transition-all text-base"
@@ -715,7 +743,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
             notesKey={`${f.key}_notes`}
             score={score}
             onChange={handleChange}
-            disabled={isSubmitted}
+            disabled={locked}
             expandedNotes={expandedNotes}
             onToggleNotes={handleToggleNotes}
           />
@@ -737,7 +765,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
                   value={v}
                   selected={(score as unknown as Record<string, unknown>)[d.key] === v}
                   onClick={() => handleChange(d.key, (score as unknown as Record<string, unknown>)[d.key] === v ? null : v)}
-                  disabled={isSubmitted}
+                  disabled={locked}
                 />
               ))}
             </div>
@@ -748,7 +776,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
           <textarea
             value={score.oral_notes || ''}
             onChange={e => handleChange('oral_notes', e.target.value)}
-            disabled={isSubmitted}
+            disabled={locked}
             placeholder="Notes on oral board performance..."
             className="w-full p-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm resize-none"
             rows={3}
@@ -767,12 +795,12 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
               key={opt.value}
               type="button"
               onClick={() => handleChange('readiness', score.readiness === opt.value ? null : opt.value)}
-              disabled={isSubmitted}
+              disabled={locked}
               className={`min-h-[60px] rounded-xl font-bold text-center transition-all ${
                 score.readiness === opt.value
                   ? `${opt.color} ring-2`
                   : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300 hover:bg-slate-200'
-              } ${isSubmitted ? 'opacity-60 cursor-not-allowed' : 'active:scale-95'}`}
+              } ${locked ? 'opacity-60 cursor-not-allowed' : 'active:scale-95'}`}
             >
               <span className="text-2xl block">{opt.icon}</span>
               <span className="text-xs">{opt.label}</span>
@@ -784,7 +812,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
           <textarea
             value={score.concerns_notes || ''}
             onChange={e => handleChange('concerns_notes', e.target.value)}
-            disabled={isSubmitted}
+            disabled={locked}
             placeholder="Describe specific concerns..."
             className="w-full p-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm resize-none mb-3"
             rows={3}
@@ -800,7 +828,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
         <textarea
           value={score.general_notes || ''}
           onChange={e => handleChange('general_notes', e.target.value)}
-          disabled={isSubmitted}
+          disabled={locked}
           placeholder="Any additional observations..."
           className="w-full p-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white text-sm resize-none"
           rows={4}
@@ -808,7 +836,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
       </div>
 
       {/* Submit or Back to Dashboard */}
-      {!isSubmitted ? (
+      {!locked ? (
         <div className="mt-8 mb-8">
           <button
             onClick={handleSubmit}
@@ -819,10 +847,10 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
                 : 'bg-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-700 dark:text-slate-500'
             }`}
           >
-            {submitting ? 'Submitting...' : !score.readiness ? 'Select Readiness to Submit' : 'Submit & Lock Score'}
+            {submitting ? (isSubmitted ? 'Saving...' : 'Submitting...') : !score.readiness ? 'Select Readiness to Submit' : isSubmitted ? 'Save changes' : 'Submit Score'}
           </button>
           <p className="text-xs text-slate-500 dark:text-slate-400 text-center mt-2">
-            Once submitted, the score cannot be modified.
+            {isSubmitted ? 'Your changes are recorded.' : 'After submitting you can still edit it, with a warning.'}
           </p>
         </div>
       ) : (
@@ -872,7 +900,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
             <div className="text-right min-w-[60px]">
               {isSubmitted ? (
                 <span className="text-xs font-medium text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-1 rounded-full">
-                  Locked
+                  {editing ? 'Editing' : 'Submitted'}
                 </span>
               ) : saving ? (
                 <span className="text-xs text-amber-500">Saving...</span>

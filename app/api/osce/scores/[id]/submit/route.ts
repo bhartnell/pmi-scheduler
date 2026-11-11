@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { logOsceEditAfterSubmit } from '@/lib/osce-score-edit';
 
-// POST - Final submit (locks the score)
+// POST - Submit the score. A submitted score is re-stampable only with edit_after_submit (no hard locks).
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -10,7 +11,7 @@ export async function POST(
 
   try {
     const body = await req.json();
-    const { evaluator_name } = body;
+    const { evaluator_name, edit_after_submit } = body;
 
     if (!evaluator_name) {
       return NextResponse.json({ success: false, error: 'evaluator_name required' }, { status: 400 });
@@ -30,7 +31,8 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Score not found' }, { status: 404 });
     }
 
-    if (existing.submitted_at) {
+    const isResubmit = !!existing.submitted_at;
+    if (isResubmit && edit_after_submit !== true) {
       return NextResponse.json({ success: false, error: 'Already submitted' }, { status: 403 });
     }
 
@@ -38,7 +40,7 @@ export async function POST(
       return NextResponse.json({ success: false, error: 'Readiness assessment required before submitting' }, { status: 400 });
     }
 
-    // Lock it
+    // Stamp it
     const { data, error } = await supabase
       .from('osce_evaluator_scores')
       .update({ submitted_at: new Date().toISOString() })
@@ -48,6 +50,16 @@ export async function POST(
       .single();
 
     if (error) throw error;
+    if (isResubmit) {
+      const { data: asmt } = await supabase.from('osce_assessments').select('student_name').eq('id', id).maybeSingle();
+      await logOsceEditAfterSubmit({
+        assessmentId: id,
+        studentName: asmt?.student_name,
+        evaluatorName: evaluator_name,
+        event: 'resubmit',
+        changes: { submitted_at: { old: existing.submitted_at, new: data.submitted_at } },
+      });
+    }
     return NextResponse.json({ success: true, score: data });
   } catch (err) {
     console.error('Error submitting score:', err);
