@@ -47,6 +47,7 @@ interface SyncStats {
   totalEvents: number;
   eventsByType: Record<string, number>;
   lastSyncedByType: Record<string, string>;
+  retiredFuture?: Record<string, number>;
 }
 
 interface SyncLogEntry {
@@ -194,6 +195,7 @@ export default function CalendarSyncPage() {
   const [cleanupPreview, setCleanupPreview] = useState<CleanupResult | null>(null);
   const [confirmingCleanup, setConfirmingCleanup] = useState(false);
   const [retireBusy, setRetireBusy] = useState(false);
+  const [blockBusy, setBlockBusy] = useState(false);
   const [planBusy, setPlanBusy] = useState(false);
 
   // ── Auth guard ──────────────────────────────────────────────────────────
@@ -346,6 +348,44 @@ export default function CalendarSyncPage() {
       if (data.failed > 0) console.error('[retire-lab-events] failures:', data.failures);
     } finally {
       setRetireBusy(false);
+    }
+  };
+
+  // ── Cancel lab-block instances covered by the day event (CAL 2/3d B, one-time) ──
+  const handleRetireLabBlocks = async (canary: boolean) => {
+    setBlockBusy(true);
+    try {
+      const dry = await (await fetch('/api/admin/calendar-sync/retire-lab-blocks')).json();
+      if (!dry.success) {
+        toast.error(dry.error || 'Dry run failed');
+        return;
+      }
+      if (dry.total === 0) {
+        toast.success(`Nothing to cancel (${dry.kept_count} lab-block dates kept). This button can come out.`);
+        return;
+      }
+      const target = canary ? 'bhartnell@pmi.edu only (canary)' : 'ALL users';
+      const ok = window.confirm(
+        `Cancel ${dry.total} future lab class-block dates across ${dry.series_affected} series?\n\n` +
+          `Each one is replaced by that lab day's single calendar event. Scope now: ${target}. ` +
+          `Only those dates are cancelled, the series stays, no mail is sent, past dates stay. ` +
+          `${dry.kept_count} lab-block dates are kept (no lab day linked, or no day event for that person).`,
+      );
+      if (!ok) return;
+      const res = await fetch('/api/admin/calendar-sync/retire-lab-blocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: true, ...(canary ? { user_email: 'bhartnell@pmi.edu' } : {}) }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error || 'Cancel failed');
+        return;
+      }
+      toast.success(`Cancelled ${data.cancelled}; already gone ${data.already_gone}; skipped ${data.skipped.length}; failed ${data.failed}.`);
+      if (data.failed > 0) console.error('[retire-lab-blocks] failures:', data.failures);
+    } finally {
+      setBlockBusy(false);
     }
   };
 
@@ -816,6 +856,27 @@ export default function CalendarSyncPage() {
                         One lab = one calendar event now. Removes the future station, general-lab and role events created before that rule, shows the count first, sends no mail, keeps a backup. Comes out once the future count is 0.
                       </p>
                     </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={() => handleRetireLabBlocks(true)}
+                        disabled={blockBusy}
+                        className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium disabled:opacity-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        {blockBusy ? 'Working…' : 'Cancel covered lab class dates: canary (Ben only)'}
+                      </button>
+                      <button
+                        onClick={() => handleRetireLabBlocks(false)}
+                        disabled={blockBusy}
+                        className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-sm font-medium disabled:opacity-50"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        Cancel covered lab class dates: everyone
+                      </button>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 max-w-xl">
+                        The class-schedule entry for a lab (for example "Day 1 S2 Lab") duplicates the lab day event. Cancels only the future dates that have a lab day and a day event for that person, shows the list first, sends no mail, leaves the series and any date without a lab day alone. Comes out once the list is empty.
+                      </p>
+                    </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400">
                       Clean up duplicates: built for the 2026-05-06 duplicate incident; deletes every app-created event on connected calendars. Re-sync PALS days and Remove test-cohort PALS events: one-time buttons from the 2026-10-29 PALS dry run.
                     </p>
@@ -894,8 +955,11 @@ export default function CalendarSyncPage() {
                       </thead>
                       <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                         {Object.entries(stats.eventsByType)
-                          .sort(([, a], [, b]) => b - a)
+                          .sort(([ta, a], [tb, b]) =>
+                            ta === 'lab_day_event' ? -1 : tb === 'lab_day_event' ? 1 : b - a,
+                          )
                           .map(([type, count]) => {
+                            const isRetired = type in (stats.retiredFuture ?? {});
                             const lastCreated = stats.lastSyncedByType?.[type];
                             const state = staleness(lastCreated);
                             const badge = {
@@ -924,11 +988,17 @@ export default function CalendarSyncPage() {
                                     : '--'}
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap">
-                                  <span
-                                    className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${badge}`}
-                                  >
-                                    {label}
-                                  </span>
+                                  {isRetired ? (
+                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                                      Retired (one event per lab day){stats.retiredFuture ? `, ${stats.retiredFuture[type] ?? 0} future` : ''}
+                                    </span>
+                                  ) : (
+                                    <span
+                                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${badge}`}
+                                    >
+                                      {label}
+                                    </span>
+                                  )}
                                 </td>
                               </tr>
                             );

@@ -49,6 +49,26 @@ export async function GET() {
       }
     });
 
+    // Retired per-instructor lab kinds (one event per lab day, 2026-11-10): how many
+    // FUTURE rows each still has, so the freshness table can say "Retired, N future".
+    const RETIRED = ['station_assignment', 'general_lab', 'lab_day_role'];
+    const retiredFuture: Record<string, number> = Object.fromEntries(RETIRED.map((k) => [k, 0]));
+    try {
+      const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
+      const { data: futureDays } = await supabase.from('lab_days').select('id').gte('date', today);
+      const ids = (futureDays || []).map((d: { id: string }) => d.id);
+      for (let i = 0; i < ids.length; i += 100) {
+        const { data: rows } = await supabase
+          .from('google_calendar_events')
+          .select('source_type')
+          .in('source_type', RETIRED)
+          .in('lab_day_id', ids.slice(i, i + 100));
+        for (const r of rows || []) retiredFuture[r.source_type] = (retiredFuture[r.source_type] || 0) + 1;
+      }
+    } catch {
+      // Display only; the table falls back to showing no future count.
+    }
+
     // Events per user (for instructor table)
     const { data: eventCounts } = await supabase
       .from('google_calendar_events')
@@ -91,6 +111,7 @@ export async function GET() {
         totalEvents: totalEvents || 0,
         eventsByType,
         lastSyncedByType,
+        retiredFuture,
       },
       recentLogs,
     });

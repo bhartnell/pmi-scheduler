@@ -52,7 +52,7 @@ export interface InstructorBlocksFilter {
 const FULL_BLOCK_SELECT = `
   id, recurring_group_id, semester_id, program_schedule_id,
   date, start_time, end_time, title, course_name, status,
-  block_type, content_notes, day_of_week,
+  block_type, linked_lab_day_id, content_notes, day_of_week,
   instructor_id, additional_instructor_id,
   room:pmi_rooms!pmi_schedule_blocks_room_id_fkey(name),
   program_schedule:pmi_program_schedules!pmi_schedule_blocks_program_schedule_id_fkey(
