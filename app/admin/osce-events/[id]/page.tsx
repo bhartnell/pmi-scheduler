@@ -36,6 +36,7 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
+import { computeSlotTime, clock12 } from '@/lib/osce-student-invites';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -111,7 +112,7 @@ interface ScheduleBlock {
   max_observers: number;
   sort_order: number;
   observers: { id: string; name: string; agency: string; email: string }[];
-  students: { id: string; name: string; slot: number }[];
+  students: { id: string; name: string; slot: number; invite_stale?: boolean }[];
   matches: { studentName: string; observerName: string; agency: string }[];
   observerCount: number;
 }
@@ -2009,6 +2010,14 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
   const [scenarioMsg, setScenarioMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [savingScenario, setSavingScenario] = useState<string | null>(null);
 
+  // Admin move panel (Move... on a roster row)
+  const [moveFor, setMoveFor] = useState<{ id: string; name: string; blockId: string; slot: number } | null>(null);
+  const [moveBlock, setMoveBlock] = useState('');
+  const [moveSlot, setMoveSlot] = useState<string>('end');
+  const [moveSwap, setMoveSwap] = useState(false);
+  const [moveBusy, setMoveBusy] = useState(false);
+  const [moveMsg, setMoveMsg] = useState<{ ok: boolean; text: string } | null>(null);
+
   const fetchScenarios = useCallback(async () => {
     try {
       const res = await fetch(`/api/osce/events/${eventId}/student-scenarios`);
@@ -2078,6 +2087,46 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
     fetchSchedule();
   }, [fetchSchedule]);
 
+  const slotStartLabel = (blockId: string, slot: number): string | null => {
+    const blk = schedule.find(b => b.id === blockId);
+    if (!blk || event.first_slot_offset_min == null || !event.minutes_per_student) return null;
+    return clock12(computeSlotTime({ blockStart: blk.start_time, offsetMin: event.first_slot_offset_min, slotNumber: slot, minutesPerStudent: event.minutes_per_student }).start);
+  };
+
+  const openMove = (blockId: string, student: { id: string; name: string; slot: number }) => {
+    setMoveFor({ id: student.id, name: student.name, blockId, slot: student.slot });
+    setMoveBlock(blockId);
+    setMoveSlot('end');
+    setMoveSwap(false);
+    setMoveMsg(null);
+  };
+
+  const handleMove = async () => {
+    if (!moveFor) return;
+    setMoveBusy(true);
+    setMoveMsg(null);
+    try {
+      const res = await fetch(`/api/osce/events/${eventId}/students/move`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(moveSlot === 'end'
+          ? { scheduleId: moveFor.id, blockId: moveBlock, mode: 'end' }
+          : { scheduleId: moveFor.id, blockId: moveBlock, mode: 'slot', slot: Number(moveSlot), swap: moveSwap }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setMoveMsg({ ok: true, text: `Moved ${moveFor.name}. Their invite is not updated yet; use Send student slot invites.` });
+        setMoveFor(null);
+        await fetchSchedule();
+      } else {
+        setMoveMsg({ ok: false, text: data.error || 'Move failed' });
+      }
+    } catch {
+      setMoveMsg({ ok: false, text: 'Network error' });
+    }
+    setMoveBusy(false);
+  };
+
   const handleReorder = async (blockId: string, students: { id: string; name: string; slot: number }[], index: number, direction: 'up' | 'down') => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     if (newIndex < 0 || newIndex >= students.length) return;
@@ -2135,6 +2184,9 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
       {scenarioMsg && (
         <div className={`p-3 rounded-lg text-sm border ${scenarioMsg.ok ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300' : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'}`}>{scenarioMsg.text}</div>
       )}
+      {moveMsg && (
+        <div className={`p-3 rounded-lg text-sm border ${moveMsg.ok ? 'bg-green-50 border-green-200 text-green-700 dark:bg-green-900/20 dark:border-green-800 dark:text-green-300' : 'bg-red-50 border-red-200 text-red-700 dark:bg-red-900/20 dark:border-red-800 dark:text-red-300'}`}>{moveMsg.text}</div>
+      )}
       {blocksWithStudents.map(block => (
         <div key={block.id} className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
           <div className="flex items-center gap-3 px-4 py-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
@@ -2151,14 +2203,23 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
           </div>
           <div className="divide-y divide-gray-100 dark:divide-gray-700/50">
             {block.students.map((student, idx) => (
-              <div key={student.id} className="flex items-center justify-between px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+              <div key={student.id} className="flex flex-wrap items-center justify-between px-4 py-2 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-200 dark:bg-gray-700 text-xs font-medium text-gray-600 dark:text-gray-300">
                     {student.slot}
                   </span>
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{student.name}</span>
+                  {student.invite_stale && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">time changed, invite not updated</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => openMove(block.id, student)}
+                    className="px-3 py-1 min-h-[36px] text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  >
+                    Move...
+                  </button>
                   {scenarioRows[student.id]?.locked ? (
                     <span className="text-xs text-gray-500 dark:text-gray-400" title="Scores have been entered, so the scenario is locked">
                       Scenario {scenarioRows[student.id]?.scenario} (scored, locked)
@@ -2198,6 +2259,53 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
                   </button>
                 </div>
                 </div>
+                {moveFor?.id === student.id && (() => {
+                  const tgt = schedule.find(b => b.id === moveBlock);
+                  const taken = new Map((tgt?.students || []).filter(x => x.id !== student.id).map(x => [x.slot, x.name]));
+                  const nominal = Math.max(10, ...(tgt?.students || []).map(x => x.slot));
+                  const endSlot = Math.max(0, ...Array.from(taken.keys())) + 1;
+                  const chosenSlot = moveSlot === 'end' ? endSlot : Number(moveSlot);
+                  const occupant = taken.get(chosenSlot);
+                  const startLabel = slotStartLabel(moveBlock, chosenSlot);
+                  return (
+                    <div className="basis-full mt-2 p-3 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 space-y-2 w-full">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">Move {student.name}</p>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <label className="text-sm text-gray-700 dark:text-gray-300">Block
+                          <select value={moveBlock} onChange={e => { setMoveBlock(e.target.value); setMoveSlot('end'); setMoveSwap(false); }}
+                            className="ml-2 min-h-[36px] px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            {schedule.map(b => <option key={b.id} value={b.id}>Day {b.day_number} - {b.label}</option>)}
+                          </select>
+                        </label>
+                        <label className="text-sm text-gray-700 dark:text-gray-300">Position
+                          <select value={moveSlot} onChange={e => { setMoveSlot(e.target.value); setMoveSwap(false); }}
+                            className="ml-2 min-h-[36px] px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
+                            <option value="end">End of block (slot {endSlot})</option>
+                            {Array.from({ length: nominal }, (_, i) => i + 1).map(n => (
+                              <option key={n} value={String(n)}>Slot {n}{taken.has(n) ? ` (${taken.get(n)})` : ' (open)'}</option>
+                            ))}
+                          </select>
+                        </label>
+                        {occupant && (
+                          <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                            <input type="checkbox" checked={moveSwap} onChange={e => setMoveSwap(e.target.checked)} />
+                            Swap with {occupant}
+                          </label>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Result: slot {chosenSlot}{startLabel ? `, starts ${startLabel}` : ''}. Scores and scenario stay with the student. The student&apos;s invite is not re-sent automatically.
+                      </p>
+                      <div className="flex gap-2">
+                        <button onClick={handleMove} disabled={moveBusy || (!!occupant && !moveSwap)}
+                          className="px-3 py-2 min-h-[44px] text-sm font-medium rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                          {moveBusy ? 'Moving...' : 'Move'}
+                        </button>
+                        <button onClick={() => setMoveFor(null)} className="px-3 py-2 min-h-[44px] text-sm rounded-lg border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200">Cancel</button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             ))}
           </div>
