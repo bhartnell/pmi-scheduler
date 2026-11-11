@@ -9,6 +9,7 @@ import {
 } from '@/lib/google-shared-calendar';
 import { findBlocksForInstructor, assertOwnsGoogleEvent } from '@/lib/instructor-blocks';
 import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
+import { coveredLabBlockIds } from '@/lib/lab-block-coverage';
 
 /**
  * POST /api/calendar/sync-my-blocks
@@ -102,6 +103,16 @@ export async function POST(request: NextRequest) {
   // group becomes ONE Google recurring event — the whole point of
   // this endpoint is to spare the user 15 individual events for
   // a 15-week class series.
+  // One event per lab day (CAL 2/3d B): lab-type blocks whose date has a linked lab day
+  // and a day event this caller is a guest on ride on that day event instead.
+  // A coverage read failure keeps the old behaviour (nothing dropped).
+  let coveredIds = new Set<string>();
+  try {
+    coveredIds = await coveredLabBlockIds(supabase, user.email, filtered);
+  } catch (e) {
+    console.error('[sync-my-blocks] lab-block coverage check failed, pushing as before:', e);
+  }
+
   const groups = new Map<string, BlockRow[]>();
   for (const b of filtered) {
     const key = b.recurring_group_id ?? `block:${b.id}`;
@@ -139,7 +150,21 @@ export async function POST(request: NextRequest) {
   let failed = 0;
   const outcomes: Array<{ key: string; label: string; status: string; google_event_id?: string; error?: string }> = [];
 
-  for (const [key, list] of groups.entries()) {
+  for (const [key, listAll] of groups.entries()) {
+    let list = listAll;
+    if (coveredIds.size > 0 && list.some((b) => coveredIds.has(b.id))) {
+      if (existingByKey.has(key)) {
+        // Covered instances were cancelled one by one (retire-lab-blocks); re-patching the
+        // series recurrence could bring them back, so leave the existing series untouched.
+        outcomes.push({ key, label: list[0].title || 'lab series', status: 'skipped-lab-day-event' });
+        continue;
+      }
+      list = list.filter((b) => !coveredIds.has(b.id));
+      if (list.length === 0) {
+        outcomes.push({ key, label: listAll[0].title || 'lab series', status: 'skipped-lab-day-event' });
+        continue;
+      }
+    }
     list.sort((a, b) => (a.date ?? '').localeCompare(b.date ?? ''));
     const first = list[0];
     // Supabase embed shape can come back as object or array depending

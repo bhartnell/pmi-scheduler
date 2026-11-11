@@ -25,6 +25,7 @@ import {
 } from '@/lib/google-shared-calendar';
 import { findBlocksForInstructor, assertOwnsGoogleEvent } from '@/lib/instructor-blocks';
 import { CALENDAR_TIMEZONE } from '@/lib/calendar-timezone';
+import { coveredLabBlockIds } from '@/lib/lab-block-coverage';
 
 export type SyncSeriesResult =
   | { status: 'synced'; eventId: string; created: boolean }
@@ -98,10 +99,41 @@ export async function syncSeriesForUser(opts: SeriesKey): Promise<SyncSeriesResu
   if (blocksErr) return { status: 'failed', error: blocksErr };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const filtered = (blocks ?? []).filter(
+  let filtered = (blocks ?? []).filter(
     (b: any) => b.date && b.start_time && b.end_time
   );
   if (filtered.length === 0) return { status: 'no-blocks' };
+
+  // One event per lab day (CAL 2/3d B): lab-type blocks whose date has a linked lab
+  // day AND a day event this person is a guest on ride on that day event, not here.
+  // A coverage read failure keeps the old behaviour (nothing dropped).
+  let coveredIds = new Set<string>();
+  try {
+    coveredIds = await coveredLabBlockIds(supabase, opts.userEmail, filtered);
+  } catch (e) {
+    console.error('[calendar-auto-sync] lab-block coverage check failed, pushing as before:', e);
+  }
+
+  // Look up existing mapping. If exists, PATCH; otherwise POST.
+  const sourceType = sourceTypeFromKey(opts);
+  const sourceId = sourceIdFromKey(opts);
+  const { data: existing } = await supabase
+    .from('google_calendar_events')
+    .select('id, google_event_id')
+    .ilike('user_email', opts.userEmail)
+    .eq('source_type', sourceType)
+    .eq('source_id', sourceId)
+    .maybeSingle();
+
+  if (existing?.google_event_id && coveredIds.size > 0) {
+    // Covered instances were cancelled one by one (retire-lab-blocks). Re-patching the
+    // series recurrence could bring them back, so leave an existing series untouched.
+    return { status: 'synced', eventId: existing.google_event_id, created: false };
+  }
+  if (!existing?.google_event_id && coveredIds.size > 0) {
+    filtered = filtered.filter((b: any) => !coveredIds.has(b.id));
+    if (filtered.length === 0) return { status: 'no-blocks' };
+  }
 
   const first = filtered[0];
   const psRaw = (first as any).program_schedule;
@@ -125,17 +157,6 @@ export async function syncSeriesForUser(opts: SeriesKey): Promise<SyncSeriesResu
 
   const dates = filtered.map(b => b.date as string);
   const { rrule, rdates } = buildRRULE(dates);
-
-  // Look up existing mapping. If exists, PATCH; otherwise POST.
-  const sourceType = sourceTypeFromKey(opts);
-  const sourceId = sourceIdFromKey(opts);
-  const { data: existing } = await supabase
-    .from('google_calendar_events')
-    .select('id, google_event_id')
-    .ilike('user_email', opts.userEmail)
-    .eq('source_type', sourceType)
-    .eq('source_id', sourceId)
-    .maybeSingle();
 
   if (existing?.google_event_id) {
     // Hard ownership guard before any modification. The mapping

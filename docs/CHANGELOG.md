@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-11
 
+cal-2-3d-b-c | CAL 2/3d B+C(c): lab-type class blocks with a linked lab day stop being pushed to a person who is a guest on that day's event (lib/lab-block-coverage.ts, calendar-auto-sync, sync-my-blocks; existing series left unpatched so cancellations hold); superadmin retire-lab-blocks route + button (dry run, instance-level cancel only, sendUpdates=none, audit_log restore point); freshness table shows retired kinds as Retired with future count, lab_day_event first. No schema change, no Google calls from Code. Revert: git revert.
 timer-stale-scope | TIMER: stale rule keyed on lab day (earlier date or >60 min past end, America/Los_Angeles) in timer/active + per-day timer GET; 'another section's clock' fallback only for same date + same cohort (?forLabDay=); lab day header gets inline rotation minutes/count editor (feedback 460eb62f). lib/timer-staleness.ts + tests. No schema change. Revert: git revert.
 cal-2-3d-plan | CAL 2/3d: planUpcomingLabDayEvents (every upcoming lab day with people gets its one day event; nightly /api/cron/lab-day-event-plan + superadmin /api/admin/calendar-sync/plan-day-events, sendUpdates=none, no deletes); retire-lab-events now keeps any row whose person has no day event for that cohort+date ('kept: no day event yet'). No schema change. Revert: git revert.
 
