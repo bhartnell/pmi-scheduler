@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { isTimerStale } from '@/lib/timer-staleness';
 
 // GET - Get timer state for a lab day
 export async function GET(request: NextRequest) {
@@ -26,13 +27,29 @@ export async function GET(request: NextRequest) {
       .from('lab_timer_state')
       .select(`
         id, lab_day_id, rotation_number, status, started_at, paused_at, elapsed_when_paused, duration_seconds, debrief_seconds, mode, rotation_acknowledged, version, updated_at,
-        lab_day:lab_days(id, date)
+        lab_day:lab_days(id, date, end_time)
       `)
       .eq('lab_day_id', labDayId)
       .single();
 
     if (error && (error as any).code !== 'PGRST116') { // PGRST116 = no rows returned
       throw error;
+    }
+
+    // End-of-day close (existing stop shape, same as timer/active): a running/paused timer whose
+    // lab day is over (earlier date, or ended >60 min ago) is stopped when a controller reads it.
+    if (data && (data.status === 'running' || data.status === 'paused')
+      && isTimerStale((data.lab_day as unknown) as { date: string; end_time?: string | null } | null)) {
+      const { error: stopErr } = await supabase
+        .from('lab_timer_state')
+        .update({ status: 'stopped', started_at: null, paused_at: null, elapsed_when_paused: 0 })
+        .eq('lab_day_id', labDayId);
+      if (!stopErr) {
+        data.status = 'stopped';
+        data.started_at = null;
+        data.paused_at = null;
+        data.elapsed_when_paused = 0;
+      }
     }
 
     // Version-based conditional response: if client sends version and it matches,

@@ -127,7 +127,7 @@ export default function TimerBanner({
     if (body?.labDay) setOtherDayName(body.labDay.displayName || null);
   }, []);
   const { timer: fallbackRaw, displaySeconds: fallbackSeconds } = useLabTimerState({
-    url: '/api/lab-management/timer/active?readonly=1',
+    url: `/api/lab-management/timer/active?readonly=1&forLabDay=${labDayId}`,
     enabled: !!labDayId && hasOwnFetched && !ownLive,
     heartbeatMs: 60000,
     onResponse: handleFallbackResponse,

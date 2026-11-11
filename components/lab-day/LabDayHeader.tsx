@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { formatCohortNumber } from '@/lib/format-cohort';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
@@ -29,6 +30,8 @@ interface LabDayHeaderProps {
   showDuplicateDropdown: boolean;
   onSetShowDuplicateDropdown: (show: boolean | ((prev: boolean) => boolean)) => void;
   onOpenTimer: () => void;
+  /** Called after rotation minutes / count are saved so the page re-fetches the lab day. */
+  onRotationSaved?: () => void;
   onPrint: () => void;
   onDownloadPDF: () => void;
   onExportCalendar: () => void;
@@ -50,6 +53,7 @@ export default function LabDayHeader({
   showDuplicateDropdown,
   onSetShowDuplicateDropdown,
   onOpenTimer,
+  onRotationSaved,
   onPrint,
   onDownloadPDF,
   onExportCalendar,
@@ -61,6 +65,48 @@ export default function LabDayHeader({
   formatDate,
   formatTime,
 }: LabDayHeaderProps) {
+  // Rotation minutes / count editor (feedback 460eb62f). lab_days.rotation_duration is the
+  // authoritative value; the PATCH also mirrors it into a STOPPED timer row.
+  const [editingRotation, setEditingRotation] = useState(false);
+  const [rotMinutes, setRotMinutes] = useState('');
+  const [rotCount, setRotCount] = useState('');
+  const [rotSaving, setRotSaving] = useState(false);
+  const [rotError, setRotError] = useState<string | null>(null);
+  const openRotationEditor = () => {
+    setRotMinutes(String(labDay.rotation_duration ?? ''));
+    setRotCount(String(labDay.num_rotations ?? ''));
+    setRotError(null);
+    setEditingRotation(true);
+  };
+  const saveRotation = async () => {
+    const minutes = Number(rotMinutes);
+    const count = Number(rotCount);
+    if (!Number.isInteger(minutes) || minutes < 1 || minutes > 180 || !Number.isInteger(count) || count < 1 || count > 30) {
+      setRotError('Minutes 1-180 and rotations 1-30, whole numbers.');
+      return;
+    }
+    setRotSaving(true);
+    setRotError(null);
+    try {
+      const res = await fetch(`/api/lab-management/lab-days/${labDayId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rotation_duration: minutes, num_rotations: count }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        setRotError(data.error || 'Could not save');
+      } else {
+        setEditingRotation(false);
+        onRotationSaved?.();
+      }
+    } catch {
+      setRotError('Network error');
+    } finally {
+      setRotSaving(false);
+    }
+  };
+
   const menuItem = (Icon: LucideIcon, label: string, onClick: () => void) => (
     <button
       role="menuitem"
@@ -101,9 +147,39 @@ export default function LabDayHeader({
                   Week {labDay.week_number}, Day {labDay.day_number}
                 </span>
               )}
-              <span className="flex items-center gap-1">
-                {labDay.num_rotations} rotations × {labDay.rotation_duration} min
-              </span>
+              {editingRotation ? (
+                <span className="flex flex-wrap items-center gap-2 print:hidden">
+                  <input
+                    type="number" min={1} max={30} value={rotCount}
+                    onChange={e => setRotCount(e.target.value)}
+                    aria-label="Number of rotations"
+                    className="w-16 min-h-[44px] px-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  />
+                  <span>rotations ×</span>
+                  <input
+                    type="number" min={1} max={180} value={rotMinutes}
+                    onChange={e => setRotMinutes(e.target.value)}
+                    aria-label="Rotation minutes"
+                    className="w-20 min-h-[44px] px-2 border rounded dark:bg-gray-700 dark:border-gray-600"
+                  />
+                  <span>min</span>
+                  <button onClick={saveRotation} disabled={rotSaving} className="px-3 min-h-[44px] bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50">
+                    {rotSaving ? 'Saving...' : 'Save'}
+                  </button>
+                  <button onClick={() => setEditingRotation(false)} className="px-3 min-h-[44px] border rounded-lg dark:border-gray-600">Cancel</button>
+                  {rotError && <span className="text-red-600 dark:text-red-400">{rotError}</span>}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={openRotationEditor}
+                  title="Set rotation minutes and number of rotations"
+                  className="flex items-center gap-1 min-h-[44px] hover:underline print:no-underline"
+                >
+                  {labDay.num_rotations} rotations × {labDay.rotation_duration} min
+                  <Edit2 className="w-3 h-3 print:hidden" />
+                </button>
+              )}
             </div>
           </div>
           <div className="flex flex-col gap-2 items-end print:hidden shrink-0">

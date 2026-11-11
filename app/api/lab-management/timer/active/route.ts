@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import type { VolunteerTokenResult } from '@/lib/api-auth';
+import { isTimerStale, isSameDaySameCohort } from '@/lib/timer-staleness';
 
 // GET - Get any active (running or paused) timer across all lab days
 // Enforces single active timer: if multiple found, keeps the most recent and stops others
-// Also cleans up stale timers that have been running for >24 hours
+// Also cleans up stale timers: running >24 hours, OR whose lab day date is before today
+// (America/Los_Angeles), OR whose lab day ended more than 60 minutes ago (lib/timer-staleness.ts)
+// Supports ?forLabDay=<id>: the caller's own lab day. Only a timer on the SAME date and
+// SAME cohort is returned (the "another section's clock" fallback); any other is never shown.
 // Supports ?version=N for efficient polling (returns not_modified when unchanged)
 // Supports ?readonly=1: pure read, skips the stale/extra-timer stop writes (used by
 // station screens that fall back to another lab day's clock; many can poll at once)
@@ -78,17 +82,26 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Stale timer cleanup: auto-stop any timer that has been running for >24 hours
+    // Lab day facts for every active timer (date / end time / cohort) drive the stale rule.
+    const { data: timerLabDays } = await supabase
+      .from('lab_days')
+      .select('id, date, end_time, cohort_id')
+      .in('id', activeTimers.map(t => t.lab_day_id));
+    const labDayById = new Map((timerLabDays || []).map(d => [d.id as string, d]));
+
+    // Stale timer cleanup: a timer is stale when started >24h ago, its lab day date is before
+    // today, or its lab day ended >60 min ago. (Monday's 4:36 PM row passed the old 24h-only
+    // rule on Tuesday afternoon because it was ~22h old.)
     const now = Date.now();
     const TWENTY_FOUR_HOURS_MS = 24 * 60 * 60 * 1000;
     const staleTimerIds: string[] = [];
 
     for (const timer of activeTimers) {
-      if (timer.started_at) {
-        const startedAt = new Date(timer.started_at).getTime();
-        if (now - startedAt > TWENTY_FOUR_HOURS_MS) {
-          staleTimerIds.push(timer.lab_day_id);
-        }
+      const tooOld = timer.started_at
+        ? now - new Date(timer.started_at).getTime() > TWENTY_FOUR_HOURS_MS
+        : false;
+      if (tooOld || isTimerStale(labDayById.get(timer.lab_day_id))) {
+        staleTimerIds.push(timer.lab_day_id);
       }
     }
 
@@ -107,7 +120,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Filter out stale timers from our active list
-    const nonStaleTimers = activeTimers.filter(t => !staleTimerIds.includes(t.lab_day_id));
+    let nonStaleTimers = activeTimers.filter(t => !staleTimerIds.includes(t.lab_day_id));
+
+    // Fallback scope: only a timer on the caller's own date + cohort may be shown.
+    const forLabDay = request.nextUrl.searchParams.get('forLabDay');
+    if (forLabDay) {
+      const { data: pageDay } = await supabase
+        .from('lab_days')
+        .select('id, date, cohort_id')
+        .eq('id', forLabDay)
+        .maybeSingle();
+      nonStaleTimers = nonStaleTimers.filter(t =>
+        isSameDaySameCohort(pageDay, labDayById.get(t.lab_day_id) as any) // eslint-disable-line @typescript-eslint/no-explicit-any
+      );
+    }
 
     if (nonStaleTimers.length === 0) {
       return NextResponse.json({
