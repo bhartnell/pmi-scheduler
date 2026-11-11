@@ -6,6 +6,8 @@ interface EvaluatorResult {
   evaluator_name: string;
   evaluator_role: string | null;
   submitted_at: string | null;
+  edited_after_submit?: boolean;
+  edit_log?: { at: string; event: string; changes: Record<string, { old: unknown; new: unknown }> }[];
   readiness: string | null;
   concerns_notes: string | null;
   general_notes: string | null;
@@ -230,6 +232,21 @@ export default function OsceResultsPage() {
                                         <span className="text-green-500 text-xs">
                                           Submitted {new Date(ev.submitted_at).toLocaleDateString()}
                                         </span>
+                                      )}
+                                      {ev.edited_after_submit && (
+                                        <details className="text-xs text-amber-600">
+                                          <summary className="cursor-pointer">edited after submit ({ev.edit_log?.length ?? 0})</summary>
+                                          <ul className="mt-1 space-y-1 text-gray-600 dark:text-gray-300">
+                                            {(ev.edit_log || []).map((e, i) => (
+                                              <li key={i}>
+                                                {new Date(e.at).toLocaleString()} - {e.event === 'resubmit' ? 're-submitted' : 'changed'}
+                                                {Object.entries(e.changes).filter(([f]) => f !== 'submitted_at').map(([f, c]) => (
+                                                  <div key={f} className="pl-3">{f}: {String(c.old ?? '(blank)')} {'->'} {String(c.new ?? '(blank)')}</div>
+                                                ))}
+                                              </li>
+                                            ))}
+                                          </ul>
+                                        </details>
                                       )}
                                     </div>
                                   </div>

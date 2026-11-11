@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { diffScoreFields, logOsceEditAfterSubmit, stripProtectedFields } from '@/lib/osce-score-edit';
 
 // GET - Get evaluator score for an assessment
 export async function GET(
@@ -67,7 +68,8 @@ export async function PUT(
 
   try {
     const body = await req.json();
-    const { evaluator_name, ...fields } = body;
+    const { evaluator_name, edit_after_submit, ...rawFields } = body;
+    const fields = stripProtectedFields(rawFields);
 
     if (!evaluator_name) {
       return NextResponse.json({ success: false, error: 'evaluator_name required' }, { status: 400 });
@@ -75,16 +77,43 @@ export async function PUT(
 
     const supabase = getSupabaseAdmin();
 
-    // Check if already submitted
+    // Already submitted? Changes are allowed only with the explicit edit flag set by the
+    // "Are you sure you want to edit it?" confirm (a stray auto-save from an old tab has no flag).
     const { data: existing } = await supabase
       .from('osce_evaluator_scores')
-      .select('submitted_at')
+      .select('*')
       .eq('assessment_id', id)
       .eq('evaluator_name', evaluator_name)
       .single();
 
     if (existing?.submitted_at) {
-      return NextResponse.json({ success: false, error: 'Score already submitted and locked' }, { status: 403 });
+      if (edit_after_submit !== true) {
+        return NextResponse.json(
+          { success: false, error: 'This evaluation has already been submitted. Confirm Edit to change it.', code: 'submitted_needs_edit_flag' },
+          { status: 403 }
+        );
+      }
+      const changes = diffScoreFields(existing, fields);
+      if (Object.keys(changes).length === 0) {
+        return NextResponse.json({ success: true, score: existing, unchanged: true });
+      }
+      const { data: edited, error: editErr } = await supabase
+        .from('osce_evaluator_scores')
+        .update({ ...fields, updated_at: new Date().toISOString() })
+        .eq('assessment_id', id)
+        .eq('evaluator_name', evaluator_name)
+        .select()
+        .single();
+      if (editErr) throw editErr;
+      const { data: asmt } = await supabase.from('osce_assessments').select('student_name').eq('id', id).maybeSingle();
+      await logOsceEditAfterSubmit({
+        assessmentId: id,
+        studentName: asmt?.student_name,
+        evaluatorName: evaluator_name,
+        event: 'field_edit',
+        changes,
+      });
+      return NextResponse.json({ success: true, score: edited, edited: true });
     }
 
     // Upsert the score

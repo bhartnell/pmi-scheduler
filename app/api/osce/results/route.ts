@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
+import { loadEditLog } from '@/lib/osce-score-edit';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 // Grade calculation: S=100, N=77, U=0
@@ -58,6 +59,8 @@ export async function GET(req: NextRequest) {
       scoresByAssessment.set(score.assessment_id, existing);
     }
 
+    const editLog = await loadEditLog(supabase, (assessments || []).map(a => a.id));
+
     // Build results
     const results = (assessments || []).map(assessment => {
       const evalScores = scoresByAssessment.get(assessment.id) || [];
@@ -75,6 +78,8 @@ export async function GET(req: NextRequest) {
           evaluator_name: score.evaluator_name,
           evaluator_role: score.evaluator_role,
           submitted_at: score.submitted_at,
+          edited_after_submit: (editLog.get(assessment.id) || []).some(e => e.evaluator_name === score.evaluator_name),
+          edit_log: (editLog.get(assessment.id) || []).filter(e => e.evaluator_name === score.evaluator_name),
           readiness: score.readiness,
           concerns_notes: score.concerns_notes,
           general_notes: score.general_notes,

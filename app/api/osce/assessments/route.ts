@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { loadEditLog } from '@/lib/osce-score-edit';
 import { getSupabaseAdmin } from '@/lib/supabase';
 
 // GET - List assessments (filtered by event_id, day, date, or all)
@@ -56,11 +57,13 @@ export async function GET(req: NextRequest) {
         .eq('evaluator_name', evaluatorName)
         .in('assessment_id', assessmentIds);
 
+      const editLog = await loadEditLog(supabase, assessmentIds);
       const scoreMap = new Map(scores?.map(s => [s.assessment_id, s]) || []);
-      const enriched = assessments.map(a => ({
-        ...a,
-        evaluator_score: scoreMap.get(a.id) || null,
-      }));
+      const enriched = assessments.map(a => {
+        const sc = scoreMap.get(a.id);
+        const edited = (editLog.get(a.id) || []).some(e => e.evaluator_name === evaluatorName);
+        return { ...a, evaluator_score: sc ? { ...sc, edited } : null };
+      });
 
       return NextResponse.json({ success: true, assessments: enriched, ...context });
     }
