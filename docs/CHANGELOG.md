@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-11
+
+cal-2-3d-plan | CAL 2/3d: planUpcomingLabDayEvents (every upcoming lab day with people gets its one day event; nightly /api/cron/lab-day-event-plan + superadmin /api/admin/calendar-sync/plan-day-events, sendUpdates=none, no deletes); retire-lab-events now keeps any row whose person has no day event for that cohort+date ('kept: no day event yet'). No schema change. Revert: git revert.
+
 ## 2026-11-10
 
 cal-3-3 | CAL 3/3 (A + C part): superadmin 'Remove old per-instructor lab events' button + /api/admin/calendar-sync/retire-lab-events (dry run, canary, sendUpdates=none, refuses without backup table); incident/one-time buttons moved into a superadmin disclosure on Admin > Calendar sync. Migration 20261110_cal_retire_backup.sql (backup table with RLS) UNAPPLIED, needs Ben. Part B (lab-block series) stopped: 3 series have a future date with no linked lab day. Revert: git revert.
