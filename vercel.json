@@ -34,6 +34,10 @@
       "schedule": "0 5 * * 0"
     },
     {
+      "path": "/api/cron/lab-day-event-plan",
+      "schedule": "0 8 * * *"
+    },
+    {
       "path": "/api/cron/lab-day-replan-drain",
       "schedule": "*/30 * * * *"
     },

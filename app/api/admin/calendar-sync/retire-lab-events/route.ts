@@ -24,6 +24,9 @@ import { getAccessTokenForUser } from '@/lib/google-calendar';
  *   - Only FUTURE rows (lab day date >= today, Pacific). Past events stay.
  *   - The mapping row is removed ONLY after Google confirms the delete
  *     (200/204/404/410). Any failure leaves the row for a retry.
+ *   - DAY-EVENT GUARD: a row is removed only if that person is a guest on the
+ *     lab_day_event for the same cohort and date. Others are listed as
+ *     "kept: no day event yet" in the dry run and the result.
  *   - Idempotent: re-running only sees what is left.
  *   - Never deletes class series, day events, PALS or any other kind.
  *
@@ -48,18 +51,29 @@ interface Row {
   lab_day_id: string;
   event_summary: string | null;
   date?: string;
+  cohort_id?: string | null;
 }
 
-async function loadFutureRows(userEmail?: string): Promise<Row[]> {
+/** A row kept because the person has no day event for that lab yet. */
+interface KeptRow {
+  id: string;
+  user: string;
+  kind: string;
+  date?: string;
+  reason: string;
+}
+
+async function loadFutureRows(userEmail?: string): Promise<{ rows: Row[]; kept: KeptRow[] }> {
   const supabase = getSupabaseAdmin();
   const today = todayPacific();
   // No FK from google_calendar_events.lab_day_id to lab_days, so no embed:
   // find future lab days first, then the mapping rows on them.
-  const { data: days, error: dErr } = await supabase.from('lab_days').select('id, date').gte('date', today);
+  const { data: days, error: dErr } = await supabase.from('lab_days').select('id, date, cohort_id').gte('date', today);
   if (dErr) throw new Error(dErr.message);
   const dateById = new Map<string, string>((days ?? []).map((d: any) => [d.id, d.date]));
+  const cohortById = new Map<string, string | null>((days ?? []).map((d: any) => [d.id, d.cohort_id ?? null]));
   const ids = Array.from(dateById.keys());
-  const out: Row[] = [];
+  const candidates: Row[] = [];
   for (let i = 0; i < ids.length; i += 100) {
     let q = supabase
       .from('google_calendar_events')
@@ -69,9 +83,34 @@ async function loadFutureRows(userEmail?: string): Promise<Row[]> {
     if (userEmail) q = q.ilike('user_email', userEmail);
     const { data, error } = await q;
     if (error) throw new Error(error.message);
-    for (const r of data ?? []) out.push({ ...(r as Row), date: dateById.get((r as Row).lab_day_id) });
+    for (const r of data ?? []) {
+      const row = r as Row;
+      candidates.push({ ...row, date: dateById.get(row.lab_day_id), cohort_id: cohortById.get(row.lab_day_id) ?? null });
+    }
   }
-  return out;
+
+  // GUARD (CAL 2/3d): never leave a person with no entry for a lab they are on.
+  // A per-instructor event is removable only when that person is a guest on the
+  // lab_day_event for the same cohort and date.
+  const keys = Array.from(new Set(candidates.filter((c) => c.cohort_id && c.date).map((c) => `${c.cohort_id}:${c.date}`)));
+  const covered = new Set<string>();
+  for (let i = 0; i < keys.length; i += 100) {
+    const { data, error } = await supabase
+      .from('google_calendar_events')
+      .select('user_email, source_id')
+      .eq('source_type', 'lab_day_event')
+      .in('source_id', keys.slice(i, i + 100));
+    if (error) throw new Error(`day-event guard read failed: ${error.message}`);
+    for (const g of data ?? []) covered.add(`${String((g as any).user_email).toLowerCase()}|${(g as any).source_id}`);
+  }
+  const rows: Row[] = [];
+  const kept: KeptRow[] = [];
+  for (const c of candidates) {
+    const has = c.cohort_id && c.date && covered.has(`${c.user_email.toLowerCase()}|${c.cohort_id}:${c.date}`);
+    if (has) rows.push(c);
+    else kept.push({ id: c.id, user: c.user_email, kind: c.source_type, date: c.date, reason: 'kept: no day event yet' });
+  }
+  return { rows, kept };
 }
 
 async function backupState(ids: string[]): Promise<{ exists: boolean; missing: string[] }> {
@@ -86,7 +125,7 @@ export async function GET() {
   const auth = await requireAuth('superadmin');
   if (auth instanceof NextResponse) return auth;
   try {
-    const rows = await loadFutureRows();
+    const { rows, kept } = await loadFutureRows();
     const byKind: Record<string, number> = {};
     const byUser: Record<string, number> = {};
     for (const r of rows) {
@@ -103,6 +142,8 @@ export async function GET() {
       backup_table: BACKUP_TABLE,
       backup_exists: backup.exists,
       backup_missing_rows: backup.missing.length,
+      kept_count: kept.length,
+      kept,
       rows: rows
         .map((r) => ({ id: r.id, user: r.user_email, kind: r.source_type, date: r.date, summary: r.event_summary }))
         .sort((a, b) => (a.date ?? '').localeCompare(b.date ?? '')),
@@ -127,7 +168,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const rows = await loadFutureRows(body.user_email);
+    const { rows } = await loadFutureRows(body.user_email);
     const backup = await backupState(rows.map((r) => r.id));
     if (!backup.exists) {
       return NextResponse.json(
@@ -178,8 +219,9 @@ export async function POST(request: NextRequest) {
       await new Promise((r2) => setTimeout(r2, 200));
     }
 
-    const remaining = (await loadFutureRows()).length;
-    return NextResponse.json({ success: true, attempted: batch.length, removed, failed: failures.length, failures, future_remaining: remaining });
+    const after = await loadFutureRows();
+    const remaining = after.rows.length + after.kept.length;
+    return NextResponse.json({ success: true, attempted: batch.length, removed, failed: failures.length, failures, future_remaining: remaining, kept_no_day_event: after.kept.length });
   } catch (e: any) {
     return NextResponse.json({ success: false, error: e.message }, { status: 500 });
   }

@@ -143,3 +143,79 @@ export async function queueReplanForLabDay(labDayId: string | null | undefined, 
     console.error('[lab-day-replan] queue failed:', err);
   }
 }
+
+// ── Plan every upcoming lab day (CAL 2/3d) ──────────────────────────────
+// Day events are otherwise written only when a membership change triggers a
+// re-plan, so a future day nobody touches never got one. This pass creates or
+// updates the lab_day_event for EVERY lab day from today forward that has at
+// least one person on it (default roster, sign-up, role or station), all
+// cohorts. Days with nobody on them get nothing. Creates/patches use
+// sendUpdates=none (createSharedCalendarEvent / patchSharedCalendarEvent).
+// Never deletes anything from Google.
+
+export interface PlanUpcomingDay {
+  cohort_id: string;
+  date: string;
+  status: string;
+  guests?: number;
+  error?: string;
+}
+
+export function todayPacific(): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
+}
+
+export async function planUpcomingLabDayEvents(opts: { dryRun: boolean; maxDays?: number }): Promise<
+  | { ok: true; dry_run: boolean; days: PlanUpcomingDay[]; tally: Record<string, number> }
+  | { ok: false; error: string }
+> {
+  const supabase = getSupabaseAdmin();
+  let calendarId = '';
+  let accessToken = '';
+  if (!opts.dryRun) {
+    if (process.env.LAB_DAY_EVENT_SYNC !== '1') return { ok: false, error: 'LAB_DAY_EVENT_SYNC is not 1' };
+    const writer = await getSharedCalendarWriter();
+    if (!writer.ok) return { ok: false, error: `${writer.reason} (${writer.email})` };
+    calendarId = writer.calendarId;
+    accessToken = writer.accessToken;
+  }
+
+  const { data: rows, error } = await supabase
+    .from('lab_days')
+    .select('cohort_id, date')
+    .gte('date', todayPacific())
+    .eq('is_archived', false)
+    .not('cohort_id', 'is', null)
+    .order('date');
+  if (error) return { ok: false, error: error.message };
+
+  const seen = new Set<string>();
+  const keys: { cohort_id: string; date: string }[] = [];
+  for (const r of rows ?? []) {
+    const k = `${r.cohort_id}:${r.date}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    keys.push({ cohort_id: r.cohort_id as string, date: r.date as string });
+  }
+
+  const days: PlanUpcomingDay[] = [];
+  const tally: Record<string, number> = {};
+  for (const k of keys.slice(0, opts.maxDays ?? 60)) {
+    const r = await syncLabDayEvent({ cohortId: k.cohort_id, date: k.date, calendarId, accessToken, dryRun: opts.dryRun, supabase });
+    let status: string = r.status;
+    let guests: number | undefined;
+    if ('plan' in r) guests = r.plan.attendeeEmails.length;
+    // Empty days are expected and fine: report as skipped-empty.
+    if (r.status === 'no-attendees') status = 'skipped-empty';
+    const d: PlanUpcomingDay = { ...k, status, guests };
+    if (r.status === 'failed') {
+      d.error = r.error;
+      // Queue for the 30-minute drain so a failed day is retried, never dropped.
+      if (!opts.dryRun) await enqueueLabDayReplan(k.cohort_id, k.date, r.error);
+    }
+    days.push(d);
+    tally[status] = (tally[status] ?? 0) + 1;
+    if (!opts.dryRun) await new Promise(res => setTimeout(res, 200));
+  }
+  return { ok: true, dry_run: opts.dryRun, days, tally };
+}

@@ -194,6 +194,7 @@ export default function CalendarSyncPage() {
   const [cleanupPreview, setCleanupPreview] = useState<CleanupResult | null>(null);
   const [confirmingCleanup, setConfirmingCleanup] = useState(false);
   const [retireBusy, setRetireBusy] = useState(false);
+  const [planBusy, setPlanBusy] = useState(false);
 
   // ── Auth guard ──────────────────────────────────────────────────────────
 
@@ -312,7 +313,11 @@ export default function CalendarSyncPage() {
         .map(([k, n]) => `${k}: ${n}`)
         .join(', ');
       if (dry.total === 0) {
-        toast.success('Nothing left to remove: 0 future per-instructor lab events. This button can come out.');
+        if ((dry.kept_count ?? 0) > 0) {
+          toast.error(`${dry.kept_count} old events kept because those people have no day event yet. Plan day events for upcoming labs first.`);
+        } else {
+          toast.success('Nothing left to remove: 0 future per-instructor lab events. This button can come out.');
+        }
         return;
       }
       if (!dry.backup_exists || dry.backup_missing_rows > 0) {
@@ -323,7 +328,8 @@ export default function CalendarSyncPage() {
       const ok = window.confirm(
         `Remove ${dry.total} future per-instructor lab events (${kinds}) from Google Calendar?\n\n` +
           `Scope now: ${target}. No emails or notifications are sent. Past events stay. ` +
-          `Backup table: ${dry.backup_table}.`,
+          `Backup table: ${dry.backup_table}.` +
+          ((dry.kept_count ?? 0) > 0 ? `\n\n${dry.kept_count} more are kept: no day event yet.` : ''),
       );
       if (!ok) return;
       const res = await fetch('/api/admin/calendar-sync/retire-lab-events', {
@@ -340,6 +346,38 @@ export default function CalendarSyncPage() {
       if (data.failed > 0) console.error('[retire-lab-events] failures:', data.failures);
     } finally {
       setRetireBusy(false);
+    }
+  };
+
+  // ── Plan day events for upcoming labs (CAL 2/3d, first run only; the nightly cron does it after) ──
+  const handlePlanDayEvents = async () => {
+    setPlanBusy(true);
+    try {
+      const dry = await (await fetch('/api/admin/calendar-sync/plan-day-events')).json();
+      if (!dry.success) {
+        toast.error(dry.error || 'Dry run failed');
+        return;
+      }
+      const tally = Object.entries(dry.tally as Record<string, number>).map(([k, n]) => `${k}: ${n}`).join(', ');
+      const ok = window.confirm(
+        `Create or update the one day event for each upcoming lab day with people on it?\n\n` +
+          `Dry run: ${dry.days.length} lab days (${tally}). No emails or notifications are sent. Nothing is deleted.`,
+      );
+      if (!ok) return;
+      const res = await fetch('/api/admin/calendar-sync/plan-day-events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirm: true }),
+      });
+      const data = await res.json();
+      if (!data.success) {
+        toast.error(data.error || 'Planning failed');
+        return;
+      }
+      const t = Object.entries(data.tally as Record<string, number>).map(([k, n]) => `${k}: ${n}`).join(', ');
+      toast.success(`Day events planned: ${t}`);
+    } finally {
+      setPlanBusy(false);
     }
   };
 
@@ -745,6 +783,18 @@ export default function CalendarSyncPage() {
                     Incident and one-time tools (superadmin)
                   </summary>
                   <div className="mt-3 flex flex-col gap-3">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        onClick={handlePlanDayEvents}
+                        disabled={planBusy}
+                        className="inline-flex items-center gap-2 px-4 py-2 border border-blue-300 dark:border-blue-700 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm font-medium disabled:opacity-50"
+                      >
+                        {planBusy ? 'Working…' : 'Plan day events for upcoming labs'}
+                      </button>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 max-w-xl">
+                        Gives every upcoming lab day with people on it its one calendar event, no mail. Run this once before the removal buttons; it also runs nightly, so this button comes out after the first night.
+                      </p>
+                    </div>
                     <div className="flex flex-wrap items-center gap-3">
                       <button
                         onClick={() => handleRetireLabEvents(true)}
