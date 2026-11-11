@@ -48,6 +48,7 @@ export type AuditResourceType =
   | 'skill_evaluation'
   | 'scenario_assessment'
   | 'osce_score'
+  | 'osce_schedule'
   | 'skill_assessment'
   | 'attendance'
   | 'clinical_hours'

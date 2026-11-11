@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-11
 
+osce-admin-move | OSCE no hard locks PR 2: admin Move... on each Students-tab row (any block/day, any open slot, end of block past nominal capacity, optional swap) via POST /api/osce/events/[id]/students/move; pure planner lib/osce-student-move.ts respects UNIQUE(time_block_id, slot_number) and renumbers nobody else; assessment follows (day/date/slot), scores and scenario untouched; audit_log row per moved student (resource_type osce_schedule); row shows 'time changed, invite not updated' until Send student slot invites. No schema change. Revert: git revert.
+
 osce-edit-after-submit | OSCE no hard locks PR 1: evaluator can Edit a submitted score after a confirm (PUT needs explicit edit_after_submit flag; submit re-stampable), every post-submit change audit-logged (audit_log resource_type osce_score, old/new per field, lib/osce-score-edit.ts), dashboard shows (edited), admin Results shows edit history. No schema change. Revert: git revert.
 
 cal-2-3d-b-c | CAL 2/3d B+C(c): lab-type class blocks with a linked lab day stop being pushed to a person who is a guest on that day's event (lib/lab-block-coverage.ts, calendar-auto-sync, sync-my-blocks; existing series left unpatched so cancellations hold); superadmin retire-lab-blocks route + button (dry run, instance-level cancel only, sendUpdates=none, audit_log restore point); freshness table shows retired kinds as Retired with future count, lab_day_event first. No schema change, no Google calls from Code. Revert: git revert.

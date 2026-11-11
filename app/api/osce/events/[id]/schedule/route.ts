@@ -37,6 +37,22 @@ export async function GET(
       .eq('event_id', id)
       .order('slot_number');
 
+    // A student moved after their invite was sent has a stale calendar invite (shown, never auto-fixed).
+    const staleSince = new Map<string, string>(); // schedule id -> latest move time
+    const sentIds = (students || []).filter(s => s.invite_sent_at).map(s => s.id);
+    if (sentIds.length > 0) {
+      const { data: moves } = await supabase
+        .from('audit_log')
+        .select('resource_id, created_at, metadata')
+        .eq('resource_type', 'osce_schedule')
+        .in('resource_id', sentIds);
+      for (const m of moves || []) {
+        if (m.metadata?.kind !== 'osce_student_move') continue;
+        const prev = staleSince.get(m.resource_id);
+        if (!prev || m.created_at > prev) staleSince.set(m.resource_id, m.created_at);
+      }
+    }
+
     // Get agency mappings for this event
     const { data: agencyMappings } = await supabase
       .from('osce_student_agencies')
@@ -52,7 +68,15 @@ export async function GET(
 
       const blockStudents = (students || []).filter(s =>
         s.time_block_id === block.id
-      ).map(s => ({ id: s.id, name: s.student_name, slot: s.slot_number }));
+      ).map(s => {
+        const moved = staleSince.get(s.id);
+        return {
+          id: s.id,
+          name: s.student_name,
+          slot: s.slot_number,
+          invite_stale: !!(moved && s.invite_sent_at && moved > s.invite_sent_at),
+        };
+      });
 
       // Find agency matches
       const matches: { studentName: string; observerName: string; agency: string }[] = [];
