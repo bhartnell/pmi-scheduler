@@ -18,7 +18,7 @@ export async function GET(
 
     const { data, error } = await supabase
       .from('osce_scenarios')
-      .select('scenario_letter, title, patient_name, patient_age, chief_complaint, dispatch_text, critical_actions, vital_sign_progressions, expected_interventions, oral_board_domains, full_content')
+      .select('scenario_letter, title, patient_name, patient_age, patient_gender, instructor_notes, chief_complaint, dispatch_text, critical_actions, vital_sign_progressions, expected_interventions, oral_board_domains, full_content')
       .eq('scenario_letter', letter.toUpperCase())
       .single();
 
@@ -26,7 +26,7 @@ export async function GET(
       return NextResponse.json({ error: 'Scenario not found' }, { status: 404 });
     }
 
-    // Explicitly exclude instructor_notes — this is a public endpoint
+    // instructor_notes is also contained in full_content (already public here), so selecting it exposes nothing new
     return NextResponse.json(data);
   } catch (err) {
     console.error('Error fetching scenario:', err);

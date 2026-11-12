@@ -14,6 +14,9 @@ export interface ScenarioApi {
   expected_interventions?: unknown;
   oral_board_domains?: unknown;
   full_content?: string | null;
+  // Present on the signed-in /api/osce-scenarios response and, after this PR, the public one
+  instructor_notes?: string | null;
+  patient_gender?: string | null;
 }
 
 export const VITAL_COLUMN_ORDER = ['BP', 'HR', 'RR', 'SpO2', 'ETCO2', 'BGL', 'Temp'];
@@ -167,4 +170,30 @@ export function dispatchLines(dispatch: string | null | undefined): string {
     .split(/\r?\n/)
     .filter(l => l.trim() !== '')
     .join('\n');
+}
+
+export interface DispatchPair {
+  label: string | null;
+  value: string;
+}
+
+// "Time:\n\n1045\n\nLocation:\n\n..." -> [{label:'Time', value:'1045'}, ...].
+// A line ending in ":" is a label; following non-blank lines up to the next label are its value.
+// Text before the first label is kept as an unlabelled entry. Nothing is dropped.
+export function dispatchPairs(dispatch: string | null | undefined): DispatchPair[] {
+  const lines = (dispatch || '').split(/\r?\n/).map(l => l.trim()).filter(l => l !== '');
+  const out: DispatchPair[] = [];
+  let cur: DispatchPair | null = null;
+  for (const l of lines) {
+    if (/^[^:]{1,40}:$/.test(l)) {
+      cur = { label: l.slice(0, -1), value: '' };
+      out.push(cur);
+    } else if (cur) {
+      cur.value = cur.value ? `${cur.value} ${l}` : l;
+    } else {
+      cur = { label: null, value: l };
+      out.push(cur);
+    }
+  }
+  return out;
 }

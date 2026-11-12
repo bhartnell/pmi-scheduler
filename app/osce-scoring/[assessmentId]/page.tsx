@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import ScenarioReference from '@/components/osce/ScenarioReference';
+import OsceScenarioView from '@/components/osce/OsceScenarioView';
 import type { ScenarioApi } from '@/components/osce/scenarioMapping';
 
 type Rating = 'S' | 'N' | 'U' | null;
@@ -266,7 +266,7 @@ export default function ScoringPage() {
   }
   const scenarioPane = scenarioRaw ? (
     <div style={{ zoom: textScale }}>
-      <ScenarioReference data={scenarioRaw} letter={scenarioLetter} />
+      <OsceScenarioView scenario={scenarioRaw} letter={scenarioLetter} />
     </div>
   ) : null;
 
