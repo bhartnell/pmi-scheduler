@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-12
+
+osce-phase-blocks | OSCE scenario view: one block per phase (vitals, expected actions, instructor cues together) replaces the separate vitals card + interventions card; phase list is the union of vitals phases and expected-intervention phases. Component-only (OsceScenarioView), no data/API/schema change. Revert: git revert.
+
 ## 2026-11-11
 
 osce-admin-move | OSCE no hard locks PR 2: admin Move... on each Students-tab row (any block/day, any open slot, end of block past nominal capacity, optional swap) via POST /api/osce/events/[id]/students/move; pure planner lib/osce-student-move.ts respects UNIQUE(time_block_id, slot_number) and renumbers nobody else; assessment follows (day/date/slot), scores and scenario untouched; audit_log row per moved student (resource_type osce_schedule); row shows 'time changed, invite not updated' until Send student slot invites. No schema change. Revert: git revert.

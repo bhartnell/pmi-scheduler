@@ -46,6 +46,42 @@ export function vitalsByPhase(progressions: unknown): PhaseVitals[] {
     .sort((a, b) => a.phase - b.phase);
 }
 
+export interface MergedPhase {
+  phase: number;
+  title: string;
+  sets: Record<string, string>[];
+  actions: string[];
+  cues: string;
+}
+
+// One block per phase: union of phases found in vitals or expected interventions.
+export function mergePhases(
+  vitals: PhaseVitals[],
+  sections: { phase: number; title: string; actions: string[]; cues: string }[],
+): MergedPhase[] {
+  const map = new Map<number, MergedPhase>();
+  const get = (n: number) => {
+    let m = map.get(n);
+    if (!m) {
+      m = { phase: n, title: '', sets: [], actions: [], cues: '' };
+      map.set(n, m);
+    }
+    return m;
+  };
+  for (const v of vitals) {
+    const m = get(v.phase);
+    m.title = v.title || m.title;
+    m.sets = v.sets;
+  }
+  for (const s of sections) {
+    const m = get(s.phase);
+    m.title = m.title || s.title;
+    m.actions = s.actions;
+    m.cues = s.cues;
+  }
+  return Array.from(map.values()).sort((a, b) => a.phase - b.phase);
+}
+
 function orderedKeys(set: Record<string, string>): string[] {
   const keys = Object.keys(set);
   return [...VITAL_COLUMN_ORDER.filter(k => keys.includes(k)), ...keys.filter(k => !VITAL_COLUMN_ORDER.includes(k))];
@@ -67,6 +103,7 @@ export default function OsceScenarioView({ scenario, letter }: { scenario: Scena
   const actions = parseCriticalActions(scenario.critical_actions);
   const vitals = vitalsByPhase(scenario.vital_sign_progressions);
   const phases = buildPhaseSections(scenario.expected_interventions, scenario.vital_sign_progressions);
+  const merged = mergePhases(vitals, phases);
   const oral = buildOralSections(scenario.oral_board_domains);
   const fullLines = buildFullTextLines(scenario.full_content);
   const age = scenario.patient_age !== null && scenario.patient_age !== undefined ? String(scenario.patient_age) : '';
@@ -136,11 +173,11 @@ export default function OsceScenarioView({ scenario, letter }: { scenario: Scena
         </div>
       )}
 
-      {vitals.length > 0 && (
+      {merged.length > 0 && (
         <div className={card}>
-          <h2 className={h2}><Activity className="h-5 w-5 text-green-500" /> Vital sign progressions</h2>
+          <h2 className={h2}><Activity className="h-5 w-5 text-green-500" /> Phases</h2>
           <div className="space-y-3">
-            {vitals.map(p => {
+            {merged.map(p => {
               const open = !collapsed.has(p.phase);
               return (
                 <div key={p.phase} className="border border-slate-200 dark:border-slate-700 rounded-lg">
@@ -151,12 +188,12 @@ export default function OsceScenarioView({ scenario, letter }: { scenario: Scena
                   >
                     <span className="flex items-center gap-3 font-semibold">
                       <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 text-sm font-bold">{p.phase}</span>
-                      {p.title}
+                      Phase {p.phase}{p.title ? `: ${p.title}` : ''}
                     </span>
                     <span className="print:hidden">{open ? <ChevronUp className="h-5 w-5 text-slate-400" /> : <ChevronDown className="h-5 w-5 text-slate-400" />}</span>
                   </button>
                   {open && (
-                    <div className="px-4 pb-4 space-y-3">
+                    <div className="px-4 pb-4 space-y-4">
                       {p.sets.map((set, si) => (
                         <div key={si}>
                           {p.sets.length > 1 && <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">set {si + 1}</p>}
@@ -173,28 +210,20 @@ export default function OsceScenarioView({ scenario, letter }: { scenario: Scena
                       {p.sets.length > 1 && (
                         <p className="text-sm text-slate-500 dark:text-slate-400">Where a phase has two sets, see that phase in the full case text for which path each belongs to.</p>
                       )}
+                      {p.actions.length > 0 && (
+                        <div>
+                          <h3 className="font-semibold text-slate-700 dark:text-slate-200 flex items-center gap-2 mb-1"><ClipboardList className="h-4 w-4 text-purple-500" /> Expected actions</h3>
+                          <ul className="list-disc pl-6 space-y-1">{p.actions.map((a, i) => <li key={i}>{a}</li>)}</ul>
+                        </div>
+                      )}
+                      {p.cues && (
+                        <p><span className="font-semibold text-slate-500 dark:text-slate-400">Instructor cues: </span>{p.cues}</p>
+                      )}
                     </div>
                   )}
                 </div>
               );
             })}
-          </div>
-        </div>
-      )}
-
-      {phases.length > 0 && (
-        <div className={card}>
-          <h2 className={h2}><ClipboardList className="h-5 w-5 text-purple-500" /> Expected interventions by phase</h2>
-          <div className="space-y-4">
-            {phases.map(p => (
-              <div key={p.phase}>
-                <h3 className="font-bold">Phase {p.phase}{p.title ? `: ${p.title}` : ''}</h3>
-                {p.actions.length > 0 && <ul className="list-disc pl-6 space-y-1 mt-1">{p.actions.map((a, i) => <li key={i}>{a}</li>)}</ul>}
-                {p.cues && (
-                  <p className="mt-2"><span className="font-semibold text-slate-500 dark:text-slate-400">Instructor cues: </span>{p.cues}</p>
-                )}
-              </div>
-            ))}
           </div>
         </div>
       )}
