@@ -2,85 +2,22 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import ScenarioReference from '@/components/osce/ScenarioReference';
+import type { ScenarioApi } from '@/components/osce/scenarioMapping';
 
 type Rating = 'S' | 'N' | 'U' | null;
 type Readiness = 'ready' | 'ready_with_concerns' | 'not_yet_ready' | null;
 
-// Scenario reference data (evaluator-safe, no instructor notes)
+// Scenario reference: the raw API response is rendered by ScenarioReference.
+// scenarioData only carries the title used in the score-sheet headers.
 interface ScenarioData {
   title: string;
-  dispatch: string;
-  patient: string;
-  age: string;
-  setting: string;
-  cc: string;
-  vitals: { label: string; value: string }[];
-  history: string;
-  criticalActions: string[];
-  oralQuestions: string[];
 }
 
-// Parse vital_sign_progressions JSONB into the vitals display format
-function parseVitals(progressions: unknown): { label: string; value: string }[] {
-  if (!progressions) return [];
-  if (Array.isArray(progressions)) {
-    return progressions.map((v: { label?: string; value?: string }) => ({
-      label: String(v.label || ''),
-      value: String(v.value || ''),
-    }));
-  }
-  if (typeof progressions === 'object' && progressions !== null) {
-    const obj = progressions as Record<string, unknown>;
-    // Try to find phase_1 or "Phase 1" key first
-    const phase1 = obj.phase_1 || obj['Phase 1'] || obj['initial'] || obj;
-    if (Array.isArray(phase1)) {
-      return phase1.map((v: { label?: string; value?: string }) => ({
-        label: String(v.label || ''),
-        value: String(v.value || ''),
-      }));
-    }
-    if (typeof phase1 === 'object' && phase1 !== null) {
-      return Object.entries(phase1 as Record<string, unknown>).map(([k, v]) => ({
-        label: k,
-        value: String(v),
-      }));
-    }
-  }
-  return [];
-}
-
-// Parse oral_board_domains JSONB into string array for display
-function parseOralQuestions(domains: unknown): string[] {
-  if (!domains) return [];
-  if (Array.isArray(domains)) {
-    return domains.map((d: unknown) => {
-      if (typeof d === 'string') return d;
-      if (typeof d === 'object' && d !== null) {
-        const obj = d as Record<string, unknown>;
-        return String(obj.question || obj.text || obj.domain || JSON.stringify(d));
-      }
-      return String(d);
-    });
-  }
-  return [];
-}
-
-// Extract setting/history from full_content text as fallback
-function extractFromFullContent(fullContent: string): { setting: string; history: string } {
-  let setting = '';
-  let history = '';
-  if (!fullContent) return { setting, history };
-
-  // Try to extract setting
-  const settingMatch = fullContent.match(/(?:Setting|Scene|Location)[:\s]*([^\n]+)/i);
-  if (settingMatch) setting = settingMatch[1].trim();
-
-  // Try to extract history
-  const historyMatch = fullContent.match(/(?:History|PMH|Past Medical)[:\s]*([^\n]+(?:\n(?!(?:Vital|Assessment|Chief|Dispatch))[^\n]+)*)/i);
-  if (historyMatch) history = historyMatch[1].trim();
-
-  return { setting, history };
-}
+const SCENARIO_SCALE_KEY = 'osce_scenario_text_scale';
+const SCALE_MIN = 0.85;
+const SCALE_MAX = 1.6;
+const SCALE_STEP = 0.15;
 
 interface Assessment {
   id: string;
@@ -221,114 +158,6 @@ function FactorCard({ label, ratingKey, notesKey, score, onChange, disabled, exp
   );
 }
 
-function ScenarioPanel({ scenario, letter, fullContent }: { scenario: ScenarioData; letter: string; fullContent?: string | null }) {
-  const [showFullContent, setShowFullContent] = useState(false);
-  const hasStructuredData = scenario.vitals.length > 0 || scenario.criticalActions.length > 0;
-
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="bg-blue-600 text-white rounded-xl p-4">
-        <p className="text-blue-200 text-xs mb-1">PMI Paramedic Clinical Capstone</p>
-        <h2 className="text-lg font-bold">Scenario {letter} - {scenario.title}</h2>
-        {scenario.dispatch && <p className="text-blue-100 text-sm mt-1">{scenario.dispatch}</p>}
-      </div>
-
-      {/* Patient Info */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-        <h3 className="font-semibold text-slate-900 dark:text-white mb-2 text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400">Patient Information</h3>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          {scenario.patient && <div><span className="text-slate-500 dark:text-slate-400">Patient:</span> <span className="font-medium text-slate-900 dark:text-white">{scenario.patient}</span></div>}
-          {scenario.age && <div><span className="text-slate-500 dark:text-slate-400">Age/Sex:</span> <span className="font-medium text-slate-900 dark:text-white">{scenario.age}</span></div>}
-          {scenario.setting && <div className="col-span-2"><span className="text-slate-500 dark:text-slate-400">Setting:</span> <span className="font-medium text-slate-900 dark:text-white">{scenario.setting}</span></div>}
-          {scenario.cc && <div className="col-span-2"><span className="text-slate-500 dark:text-slate-400">Chief Complaint:</span> <span className="font-medium text-slate-900 dark:text-white">{scenario.cc}</span></div>}
-        </div>
-      </div>
-
-      {/* Vitals */}
-      {scenario.vitals.length > 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-          <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Vital Signs</h3>
-          <div className="grid grid-cols-2 gap-2">
-            {scenario.vitals.map(v => (
-              <div key={v.label} className="bg-slate-50 dark:bg-slate-700 rounded-lg p-2 text-center">
-                <p className="text-xs text-slate-500 dark:text-slate-400">{v.label}</p>
-                <p className="font-bold text-slate-900 dark:text-white text-sm">{v.value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* History */}
-      {scenario.history && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-          <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Medical History</h3>
-          <p className="text-sm text-slate-700 dark:text-slate-300">{scenario.history}</p>
-        </div>
-      )}
-
-      {/* Critical Actions */}
-      {scenario.criticalActions.length > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800 p-4">
-          <h3 className="font-semibold text-sm uppercase tracking-wider text-amber-700 dark:text-amber-400 mb-2">Critical Actions</h3>
-          <ul className="space-y-1.5">
-            {scenario.criticalActions.map((action, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm">
-                <span className="flex-shrink-0 w-5 h-5 bg-amber-200 dark:bg-amber-800 text-amber-800 dark:text-amber-200 rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                  {i + 1}
-                </span>
-                <span className="text-slate-700 dark:text-slate-300">{action}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Oral Board Questions */}
-      {scenario.oralQuestions.length > 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-          <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Oral Board Questions</h3>
-          <ol className="space-y-2">
-            {scenario.oralQuestions.map((q, i) => (
-              <li key={i} className="flex items-start gap-2 text-sm">
-                <span className="flex-shrink-0 w-5 h-5 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
-                  {i + 1}
-                </span>
-                <span className="text-slate-700 dark:text-slate-300">{q}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
-
-      {/* Full Content fallback — shown when structured fields are sparse or on demand */}
-      {fullContent && (
-        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4">
-          {hasStructuredData ? (
-            <>
-              <button
-                onClick={() => setShowFullContent(!showFullContent)}
-                className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
-              >
-                {showFullContent ? 'Hide Full Scenario Text' : 'Show Full Scenario Text'}
-              </button>
-              {showFullContent && (
-                <pre className="mt-3 text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans leading-relaxed">{fullContent}</pre>
-              )}
-            </>
-          ) : (
-            <>
-              <h3 className="font-semibold text-sm uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Scenario Details</h3>
-              <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans leading-relaxed">{fullContent}</pre>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function ScoringPage() {
   const router = useRouter();
   const params = useParams();
@@ -355,7 +184,8 @@ export default function ScoringPage() {
   const [activeTab, setActiveTab] = useState<'scenario' | 'score'>('score');
   const [scenarioData, setScenarioData] = useState<ScenarioData | null>(null);
   const [scenarioLoading, setScenarioLoading] = useState(false);
-  const [fullContent, setFullContent] = useState<string | null>(null);
+  const [scenarioRaw, setScenarioRaw] = useState<ScenarioApi | null>(null);
+  const [textScale, setTextScale] = useState(1);
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingChangesRef = useRef<Record<string, unknown>>({});
@@ -414,6 +244,32 @@ export default function ScoringPage() {
 
   const scenarioLetter = assessment?.scenario?.toUpperCase() || '';
 
+  // Scenario pane text scale (A- / A+), saved per browser
+  useEffect(() => {
+    try {
+      const saved = parseFloat(localStorage.getItem(SCENARIO_SCALE_KEY) || '');
+      if (!isNaN(saved)) setTextScale(Math.min(SCALE_MAX, Math.max(SCALE_MIN, saved)));
+    } catch {
+      /* storage unavailable - keep default */
+    }
+  }, []);
+  function changeScale(delta: number) {
+    setTextScale(prev => {
+      const next = Math.round(Math.min(SCALE_MAX, Math.max(SCALE_MIN, prev + delta)) * 100) / 100;
+      try {
+        localStorage.setItem(SCENARIO_SCALE_KEY, String(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }
+  const scenarioPane = scenarioRaw ? (
+    <div style={{ zoom: textScale }}>
+      <ScenarioReference data={scenarioRaw} letter={scenarioLetter} />
+    </div>
+  ) : null;
+
   // Fetch scenario data from database when assessment loads
   useEffect(() => {
     if (!assessment?.scenario) return;
@@ -423,20 +279,8 @@ export default function ScoringPage() {
       .then(res => res.json())
       .then(data => {
         if (data && !data.error) {
-          const extracted = extractFromFullContent(data.full_content || '');
-          setFullContent(data.full_content || null);
-          setScenarioData({
-            title: data.title || '',
-            dispatch: data.dispatch_text || '',
-            patient: data.patient_name || '',
-            age: data.patient_age ? `${data.patient_age}` : '',
-            setting: extracted.setting,
-            cc: data.chief_complaint || '',
-            vitals: parseVitals(data.vital_sign_progressions),
-            history: extracted.history,
-            criticalActions: Array.isArray(data.critical_actions) ? data.critical_actions : [],
-            oralQuestions: parseOralQuestions(data.oral_board_domains),
-          });
+          setScenarioRaw(data as ScenarioApi);
+          setScenarioData({ title: data.title || '' });
         }
       })
       .catch(err => console.error('Failed to fetch scenario:', err))
@@ -927,9 +771,9 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
         </div>
       )}
 
-      {/* Mobile: Tab toggle bar (< 1024px) */}
+      {/* Mobile: Tab toggle bar (< 768px) */}
       {scenarioData && (
-        <div className="flex-shrink-0 lg:hidden flex border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+        <div className="flex-shrink-0 md:hidden flex border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
           <button
             onClick={() => setActiveTab('scenario')}
             className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${
@@ -954,27 +798,45 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
       )}
 
       {/* Main content area */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        {/* Desktop: Left panel — Scenario Reference (>= 1024px) */}
+      <div className="flex-1 flex flex-col md:flex-row min-h-0">
+        {/* Left panel — Scenario Reference (>= 768px) */}
         {scenarioData && showScenario && (
-          <div className="hidden lg:flex lg:flex-col lg:w-1/2 border-r border-slate-200 dark:border-slate-700">
+          <div className="hidden md:flex md:flex-col md:w-1/2 border-r border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between px-4 pt-3 pb-2 flex-shrink-0">
               <h2 className="text-sm font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Scenario Reference</h2>
-              <button
-                onClick={() => setShowScenario(false)}
-                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 px-2 py-1"
-              >
-                &#9664; Hide
-              </button>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => changeScale(-SCALE_STEP)}
+                  disabled={textScale <= SCALE_MIN}
+                  aria-label="Smaller scenario text"
+                  className="min-w-[44px] min-h-[44px] text-sm font-semibold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-40"
+                >
+                  A-
+                </button>
+                <button
+                  onClick={() => changeScale(SCALE_STEP)}
+                  disabled={textScale >= SCALE_MAX}
+                  aria-label="Larger scenario text"
+                  className="min-w-[44px] min-h-[44px] text-lg font-semibold text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-600 rounded-lg disabled:opacity-40"
+                >
+                  A+
+                </button>
+                <button
+                  onClick={() => setShowScenario(false)}
+                  className="min-h-[44px] text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 px-2 py-1"
+                >
+                  &#9664; Hide
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto p-4 pt-0">
-              <ScenarioPanel scenario={scenarioData} letter={scenarioLetter} fullContent={fullContent} />
+              {scenarioPane}
             </div>
           </div>
         )}
 
-        {/* Desktop: Right panel — Score Sheet (>= 1024px) */}
-        <div className={`hidden lg:flex lg:flex-col ${scenarioData && showScenario ? 'lg:w-1/2' : 'lg:w-full'}`}>
+        {/* Right panel — Score Sheet (>= 768px) */}
+        <div className={`hidden md:flex md:flex-col ${scenarioData && showScenario ? 'md:w-1/2' : 'md:w-full'}`}>
           {scenarioData && !showScenario && (
             <div className="flex-shrink-0 px-4 pt-3">
               <button
@@ -992,11 +854,11 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
           </div>
         </div>
 
-        {/* Mobile: Single panel with tab switching (< 1024px) */}
-        <div className="flex-1 lg:hidden overflow-y-auto">
+        {/* Mobile: Single panel with tab switching (< 768px) */}
+        <div className="flex-1 md:hidden overflow-y-auto">
           {scenarioData && activeTab === 'scenario' ? (
             <div className="p-4">
-              <ScenarioPanel scenario={scenarioData} letter={scenarioLetter} fullContent={fullContent} />
+              {scenarioPane}
             </div>
           ) : (
             <div className="p-4 pb-32">
