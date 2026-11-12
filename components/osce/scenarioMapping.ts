@@ -249,16 +249,22 @@ export function mapOsceToScenario(s: ScenarioApi): Record<string, unknown> {
   let dispatch_time: string | undefined;
   let dispatch_location: string | undefined;
   const notes: string[] = [];
+  const normCC = (v: string | null | undefined) => (v || '').trim().replace(/\s+/g, ' ').toLowerCase();
   for (const d of dispatch) {
     const l = (d.label || '').toLowerCase();
     if (l === 'time' && !dispatch_time) dispatch_time = d.value;
     else if (l === 'location' && !dispatch_location) dispatch_location = d.value;
-    else notes.push(d.label ? `${d.label}: ${d.value}` : d.value);
+    // Same chief complaint already shown under Patient Information: leave it out of the notes.
+    else if (l === 'chief complaint' && normCC(d.value) === normCC(s.chief_complaint)) continue;
+    // Dispatch notes text is shown without its label; any other label is kept.
+    else notes.push(d.label && l !== 'dispatch notes' ? `${d.label}: ${d.value}` : d.value);
   }
 
   const debrief: string[] = [];
   for (const sec of buildOralSections(s.oral_board_domains)) {
-    for (const item of sec.items) debrief.push(sec.heading ? `${sec.heading}: ${item}` : item);
+    // Section is already titled "Debrief Discussion Points": drop a repeated prefix, keep any other heading.
+    const repeats = !!sec.heading && /^debrief discussion points$/i.test(sec.heading.trim());
+    for (const item of sec.items) debrief.push(sec.heading && !repeats ? `${sec.heading}: ${item}` : item);
   }
 
   const ageText = s.patient_age === null || s.patient_age === undefined ? '' : String(s.patient_age).replace(/\s*years?\s*$/i, '').trim();

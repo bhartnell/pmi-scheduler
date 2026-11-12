@@ -25,7 +25,7 @@ export default function OsceScenarioView({ scenario, letter }: { scenario: Scena
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Scenario {L}{scenario.title ? `: ${scenario.title}` : ''}</h1>
       </div>
 
-      <ScenarioFullDisplay scenario={mapped} expandAllPhases hideEmpty />
+      <ScenarioFullDisplay scenario={mapped} expandAllPhases hideEmpty hideSecondaryAssessment />
 
       {fullLines.length > 0 && (
         <div className={`${card} print:hidden`}>

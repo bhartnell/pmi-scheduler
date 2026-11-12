@@ -59,12 +59,18 @@ export interface ScenarioFullDisplayProps {
    *  Assessment, SAMPLE) if they have no data — for sparse cases (e.g. OCR'd
    *  ACLS cards). Default false → unchanged for existing consumers. */
   hideEmpty?: boolean;
+  /** When true, never render the Secondary Assessment block (vitals, history,
+   *  SAMPLE, OPQRST). For sources with no structured history (OSCE), where the
+   *  SAMPLE defaults ('NKDA' / 'None') would read as recorded data. Default
+   *  false -> unchanged for existing consumers. */
+  hideSecondaryAssessment?: boolean;
 }
 
 export default function ScenarioFullDisplay({
   scenario,
   expandAllPhases = false,
   hideEmpty = false,
+  hideSecondaryAssessment = false,
 }: ScenarioFullDisplayProps) {
   useFeedbackScenario(scenario?.id, scenario?.title);
   const [expandedPhases, setExpandedPhases] = useState<Set<number>>(() => {
@@ -112,7 +118,7 @@ export default function ScenarioFullDisplay({
   const secondaryHasData = !!(secondary && Object.values(secondary).some(v => v));
   const secondaryWrapperHasData = vitalsHasData || medHistHasData || sampleHasData || opqrstHasData || secondaryHasData;
   const showPatientInfo = !hideEmpty || patientInfoHasData;
-  const showSecondary = !hideEmpty || secondaryWrapperHasData;
+  const showSecondary = !hideSecondaryAssessment && (!hideEmpty || secondaryWrapperHasData);
   const showSample = !hideEmpty || sampleHasData;
 
   return (
