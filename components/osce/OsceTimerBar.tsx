@@ -1,5 +1,6 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react';
 import { computeTimer, formatMmSs, parseTimerState, type OsceTimerState } from '@/lib/osce-timer';
 
@@ -74,14 +75,24 @@ export function TimerBarView({ eventId, large = false }: { eventId: string; larg
 // Layout-level wrapper: reads the evaluator's event from the saved session.
 export default function OsceTimerBar() {
   const [eventId, setEventId] = useState<string | null>(null);
+  const pathname = usePathname();
+  // Re-read the session on route change and every 2s so a freshly signed-in
+  // evaluator (client-side navigation, no layout remount) gets the bar.
   useEffect(() => {
-    try {
-      const s = JSON.parse(localStorage.getItem('osce_session') || 'null');
-      if (s?.eventId) setEventId(String(s.eventId));
-    } catch {
-      /* ignore */
+    function read() {
+      let next: string | null = null;
+      try {
+        const s = JSON.parse(localStorage.getItem('osce_session') || 'null');
+        if (s?.eventId) next = String(s.eventId);
+      } catch {
+        /* ignore */
+      }
+      setEventId(prev => (prev === next ? prev : next));
     }
-  }, []);
+    read();
+    const i = setInterval(read, 2000);
+    return () => clearInterval(i);
+  }, [pathname]);
   if (!eventId) return null;
   return (
     <Boundary>
