@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-12
 
+osce-phase-blocks-2 | OSCE scenario view now renders through the standard lab ScenarioFullDisplay (new mapOsceToScenario mapper, expandAllPhases + hideEmpty); ScenarioFullDisplay gains an optional phase.vitals_extra_sets (additive, other consumers unchanged). Draft PR #514, not merged (OSCE hold).
 osce-phase-blocks | OSCE scenario view: one block per phase (vitals, expected actions, instructor cues together) replaces the separate vitals card + interventions card; phase list is the union of vitals phases and expected-intervention phases. Component-only (OsceScenarioView), no data/API/schema change. Revert: git revert.
 
 ## 2026-11-11
