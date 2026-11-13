@@ -7,6 +7,11 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-13
+
+osce-easy-access | OSCE easy access (items 2 and 4): 'Open evaluator grading' link on the event admin page; Timer link on the evaluator dashboard for signed-in admins; saved evaluator session for a closed or out-of-window event is dropped (new GET /api/osce/session-status, network failure keeps the session); 44px Sign Out targets. No schema change, no change to who can enter grading. Revert: git revert.
+osce-easy-access-2 | OSCE easy access second pass: session-status and validate-pin now share one accept rule (isEventAcceptingEvaluators: open or closed, inside start-1 to end+1 day), so a closed in-window event no longer loops evaluators back to sign-in; unit test tests/osce-session-status.test.ts. Revert: git revert.
+
 ## 2026-11-11
 
 osce-admin-move | OSCE no hard locks PR 2: admin Move... on each Students-tab row (any block/day, any open slot, end of block past nominal capacity, optional swap) via POST /api/osce/events/[id]/students/move; pure planner lib/osce-student-move.ts respects UNIQUE(time_block_id, slot_number) and renumbers nobody else; assessment follows (day/date/slot), scores and scenario untouched; audit_log row per moved student (resource_type osce_schedule); row shows 'time changed, invite not updated' until Send student slot invites. No schema change. Revert: git revert.
