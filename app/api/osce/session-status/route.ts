@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
-import { chooseEventForPin, todayInOsceZone } from '@/lib/osce-event-pin';
+import { isEventAcceptingEvaluators, todayInOsceZone } from '@/lib/osce-event-pin';
 
 // GET - Public: is a saved evaluator session still good?
-// Returns { active } for the saved event (open AND today inside its date window)
+// Returns { active } for the saved event (status open or closed AND today inside its date window, same rule as validate-pin)
 // plus is_admin for a signed-in admin (used only to show the Timer link).
 // Exposes no scores, rosters or codes.
 export async function GET(req: NextRequest) {
@@ -30,8 +30,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Lookup failed', is_admin: isAdmin }, { status: 500 });
   }
 
-  const active =
-    !!event && event.status === 'open' && chooseEventForPin([event], todayInOsceZone()) !== null;
+  // Same rule validate-pin uses (open or closed, inside the date window), so a
+  // saved session is dropped exactly when the code would no longer be accepted.
+  const active = isEventAcceptingEvaluators(event, todayInOsceZone());
 
   return NextResponse.json({ success: true, active, is_admin: isAdmin });
 }
