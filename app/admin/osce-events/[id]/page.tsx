@@ -37,7 +37,7 @@ import {
 } from 'lucide-react';
 import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 import { computeSlotTime, clock12 } from '@/lib/osce-student-invites';
-import { DEFAULT_SCENARIO_LETTERS } from '@/lib/osce-scenario-letters';
+import { DEFAULT_SCENARIO_LETTERS, caseLabel, caseLabelFrom, buildCaseNames, type CaseNames } from '@/lib/osce-scenario-letters';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1858,6 +1858,7 @@ function RosterSetupPanel({ eventId, event, onGenerated }: { eventId: string; ev
   const [day1, setDay1] = useState<string[]>([]);
   const [day2, setDay2] = useState<string[]>([]);
   const [allScenarios, setAllScenarios] = useState<string[]>(DEFAULT_SCENARIO_LETTERS);
+  const [caseNames, setCaseNames] = useState<CaseNames>({});
   const [savingScenarios, setSavingScenarios] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -1868,7 +1869,10 @@ function RosterSetupPanel({ eventId, event, onGenerated }: { eventId: string; ev
       try {
         const sres = await fetch('/api/osce-scenarios');
         const sdata = await sres.json();
-        if (Array.isArray(sdata) && sdata.length > 0) setAllScenarios(sdata.map((r: { scenario_letter: string }) => r.scenario_letter));
+        if (Array.isArray(sdata) && sdata.length > 0) {
+          setAllScenarios(sdata.map((r: { scenario_letter: string }) => r.scenario_letter));
+          setCaseNames(buildCaseNames(sdata));
+        }
       } catch { /* keep default letters */ }
       try {
         const res = await fetch(`/api/osce/events/${eventId}/day-scenarios`);
@@ -1948,7 +1952,7 @@ function RosterSetupPanel({ eventId, event, onGenerated }: { eventId: string; ev
                   key={s}
                   type="button"
                   onClick={() => toggle(day as 1 | 2, s)}
-                  className={`w-9 h-9 rounded-lg text-sm font-bold border transition-colors ${
+                  className={`min-w-9 h-9 px-3 rounded-lg text-sm font-bold border transition-colors ${
                     selected
                       ? isOverlap
                         ? 'bg-amber-100 border-amber-400 text-amber-800 dark:bg-amber-900/40 dark:border-amber-600 dark:text-amber-300'
@@ -1956,7 +1960,7 @@ function RosterSetupPanel({ eventId, event, onGenerated }: { eventId: string; ev
                       : 'bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-600 dark:text-gray-300'
                   }`}
                 >
-                  {s}
+                  {caseLabelFrom(s, caseNames)}
                 </button>
               );
             })}
@@ -1967,7 +1971,7 @@ function RosterSetupPanel({ eventId, event, onGenerated }: { eventId: string; ev
       {overlap.length > 0 && (
         <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg px-3 py-2">
           <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-          Scenario{overlap.length !== 1 ? 's' : ''} {overlap.join(', ')} assigned to both days - a student on Day 1 could
+          Scenario{overlap.length !== 1 ? 's' : ''} {overlap.map(l => caseLabelFrom(l, caseNames)).join(', ')} assigned to both days - a student on Day 1 could
           brief a Day 2 student on it. Confirm this is intentional before generating.
         </div>
       )}
@@ -2025,7 +2029,7 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
   const [loading, setLoading] = useState(true);
 
   const [scenarioRows, setScenarioRows] = useState<Record<string, { scenario: string; locked: boolean } | null>>({});
-  const [scenarioOptions, setScenarioOptions] = useState<{ letter: string; title: string }[]>([]);
+  const [scenarioOptions, setScenarioOptions] = useState<{ letter: string; title: string; short_name?: string | null }[]>([]);
   const [scenarioMsg, setScenarioMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [savingScenario, setSavingScenario] = useState<string | null>(null);
 
@@ -2241,7 +2245,7 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
                   </button>
                   {scenarioRows[student.id]?.locked ? (
                     <span className="text-xs text-gray-500 dark:text-gray-400" title="Scores have been entered, so the scenario is locked">
-                      Scenario {scenarioRows[student.id]?.scenario} (scored, locked)
+                      {caseLabel(scenarioRows[student.id]?.scenario, scenarioOptions.find(o => o.letter === scenarioRows[student.id]?.scenario)?.short_name)} (scored, locked)
                     </span>
                   ) : (
                     <select
@@ -2253,7 +2257,7 @@ function StudentsTab({ eventId, event }: { eventId: string; event: OsceEvent }) 
                     >
                       <option value="">No scenario</option>
                       {scenarioOptions.map(o => (
-                        <option key={o.letter} value={o.letter}>{o.letter} - {o.title}</option>
+                        <option key={o.letter} value={o.letter}>{caseLabel(o.letter, o.short_name)} - {o.title}</option>
                       ))}
                     </select>
                   )}
@@ -2364,6 +2368,7 @@ interface ResultsAssessmentResult {
   id: string;
   student_name: string;
   scenario: string;
+  scenario_name?: string | null;
   slot_number: number;
   day_number: number;
   assessment_date: string;
@@ -2476,7 +2481,7 @@ function ResultsTab({ eventId }: { eventId: string }) {
                   <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{r.student_name}</td>
                   <td className="px-3 py-3 text-center">
                     <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded font-bold text-xs">
-                      {r.scenario}
+                      {caseLabel(r.scenario, r.scenario_name)}
                     </span>
                   </td>
                   <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{r.day_number}</td>

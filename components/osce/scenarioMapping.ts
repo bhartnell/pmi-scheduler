@@ -4,6 +4,7 @@
 
 export interface ScenarioApi {
   scenario_letter?: string;
+  short_name?: string | null;
   title?: string;
   patient_name?: string | null;
   patient_age?: string | number | null;

@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import OsceScenarioView from '@/components/osce/OsceScenarioView';
 import type { ScenarioApi } from '@/components/osce/scenarioMapping';
-import { scenarioSolidColor } from '@/lib/osce-scenario-letters';
+import { scenarioSolidColor, caseLabel } from '@/lib/osce-scenario-letters';
 
 type Rating = 'S' | 'N' | 'U' | null;
 type Readiness = 'ready' | 'ready_with_concerns' | 'not_yet_ready' | null;
@@ -12,6 +12,7 @@ type Readiness = 'ready' | 'ready_with_concerns' | 'not_yet_ready' | null;
 // Scenario reference: the raw API response is rendered by ScenarioReference.
 // scenarioData only carries the title used in the score-sheet headers.
 interface ScenarioData {
+  shortName?: string | null;
   title: string;
 }
 
@@ -290,7 +291,7 @@ export default function ScoringPage() {
       .then(data => {
         if (data && !data.error) {
           setScenarioRaw(data as ScenarioApi);
-          setScenarioData({ title: data.title || '' });
+          setScenarioData({ title: data.title || '', shortName: data.short_name || null });
         }
       })
       .catch(err => console.error('Failed to fetch scenario:', err))
@@ -432,7 +433,7 @@ export default function ScoringPage() {
 <h1>OSCE Clinical Capstone - Score Sheet</h1>
 <p class="meta">
   <strong>Student:</strong> ${assessment.student_name} &nbsp;|&nbsp;
-  <strong>Scenario:</strong> ${assessment.scenario} &nbsp;|&nbsp;
+  <strong>Scenario:</strong> ${caseLabel(assessment.scenario, scenarioData?.shortName)}${scenarioData?.shortName?.trim() ? ` (${assessment.scenario})` : ''} &nbsp;|&nbsp;
   <strong>Slot:</strong> ${assessment.slot_number} &nbsp;|&nbsp;
   <strong>Day:</strong> ${assessment.day_number}<br/>
   <strong>Evaluator:</strong> ${evaluator.name} &nbsp;|&nbsp;
@@ -566,11 +567,11 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
       {scenarioData && (
         <div className="flex items-center gap-2 mb-3">
           <span className={`w-8 h-8 rounded-lg ${scenarioSolidColor(scenarioLetter)} text-white font-bold flex items-center justify-center text-sm flex-shrink-0`}>
-            {scenarioLetter}
+            {scenarioData.shortName?.trim() ? scenarioData.shortName.trim().charAt(0).toUpperCase() : scenarioLetter}
           </span>
           <div>
             <p className="font-bold text-slate-900 dark:text-white text-sm">
-              Scenario {scenarioLetter} - {scenarioData.title}
+              {caseLabel(scenarioLetter, scenarioData.shortName)} - {scenarioData.title}
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-400">
               {assessment.student_name} | Slot {assessment.slot_number} | Day {assessment.day_number}
@@ -738,12 +739,12 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
             <div className="text-center flex-1">
               <div className="flex items-center justify-center gap-2">
                 <span className={`w-8 h-8 rounded-lg ${scenarioSolidColor(assessment.scenario)} text-white font-bold flex items-center justify-center text-sm`}>
-                  {assessment.scenario}
+                  {scenarioData?.shortName?.trim() ? scenarioData.shortName.trim().charAt(0).toUpperCase() : assessment.scenario}
                 </span>
                 <h1 className="text-lg font-bold text-slate-900 dark:text-white">{assessment.student_name}</h1>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                {scenarioData ? `Scenario ${scenarioLetter} - ${scenarioData.title} | ` : ''}Slot {assessment.slot_number} &middot; {evaluator.name}
+                {scenarioData ? `${caseLabel(scenarioLetter, scenarioData.shortName)} - ${scenarioData.title} | ` : ''}Slot {assessment.slot_number} &middot; {evaluator.name}
               </p>
             </div>
             <div className="text-right min-w-[60px]">

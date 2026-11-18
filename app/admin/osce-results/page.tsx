@@ -1,5 +1,6 @@
 'use client';
 
+import { caseLabel } from '@/lib/osce-scenario-letters';
 import { useState, useEffect } from 'react';
 
 interface EvaluatorResult {
@@ -30,6 +31,7 @@ interface AssessmentResult {
   id: string;
   student_name: string;
   scenario: string;
+  scenario_name?: string | null;
   slot_number: number;
   day_number: number;
   assessment_date: string;
@@ -188,7 +190,7 @@ export default function OsceResultsPage() {
                       <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{r.student_name}</td>
                       <td className="px-3 py-3 text-center">
                         <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded font-bold text-xs">
-                          {r.scenario}
+                          {caseLabel(r.scenario, r.scenario_name)}
                         </span>
                       </td>
                       <td className="px-3 py-3 text-center text-gray-600 dark:text-gray-400">{r.day_number}</td>

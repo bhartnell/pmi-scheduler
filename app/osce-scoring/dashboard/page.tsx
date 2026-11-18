@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { buildDayTabs, pickActiveDay, groupDayAssessments, type DashBlock, type DashRosterRow } from '@/lib/osce-dashboard';
 import { todayInOsceZone } from '@/lib/osce-event-pin';
-import { scenarioSoftColor } from '@/lib/osce-scenario-letters';
+import { scenarioSoftColor, caseLabelFrom, type CaseNames } from '@/lib/osce-scenario-letters';
 
 interface Assessment {
   id: string;
@@ -43,6 +43,7 @@ export default function EvaluatorDashboard() {
   const [timerEventId, setTimerEventId] = useState<string | null>(null);
   const [eventTitle, setEventTitle] = useState<string>('');
   const [blocks, setBlocks] = useState<DashBlock[]>([]);
+  const [caseNames, setCaseNames] = useState<CaseNames>({});
   const [roster, setRoster] = useState<DashRosterRow[]>([]);
   const [timing, setTiming] = useState<{ minutes_per_student: number | null; first_slot_offset_min: number | null }>({ minutes_per_student: null, first_slot_offset_min: null });
 
@@ -101,6 +102,7 @@ export default function EvaluatorDashboard() {
         const b: DashBlock[] = data.blocks || [];
         setBlocks(b);
         setRoster(data.roster || []);
+        setCaseNames(data.case_names || {});
         if (data.timing) setTiming(data.timing);
         // Select today's tab (OSCE time zone), else the next upcoming day.
         setActiveDay(pickActiveDay(buildDayTabs(b, data.assessments || []), todayInOsceZone()));
@@ -209,7 +211,7 @@ export default function EvaluatorDashboard() {
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${scenarioSoftColor(a.scenario)}`}>
-                      {a.scenario}
+                      {caseLabelFrom(a.scenario, caseNames)}
                     </span>
                     <div>
                       <h3 className="font-semibold text-slate-900 dark:text-white text-lg">{a.student_name}</h3>
