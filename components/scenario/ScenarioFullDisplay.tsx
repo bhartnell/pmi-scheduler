@@ -59,12 +59,18 @@ export interface ScenarioFullDisplayProps {
    *  Assessment, SAMPLE) if they have no data — for sparse cases (e.g. OCR'd
    *  ACLS cards). Default false → unchanged for existing consumers. */
   hideEmpty?: boolean;
+  /** When true, never render the Secondary Assessment block (vitals, history,
+   *  SAMPLE, OPQRST). For sources with no structured history (OSCE), where the
+   *  SAMPLE defaults ('NKDA' / 'None') would read as recorded data. Default
+   *  false -> unchanged for existing consumers. */
+  hideSecondaryAssessment?: boolean;
 }
 
 export default function ScenarioFullDisplay({
   scenario,
   expandAllPhases = false,
   hideEmpty = false,
+  hideSecondaryAssessment = false,
 }: ScenarioFullDisplayProps) {
   useFeedbackScenario(scenario?.id, scenario?.title);
   const [expandedPhases, setExpandedPhases] = useState<Set<number>>(() => {
@@ -112,7 +118,7 @@ export default function ScenarioFullDisplay({
   const secondaryHasData = !!(secondary && Object.values(secondary).some(v => v));
   const secondaryWrapperHasData = vitalsHasData || medHistHasData || sampleHasData || opqrstHasData || secondaryHasData;
   const showPatientInfo = !hideEmpty || patientInfoHasData;
-  const showSecondary = !hideEmpty || secondaryWrapperHasData;
+  const showSecondary = !hideSecondaryAssessment && (!hideEmpty || secondaryWrapperHasData);
   const showSample = !hideEmpty || sampleHasData;
 
   return (
@@ -481,31 +487,38 @@ export default function ScenarioFullDisplay({
                 </button>
                 {expandedPhases.has(idx) && (
                   <div className="p-4 space-y-3">
-                    {phase.vitals && (
-                      <div>
-                        <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                          Vitals
-                        </h5>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                          {phase.vitals.bp && <PhaseVitalCell tone="blue" label="BP" value={phase.vitals.bp} />}
-                          {phase.vitals.hr && <PhaseVitalCell tone="red" label="HR" value={phase.vitals.hr} />}
-                          {phase.vitals.rr && <PhaseVitalCell tone="green" label="RR" value={phase.vitals.rr} />}
-                          {phase.vitals.spo2 && <PhaseVitalCell tone="purple" label="SpO2" value={withUnit(phase.vitals.spo2, '%')} />}
-                          {phase.vitals.temp && <PhaseVitalCell tone="orange" label="Temp" value={withUnit(phase.vitals.temp, '°F')} />}
-                          {phase.vitals.bgl && <PhaseVitalCell tone="yellow" label="BGL" value={phase.vitals.bgl} />}
-                          {phase.vitals.gcs && <PhaseVitalCell tone="gray" label="GCS" value={phase.vitals.gcs} />}
-                          {phase.vitals.etco2 && <PhaseVitalCell tone="cyan" label="ETCO2" value={phase.vitals.etco2} />}
-                          {(phase.vitals.rhythm || phase.vitals.ekg || phase.vitals.ekg_rhythm) && (
-                            <PhaseVitalCell
-                              tone="pink"
-                              label="EKG Rhythm"
-                              value={phase.vitals.ekg_rhythm || phase.vitals.rhythm || phase.vitals.ekg}
-                              wide
-                            />
-                          )}
+                    {(() => {
+                      // Optional, additive: some sources (OSCE) carry more than one vitals set per phase.
+                      const extra: AnyObj[] = Array.isArray(phase.vitals_extra_sets)
+                        ? phase.vitals_extra_sets.filter((v: AnyObj) => v && typeof v === 'object')
+                        : [];
+                      const sets: AnyObj[] = [phase.vitals, ...extra].filter(Boolean);
+                      if (sets.length === 0) return null;
+                      return (
+                        <div className="space-y-2">
+                          {sets.map((v: AnyObj, si: number) => (
+                            <div key={si}>
+                              <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                {sets.length > 1 ? `Vitals - set ${si + 1}` : 'Vitals'}
+                              </h5>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+                                {v.bp && <PhaseVitalCell tone="blue" label="BP" value={v.bp} />}
+                                {v.hr && <PhaseVitalCell tone="red" label="HR" value={v.hr} />}
+                                {v.rr && <PhaseVitalCell tone="green" label="RR" value={v.rr} />}
+                                {v.spo2 && <PhaseVitalCell tone="purple" label="SpO2" value={withUnit(v.spo2, '%')} />}
+                                {v.temp && <PhaseVitalCell tone="orange" label="Temp" value={withUnit(v.temp, '°F')} />}
+                                {v.bgl && <PhaseVitalCell tone="yellow" label="BGL" value={v.bgl} />}
+                                {v.gcs && <PhaseVitalCell tone="gray" label="GCS" value={v.gcs} />}
+                                {v.etco2 && <PhaseVitalCell tone="cyan" label="ETCO2" value={v.etco2} />}
+                                {(v.rhythm || v.ekg || v.ekg_rhythm) && (
+                                  <PhaseVitalCell tone="pink" label="EKG Rhythm" value={v.ekg_rhythm || v.rhythm || v.ekg} wide />
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                     {phase.presentation_notes && (
                       <div>
                         <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
