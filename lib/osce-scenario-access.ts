@@ -3,6 +3,18 @@
 // session that proves it belongs to an event that is accepting evaluators today.
 
 import { isEventAcceptingEvaluators } from './osce-event-pin.ts';
+import { hasMinRole } from './permissions.ts';
+
+/**
+ * Staff-only rule for the signed-in OSCE case pages and their APIs
+ * (/osce-scenario, /api/osce-scenarios). Instructor level and above; students,
+ * guests, agency observers, program directors and pending users are refused.
+ * Mirrors requireAuth('instructor') in the routes.
+ */
+export const OSCE_CASE_MIN_ROLE = 'instructor' as const;
+export function canViewOsceCases(role: string | null | undefined): boolean {
+  return !!role && hasMinRole(role, OSCE_CASE_MIN_ROLE);
+}
 
 export interface ScenarioAccessEvent {
   id: string;

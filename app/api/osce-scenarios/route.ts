@@ -8,11 +8,11 @@ import { sortCases } from '@/lib/osce-scenario-letters';
 // GET /api/osce-scenarios
 //
 // Returns list of all active OSCE scenarios (summary only).
-// Requires authenticated user.
+// Staff only (instructor or above): the list reveals which cases exist for the exam.
 // ---------------------------------------------------------------------------
 export async function GET() {
   try {
-    const auth = await requireAuth();
+    const auth = await requireAuth('instructor');
     if (auth instanceof NextResponse) return auth;
 
     const supabase = getSupabaseAdmin();
