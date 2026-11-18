@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
 import { computeSlotTime, clock12 } from '@/lib/osce-student-invites';
+import { DEFAULT_SCENARIO_LETTERS } from '@/lib/osce-scenario-letters';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1845,7 +1846,6 @@ function TimeBlocksTab({ eventId, event, onRefresh }: { eventId: string; event: 
 // TAB 5: Students
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const ALL_SCENARIOS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 /**
  * Cohort roster auto-populate + capacity-based distribution + assessment
@@ -1857,6 +1857,7 @@ const ALL_SCENARIOS = ['A', 'B', 'C', 'D', 'E', 'F'];
 function RosterSetupPanel({ eventId, event, onGenerated }: { eventId: string; event: OsceEvent; onGenerated: () => void }) {
   const [day1, setDay1] = useState<string[]>([]);
   const [day2, setDay2] = useState<string[]>([]);
+  const [allScenarios, setAllScenarios] = useState<string[]>(DEFAULT_SCENARIO_LETTERS);
   const [savingScenarios, setSavingScenarios] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -1864,6 +1865,11 @@ function RosterSetupPanel({ eventId, event, onGenerated }: { eventId: string; ev
 
   useEffect(() => {
     (async () => {
+      try {
+        const sres = await fetch('/api/osce-scenarios');
+        const sdata = await sres.json();
+        if (Array.isArray(sdata) && sdata.length > 0) setAllScenarios(sdata.map((r: { scenario_letter: string }) => r.scenario_letter));
+      } catch { /* keep default letters */ }
       try {
         const res = await fetch(`/api/osce/events/${eventId}/day-scenarios`);
         const data = await res.json();
@@ -1934,7 +1940,7 @@ function RosterSetupPanel({ eventId, event, onGenerated }: { eventId: string; ev
         <div key={day}>
           <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Day {day} Scenarios</label>
           <div className="flex flex-wrap gap-2">
-            {ALL_SCENARIOS.map(s => {
+            {allScenarios.map(s => {
               const selected = (day === 1 ? day1 : day2).includes(s);
               const isOverlap = overlap.includes(s);
               return (
