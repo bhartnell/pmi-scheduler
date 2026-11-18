@@ -25,6 +25,8 @@ function EnterContent() {
 
   // PIN flow state
   const [pin, setPin] = useState('');
+  const [stationEventId, setStationEventId] = useState<string | null>(null);
+  const [staffChecking, setStaffChecking] = useState(false);
   const [pinValidated, setPinValidated] = useState(false);
   const [eventInfo, setEventInfo] = useState<EventInfo | null>(null);
   const [evaluators, setEvaluators] = useState<EvaluatorOption[]>([]);
@@ -74,6 +76,46 @@ function EnterContent() {
       return;
     }
 
+    // Signed-in pmi.edu staff skip the code: server picks today's event and
+    // returns their own name. Not for students/outside accounts (server decides).
+    // Skipped after an explicit sign out in this tab so there is no re-login loop.
+    let skipStaff = false;
+    try { skipStaff = sessionStorage.getItem('osce_no_staff_auto') === '1'; } catch { /* ignore */ }
+    if (!skipStaff) {
+      setStaffChecking(true);
+      fetch('/api/osce/staff-session')
+        .then(r => r.json())
+        .then(d => {
+          if (d && d.success && d.evaluator && d.event) {
+            localStorage.setItem('osce_session', JSON.stringify({
+              eventId: d.event.id,
+              evaluatorName: d.evaluator.name,
+              evaluatorRole: d.evaluator.role,
+              pin: '',
+              eventTitle: d.event.title,
+              staff: true,
+            }));
+            localStorage.setItem('osce_evaluator', JSON.stringify({ name: d.evaluator.name, role: d.evaluator.role }));
+            router.push('/osce-scoring/dashboard');
+            return;
+          }
+          setStaffChecking(false);
+          resumeOrStation();
+        })
+        .catch(() => { setStaffChecking(false); resumeOrStation(); });
+      return;
+    }
+    resumeOrStation();
+    return;
+
+    function resumeOrStation() {
+    // Station link: ?event=<id> picks the event (no code); person picks their name.
+    const stationEvent = searchParams.get('event');
+    if (stationEvent && !localStorage.getItem('osce_session')) {
+      validateStation(stationEvent);
+      return;
+    }
+
     // Check localStorage for existing PIN session
     const savedSession = localStorage.getItem('osce_session');
     if (savedSession) {
@@ -104,8 +146,35 @@ function EnterContent() {
     if (savedToken) {
       validateToken(savedToken);
     }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // ── Station link: event chosen by id, no code ──────────────────────────────
+  async function validateStation(eventId: string) {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/osce/validate-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_id: eventId }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setStationEventId(eventId);
+        setPinValidated(true);
+        setEventInfo(data.event);
+        setEvaluators(data.evaluators || []);
+      } else {
+        setError(data.error || 'This station link is not active right now');
+      }
+    } catch {
+      setError('Connection error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   // ── PIN validation ──────────────────────────────────────────────────────────
   async function validatePin(code: string) {
@@ -172,7 +241,7 @@ function EnterContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          pin: pin.trim(),
+          ...(stationEventId ? { event_id: stationEventId } : { pin: pin.trim() }),
           name: walkupName.trim(),
           agency: walkupAgency.trim(),
           role: walkupRole,
@@ -254,6 +323,7 @@ function EnterContent() {
     localStorage.removeItem('osce_token');
     localStorage.removeItem('osce_evaluator');
     localStorage.removeItem('osce_session');
+    try { sessionStorage.setItem('osce_no_staff_auto', '1'); } catch { /* ignore */ }
   }
 
   return (
@@ -272,8 +342,9 @@ function EnterContent() {
         </div>
 
         <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-6">
-          {/* ── Already authenticated ─────────────────────────────── */}
-          {evaluator ? (
+          {staffChecking ? (
+            <p className="text-center text-slate-500 dark:text-slate-400 py-6">Checking your PMI sign-in...</p>
+          ) : evaluator ? (
             <div className="text-center">
               <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-3">
                 <svg className="w-6 h-6 text-green-600 dark:text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -356,6 +427,12 @@ function EnterContent() {
                 className="w-full mt-4 py-3 px-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-lg"
               >
                 {loading ? 'Validating...' : 'Continue'}
+              </button>
+              <button
+                onClick={() => { try { sessionStorage.removeItem('osce_no_staff_auto'); } catch { /* ignore */ } window.location.reload(); }}
+                className="w-full mt-1 min-h-[44px] text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                PMI staff? Continue with your PMI sign-in
               </button>
               <button
                 onClick={() => { setShowTokenFallback(true); setError(''); }}

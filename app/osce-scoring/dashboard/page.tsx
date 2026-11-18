@@ -115,6 +115,8 @@ export default function EvaluatorDashboard() {
     localStorage.removeItem('osce_token');
     localStorage.removeItem('osce_evaluator');
     localStorage.removeItem('osce_session');
+    // Explicit sign out: do not auto sign staff straight back in on this tab.
+    try { sessionStorage.setItem('osce_no_staff_auto', '1'); } catch { /* ignore */ }
     router.push('/osce-scoring/enter');
   }
 

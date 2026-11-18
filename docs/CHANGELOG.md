@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-18
 
+PENDING | [preview] OSCE easy access 3rd pass: signed-in pmi.edu staff skip the event code (/api/osce/staff-session, own name, walk-up row once per event+name), station link /osce-scoring/enter?event=<id> + QR on event admin page (event id, never the code), explicit sign out stops auto sign-in. 6 unit tests. No schema/data change. Revert: git revert.
 3461133 | OSCE: /api/osce/scenario/[letter] no longer public; needs instructor/admin sign-in or evaluator proof (event id + event code or guest token in headers, event accepting evaluators today), else 401. Grading page sends proof. 7 unit tests. No schema/data change. Revert: git revert.
 
 osce-timer-adjust | OSCE timer control page: -1 min / +1 min / Set remaining (mm:ss) on a running or paused phase via new adjust + set_remaining actions in lib/osce-timer.ts (shifts started_at, clamps 0..phase total and reports it), audit_log row per adjustment (resource_type osce_timer), 8 unit tests; day-of checklist gains 'refresh every evaluator screen after any update'. No schema change, lab timer untouched. Revert: git revert.
