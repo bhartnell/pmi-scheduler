@@ -6,13 +6,9 @@ import { chooseEventForPin, PIN_ACCEPTED_STATUSES, todayInOsceZone } from '@/lib
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { pin, event_id: stationEventId } = body;
+    const { pin } = body;
 
-    // Station link: the event id (never the code) picks the event, still subject to
-    // the same accept rule (open/closed and inside the date window).
-    const byEventId = !pin && typeof stationEventId === 'string' && stationEventId.length > 0;
-
-    if (!byEventId && (!pin || typeof pin !== 'string')) {
+    if (!pin || typeof pin !== 'string') {
       return NextResponse.json(
         { valid: false, error: 'Event code is required' },
         { status: 400 }
@@ -23,12 +19,11 @@ export async function POST(req: NextRequest) {
 
     // Several events may share a code (Spring + Fall): fetch them all and pick the
     // one whose date window contains today in the OSCE time zone (nearest start).
-    let candQuery = supabase
+    const { data: candidates, error: eventError } = await supabase
       .from('osce_events')
       .select('id, title, subtitle, slug, start_date, end_date, status')
+      .eq('event_pin', pin.trim())
       .in('status', [...PIN_ACCEPTED_STATUSES]);
-    candQuery = byEventId ? candQuery.eq('id', stationEventId) : candQuery.eq('event_pin', String(pin).trim());
-    const { data: candidates, error: eventError } = await candQuery;
 
     if (eventError || !candidates || candidates.length === 0) {
       return NextResponse.json(

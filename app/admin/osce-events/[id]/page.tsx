@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import AgencyPreferencesPanel from '@/components/osce/AgencyPreferencesPanel';
 import CalendarSyncPanel from '@/components/osce/CalendarSyncPanel';
-import QRCodeDisplay from '@/components/QRCodeDisplay';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
@@ -145,8 +144,6 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabKey>('observers');
   const [copiedUrl, setCopiedUrl] = useState(false);
-  const [showStationLink, setShowStationLink] = useState(false);
-  const [copiedStation, setCopiedStation] = useState(false);
   const [deletingTestData, setDeletingTestData] = useState(false);
   const [testDataMessage, setTestDataMessage] = useState<string | null>(null);
   const [confirmDeleteTestData, setConfirmDeleteTestData] = useState(false);
@@ -280,18 +277,12 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
               Timer
             </button>
             <a
-              href="/osce-scoring/enter"
+              href="/osce-scoring/enter?staff=1"
               className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />
               Open evaluator grading
             </a>
-            <button
-              onClick={() => setShowStationLink(v => !v)}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-            >
-              Station link
-            </button>
             <a
               href={`/osce/${event.slug}`}
               className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
@@ -310,31 +301,6 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
           </div>
         </div>
       </div>
-
-      {showStationLink && eventId && (() => {
-        const stationUrl = `${typeof window !== 'undefined' ? window.location.origin : ''}/osce-scoring/enter?event=${eventId}`;
-        return (
-          <div className="mb-4 p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg flex items-start gap-6 max-md:flex-col">
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-gray-900 dark:text-white">Station link (room setup)</p>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                Opens evaluator sign-in with this event already chosen; the person picks their name from the signed-up list or adds themselves.
-                Anyone with this link can sign in as an evaluator during the event dates. It does not contain the event code.
-              </p>
-              <div className="flex items-center gap-2 mt-3">
-                <input readOnly value={stationUrl} className="flex-1 min-w-0 px-3 py-2 text-sm font-mono border border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white" />
-                <button
-                  onClick={() => { navigator.clipboard?.writeText(stationUrl); setCopiedStation(true); setTimeout(() => setCopiedStation(false), 2000); }}
-                  className="min-h-[44px] px-4 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-                >
-                  {copiedStation ? 'Copied' : 'Copy'}
-                </button>
-              </div>
-            </div>
-            <QRCodeDisplay url={stationUrl} size={160} showUrl={false} />
-          </div>
-        );
-      })()}
 
       {/* Test event banner */}
       {isTestEvent && (

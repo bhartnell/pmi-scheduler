@@ -13,8 +13,6 @@ export interface StaffSessionInput<E extends StaffSessionEvent> {
   user: { email: string; role: string } | null;
   events: E[] | null | undefined;
   today: string; // YYYY-MM-DD in the OSCE zone
-  /** Optional: restrict to one event (station link). */
-  eventId?: string | null;
 }
 
 export type StaffSessionDecision<E> =
@@ -32,7 +30,7 @@ export function decideStaffSession<E extends StaffSessionEvent>(i: StaffSessionI
   if (!i.user) return { ok: false, reason: 'signed_out' };
   if (!isPmiStaffUser(i.user)) return { ok: false, reason: 'not_staff' };
   const accepting = (i.events ?? []).filter(
-    (e) => (!i.eventId || e.id === i.eventId) && isEventAcceptingEvaluators(e, i.today),
+    (e) => isEventAcceptingEvaluators(e, i.today),
   );
   // chooseEventForPin keeps the nearest start date, same as the code path.
   const event = chooseEventForPin(accepting, i.today);

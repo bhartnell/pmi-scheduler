@@ -21,12 +21,10 @@ test('student account (my.pmi.edu or low role) is refused', () => {
 test('signed out is refused', () => {
   assert.deepEqual(decideStaffSession({ user: null, events: [fall], today: '2026-11-19' }), { ok: false, reason: 'signed_out' });
 });
-test('two events in window: nearest start wins; eventId narrows', () => {
+test('two events in window: nearest start wins', () => {
   const other = { id: 'other', status: 'closed', start_date: '2026-11-18', end_date: '2026-11-20' };
   const d = decideStaffSession({ user: staff, events: [fall, other], today: '2026-11-19' });
   assert.equal(d.ok && d.event.id, 'other');
-  const n = decideStaffSession({ user: staff, events: [fall, other], today: '2026-11-19', eventId: 'fall' });
-  assert.equal(n.ok && n.event.id, 'fall');
 });
 test('draft event is not offered', () => {
   const d = decideStaffSession({ user: staff, events: [{ ...fall, status: 'draft' }], today: '2026-11-19' });

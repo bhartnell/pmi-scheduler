@@ -426,7 +426,7 @@ Case study system. 10 pages.
 | `/osce`, `/osce/[slug]` | Public OSCE landing |
 | `/osce-evaluator-signup` | Public self-serve observer registration form (picks time blocks, writes `osce_observers`). NOT a redirect — corrected 2026-09-01; previous entry here was stale. Still hardcoded to "Spring 2026" copy/dates in the JSX rather than reading the selected event, flagged separately as a Repeatability-Rule gap for a future pass. |
 | `/osce-scenario`, `/osce-scenario/[letter]` | Scenario library |
-| `/osce-scoring/{enter,dashboard,[assessmentId]}` | Scoring workflow. `/osce-scoring/enter` accepts either the event PIN + name-select flow, or a `?token=` guest-token link (see `/admin/osce-tokens`), or `?event=<id>` (station link, no code); signed-in pmi.edu staff skip the code via `/api/osce/staff-session` |
+| `/osce-scoring/{enter,dashboard,[assessmentId]}` | Scoring workflow. `/osce-scoring/enter` accepts either the event PIN + name-select flow, or a `?token=` guest-token link (see `/admin/osce-tokens`). Signed-in pmi.edu staff see a one-click "Continue as NAME" card (`/api/osce/staff-session`: GET lookup, POST on Continue); `?staff=1` (admin page button) goes straight through |
 | `/admin/osce-events` | Admin — create/manage OSCE events, observers, time blocks, results (per event) |
 | `/admin/osce-tokens` | Admin — generate per-evaluator guest-token links scoped to one event and email invites to external evaluators (chiefs/agency/clinical leadership). Now linked from the Admin hub (2026-09-01); previously reachable only by direct URL. |
 | `/admin/osce-observers` | Redirect stub → most recent event's `/admin/osce-events/[id]` (Observers tab) |
