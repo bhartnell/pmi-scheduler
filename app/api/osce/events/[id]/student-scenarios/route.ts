@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isScenarioLetter } from '@/lib/osce-scenario-letters';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
@@ -66,7 +67,7 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
   try {
     const { id } = await params;
     const { schedule_id, scenario } = await req.json();
-    if (!schedule_id || typeof scenario !== 'string' || !/^[A-F]$/.test(scenario)) {
+    if (!schedule_id || typeof scenario !== 'string' || !isScenarioLetter(scenario)) {
       return NextResponse.json({ success: false, error: 'schedule_id and a scenario letter are required' }, { status: 400 });
     }
     const supabase = getSupabaseAdmin();

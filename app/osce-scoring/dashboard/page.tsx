@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { buildDayTabs, pickActiveDay, groupDayAssessments, type DashBlock, type DashRosterRow } from '@/lib/osce-dashboard';
 import { todayInOsceZone } from '@/lib/osce-event-pin';
+import { scenarioSoftColor } from '@/lib/osce-scenario-letters';
 
 interface Assessment {
   id: string;
@@ -122,15 +123,6 @@ export default function EvaluatorDashboard() {
   const groups = groupDayAssessments(activeDay, assessments, roster, blocks, timing);
   const dayHasRoster = roster.some(r => blocks.find(b => b.id === r.time_block_id)?.day_number === activeDay);
 
-  const scenarioColors: Record<string, string> = {
-    A: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-    B: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    C: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-    D: 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200',
-    E: 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200',
-    F: 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200',
-  };
-
   const readinessLabels: Record<string, { label: string; color: string }> = {
     ready: { label: 'Ready', color: 'text-green-600 dark:text-green-400' },
     ready_with_concerns: { label: 'Concerns', color: 'text-amber-600 dark:text-amber-400' },
@@ -216,7 +208,7 @@ export default function EvaluatorDashboard() {
               >
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${scenarioColors[a.scenario] || 'bg-slate-100'}`}>
+                    <span className={`px-2.5 py-1 rounded-lg text-xs font-bold ${scenarioSoftColor(a.scenario)}`}>
                       {a.scenario}
                     </span>
                     <div>

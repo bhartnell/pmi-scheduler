@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import OsceScenarioView from '@/components/osce/OsceScenarioView';
 import type { ScenarioApi } from '@/components/osce/scenarioMapping';
+import { scenarioSolidColor } from '@/lib/osce-scenario-letters';
 
 type Rating = 'S' | 'N' | 'U' | null;
 type Readiness = 'ready' | 'ready_with_concerns' | 'not_yet_ready' | null;
@@ -516,11 +517,6 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
     );
   }
 
-  const scenarioColors: Record<string, string> = {
-    A: 'bg-red-500', B: 'bg-blue-500', C: 'bg-green-500',
-    D: 'bg-purple-500', E: 'bg-amber-500', F: 'bg-pink-500',
-  };
-
   const readinessOptions = [
     { value: 'ready' as const, label: 'Ready for Field', color: 'bg-green-600 text-white ring-green-400', icon: '✓' },
     { value: 'ready_with_concerns' as const, label: 'Ready w/ Concerns', color: 'bg-amber-500 text-white ring-amber-400', icon: '!' },
@@ -569,7 +565,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
       {/* Scenario title in score sheet header */}
       {scenarioData && (
         <div className="flex items-center gap-2 mb-3">
-          <span className={`w-8 h-8 rounded-lg ${scenarioColors[scenarioLetter]} text-white font-bold flex items-center justify-center text-sm flex-shrink-0`}>
+          <span className={`w-8 h-8 rounded-lg ${scenarioSolidColor(scenarioLetter)} text-white font-bold flex items-center justify-center text-sm flex-shrink-0`}>
             {scenarioLetter}
           </span>
           <div>
@@ -741,7 +737,7 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
             </button>
             <div className="text-center flex-1">
               <div className="flex items-center justify-center gap-2">
-                <span className={`w-8 h-8 rounded-lg ${scenarioColors[assessment.scenario]} text-white font-bold flex items-center justify-center text-sm`}>
+                <span className={`w-8 h-8 rounded-lg ${scenarioSolidColor(assessment.scenario)} text-white font-bold flex items-center justify-center text-sm`}>
                   {assessment.scenario}
                 </span>
                 <h1 className="text-lg font-bold text-slate-900 dark:text-white">{assessment.student_name}</h1>

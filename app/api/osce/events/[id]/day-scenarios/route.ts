@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { isScenarioLetter } from '@/lib/osce-scenario-letters';
 
-const VALID_SCENARIOS = ['A', 'B', 'C', 'D', 'E', 'F'];
 
 // GET - Admin: current per-day scenario assignment for this event, plus
 // which scenarios (if any) are assigned to both days (exam-security warning).
@@ -52,13 +52,22 @@ export async function PUT(
     const day1: string[] = Array.isArray(body.day1) ? body.day1 : [];
     const day2: string[] = Array.isArray(body.day2) ? body.day2 : [];
 
-    for (const s of [...day1, ...day2]) {
-      if (!VALID_SCENARIOS.includes(s)) {
-        return NextResponse.json({ success: false, error: `Invalid scenario "${s}"` }, { status: 400 });
-      }
-    }
-
     const supabase = getSupabaseAdmin();
+
+    // Shape check, then the real gate: the letter must be an ACTIVE osce_scenarios row.
+    const requested = [...new Set([...day1, ...day2])];
+    if (requested.some(s => !isScenarioLetter(s))) {
+      const bad = requested.find(s => !isScenarioLetter(s));
+      return NextResponse.json({ success: false, error: `Invalid scenario "${bad}"` }, { status: 400 });
+    }
+    if (requested.length > 0) {
+      const { data: active, error: activeErr } = await supabase
+        .from('osce_scenarios').select('scenario_letter').eq('is_active', true).in('scenario_letter', requested);
+      if (activeErr) throw activeErr;
+      const ok = new Set((active || []).map(r => r.scenario_letter));
+      const bad = requested.find(s => !ok.has(s));
+      if (bad) return NextResponse.json({ success: false, error: `Invalid scenario "${bad}"` }, { status: 400 });
+    }
 
     const { error: deleteErr } = await supabase.from('osce_day_scenarios').delete().eq('event_id', id);
     if (deleteErr) throw deleteErr;
