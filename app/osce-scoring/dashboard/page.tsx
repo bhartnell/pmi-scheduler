@@ -39,6 +39,7 @@ export default function EvaluatorDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeDay, setActiveDay] = useState<number>(1);
   const [isTestMode, setIsTestMode] = useState(false);
+  const [timerEventId, setTimerEventId] = useState<string | null>(null);
   const [eventTitle, setEventTitle] = useState<string>('');
   const [blocks, setBlocks] = useState<DashBlock[]>([]);
   const [roster, setRoster] = useState<DashRosterRow[]>([]);
@@ -68,6 +69,21 @@ export default function EvaluatorDashboard() {
         setEventTitle(title);
       } catch { /* ignore */ }
     }
+
+    // Drop a saved session whose event is closed or outside its date window.
+    // A failed lookup keeps the session (never kick an evaluator mid-grading on a blip).
+    fetch(`/api/osce/session-status?event_id=${encodeURIComponent(eventId || '')}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d?.is_admin && eventId) setTimerEventId(eventId);
+        if (d && d.success && d.active === false && eventId) {
+          localStorage.removeItem('osce_token');
+          localStorage.removeItem('osce_evaluator');
+          localStorage.removeItem('osce_session');
+          router.push('/osce-scoring/enter');
+        }
+      })
+      .catch(() => { /* keep session */ });
 
     fetchAssessments(ev.name, eventId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -132,12 +148,22 @@ export default function EvaluatorDashboard() {
             <h1 className="text-lg font-bold">OSCE Evaluator Dashboard</h1>
             <p className="text-blue-200 text-sm">{evaluator.name}</p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-blue-200 hover:text-white px-3 py-1 border border-blue-400 rounded-lg"
-          >
-            Sign Out
-          </button>
+          <div className="flex items-center gap-2">
+            {timerEventId && (
+              <a
+                href={`/admin/osce-events/${timerEventId}/timer`}
+                className="text-sm text-blue-100 hover:text-white px-3 py-2 min-h-[44px] inline-flex items-center border border-blue-400 rounded-lg"
+              >
+                Timer
+              </a>
+            )}
+            <button
+              onClick={handleLogout}
+              className="text-sm text-blue-200 hover:text-white px-3 py-2 min-h-[44px] border border-blue-400 rounded-lg"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </div>
 

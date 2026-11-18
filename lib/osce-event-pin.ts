@@ -38,3 +38,20 @@ export function chooseEventForPin<T extends PinEventCandidate>(events: T[] | nul
 export function pinMissReason<T>(events: T[] | null | undefined): 'invalid' | 'inactive' {
   return events && events.length > 0 ? 'inactive' : 'invalid';
 }
+
+/** Statuses validate-pin accepts when signing in with an event code. */
+export const PIN_ACCEPTED_STATUSES = ['open', 'closed'] as const;
+
+/**
+ * ONE accept rule shared by validate-pin and session-status: an event accepts
+ * evaluator sign-in (and keeps a saved session) when its status is open or
+ * closed AND today is inside its window (start - 1 day to end + 1 day).
+ */
+export function isEventAcceptingEvaluators(
+  event: (PinEventCandidate & { status?: string | null }) | null | undefined,
+  today: string,
+): boolean {
+  if (!event) return false;
+  if (!(PIN_ACCEPTED_STATUSES as readonly string[]).includes(event.status ?? '')) return false;
+  return chooseEventForPin([event], today) !== null;
+}

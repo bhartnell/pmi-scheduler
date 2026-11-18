@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
-import { chooseEventForPin, todayInOsceZone } from '@/lib/osce-event-pin';
+import { chooseEventForPin, PIN_ACCEPTED_STATUSES, todayInOsceZone } from '@/lib/osce-event-pin';
 
 // POST - Public: validate an event PIN and return evaluator list
 export async function POST(req: NextRequest) {
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       .from('osce_events')
       .select('id, title, subtitle, slug, start_date, end_date, status')
       .eq('event_pin', pin.trim())
-      .in('status', ['open', 'closed']);
+      .in('status', [...PIN_ACCEPTED_STATUSES]);
 
     if (eventError || !candidates || candidates.length === 0) {
       return NextResponse.json(

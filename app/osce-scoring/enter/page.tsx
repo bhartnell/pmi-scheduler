@@ -80,6 +80,19 @@ function EnterContent() {
       try {
         const session = JSON.parse(savedSession);
         if (session.eventId && session.evaluatorName) {
+          // A saved session for a closed / out-of-window event never wins:
+          // drop it so today's event is shown. Network failure keeps it.
+          fetch(`/api/osce/session-status?event_id=${encodeURIComponent(session.eventId)}`)
+            .then(r => r.json())
+            .then(d => {
+              if (d && d.success && d.active === false) {
+                localStorage.removeItem('osce_session');
+                localStorage.removeItem('osce_evaluator');
+                localStorage.removeItem('osce_token');
+                setEvaluator(null);
+              }
+            })
+            .catch(() => { /* keep saved session */ });
           setEvaluator({ name: session.evaluatorName, role: session.evaluatorRole || '' });
           return;
         }
@@ -283,7 +296,7 @@ function EnterContent() {
               </button>
               <button
                 onClick={handleLogout}
-                className="mt-3 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                className="mt-3 min-h-[44px] px-4 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
               >
                 Not you? Sign out
               </button>
