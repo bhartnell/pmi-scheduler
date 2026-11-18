@@ -197,3 +197,92 @@ export function dispatchPairs(dispatch: string | null | undefined): DispatchPair
   }
   return out;
 }
+
+// ---- Map an OSCE case into the permissive shape ScenarioFullDisplay reads ----
+// Only real fields are mapped. Primary assessment, history, SAMPLE and OPQRST
+// are NOT parsed out of full_content (the OSCE row has no structured form of
+// them), so ScenarioFullDisplay's hideEmpty hides those sections.
+
+const VITAL_KEY_MAP: Record<string, string> = {
+  BP: 'bp', HR: 'hr', RR: 'rr', SpO2: 'spo2', ETCO2: 'etco2', BGL: 'bgl', Temp: 'temp', GCS: 'gcs',
+};
+
+function mapVitalSet(set: Record<string, unknown>): { vitals: Record<string, string>; other: string[] } {
+  const vitals: Record<string, string> = {};
+  const other: string[] = [];
+  for (const [k, v] of Object.entries(set)) {
+    const t = cellText(v);
+    if (t === '-') continue;
+    const mapped = VITAL_KEY_MAP[k];
+    if (mapped) vitals[mapped] = t;
+    else other.push(`${k}: ${t}`); // unknown key: never dropped, shown as text
+  }
+  return { vitals, other };
+}
+
+export function mapOsceToScenario(s: ScenarioApi): Record<string, unknown> {
+  const progressions = Array.isArray(s.vital_sign_progressions) ? s.vital_sign_progressions.filter(isObj) : [];
+  const sections = buildPhaseSections(s.expected_interventions, s.vital_sign_progressions);
+  const nums = new Set<number>();
+  progressions.forEach((p, idx) => nums.add(Number(p.phase) || idx + 1));
+  sections.forEach(x => nums.add(x.phase));
+
+  const phases = Array.from(nums).sort((a, b) => a - b).map(n => {
+    const idx = progressions.findIndex((p, i) => (Number(p.phase) || i + 1) === n);
+    const prog = idx >= 0 ? progressions[idx] : null;
+    const sec = sections.find(x => x.phase === n);
+    const sets = prog && Array.isArray(prog.vitals) ? prog.vitals.filter(isObj).map(mapVitalSet) : [];
+    const title = (prog && typeof prog.title === 'string' ? prog.title.trim() : '') || sec?.title || '';
+    const other = sets.flatMap(x => x.other);
+    return {
+      name: title || `Phase ${n}`,
+      vitals: sets.length > 0 && Object.keys(sets[0].vitals).length > 0 ? sets[0].vitals : null,
+      // Additive optional field read by ScenarioFullDisplay: second and later vitals sets.
+      vitals_extra_sets: sets.slice(1).map(x => x.vitals),
+      presentation_notes: other.length ? other.join(' | ') : null,
+      expected_actions: sec?.actions ?? [],
+      instructor_cues: sec?.cues ? [sec.cues] : [],
+    };
+  });
+
+  const dispatch = dispatchPairs(s.dispatch_text);
+  let dispatch_time: string | undefined;
+  let dispatch_location: string | undefined;
+  const notes: string[] = [];
+  const normCC = (v: string | null | undefined) => (v || '').trim().replace(/\s+/g, ' ').toLowerCase();
+  for (const d of dispatch) {
+    const l = (d.label || '').toLowerCase();
+    if (l === 'time' && !dispatch_time) dispatch_time = d.value;
+    else if (l === 'location' && !dispatch_location) dispatch_location = d.value;
+    // Same chief complaint already shown under Patient Information: leave it out of the notes.
+    else if (l === 'chief complaint' && normCC(d.value) === normCC(s.chief_complaint)) continue;
+    // Dispatch notes text is shown without its label; any other label is kept.
+    else notes.push(d.label && l !== 'dispatch notes' ? `${d.label}: ${d.value}` : d.value);
+  }
+
+  const debrief: string[] = [];
+  for (const sec of buildOralSections(s.oral_board_domains)) {
+    // Section is already titled "Debrief Discussion Points": drop a repeated prefix, keep any other heading.
+    const repeats = !!sec.heading && /^debrief discussion points$/i.test(sec.heading.trim());
+    for (const item of sec.items) debrief.push(sec.heading && !repeats ? `${sec.heading}: ${item}` : item);
+  }
+
+  const ageText = s.patient_age === null || s.patient_age === undefined ? '' : String(s.patient_age).replace(/\s*years?\s*$/i, '').trim();
+  const sex = s.patient_gender === 'M' ? 'Male' : s.patient_gender === 'F' ? 'Female' : s.patient_gender || undefined;
+
+  return {
+    // no id on purpose: ScenarioFullDisplay's feedback hook then does nothing
+    title: s.title,
+    chief_complaint: s.chief_complaint || undefined,
+    patient_name: s.patient_name || undefined,
+    patient_age: ageText || undefined,
+    patient_sex: sex,
+    instructor_notes: s.instructor_notes || undefined,
+    dispatch_time,
+    dispatch_location,
+    dispatch_notes: notes.length ? notes.join(' | ') : undefined,
+    critical_actions: parseCriticalActions(s.critical_actions),
+    phases,
+    debrief_points: debrief,
+  };
+}
