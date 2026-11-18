@@ -25,6 +25,7 @@ export default function OsceScenarioList() {
       .then(async (res) => {
         if (!res.ok) {
           if (res.status === 401) setError('You must be signed in to view scenarios.');
+          else if (res.status === 403) setError('Staff only. These exam cases are visible to instructors.');
           else setError('Failed to load scenarios.');
           return;
         }

@@ -21,6 +21,8 @@ export default function OsceScenarioViewer() {
         if (!res.ok) {
           if (res.status === 401) {
             setError('You must be signed in to view scenarios.');
+          } else if (res.status === 403) {
+            setError('Staff only. These exam cases are visible to instructors.');
           } else if (res.status === 404) {
             setError('Scenario not found.');
           } else {

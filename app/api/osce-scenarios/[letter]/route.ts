@@ -9,14 +9,14 @@ import { loadCaseNames } from '@/lib/osce-case-names';
 //
 // Returns a single OSCE scenario by letter (A, B, D, E, F).
 // instructor_notes is only included for admin or lead_instructor roles.
-// Requires authenticated user.
+// Staff only (instructor or above); students and guests get 403 and no case content.
 // ---------------------------------------------------------------------------
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ letter: string }> }
 ) {
   try {
-    const auth = await requireAuth();
+    const auth = await requireAuth('instructor');
     if (auth instanceof NextResponse) return auth;
     const { user } = auth;
 
