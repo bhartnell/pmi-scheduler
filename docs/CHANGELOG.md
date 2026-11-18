@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-18
 
+PENDING | [preview] OSCE one-word case names (display only): caseLabel helper + tolerant loadCaseNames (osce_scenarios.short_name, falls back to the letter if the column is missing); names shown on evaluator dashboard, grading header/pane/print sheet, event admin pickers, results (+ 'Case name' CSV column, letter column kept), student result card, standalone scenario list/page; cases listed active first then A-Z by name. Letter stays the stored key; colours keyed by letter. No schema/data change. Revert: git revert.
+
 PENDING | [preview] OSCE cases beyond F: student-scenarios and day-scenarios routes accept any single capital letter that is an ACTIVE osce_scenarios row (G-J); admin day-scenario picker lists active letters; G-J badge colours + neutral fallback on scoring and dashboard pages (lib/osce-scenario-letters.ts). Unit tests. No schema/data change. Revert: git revert.
 PENDING | [preview] OSCE easy access 4th pass: signed-in pmi.edu staff see one 'Continue as NAME (PMI sign-in)' button on /osce-scoring/enter (GET /api/osce/staff-session is lookup only; POST on Continue writes the walk-up row once per event+name), 'Someone else? Use the event code' beside it; admin 'Open evaluator grading' button goes straight through via ?staff=1. Station link/QR removed (event id is public); validate-pin and walkup-evaluators identical to main. Unit tests. No schema/data change. Revert: git revert.
 3461133 | OSCE: /api/osce/scenario/[letter] no longer public; needs instructor/admin sign-in or evaluator proof (event id + event code or guest token in headers, event accepting evaluators today), else 401. Grading page sends proof. 7 unit tests. No schema/data change. Revert: git revert.

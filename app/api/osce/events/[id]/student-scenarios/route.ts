@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isScenarioLetter } from '@/lib/osce-scenario-letters';
+import { isScenarioLetter, sortCases } from '@/lib/osce-scenario-letters';
+import { loadCaseNames } from '@/lib/osce-case-names';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
@@ -33,6 +34,7 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
       supabase.from('osce_assessments').select('id, student_name, scenario').eq('event_id', id),
       supabase.from('osce_scenarios').select('scenario_letter, title').eq('is_active', true).order('scenario_letter'),
     ]);
+    const caseNames = await loadCaseNames(supabase);
     const ids = (assessments || []).map((a) => a.id);
     const scored = new Set<string>();
     if (ids.length > 0) {
@@ -53,7 +55,8 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     return NextResponse.json({
       success: true,
       rows,
-      scenarios: (scenarios || []).map((s) => ({ letter: s.scenario_letter, title: s.title })),
+      scenarios: sortCases((scenarios || []).map((s) => ({ scenario_letter: s.scenario_letter, title: s.title, short_name: caseNames[s.scenario_letter] ?? null })))
+        .map((s) => ({ letter: s.scenario_letter, title: s.title, short_name: s.short_name })),
     });
   } catch (err) {
     console.error('student-scenarios GET:', err);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { loadCaseNames } from '@/lib/osce-case-names';
 import { buildAssessmentResults } from '@/lib/osce-results';
 import { matchOsceStudentName, type MatchableStudent } from '@/lib/osce-student-match';
 
@@ -57,7 +58,7 @@ export async function GET(req: NextRequest) {
     );
     const matchedAssessments = (assessments || []).filter(a => matchedAssessmentIds.has(a.id));
 
-    const results = buildAssessmentResults(matchedAssessments, scores || []).map(r => {
+    const results = buildAssessmentResults(matchedAssessments, scores || [], await loadCaseNames(supabase)).map(r => {
       const match = matchOsceStudentName(r.student_name, candidates);
       return { ...r, match_confidence: match?.confidence ?? null };
     });

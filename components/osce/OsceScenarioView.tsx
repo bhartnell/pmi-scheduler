@@ -5,6 +5,7 @@
 // The case is mapped (mapOsceToScenario) and rendered THROUGH the standard lab
 // ScenarioFullDisplay, phases expanded, absent sections hidden. No data invented.
 
+import { caseLabel } from '@/lib/osce-scenario-letters';
 import { useMemo, useState } from 'react';
 import { FileText } from 'lucide-react';
 import ScenarioFullDisplay from '@/components/scenario/ScenarioFullDisplay';
@@ -22,7 +23,7 @@ export default function OsceScenarioView({ scenario, letter }: { scenario: Scena
     <div className="w-full space-y-5 text-base leading-relaxed text-slate-800 dark:text-slate-200">
       <div className="flex items-center gap-3">
         <span className="inline-flex items-center justify-center h-12 w-12 rounded-lg bg-blue-600 text-white text-xl font-bold flex-shrink-0">{L}</span>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Scenario {L}{scenario.title ? `: ${scenario.title}` : ''}</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{caseLabel(L, scenario.short_name)}{scenario.title ? ` - ${scenario.title}` : ''}</h1>
       </div>
 
       <ScenarioFullDisplay scenario={mapped} expandAllPhases hideEmpty hideSecondaryAssessment />

@@ -1,11 +1,13 @@
 'use client';
 
+import { caseLabel } from '@/lib/osce-scenario-letters';
 import { useState, useEffect } from 'react';
 import { FileText, ArrowRight, AlertTriangle } from 'lucide-react';
 
 interface ScenarioSummary {
   id: string;
   scenario_letter: string;
+  short_name?: string | null;
   title: string;
   patient_name: string;
   patient_age: string;
@@ -74,11 +76,11 @@ export default function OsceScenarioList() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <span className="inline-flex items-center justify-center h-12 w-12 rounded-lg bg-blue-600 text-white text-xl font-bold">
-                    {s.scenario_letter}
+                    {(s.short_name || '').trim() ? (s.short_name || '').trim().charAt(0).toUpperCase() : s.scenario_letter}
                   </span>
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">
-                      Scenario {s.scenario_letter}: {s.title}
+                      {caseLabel(s.scenario_letter, s.short_name)} - {s.title}
                     </h2>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                       {s.patient_name} - {s.patient_age}, {s.patient_gender === 'M' ? 'Male' : 'Female'} - {s.chief_complaint}

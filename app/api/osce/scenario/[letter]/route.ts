@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { todayInOsceZone } from '@/lib/osce-event-pin';
 import { canReadScenario } from '@/lib/osce-scenario-access';
+import { loadCaseNames } from '@/lib/osce-case-names';
 
 // Scenario data for the OSCE scoring page. NOT public: answers only for a
 // signed-in admin/instructor, or an evaluator session that proves it belongs to
@@ -61,7 +62,8 @@ export async function GET(
       return NextResponse.json({ error: 'Scenario not found' }, { status: 404 });
     }
 
-    return NextResponse.json(data);
+    const names = await loadCaseNames(supabase);
+    return NextResponse.json({ ...data, short_name: names[data.scenario_letter] ?? null });
   } catch (err) {
     console.error('Error fetching scenario:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

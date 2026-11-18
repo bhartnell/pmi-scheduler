@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/api-auth';
 import { loadEditLog } from '@/lib/osce-score-edit';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { loadCaseNames } from '@/lib/osce-case-names';
 
 // Grade calculation: S=100, N=77, U=0
 function gradeValue(rating: string | null): number | null {
@@ -27,6 +28,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const supabase = getSupabaseAdmin();
+    const caseNames = await loadCaseNames(supabase);
 
     // Get all assessments (optionally scoped to a single event)
     let assessmentsQuery = supabase
@@ -105,6 +107,7 @@ export async function GET(req: NextRequest) {
         id: assessment.id,
         student_name: assessment.student_name,
         scenario: assessment.scenario,
+        scenario_name: caseNames[assessment.scenario] ?? null,
         slot_number: assessment.slot_number,
         day_number: assessment.day_number,
         assessment_date: assessment.assessment_date,
@@ -118,7 +121,7 @@ export async function GET(req: NextRequest) {
       // Generate CSV export
       const csvRows: string[] = [];
       csvRows.push([
-        'Student', 'Scenario', 'Day', 'Slot', 'Date',
+        'Student', 'Scenario', 'Case name', 'Day', 'Slot', 'Date',
         'Evaluator', 'Role', 'Submitted',
         ...SNHD_FACTORS.map(f => f.replace(/_/g, ' ').toUpperCase()),
         'S Count', 'Phase 1 Pass', 'SNHD Grade %',
@@ -130,7 +133,7 @@ export async function GET(req: NextRequest) {
       for (const r of results) {
         for (const ev of r.evaluators) {
           csvRows.push([
-            `"${r.student_name}"`, r.scenario, r.day_number, r.slot_number, r.assessment_date,
+            `"${r.student_name}"`, r.scenario, `"${(r.scenario_name || '').replace(/"/g, '""')}"`, r.day_number, r.slot_number, r.assessment_date,
             `"${ev.evaluator_name}"`, ev.evaluator_role || '', ev.submitted_at || '',
             ...SNHD_FACTORS.map(f => ev.factors[f]?.rating || ''),
             ev.s_count, ev.phase1_pass ? 'PASS' : 'FAIL',

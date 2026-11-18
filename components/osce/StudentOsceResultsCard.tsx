@@ -1,5 +1,6 @@
 'use client';
 
+import { caseLabel } from '@/lib/osce-scenario-letters';
 import { useEffect, useState, useCallback } from 'react';
 import { ClipboardCheck, Loader2, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -22,6 +23,7 @@ interface AssessmentResult {
   id: string;
   student_name: string;
   scenario: string;
+  scenario_name?: string | null;
   slot_number: number | null;
   day_number: number | null;
   assessment_date: string;
@@ -128,7 +130,7 @@ export default function StudentOsceResultsCard({ studentId }: { studentId: strin
             >
               <div className="flex items-center gap-3 min-w-0">
                 <span className="px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded font-bold text-xs shrink-0">
-                  Scenario {r.scenario}
+                  {caseLabel(r.scenario, r.scenario_name)}
                 </span>
                 <span className="text-sm text-gray-600 dark:text-gray-300 truncate">
                   Day {r.day_number ?? '?'} &middot; {r.assessment_date}

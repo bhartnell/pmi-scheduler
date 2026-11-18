@@ -32,3 +32,40 @@ export const scenarioSolidColor = (letter: string | null | undefined): string =>
 
 export const scenarioSoftColor = (letter: string | null | undefined): string =>
   (letter && SOFT[letter]) || 'bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200';
+
+// ---------------------------------------------------------------------------
+// Case names (display only). osce_scenarios.short_name is a one-word label
+// (Asthma, CHF, Bradycardia). The letter stays the stored key everywhere; the
+// name is only what staff SEE. Never shown to students (it gives away the case).
+// ---------------------------------------------------------------------------
+
+/** Name when present and non-blank, else the letter. */
+export const caseLabel = (letter: string | null | undefined, shortName?: string | null): string => {
+  const name = typeof shortName === 'string' ? shortName.trim() : '';
+  return name || letter || '';
+};
+
+export type CaseNames = Record<string, string>;
+
+/** Label for a letter from a letter -> name map (missing / blank falls back to the letter). */
+export const caseLabelFrom = (letter: string | null | undefined, names?: CaseNames | null): string =>
+  caseLabel(letter, letter && names ? names[letter] : null);
+
+/** Build a letter -> name map, dropping null / blank names. */
+export const buildCaseNames = (rows: Array<{ scenario_letter: string; short_name?: string | null }> | null | undefined): CaseNames => {
+  const out: CaseNames = {};
+  for (const r of rows || []) {
+    const n = typeof r.short_name === 'string' ? r.short_name.trim() : '';
+    if (r.scenario_letter && n) out[r.scenario_letter] = n;
+  }
+  return out;
+};
+
+/** Active first, then by name A-Z (letter when there is no name). */
+export const sortCases = <T extends { scenario_letter: string; short_name?: string | null; is_active?: boolean | null }>(rows: T[]): T[] =>
+  [...rows].sort((a, b) => {
+    const act = Number(b.is_active !== false) - Number(a.is_active !== false);
+    if (act) return act;
+    const byName = caseLabel(a.scenario_letter, a.short_name).localeCompare(caseLabel(b.scenario_letter, b.short_name), undefined, { sensitivity: 'base' });
+    return byName || a.scenario_letter.localeCompare(b.scenario_letter);
+  });

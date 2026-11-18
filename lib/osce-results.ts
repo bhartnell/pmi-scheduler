@@ -41,6 +41,8 @@ export interface OsceAssessmentResult {
   event_id: string | null;
   student_name: string;
   scenario: string;
+  /** One-word case name for staff display; null when none (show the letter). */
+  scenario_name?: string | null;
   slot_number: number | null;
   day_number: number | null;
   assessment_date: string;
@@ -93,7 +95,8 @@ export function buildEvaluatorResult(score: OsceScoreRow): OsceEvaluatorResult {
 /** Groups evaluator-score rows by assessment and builds one OsceAssessmentResult per assessment. */
 export function buildAssessmentResults(
   assessments: OsceAssessmentRow[],
-  scores: OsceScoreRow[]
+  scores: OsceScoreRow[],
+  caseNames?: Record<string, string>
 ): OsceAssessmentResult[] {
   const scoresByAssessment = new Map<string, OsceScoreRow[]>();
   for (const score of scores) {
@@ -111,6 +114,7 @@ export function buildAssessmentResults(
       event_id: assessment.event_id ?? null,
       student_name: assessment.student_name,
       scenario: assessment.scenario,
+      scenario_name: caseNames?.[assessment.scenario] ?? null,
       slot_number: assessment.slot_number,
       day_number: assessment.day_number,
       assessment_date: assessment.assessment_date,

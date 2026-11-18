@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { loadCaseNames } from '@/lib/osce-case-names';
+import { sortCases } from '@/lib/osce-scenario-letters';
 
 // ---------------------------------------------------------------------------
 // GET /api/osce-scenarios
@@ -26,7 +28,8 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch scenarios' }, { status: 500 });
     }
 
-    return NextResponse.json(data);
+    const names = await loadCaseNames(supabase);
+    return NextResponse.json(sortCases((data || []).map((r) => ({ ...r, short_name: names[r.scenario_letter] ?? null }))));
   } catch (err) {
     console.error('OSCE scenarios list error:', err);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
