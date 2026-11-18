@@ -275,7 +275,16 @@ export default function ScoringPage() {
     if (!assessment?.scenario) return;
     const letter = assessment.scenario.toUpperCase();
     setScenarioLoading(true);
-    fetch(`/api/osce/scenario/${letter}`)
+    // Proof of an evaluator session goes in headers (never the URL).
+    const proof: Record<string, string> = {};
+    try {
+      const sess = JSON.parse(localStorage.getItem('osce_session') || 'null');
+      if (sess?.eventId) proof['x-osce-event-id'] = String(sess.eventId);
+      if (sess?.pin) proof['x-osce-code'] = String(sess.pin);
+      const tok = localStorage.getItem('osce_token');
+      if (tok) proof['x-osce-token'] = tok;
+    } catch { /* no saved session: server will answer 401 */ }
+    fetch(`/api/osce/scenario/${letter}`, { headers: proof })
       .then(res => res.json())
       .then(data => {
         if (data && !data.error) {
