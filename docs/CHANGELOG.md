@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-18
+
+osce-timer-adjust | OSCE timer control page: -1 min / +1 min / Set remaining (mm:ss) on a running or paused phase via new adjust + set_remaining actions in lib/osce-timer.ts (shifts started_at, clamps 0..phase total and reports it), audit_log row per adjustment (resource_type osce_timer), 8 unit tests; day-of checklist gains 'refresh every evaluator screen after any update'. No schema change, lab timer untouched. Revert: git revert.
+
 ## 2026-11-13
 
 osce-easy-access | OSCE easy access (items 2 and 4): 'Open evaluator grading' link on the event admin page; Timer link on the evaluator dashboard for signed-in admins; saved evaluator session for a closed or out-of-window event is dropped (new GET /api/osce/session-status, network failure keeps the session); 44px Sign Out targets. No schema change, no change to who can enter grading. Revert: git revert.

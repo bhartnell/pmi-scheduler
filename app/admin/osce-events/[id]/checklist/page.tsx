@@ -46,6 +46,7 @@ const CHECKLIST_SECTIONS: ChecklistSection[] = [
       { id: 'scenario-assignments', label: 'Scenario assignments finalized (A/B/D/E/F)' },
       { id: 'student-schedule-posted', label: 'Student schedule posted' },
       { id: 'medical-directors-confirmed', label: 'Medical Directors confirmed' },
+      { id: 'refresh-evaluator-screens', label: 'After any site update, refresh every evaluator screen (tabs opened before an update may not show the timer bar)' },
     ],
   },
   {
