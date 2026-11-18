@@ -98,3 +98,41 @@ export function applyAction(state: OsceTimerState, action: TimerAction, nowIso: 
       return null;
   }
 }
+
+// ---- Adjusting a running or paused phase (Ben, OSCE Day 1: started ~4 min late) ----
+// Works by shifting started_at, so the model (one row, timestamps only) is unchanged.
+export type AdjustKind = 'adjust' | 'set_remaining';
+
+export interface AdjustResult {
+  state: OsceTimerState;
+  before_sec: number;
+  after_sec: number;
+  requested_sec: number; // target remaining (set_remaining) or delta (adjust), as asked
+  clamped: boolean;
+}
+
+export function applyAdjustment(
+  state: OsceTimerState,
+  kind: AdjustKind,
+  valueSec: number,
+  nowIso: string
+): AdjustResult | null {
+  if (state.phase === 'idle' || !state.started_at) return null;
+  if (!Number.isFinite(valueSec)) return null;
+  const total = PHASE_CONFIG[state.phase].totalSec;
+  const nowMs = new Date(nowIso).getTime();
+  const endMs = state.paused_at ? new Date(state.paused_at).getTime() : nowMs;
+  const before = computeTimer(state, nowMs);
+  if (!before.active) return null;
+  const wanted = kind === 'adjust' ? before.remainingSec + Math.round(valueSec) : Math.round(valueSec);
+  const after = Math.min(total, Math.max(0, wanted));
+  const elapsedMs = (total - after) * 1000;
+  const startedMs = endMs - (state.paused_ms || 0) - elapsedMs;
+  return {
+    state: { ...state, started_at: new Date(startedMs).toISOString() },
+    before_sec: before.remainingSec,
+    after_sec: after,
+    requested_sec: Math.round(valueSec),
+    clamped: after !== wanted,
+  };
+}
