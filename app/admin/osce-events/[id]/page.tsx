@@ -277,7 +277,7 @@ export default function OsceEventDetailPage({ params }: { params: Promise<{ id: 
               Timer
             </button>
             <a
-              href="/osce-scoring/enter"
+              href="/osce-scoring/enter?staff=1"
               className="inline-flex items-center gap-2 px-3 py-1.5 text-sm text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
             >
               <ExternalLink className="w-3.5 h-3.5" />

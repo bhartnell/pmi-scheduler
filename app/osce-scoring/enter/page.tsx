@@ -43,6 +43,10 @@ function EnterContent() {
   const [walkupSubmitting, setWalkupSubmitting] = useState(false);
   const [walkupError, setWalkupError] = useState('');
 
+  // PMI staff sign-in (one click, never silent)
+  const [staffInfo, setStaffInfo] = useState<{ name: string; role: string; eventId: string; eventTitle: string } | null>(null);
+  const [staffDeclined, setStaffDeclined] = useState(false);
+
   // Shared state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -72,6 +76,23 @@ function EnterContent() {
       setAutoRedirect(true);
       validateToken(t);
       return;
+    }
+
+    // Signed-in pmi.edu staff: the server only reports who they would be and for
+    // which event. Nothing is saved or written until they press Continue.
+    // ?staff=1 (the admin page button, pressed by the signed-in person) goes
+    // straight through.
+    const explicitStaff = searchParams.get('staff') === '1';
+    if (explicitStaff || !localStorage.getItem('osce_session')) {
+      fetch('/api/osce/staff-session')
+        .then(r => r.json())
+        .then(d => {
+          if (d && d.success && d.evaluator && d.event) {
+            const info = { name: d.evaluator.name, role: d.evaluator.role, eventId: d.event.id, eventTitle: d.event.title };
+            if (explicitStaff) { continueAsStaff(); } else { setStaffInfo(info); }
+          }
+        })
+        .catch(() => { /* code path stays available */ });
     }
 
     // Check localStorage for existing PIN session
@@ -106,6 +127,35 @@ function EnterContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  // ── Staff Continue: writes the walk-up row (once) and saves the session ────
+  async function continueAsStaff() {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await fetch('/api/osce/staff-session', { method: 'POST' });
+      const d = await res.json();
+      if (d && d.success && d.evaluator && d.event) {
+        localStorage.setItem('osce_session', JSON.stringify({
+          eventId: d.event.id,
+          evaluatorName: d.evaluator.name,
+          evaluatorRole: d.evaluator.role,
+          pin: '',
+          eventTitle: d.event.title,
+          staff: true,
+        }));
+        localStorage.setItem('osce_evaluator', JSON.stringify({ name: d.evaluator.name, role: d.evaluator.role }));
+        router.push('/osce-scoring/dashboard');
+        return;
+      }
+      setStaffInfo(null);
+      setError('PMI sign-in did not work for today\'s event. Use the event code.');
+    } catch {
+      setError('Connection error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   // ── PIN validation ──────────────────────────────────────────────────────────
   async function validatePin(code: string) {
@@ -299,6 +349,25 @@ function EnterContent() {
                 className="mt-3 min-h-[44px] px-4 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
               >
                 Not you? Sign out
+              </button>
+            </div>
+          ) : staffInfo && !staffDeclined && !pinValidated && !showTokenFallback ? (
+            /* ── PMI staff: one click, never silent ──────────────── */
+            <div className="text-center">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{staffInfo.eventTitle}</p>
+              <button
+                onClick={() => continueAsStaff()}
+                disabled={loading}
+                className="w-full min-h-[44px] py-3 px-4 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 disabled:opacity-50 transition-colors text-lg"
+              >
+                {loading ? 'Signing in...' : `Continue as ${staffInfo.name} (PMI sign-in)`}
+              </button>
+              {error && <p className="mt-2 text-sm text-red-500 dark:text-red-400">{error}</p>}
+              <button
+                onClick={() => { setStaffDeclined(true); setError(''); }}
+                className="w-full mt-2 min-h-[44px] text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              >
+                Someone else? Use the event code
               </button>
             </div>
           ) : showTokenFallback ? (
