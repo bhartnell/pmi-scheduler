@@ -9,6 +9,8 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-18
 
+3461133 | OSCE: /api/osce/scenario/[letter] no longer public; needs instructor/admin sign-in or evaluator proof (event id + event code or guest token in headers, event accepting evaluators today), else 401. Grading page sends proof. 7 unit tests. No schema/data change. Revert: git revert.
+
 osce-timer-adjust | OSCE timer control page: -1 min / +1 min / Set remaining (mm:ss) on a running or paused phase via new adjust + set_remaining actions in lib/osce-timer.ts (shifts started_at, clamps 0..phase total and reports it), audit_log row per adjustment (resource_type osce_timer), 8 unit tests; day-of checklist gains 'refresh every evaluator screen after any update'. No schema change, lab timer untouched. Revert: git revert.
 
 ## 2026-11-13
