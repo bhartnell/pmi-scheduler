@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-18
+
+osce-timer-adjust | OSCE timer control page: -1 min / +1 min / Set remaining (mm:ss) on a running or paused phase via new adjust + set_remaining actions in lib/osce-timer.ts (shifts started_at, clamps 0..phase total and reports it), audit_log row per adjustment (resource_type osce_timer), 8 unit tests; day-of checklist gains 'refresh every evaluator screen after any update'. No schema change, lab timer untouched. Revert: git revert.
+
 ## 2026-11-11
 
 osce-admin-move | OSCE no hard locks PR 2: admin Move... on each Students-tab row (any block/day, any open slot, end of block past nominal capacity, optional swap) via POST /api/osce/events/[id]/students/move; pure planner lib/osce-student-move.ts respects UNIQUE(time_block_id, slot_number) and renumbers nobody else; assessment follows (day/date/slot), scores and scenario untouched; audit_log row per moved student (resource_type osce_schedule); row shows 'time changed, invite not updated' until Send student slot invites. No schema change. Revert: git revert.
