@@ -4,6 +4,7 @@ import { loadCaseNames } from '@/lib/osce-case-names';
 import { requireAuth } from '@/lib/api-auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/audit';
+import { scoreRowHasContent, SCORE_CONTENT_SELECT } from '@/lib/osce-score-content';
 
 // Per-student scenario control for a hand-loaded OSCE roster.
 //
@@ -38,8 +39,11 @@ export async function GET(_req: NextRequest, { params }: Ctx) {
     const ids = (assessments || []).map((a) => a.id);
     const scored = new Set<string>();
     if (ids.length > 0) {
-      const { data: scores } = await supabase.from('osce_evaluator_scores').select('assessment_id').in('assessment_id', ids);
-      for (const s of scores || []) scored.add(s.assessment_id);
+      // An empty row (created when an evaluator merely opens a student) does not lock.
+      const { data: scores } = await supabase.from('osce_evaluator_scores').select(SCORE_CONTENT_SELECT).in('assessment_id', ids);
+      for (const s of (scores || []) as unknown as Record<string, unknown>[]) {
+        if (scoreRowHasContent(s)) scored.add(s.assessment_id as string);
+      }
     }
     const byName = new Map((assessments || []).map((a) => [a.student_name.trim().toUpperCase(), a]));
     const rows = (roster || []).map((r) => {
@@ -100,8 +104,8 @@ export async function PUT(req: NextRequest, { params }: Ctx) {
       return NextResponse.json({ success: false, error: 'More than one assessment matches this student; fix it by hand.' }, { status: 409 });
     }
     if (existing && existing.length === 1) {
-      const { count } = await supabase.from('osce_evaluator_scores').select('id', { count: 'exact', head: true }).eq('assessment_id', existing[0].id);
-      if ((count || 0) > 0) {
+      const { data: scoreRows } = await supabase.from('osce_evaluator_scores').select(SCORE_CONTENT_SELECT).eq('assessment_id', existing[0].id);
+      if (((scoreRows || []) as unknown as Record<string, unknown>[]).some(scoreRowHasContent)) {
         return NextResponse.json({ success: false, error: 'This student already has scores, so the scenario is locked.' }, { status: 409 });
       }
       const { error } = await supabase
