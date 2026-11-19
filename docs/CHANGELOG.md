@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-19
+
+PENDING | [preview] OSCE grading page: one-line "what to look for" hint under each oral board area (text only, app/osce-scoring/[assessmentId]/page.tsx). No data/schema change. Revert: git revert.
+
 ## 2026-11-18
 
 PENDING | [preview] OSCE Students tab: an empty score row (created when an evaluator just opens a student) no longer locks the student's case; lib/osce-score-content.ts scoreRowHasContent + test, used by student-scenarios GET/PUT. No data/schema change. Revert: git revert.
