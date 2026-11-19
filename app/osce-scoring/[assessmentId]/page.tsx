@@ -75,11 +75,11 @@ const SNHD_FACTORS = [
 ] as const;
 
 const ORAL_DOMAINS = [
-  { key: 'oral_prioritization', label: 'Prioritization' },
-  { key: 'oral_differential', label: 'Differential Diagnosis' },
-  { key: 'oral_decision_defense', label: 'Decision Defense' },
-  { key: 'oral_reassessment', label: 'Reassessment Plan' },
-  { key: 'oral_transport_handoff', label: 'Transport / Handoff' },
+  { key: 'oral_prioritization', label: 'Prioritization', hint: 'Says what they treated first and why. Names the most immediate threat to life and puts the interventions in an order they can defend.' },
+  { key: 'oral_differential', label: 'Differential Diagnosis', hint: 'Gives the working diagnosis and at least two reasonable alternatives, with the findings that ruled each in or out.' },
+  { key: 'oral_decision_defense', label: 'Decision Defense', hint: 'Justifies the key choices (drug, dose, route, timing) from protocol and patient findings, can say why they did not pick the alternative, and owns a mistake when it is pointed out.' },
+  { key: 'oral_reassessment', label: 'Reassessment Plan', hint: 'Says what they rechecked after each intervention, what change they expected, and what they would do next if the patient did not improve or got worse.' },
+  { key: 'oral_transport_handoff', label: 'Transport / Handoff', hint: 'Picks a fitting destination and transport priority, and gives a complete, organized handoff: what was found, what was given, the response, what is still needed.' },
 ] as const;
 
 function RatingButton({ value, selected, onClick, disabled }: {
@@ -607,7 +607,8 @@ ${score.general_notes ? `<div class="notes"><strong>General Notes:</strong> ${sc
       <div className="space-y-3">
         {ORAL_DOMAINS.map(d => (
           <div key={d.key} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 shadow-sm">
-            <h3 className="font-semibold text-slate-900 dark:text-white mb-3">{d.label}</h3>
+            <h3 className="font-semibold text-slate-900 dark:text-white mb-1">{d.label}</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">{d.hint}</p>
             <div className="flex gap-2">
               {(['S', 'N', 'U'] as const).map(v => (
                 <RatingButton
