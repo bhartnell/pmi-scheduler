@@ -537,6 +537,10 @@ export default function SkillSheetPanel({
   // stays untouched.)
   const [showCriticalFailBlock, setShowCriticalFailBlock] = useState(false);
   const [showMissingExaminerNotesBlock, setShowMissingExaminerNotesBlock] = useState(false);
+  // Blocking save-failure notice. A failed FINAL submit must never be a 3s
+  // toast (Aug 5 2026: evaluations silently failed to save). Stays up until
+  // acknowledged; entered marks stay on screen so the proctor can retry.
+  const [saveFailure, setSaveFailure] = useState<string | null>(null);
   // Below-minimum Pass: soft block. The examiner must type a reason, which is
   // stored with the evaluation (admin view only; never on print/export).
   const [showBelowMinReason, setShowBelowMinReason] = useState(false);
@@ -807,7 +811,10 @@ export default function SkillSheetPanel({
       });
 
       const data = await res.json();
-      if (data.success) {
+      if (data.success && saveStatus === 'complete' && !data.evaluation?.id) {
+        // Server said success but returned no saved record: do not trust it.
+        setSaveFailure('The server did not confirm a saved record for this evaluation. Your marks are still on screen. Press Submit again, and tell the coordinator if it happens twice.');
+      } else if (data.success) {
         const evalId = data.evaluation?.id;
         setLastSavedEvalId(evalId || null);
         setJustSavedStudentName(studentName || null);
@@ -880,10 +887,16 @@ export default function SkillSheetPanel({
         }
       } else {
         showToast(data.error || 'Failed to save evaluation', 'error');
+        if (saveStatus === 'complete') {
+          setSaveFailure(`NOT SAVED: ${data.error || 'the server rejected the evaluation'}. Your marks are still on screen. Press Submit again.`);
+        }
       }
     } catch (err) {
       console.error('Failed to save evaluation:', err);
       showToast('Failed to save evaluation', 'error');
+      if (saveStatus === 'complete') {
+        setSaveFailure('NOT SAVED: could not reach the server (network or sign-in problem). Your marks are still on screen. Check the connection, then press Submit again.');
+      }
     }
     belowMinReasonRef.current = null;
     setSaving(false);
@@ -1222,7 +1235,12 @@ export default function SkillSheetPanel({
       });
 
       const data = await res.json();
-      if (data.success && data.team) {
+      const savedCount = Array.isArray(data.evaluations) ? data.evaluations.length : 0;
+      if (data.success && data.team && saveStatus === 'complete' && savedCount < teamMembers.length) {
+        const savedIds = new Set((data.evaluations || []).map((ev: Record<string, unknown>) => ev.student_id as string));
+        const missing = teamMembers.filter(m => !savedIds.has(m.student_id)).map(m => m.student_name).join(', ');
+        setSaveFailure(`PARTIALLY SAVED: only ${savedCount} of ${teamMembers.length} team evaluations were saved. Not saved: ${missing}. Do NOT resubmit the whole team. Tell the coordinator so the missing students can be entered.`);
+      } else if (data.success && data.team) {
         // Compute score for completion screen
         let earned = 0;
         let total = 0;
@@ -1256,10 +1274,16 @@ export default function SkillSheetPanel({
         }
       } else {
         showToast(data.error || 'Failed to save team evaluation', 'error');
+        if (saveStatus === 'complete') {
+          setSaveFailure(`NOT SAVED: ${data.error || 'the server rejected the team evaluation'}. Your marks are still on screen. Press Submit again.`);
+        }
       }
     } catch (err) {
       console.error('Failed to save team evaluation:', err);
       showToast('Failed to save team evaluation', 'error');
+      if (saveStatus === 'complete') {
+        setSaveFailure('NOT SAVED: could not reach the server (network or sign-in problem). Your marks are still on screen. Check the connection, then press Submit again.');
+      }
     }
     setSaving(false);
   };
@@ -1855,6 +1879,28 @@ export default function SkillSheetPanel({
           fail submissions on NREMT day. The modal explicitly names the
           "Examiner Notes" panel so the grader knows where to go, because
           on mobile that panel is behind a collapsed drawer tab. */}
+      {saveFailure && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60" role="alertdialog" aria-live="assertive">
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4 border-4 border-red-600">
+            <div className="flex items-start gap-3">
+              <XCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Evaluation NOT saved</h3>
+                <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">{saveFailure}</p>
+              </div>
+            </div>
+            <div className="flex justify-end">
+              <button
+                onClick={() => setSaveFailure(null)}
+                className="px-4 py-2 min-h-[44px] text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+              >
+                I understand
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showMissingExaminerNotesBlock && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">

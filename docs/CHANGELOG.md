@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-23
+
+PENDING | [preview] Skill sheet submit: failed/unconfirmed final saves now show a blocking "NOT SAVED" dialog (was a 3s toast); team saves flag partial saves (components/SkillSheetPanel.tsx). No server/scoring change. Revert: git revert.
+
 ## 2026-11-19
 
 PENDING | [preview] OSCE grading page: one-line "what to look for" hint under each oral board area (text only, app/osce-scoring/[assessmentId]/page.tsx). No data/schema change. Revert: git revert.
