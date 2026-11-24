@@ -129,3 +129,37 @@ export function whoIsWhere(today: { name: string; email: string }[], tiles: Plac
 export function placementLine(name: string, places: string[]): string {
   return `${name} - ${places.length ? places.join('; ') : 'not placed yet'}`;
 }
+
+// ---- Stations that are "not made yet" (card 4225cd1c, 2026-11-24) ----
+
+export interface MadeCheckRow {
+  id: string;
+  station_number: number;
+  /** Skill group key (the skill sheet id). Null = unknown: never treated as not made. */
+  group: string | null;
+  closed: boolean;
+  /** An evaluation or a queue row exists on this station, or that could not be checked. */
+  used: boolean;
+}
+
+/**
+ * Station rows copied in when a day is set up are not real stations until somebody makes them. A row is
+ * NOT MADE YET when it is closed, is not the base station of its skill (the lowest station number of the
+ * skill), and nothing was ever done on it (no evaluation, no queue row). The hub leaves these out of every
+ * count and list; "Open another" reuses one. Nothing is deleted. Returns the ids of the not-made rows.
+ */
+export function notMadeStationIds(rows: MadeCheckRow[]): Set<string> {
+  const base = new Map<string, number>();
+  for (const r of rows) {
+    if (!r.group) continue;
+    const cur = base.get(r.group);
+    if (cur === undefined || r.station_number < cur) base.set(r.group, r.station_number);
+  }
+  const out = new Set<string>();
+  for (const r of rows) {
+    if (!r.group || !r.closed || r.used) continue;
+    if (base.get(r.group) === r.station_number) continue;
+    out.add(r.id);
+  }
+  return out;
+}

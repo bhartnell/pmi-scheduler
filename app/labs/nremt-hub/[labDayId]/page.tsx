@@ -66,6 +66,8 @@ interface HubData {
     station_count: number;
   };
   my_stations: Tile[];
+  /** Copied closed extras nobody made or used; left out of every list and count, reused by Open another. */
+  spares?: Tile[];
   groups: Group[];
   locations: { standard: string[]; nremtOnly: string[] };
   scenarios_by_code: Record<string, { id: string; title: string }[]>;
@@ -990,7 +992,7 @@ export default function NremtHubDayPage() {
       .then((r) => r.json())
       .then((d) => {
         if (!d.success) return;
-        setStats(computeDayStats(d.students || [], d.stations || [], d.cells || {}, d.skillColumns || [], d.skillCells || {}));
+        setStats(computeDayStats(d.students || [], (d.stations || []).filter((st: { notMade?: boolean }) => !st.notMade), d.cells || {}, d.skillColumns || [], d.skillCells || {}));
       })
       .catch(() => {});
   }, [labDayId]);
@@ -1131,9 +1133,9 @@ export default function NremtHubDayPage() {
               const unitTotal = singles.length + dayPairs.length;
               const openCount = singles.filter((t) => !isClosed(t.coordinator_status)).length + dayPairs.filter((p) => !isClosed(p.o2.coordinator_status) && !isClosed(p.bvm.coordinator_status)).length;
               const pct = stats.skillsPossible > 0 ? Math.round((stats.skillsCompleted / stats.skillsPossible) * 100) : 0;
-              const items: { label: string; value: string }[] = [
+              const items: { label: string; value: string; note?: string }[] = [
                 { label: 'Students', value: String(stats.students) },
-                { label: 'Stations open', value: `${openCount} of ${unitTotal}` },
+                { label: 'Stations open', value: String(openCount), note: unitTotal > openCount ? `${unitTotal - openCount} closed` : undefined },
                 { label: 'Testing now', value: String(stats.testing) },
                 { label: 'Waiting', value: String(stats.waiting) },
                 { label: 'Complete', value: String(stats.complete) },
@@ -1145,7 +1147,10 @@ export default function NremtHubDayPage() {
                   {items.map((it) => (
                     <div key={it.label} className="rounded-lg bg-white dark:bg-gray-800 shadow px-4 py-3 border border-gray-200 dark:border-gray-700">
                       <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{it.label}</div>
-                      <div className="text-xl font-bold text-gray-900 dark:text-white tabular-nums">{it.value}</div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white tabular-nums">
+                        {it.value}
+                        {it.note && <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">{it.note}</span>}
+                      </div>
                     </div>
                   ))}
                 </section>
@@ -1218,7 +1223,6 @@ export default function NremtHubDayPage() {
 
             {(() => {
               const allTiles = data.groups.flatMap((g) => g.stations);
-              const closedCount = allTiles.filter((t) => isClosed(t.coordinator_status)).length;
               const visible = (t: Tile) => showClosed || !isClosed(t.coordinator_status);
               const isPartGroup = (g: Group) => g.stations.some((t) => tileCode(t) === 'E203' || tileCode(t) === 'E204');
               const partGroups = data.groups.filter(isPartGroup);
@@ -1226,6 +1230,8 @@ export default function NremtHubDayPage() {
               const partTiles = partGroups.flatMap((g) => g.stations);
               const pairs = tilePairs(partTiles);
               const pairedIds = new Set(pairs.flatMap((p) => [p.o2.id, p.bvm.id]));
+              // A BVM + O2 pair is one station in the count: closed when both parts are closed.
+              const closedCount = allTiles.filter((t) => !pairedIds.has(t.id) && isClosed(t.coordinator_status)).length + pairs.filter((p) => isClosed(p.o2.coordinator_status) && isClosed(p.bvm.coordinator_status)).length;
               const pairsShown = pairs.filter((p) => showClosed || !(isClosed(p.o2.coordinator_status) && isClosed(p.bvm.coordinator_status)));
               const looseShown = partTiles.filter((t) => !pairedIds.has(t.id) && visible(t));
               const o2Group = partGroups.find((g) => g.stations.some((t) => tileCode(t) === 'E204'));
@@ -1387,7 +1393,7 @@ export default function NremtHubDayPage() {
                 labDayId={labDayId}
                 instructors={pickerPeople}
                 groupStations={data.groups.flatMap((g) => g.stations.filter((st) => st.skill_sheet_id === panel.skillSheetId).map((st) => ({ station_number: st.station_number, name: st.own_name })))}
-                allNumbers={data.groups.flatMap((g) => g.stations.map((st) => st.station_number))}
+                allNumbers={[...data.groups.flatMap((g) => g.stations), ...(data.spares || [])].map((st) => st.station_number)}
                 onClose={() => setPanel(null)}
                 onSaved={() => {
                   setPanel(null);

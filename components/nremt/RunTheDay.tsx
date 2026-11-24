@@ -76,7 +76,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
       const next: RtdInput = {
         students: d.students || [],
         // The hub shows the proctor with the station's own text as fallback (API proctorName).
-        stations: (d.stations || []).map((st: RtdStation) => ({ ...st, instructorName: st.proctorName ?? st.instructorName })),
+        stations: (d.stations || []).filter((st: RtdStation) => !st.notMade).map((st: RtdStation) => ({ ...st, instructorName: st.proctorName ?? st.instructorName })),
         cells: d.cells || {},
         skillColumns: d.skillColumns || [],
         skillCells: d.skillCells || {},
@@ -197,16 +197,21 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
     await afterWrite();
   };
 
-  const reopen = async (stationId: string) => {
-    setBusyKey(stationId);
+  const reopen = async (key: string, stationIds: string[]) => {
+    setBusyKey(key);
     try {
-      const r = await fetch(`/api/lab-management/stations/${stationId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coordinator_status: 'open' }),
-      });
-      const d = await r.json();
-      if (!d.success) alert('Could not reopen the station: ' + (d.error || 'unknown error'));
+      for (const stationId of stationIds) {
+        const r = await fetch(`/api/lab-management/stations/${stationId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coordinator_status: 'open' }),
+        });
+        const d = await r.json();
+        if (!d.success) {
+          alert('Could not reopen the station: ' + (d.error || 'unknown error'));
+          break;
+        }
+      }
     } catch {
       alert('Could not reopen the station');
     }
@@ -229,7 +234,15 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
       unitOf,
       testing: testingNow(input),
       suggestions: spreadUnitSuggestions(free, input),
-      closed: input.stations.filter((s) => (s.coordinatorStatus || 'open') !== 'open'),
+      // A BVM + O2 pair is one station: one entry, reopened as a pair.
+      closed: units
+        .filter((u) => unitStations(u).some((st) => (st.coordinatorStatus || 'open') !== 'open'))
+        .map((u) => ({
+          key: u.key,
+          ids: unitStations(u).map((st) => st.id),
+          title: unitTitle(u, stationName),
+          onBreak: unitStations(u).every((st) => (st.coordinatorStatus || 'open') === 'break'),
+        })),
     };
   }, [input, now, dismissedGaps]);
 
@@ -487,15 +500,15 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
             </summary>
             <ul className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-x-6 gap-y-1">
               {view.closed.map((s) => (
-                <li key={s.id} className="flex items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-400 min-h-[44px]">
+                <li key={s.key} className="flex items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-400 min-h-[44px]">
                   <span>
-                    {stationName(s)} - {s.coordinatorStatus === 'break' ? 'on break' : 'closed'}
+                    {s.title} - {s.onBreak ? 'on break' : 'closed'}
                   </span>
                   {canManage && (
                     <button
                       type="button"
-                      disabled={busyKey === s.id}
-                      onClick={() => reopen(s.id)}
+                      disabled={busyKey === s.key}
+                      onClick={() => reopen(s.key, s.ids)}
                       className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 disabled:opacity-60"
                     >
                       <Unlock className="w-4 h-4" /> Reopen

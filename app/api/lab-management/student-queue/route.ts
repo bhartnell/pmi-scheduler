@@ -1,3 +1,4 @@
+import { notMadeStationIds } from '@/lib/nremt-hub-stations';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
@@ -138,7 +139,7 @@ export async function GET(request: NextRequest) {
     // coordinator "assign" that would create a queue entry).
     const { data: evaluations } = await supabase
       .from('student_skill_evaluations')
-      .select('id, student_id, skill_sheet_id, result, status, step_marks, created_at, team_role, is_retake, attempt_number, evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(name)')
+      .select('id, student_id, lab_station_id, skill_sheet_id, result, status, step_marks, created_at, team_role, is_retake, attempt_number, evaluator:lab_users!student_skill_evaluations_evaluator_id_fkey(name)')
       .eq('lab_day_id', labDayId);
 
     // 7. Build station-to-skill-sheet mapping.
@@ -665,6 +666,19 @@ export async function GET(request: NextRequest) {
       studentNeeds[student.id] = needs;
     }
 
+    // Additive (NREMT hub): copied closed extras nobody made or used are "not made yet" and the hub
+    // leaves them out. Unknown evaluations (failed query) = every station counts as used.
+    const usedStationIds = new Set<string>();
+    for (const q of (queueEntries || [])) if ((q as { station_id?: string | null }).station_id) usedStationIds.add((q as { station_id: string }).station_id);
+    for (const e of (evaluations || [])) if ((e as unknown as { lab_station_id?: string | null }).lab_station_id) usedStationIds.add((e as unknown as { lab_station_id: string }).lab_station_id);
+    const notMade = notMadeStationIds(stationList.map((s) => ({
+      id: s.id,
+      station_number: s.station_number,
+      group: stationSkillMap[s.id] || null,
+      closed: (((s.metadata || {}) as Record<string, unknown>).coordinator_status as string | undefined) === 'closed',
+      used: !evaluations || usedStationIds.has(s.id),
+    })));
+
     return NextResponse.json({
       success: true,
       labMode: labDay.lab_mode || 'group_rotations',
@@ -693,6 +707,7 @@ export async function GET(request: NextRequest) {
           addedDuringExam: stationAddedDuringExamMap[s.id] || false,
           stationSuffix: stationSuffixMap[s.id] || null,
           coordinatorStatus,
+          notMade: notMade.has(s.id),
           // Typed column; defaults false per migration 20260419.
           isRetakeStation: (s as { is_retake_station?: boolean }).is_retake_station === true,
         };

@@ -4,7 +4,7 @@ import { requireAuth } from '@/lib/api-auth';
 import { hasMinRole } from '@/lib/permissions';
 import { isNotWithdrawn } from '@/lib/live-students';
 import { proctorAuthFallback, proctorLabDayIds } from '@/lib/nremt-proctor';
-import { buildLocationLists, sortGroupStations } from '@/lib/nremt-hub-stations';
+import { buildLocationLists, sortGroupStations, notMadeStationIds } from '@/lib/nremt-hub-stations';
 
 // NREMT hub. READ-ONLY API: a front door to the existing grading page, Coordinator
 // View and Skill Results. All writes the hub makes go through the existing station
@@ -118,6 +118,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Copied closed extras nobody made or used are "not made yet": the hub leaves them out of its
+    // groups and counts, and "Open another" reuses one (returned as `spares`). Nothing is deleted.
+    // A queue row on a station counts as use; an unknown answer counts every station as used.
+    const queued = new Set<string>();
+    let queueKnown = true;
+    if (stationIds.length > 0) {
+      const { data: qrows, error: qErr } = await supabase.from('lab_day_student_queue').select('station_id').eq('lab_day_id', labDayId);
+      if (qErr) queueKnown = false;
+      for (const q of qrows || []) if ((q as any).station_id) queued.add((q as any).station_id as string);
+    }
+    const notMade = notMadeStationIds((stations || []).map((s: any) => ({
+      id: s.id as string,
+      station_number: s.station_number as number,
+      group: sheetIdOf(s),
+      closed: !!(s.metadata && s.metadata.coordinator_status === 'closed'),
+      used: !evalCountsKnown || !queueKnown || (evalCounts[s.id] || 0) > 0 || queued.has(s.id),
+    })));
+
     // NREMT codes for the skills on this day + scenario banks (E201 trauma / E202 medical).
     const sheetMeta: Record<string, { nremt_code: string | null }> = {};
     if (sheetIds.length > 0) {
@@ -183,8 +201,9 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    const spares = tiles.filter((t) => notMade.has(t.id));
     const groupMap = new Map<string, { key: string; skill_name: string; stations: typeof tiles }>();
-    for (const t of tiles) {
+    for (const t of tiles.filter((x) => !notMade.has(x.id))) {
       const key = t.skill_sheet_id || 'other';
       if (!groupMap.has(key)) {
         groupMap.set(key, { key, skill_name: t.skill_sheet_id ? (t.skill_label || 'Skill') : 'Other stations', stations: [] });
@@ -233,7 +252,7 @@ export async function GET(request: NextRequest) {
       end_time: day.end_time,
       cohort_label: cohort ? `${program?.abbreviation || program?.name || ''} ${cohort.cohort_number}`.trim() : null,
       student_count: await studentCount(supabase, day.cohort_id ?? null),
-      station_count: tiles.length,
+      station_count: tiles.length - notMade.size,
     };
 
     // Stations-only shape for a listed proctor: no emails, no counts of past evaluations,
@@ -249,7 +268,7 @@ export async function GET(request: NextRequest) {
         skill_options: [],
         proctor_options: [],
         day: dayOut,
-        my_stations: tiles.filter((t) => t.is_mine).map(strip),
+        my_stations: tiles.filter((t) => t.is_mine && !notMade.has(t.id)).map(strip),
         groups: groups.map((g) => ({ ...g, stations: g.stations.map(strip) })),
       });
     }
@@ -281,9 +300,10 @@ export async function GET(request: NextRequest) {
         end_time: day.end_time,
         cohort_label: cohort ? `${program?.abbreviation || program?.name || ''} ${cohort.cohort_number}`.trim() : null,
         student_count: await studentCount(supabase, day.cohort_id ?? null),
-        station_count: tiles.length,
+        station_count: tiles.length - notMade.size,
       },
-      my_stations: tiles.filter((t) => t.is_mine),
+      my_stations: tiles.filter((t) => t.is_mine && !notMade.has(t.id)),
+      spares,
       groups,
       can_manage: hasMinRole(user.role, 'instructor'),
     });
