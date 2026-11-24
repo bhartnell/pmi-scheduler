@@ -292,7 +292,7 @@ export default function GradeStationPage() {
     (async () => {
       try {
         const res = await fetch(
-          `/api/lab-management/lab-days/${labDayId}/station-by-nremt-code?code=E203`
+          `/api/lab-management/lab-days/${labDayId}/station-by-nremt-code?code=E203&from=${encodeURIComponent(station?.id || '')}`
         );
         if (!res.ok) return;
         const data = await res.json();
@@ -306,7 +306,7 @@ export default function GradeStationPage() {
     return () => {
       cancelled = true;
     };
-  }, [station?.lab_day?.id, nremtSheetCode]);
+  }, [station?.lab_day?.id, station?.id, nremtSheetCode]);
 
   // Handoff target: when navigating from a paired station with ?student=...,
   // pre-select that student once the roster is loaded.

@@ -8,6 +8,7 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 ## 2026-11-24
+PENDING | NREMT HUB six stations to start (card 4225cd1c): O2-to-BVM handoff lookup no longer 500s when a day has two BVM stations (partner chosen by proctor, room, open, number; grading page sends one extra from= param); BVM + O2 by NRB is ONE station on Run the day and Stations tab (one card, needs-both/O2 only/BVM only labels, 5 min gap, Open another both/BVM/O2); closed stations hidden by default; extra station names = base name + next number; student-queue cells carry completedAt (additive). No schema change
 PENDING | NREMT HUB live-check fixes (card 4225cd1c): run-the-day cards show proctor + location (additive proctorName/room on student-queue), suggestions spread across free stations, tracker full width with short NREMT skill labels, Stations tab group grid, Stations-free stats tile, home popover "Open NREMT hub", results heading date parsed as local
 PENDING | NREMT HUB one entry (card 4225cd1c): home Today band and site/home calendar show an NREMT testing day as ONE entry that opens the hub, no station rows; display only, no schema or calendar-sync change
 
