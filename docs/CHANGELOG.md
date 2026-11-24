@@ -9,7 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-24
 
-(pending) | NREMT per-day proctor access (card 4225cd1c): new table nremt_day_proctors (migration 20261124, UNAPPLIED), second-step proctor check on the grading routes (runs only after the instructor check refuses; errors refuse), Proctors panel on the hub, stations-only hub view, home-page card. Revert: git revert.
+PR #528 | NREMT per-day proctor access (card 4225cd1c): new table nremt_day_proctors (migration 20261124, UNAPPLIED), second-step proctor check on the grading routes (runs only after the instructor check refuses; errors refuse), Proctors panel on the hub, stations-only hub view, home-page card. Revert: git revert.
 a2dbd10 | NREMT HUB station controls: tile own name + skill chip + scenario + proctor + location + Open/Closed; Edit station panel; Open another [skill] station per group (same completion spot); Close/Reopen via existing coordinator_status; NREMT-only locations (no table, derived from NREMT-day station rooms); collapsible Individual Testing Tracker; station PATCH accepts skill_sheet_id/skill_name; lib/nremt-hub-stations.ts + tests. No schema change. Revert: git revert.
 4c1257d | NREMT HUB 1 of 3: new `/labs/nremt-hub` + `/labs/nremt-hub/[labDayId]` (stations by skill, Open grading, Your station, Change proctor via existing station PATCH) + `GET /api/lab-management/nremt-hub`; "Open NREMT hub" button on the NREMT lab day page; nav links. Read-only, no schema change. Revert: git revert.
 
