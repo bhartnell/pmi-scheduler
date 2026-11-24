@@ -126,7 +126,7 @@ function isMine(e: BandEvent, name: string | null): boolean {
 function labDayIdOf(e: BandEvent): string | null {
   if (e.event_type !== 'lab') return null;
   // A hub course day (ACLS / PALS) is assigned on the hub: no Sign up / You're in.
-  if (e.metadata?.hub_url) return null;
+  if (e.metadata?.hub_url && e.metadata?.nremt_testing !== true) return null;
   if (e.source === 'lab_day') return e.linked_id ?? e.id.replace(/^lab-/, '');
   return e.linked_lab_day_id ?? null;
 }
