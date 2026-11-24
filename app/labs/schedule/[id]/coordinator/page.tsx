@@ -34,6 +34,9 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import LabDayChat from '@/components/lab-day/LabDayChat';
+import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
+import { nremtHubCrumbs } from '@/lib/nremt-hub-format';
+import { getStudentCompletionCount, isStudentCurrentlyTesting, classifyStudent } from '@/lib/nremt-day-stats';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -364,33 +367,6 @@ function getStationCompletedCount(
     if (cell?.status === 'completed') count++;
   }
   return count;
-}
-
-function getStudentCompletionCount(
-  student: Student,
-  stations: GridStation[],
-  cells: Record<string, CellData>
-): number {
-  let count = 0;
-  for (const station of stations) {
-    const key = `${student.id}_${station.id}`;
-    const cell = cells[key];
-    if (cell?.status === 'completed') count++;
-  }
-  return count;
-}
-
-function isStudentCurrentlyTesting(
-  student: Student,
-  stations: GridStation[],
-  cells: Record<string, CellData>
-): GridStation | null {
-  for (const station of stations) {
-    const key = `${student.id}_${station.id}`;
-    const cell = cells[key];
-    if (cell?.status === 'in_progress') return station;
-  }
-  return null;
 }
 
 /** Find the best available station for a student: not completed, station not busy, fewest completions */
@@ -1209,9 +1185,11 @@ export default function CoordinatorViewPage() {
       const completedCount = getStudentCompletionCount(student, stations, cells);
       const testingStation = isStudentCurrentlyTesting(student, stations, cells);
 
-      if (completedCount >= totalStations && totalStations > 0) {
+      // classifyStudent is the shared rule (lib/nremt-day-stats) the NREMT hub overview also uses.
+      const state = classifyStudent(student, stations, cells);
+      if (state === 'complete') {
         complete.push({ student, completedCount });
-      } else if (testingStation) {
+      } else if (state === 'testing' && testingStation) {
         testing.push({ student, completedCount, testingStation });
       } else {
         const suggested = suggestStationForStudent(student, stations, students, cells);
@@ -1864,16 +1842,19 @@ export default function CoordinatorViewPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      {labDayInfo?.is_nremt_testing && (
+        <BreadcrumbNames {...nremtHubCrumbs(labDayId, labDayInfo.date, 'coordinator', 'Coordinator')} />
+      )}
       {/* ─── Top Bar (sticky) ─────────────────────────────────────────── */}
       <div className="sticky top-0 z-30 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-3">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <Link
-              href={`/labs/schedule/${labDayId}`}
+              href={labDayInfo?.is_nremt_testing ? `/labs/nremt-hub/${labDayId}` : `/labs/schedule/${labDayId}`}
               className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 min-h-[44px]"
             >
               <ChevronLeft className="w-4 h-4" />
-              <span className="hidden sm:inline">Back to Lab Day</span>
+              <span className="hidden sm:inline">{labDayInfo?.is_nremt_testing ? 'Back to NREMT hub' : 'Back to Lab Day'}</span>
               <span className="sm:hidden">Back</span>
             </Link>
 

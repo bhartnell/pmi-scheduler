@@ -9,6 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-24
 
+(this PR) | NREMT HUB layout + overview + navigation: both hub pages follow docs/LAYOUT.md (w-full max-w-[3000px], auto-fill station grids, no fixed columns); overview row (students, stations open of total, testing, waiting, complete, overall skills) from shared lib/nremt-day-stats.ts, also used by the Coordinator View status bar; on NREMT days Coordinator View and Skill Results go back to the hub with Labs > NREMT Hub > day > page crumbs; other lab days unchanged. No schema change, no DB writes. Revert: git revert.
 a2dbd10 | NREMT HUB station controls: tile own name + skill chip + scenario + proctor + location + Open/Closed; Edit station panel; Open another [skill] station per group (same completion spot); Close/Reopen via existing coordinator_status; NREMT-only locations (no table, derived from NREMT-day station rooms); collapsible Individual Testing Tracker; station PATCH accepts skill_sheet_id/skill_name; lib/nremt-hub-stations.ts + tests. No schema change. Revert: git revert.
 4c1257d | NREMT HUB 1 of 3: new `/labs/nremt-hub` + `/labs/nremt-hub/[labDayId]` (stations by skill, Open grading, Your station, Change proctor via existing station PATCH) + `GET /api/lab-management/nremt-hub`; "Open NREMT hub" button on the NREMT lab day page; nav links. Read-only, no schema change. Revert: git revert.
 
