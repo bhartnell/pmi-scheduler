@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Undo2, Unlock } from 'lucide-react';
-import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
+import IndividualTestingGrid, { type HubCellMenu } from '@/components/lab-day/IndividualTestingGrid';
 import { shortSkillLabel } from '@/lib/nremt-skill-labels';
 import {
   dayUnits,
@@ -39,6 +39,7 @@ import {
 // Refresh polls every 10s (the coordinator waits on it to see a station free up) and keeps the last good data on a failure.
 
 const POLL_MS = 10000;
+const TRACKER_POLL_MS = 15000;
 const SLOW_MIN = 10;
 
 function skillChip(st: RtdStation, input: RtdInput): string | null {
@@ -131,6 +132,42 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
       alert('Could not undo');
     }
     setBusyKey(null);
+    await load();
+  };
+
+  // Table cell menu: "Already there - mark In progress". Same student-queue POST the proctor's Start uses
+  // (it promotes the en-route row, or creates one). No evaluation is written.
+  const markInProgress = async (stationId: string, studentId: string) => {
+    try {
+      const r = await fetch('/api/lab-management/student-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lab_day_id: labDayId, student_id: studentId, station_id: stationId, status: 'in_progress' }),
+      });
+      const d = await r.json();
+      if (!d.success) alert('Could not mark In progress: ' + (d.error || 'unknown error'));
+    } catch {
+      alert('Could not mark In progress');
+    }
+    await load();
+    setNow(Date.now());
+  };
+
+  // Table cell menu: In progress -> Not started. Offered only when no evaluation is saved; removes the
+  // queue row only, never an evaluation.
+  const backToNotStarted = async (_stationId: string, queueId: string | null) => {
+    if (!queueId) return;
+    try {
+      const r = await fetch('/api/lab-management/student-queue', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: queueId }),
+      });
+      const d = await r.json();
+      if (!d.success) alert('Could not move back to Not started: ' + (d.error || 'unknown error'));
+    } catch {
+      alert('Could not move back to Not started');
+    }
     await load();
   };
 
@@ -398,7 +435,12 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
 
       <section aria-label="Completion table" className="rounded-xl bg-white dark:bg-gray-800 shadow overflow-hidden min-w-0">
         <h2 className="px-4 pt-4 text-lg font-semibold text-gray-900 dark:text-white">Completion</h2>
-        <IndividualTestingGrid labDayId={labDayId} isNremtTesting />
+        <IndividualTestingGrid
+          labDayId={labDayId}
+          isNremtTesting
+          refreshMs={TRACKER_POLL_MS}
+          hubMenu={{ canManage, send, markInProgress, undo, backToNotStarted } satisfies HubCellMenu}
+        />
       </section>
     </div>
   );

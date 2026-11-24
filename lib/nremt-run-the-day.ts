@@ -406,3 +406,152 @@ export function spreadUnitSuggestions(units: RtdUnit[], input: RtdInput): { unit
 export function unitCounts(input: RtdInput, now: number, dismissed: Set<string>): { free: number; total: number } {
   return { free: freeUnitsNow(input, now, dismissed).units.length, total: dayUnits(input).length };
 }
+
+
+// ---------------------------------------------------------------------------------------------
+// The hub's table cell menu (card 4225cd1c, 2026-11-24). One small menu per cell of the
+// completion table: where the cell stands, and the open stations to send the student to. Pure; the
+// table component renders it and the Run the day tab supplies the writes (same ones the cards use).
+// ---------------------------------------------------------------------------------------------
+
+export type CellMenuState = 'not_started' | 'en_route' | 'in_progress' | 'pass' | 'fail' | 'done';
+
+export interface SendOption {
+  /** Station the Send writes to (for the BVM + O2 pair: the first part the student owes). */
+  stationId: string;
+  /** Station name, or "BVM + O2 by NRB" once for the pair. */
+  title: string;
+  proctor: string | null;
+  room: string | null;
+  /** Student currently at, or heading to, this station; the option is shown greyed. */
+  busyWith: string | null;
+  /** Retake only: the first attempt's proctor is this station's proctor. */
+  sameProctorAsFirstAttempt: boolean;
+}
+
+export interface CellMenu {
+  state: CellMenuState;
+  studentName: string;
+  skillName: string;
+  /** Skills passed / skills on the day. */
+  progress: { done: number; total: number };
+  /** Station the cell is at (en route or in progress), when it can be told. */
+  at: { stationId: string; title: string; proctor: string | null; minutes: number | null } | null;
+  queueId: string | null;
+  evaluationId: string | null;
+  /** The student is already en route or being graded somewhere else, so nothing is offered to send. */
+  busyElsewhere: { title: string; kind: 'en_route' | 'in_progress' } | null;
+  /** Fail only: first attempt's evaluator, for the retake line. */
+  firstAttemptBy: string | null;
+  /** Open stations for this skill (closed and on-break are left out). Pair appears once. */
+  options: SendOption[];
+}
+
+function nameOfStation(s: RtdStation): string {
+  return s.custom_title || s.skill_name || `Station ${s.station_number}`;
+}
+
+/** Everything the cell menu shows for one student and skill column. */
+export function cellMenuFor(student: RtdStudent, skillName: string, input: RtdInput, now: number): CellMenu {
+  const col = input.skillColumns.find((c) => c.skillName === skillName) || null;
+  const cell = input.skillCells[`${student.id}_${skillName}`] || null;
+  const units = dayUnits(input);
+  const unitOf = new Map<string, RtdUnit>();
+  for (const u of units) for (const st of unitStations(u)) unitOf.set(st.id, u);
+  const titleOf = (st: RtdStation) => {
+    const u = unitOf.get(st.id);
+    return u ? unitTitle(u, nameOfStation) : nameOfStation(st);
+  };
+  const proctorOf = (st: RtdStation) => st.proctorName ?? st.instructorName ?? null;
+
+  let state: CellMenuState = 'not_started';
+  if (cell?.status === 'queued') state = 'en_route';
+  else if (cell?.status === 'in_progress') state = 'in_progress';
+  else if (cell?.status === 'completed') state = cell.result === 'pass' ? 'pass' : cell.result === 'fail' ? 'fail' : 'done';
+
+  // Where this cell's queue row sits: a station of this skill with the matching state.
+  let at: CellMenu['at'] = null;
+  if ((state === 'en_route' || state === 'in_progress') && col) {
+    const want = state === 'en_route' ? 'queued' : 'in_progress';
+    for (const sid of col.stationIds) {
+      const sc = input.cells[`${student.id}_${sid}`];
+      const st = input.stations.find((x) => x.id === sid);
+      if (sc?.status === want && st) {
+        at = {
+          stationId: st.id,
+          title: titleOf(st),
+          proctor: proctorOf(st),
+          minutes: minutesSince(want === 'queued' ? sc.queuedAt : sc.startedAt, now),
+        };
+        break;
+      }
+    }
+  }
+
+  // Already en route / testing anywhere (any skill).
+  let busyElsewhere: CellMenu['busyElsewhere'] = null;
+  for (const st of input.stations) {
+    const s = input.cells[`${student.id}_${st.id}`]?.status;
+    if (s === 'in_progress' || s === 'queued') {
+      busyElsewhere = { title: titleOf(st), kind: s === 'queued' ? 'en_route' : 'in_progress' };
+      if (s === 'in_progress') break;
+    }
+  }
+
+  // Busy stations: someone in progress or en route there.
+  const busyBy = new Map<string, string>();
+  for (const st of input.stations) {
+    const at2 = studentAtStation(st, input);
+    if (at2) busyBy.set(st.id, studentName(at2));
+  }
+  for (const e of enRouteList(input)) if (!busyBy.has(e.station.id)) busyBy.set(e.station.id, studentName(e.student));
+
+  const firstAttemptBy = state === 'fail' ? cell?.evalSummary?.evaluatorName || null : null;
+
+  const options: SendOption[] = [];
+  if (col && (state === 'not_started' || state === 'fail')) {
+    const seen = new Set<string>();
+    for (const sid of col.stationIds) {
+      const u = unitOf.get(sid);
+      if (!u || seen.has(u.key)) continue;
+      seen.add(u.key);
+      const parts = unitStations(u);
+      if (!parts.every(isRoutable)) continue; // closed or on break: not listed
+      let target: RtdStation;
+      if (u.kind === 'pair') {
+        const part = firstPart(needOf(student, u, input));
+        if (!part) continue; // passed both parts
+        target = part === 'o2' ? u.o2 : u.bvm;
+      } else {
+        target = u.station;
+      }
+      const busy = parts.map((p) => busyBy.get(p.id)).find(Boolean) || null;
+      options.push({
+        stationId: target.id,
+        title: unitTitle(u, nameOfStation),
+        proctor: proctorOf(target),
+        room: target.room ?? null,
+        busyWith: busy,
+        sameProctorAsFirstAttempt: state === 'fail' && sameName(firstAttemptBy, proctorOf(target)),
+      });
+    }
+    options.sort((a, b) => {
+      const na = input.stations.find((s) => s.id === a.stationId)?.station_number ?? 0;
+      const nb = input.stations.find((s) => s.id === b.stationId)?.station_number ?? 0;
+      return na - nb;
+    });
+  }
+
+  return {
+    state,
+    studentName: studentName(student),
+    skillName,
+    progress: { done: doneSkillCount(student, input), total: input.skillColumns.length },
+    at,
+    queueId: (at ? input.cells[`${student.id}_${at.stationId}`]?.queueId : null) ?? cell?.queueId ?? null,
+    evaluationId: (cell as (RtdCell & { evaluationId?: string | null }) | null)?.evaluationId ?? null,
+    busyElsewhere,
+    firstAttemptBy,
+    options,
+  };
+}

@@ -154,3 +154,86 @@ test('a plain date is a local calendar date, not the day before', () => {
   assert.equal(d.getDate(), 25);
   assert.equal(localCalendarDate('2026-11-25T00:00:00+00:00').getDate(), 25);
 });
+
+// --- Hub table cell menu (card 4225cd1c) ---
+import { cellMenuFor } from '../lib/nremt-run-the-day.ts';
+
+const NOW = Date.parse('2026-11-25T10:00:00Z');
+
+test('cell menu, not started: lists open stations of the skill, closed ones left out, busy ones greyed', () => {
+  const input = {
+    ...base,
+    cells: { b_m1: { status: 'in_progress', startedAt: '2026-11-25T09:50:00Z' } },
+  };
+  const m = cellMenuFor(students[0], 'Medical', input, NOW);
+  assert.equal(m.state, 'not_started');
+  assert.deepEqual(m.options.map((o) => [o.stationId, o.busyWith]), [['m1', 'B X'], ['m2', null]]);
+  // Trauma: t2 is closed so only t1 is listed
+  assert.deepEqual(cellMenuFor(students[0], 'Trauma', base, NOW).options.map((o) => o.stationId), ['t1']);
+});
+
+test('cell menu, not started: no open station for the skill gives an empty list', () => {
+  const closedAll = { ...base, stations: stations.map((s) => ({ ...s, coordinatorStatus: 'closed' as const })) };
+  assert.deepEqual(cellMenuFor(students[0], 'Medical', closedAll, NOW).options, []);
+});
+
+test('cell menu, en route: says where, how long, and offers no send list', () => {
+  const input = {
+    ...base,
+    cells: { a_m2: { status: 'queued', queueId: 'q9', queuedAt: '2026-11-25T09:55:00Z' } },
+    skillCells: { a_Medical: { status: 'queued', queueId: 'q9', queuedAt: '2026-11-25T09:55:00Z' } },
+  };
+  const m = cellMenuFor(students[0], 'Medical', input, NOW);
+  assert.equal(m.state, 'en_route');
+  assert.equal(m.at?.stationId, 'm2');
+  assert.equal(m.at?.minutes, 5);
+  assert.equal(m.queueId, 'q9');
+  assert.deepEqual(m.options, []);
+});
+
+test('cell menu, already en route elsewhere: another skill cell reports it so nothing is sent twice', () => {
+  const input = { ...base, cells: { a_m2: { status: 'queued', queueId: 'q9' } }, skillCells: { a_Medical: { status: 'queued', queueId: 'q9' } } };
+  const m = cellMenuFor(students[0], 'Trauma', input, NOW);
+  assert.equal(m.state, 'not_started');
+  assert.deepEqual(m.busyElsewhere, { title: 'Station 2', kind: 'en_route' });
+});
+
+test('cell menu, fail: retake list with the first attempt evaluator and the same-proctor flag', () => {
+  const input = {
+    ...base,
+    skillCells: { a_Medical: { status: 'completed', result: 'fail', evalSummary: { evaluatorName: 'Pat' } } },
+  };
+  const m = cellMenuFor(students[0], 'Medical', input, NOW);
+  assert.equal(m.state, 'fail');
+  assert.equal(m.firstAttemptBy, 'Pat');
+  assert.deepEqual(m.options.map((o) => [o.stationId, o.sameProctorAsFirstAttempt]), [['m1', true], ['m2', false]]);
+});
+
+test('cell menu, pass: no send list; progress counts passed skills', () => {
+  const input = { ...base, skillCells: { a_Medical: { status: 'completed', result: 'pass' } } };
+  const m = cellMenuFor(students[0], 'Medical', input, NOW);
+  assert.equal(m.state, 'pass');
+  assert.deepEqual(m.options, []);
+  assert.deepEqual(m.progress, { done: 1, total: 2 });
+});
+
+test('cell menu: the BVM + O2 pair appears once, from either column, routed to the first part owed', () => {
+  const st = [
+    { id: 'o2', station_number: 1, skill_name: 'Oxygen Administration by Non-Rebreather Mask', proctorName: 'Pat', room: 'R1' },
+    { id: 'bv', station_number: 2, skill_name: 'BVM Ventilation of an Apneic Adult Patient', proctorName: 'Pat', room: 'R1' },
+  ];
+  const cols = [
+    { skillName: 'O2', stationIds: ['o2'], nremtCode: 'E204' },
+    { skillName: 'BVM', stationIds: ['bv'], nremtCode: 'E203' },
+  ];
+  const input = { students, stations: st, skillColumns: cols, cells: {}, skillCells: {} };
+  for (const skill of ['O2', 'BVM']) {
+    const m = cellMenuFor(students[0], skill, input, NOW);
+    assert.equal(m.options.length, 1);
+    assert.equal(m.options[0].title, 'BVM + O2 by NRB');
+    assert.equal(m.options[0].stationId, 'o2');
+  }
+  // student who passed O2 goes to BVM
+  const passedO2 = { ...input, skillCells: { a_O2: { status: 'completed', result: 'pass' } } };
+  assert.equal(cellMenuFor(students[0], 'BVM', passedO2, NOW).options[0].stationId, 'bv');
+});

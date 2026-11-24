@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { downloadStudentPDF } from '@/lib/nremtExport';
 import { findMinimumPoints } from '@/lib/nremt-instructions';
+import { cellMenuFor, type CellMenu, type RtdInput } from '@/lib/nremt-run-the-day';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -37,6 +38,12 @@ interface GridStation {
   skillSheetId: string | null;
   instructorName: string | null;
   scenario?: { id: string; title: string } | null;
+  // Additive fields of the student-queue API, used only by the hub's cell menu.
+  proctorName?: string | null;
+  room?: string | null;
+  coordinatorStatus?: 'open' | 'closed' | 'break';
+  isRetakeStation?: boolean;
+  stationSuffix?: string | null;
 }
 
 interface SkillColumn {
@@ -61,17 +68,39 @@ interface CellData {
   evaluationId: string | null;
   evalSummary: EvalSummary | null;
   teamRole: string | null;
+  queuedAt?: string | null;
+  startedAt?: string | null;
+  completedAt?: string | null;
+}
+
+/**
+ * NREMT hub only (card 4225cd1c). When present, every cell opens the hub's cell menu (where the cell
+ * stands, send to a station, mark in progress, undo, Evaluation results). The writes are the Run the
+ * day tab's own, so the table and the station cards cannot disagree. Absent everywhere else, where the
+ * table behaves exactly as before.
+ */
+export interface HubCellMenu {
+  canManage: boolean;
+  send: (stationId: string, studentId: string) => Promise<void>;
+  markInProgress: (stationId: string, studentId: string) => Promise<void>;
+  /** En route -> back to Not started (queue row only, guarded on status queued). */
+  undo: (stationId: string, queueId: string | null) => Promise<void>;
+  /** In progress with no evaluation saved -> back to Not started (queue row only). */
+  backToNotStarted: (stationId: string, queueId: string | null) => Promise<void>;
 }
 
 interface IndividualTestingGridProps {
   labDayId: string;
   labDayDate?: string;
   isNremtTesting?: boolean;
+  hubMenu?: HubCellMenu;
+  /** Background refresh interval; default 5000 everywhere except the hub (15000). */
+  refreshMs?: number;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTesting = false }: IndividualTestingGridProps) {
+export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTesting = false, hubMenu, refreshMs = 5000 }: IndividualTestingGridProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [stations, setStations] = useState<GridStation[]>([]);
   const [cells, setCells] = useState<Record<string, CellData>>({});
@@ -151,7 +180,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
     }
   }, [labDayId]);
 
-  // Initial fetch + polling every 5 seconds (stops on 401 to avoid wasting invocations)
+  // Initial fetch + polling (refreshMs, default 5 seconds; stops on 401 to avoid wasting invocations)
   useEffect(() => {
     fetchGrid();
     const interval = setInterval(() => {
@@ -159,10 +188,19 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
         clearInterval(interval);
         return;
       }
+      // A hidden browser tab does not poll; it refreshes once when it becomes visible again.
+      if (document.hidden) return;
       fetchGrid(true);
-    }, 5000);
-    return () => clearInterval(interval);
-  }, [fetchGrid]);
+    }, refreshMs);
+    const onVisible = () => {
+      if (!document.hidden && !sessionExpiredRef.current) fetchGrid(true);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [fetchGrid, refreshMs]);
 
   // ─── Helpers: find a station for a skill ────────────────────────────────
 
@@ -406,6 +444,151 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
     return null;
   };
 
+  // ─── Hub cell menu (NREMT hub only) ─────────────────────────────────────
+
+  const hubRun = async (key: string, fn: () => Promise<void>) => {
+    setActionLoading(key);
+    setPopoverCell(null);
+    try {
+      await fn();
+      await fetchGrid(true);
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const renderHubMenu = (studentId: string, skillName: string, key: string) => {
+    const student = students.find((s) => s.id === studentId);
+    if (!student || !hubMenu) return null;
+    const input: RtdInput = {
+      students,
+      stations: stations.map((st) => ({ ...st, instructorName: st.proctorName ?? st.instructorName })),
+      cells,
+      skillColumns,
+      skillCells,
+    };
+    const menu: CellMenu = cellMenuFor(student, skillName, input, Date.now());
+    const cell = skillCells[key];
+    const shell = 'absolute z-50 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 min-w-[260px] max-w-[320px] text-left';
+    const item = 'w-full text-left min-h-[44px] px-3 py-2 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60';
+    const sub = 'text-xs text-gray-600 dark:text-gray-400';
+
+    const where =
+      menu.state === 'not_started'
+        ? 'Not started'
+        : menu.state === 'en_route'
+        ? `En route${menu.at ? ` to ${menu.at.title}` : ''}${menu.at?.minutes != null ? `, sent ${menu.at.minutes} min ago` : ''}`
+        : menu.state === 'in_progress'
+        ? `In progress${menu.at ? ` at ${menu.at.title}` : ''}${menu.at?.proctor ? ` with ${menu.at.proctor}` : ''}${menu.at?.minutes != null ? `, ${menu.at.minutes} min` : ''}`
+        : menu.state === 'pass'
+        ? 'Pass'
+        : menu.state === 'fail'
+        ? 'Fail'
+        : 'Done';
+
+    const sendList = (heading: string) => {
+      if (!hubMenu.canManage) return null;
+      if (menu.busyElsewhere) {
+        return (
+          <p className={`${sub} pt-2`}>
+            {menu.busyElsewhere.kind === 'en_route' ? 'Already en route to' : 'Being graded at'} {menu.busyElsewhere.title}. Undo first.
+          </p>
+        );
+      }
+      const open = menu.options;
+      if (open.length === 0) {
+        return <p className={`${sub} pt-2`}>No open station for this skill. Open one on the Stations and proctors tab.</p>;
+      }
+      return (
+        <div className="pt-2 space-y-1">
+          <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">{heading}</p>
+          {open.map((o) => (
+            <div key={o.stationId} className="space-y-0.5">
+              <button
+                type="button"
+                disabled={!!o.busyWith}
+                onClick={() => hubRun(key, () => hubMenu.send(o.stationId, studentId))}
+                className={`${item} border border-gray-200 dark:border-gray-600 ${o.busyWith ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}
+              >
+                <span className="font-medium">{o.title}</span>
+                <span className={sub}> - {o.proctor || 'Proctor not set'} - {o.room || 'Location not set'}</span>
+                {o.busyWith && <span className="block text-xs">{o.busyWith} is there</span>}
+                {o.sameProctorAsFirstAttempt && <span className="block text-xs text-amber-700 dark:text-amber-300">This proctor graded the first attempt</span>}
+              </button>
+              {menu.state === 'not_started' && !o.busyWith && (
+                <button
+                  type="button"
+                  onClick={() => hubRun(key, () => hubMenu.markInProgress(o.stationId, studentId))}
+                  className="w-full text-left min-h-[36px] px-3 text-xs text-gray-600 dark:text-gray-300 hover:underline"
+                >
+                  Already there - mark In progress at {o.title}
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    };
+
+    return (
+      <div
+        ref={popoverRef}
+        className={shell}
+        style={{ top: '100%', left: '50%', transform: 'translateX(-50%)' }}
+      >
+        <div className="pb-2 border-b border-gray-100 dark:border-gray-700 space-y-0.5">
+          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{menu.studentName}</div>
+          <div className={sub}>{menu.skillName}</div>
+          <div className="text-sm text-gray-900 dark:text-gray-100">{where}</div>
+          <div className={sub}>{menu.progress.done} of {menu.progress.total} passed</div>
+        </div>
+
+        {menu.state === 'not_started' && sendList('Send to:')}
+
+        {menu.state === 'en_route' && hubMenu.canManage && (
+          <div className="pt-2 space-y-1">
+            {menu.at && (
+              <button type="button" onClick={() => hubRun(key, () => hubMenu.markInProgress(menu.at!.stationId, studentId))} className={`${item} border border-gray-200 dark:border-gray-600 text-gray-900 dark:text-gray-100`}>
+                Mark In progress
+              </button>
+            )}
+            <button type="button" onClick={() => hubRun(key, () => hubMenu.undo(menu.at?.stationId || '', menu.queueId))} disabled={!menu.queueId} className={`${item} text-gray-700 dark:text-gray-200`}>
+              Undo - back to Not started
+            </button>
+          </div>
+        )}
+
+        {menu.state === 'in_progress' && (
+          <div className="pt-2 space-y-1">
+            {hubMenu.canManage && !cell?.result && !menu.evaluationId && menu.queueId && (
+              <button type="button" onClick={() => hubRun(key, () => hubMenu.backToNotStarted(menu.at?.stationId || '', menu.queueId))} className={`${item} text-gray-700 dark:text-gray-200`}>
+                Back to Not started
+              </button>
+            )}
+            {menu.evaluationId && (
+              <a href={`/skill-evaluations/${menu.evaluationId}`} target="_blank" rel="noopener noreferrer" className={`${item} flex items-center gap-2 text-blue-600 dark:text-blue-400`}>
+                <Eye className="w-4 h-4" /> Evaluation results
+              </a>
+            )}
+          </div>
+        )}
+
+        {(menu.state === 'pass' || menu.state === 'fail' || menu.state === 'done') && (
+          <div className="pt-2 space-y-1">
+            {menu.evaluationId ? (
+              <a href={`/skill-evaluations/${menu.evaluationId}`} target="_blank" rel="noopener noreferrer" className={`${item} flex items-center gap-2 font-medium text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-700`}>
+                <Eye className="w-4 h-4" /> Evaluation results
+              </a>
+            ) : (
+              <p className={sub}>No evaluation recorded yet</p>
+            )}
+            {menu.state === 'fail' && sendList(menu.firstAttemptBy ? `Send for retake to: (first attempt graded by ${menu.firstAttemptBy})` : 'Send for retake to:')}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // ─── Popover ────────────────────────────────────────────────────────────
 
   const renderPopover = (studentId: string, skillName: string) => {
@@ -414,6 +597,8 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
 
     const cell = skillCells[key];
     const minPoints = findMinimumPoints(skillName);
+
+    if (hubMenu) return renderHubMenu(studentId, skillName, key);
 
     // Not started — no cell or no status
     if (!cell || !cell.status) {
