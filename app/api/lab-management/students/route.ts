@@ -5,14 +5,24 @@ import { hasMinRole } from '@/lib/permissions';
 import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import type { VolunteerTokenResult } from '@/lib/api-auth';
 import { createEnrollmentForNewStudent } from '@/lib/student-enrollment';
+import { proctorAuthFallback } from '@/lib/nremt-proctor';
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuthOrVolunteerToken(request, 'instructor');
+  let auth = await requireAuthOrVolunteerToken(request, 'instructor');
 
-  if (auth instanceof NextResponse) return auth;
+  // Second step, only after the instructor check refused: a live NREMT-day proctor may
+  // read ONLY the roster of that lab day's cohort.
+  let proctorOk = false;
+  if (auth instanceof NextResponse) {
+    const proctor = await proctorAuthFallback(auth, { cohortId: request.nextUrl.searchParams.get('cohortId') });
+    if (!proctor) return auth;
+    auth = proctor;
+    proctorOk = true;
+  }
 
-  // Skip redundant role check for volunteer tokens (already validated)
-  if (!(auth as VolunteerTokenResult).isVolunteerToken) {
+  // Skip redundant role check for volunteer tokens (already validated) and proctors
+  // (already checked against the lab day's cohort above)
+  if (!proctorOk && !(auth as VolunteerTokenResult).isVolunteerToken) {
     const { session } = auth as { session: { user: { email: string } } };
     const supabaseForRole = getSupabaseAdmin();
     const { data: callerUser } = await supabaseForRole

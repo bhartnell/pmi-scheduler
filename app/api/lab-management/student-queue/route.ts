@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import type { VolunteerTokenResult } from '@/lib/api-auth';
+import { proctorQueueFallback } from '@/lib/nremt-proctor';
 
 // ---------------------------------------------------------------------------
 // GET /api/lab-management/student-queue?lab_day_id=UUID
@@ -683,8 +684,13 @@ export async function GET(request: NextRequest) {
 // Handles "already in progress" gracefully — returns existing entry.
 // ---------------------------------------------------------------------------
 export async function POST(request: NextRequest) {
-  const auth = await requireAuth('instructor');
-  if (auth instanceof NextResponse) return auth;
+  let auth = await requireAuth('instructor');
+  if (auth instanceof NextResponse) {
+    // Second step, only after the instructor check refused: live NREMT-day proctor (card 4225cd1c).
+    const proctor = await proctorQueueFallback(request);
+    if (!proctor) return auth;
+    auth = proctor;
+  }
 
   try {
     const body = await request.json();
@@ -745,8 +751,13 @@ export async function POST(request: NextRequest) {
 // Also supports lookup by { lab_day_id, student_id, station_id } if id is not known.
 // ---------------------------------------------------------------------------
 export async function PUT(request: NextRequest) {
-  const auth = await requireAuth('instructor');
-  if (auth instanceof NextResponse) return auth;
+  let auth = await requireAuth('instructor');
+  if (auth instanceof NextResponse) {
+    // Second step, only after the instructor check refused: live NREMT-day proctor (card 4225cd1c).
+    const proctor = await proctorQueueFallback(request);
+    if (!proctor) return auth;
+    auth = proctor;
+  }
 
   try {
     const body = await request.json();

@@ -39,6 +39,7 @@ import { ErrorBoundary } from '@/components/ui/ErrorBoundary';
 import { PageErrorBoundary } from '@/components/PageErrorBoundary';
 import AnnouncementBanner from '@/components/dashboard/AnnouncementBanner';
 import CalendarConnectBanner from '@/components/dashboard/CalendarConnectBanner';
+import NremtProctorCard from '@/components/NremtProctorCard';
 import { SkeletonStats, SkeletonCard } from '@/components/ui';
 import type { CurrentUser as CurrentUserType } from '@/types';
 
@@ -246,6 +247,8 @@ export default function HomePage() {
       {/* Main Content */}
       <main id="main-content" className="px-[clamp(16px,2.75vw,96px)] py-6 w-full max-w-[3000px] mx-auto">
         <PageErrorBoundary>
+
+        <NremtProctorCard />
 
         {/* System Announcements */}
         <ErrorBoundary>

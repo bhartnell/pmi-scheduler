@@ -1,13 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { proctorAuthFallback } from '@/lib/nremt-proctor';
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuth('instructor');
-  if (auth instanceof NextResponse) return auth;
+  let auth = await requireAuth('instructor');
+  if (auth instanceof NextResponse) {
+    // Second step, only after the instructor check refused: live NREMT-day proctors.
+    const proctor = await proctorAuthFallback(auth, { any: true });
+    if (!proctor) return auth;
+    auth = proctor;
+  }
 
   const { id } = await params;
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { proctorAuthFallback } from '@/lib/nremt-proctor';
 
 /**
  * POST /api/lab-management/stations/:id/scenario/rotate
@@ -28,8 +29,14 @@ export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuth('instructor');
-  if (auth instanceof NextResponse) return auth;
+  let auth = await requireAuth('instructor');
+  if (auth instanceof NextResponse) {
+    // Second step, only after the instructor check refused: live NREMT-day proctor for this
+    // station's lab day (card 4225cd1c). The scenario SET route stays instructor-only.
+    const proctor = await proctorAuthFallback(auth, { stationId: (await params).id });
+    if (!proctor) return auth;
+    auth = proctor;
+  }
 
   try {
     const { id: stationId } = await params;

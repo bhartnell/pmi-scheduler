@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import { logAuditEvent } from '@/lib/audit';
 import { isNotWithdrawn } from '@/lib/live-students';
+import { proctorAuthFallback } from '@/lib/nremt-proctor';
 
 // Belt-and-suspenders against the App Router edge / route cache. The
 // route is implicitly dynamic (reads searchParams), but after the
@@ -22,8 +23,13 @@ export async function GET(request: NextRequest) {
   const includeMembers = searchParams.get('include') === 'members';
 
   try {
-    const auth = await requireAuthOrVolunteerToken(request, 'instructor');
-    if (auth instanceof NextResponse) return auth;
+    let auth = await requireAuthOrVolunteerToken(request, 'instructor');
+    if (auth instanceof NextResponse) {
+      // Second step, only after the instructor check refused: live NREMT-day proctors.
+      const proctor = await proctorAuthFallback(auth, { cohortId });
+      if (!proctor) return auth;
+      auth = proctor;
+    }
     const supabase = getSupabaseAdmin();
     // Sort by name, not display_order. display_order on lab_groups has
     // historically drifted (PM G15 had two groups sharing order=2),

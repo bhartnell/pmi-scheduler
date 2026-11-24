@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { validateVolunteerToken } from '@/lib/api-auth';
+import { proctorAuthFallback } from '@/lib/nremt-proctor';
 
 async function getCurrentUser(email: string) {
   const supabase = getSupabaseAdmin();
@@ -33,7 +34,10 @@ export async function GET(
     } else {
       const currentUser = await getCurrentUser(session.user.email);
       if (!currentUser || !hasMinRole(currentUser.role, 'instructor')) {
-        return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+        // Second step, only after the instructor check refused: live NREMT-day proctors
+        // may read skill sheets (grading content, no student data).
+        const refusal = NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+        if (!(await proctorAuthFallback(refusal, { any: true }))) return refusal;
       }
     }
 

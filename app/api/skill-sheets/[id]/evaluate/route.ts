@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole } from '@/lib/permissions';
 import { validateVolunteerToken } from '@/lib/api-auth';
+import { proctorEvaluateFallback } from '@/lib/nremt-proctor';
 import type { VolunteerTokenResult } from '@/lib/api-auth';
 
 async function getCurrentUser(email: string) {
@@ -34,7 +35,13 @@ export async function POST(
     } else {
       currentUser = await getCurrentUser(session.user.email);
       if (!currentUser || !hasMinRole(currentUser.role, 'instructor')) {
-        return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+        // Second step, only after the instructor check refused: a live NREMT-day proctor
+        // may submit for a station of THEIR lab day only. The evaluation records their own
+        // account (currentUser stays the signed-in person).
+        const proctor = await proctorEvaluateFallback(request);
+        if (!proctor || !currentUser) {
+          return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+        }
       }
     }
 

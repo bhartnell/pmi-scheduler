@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { hasMinRole, canEditScoreSheets } from '@/lib/permissions';
 import { validateVolunteerToken } from '@/lib/api-auth';
 import { logEvaluationEdit } from '@/lib/audit';
+import { proctorStudentReadFallback } from '@/lib/nremt-proctor';
 
 // edited_by has no FK constraint (plain uuid), so resolve editor names with a
 // second lookup instead of a PostgREST embed.
@@ -49,7 +50,12 @@ export async function GET(
         .single();
 
       if (!currentUser || !hasMinRole(currentUser.role, 'instructor')) {
-        return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+        // Second step, GET only: a live NREMT-day proctor may read evaluations for a student
+        // of the cohort of a day they are live on (card 4225cd1c). Errors refuse.
+        const proctor = await proctorStudentReadFallback(request.nextUrl.searchParams.get('student_id'));
+        if (!proctor) {
+          return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 });
+        }
       }
     }
 

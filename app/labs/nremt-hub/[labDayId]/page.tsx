@@ -12,6 +12,7 @@ import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { formatHubDate, formatHubTime } from '@/lib/nremt-hub-format';
 import { nextStationName, nextStationNumber, isClosed } from '@/lib/nremt-hub-stations';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
+import ProctorsPanel from '@/components/nremt/ProctorsPanel';
 import { computeDayStats, type DayStats } from '@/lib/nremt-day-stats';
 
 // NREMT hub: the day hub. Stations grouped by skill sheet, one big "Open grading"
@@ -60,6 +61,9 @@ interface HubData {
   locations: { standard: string[]; nremtOnly: string[] };
   scenarios_by_code: Record<string, { id: string; title: string }[]>;
   skill_options: { id: string; skill_name: string; nremt_code: string | null }[];
+  proctor_options?: { id: string | null; name: string; email: string }[];
+  is_proctor?: boolean;
+  can_manage?: boolean;
 }
 interface InstructorOption {
   id: string;
@@ -445,7 +449,16 @@ export default function NremtHubDayPage() {
     if (session && labDayId) load();
   }, [session, labDayId, load]);
 
-  const canManage = effectiveRole ? hasMinRole(effectiveRole, 'instructor') : false;
+  // A listed proctor (student account) gets the stations-only view: the API sends can_manage false.
+  const canManage = data?.is_proctor ? false : effectiveRole ? hasMinRole(effectiveRole, 'instructor') : false;
+
+  // Instructors plus the day's proctor list, so a person can be added and placed in one sitting.
+  const pickerPeople: InstructorOption[] = [
+    ...instructors,
+    ...(data?.proctor_options || [])
+      .filter((p) => !instructors.some((i) => i.email.toLowerCase() === p.email.toLowerCase()))
+      .map((p) => ({ id: p.id || p.email, name: p.name, email: p.email })),
+  ];
 
   useEffect(() => {
     if (!canManage) return;
@@ -596,6 +609,8 @@ export default function NremtHubDayPage() {
               </section>
             ))}
 
+            {canManage && <ProctorsPanel labDayId={labDayId} onChanged={load} />}
+
             {canManage && (
               <details className="rounded-lg bg-white dark:bg-gray-800 shadow">
                 <summary className="cursor-pointer min-h-[44px] flex items-center px-4 font-semibold text-gray-900 dark:text-white">Individual Testing Tracker</summary>
@@ -625,7 +640,7 @@ export default function NremtHubDayPage() {
                 state={panel}
                 data={data}
                 labDayId={labDayId}
-                instructors={instructors}
+                instructors={pickerPeople}
                 allNames={data.groups.flatMap((g) => g.stations.filter((st) => st.skill_sheet_id === panel.skillSheetId).map((st) => st.own_name || st.skill_label))}
                 allNumbers={data.groups.flatMap((g) => g.stations.map((st) => st.station_number))}
                 onClose={() => setPanel(null)}
