@@ -17,3 +17,22 @@ export function formatHubTime(t: string | null | undefined): string {
   const ap = h >= 12 ? 'PM' : 'AM';
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${ap}`;
 }
+
+/**
+ * Breadcrumb props for the Coordinator View and Skill Results of an NREMT testing day, so the
+ * trail reads Labs > NREMT Hub > the day > page and every crumb goes through the hub. Fed to
+ * BreadcrumbNames. The URLs of those pages are unchanged; only the crumbs' labels and links.
+ */
+export function nremtHubCrumbs(labDayId: string, dayTitle: string, pageSegment: string, pageLabel: string) {
+  return {
+    entityTitle: dayTitle,
+    customSegments: {
+      'labs/schedule': 'NREMT Hub',
+      [`labs/schedule/${labDayId}/${pageSegment}`]: pageLabel,
+    } as Record<string, string>,
+    customHrefs: {
+      'labs/schedule': '/labs/nremt-hub',
+      [`labs/schedule/${labDayId}`]: `/labs/nremt-hub/${labDayId}`,
+    } as Record<string, string>,
+  };
+}
