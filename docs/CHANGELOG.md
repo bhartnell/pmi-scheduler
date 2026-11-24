@@ -9,7 +9,7 @@ Format: `commit-hash | brief description`
 
 ## 2026-11-24
 
-PENDING | NREMT HUB 1 of 3: new `/labs/nremt-hub` + `/labs/nremt-hub/[labDayId]` (stations by skill, Open grading, Your station, Change proctor via existing station PATCH) + `GET /api/lab-management/nremt-hub`; "Open NREMT hub" button on the NREMT lab day page; nav links. Read-only, no schema change. Revert: git revert.
+4c1257d | NREMT HUB 1 of 3: new `/labs/nremt-hub` + `/labs/nremt-hub/[labDayId]` (stations by skill, Open grading, Your station, Change proctor via existing station PATCH) + `GET /api/lab-management/nremt-hub`; "Open NREMT hub" button on the NREMT lab day page; nav links. Read-only, no schema change. Revert: git revert.
 
 ## 2026-11-23
 
