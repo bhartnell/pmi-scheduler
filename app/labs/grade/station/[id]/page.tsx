@@ -1491,7 +1491,7 @@ export default function GradeStationPage() {
             station?.lab_day?.is_nremt_testing
               ? // NREMT: mobile stacked (<lg) becomes 3-col grid at lg+
                 'w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4 pb-24 flex flex-col gap-4 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)_20rem] lg:gap-4 lg:items-start' +
-                (scenarioSplitActive ? ' xl:grid-cols-[18rem_minmax(0,1fr)_minmax(0,1fr)]' : '')
+                (scenarioSplitActive ? ' xl:grid-cols-[18rem_minmax(0,1fr)_minmax(0,1fr)] xl:grid-rows-[auto_minmax(0,1fr)]' : '')
               : 'flex gap-6 w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4 pb-4'
           }
         >

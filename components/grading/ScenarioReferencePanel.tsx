@@ -352,7 +352,7 @@ export default function ScenarioReferencePanel({
               className="mr-3 shrink-0 min-h-[44px] px-3 text-xs font-medium rounded-md border border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/30"
               title="Switch between scenario beside the grading sheet and stacked above it"
             >
-              {layoutSwitch.sideBySide ? 'Side by side' : 'Stacked'}
+              {layoutSwitch.sideBySide ? 'Switch to stacked' : 'Switch to side by side'}
             </button>
           )}
         </div>
