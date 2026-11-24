@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
-import { nremtHubCrumbs } from '@/lib/nremt-hub-format';
+import { nremtHubCrumbs, localCalendarDate } from '@/lib/nremt-hub-format';
 import { PageLoader } from '@/components/ui';
 import { exportToExcel } from '@/lib/export-utils';
 import {
@@ -399,7 +399,7 @@ export default function SkillResultsPage() {
   }
 
   const dateFormatted = labDay?.date
-    ? new Date(labDay.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+    ? localCalendarDate(labDay.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
     : '';
 
   const queuedCount = students.reduce(
@@ -1097,7 +1097,7 @@ function IndividualStudentTab({
                     : '';
 
                   const dateStr = ev.lab_day_date
-                    ? new Date(ev.lab_day_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                    ? localCalendarDate(ev.lab_day_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
                     : new Date(ev.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 
                   const canResend = ev.email_status === 'queued' || ev.email_status === 'pending';

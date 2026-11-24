@@ -14,6 +14,7 @@ import { nextStationName, nextStationNumber, isClosed } from '@/lib/nremt-hub-st
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
 import ProctorsPanel from '@/components/nremt/ProctorsPanel';
 import RunTheDay from '@/components/nremt/RunTheDay';
+import { shortSkillLabel } from '@/lib/nremt-skill-labels';
 import { computeDayStats, type DayStats } from '@/lib/nremt-day-stats';
 
 // NREMT hub: the day hub. Stations grouped by skill sheet, one big "Open grading"
@@ -478,6 +479,8 @@ export default function NremtHubDayPage() {
   // Overview row: the same student-queue data and the same rules (lib/nremt-day-stats) the
   // Coordinator View status bar uses. Instructor+ only (the API's own gate); refreshes every 30s.
   const [stats, setStats] = useState<DayStats | null>(null);
+  const [freeCount, setFreeCount] = useState<{ free: number; total: number } | null>(null);
+  const onFreeCount = useCallback((free: number, total: number) => setFreeCount((p) => (p && p.free === free && p.total === total ? p : { free, total })), []);
   const loadStats = useCallback(() => {
     fetch(`/api/lab-management/student-queue?lab_day_id=${labDayId}`)
       .then((r) => r.json())
@@ -561,6 +564,7 @@ export default function NremtHubDayPage() {
                 { label: 'Complete', value: String(stats.complete) },
                 { label: 'Overall', value: `${stats.skillsCompleted} of ${stats.skillsPossible} (${pct}%)` },
               ];
+              if (tab === 'run' && freeCount) items.splice(2, 0, { label: 'Stations free', value: `${freeCount.free} of ${freeCount.total}` });
               return (
                 <section aria-label="Day overview" className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
                   {items.map((it) => (
@@ -595,7 +599,7 @@ export default function NremtHubDayPage() {
               </nav>
             )}
 
-            {canManage && tab === 'run' && <RunTheDay labDayId={labDayId} canManage={canManage} onChanged={load} />}
+            {canManage && tab === 'run' && <RunTheDay labDayId={labDayId} canManage={canManage} onChanged={load} onFreeCount={onFreeCount} />}
 
             {(!canManage || tab === 'stations') && (<>
             {data.my_stations.length > 0 && (
@@ -613,11 +617,14 @@ export default function NremtHubDayPage() {
               <p className="text-sm text-gray-500 dark:text-gray-400">This day has no stations yet. Add them on the lab day page.</p>
             )}
 
-            {data.groups.map((g) => (
-              <section key={g.key} className="space-y-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,560px),1fr))] gap-4 items-start">
+            {data.groups.map((g) => {
+              const groupLabel = shortSkillLabel(g.skill_name, g.stations[0]?.nremt_code);
+              return (
+              <section key={g.key} className="space-y-3 rounded-xl bg-white dark:bg-gray-800 shadow p-4 min-w-0">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    {g.skill_name} <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({g.stations.length})</span>
+                    <span title={g.skill_name}>{groupLabel}</span> <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({g.stations.length})</span>
                   </h2>
                   {canManage && g.key !== 'other' && (
                     <button
@@ -625,7 +632,7 @@ export default function NremtHubDayPage() {
                       onClick={() => setPanel({ mode: 'create', skillSheetId: g.key, skillLabel: g.skill_name })}
                       className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg border border-blue-600 text-blue-700 dark:text-blue-300 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20"
                     >
-                      <Plus className="w-4 h-4" /> Open another {g.skill_name} station
+                      <Plus className="w-4 h-4" /> Open another {groupLabel} station
                     </button>
                   )}
                 </div>
@@ -635,7 +642,9 @@ export default function NremtHubDayPage() {
                   ))}
                 </div>
               </section>
-            ))}
+              );
+            })}
+            </div>
 
             {canManage && <ProctorsPanel labDayId={labDayId} onChanged={load} />}
 

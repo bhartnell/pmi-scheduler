@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     // evaluation back to an existing station column.
     const { data: stations, error: stationsErr } = await supabase
       .from('lab_stations')
-      .select('id, station_number, station_type, custom_title, skill_name, skill_sheet_id, is_retake_station, metadata, scenario:scenarios(id, title)')
+      .select('id, station_number, station_type, custom_title, skill_name, skill_sheet_id, room, instructor_name, is_retake_station, metadata, scenario:scenarios(id, title)')
       .eq('lab_day_id', labDayId)
       .order('station_number');
 
@@ -409,6 +409,8 @@ export async function GET(request: NextRequest) {
       custom_title: s.custom_title as string | null,
       skill_name: s.skill_name as string | null,
       skill_sheet_id: (s.skill_sheet_id as string | null) || null,
+      room: (s.room as string | null) || null,
+      instructor_name: (s.instructor_name as string | null) || null,
       metadata: (s.metadata as Record<string, unknown> | null) || null,
       scenario: Array.isArray(s.scenario) ? (s.scenario[0] as { id: string; title: string } | undefined) || null : s.scenario as { id: string; title: string } | null,
     }));
@@ -427,14 +429,16 @@ export async function GET(request: NextRequest) {
     // whose skill_sheet_id is not represented by any current station still get a
     // human-readable column header).
     const skillSheetIdToName: Record<string, string> = {};
+    const skillSheetIdToCode: Record<string, string> = {};
     if (allSkillSheetIds.size > 0) {
       const { data: sheetRows } = await supabase
         .from('skill_sheets')
-        .select('id, skill_name')
+        .select('id, skill_name, nremt_code')
         .in('id', Array.from(allSkillSheetIds));
       if (sheetRows) {
-        for (const row of sheetRows as Array<{ id: string; skill_name: string | null }>) {
+        for (const row of sheetRows as Array<{ id: string; skill_name: string | null; nremt_code?: string | null }>) {
           if (row.skill_name) skillSheetIdToName[row.id] = row.skill_name;
+          if (row.nremt_code) skillSheetIdToCode[row.id] = row.nremt_code;
         }
       }
     }
@@ -504,6 +508,8 @@ export async function GET(request: NextRequest) {
       skillName,
       stationIds: skillToStationIds[skillName] || [],
       skillSheetId: skillNameToSheetId[skillName] || null,
+      // Additive: lets the UI show a short label (lib/nremt-skill-labels).
+      nremtCode: (skillNameToSheetId[skillName] && skillSheetIdToCode[skillNameToSheetId[skillName] as string]) || null,
     }));
 
     // Build skillCells: key = `${studentId}_${skillName}`
@@ -663,8 +669,17 @@ export async function GET(request: NextRequest) {
         const coordinatorStatus = (meta.coordinator_status as string | undefined) || 'open';
         return {
           ...s,
+          // Additive (NREMT hub only).
+          room: (s.room || '').trim() || null,
           skillSheetId: stationSkillMap[s.id] || null,
           instructorName: stationInstructorMap[s.id]?.name || null,
+          // Additive (NREMT hub): station_instructors name, else the station's own instructor_name
+          // text (copied Nov 25 stations carry the text and no station_instructors rows).
+          // instructorName above is unchanged so the Coordinator View's examiner display is too.
+          proctorName:
+            stationInstructorMap[s.id]?.name ||
+            (s.instructor_name || '').trim() ||
+            null,
           addedDuringExam: stationAddedDuringExamMap[s.id] || false,
           stationSuffix: stationSuffixMap[s.id] || null,
           coordinatorStatus,

@@ -8,6 +8,8 @@
 //
 // Input shapes are the student-queue API response.
 
+import { shortSkillLabel } from './nremt-skill-labels.ts';
+
 export interface RtdStudent {
   id: string;
   first_name: string;
@@ -20,6 +22,10 @@ export interface RtdStation {
   skill_name?: string | null;
   skillSheetId?: string | null;
   instructorName?: string | null;
+  /** Proctor for the hub: station_instructors name, else the station's own text (API proctorName). */
+  proctorName?: string | null;
+  /** Free-text room on the station (lab_stations.room). */
+  room?: string | null;
   stationSuffix?: string | null;
   coordinatorStatus?: 'open' | 'closed' | 'break';
   isRetakeStation?: boolean;
@@ -38,6 +44,7 @@ export interface RtdSkillColumn {
   skillName: string;
   stationIds: string[];
   skillSheetId?: string | null;
+  nremtCode?: string | null;
 }
 export interface RtdInput {
   students: RtdStudent[];
@@ -118,6 +125,8 @@ export function testingNow(input: RtdInput): { station: RtdStation; student: Rtd
 export interface Candidate {
   student: RtdStudent;
   skillName: string | null;
+  /** NREMT code of the skill when known, for the short label. */
+  nremtCode?: string | null;
   isRetake: boolean;
   firstAttemptBy: string | null;
   doneCount: number;
@@ -179,11 +188,12 @@ export function candidatesForStation(station: RtdStation, input: RtdInput): Cand
     out.push({
       student: s,
       skillName: col?.skillName || null,
+      nremtCode: col?.nremtCode || null,
       isRetake,
       firstAttemptBy,
       doneCount: doneSkillCount(s, input),
       totalSkills: input.skillColumns.length,
-      sameProctorAsFirstAttempt: isRetake && sameName(firstAttemptBy, station.instructorName),
+      sameProctorAsFirstAttempt: isRetake && sameName(firstAttemptBy, station.proctorName ?? station.instructorName),
     });
   }
   out.sort((a, b) => {
@@ -201,7 +211,7 @@ export function whyLine(c: Candidate): string {
     return c.firstAttemptBy ? `Retake - first attempt graded by ${c.firstAttemptBy}` : 'Retake';
   }
   if (c.totalSkills > 0 && c.skillName) {
-    return `${c.doneCount} of ${c.totalSkills} done - has not done ${c.skillName}`;
+    return `${c.doneCount} of ${c.totalSkills} done - has not done ${shortSkillLabel(c.skillName, c.nremtCode)}`;
   }
   return `${c.doneCount} done`;
 }
@@ -212,4 +222,23 @@ export function minutesSince(iso: string | null | undefined, now: number): numbe
   const t = Date.parse(iso);
   if (Number.isNaN(t)) return null;
   return Math.max(0, Math.floor((now - t) / 60000));
+}
+
+/**
+ * Spread suggestions across the free stations (fix 2). Walk the free stations in order; each gets
+ * its best candidate who is not already the suggestion on an earlier card. A station with nobody
+ * left gets null (the card says "Nobody waiting for this skill"). The full eligible list per
+ * station is unchanged and still feeds "Someone else".
+ */
+export function spreadSuggestions(
+  free: RtdStation[],
+  input: RtdInput
+): { station: RtdStation; list: Candidate[]; top: Candidate | null }[] {
+  const taken = new Set<string>();
+  return free.map((station) => {
+    const list = candidatesForStation(station, input);
+    const top = list.find((c) => !taken.has(c.student.id)) || null;
+    if (top) taken.add(top.student.id);
+    return { station, list, top };
+  });
 }
