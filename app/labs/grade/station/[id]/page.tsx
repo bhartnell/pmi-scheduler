@@ -122,6 +122,9 @@ export default function GradeStationPage() {
   // NREMT skill sheet badge info
   const [nremtSheetSource, setNremtSheetSource] = useState<string | null>(null);
   const [nremtSheetCode, setNremtSheetCode] = useState<string | null>(null);
+  // Which panel sheet has finished loading (success or not): the instructions and timer wait on it.
+  const [nremtSheetFetchedId, setNremtSheetFetchedId] = useState<string | null>(null);
+  const nremtCodePending = !!panelSheetId && nremtSheetFetchedId !== panelSheetId;
 
   // NREMT scenario reference (E201 trauma, E202 medical)
   const [nremtScenario, setNremtScenario] = useState<{
@@ -411,11 +414,20 @@ export default function GradeStationPage() {
   // Also fetches NREMT badge info (source, nremt_code) for any skill sheet
   useEffect(() => {
     if (!panelSheetId) return;
+    // Ignore a stale answer if the sheet changed while this fetch was in flight.
+    let cancelled = false;
+    // Never leave the proctor waiting more than 5 seconds for the sheet code:
+    // after that the safe name match is used (a late code only re-seeds an unstarted timer).
+    const giveUpTimer = setTimeout(() => {
+      if (!cancelled) setNremtSheetFetchedId(panelSheetId);
+    }, 5000);
     (async () => {
       try {
         const res = await fetch(`/api/skill-sheets/${panelSheetId}`);
+        if (cancelled) return;
         if (res.ok) {
           const data = await res.json();
+          if (cancelled) return;
           if (data.success && data.sheet) {
             // Store NREMT badge info
             if (data.sheet.source) setNremtSheetSource(data.sheet.source);
@@ -428,7 +440,12 @@ export default function GradeStationPage() {
           }
         }
       } catch { /* ignore */ }
+      finally { if (!cancelled) setNremtSheetFetchedId(panelSheetId); }
     })();
+    return () => {
+      cancelled = true;
+      clearTimeout(giveUpTimer);
+    };
   }, [panelSheetId, station?.lab_day?.is_nremt_testing]);
 
   // Fetch NREMT scenario reference when station + nremt_code are available
@@ -1336,6 +1353,8 @@ export default function GradeStationPage() {
           <NremtCandidateInstructions
             key={nremtInstructionsKey}
             stationName={station.custom_title || station.skill_name || ''}
+            nremtCode={nremtSheetCode}
+            codePending={nremtCodePending}
             onInstructionsRead={(read) => {
               setNremtInstructionsRead(read);
               if (read && !nremtTimerRef.current?.isRunning) {
@@ -1383,6 +1402,8 @@ export default function GradeStationPage() {
         <NremtTimer
           ref={nremtTimerRef}
           stationName={station.custom_title || station.skill_name || ''}
+          nremtCode={nremtSheetCode}
+          codePending={nremtCodePending}
           instructionsRead={nremtInstructionsRead}
           stickyBottom
           onPhaseChange={isDualSkillStation ? handleTimerPhaseChange : undefined}

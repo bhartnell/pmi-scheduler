@@ -264,30 +264,83 @@ const SKILL_NAME_SYNONYMS: Array<{
   { pattern: /bag[-\s]?valve[-\s]?mask/i, canonicalKey: 'BVM Ventilation of an Apneic Adult Patient' },
 ];
 
+/**
+ * NREMT skill-sheet code (skill_sheets.nremt_code, source='nremt') -> key in
+ * NREMT_CANDIDATE_INSTRUCTIONS. This is the authoritative way to pick the
+ * candidate text and time limit: the station's skill sheet says which skill
+ * it is, the station NAME does not (names get dashes, numbers, custom titles).
+ */
+export const NREMT_CODE_TO_INSTRUCTION_KEY: Record<string, string> = {
+  E201: 'Patient Assessment - Trauma',
+  E202: 'Patient Assessment - Medical',
+  E203: 'BVM Ventilation of an Apneic Adult Patient',
+  E204: 'Oxygen Administration by Non-Rebreather Mask',
+  E211: 'Spinal Immobilization (Seated Patient)',
+  E212: 'Spinal Immobilization (Supine Patient)',
+  E213: 'Bleeding Control/Shock Management',
+  E215: 'Cardiac Arrest Management / AED',
+  E216: 'Joint Immobilization',
+  E217: 'Long Bone Immobilization',
+};
+
+export function findInstructionEntryByCode(code: string | null | undefined): SkillInstructionEntry | null {
+  if (!code) return null;
+  const key = NREMT_CODE_TO_INSTRUCTION_KEY[code.trim().toUpperCase()];
+  return key ? NREMT_CANDIDATE_INSTRUCTIONS[key] ?? null : null;
+}
+
+/** Long dash / en dash / hyphen / slash / parens are the same; a trailing number ("Trauma 2", "(2)") is dropped. */
+function normalizeStationName(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[\u2014\u2013\u2212\-\/()]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/(\s+#?\d+)+$/, '')
+    .trim();
+}
+
+/**
+ * Find the instruction entry for a station name. Safe by design: when two
+ * entries match equally (Trauma and Medical share "patient assessment") it
+ * returns null rather than the first one, because a missing panel is safer
+ * than the wrong skill's text. Prefer findInstructionEntryByCode when the
+ * station's skill sheet code is known.
+ */
 export function findInstructionEntry(stationName: string): SkillInstructionEntry | null {
   if (!stationName) return null;
-  const lower = stationName.toLowerCase();
+  const name = normalizeStationName(stationName);
+  if (!name) return null;
+  const entries = Object.entries(NREMT_CANDIDATE_INSTRUCTIONS).map(([key, entry]) => ({
+    norm: normalizeStationName(key),
+    entry,
+  }));
 
-  // Exact match first
-  for (const [key, entry] of Object.entries(NREMT_CANDIDATE_INSTRUCTIONS)) {
-    if (key.toLowerCase() === lower) return entry;
+  // Exact (after normalising dashes and trailing numbers)
+  const exact = entries.find(e => e.norm === name);
+  if (exact) return exact.entry;
+
+  // Substring either way: only when exactly one entry matches
+  if (name.length >= 4) {
+    const subs = entries.filter(e => e.norm.includes(name) || name.includes(e.norm));
+    if (subs.length === 1) return subs[0].entry;
+    if (subs.length > 1) return null;
   }
 
-  // Substring match (either direction)
-  for (const [key, entry] of Object.entries(NREMT_CANDIDATE_INSTRUCTIONS)) {
-    if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) return entry;
+  // Keyword overlap (2+ significant words): best score wins, a tie returns null
+  const words = (s: string) => s.split(' ').filter(w => w.length > 3);
+  let best = 0;
+  let bestEntries: SkillInstructionEntry[] = [];
+  for (const e of entries) {
+    const score = words(e.norm).filter(w => name.includes(w)).length;
+    if (score < 2) continue;
+    if (score > best) { best = score; bestEntries = [e.entry]; }
+    else if (score === best) bestEntries.push(e.entry);
   }
+  if (bestEntries.length === 1) return bestEntries[0];
+  if (bestEntries.length > 1) return null;
 
-  // Keyword overlap (2+ significant words matching)
-  for (const [key, entry] of Object.entries(NREMT_CANDIDATE_INSTRUCTIONS)) {
-    const keyWords = key.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-    const matchCount = keyWords.filter(w => lower.includes(w)).length;
-    if (matchCount >= 2) return entry;
-  }
-
-  // Synonym fallback — catches "O2", "NRB", "BVM" etc. that don't share
-  // enough significant words with the canonical key to satisfy the
-  // keyword-overlap heuristic.
+  // Synonym fallback ("O2", "NRB", "BVM" that share too few words with the key)
   for (const { pattern, canonicalKey } of SKILL_NAME_SYNONYMS) {
     if (pattern.test(stationName)) {
       const entry = NREMT_CANDIDATE_INSTRUCTIONS[canonicalKey];
@@ -296,6 +349,14 @@ export function findInstructionEntry(stationName: string): SkillInstructionEntry
   }
 
   return null;
+}
+
+/** Skill-sheet code wins; the station name is only the fallback. */
+export function resolveInstructionEntry(
+  stationName: string,
+  nremtCode?: string | null
+): SkillInstructionEntry | null {
+  return findInstructionEntryByCode(nremtCode) ?? findInstructionEntry(stationName);
 }
 
 // ─── General Proctor Responsibilities (shared preamble) ────────
