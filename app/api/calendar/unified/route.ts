@@ -140,6 +140,26 @@ export async function GET(request: NextRequest) {
         console.error('Error fetching hub course days:', err);
       }
     }
+    // NREMT testing days: the calendar shows the day as ONE entry that opens
+    // the NREMT hub (never its stations). Display only; nothing is written.
+    const nremtDayIds = new Set<string>();
+    if (include.has('classes') || include.has('labs')) {
+      try {
+        let nremtQuery = supabase
+          .from('lab_days')
+          .select('id')
+          .eq('is_nremt_testing', true)
+          .eq('is_archived', false)
+          .gte('date', startDate)
+          .lte('date', endDate);
+        if (cohortId) nremtQuery = nremtQuery.eq('cohort_id', cohortId);
+        const { data: nremtRows } = await nremtQuery;
+        for (const r of nremtRows ?? []) nremtDayIds.add(r.id as string);
+      } catch (err) {
+        console.error('Error fetching NREMT testing days:', err);
+      }
+    }
+    const nremtHubUrl = (labDayId: string) => `/labs/nremt-hub/${labDayId}`;
     // Course days that already have their one umbrella entry (planner block).
     const umbrellaKeys = new Set<string>();
     const courseDayKey = (course: string, cohort: string | null | undefined, date: string) => `${course}:${cohort ?? ''}:${date}`;
@@ -237,10 +257,13 @@ export async function GET(request: NextRequest) {
             const hubDay = block.linked_lab_day_id ? certDays.get(block.linked_lab_day_id as string) : undefined;
             if (hubDay) umbrellaKeys.add(courseDayKey(hubDay.course, hubDay.cohortId, hubDay.date));
 
+            const nremtLinked = !!block.linked_lab_day_id && nremtDayIds.has(block.linked_lab_day_id as string);
             events.push({
               id: `planner-${block.id}`,
               source: 'planner',
-              title: block.title || block.course_name || ps?.label || 'Class Block',
+              title: nremtLinked
+                ? `NREMT Testing Day${cohort?.cohort_number != null ? ` - C${cohort.cohort_number}` : ''}`
+                : block.title || block.course_name || ps?.label || 'Class Block',
               date: block.date,
               start_time: block.start_time,
               end_time: block.end_time,
@@ -250,7 +273,9 @@ export async function GET(request: NextRequest) {
               instructor_names: instructorNames,
               room: roomData?.name,
               linked_id: block.id,
-              linked_url: hubDay ? hubUrlFor(hubDay.course, hubDay.cohortId, hubDay.date) : '/scheduling/planner',
+              linked_url: nremtLinked
+                ? nremtHubUrl(block.linked_lab_day_id as string)
+                : hubDay ? hubUrlFor(hubDay.course, hubDay.cohortId, hubDay.date) : '/scheduling/planner',
               event_type: eventType,
               status: blockStatus,
               content_notes: (block.content_notes as string) || undefined,
@@ -264,6 +289,7 @@ export async function GET(request: NextRequest) {
                 is_parked: (block.is_parked as boolean | null) ?? false,
                 linked_section_number: (block.linked_section_number as number | null) ?? null,
                 ...(hubDay ? { hub_url: hubUrlFor(hubDay.course, hubDay.cohortId, hubDay.date), hub_course: hubDay.course } : {}),
+                ...(nremtLinked ? { hub_url: nremtHubUrl(block.linked_lab_day_id as string), nremt_testing: true } : {}),
               },
             });
           }
@@ -349,10 +375,13 @@ export async function GET(request: NextRequest) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const courseDay = isFlaggedCourseDay(ld as any);
             const openStationCount = stations.filter(s => !s.instructor_name).length;
+            const isNremt = nremtDayIds.has(ld.id as string);
             events.push({
               id: `lab-${ld.id}`,
               source: 'lab_day',
-              title: (ld.title || `Lab Day - C${cohort?.cohort_number || '?'}`) + sectionSuffix,
+              title: isNremt
+                ? `NREMT Testing Day - C${cohort?.cohort_number ?? '?'}`
+                : (ld.title || `Lab Day - C${cohort?.cohort_number || '?'}`) + sectionSuffix,
               date: ld.date,
               start_time: ld.start_time ?? null,
               end_time: ld.end_time ?? null,
@@ -361,9 +390,10 @@ export async function GET(request: NextRequest) {
               cohort_number: cohort?.cohort_number,
               instructor_names: instructorNames,
               linked_id: ld.id,
-              linked_url: `/labs/schedule/${ld.id}`,
+              linked_url: isNremt ? nremtHubUrl(ld.id as string) : `/labs/schedule/${ld.id}`,
               event_type: 'lab',
               metadata: {
+                ...(isNremt ? { hub_url: nremtHubUrl(ld.id as string), nremt_testing: true } : {}),
                 station_count: stations.length,
                 // A flagged course day with nobody on it still needs instructors
                 // even when it has no stations (NREMT testing day).

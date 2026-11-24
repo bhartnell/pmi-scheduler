@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
       .from('lab_days')
       .select(`
         id, date, title, start_time, section_label, num_rotations, rotation_duration,
-        priority_flag, cert_course, cohort_id, is_adv_cert_testing,
+        priority_flag, cert_course, cohort_id, is_adv_cert_testing, is_nremt_testing, end_time,
         cohort:cohorts(id, cohort_number, program:programs(abbreviation)),
         stations:lab_stations(
           id, station_number, custom_title, instructor_name, instructor_email,
@@ -95,6 +95,9 @@ export async function GET(request: NextRequest) {
           priority_flag: ld.priority_flag ?? null,
           cert_course: ld.cert_course ?? null,
           is_adv_cert_testing: !!ld.is_adv_cert_testing,
+          is_nremt_testing: !!ld.is_nremt_testing,
+          end_time: ld.end_time ?? null,
+          station_count: (ld.stations || []).length,
           cohort_id: ld.cohort_id ?? null,
           roles: (ld.roles || []).map((r: any) => ({
             role: r.role,
