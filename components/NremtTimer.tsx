@@ -3,21 +3,10 @@
 import { useState, useEffect, useRef, useCallback, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { Play, RotateCcw, SkipForward, Clock } from 'lucide-react';
 import { useBottomBannerOffset } from '@/hooks/useBottomBannerOffset';
-import { findInstructionEntry, isMultiPart } from '@/lib/nremt-instructions';
+import { resolveInstructionEntry, isMultiPart } from '@/lib/nremt-instructions';
 
-// Time limits in minutes per station. This is a FALLBACK only, used when a
-// station name doesn't resolve to an entry in lib/nremt-instructions.ts
-// (the canonical, officially-sourced NREMT skill data — see getTimeLimit
-// and getPhaseConfig below, which both check that first).
-const NREMT_TIME_LIMITS: Record<string, number> = {
-  'Cardiac Arrest Management / AED': 15,
-  'Patient Assessment - Medical': 15,
-  'Patient Assessment - Trauma': 10,
-  'Spinal Immobilization (Supine Patient)': 10,
-  'BVM Ventilation of an Apneic Adult Patient': 15,
-  'Oxygen Administration by Non-Rebreather Mask': 15,
-  'Bleeding Control/Shock Management': 10,
-};
+// Used only when neither the skill-sheet code nor the station name resolves
+// to an entry in lib/nremt-instructions.ts (the timer then says so).
 const DEFAULT_TIME_LIMIT = 15;
 
 // isDualStation is kept for the grading page's UNRELATED "2+ skill sheets
@@ -42,28 +31,18 @@ export function isDualStation(name: string): boolean {
   );
 }
 
-// Authoritative time limit: prefer lib/nremt-instructions.ts (the sourced
-// NREMT skill data, also used for the candidate/proctor instruction panel —
-// NremtCandidateInstructions.tsx) so this widget can never drift out of
-// sync with the text the examiner is reading from. Falls back to the local
-// NREMT_TIME_LIMITS map for any name that doesn't resolve there.
-function getTimeLimit(name: string): number {
-  if (!name) return DEFAULT_TIME_LIMIT;
-  const entry = findInstructionEntry(name);
-  if (entry) return entry.timeLimitMinutes;
-  const lower = name.toLowerCase();
-  for (const [key, mins] of Object.entries(NREMT_TIME_LIMITS)) {
-    if (key.toLowerCase() === lower) return mins;
-  }
-  for (const [key, mins] of Object.entries(NREMT_TIME_LIMITS)) {
-    if (lower.includes(key.toLowerCase()) || key.toLowerCase().includes(lower)) return mins;
-  }
-  for (const [key, mins] of Object.entries(NREMT_TIME_LIMITS)) {
-    const keyWords = key.toLowerCase().split(/\s+/).filter(w => w.length > 3);
-    const matchCount = keyWords.filter(w => lower.includes(w)).length;
-    if (matchCount >= 2) return mins;
-  }
-  return DEFAULT_TIME_LIMIT;
+// Authoritative time limit: lib/nremt-instructions.ts (the sourced NREMT
+// skill data, also used for the candidate/proctor instruction panel), picked
+// by the skill sheet's NREMT code first and the station name only as fallback.
+// No fuzzy guessing here: an unresolved station gets the default and the UI
+// says "time limit not found".
+function getTimeLimit(name: string, code?: string | null): number {
+  const entry = resolveInstructionEntry(name, code);
+  return entry ? entry.timeLimitMinutes : DEFAULT_TIME_LIMIT;
+}
+
+function hasTimeLimit(name: string, code?: string | null): boolean {
+  return resolveInstructionEntry(name, code) !== null;
 }
 
 export interface TimerPhase {
@@ -82,9 +61,8 @@ export interface TimerPhase {
 // should be 5 minutes... missing proctor instruction, and 2 minute prep
 // timer"): the old DUAL_PHASES array hardcoded BOTH O2 and BVM's phases
 // together and forced any single-skill station through all 4 of them.
-function getPhaseConfig(name: string): TimerPhase[] | null {
-  if (!name) return null;
-  const entry = findInstructionEntry(name);
+function getPhaseConfig(name: string, code?: string | null): TimerPhase[] | null {
+  const entry = resolveInstructionEntry(name, code);
   if (!entry) return null;
   const instr = entry.candidateInstruction;
   if (isMultiPart(instr) && instr.waitType === 'prep_timer' && instr.prepDurationSeconds) {
@@ -137,6 +115,10 @@ export interface NremtTimerHandle {
 
 interface NremtTimerProps {
   stationName: string;
+  /** NREMT code of the station's skill sheet (E201..E217). Wins over the name. */
+  nremtCode?: string | null;
+  /** True while the skill sheet (and its code) is still loading: the timer will not start on a name-based guess. */
+  codePending?: boolean;
   instructionsRead: boolean;
   /** When true, renders as a fixed bottom bar instead of inline */
   stickyBottom?: boolean;
@@ -144,17 +126,20 @@ interface NremtTimerProps {
   onPhaseChange?: (phaseIndex: number, phaseName: string) => void;
 }
 
-const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtTimer({ stationName, instructionsRead, stickyBottom = false, onPhaseChange }: NremtTimerProps, ref) {
+const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtTimer({ stationName, nremtCode = null, codePending = false, instructionsRead, stickyBottom = false, onPhaseChange }: NremtTimerProps, ref) {
   // Per-skill prep+eval phases from lib/nremt-instructions.ts (see
   // getPhaseConfig above) — null means "no prep phase for this skill",
   // in which case the standard single-timer branch below is used instead.
-  const phases = useMemo(() => getPhaseConfig(stationName), [stationName]);
+  const phases = useMemo(() => getPhaseConfig(stationName, nremtCode), [stationName, nremtCode]);
   const dual = phases !== null;
 
   // Standard timer state
   const [status, setStatus] = useState<TimerStatus>('ready');
-  const [remaining, setRemaining] = useState(() => getTimeLimit(stationName) * 60);
-  const totalSeconds = getTimeLimit(stationName) * 60;
+  const [remaining, setRemaining] = useState(() => getTimeLimit(stationName, nremtCode) * 60);
+  const limitFound = hasTimeLimit(stationName, nremtCode);
+  // Frozen at start so a late code can never change a running clock
+  const [lockedTotal, setLockedTotal] = useState<number | null>(null);
+  const totalSeconds = lockedTotal ?? getTimeLimit(stationName, nremtCode) * 60;
 
   // Dual (prep + eval) timer state
   const [phaseIndex, setPhaseIndex] = useState(0);
@@ -180,9 +165,22 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
     return clearTimer;
   }, [clearTimer]);
 
+  // A late code (or a different station) re-seeds an UNSTARTED timer only.
+  // A timer that is already running or expired is never reset by this.
+  useEffect(() => {
+    if (status === 'ready') setRemaining(getTimeLimit(stationName, nremtCode) * 60);
+  }, [stationName, nremtCode, status]);
+  useEffect(() => {
+    if (dualStatus === 'ready') {
+      setPhaseIndex(0);
+      setPhaseRemaining(phases?.[0]?.seconds ?? 0);
+    }
+  }, [phases, dualStatus]);
+
   // ─── Standard Timer Logic ───
   const startStandard = useCallback(() => {
-    if (status !== 'ready') return;
+    if (status !== 'ready' || codePending) return;
+    setLockedTotal(getTimeLimit(stationName, nremtCode) * 60);
     setStatus('running');
     oneMinAlertFired.current = false;
     expiredAlertFired.current = false;
@@ -208,15 +206,16 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
         return next;
       });
     }, 1000);
-  }, [status, clearTimer]);
+  }, [status, clearTimer, codePending, stationName, nremtCode]);
 
   const resetStandard = useCallback(() => {
     clearTimer();
     setStatus('ready');
-    setRemaining(getTimeLimit(stationName) * 60);
+    setLockedTotal(null);
+    setRemaining(getTimeLimit(stationName, nremtCode) * 60);
     oneMinAlertFired.current = false;
     expiredAlertFired.current = false;
-  }, [clearTimer, stationName]);
+  }, [clearTimer, stationName, nremtCode]);
 
   // ─── Dual (prep + eval) Timer Logic ───
   const advancePhase = useCallback((currentPhase: number) => {
@@ -240,7 +239,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
   useEffect(() => { onPhaseChangeRef.current = onPhaseChange; }, [onPhaseChange]);
 
   const startDual = useCallback(() => {
-    if (dualStatus !== 'ready' || !phases) return;
+    if (dualStatus !== 'ready' || !phases || codePending) return;
     setDualStatus('running');
     phaseAlertFired.current = false;
     // Notify phase 0 started
@@ -276,7 +275,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
         return next;
       });
     }, 1000);
-  }, [dualStatus, clearTimer, phases]);
+  }, [dualStatus, clearTimer, phases, codePending]);
 
   const resetDual = useCallback(() => {
     clearTimer();
@@ -298,8 +297,8 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
     get isRunning() {
       return dual ? dualStatus === 'running' : status === 'running';
     },
-    timeLimitMinutes: getTimeLimit(stationName),
-  }), [dual, startDual, startStandard, dualStatus, status, stationName]);
+    timeLimitMinutes: getTimeLimit(stationName, nremtCode),
+  }), [dual, startDual, startStandard, dualStatus, status, stationName, nremtCode]);
 
   const manualAdvance = useCallback(() => {
     if (dualStatus !== 'running' || !phases) return;
@@ -560,7 +559,9 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
             <div className="flex items-center gap-3 min-w-0">
               <Clock className="w-5 h-5 shrink-0 opacity-70" />
               <span className="font-semibold text-sm truncate">{stationName}</span>
-              <span className="text-xs opacity-50">({getTimeLimit(stationName)} min)</span>
+              <span className="text-xs opacity-50">
+                ({getTimeLimit(stationName, nremtCode)} min{!limitFound ? ' - time limit not found' : ''}{codePending ? ' - loading skill sheet' : ''})
+              </span>
             </div>
             <span className={`text-3xl font-mono font-bold tabular-nums shrink-0 ${isExpired ? 'text-red-300' : ''}`}>
               {isExpired ? 'TIME EXPIRED' : formatMmSs(remaining)}
@@ -609,7 +610,7 @@ const NremtTimer = forwardRef<NremtTimerHandle, NremtTimerProps>(function NremtT
               NREMT Station Timer
             </span>
             <span className="text-xs text-gray-400 dark:text-gray-500">
-              ({getTimeLimit(stationName)} min)
+              ({getTimeLimit(stationName, nremtCode)} min{!limitFound ? ' - time limit not found' : ''}{codePending ? ' - loading skill sheet' : ''})
             </span>
           </div>
           <span className={`text-2xl font-mono font-bold tabular-nums ${isExpired ? 'text-red-600 dark:text-red-400' : getTextColor(remaining, isRunning)}`}>

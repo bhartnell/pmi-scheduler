@@ -122,6 +122,9 @@ export default function GradeStationPage() {
   // NREMT skill sheet badge info
   const [nremtSheetSource, setNremtSheetSource] = useState<string | null>(null);
   const [nremtSheetCode, setNremtSheetCode] = useState<string | null>(null);
+  // Which panel sheet has finished loading (success or not): the instructions and timer wait on it.
+  const [nremtSheetFetchedId, setNremtSheetFetchedId] = useState<string | null>(null);
+  const nremtCodePending = !!panelSheetId && nremtSheetFetchedId !== panelSheetId;
 
   // NREMT scenario reference (E201 trauma, E202 medical)
   const [nremtScenario, setNremtScenario] = useState<{
@@ -428,6 +431,7 @@ export default function GradeStationPage() {
           }
         }
       } catch { /* ignore */ }
+      finally { setNremtSheetFetchedId(panelSheetId); }
     })();
   }, [panelSheetId, station?.lab_day?.is_nremt_testing]);
 
@@ -1336,6 +1340,8 @@ export default function GradeStationPage() {
           <NremtCandidateInstructions
             key={nremtInstructionsKey}
             stationName={station.custom_title || station.skill_name || ''}
+            nremtCode={nremtSheetCode}
+            codePending={nremtCodePending}
             onInstructionsRead={(read) => {
               setNremtInstructionsRead(read);
               if (read && !nremtTimerRef.current?.isRunning) {
@@ -1383,6 +1389,8 @@ export default function GradeStationPage() {
         <NremtTimer
           ref={nremtTimerRef}
           stationName={station.custom_title || station.skill_name || ''}
+          nremtCode={nremtSheetCode}
+          codePending={nremtCodePending}
           instructionsRead={nremtInstructionsRead}
           stickyBottom
           onPhaseChange={isDualSkillStation ? handleTimerPhaseChange : undefined}
