@@ -11,7 +11,7 @@ import { hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { formatHubDate, formatHubTime } from '@/lib/nremt-hub-format';
 import { nextStationNumber, isClosed } from '@/lib/nremt-hub-stations';
-import { buildStationPairs, nextExtraStationName, pairCodeFor, PAIR_TITLE, type PairItem } from '@/lib/nremt-pairs';
+import { buildStationPairs, nextExtraStationName, pairCodeFor, pickReopenStation, pickReopenPair, PAIR_TITLE, type PairItem } from '@/lib/nremt-pairs';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
 import ProctorsPanel from '@/components/nremt/ProctorsPanel';
 import RunTheDay from '@/components/nremt/RunTheDay';
@@ -701,6 +701,23 @@ export default function NremtHubDayPage() {
     loadStats();
   };
 
+  // "Open another ..." reopens the lowest-numbered CLOSED station of that skill first (Nov 25 already
+  // holds closed extras); only when the skill has none does it open the create panel for a new one.
+  const [reopenNote, setReopenNote] = useState<string | null>(null);
+  const stationLabel = (t: Tile) => t.own_name || t.skill_label || `Station ${t.station_number}`;
+  const reopenOrCreate = async (candidates: Tile[], create: PanelState) => {
+    const pick = pickReopenStation(candidates.map((t) => ({ station_number: t.station_number, closed: isClosed(t.coordinator_status), tile: t })));
+    if (!pick) return setPanel(create);
+    await setStationStatus(pick.tile, 'open');
+    setReopenNote(`Reopened ${stationLabel(pick.tile)}`);
+  };
+  const reopenOrCreatePair = async (all: Tile[], create: PanelState) => {
+    const pair = pickReopenPair(buildStationPairs(all.map((t) => ({ ...tileItem(t), closed: isClosed(t.coordinator_status) }))));
+    if (!pair) return setPanel(create);
+    await setRowsStatus([pair.o2.tile, pair.bvm.tile], 'open');
+    setReopenNote(`Reopened ${PAIR_TITLE} (${stationLabel(pair.o2.tile)} and ${stationLabel(pair.bvm.tile)})`);
+  };
+
   if (status === 'loading' || (!data && !error)) return <PageLoader />;
   if (!session) return null;
 
@@ -823,6 +840,12 @@ export default function NremtHubDayPage() {
               const openEdit = (x: Tile) => setPanel({ mode: 'edit', tile: x, skillSheetId: x.skill_sheet_id, skillLabel: x.skill_label || '' });
               return (
                 <>
+                  {reopenNote && (
+                    <div role="status" className="flex items-center justify-between gap-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-4 min-h-[44px] text-sm text-green-900 dark:text-green-200">
+                      <span>{reopenNote}</span>
+                      <button type="button" onClick={() => setReopenNote(null)} aria-label="Dismiss" className="min-h-[44px] min-w-[44px] flex items-center justify-center"><X className="w-4 h-4" /></button>
+                    </div>
+                  )}
                   {closedCount > 0 && (
                     <div className="flex justify-end">
                       <button
@@ -855,7 +878,7 @@ export default function NremtHubDayPage() {
                                         type="button"
                                         className="text-left min-h-[44px] px-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
                                         onClick={() =>
-                                          setPanel({
+                                          reopenOrCreatePair(partTiles, {
                                             mode: 'create',
                                             skillSheetId: null,
                                             skillLabel: PAIR_TITLE,
@@ -874,12 +897,12 @@ export default function NremtHubDayPage() {
                                       </button>
                                     )}
                                     {bvmGroup && (
-                                      <button type="button" className="text-left min-h-[44px] px-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white" onClick={() => setPanel({ mode: 'create', skillSheetId: bvmGroup.key, skillLabel: bvmGroup.skill_name })}>
+                                      <button type="button" className="text-left min-h-[44px] px-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white" onClick={() => reopenOrCreate(bvmGroup.stations.filter((t) => tileCode(t) === 'E203'), { mode: 'create', skillSheetId: bvmGroup.key, skillLabel: bvmGroup.skill_name })}>
                                         BVM only
                                       </button>
                                     )}
                                     {o2Group && (
-                                      <button type="button" className="text-left min-h-[44px] px-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white" onClick={() => setPanel({ mode: 'create', skillSheetId: o2Group.key, skillLabel: o2Group.skill_name })}>
+                                      <button type="button" className="text-left min-h-[44px] px-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white" onClick={() => reopenOrCreate(o2Group.stations.filter((t) => tileCode(t) === 'E204'), { mode: 'create', skillSheetId: o2Group.key, skillLabel: o2Group.skill_name })}>
                                         O2 by NRB only
                                       </button>
                                     )}
@@ -920,7 +943,7 @@ export default function NremtHubDayPage() {
                             {canManage && g.key !== 'other' && (
                               <button
                                 type="button"
-                                onClick={() => setPanel({ mode: 'create', skillSheetId: g.key, skillLabel: g.skill_name })}
+                                onClick={() => reopenOrCreate(g.stations, { mode: 'create', skillSheetId: g.key, skillLabel: g.skill_name })}
                                 className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg border border-blue-600 text-blue-700 dark:text-blue-300 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20"
                               >
                                 <Plus className="w-4 h-4" /> Open another {groupLabel} station

@@ -109,3 +109,20 @@ export function nextExtraStationName(group: Array<{ station_number: number; name
   while (used.has(`${base} ${n}`.toLowerCase())) n += 1;
   return `${base} ${n}`;
 }
+
+/**
+ * "Open another ..." reopens a closed station of that skill before it creates a new one
+ * (card 4225cd1c). Returns the lowest-numbered CLOSED station (status exactly 'closed', never
+ * 'break'), or null when the skill has none and a new station should be created.
+ */
+export function pickReopenStation<T extends { station_number: number; closed: boolean }>(stations: T[]): T | null {
+  const closed = stations.filter((s) => s.closed).sort((a, b) => a.station_number - b.station_number);
+  return closed[0] || null;
+}
+
+/** Lowest-numbered pair whose two parts are BOTH closed, or null. Pair order = lowest part number. */
+export function pickReopenPair<T extends PairItem & { closed: boolean }>(pairs: StationPair<T>[]): StationPair<T> | null {
+  const closed = pairs.filter((p) => p.o2.closed && p.bvm.closed);
+  closed.sort((a, b) => Math.min(a.o2.station_number, a.bvm.station_number) - Math.min(b.o2.station_number, b.bvm.station_number));
+  return closed[0] || null;
+}
