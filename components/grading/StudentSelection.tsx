@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Users, Star, CheckCircle, Clock } from 'lucide-react';
 import StudentPicker from '@/components/StudentPicker';
@@ -48,6 +49,7 @@ export default function StudentSelection({
   inProgressStudents = {},
   absentStudentIds,
 }: StudentSelectionProps) {
+  const [listOpenByUser, setListOpenByUser] = useState(false);
   const isAbsent = (id: string) => !!absentStudentIds?.has(id);
   const selectedGroup = labGroups.find(g => g.id === selectedGroupId);
   const completedCount = Object.keys(evaluatedStudents).length;
@@ -80,8 +82,70 @@ export default function StudentSelection({
           )}
         </div>
 
+        {/* NREMT days: the student list itself is the picker (no drop-down, one scrollbar at most) */}
+        {isNremtTesting && (
+          allStudents.length === 0 ? (
+            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+              <p className="text-sm text-yellow-800 dark:text-yellow-300">Loading students...</p>
+            </div>
+          ) : (() => {
+            const selected = allStudents.find(st => st.id === selectedStudentId);
+            const listOpen = !selected || listOpenByUser;
+            const rows = listOpen ? allStudents : [selected as Student];
+            return (
+              <div className="space-y-1">
+                {rows.map(student => {
+                  const isEvaluated = !!evaluatedStudents[student.id];
+                  const isInProgress = !!inProgressStudents[student.id] && !isEvaluated;
+                  const isSelected = student.id === selectedStudentId;
+                  return (
+                    <button
+                      key={student.id}
+                      type="button"
+                      onClick={() => {
+                        onSetSelectedStudentId(student.id);
+                        setListOpenByUser(false);
+                        triggerAutoSave();
+                      }}
+                      className={`w-full min-h-[44px] flex items-center justify-between gap-2 px-3 py-1.5 rounded text-left ${
+                        isSelected
+                          ? 'bg-blue-50 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      <span className={`truncate min-w-0 text-base font-semibold ${isEvaluated ? 'text-gray-400 line-through' : isAbsent(student.id) ? ABSENT_NAME_CLASS : 'text-gray-900 dark:text-white'}`}>
+                        {student.first_name} {student.last_name}
+                      </span>
+                      {isEvaluated ? (
+                        <span className="text-green-500 flex items-center gap-1 text-xs whitespace-nowrap shrink-0">
+                          <CheckCircle className="w-3.5 h-3.5" /> completed
+                        </span>
+                      ) : isInProgress ? (
+                        <span className="text-amber-500 flex items-center gap-1 text-xs whitespace-nowrap shrink-0">
+                          <Clock className="w-3.5 h-3.5" /> in progress
+                        </span>
+                      ) : (
+                        <span className="w-3 h-3 rounded-full border-2 border-gray-300 dark:border-gray-600 shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+                {selected && (
+                  <button
+                    type="button"
+                    onClick={() => setListOpenByUser(o => !o)}
+                    className="w-full min-h-[44px] px-3 text-sm font-medium rounded-md border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700"
+                  >
+                    {listOpen ? 'Hide list' : 'Change student'}
+                  </button>
+                )}
+              </div>
+            );
+          })()
+        )}
+
         {/* Student Selection with Photos */}
-        <div>
+        {!isNremtTesting && (<div>
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Student</label>
           {allStudents.length === 0 ? (
             <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
@@ -100,10 +164,10 @@ export default function StudentSelection({
               placeholder="Select a student..."
             />
           )}
-        </div>
+        </div>)}
 
         {/* Student status list — only show when we have tracking data */}
-        {(completedCount > 0 || inProgressCount > 0) && (
+        {!isNremtTesting && (completedCount > 0 || inProgressCount > 0) && (
           <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
             <div className="space-y-1">
               {allStudents.map(student => {

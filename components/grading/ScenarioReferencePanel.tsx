@@ -11,6 +11,11 @@ interface ScenarioReferencePanelProps {
     scenario_data: Record<string, unknown>;
   } | null;
   defaultCollapsed?: boolean;
+  /** Optional controlled collapse state (page owns it so layout can react). */
+  collapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
+  /** When set, shows a Side by side / Stacked switch in the desktop header. */
+  layoutSwitch?: { sideBySide: boolean; onChange: (sideBySide: boolean) => void };
 }
 
 type HistoryObj = Record<string, unknown>;
@@ -259,8 +264,17 @@ function ScenarioBody({
 export default function ScenarioReferencePanel({
   scenario,
   defaultCollapsed = false,
+  collapsed: collapsedProp,
+  onCollapsedChange,
+  layoutSwitch,
 }: ScenarioReferencePanelProps) {
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const [collapsedState, setCollapsedState] = useState(defaultCollapsed);
+  const collapsed = collapsedProp ?? collapsedState;
+  const setCollapsed = (fn: (c: boolean) => boolean) => {
+    const next = fn(collapsed);
+    setCollapsedState(next);
+    onCollapsedChange?.(next);
+  };
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Lock body scroll when mobile modal is open
@@ -312,24 +326,36 @@ export default function ScenarioReferencePanel({
 
       {/* Desktop: collapsible inline card */}
       <div className="hidden lg:block mb-4 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setCollapsed((c) => !c)}
-          className="w-full flex items-center justify-between px-4 py-3 text-left"
-          aria-expanded={!collapsed}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="shrink-0">📋</span>
-            <span className="font-bold text-sm text-gray-900 dark:text-gray-100 truncate">
-              Scenario Reference - {scenario.title}
-            </span>
-          </div>
-          {collapsed ? (
-            <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" />
-          ) : (
-            <ChevronUp className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" />
+        <div className="flex items-center">
+          <button
+            type="button"
+            onClick={() => setCollapsed((c) => !c)}
+            className="flex-1 min-w-0 flex items-center justify-between px-4 py-3 text-left"
+            aria-expanded={!collapsed}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="shrink-0">📋</span>
+              <span className="font-bold text-sm text-gray-900 dark:text-gray-100 truncate">
+                Scenario Reference - {scenario.title}
+              </span>
+            </div>
+            {collapsed ? (
+              <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" />
+            ) : (
+              <ChevronUp className="w-4 h-4 text-gray-500 dark:text-gray-400 shrink-0" />
+            )}
+          </button>
+          {layoutSwitch && (
+            <button
+              type="button"
+              onClick={() => layoutSwitch.onChange(!layoutSwitch.sideBySide)}
+              className="mr-3 shrink-0 min-h-[44px] px-3 text-xs font-medium rounded-md border border-blue-300 dark:border-blue-700 text-blue-800 dark:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+              title="Switch between scenario beside the grading sheet and stacked above it"
+            >
+              {layoutSwitch.sideBySide ? 'Switch to stacked' : 'Switch to side by side'}
+            </button>
           )}
-        </button>
+        </div>
         {!collapsed && (
           <div className="border-t border-gray-200 dark:border-gray-700">
             <ScenarioBody scenario={scenario} />
