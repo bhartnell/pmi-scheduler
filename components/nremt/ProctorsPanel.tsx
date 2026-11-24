@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { UserPlus, X } from 'lucide-react';
+import { signInLine } from '@/lib/nremt-outside-proctor';
 
 // Hub "Proctors" panel (instructor level and above only). The day's proctor list: add by
 // searching existing accounts and students, or by typing an email for someone who has
 // never signed in; remove with one tap (flag only, nothing is deleted).
 
-interface Proctor { id: string; email: string; name: string | null; lab_user_id: string | null }
+interface Proctor { id: string; email: string; name: string | null; lab_user_id: string | null; outside_email?: boolean }
 interface Person { lab_user_id: string | null; name: string; email: string; kind: string }
 
 export interface PickedPerson { email: string; name?: string; labUserId?: string | null }
@@ -48,7 +49,7 @@ export function PersonSearch({ onPick, busy, autoFocus }: { onPick: (p: PickedPe
         value={q}
         onChange={(e) => setQ(e.target.value)}
         autoFocus={autoFocus}
-        placeholder="Search by name or email, or type a full email to add someone new"
+        placeholder="Search by name or email. A personal email can be added by an admin; it gets a student-level account."
         className="w-full min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 text-gray-900 dark:text-white"
       />
       {people.map((p) => (
@@ -102,6 +103,7 @@ export default function ProctorsPanel({ labDayId, onChanged, extra, placements }
       const d = await res.json();
       if (!d.success) setMsg(d.error || 'Could not add that person');
       else {
+        if (d.account_created) setMsg(`Account created for ${p.email} (student level). They sign in with Google using this address.`);
         load();
         onChanged();
       }
@@ -143,12 +145,22 @@ export default function ProctorsPanel({ labDayId, onChanged, extra, placements }
           {proctors.map((p) => (
             <span key={p.id} className="inline-flex items-center gap-2 rounded-full bg-gray-100 dark:bg-gray-700 pl-3 pr-1 min-h-[44px] text-sm text-gray-900 dark:text-white">
               {p.name || p.email}
+              {p.outside_email && <span className="rounded bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200 px-1.5 text-xs">outside email</span>}
               <button type="button" disabled={busy} onClick={() => remove(p)} aria-label={`Remove ${p.name || p.email}`} className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-full hover:bg-gray-200 dark:hover:bg-gray-600">
                 <X className="w-4 h-4" />
               </button>
             </span>
           ))}
         </div>
+        {proctors.some((p) => p.outside_email) && (
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">For people on an outside email (copy and send)</div>
+            <ul className="text-sm text-gray-800 dark:text-gray-200 space-y-0.5 select-all">
+              {proctors.filter((p) => p.outside_email).map((p) => <li key={p.id}>{p.name || p.email}: {signInLine(p.email)}</li>)}
+            </ul>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Their accounts stay after the day. Deactivate them in Admin &gt; Users when done.</p>
+          </div>
+        )}
         {placements && placements.length > 0 && (
           <div className="space-y-1">
             <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Who is where</div>
