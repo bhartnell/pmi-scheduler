@@ -120,15 +120,20 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
 
   // A fixed hub menu would drift from its cell if the page moved, so scrolling or resizing closes it.
   useEffect(() => {
-    if (!popoverCell) return;
-    const close = () => setPopoverCell(null);
-    window.addEventListener('scroll', close, true);
-    window.addEventListener('resize', close);
-    return () => {
-      window.removeEventListener('scroll', close, true);
-      window.removeEventListener('resize', close);
+    if (!popoverCell || !hubMenu) return;
+    const closeOnScroll = (e: Event) => {
+      // The menu itself scrolls when long; only page/wrapper scrolls close it.
+      if (popoverRef.current && e.target instanceof Node && popoverRef.current.contains(e.target)) return;
+      setPopoverCell(null);
     };
-  }, [popoverCell]);
+    const closeOnResize = () => setPopoverCell(null);
+    window.addEventListener('scroll', closeOnScroll, true);
+    window.addEventListener('resize', closeOnResize);
+    return () => {
+      window.removeEventListener('scroll', closeOnScroll, true);
+      window.removeEventListener('resize', closeOnResize);
+    };
+  }, [popoverCell, hubMenu]);
 
   // Close popover on outside click
   useEffect(() => {
