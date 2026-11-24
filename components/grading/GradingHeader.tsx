@@ -2,6 +2,7 @@
 
 import { formatCohortNumber } from '@/lib/format-cohort';
 import Link from 'next/link';
+import { useEffect, useRef } from 'react';
 import {
   ChevronRight,
   Save,
@@ -47,8 +48,25 @@ export default function GradingHeader({
   // main-page Save buttons allowed the save.
   const strictNremt = nremtCode === 'E204';
 
+  // Publish this sticky header's height as --grade-header-h so the side-by-side scenario pane can sit
+  // below it (card 4225cd1c). Removed again when the header goes away.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const root = document.documentElement;
+    const publish = () => root.style.setProperty('--grade-header-h', `${el.offsetHeight}px`);
+    publish();
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(publish) : null;
+    ro?.observe(el);
+    return () => {
+      ro?.disconnect();
+      root.style.removeProperty('--grade-header-h');
+    };
+  }, []);
+
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
+    <div ref={rootRef} className="bg-white dark:bg-gray-800 shadow-sm sticky top-0 z-10">
       <div className="max-w-screen-2xl mx-auto px-4 py-3">
         <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-1">
           <Link href="/" className="hover:text-blue-600 dark:hover:text-blue-400">Home</Link>

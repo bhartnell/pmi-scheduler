@@ -1530,7 +1530,7 @@ export default function GradeStationPage() {
 
           {/* NREMT side-by-side: scenario is its own grid cell, scrolls independently */}
           {scenarioSplitActive && nremtScenario && (
-            <div className="xl:col-start-2 xl:row-start-1 xl:row-span-2 xl:sticky xl:top-0 xl:self-start xl:max-h-[calc(100vh-var(--bottom-banner-h,0px))] xl:overflow-y-auto min-w-0">
+            <div className="xl:col-start-2 xl:row-start-1 xl:row-span-2 xl:sticky xl:top-[var(--grade-header-h,0px)] xl:self-start xl:max-h-[calc(100vh-var(--grade-header-h,0px)-var(--bottom-banner-h,0px))] xl:overflow-y-auto min-w-0">
               <ScenarioReferencePanel
                 scenario={nremtScenario}
                 collapsed={scenarioCollapsed}
