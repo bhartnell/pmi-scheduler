@@ -328,6 +328,19 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
       );
     }
 
+    if (cell.status === 'queued') {
+      return (
+        <button
+          onClick={() => handleSkillCellClick(studentId, skillName)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-700 cursor-pointer"
+          title="En route"
+        >
+          <span className="hidden sm:inline">En route</span>
+          <span className="sm:hidden">En route</span>
+        </button>
+      );
+    }
+
     if (cell.status === 'in_progress') {
       return (
         <button
@@ -495,6 +508,10 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
               </button>
             </div>
           </div>
+        )}
+
+        {cell.status === 'queued' && (
+          <p className="text-xs text-gray-600 dark:text-gray-300">En route - waiting for the proctor to start</p>
         )}
 
         {/* In-progress popover: mark pass/fail + reset */}

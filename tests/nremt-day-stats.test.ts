@@ -24,6 +24,6 @@ test('classifyStudent: no stations means nobody is complete', () => {
 
 test('computeDayStats counts and skill completion', () => {
   const skillCells = { s1_x: { status: 'completed' }, s1_y: { status: 'completed' }, s2_x: { status: 'in_progress' } };
-  const st = computeDayStats(students, stations, cells, 2, skillCells);
+  const st = computeDayStats(students, stations, cells, [{ skillName: 'x' }, { skillName: 'y' }], skillCells);
   assert.deepEqual(st, { students: 4, testing: 1, waiting: 2, complete: 1, skillsCompleted: 2, skillsPossible: 8 });
 });
