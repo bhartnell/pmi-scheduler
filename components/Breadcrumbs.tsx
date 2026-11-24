@@ -21,6 +21,7 @@ const ROUTE_LABELS: Record<string, string> = {
   'labs/acls-hub': 'ACLS Hub',
   'labs/acls-hub/board': 'Board',
   'labs/pals-hub': 'PALS Hub',
+  'labs/nremt-hub': 'NREMT Hub',
   'labs/templates': 'Templates',
   'labs/seating': 'Seating',
   'labs/grade': 'Grading',

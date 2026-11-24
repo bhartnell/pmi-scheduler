@@ -114,6 +114,7 @@ export const TESTING_LANDING: Landing = {
       heading: 'This semester',
       cards: [
         { name: 'AHA hub', href: '/labs/aha-hub', icon: Award, description: 'ACLS and PALS in one place: course days, team-lead counts, exports, blank forms.' },
+        { name: 'NREMT hub', href: '/labs/nremt-hub', icon: ClipboardCheck, description: 'NREMT testing day: stations grouped by skill, one tap to grading.' },
         { name: 'PALS hub', href: '/labs/pals-hub', icon: Stethoscope, description: 'Course days, coordinator overview, practice grading, learning stations.' },
         { name: 'OSCE (coordinator)', href: '/admin/osce-events', icon: Layers, minRole: 'admin', description: 'The current OSCE event: blocks, evaluators, calendar events, student placement, results.' },
         { name: 'OSCE scoring', href: '/osce-scoring/enter', icon: PenLine, description: 'Enter scores at a station; the live scoring dashboard.' },
