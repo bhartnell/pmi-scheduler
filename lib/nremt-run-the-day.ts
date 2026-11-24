@@ -9,6 +9,7 @@
 // Input shapes are the student-queue API response.
 
 import { shortSkillLabel } from './nremt-skill-labels.ts';
+import { buildStationPairs, pairCodeFor, pairNeed, firstPart, needsLabel, inPairGap, PAIR_TITLE, type PairNeed } from './nremt-pairs.ts';
 
 export interface RtdStudent {
   id: string;
@@ -38,6 +39,8 @@ export interface RtdCell {
   queuedAt?: string | null;
   /** When the proctor first started grading (queue row started_at). */
   startedAt?: string | null;
+  /** When the proctor finished (queue row completed_at); null when unknown. */
+  completedAt?: string | null;
   evalSummary?: { evaluatorName: string | null } | null;
 }
 export interface RtdSkillColumn {
@@ -241,4 +244,165 @@ export function spreadSuggestions(
     if (top) taken.add(top.student.id);
     return { station, list, top };
   });
+}
+
+
+// ---------------------------------------------------------------------------------------------
+// The two-part BVM + O2 by NRB station is ONE station on the hub (card 4225cd1c, 2026-11-24).
+// ---------------------------------------------------------------------------------------------
+
+export type RtdUnit =
+  | { kind: 'single'; key: string; station: RtdStation }
+  | { kind: 'pair'; key: string; o2: RtdStation; bvm: RtdStation };
+
+export function unitStations(u: RtdUnit): RtdStation[] {
+  return u.kind === 'single' ? [u.station] : [u.o2, u.bvm];
+}
+
+function pairItems(input: RtdInput) {
+  return input.stations.map((st) => ({
+    id: st.id,
+    station_number: st.station_number,
+    code: pairCodeFor(skillForStation(st.id, input.skillColumns)?.nremtCode, st.skill_name),
+    proctor: st.proctorName ?? st.instructorName ?? null,
+    room: st.room ?? null,
+  }));
+}
+
+/** Stations of the day grouped into units: each BVM + O2 pair is one unit, everything else is single. */
+export function dayUnits(input: RtdInput): RtdUnit[] {
+  const byId = new Map(input.stations.map((s) => [s.id, s]));
+  const pairs = buildStationPairs(pairItems(input));
+  const paired = new Set<string>();
+  const units: RtdUnit[] = [];
+  for (const p of pairs) {
+    paired.add(p.o2.id);
+    paired.add(p.bvm.id);
+    units.push({ kind: 'pair', key: `pair-${p.o2.id}`, o2: byId.get(p.o2.id)!, bvm: byId.get(p.bvm.id)! });
+  }
+  for (const st of input.stations) if (!paired.has(st.id)) units.push({ kind: 'single', key: st.id, station: st });
+  const first = (u: RtdUnit) => Math.min(...unitStations(u).map((s) => s.station_number));
+  return units.sort((a, b) => first(a) - first(b));
+}
+
+export function unitTitle(u: RtdUnit, nameOf: (s: RtdStation) => string): string {
+  return u.kind === 'pair' ? PAIR_TITLE : nameOf(u.station);
+}
+
+function passedAt(student: RtdStudent, st: RtdStation, input: RtdInput): boolean {
+  const col = skillForStation(st.id, input.skillColumns);
+  if (col) {
+    const c = input.skillCells[`${student.id}_${col.skillName}`];
+    return c?.status === 'completed' && c.result === 'pass';
+  }
+  const c = input.cells[`${student.id}_${st.id}`];
+  return c?.status === 'completed' && c.result === 'pass';
+}
+
+export function needOf(student: RtdStudent, pair: { o2: RtdStation; bvm: RtdStation }, input: RtdInput): PairNeed {
+  return pairNeed(passedAt(student, pair.o2, input), passedAt(student, pair.bvm, input));
+}
+
+function busyAnywhere(student: RtdStudent, input: RtdInput): boolean {
+  return input.stations.some((st) => {
+    const s = input.cells[`${student.id}_${st.id}`]?.status;
+    return s === 'in_progress' || s === 'queued';
+  });
+}
+
+export interface UnitCandidate {
+  student: RtdStudent;
+  /** Station the Send button routes to (for a pair: the first part the student owes). */
+  stationId: string;
+  why: string;
+  warn: string | null;
+}
+
+/** For a single station: the existing eligibility, shaped for the unit card. */
+function singleCandidates(station: RtdStation, input: RtdInput): UnitCandidate[] {
+  return candidatesForStation(station, input).map((c) => ({
+    student: c.student,
+    stationId: station.id,
+    why: whyLine(c),
+    warn: c.sameProctorAsFirstAttempt ? 'This proctor graded the first attempt' : null,
+  }));
+}
+
+/** For a pair: anyone not testing or en route who has not passed O2 by NRB, or has not passed BVM. */
+export function pairCandidates(pair: { o2: RtdStation; bvm: RtdStation }, input: RtdInput): UnitCandidate[] {
+  const out: (UnitCandidate & { done: number })[] = [];
+  for (const s of input.students) {
+    if (busyAnywhere(s, input)) continue;
+    const need = needOf(s, pair, input);
+    const part = firstPart(need);
+    if (!part) continue;
+    out.push({ student: s, stationId: part === 'o2' ? pair.o2.id : pair.bvm.id, why: needsLabel(need), warn: null, done: doneSkillCount(s, input) });
+  }
+  out.sort((a, b) => a.done - b.done || studentName(a.student).localeCompare(studentName(b.student)));
+  return out.map((c) => ({ student: c.student, stationId: c.stationId, why: c.why, warn: c.warn }));
+}
+
+export interface PairGap {
+  student: RtdStudent;
+  finished: 'o2' | 'bvm';
+  stationId: string;
+}
+
+/**
+ * Between finishing one part and starting the other the proctor reads the next instructions: for
+ * 5 minutes after a student completes one part at this pair while still needing the other, the card
+ * reads "finished X, Y next" instead of offering Send. No hard lock (the screen can clear it).
+ */
+export function pairGap(pair: { o2: RtdStation; bvm: RtdStation }, input: RtdInput, now: number): PairGap | null {
+  for (const s of input.students) {
+    if (busyAnywhere(s, input)) continue;
+    for (const [which, st, other] of [['o2', pair.o2, pair.bvm], ['bvm', pair.bvm, pair.o2]] as const) {
+      const c = input.cells[`${s.id}_${st.id}`];
+      if (c?.status === 'completed' && inPairGap(c.completedAt, now) && !passedAt(s, other, input)) {
+        return { student: s, finished: which, stationId: st.id };
+      }
+    }
+  }
+  return null;
+}
+
+export const gapKey = (g: PairGap, pairKey: string) => `${pairKey}:${g.student.id}:${g.finished}`;
+
+/** A unit is free when all its stations are open and nobody is in or heading to any of them. */
+export function freeUnits(input: RtdInput): RtdUnit[] {
+  const busy = new Set(enRouteList(input).map((e) => e.station.id));
+  return dayUnits(input).filter((u) =>
+    unitStations(u).every((st) => isRoutable(st) && !studentAtStation(st, input) && !busy.has(st.id))
+  );
+}
+
+/** Free units with the pair gap applied (a unit in its gap is not free unless dismissed on this screen). */
+export function freeUnitsNow(input: RtdInput, now: number, dismissed: Set<string>): { units: RtdUnit[]; gaps: Map<string, PairGap> } {
+  const gaps = new Map<string, PairGap>();
+  const units = freeUnits(input).filter((u) => {
+    if (u.kind !== 'pair') return true;
+    const g = pairGap(u, input, now);
+    if (g && !dismissed.has(gapKey(g, u.key))) {
+      gaps.set(u.key, g);
+      return false;
+    }
+    return true;
+  });
+  return { units, gaps };
+}
+
+/** Spread suggestions over units: each gets its best candidate not already suggested on an earlier card. */
+export function spreadUnitSuggestions(units: RtdUnit[], input: RtdInput): { unit: RtdUnit; list: UnitCandidate[]; top: UnitCandidate | null }[] {
+  const taken = new Set<string>();
+  return units.map((unit) => {
+    const list = unit.kind === 'pair' ? pairCandidates(unit, input) : singleCandidates(unit.station, input);
+    const top = list.find((c) => !taken.has(c.student.id)) || null;
+    if (top) taken.add(top.student.id);
+    return { unit, list, top };
+  });
+}
+
+/** Counts for the overview: a pair is one station. */
+export function unitCounts(input: RtdInput, now: number, dismissed: Set<string>): { free: number; total: number } {
+  return { free: freeUnitsNow(input, now, dismissed).units.length, total: dayUnits(input).length };
 }

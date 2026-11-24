@@ -10,7 +10,8 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { formatHubDate, formatHubTime } from '@/lib/nremt-hub-format';
-import { nextStationName, nextStationNumber, isClosed } from '@/lib/nremt-hub-stations';
+import { nextStationNumber, isClosed } from '@/lib/nremt-hub-stations';
+import { buildStationPairs, nextExtraStationName, pairCodeFor, pickReopenStation, pickReopenPair, PAIR_TITLE, type PairItem } from '@/lib/nremt-pairs';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
 import ProctorsPanel from '@/components/nremt/ProctorsPanel';
 import RunTheDay from '@/components/nremt/RunTheDay';
@@ -168,19 +169,104 @@ function StationTile({
   );
 }
 
+function PairTile({
+  pair,
+  canManage,
+  saving,
+  onEdit,
+  onSetStatus,
+}: {
+  pair: { o2: Tile; bvm: Tile };
+  canManage: boolean;
+  saving: boolean;
+  onEdit: (p: { o2: Tile; bvm: Tile }) => void;
+  onSetStatus: (rows: Tile[], status: 'open' | 'closed') => void;
+}) {
+  const { o2, bvm } = pair;
+  const closed = isClosed(o2.coordinator_status) && isClosed(bvm.coordinator_status);
+  const proctor = (t: Tile) => (t.proctors.length > 0 ? t.proctors.join(', ') : 'not set');
+  const sameProctor = proctor(o2) === proctor(bvm);
+  const sameRoom = (o2.room || '') === (bvm.room || '');
+  return (
+    <div className={`rounded-lg shadow p-4 flex flex-col gap-3 ${closed ? 'bg-gray-100 dark:bg-gray-900 opacity-70' : 'bg-white dark:bg-gray-800'} border border-gray-200 dark:border-gray-700`}>
+      <div className="space-y-1">
+        <div className="flex items-start justify-between gap-2">
+          <div className="font-bold text-lg text-gray-900 dark:text-white">{PAIR_TITLE}</div>
+          {closed && <span className="shrink-0 rounded-full bg-gray-300 dark:bg-gray-700 px-2 py-0.5 text-xs font-semibold text-gray-800 dark:text-gray-200">Closed</span>}
+        </div>
+        <div className="text-sm text-gray-700 dark:text-gray-300">
+          1. O2 by NRB - station {o2.station_number}
+          {!closed && isClosed(o2.coordinator_status) ? ' (closed)' : ''}
+          <br />
+          2. BVM - station {bvm.station_number}
+          {!closed && isClosed(bvm.coordinator_status) ? ' (closed)' : ''}
+        </div>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          Proctor: {sameProctor ? proctor(o2) : `${proctor(o2)} (O2 by NRB), ${proctor(bvm)} (BVM)`}
+        </div>
+        <div className="text-sm text-gray-600 dark:text-gray-400">
+          {sameRoom ? (o2.room ? `Location: ${o2.room}` : 'Location: not set') : `Location: ${o2.room || 'not set'} (O2 by NRB), ${bvm.room || 'not set'} (BVM)`}
+        </div>
+      </div>
+      {closed && canManage ? (
+        <button type="button" disabled={saving} onClick={() => onSetStatus([o2, bvm], 'open')} className="flex items-center justify-center gap-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold min-h-[52px] disabled:opacity-60">
+          <Unlock className="w-4 h-4" /> {saving ? 'Saving...' : 'Reopen'}
+        </button>
+      ) : (
+        <>
+          <Link href={`/labs/grade/station/${o2.id}`} className="flex items-center justify-center rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold min-h-[52px]">
+            Open grading
+          </Link>
+          <Link href={`/labs/grade/station/${bvm.id}`} className="text-xs text-blue-600 dark:text-blue-400 hover:underline self-start min-h-[44px] inline-flex items-center">
+            Open BVM directly
+          </Link>
+        </>
+      )}
+      {canManage && (
+        <div className="flex gap-2">
+          <button type="button" onClick={() => onEdit(pair)} className="flex-1 inline-flex items-center justify-center gap-1 min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <Pencil className="w-4 h-4" /> Edit station
+          </button>
+          {!closed && (
+            <button type="button" disabled={saving} onClick={() => onSetStatus([o2, bvm], 'closed')} className="inline-flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60">
+              <Lock className="w-4 h-4" /> Close
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface PanelState {
   mode: 'edit' | 'create';
   tile?: Tile; // edit
   skillSheetId: string | null; // create: the group's skill
   skillLabel: string;
+  /** Edit of a BVM + O2 by NRB pair: proctor and location apply to this partner row too. */
+  partner?: Tile;
+  /** Create of BOTH parts of the two-part station (O2 by NRB first, then BVM). */
+  pairCreate?: { o2SheetId: string | null; bvmSheetId: string | null; o2Label: string; bvmLabel: string; o2Group: Tile[]; bvmGroup: Tile[] };
 }
+
+const tileCode = (t: Tile) => pairCodeFor(t.nremt_code, t.skill_label);
+const tileItem = (t: Tile): PairItem & { tile: Tile } => ({
+  id: t.id,
+  station_number: t.station_number,
+  code: tileCode(t),
+  proctor: t.proctors.length > 0 ? t.proctors.join(', ') : t.instructor_name,
+  room: t.room,
+  tile: t,
+});
+/** BVM + O2 by NRB pairs among the day's tiles (same proctor, else same room when both are empty). */
+const tilePairs = (tiles: Tile[]) => buildStationPairs(tiles.map(tileItem)).map((p) => ({ o2: p.o2.tile, bvm: p.bvm.tile }));
 
 function StationPanel({
   state,
   data,
   labDayId,
   instructors,
-  allNames,
+  groupStations,
   allNumbers,
   onClose,
   onSaved,
@@ -189,14 +275,21 @@ function StationPanel({
   data: HubData;
   labDayId: string;
   instructors: InstructorOption[];
-  allNames: Array<string | null>;
+  groupStations: Array<{ station_number: number; name: string | null }>;
   allNumbers: number[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const t = state.tile;
   const isEdit = state.mode === 'edit';
-  const [ownName, setOwnName] = useState(isEdit ? t?.own_name || '' : nextStationName(state.skillLabel, allNames));
+  const partner = state.partner;
+  const pc = state.pairCreate;
+  // Extra stations are named after the base station in the group plus the next number
+  // (never "Station 5B" style, never a "CPR -" prefix). Existing rows are not renamed.
+  const [ownName, setOwnName] = useState(
+    isEdit ? t?.own_name || '' : pc ? nextExtraStationName(pc.o2Group.map((x) => ({ station_number: x.station_number, name: x.own_name })), pc.o2Label) : nextExtraStationName(groupStations, state.skillLabel)
+  );
+  const [ownName2, setOwnName2] = useState(pc ? nextExtraStationName(pc.bvmGroup.map((x) => ({ station_number: x.station_number, name: x.own_name })), pc.bvmLabel) : '');
   const [skillId, setSkillId] = useState<string>((isEdit ? t?.skill_sheet_id : state.skillSheetId) || '');
   const [scenarioId, setScenarioId] = useState<string>(isEdit ? t?.scenario_id || '' : '');
   const [proctorEmail, setProctorEmail] = useState<string>(isEdit ? t?.instructor_email || '' : '');
@@ -228,7 +321,61 @@ function StationPanel({
     try {
       const inst = instructors.find((i) => i.email === proctorEmail) || null;
       const instructorName = inst ? inst.name : proctorEmail ? t?.instructor_name || null : null;
-      if (isEdit && t) {
+      if (isEdit && t && partner) {
+        // BVM + O2 by NRB: proctor and location apply to both rows (two calls to the station PATCH).
+        for (const row of [t, partner]) {
+          const body: Record<string, unknown> = {};
+          if (roomValue !== (row.room || '')) body.room = roomValue || null;
+          if (proctorEmail !== (row.instructor_email || '')) {
+            body.instructor_name = instructorName;
+            body.instructor_email = proctorEmail;
+          }
+          if (Object.keys(body).length === 0) continue;
+          const res = await fetch(`/api/lab-management/stations/${row.id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const d = await res.json();
+          if (!d.success) throw new Error(d.error || 'Could not save the station');
+        }
+      } else if (!isEdit && pc) {
+        const parts = [
+          { sheet: pc.o2SheetId, label: pc.o2Label, name: ownName, what: 'O2 by NRB' },
+          { sheet: pc.bvmSheetId, label: pc.bvmLabel, name: ownName2, what: 'BVM' },
+        ];
+        let n = nextStationNumber(allNumbers);
+        let opened = 0;
+        for (const part of parts) {
+          const b: Record<string, unknown> = {
+            lab_day_id: labDayId,
+            station_number: n++,
+            station_type: 'skills',
+            skill_sheet_id: part.sheet || null,
+            skill_name: part.label || null,
+            custom_title: part.name.trim() || null,
+            room: roomValue || null,
+            added_during_exam: true,
+          };
+          if (proctorEmail) {
+            b.instructor_name = instructorName;
+            b.instructor_email = proctorEmail;
+          }
+          const res = await fetch('/api/lab-management/stations', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(b),
+          });
+          const d = await res.json();
+          if (!d.success) {
+            throw new Error(
+              (opened > 0 ? `The ${parts[0].what} part was opened but the ${part.what} part was not. Close this and use "Open another" for ${part.what} only. ` : '') +
+                (d.error || 'Could not open the station')
+            );
+          }
+          opened++;
+        }
+      } else if (isEdit && t) {
         const body: Record<string, unknown> = {};
         if (ownName.trim() !== (t.own_name || '')) body.custom_title = ownName.trim() || null;
         if (roomValue !== (t.room || '')) body.room = roomValue || null;
@@ -299,17 +446,26 @@ function StationPanel({
       <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-xl bg-white dark:bg-gray-800 shadow-xl p-5 space-y-4">
         <div className="flex items-start justify-between gap-3">
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-            {isEdit ? `Edit station ${t?.station_number}` : `Open another ${state.skillLabel} station`}
+            {partner ? `Edit ${PAIR_TITLE}` : pc ? `Open another ${PAIR_TITLE} station` : isEdit ? `Edit station ${t?.station_number}` : `Open another ${state.skillLabel} station`}
           </h2>
           <button type="button" onClick={onClose} aria-label="Close" className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
             <X className="w-5 h-5 text-gray-700 dark:text-gray-200" />
           </button>
         </div>
 
-        <div>
-          <label className={label}>Station name</label>
-          <input className={field} value={ownName} onChange={(e) => setOwnName(e.target.value)} placeholder="e.g. Patient Assessment - Medical 2" />
-        </div>
+        {!partner && (
+          <div>
+            <label className={label}>{pc ? 'O2 by NRB station name' : 'Station name'}</label>
+            <input className={field} value={ownName} onChange={(e) => setOwnName(e.target.value)} placeholder="e.g. Patient Assessment - Medical 2" />
+          </div>
+        )}
+        {pc && (
+          <div>
+            <label className={label}>BVM station name</label>
+            <input className={field} value={ownName2} onChange={(e) => setOwnName2(e.target.value)} />
+          </div>
+        )}
+        {!partner && !pc && (<>
 
         <div>
           <label className={label}>NREMT skill this station covers</label>
@@ -351,6 +507,8 @@ function StationPanel({
             </select>
           </div>
         )}
+
+        </>)}
 
         <div>
           <label className={label}>Proctor</label>
@@ -422,6 +580,8 @@ export default function NremtHubDayPage() {
   const [error, setError] = useState<string | null>(null);
   const [instructors, setInstructors] = useState<InstructorOption[]>([]);
   const [savingId, setSavingId] = useState<string | null>(null);
+  // Closed stations are tucked away by default (nothing is deleted); one control reveals them.
+  const [showClosed, setShowClosed] = useState(false);
 
   useEffect(() => {
     if (status === 'unauthenticated') router.push('/');
@@ -517,6 +677,47 @@ export default function NremtHubDayPage() {
     loadStats();
   };
 
+  // Close / reopen both rows of the two-part station (two calls to the same station PATCH).
+  const setRowsStatus = async (rows: Tile[], next: 'open' | 'closed') => {
+    setSavingId(rows[0].id);
+    try {
+      for (const row of rows) {
+        const res = await fetch(`/api/lab-management/stations/${row.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coordinator_status: next }),
+        });
+        const d = await res.json();
+        if (!d.success) {
+          alert('Could not change the station: ' + (d.error || 'unknown error'));
+          break;
+        }
+      }
+    } catch {
+      alert('Could not change the station');
+    }
+    setSavingId(null);
+    load();
+    loadStats();
+  };
+
+  // "Open another ..." reopens the lowest-numbered CLOSED station of that skill first (Nov 25 already
+  // holds closed extras); only when the skill has none does it open the create panel for a new one.
+  const [reopenNote, setReopenNote] = useState<string | null>(null);
+  const stationLabel = (t: Tile) => t.own_name || t.skill_label || `Station ${t.station_number}`;
+  const reopenOrCreate = async (candidates: Tile[], create: PanelState) => {
+    const pick = pickReopenStation(candidates.map((t) => ({ station_number: t.station_number, closed: isClosed(t.coordinator_status), tile: t })));
+    if (!pick) return setPanel(create);
+    await setStationStatus(pick.tile, 'open');
+    setReopenNote(`Reopened ${stationLabel(pick.tile)}`);
+  };
+  const reopenOrCreatePair = async (all: Tile[], create: PanelState) => {
+    const pair = pickReopenPair(buildStationPairs(all.map((t) => ({ ...tileItem(t), closed: isClosed(t.coordinator_status) }))));
+    if (!pair) return setPanel(create);
+    await setRowsStatus([pair.o2.tile, pair.bvm.tile], 'open');
+    setReopenNote(`Reopened ${PAIR_TITLE} (${stationLabel(pair.o2.tile)} and ${stationLabel(pair.bvm.tile)})`);
+  };
+
   if (status === 'loading' || (!data && !error)) return <PageLoader />;
   if (!session) return null;
 
@@ -554,11 +755,16 @@ export default function NremtHubDayPage() {
           <>
             {canManage && stats && (() => {
               const allTiles = data.groups.flatMap((g) => g.stations);
-              const openCount = allTiles.filter((t) => !isClosed(t.coordinator_status)).length;
+              // A BVM + O2 by NRB pair counts as one station.
+              const dayPairs = tilePairs(allTiles);
+              const pairedIds = new Set(dayPairs.flatMap((p) => [p.o2.id, p.bvm.id]));
+              const singles = allTiles.filter((t) => !pairedIds.has(t.id));
+              const unitTotal = singles.length + dayPairs.length;
+              const openCount = singles.filter((t) => !isClosed(t.coordinator_status)).length + dayPairs.filter((p) => !isClosed(p.o2.coordinator_status) && !isClosed(p.bvm.coordinator_status)).length;
               const pct = stats.skillsPossible > 0 ? Math.round((stats.skillsCompleted / stats.skillsPossible) * 100) : 0;
               const items: { label: string; value: string }[] = [
                 { label: 'Students', value: String(stats.students) },
-                { label: 'Stations open', value: `${openCount} of ${allTiles.length}` },
+                { label: 'Stations open', value: `${openCount} of ${unitTotal}` },
                 { label: 'Testing now', value: String(stats.testing) },
                 { label: 'Waiting', value: String(stats.waiting) },
                 { label: 'Complete', value: String(stats.complete) },
@@ -617,34 +823,145 @@ export default function NremtHubDayPage() {
               <p className="text-sm text-gray-500 dark:text-gray-400">This day has no stations yet. Add them on the lab day page.</p>
             )}
 
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,560px),1fr))] gap-4 items-start">
-            {data.groups.map((g) => {
-              const groupLabel = shortSkillLabel(g.skill_name, g.stations[0]?.nremt_code);
+            {(() => {
+              const allTiles = data.groups.flatMap((g) => g.stations);
+              const closedCount = allTiles.filter((t) => isClosed(t.coordinator_status)).length;
+              const visible = (t: Tile) => showClosed || !isClosed(t.coordinator_status);
+              const isPartGroup = (g: Group) => g.stations.some((t) => tileCode(t) === 'E203' || tileCode(t) === 'E204');
+              const partGroups = data.groups.filter(isPartGroup);
+              const firstPartGroup = partGroups[0];
+              const partTiles = partGroups.flatMap((g) => g.stations);
+              const pairs = tilePairs(partTiles);
+              const pairedIds = new Set(pairs.flatMap((p) => [p.o2.id, p.bvm.id]));
+              const pairsShown = pairs.filter((p) => showClosed || !(isClosed(p.o2.coordinator_status) && isClosed(p.bvm.coordinator_status)));
+              const looseShown = partTiles.filter((t) => !pairedIds.has(t.id) && visible(t));
+              const o2Group = partGroups.find((g) => g.stations.some((t) => tileCode(t) === 'E204'));
+              const bvmGroup = partGroups.find((g) => g.stations.some((t) => tileCode(t) === 'E203'));
+              const openEdit = (x: Tile) => setPanel({ mode: 'edit', tile: x, skillSheetId: x.skill_sheet_id, skillLabel: x.skill_label || '' });
               return (
-              <section key={g.key} className="space-y-3 rounded-xl bg-white dark:bg-gray-800 shadow p-4 min-w-0">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                    <span title={g.skill_name}>{groupLabel}</span> <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({g.stations.length})</span>
-                  </h2>
-                  {canManage && g.key !== 'other' && (
-                    <button
-                      type="button"
-                      onClick={() => setPanel({ mode: 'create', skillSheetId: g.key, skillLabel: g.skill_name })}
-                      className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg border border-blue-600 text-blue-700 dark:text-blue-300 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20"
-                    >
-                      <Plus className="w-4 h-4" /> Open another {groupLabel} station
-                    </button>
+                <>
+                  {reopenNote && (
+                    <div role="status" className="flex items-center justify-between gap-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-4 min-h-[44px] text-sm text-green-900 dark:text-green-200">
+                      <span>{reopenNote}</span>
+                      <button type="button" onClick={() => setReopenNote(null)} aria-label="Dismiss" className="min-h-[44px] min-w-[44px] flex items-center justify-center"><X className="w-4 h-4" /></button>
+                    </div>
                   )}
-                </div>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
-                  {g.stations.map((t) => (
-                    <StationTile key={t.id} tile={t} canManage={canManage} saving={savingId === t.id} onEdit={(x) => setPanel({ mode: 'edit', tile: x, skillSheetId: x.skill_sheet_id, skillLabel: x.skill_label || '' })} onSetStatus={setStationStatus} />
-                  ))}
-                </div>
-              </section>
+                  {closedCount > 0 && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setShowClosed((v) => !v)}
+                        className="min-h-[44px] px-3 rounded-lg text-sm text-gray-600 dark:text-gray-400 hover:underline"
+                      >
+                        {showClosed ? 'Hide closed stations' : `Show closed stations (${closedCount})`}
+                      </button>
+                    </div>
+                  )}
+                  <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,560px),1fr))] gap-4 items-start">
+                    {data.groups.map((g) => {
+                      if (isPartGroup(g)) {
+                        if (g !== firstPartGroup) return null;
+                        return (
+                          <section key="bvm-o2-pair" className="space-y-3 rounded-xl bg-white dark:bg-gray-800 shadow p-4 min-w-0">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                                {PAIR_TITLE} <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({pairsShown.length + looseShown.length})</span>
+                              </h2>
+                              {canManage && (
+                                <details className="relative">
+                                  <summary className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg border border-blue-600 text-blue-700 dark:text-blue-300 text-sm font-medium cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 list-none">
+                                    <Plus className="w-4 h-4" /> Open another
+                                  </summary>
+                                  <div className="absolute right-0 z-10 mt-1 w-56 rounded-lg bg-white dark:bg-gray-800 shadow-lg border border-gray-200 dark:border-gray-700 p-1 flex flex-col">
+                                    {o2Group && bvmGroup && (
+                                      <button
+                                        type="button"
+                                        className="text-left min-h-[44px] px-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
+                                        onClick={() =>
+                                          reopenOrCreatePair(partTiles, {
+                                            mode: 'create',
+                                            skillSheetId: null,
+                                            skillLabel: PAIR_TITLE,
+                                            pairCreate: {
+                                              o2SheetId: o2Group.key,
+                                              bvmSheetId: bvmGroup.key,
+                                              o2Label: o2Group.skill_name,
+                                              bvmLabel: bvmGroup.skill_name,
+                                              o2Group: o2Group.stations,
+                                              bvmGroup: bvmGroup.stations,
+                                            },
+                                          })
+                                        }
+                                      >
+                                        Both parts
+                                      </button>
+                                    )}
+                                    {bvmGroup && (
+                                      <button type="button" className="text-left min-h-[44px] px-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white" onClick={() => reopenOrCreate(bvmGroup.stations.filter((t) => tileCode(t) === 'E203'), { mode: 'create', skillSheetId: bvmGroup.key, skillLabel: bvmGroup.skill_name })}>
+                                        BVM only
+                                      </button>
+                                    )}
+                                    {o2Group && (
+                                      <button type="button" className="text-left min-h-[44px] px-3 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-900 dark:text-white" onClick={() => reopenOrCreate(o2Group.stations.filter((t) => tileCode(t) === 'E204'), { mode: 'create', skillSheetId: o2Group.key, skillLabel: o2Group.skill_name })}>
+                                        O2 by NRB only
+                                      </button>
+                                    )}
+                                  </div>
+                                </details>
+                              )}
+                            </div>
+                            <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+                              {pairsShown.map((p) => (
+                                <PairTile
+                                  key={p.o2.id}
+                                  pair={p}
+                                  canManage={canManage}
+                                  saving={savingId === p.o2.id}
+                                  onEdit={(x) => setPanel({ mode: 'edit', tile: x.o2, partner: x.bvm, skillSheetId: x.o2.skill_sheet_id, skillLabel: PAIR_TITLE })}
+                                  onSetStatus={setRowsStatus}
+                                />
+                              ))}
+                              {looseShown.map((t) => (
+                                <div key={t.id} className="space-y-1">
+                                  <div className="text-xs font-medium text-gray-500 dark:text-gray-400">{tileCode(t) === 'E203' ? 'BVM only' : 'O2 by NRB only'}</div>
+                                  <StationTile tile={t} canManage={canManage} saving={savingId === t.id} onEdit={openEdit} onSetStatus={setStationStatus} />
+                                </div>
+                              ))}
+                            </div>
+                          </section>
+                        );
+                      }
+                      const shown = g.stations.filter(visible);
+                      if (shown.length === 0) return null;
+                      const groupLabel = shortSkillLabel(g.skill_name, g.stations[0]?.nremt_code);
+                      return (
+                        <section key={g.key} className="space-y-3 rounded-xl bg-white dark:bg-gray-800 shadow p-4 min-w-0">
+                          <div className="flex flex-wrap items-center justify-between gap-3">
+                            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                              <span title={g.skill_name}>{groupLabel}</span> <span className="text-sm font-normal text-gray-500 dark:text-gray-400">({shown.length})</span>
+                            </h2>
+                            {canManage && g.key !== 'other' && (
+                              <button
+                                type="button"
+                                onClick={() => reopenOrCreate(g.stations, { mode: 'create', skillSheetId: g.key, skillLabel: g.skill_name })}
+                                className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg border border-blue-600 text-blue-700 dark:text-blue-300 text-sm font-medium hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                              >
+                                <Plus className="w-4 h-4" /> Open another {groupLabel} station
+                              </button>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
+                            {shown.map((t) => (
+                              <StationTile key={t.id} tile={t} canManage={canManage} saving={savingId === t.id} onEdit={openEdit} onSetStatus={setStationStatus} />
+                            ))}
+                          </div>
+                        </section>
+                      );
+                    })}
+                  </div>
+                </>
               );
-            })}
-            </div>
+            })()}
 
             {canManage && <ProctorsPanel labDayId={labDayId} onChanged={load} />}
 
@@ -674,7 +991,7 @@ export default function NremtHubDayPage() {
                 data={data}
                 labDayId={labDayId}
                 instructors={pickerPeople}
-                allNames={data.groups.flatMap((g) => g.stations.filter((st) => st.skill_sheet_id === panel.skillSheetId).map((st) => st.own_name || st.skill_label))}
+                groupStations={data.groups.flatMap((g) => g.stations.filter((st) => st.skill_sheet_id === panel.skillSheetId).map((st) => ({ station_number: st.station_number, name: st.own_name })))}
                 allNumbers={data.groups.flatMap((g) => g.stations.map((st) => st.station_number))}
                 onClose={() => setPanel(null)}
                 onSaved={() => {
