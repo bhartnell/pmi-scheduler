@@ -253,7 +253,7 @@ auto-sync flow.
 `endorsements`, `ferpa`, `ferpa-filter`, `fetch-utils`, `format-cohort`,
 `format-name`, `google-calendar`, `google-shared-calendar`, `ics-export`,
 `instructor-blocks`, `lvfr-availability`, `lvfr-utils`, `nremtExport`,
-`nremt-instructions`, `pharm-scoring`, `planner-semester`, `poll-link`,
+`nremt-instructions`, `nremt-pairs`, `nremt-station-partner`, `pharm-scoring`, `planner-semester`, `poll-link`,
 `practice-auth`, `print-utils`, `program-key`, `question-types`,
 `rate-limit`, `safe-array`, `scenario-export`, `schedule-constraints`,
 `semester-cascade`, `session-tracker`, `shift-calculator`,

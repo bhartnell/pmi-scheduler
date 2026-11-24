@@ -288,6 +288,8 @@ export async function GET(request: NextRequest) {
       queuedAt?: string | null;
       /** When the proctor first started grading (queue row started_at); null when unknown. */
       startedAt?: string | null;
+      /** When the proctor finished (queue row completed_at); null when unknown. */
+      completedAt?: string | null;
     }> = {};
 
     // First populate from queue entries
@@ -304,6 +306,7 @@ export async function GET(request: NextRequest) {
         bestResult: entry.result,
         queuedAt: (entry as { queued_at?: string | null }).queued_at || null,
         startedAt: (entry as { started_at?: string | null }).started_at || null,
+        completedAt: (entry as { completed_at?: string | null }).completed_at || null,
       };
     }
 
@@ -390,6 +393,8 @@ export async function GET(request: NextRequest) {
             teamRole: (evalItem as Record<string, unknown>).team_role as string | null || null,
             hasRetake: allResults[key].hasRetake,
             bestResult,
+            // Additive: keep the queue row's finish time so the hub can show the BVM/O2 gap.
+            completedAt: existing?.completedAt ?? null,
           };
         }
       }

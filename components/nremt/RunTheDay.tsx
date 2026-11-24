@@ -5,17 +5,22 @@ import { Undo2, Unlock } from 'lucide-react';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
 import { shortSkillLabel } from '@/lib/nremt-skill-labels';
 import {
+  dayUnits,
   enRouteList,
-  freeStations,
+  freeUnitsNow,
+  gapKey,
   minutesSince,
   skillForStation,
-  spreadSuggestions,
+  spreadUnitSuggestions,
   studentName,
   testingNow,
-  whyLine,
-  type Candidate,
+  unitCounts,
+  unitStations,
+  unitTitle,
   type RtdInput,
   type RtdStation,
+  type RtdUnit,
+  type UnitCandidate,
 } from '@/lib/nremt-run-the-day';
 
 // NREMT hub "Run the day" tab (card 4225cd1c). The simple coordinator view: only FREE stations,
@@ -52,6 +57,8 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [openPick, setOpenPick] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+  // "Station is free" on the BVM + O2 gap card: clears the gap for THIS screen only.
+  const [dismissedGaps, setDismissedGaps] = useState<Set<string>>(() => new Set());
   const lastGood = useRef<RtdInput | null>(null);
 
   const load = useCallback(async () => {
@@ -148,18 +155,25 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
   const view = useMemo(() => {
     if (!input) return null;
     const enRoute = enRouteList(input);
-    const free = freeStations(input);
+    const { units: free, gaps } = freeUnitsNow(input, now, dismissedGaps);
+    const units = dayUnits(input);
+    const unitOf = new Map<string, RtdUnit>();
+    for (const u of units) for (const st of unitStations(u)) unitOf.set(st.id, u);
     return {
       enRoute,
       free,
+      gaps,
+      unitOf,
       testing: testingNow(input),
-      suggestions: spreadSuggestions(free, input),
+      suggestions: spreadUnitSuggestions(free, input),
       closed: input.stations.filter((s) => (s.coordinatorStatus || 'open') !== 'open'),
     };
-  }, [input]);
+  }, [input, now, dismissedGaps]);
 
-  const freeNow = view ? view.free.length : null;
-  const totalNow = input ? input.stations.length : null;
+  // A BVM + O2 pair counts as one station in "Stations free".
+  const counts = input ? unitCounts(input, now, dismissedGaps) : null;
+  const freeNow = counts ? counts.free : null;
+  const totalNow = counts ? counts.total : null;
   useEffect(() => {
     if (freeNow !== null && totalNow !== null) onFreeCount?.(freeNow, totalNow);
   }, [freeNow, totalNow, onFreeCount]);
@@ -184,11 +198,18 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
           {view.enRoute.map((e) => {
             const mins = minutesSince(e.sentAt, now);
             const slow = mins !== null && mins >= SLOW_MIN;
+            const eu = view.unitOf.get(e.station.id);
             return (
               <div key={`er-${e.station.id}-${e.student.id}`} className="rounded-xl bg-white dark:bg-gray-800 shadow border border-amber-400 p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">{stationName(e.station)}</div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">{eu ? unitTitle(eu, stationName) : stationName(e.station)}</div>
                   <span className="shrink-0 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-900">En route</span>
+                </div>
+                {eu?.kind === 'pair' && (
+                  <div className="text-sm text-gray-700 dark:text-gray-300">Going to {e.station.id === eu.o2.id ? 'O2 by NRB' : 'BVM'} first</div>
+                )}
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {e.station.instructorName || 'Proctor not set'} - {e.station.room || 'Location not set'}
                 </div>
                 <div className="text-lg font-semibold text-gray-900 dark:text-white">{studentName(e.student)}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -209,15 +230,39 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
             );
           })}
 
-          {view.suggestions.map(({ station: st, list, top }) => {
-            const others: Candidate[] = list.filter((c) => c.student.id !== top?.student.id);
+          {Array.from(view.gaps.entries()).map(([key, g]) => {
+            const u = view.unitOf.get(g.stationId);
             return (
-              <div key={st.id} className="rounded-xl bg-white dark:bg-gray-800 shadow border border-green-500 p-4 space-y-2">
+              <div key={`gap-${key}`} className="rounded-xl bg-white dark:bg-gray-800 shadow border border-amber-400 p-4 space-y-2">
+                <div className="text-xl font-bold text-gray-900 dark:text-white">{u ? unitTitle(u, stationName) : 'BVM + O2 by NRB'}</div>
+                <div className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {studentName(g.student)} - finished {g.finished === 'o2' ? 'O2 by NRB' : 'BVM'}, {g.finished === 'o2' ? 'BVM' : 'O2 by NRB'} next
+                </div>
+                <div className="text-sm text-gray-600 dark:text-gray-400">The proctor is reading the next instructions.</div>
+                {canManage && (
+                  <button
+                    type="button"
+                    onClick={() => setDismissedGaps((p) => new Set(p).add(gapKey(g, key)))}
+                    className="min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-100"
+                  >
+                    Station is free
+                  </button>
+                )}
+              </div>
+            );
+          })}
+
+          {view.suggestions.map(({ unit, list, top }) => {
+            const st = unit.kind === 'single' ? unit.station : unit.o2;
+            const cardKey = unit.key;
+            const others: UnitCandidate[] = list.filter((c) => c.student.id !== top?.student.id);
+            return (
+              <div key={cardKey} className="rounded-xl bg-white dark:bg-gray-800 shadow border border-green-500 p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="text-xl font-bold text-gray-900 dark:text-white">{stationName(st)}</div>
+                  <div className="text-xl font-bold text-gray-900 dark:text-white">{unitTitle(unit, stationName)}</div>
                   <span className="shrink-0 rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-semibold text-green-800 dark:text-green-200">Free</span>
                 </div>
-                {skillChip(st, input) && (
+                {unit.kind === 'single' && skillChip(st, input) && (
                   <span className="inline-block rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-200" title={st.skill_name || undefined}>
                     {skillChip(st, input)}
                   </span>
@@ -225,30 +270,31 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   {st.instructorName || 'Proctor not set'} - {st.room || 'Location not set'}
                 </div>
+                {unit.kind === 'pair' && <div className="text-xs text-gray-500 dark:text-gray-400">O2 by NRB first, then BVM</div>}
                 {top ? (
                   <>
                     <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Suggested next</div>
                     <div className="text-lg font-bold text-gray-900 dark:text-white">{studentName(top.student)}</div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">{whyLine(top)}</div>
-                    {top.sameProctorAsFirstAttempt && (
+                    <div className="text-sm text-gray-600 dark:text-gray-400">{top.why}</div>
+                    {top.warn && (
                       <div className="text-sm font-medium text-amber-700 dark:text-amber-300">
-                        This proctor graded the first attempt. Pick someone else if you can.
+                        {top.warn}. Pick someone else if you can.
                       </div>
                     )}
                     {canManage && (
                       <div className="flex flex-wrap gap-2 pt-1">
                         <button
                           type="button"
-                          disabled={busyKey === st.id}
-                          onClick={() => send(st.id, top.student.id)}
+                          disabled={(busyKey === cardKey || unitStations(unit).some((x) => x.id === busyKey))}
+                          onClick={() => send(top.stationId, top.student.id)}
                           className={`${btn} bg-blue-600 hover:bg-blue-700 text-white`}
                         >
-                          {busyKey === st.id ? 'Sending...' : `Send ${top.student.first_name}`}
+                          {(busyKey === cardKey || unitStations(unit).some((x) => x.id === busyKey)) ? 'Sending...' : `Send ${top.student.first_name}`}
                         </button>
                         {others.length > 0 && (
                           <button
                             type="button"
-                            onClick={() => setOpenPick(openPick === st.id ? null : st.id)}
+                            onClick={() => setOpenPick(openPick === cardKey ? null : cardKey)}
                             className={`${btn} border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100`}
                           >
                             Someone else
@@ -264,7 +310,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
                       <div className="pt-1">
                         <button
                           type="button"
-                          onClick={() => setOpenPick(openPick === st.id ? null : st.id)}
+                          onClick={() => setOpenPick(openPick === cardKey ? null : cardKey)}
                           className={`${btn} border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100`}
                         >
                           Someone else
@@ -273,21 +319,21 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
                     )}
                   </>
                 )}
-                {openPick === st.id && (
+                {openPick === cardKey && (
                   <ul className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 max-h-64 overflow-y-auto">
                     {others.map((c) => (
                       <li key={c.student.id}>
                         <button
                           type="button"
-                          disabled={busyKey === st.id}
-                          onClick={() => send(st.id, c.student.id)}
+                          disabled={(busyKey === cardKey || unitStations(unit).some((x) => x.id === busyKey))}
+                          onClick={() => send(c.stationId, c.student.id)}
                           className="w-full text-left min-h-[44px] px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700"
                         >
                           <div className="font-medium text-gray-900 dark:text-white">{studentName(c.student)}</div>
-                          <div className="text-xs text-gray-600 dark:text-gray-400">{whyLine(c)}</div>
-                          {c.sameProctorAsFirstAttempt && (
+                          <div className="text-xs text-gray-600 dark:text-gray-400">{c.why}</div>
+                          {c.warn && (
                             <div className="text-xs font-medium text-amber-700 dark:text-amber-300">
-                              Warning: this proctor graded the first attempt
+                              Warning: {c.warn?.toLowerCase()}
                             </div>
                           )}
                         </button>
@@ -307,37 +353,46 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
           <p className="text-sm text-gray-600 dark:text-gray-400">Nobody is being graded right now.</p>
         ) : (
           <ul className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-x-6 gap-y-1">
-            {view.testing.map((t) => (
-              <li key={t.station.id} className="flex items-center justify-between gap-3 text-sm min-h-[44px] border-b border-gray-100 dark:border-gray-700/60">
-                <span className="font-medium text-gray-900 dark:text-white">{stationName(t.station)}</span>
-                <span className="text-gray-700 dark:text-gray-300">
-                  {studentName(t.student)}
-                  {minutesSince(t.startedAt, now) !== null && ` - ${minutesSince(t.startedAt, now)} min`}
-                </span>
-              </li>
-            ))}
+            {view.testing.map((t) => {
+              const tu = view.unitOf.get(t.station.id);
+              const part = tu?.kind === 'pair' ? (t.station.id === tu.o2.id ? ' (O2 by NRB)' : ' (BVM)') : '';
+              return (
+                <li key={t.station.id} className="flex items-center justify-between gap-3 text-sm min-h-[44px] border-b border-gray-100 dark:border-gray-700/60">
+                  <span className="font-medium text-gray-900 dark:text-white">{(tu ? unitTitle(tu, stationName) : stationName(t.station)) + part}</span>
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {studentName(t.student)}
+                    {minutesSince(t.startedAt, now) !== null && ` - ${minutesSince(t.startedAt, now)} min`}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         )}
         {view.closed.length > 0 && (
-          <ul className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-x-6 gap-y-1 pt-2 border-t border-gray-200 dark:border-gray-700">
-            {view.closed.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-400 min-h-[44px]">
-                <span>
-                  {stationName(s)} - {s.coordinatorStatus === 'break' ? 'on break' : 'closed'}
-                </span>
-                {canManage && (
-                  <button
-                    type="button"
-                    disabled={busyKey === s.id}
-                    onClick={() => reopen(s.id)}
-                    className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 disabled:opacity-60"
-                  >
-                    <Unlock className="w-4 h-4" /> Reopen
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
+          <details className="pt-2 border-t border-gray-200 dark:border-gray-700">
+            <summary className="cursor-pointer min-h-[44px] flex items-center text-sm text-gray-600 dark:text-gray-400">
+              {view.closed.length} closed station{view.closed.length === 1 ? '' : 's'}
+            </summary>
+            <ul className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-x-6 gap-y-1">
+              {view.closed.map((s) => (
+                <li key={s.id} className="flex items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-400 min-h-[44px]">
+                  <span>
+                    {stationName(s)} - {s.coordinatorStatus === 'break' ? 'on break' : 'closed'}
+                  </span>
+                  {canManage && (
+                    <button
+                      type="button"
+                      disabled={busyKey === s.id}
+                      onClick={() => reopen(s.id)}
+                      className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 disabled:opacity-60"
+                    >
+                      <Unlock className="w-4 h-4" /> Reopen
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
       </section>
 
