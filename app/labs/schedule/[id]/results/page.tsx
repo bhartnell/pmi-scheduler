@@ -332,7 +332,7 @@ export default function SkillResultsPage() {
     ];
 
     const dateStr = labDay?.date
-      ? new Date(labDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      ? localCalendarDate(labDay.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
       : '';
 
     exportToExcel({
