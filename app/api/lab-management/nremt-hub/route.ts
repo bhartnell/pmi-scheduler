@@ -143,13 +143,16 @@ export async function GET(request: NextRequest) {
       // plus any station_instructors rows. instructor_id is not read.
       const names: string[] = [];
       if (s.instructor_name || s.instructor_email) names.push(s.instructor_name || s.instructor_email);
-      for (const si of s.station_instructors || []) {
+      // Primary rows only: a cleared or replaced proctor is un-flagged (is_primary false), not deleted, so
+      // counting every row kept showing people who had been taken off the station.
+      const activeSi = (s.station_instructors || []).filter((si: any) => si.is_primary !== false);
+      for (const si of activeSi) {
         const n = si.user_name || si.user_email;
         if (n && !names.includes(n)) names.push(n);
       }
       const emails: string[] = [];
       if (s.instructor_email) emails.push(String(s.instructor_email).toLowerCase());
-      for (const si of s.station_instructors || []) if (si.user_email) emails.push(String(si.user_email).toLowerCase());
+      for (const si of activeSi) if (si.user_email) emails.push(String(si.user_email).toLowerCase());
       const sheetId = sheetIdOf(s);
       return {
         id: s.id as string,

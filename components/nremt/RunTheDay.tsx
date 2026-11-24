@@ -52,7 +52,7 @@ function stationName(s: RtdStation): string {
   return s.custom_title || s.skill_name || `Station ${s.station_number}`;
 }
 
-export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount }: { labDayId: string; canManage: boolean; onChanged?: () => void; onFreeCount?: (free: number, total: number) => void }) {
+export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount, onData }: { labDayId: string; canManage: boolean; onChanged?: () => void; onFreeCount?: (free: number, total: number) => void; onData?: (input: RtdInput) => void }) {
   const [input, setInput] = useState<RtdInput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -79,12 +79,13 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
       if (next.students.length === 0 && (lastGood.current?.students.length || 0) > 0) throw new Error('empty refresh');
       lastGood.current = next;
       setInput(next);
+      onData?.(next);
       setError(null);
     } catch {
       // keep the last good data on screen
       setError(lastGood.current ? 'Could not refresh. Showing the last good data.' : 'Could not load this day.');
     }
-  }, [labDayId]);
+  }, [labDayId, onData]);
 
   useEffect(() => {
     load();
@@ -92,7 +93,18 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
       if (!document.hidden) load();
       setNow(Date.now());
     }, POLL_MS);
-    return () => clearInterval(t);
+    // A hidden tab skips its polls; it refreshes once when it becomes visible again.
+    const onVisible = () => {
+      if (!document.hidden) {
+        load();
+        setNow(Date.now());
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [load]);
 
   const send = async (stationId: string, studentId: string) => {

@@ -237,3 +237,24 @@ test('cell menu: the BVM + O2 pair appears once, from either column, routed to t
   const passedO2 = { ...input, skillCells: { a_O2: { status: 'completed', result: 'pass' } } };
   assert.equal(cellMenuFor(students[0], 'BVM', passedO2, NOW).options[0].stationId, 'bv');
 });
+
+// --- In-place tile edit and proctor drop-down order (card 4225cd1c) ---
+import { patchTilesIn, proctorChoices } from '../lib/nremt-hub-stations.ts';
+
+test('patchTilesIn changes only the named tiles, in my stations and in the groups', () => {
+  const t = (id: string, proctor: string | null) => ({ id, proctor });
+  const d = { name: 'day', my_stations: [t('a', 'X')], groups: [{ key: 'g', stations: [t('a', 'X'), t('b', 'Y')] }] };
+  const out = patchTilesIn(d, ['a'], { proctor: null });
+  assert.equal(out.my_stations[0].proctor, null);
+  assert.deepEqual(out.groups[0].stations.map((x) => x.proctor), [null, 'Y']);
+  assert.equal(d.groups[0].stations[0].proctor, 'X'); // original untouched
+  assert.equal(out.name, 'day');
+});
+
+test('proctor drop-down: today first, staff after, no one listed twice', () => {
+  const today = [{ name: 'Ann', email: 'Ann@x.org' }];
+  const staff = [{ name: 'Ann S', email: 'ann@x.org' }, { name: 'Bo', email: 'bo@x.org' }];
+  const c = proctorChoices(today, staff);
+  assert.deepEqual(c.today.map((p) => p.name), ['Ann']);
+  assert.deepEqual(c.staff.map((p) => p.name), ['Bo']);
+});

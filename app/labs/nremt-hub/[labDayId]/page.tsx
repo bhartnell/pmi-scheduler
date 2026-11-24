@@ -4,16 +4,17 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ClipboardCheck, ArrowLeft, Pencil, Plus, Lock, Unlock, X } from 'lucide-react';
+import { ClipboardCheck, ArrowLeft, Pencil, Plus, Lock, Unlock, X, Check } from 'lucide-react';
 import { PageLoader } from '@/components/ui';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { formatHubDate, formatHubTime } from '@/lib/nremt-hub-format';
-import { nextStationNumber, isClosed } from '@/lib/nremt-hub-stations';
+import { nextStationNumber, isClosed, patchTilesIn, proctorChoices } from '@/lib/nremt-hub-stations';
 import { buildStationPairs, nextExtraStationName, pairCodeFor, pickReopenStation, pickReopenPair, PAIR_TITLE, type PairItem } from '@/lib/nremt-pairs';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
-import ProctorsPanel from '@/components/nremt/ProctorsPanel';
+import ProctorsPanel, { PersonSearch, type PickedPerson } from '@/components/nremt/ProctorsPanel';
+import type { RtdInput } from '@/lib/nremt-run-the-day';
 import RunTheDay from '@/components/nremt/RunTheDay';
 import { shortSkillLabel } from '@/lib/nremt-skill-labels';
 import { computeDayStats, type DayStats } from '@/lib/nremt-day-stats';
@@ -77,6 +78,149 @@ interface InstructorOption {
 const SCENARIO_CODES = ['E201', 'E202'];
 const NEW_LOCATION = '__new__';
 
+// ---- Proctor and location drop-downs on each tile (card 4225cd1c) ---------------------------
+// Picking a name or a place saves at once through the existing station PATCH and updates that one
+// tile in place: no panel, no refetch of the whole day. A failed save leaves the old value showing.
+
+interface DropsApi {
+  today: InstructorOption[];
+  staff: InstructorOption[];
+  rooms: { standard: string[]; nremtOnly: string[] };
+  setProctor: (rows: Tile[], who: { name: string; email: string } | null) => Promise<boolean>;
+  setRoom: (rows: Tile[], room: string | null) => Promise<boolean>;
+  addAndSet: (rows: Tile[], person: PickedPerson) => Promise<boolean>;
+}
+
+const ADD_PERSON = '__add__';
+const MIXED = '__mixed__';
+
+function StationDrops({ rows, drops }: { rows: Tile[]; drops: DropsApi }) {
+  const [adding, setAdding] = useState(false);
+  const [newRoom, setNewRoom] = useState<string | null>(null);
+  const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
+  const run = async (fn: () => Promise<boolean>) => {
+    setState('saving');
+    const ok = await fn();
+    setState(ok ? 'saved' : 'failed');
+    if (ok) setTimeout(() => setState((s) => (s === 'saved' ? 'idle' : s)), 1500);
+  };
+
+  const emails = rows.map((r) => (r.instructor_email || '').toLowerCase());
+  const mixedProctor = new Set(emails).size > 1;
+  const proctorValue = mixedProctor ? MIXED : emails[0] || '';
+  const rooms = rows.map((r) => r.room || '');
+  const mixedRoom = new Set(rooms).size > 1;
+  const roomValue = mixedRoom ? MIXED : rooms[0];
+  const knownRooms = [...drops.rooms.standard, ...drops.rooms.nremtOnly];
+  const staff = proctorChoices(drops.today, drops.staff).staff;
+  const sel = 'w-full min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-2 text-sm text-gray-900 dark:text-white';
+  const label = 'text-xs font-medium text-gray-500 dark:text-gray-400';
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className={label}>Proctor and location</span>
+        {state === 'saving' && <span className="text-xs text-gray-500 dark:text-gray-400">Saving...</span>}
+        {state === 'saved' && <span className="inline-flex items-center gap-1 text-xs text-green-700 dark:text-green-300"><Check className="w-3 h-3" /> Saved</span>}
+        {state === 'failed' && <span className="text-xs text-red-600 dark:text-red-400">Not saved, old value kept</span>}
+      </div>
+      <select
+        aria-label="Proctor"
+        className={sel}
+        value={proctorValue}
+        disabled={state === 'saving'}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === ADD_PERSON) return setAdding(true);
+          if (v === MIXED) return;
+          if (v === '') return void run(() => drops.setProctor(rows, null));
+          const who = [...drops.today, ...drops.staff].find((p) => p.email.toLowerCase() === v);
+          if (who) void run(() => drops.setProctor(rows, { name: who.name, email: who.email }));
+        }}
+      >
+        {mixedProctor && <option value={MIXED}>Different on each part</option>}
+        <option value="">No proctor</option>
+        {proctorValue && proctorValue !== MIXED && ![...drops.today, ...drops.staff].some((p) => p.email.toLowerCase() === proctorValue) && (
+          <option value={proctorValue}>{rows[0].instructor_name || proctorValue}</option>
+        )}
+        {drops.today.length > 0 && (
+          <optgroup label="Today's proctors">
+            {drops.today.map((p) => <option key={p.email} value={p.email.toLowerCase()}>{p.name}</option>)}
+          </optgroup>
+        )}
+        {staff.length > 0 && (
+          <optgroup label="Staff">
+            {staff.map((p) => <option key={p.email} value={p.email.toLowerCase()}>{p.name}</option>)}
+          </optgroup>
+        )}
+        <option value={ADD_PERSON}>Add someone...</option>
+      </select>
+      {adding && (
+        <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 space-y-2">
+          <PersonSearch
+            autoFocus
+            busy={state === 'saving'}
+            onPick={(p) => {
+              setAdding(false);
+              void run(() => drops.addAndSet(rows, p));
+            }}
+          />
+          <button type="button" onClick={() => setAdding(false)} className="min-h-[44px] px-3 text-sm text-gray-600 dark:text-gray-300 hover:underline">Cancel</button>
+        </div>
+      )}
+      <select
+        aria-label="Location"
+        className={sel}
+        value={newRoom !== null ? '__new__' : roomValue}
+        disabled={state === 'saving'}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === '__new__') return setNewRoom('');
+          if (v === MIXED) return;
+          void run(() => drops.setRoom(rows, v || null));
+        }}
+      >
+        {mixedRoom && <option value={MIXED}>Different on each part</option>}
+        <option value="">Location not set</option>
+        {roomValue && roomValue !== MIXED && !knownRooms.includes(roomValue) && <option value={roomValue}>{roomValue}</option>}
+        <optgroup label="Standard lab locations">
+          {drops.rooms.standard.map((r) => <option key={r} value={r}>{r}</option>)}
+        </optgroup>
+        {drops.rooms.nremtOnly.length > 0 && (
+          <optgroup label="NREMT-only locations">
+            {drops.rooms.nremtOnly.map((r) => <option key={r} value={r}>{r}</option>)}
+          </optgroup>
+        )}
+        <option value="__new__">Add new location...</option>
+      </select>
+      {newRoom !== null && (
+        <div className="flex gap-2">
+          <input
+            autoFocus
+            value={newRoom}
+            onChange={(e) => setNewRoom(e.target.value)}
+            placeholder="Type the location"
+            className="flex-1 min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 text-sm text-gray-900 dark:text-white"
+          />
+          <button
+            type="button"
+            disabled={!newRoom.trim() || state === 'saving'}
+            onClick={() => {
+              const v = newRoom.trim();
+              setNewRoom(null);
+              void run(() => drops.setRoom(rows, v));
+            }}
+            className="min-h-[44px] px-3 rounded-lg bg-blue-600 text-white text-sm font-semibold disabled:opacity-60"
+          >
+            Save
+          </button>
+          <button type="button" onClick={() => setNewRoom(null)} className="min-h-[44px] px-2 text-sm text-gray-600 dark:text-gray-300 hover:underline">Cancel</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StationTile({
   tile,
   large,
@@ -84,6 +228,7 @@ function StationTile({
   saving,
   onEdit,
   onSetStatus,
+  drops,
 }: {
   tile: Tile;
   large?: boolean;
@@ -91,6 +236,7 @@ function StationTile({
   saving: boolean;
   onEdit: (t: Tile) => void;
   onSetStatus: (t: Tile, status: 'open' | 'closed') => void;
+  drops?: DropsApi;
 }) {
   const closed = isClosed(tile.coordinator_status);
   const title = tile.own_name || tile.skill_label || `Station ${tile.station_number}`;
@@ -122,10 +268,16 @@ function StationTile({
         {tile.nremt_code && SCENARIO_CODES.includes(tile.nremt_code) && (
           <div className="text-sm text-gray-700 dark:text-gray-300">Scenario: {tile.scenario_title || 'not picked'}</div>
         )}
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          Proctor: {tile.proctors.length > 0 ? tile.proctors.join(', ') : 'not set'}
-        </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">{tile.room ? `Location: ${tile.room}` : 'Location: not set'}</div>
+        {canManage && drops ? (
+          <StationDrops rows={[tile]} drops={drops} />
+        ) : (
+          <>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Proctor: {tile.proctors.length > 0 ? tile.proctors.join(', ') : 'not set'}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">{tile.room ? `Location: ${tile.room}` : 'Location: not set'}</div>
+          </>
+        )}
       </div>
       {closed && canManage ? (
         <button
@@ -175,12 +327,14 @@ function PairTile({
   saving,
   onEdit,
   onSetStatus,
+  drops,
 }: {
   pair: { o2: Tile; bvm: Tile };
   canManage: boolean;
   saving: boolean;
   onEdit: (p: { o2: Tile; bvm: Tile }) => void;
   onSetStatus: (rows: Tile[], status: 'open' | 'closed') => void;
+  drops?: DropsApi;
 }) {
   const { o2, bvm } = pair;
   const closed = isClosed(o2.coordinator_status) && isClosed(bvm.coordinator_status);
@@ -201,12 +355,18 @@ function PairTile({
           2. BVM - station {bvm.station_number}
           {!closed && isClosed(bvm.coordinator_status) ? ' (closed)' : ''}
         </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          Proctor: {sameProctor ? proctor(o2) : `${proctor(o2)} (O2 by NRB), ${proctor(bvm)} (BVM)`}
-        </div>
-        <div className="text-sm text-gray-600 dark:text-gray-400">
-          {sameRoom ? (o2.room ? `Location: ${o2.room}` : 'Location: not set') : `Location: ${o2.room || 'not set'} (O2 by NRB), ${bvm.room || 'not set'} (BVM)`}
-        </div>
+        {canManage && drops ? (
+          <StationDrops rows={[o2, bvm]} drops={drops} />
+        ) : (
+          <>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Proctor: {sameProctor ? proctor(o2) : `${proctor(o2)} (O2 by NRB), ${proctor(bvm)} (BVM)`}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              {sameRoom ? (o2.room ? `Location: ${o2.room}` : 'Location: not set') : `Location: ${o2.room || 'not set'} (O2 by NRB), ${bvm.room || 'not set'} (BVM)`}
+            </div>
+          </>
+        )}
       </div>
       {closed && canManage ? (
         <button type="button" disabled={saving} onClick={() => onSetStatus([o2, bvm], 'open')} className="flex items-center justify-center gap-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold min-h-[52px] disabled:opacity-60">
@@ -632,12 +792,100 @@ export default function NremtHubDayPage() {
       .catch(() => {});
   }, [canManage]);
 
+  // ---- Proctor / location drop-downs: in-place saves (card 4225cd1c) ----
+  const [proctorsVersion, setProctorsVersion] = useState(0);
+  const [clearNote, setClearNote] = useState<string | null>(null);
+  const sessionEmail = (session?.user?.email || '').toLowerCase();
+  const patchTilesLocal = (ids: string[], patch: Partial<Tile>) => setData((d) => (d ? patchTilesIn(d, ids, patch) : d));
+  const patchStation = async (id: string, body: Record<string, unknown>): Promise<string | null> => {
+    try {
+      const res = await fetch(`/api/lab-management/stations/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      const d = await res.json();
+      return d.success ? null : d.error || 'unknown error';
+    } catch {
+      return 'network error';
+    }
+  };
+  const setProctorRows = async (rows: Tile[], who: { name: string; email: string } | null): Promise<boolean> => {
+    const done: string[] = [];
+    for (const row of rows) {
+      const err = await patchStation(row.id, who ? { instructor_name: who.name, instructor_email: who.email } : { instructor_name: null, instructor_email: '' });
+      if (err) {
+        alert('Could not change the proctor: ' + err);
+        if (done.length) patchTilesLocal(done, who ? { instructor_name: who.name, instructor_email: who.email, proctors: [who.name], is_mine: who.email.toLowerCase() === sessionEmail } : { instructor_name: null, instructor_email: null, proctors: [], is_mine: false });
+        return false;
+      }
+      done.push(row.id);
+    }
+    patchTilesLocal(done, who ? { instructor_name: who.name, instructor_email: who.email, proctors: [who.name], is_mine: who.email.toLowerCase() === sessionEmail } : { instructor_name: null, instructor_email: null, proctors: [], is_mine: false });
+    return true;
+  };
+  const setRoomRows = async (rows: Tile[], room: string | null): Promise<boolean> => {
+    const done: string[] = [];
+    for (const row of rows) {
+      const err = await patchStation(row.id, { room });
+      if (err) {
+        alert('Could not change the location: ' + err);
+        if (done.length) patchTilesLocal(done, { room });
+        return false;
+      }
+      done.push(row.id);
+    }
+    patchTilesLocal(done, { room });
+    if (room) {
+      setData((d) => (d && ![...d.locations.standard, ...d.locations.nremtOnly].includes(room) ? { ...d, locations: { ...d.locations, nremtOnly: [...d.locations.nremtOnly, room] } } : d));
+    }
+    return true;
+  };
+  const addAndSetProctor = async (rows: Tile[], p: PickedPerson): Promise<boolean> => {
+    try {
+      const res = await fetch('/api/lab-management/nremt-hub/proctors', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ labDayId, email: p.email, name: p.name, labUserId: p.labUserId }),
+      });
+      const d = await res.json();
+      if (!d.success) {
+        alert('Could not add that person: ' + (d.error || 'unknown error'));
+        return false;
+      }
+    } catch {
+      alert('Could not add that person');
+      return false;
+    }
+    const name = p.name || p.email;
+    setData((d) => (d && !(d.proctor_options || []).some((o) => o.email.toLowerCase() === p.email.toLowerCase()) ? { ...d, proctor_options: [...(d.proctor_options || []), { id: p.labUserId || null, name, email: p.email }] } : d));
+    setProctorsVersion((v) => v + 1);
+    return setProctorRows(rows, { name, email: p.email });
+  };
+  const clearAllProctors = async () => {
+    const tiles = (data?.groups || []).flatMap((g) => g.stations).filter((t) => t.instructor_email || t.instructor_name || t.proctors.length > 0);
+    if (tiles.length === 0) return setClearNote('No station has a proctor.');
+    if (!window.confirm(`Remove the proctor from ${tiles.length} station${tiles.length === 1 ? '' : 's'}? Locations and scenarios stay.`)) return;
+    let cleared = 0;
+    for (const t of tiles) {
+      if (await setProctorRows([t], null)) cleared++;
+      else break;
+    }
+    setClearNote(`Cleared the proctor on ${cleared} of ${tiles.length} stations.`);
+  };
+  const drops: DropsApi | undefined = canManage && data
+    ? {
+        today: (data.proctor_options || []).map((p) => ({ id: p.id || p.email, name: p.name, email: p.email })),
+        staff: instructors,
+        rooms: data.locations,
+        setProctor: setProctorRows,
+        setRoom: setRoomRows,
+        addAndSet: addAndSetProctor,
+      }
+    : undefined;
+
   const [panel, setPanel] = useState<PanelState | null>(null);
   // Tabs (instructor and above). "Run the day" is the default; a listed proctor sees stations only.
   const [tab, setTab] = useState<'run' | 'stations'>('run');
 
   // Overview row: the same student-queue data and the same rules (lib/nremt-day-stats) the
-  // Coordinator View status bar uses. Instructor+ only (the API's own gate); refreshes every 30s.
+  // Coordinator View status bar uses. Instructor+ only (the API's own gate); refreshes with the Run the day data (30s on Stations and proctors).
   const [stats, setStats] = useState<DayStats | null>(null);
   const [freeCount, setFreeCount] = useState<{ free: number; total: number } | null>(null);
   const onFreeCount = useCallback((free: number, total: number) => setFreeCount((p) => (p && p.free === free && p.total === total ? p : { free, total })), []);
@@ -650,12 +898,28 @@ export default function NremtHubDayPage() {
       })
       .catch(() => {});
   }, [labDayId]);
+  // On Run the day the stats come from the data that tab already fetched (onRunData), so there is no
+  // second poll. On Stations and proctors there is no such data, so the old 30 s fetch stays there; it
+  // skips while the browser tab is hidden and refreshes once when it is visible again.
+  const onRunData = useCallback(
+    (i: RtdInput) => setStats(computeDayStats(i.students, i.stations, i.cells, i.skillColumns, i.skillCells)),
+    []
+  );
   useEffect(() => {
-    if (!canManage || !labDayId) return;
+    if (!canManage || !labDayId || tab === 'run') return;
     loadStats();
-    const t = setInterval(loadStats, 30000);
-    return () => clearInterval(t);
-  }, [canManage, labDayId, loadStats]);
+    const t = setInterval(() => {
+      if (!document.hidden) loadStats();
+    }, 30000);
+    const onVisible = () => {
+      if (!document.hidden) loadStats();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [canManage, labDayId, loadStats, tab]);
 
   // Close / reopen: the existing coordinator_status mark on the station (the same one the
   // Coordinator View sets). Nothing is deleted; evaluations stay counted.
@@ -799,21 +1063,33 @@ export default function NremtHubDayPage() {
                 <Link href={`/labs/schedule/${labDayId}/results`} className="inline-flex items-center min-h-[44px] px-4 rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400 font-medium hover:underline">
                   Skill results
                 </Link>
-                <Link href={`/labs/schedule/${labDayId}`} className="inline-flex items-center min-h-[44px] px-4 rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400 font-medium hover:underline">
-                  Set-up
-                </Link>
               </nav>
             )}
 
-            {canManage && tab === 'run' && <RunTheDay labDayId={labDayId} canManage={canManage} onChanged={load} onFreeCount={onFreeCount} />}
+            {canManage && tab === 'run' && <RunTheDay labDayId={labDayId} canManage={canManage} onChanged={load} onFreeCount={onFreeCount} onData={onRunData} />}
 
             {(!canManage || tab === 'stations') && (<>
+            {canManage && (
+              <ProctorsPanel
+                key={proctorsVersion}
+                labDayId={labDayId}
+                onChanged={load}
+                extra={
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    <button type="button" onClick={clearAllProctors} className="min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700">
+                      Clear all proctors
+                    </button>
+                    {clearNote && <span role="status" className="text-sm text-gray-700 dark:text-gray-300">{clearNote}</span>}
+                  </div>
+                }
+              />
+            )}
             {data.my_stations.length > 0 && (
               <section className="space-y-3">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your station</h2>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
                   {data.my_stations.map((t) => (
-                    <StationTile key={t.id} tile={t} large canManage={canManage} saving={savingId === t.id} onEdit={(x) => setPanel({ mode: 'edit', tile: x, skillSheetId: x.skill_sheet_id, skillLabel: x.skill_label || '' })} onSetStatus={setStationStatus} />
+                    <StationTile key={t.id} tile={t} large canManage={canManage} saving={savingId === t.id} onEdit={(x) => setPanel({ mode: 'edit', tile: x, skillSheetId: x.skill_sheet_id, skillLabel: x.skill_label || '' })} onSetStatus={setStationStatus} drops={drops} />
                   ))}
                 </div>
               </section>
@@ -919,12 +1195,13 @@ export default function NremtHubDayPage() {
                                   saving={savingId === p.o2.id}
                                   onEdit={(x) => setPanel({ mode: 'edit', tile: x.o2, partner: x.bvm, skillSheetId: x.o2.skill_sheet_id, skillLabel: PAIR_TITLE })}
                                   onSetStatus={setRowsStatus}
+                                  drops={drops}
                                 />
                               ))}
                               {looseShown.map((t) => (
                                 <div key={t.id} className="space-y-1">
                                   <div className="text-xs font-medium text-gray-500 dark:text-gray-400">{tileCode(t) === 'E203' ? 'BVM only' : 'O2 by NRB only'}</div>
-                                  <StationTile tile={t} canManage={canManage} saving={savingId === t.id} onEdit={openEdit} onSetStatus={setStationStatus} />
+                                  <StationTile tile={t} canManage={canManage} saving={savingId === t.id} onEdit={openEdit} onSetStatus={setStationStatus} drops={drops} />
                                 </div>
                               ))}
                             </div>
@@ -952,7 +1229,7 @@ export default function NremtHubDayPage() {
                           </div>
                           <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
                             {shown.map((t) => (
-                              <StationTile key={t.id} tile={t} canManage={canManage} saving={savingId === t.id} onEdit={openEdit} onSetStatus={setStationStatus} />
+                              <StationTile key={t.id} tile={t} canManage={canManage} saving={savingId === t.id} onEdit={openEdit} onSetStatus={setStationStatus} drops={drops} />
                             ))}
                           </div>
                         </section>
@@ -963,13 +1240,11 @@ export default function NremtHubDayPage() {
               );
             })()}
 
-            {canManage && <ProctorsPanel labDayId={labDayId} onChanged={load} />}
-
             {canManage && (
               <details className="rounded-lg bg-white dark:bg-gray-800 shadow">
                 <summary className="cursor-pointer min-h-[44px] flex items-center px-4 font-semibold text-gray-900 dark:text-white">Individual Testing Tracker</summary>
                 <div className="border-t border-gray-200 dark:border-gray-700">
-                  <IndividualTestingGrid labDayId={labDayId} isNremtTesting />
+                  <IndividualTestingGrid labDayId={labDayId} isNremtTesting refreshMs={15000} />
                 </div>
               </details>
             )}
@@ -980,6 +1255,9 @@ export default function NremtHubDayPage() {
               <div className="flex flex-wrap gap-3">
                 <Link href={`/labs/schedule/${labDayId}/coordinator`} className="inline-flex items-center min-h-[44px] px-4 rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400 font-medium hover:underline">
                   Coordinator View (previous)
+                </Link>
+                <Link href={`/labs/schedule/${labDayId}`} className="inline-flex items-center min-h-[44px] px-4 rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400 font-medium hover:underline">
+                  Lab day page (previous)
                 </Link>
               </div>
             )}
