@@ -52,3 +52,14 @@ test('Run the day cell menu shows both names; the retake check still uses the pr
   const json = JSON.stringify(menu);
   assert.ok(json.includes('Casey Townsley + Gavin Grogg (assisting)'), json);
 });
+
+test('who is where leaves out closed stations', () => {
+  const w = whoIsWhere(
+    [{ name: 'Casey Townsley', email: 'casey@pmi.edu' }],
+    [
+      { station_number: 1, title: 'Supine Spinal', instructor_email: 'casey@pmi.edu', instructor_name: 'Casey', assistant_email: null, assistant_name: null, coordinator_status: 'open' },
+      { station_number: 2, title: 'Medical 2', instructor_email: 'casey@pmi.edu', instructor_name: 'Casey', assistant_email: null, assistant_name: null, coordinator_status: 'closed' },
+    ],
+  );
+  assert.deepEqual(w[0].places, ['Supine Spinal']);
+});

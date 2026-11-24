@@ -104,6 +104,8 @@ export interface PlacementTile {
   instructor_name: string | null;
   assistant_email: string | null;
   assistant_name: string | null;
+  /** Closed stations are left out of the who-is-where list. */
+  coordinator_status?: string | null;
 }
 
 /**
@@ -112,7 +114,7 @@ export interface PlacementTile {
  * Matching is by email, case-insensitive. `today` keeps its own order.
  */
 export function whoIsWhere(today: { name: string; email: string }[], tiles: PlacementTile[]): { email: string; name: string; places: string[] }[] {
-  const sorted = [...tiles].sort((a, b) => a.station_number - b.station_number);
+  const sorted = tiles.filter((t) => !isClosed(t.coordinator_status)).sort((a, b) => a.station_number - b.station_number);
   return today.map((p) => {
     const places: string[] = [];
     for (const t of sorted) {

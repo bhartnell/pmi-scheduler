@@ -9,7 +9,7 @@ import { PageLoader } from '@/components/ui';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
-import { formatHubDate, formatHubTime } from '@/lib/nremt-hub-format';
+import { formatHubDate, formatHubTime, localCalendarDate } from '@/lib/nremt-hub-format';
 import { nextStationNumber, isClosed, patchTilesIn, proctorChoices, withAssistant, sameStationPerson, whoIsWhere, placementLine } from '@/lib/nremt-hub-stations';
 import { buildStationPairs, nextExtraStationName, pairCodeFor, pickReopenStation, pickReopenPair, PAIR_TITLE, type PairItem } from '@/lib/nremt-pairs';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
@@ -997,6 +997,15 @@ export default function NremtHubDayPage() {
   // On Run the day the stats come from the data that tab already fetched (onRunData), so there is no
   // second poll. On Stations and proctors there is no such data, so the old 30 s fetch stays there; it
   // skips while the browser tab is hidden and refreshes once when it is visible again.
+  // Day start (date + start time, as the browser reads it) for the estimated finish on Run the day.
+  const dayStartMs = ((): number | null => {
+    if (!data?.day?.date || !data.day.start_time) return null;
+    const m = /^(\d{1,2}):(\d{2})/.exec(data.day.start_time);
+    if (!m) return null;
+    const d = localCalendarDate(data.day.date);
+    d.setHours(Number(m[1]), Number(m[2]), 0, 0);
+    return Number.isNaN(d.getTime()) ? null : d.getTime();
+  })();
   const onRunData = useCallback(
     (i: RtdInput) => setStats(computeDayStats(i.students, i.stations, i.cells, i.skillColumns, i.skillCells)),
     []
@@ -1162,7 +1171,7 @@ export default function NremtHubDayPage() {
               </nav>
             )}
 
-            {canManage && tab === 'run' && <RunTheDay labDayId={labDayId} canManage={canManage} onChanged={load} onFreeCount={onFreeCount} onData={onRunData} />}
+            {canManage && tab === 'run' && <RunTheDay labDayId={labDayId} canManage={canManage} onChanged={load} onFreeCount={onFreeCount} onData={onRunData} startMs={dayStartMs} />}
 
             {(!canManage || tab === 'stations') && (<>
             {canManage && (
@@ -1176,6 +1185,7 @@ export default function NremtHubDayPage() {
                     instructor_name: t.instructor_name,
                     assistant_email: t.assistant_email ?? null,
                     assistant_name: t.assistant_name ?? null,
+                    coordinator_status: t.coordinator_status,
                   }))
                 ).map((w) => placementLine(w.name, w.places))}
                 key={proctorsVersion}
