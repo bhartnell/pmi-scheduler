@@ -20,5 +20,5 @@ test('second add of the same address finds the account, creates nothing', () => 
 test('helpers', () => {
   assert.equal(isPmiAddress('A@PMI.EDU'), true);
   assert.equal(isPmiAddress('a@notpmi.edu'), false);
-  assert.match(signInLine('k@gmail.com'), /using k@gmail.com, then open Testing > NREMT\.$/);
+  assert.match(signInLine('k@gmail.com'), /using k@gmail\.com\. Your home page then shows 'NREMT Testing Day - open your stations'\.$/);
 });

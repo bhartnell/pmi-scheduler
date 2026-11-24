@@ -19,5 +19,5 @@ export function outsideProctorDecision(email: string, hasAccount: boolean, calle
 export const OUTSIDE_REFUSED_MESSAGE = 'This is not a PMI address and has no account yet. An admin has to add it.';
 
 export function signInLine(email: string): string {
-  return `Sign in at pmiparamedic.tools with Google using ${email}, then open Testing > NREMT.`;
+  return `Sign in at pmiparamedic.tools with Google using ${email}. Your home page then shows 'NREMT Testing Day - open your stations'.`;
 }
