@@ -33,6 +33,8 @@ export interface RtdStation {
   stationSuffix?: string | null;
   coordinatorStatus?: 'open' | 'closed' | 'break';
   isRetakeStation?: boolean;
+  /** Copied closed extra that nobody made or used (student-queue API). The hub leaves it out of everything. */
+  notMade?: boolean;
 }
 export interface RtdCell {
   queueId?: string | null;
@@ -405,9 +407,9 @@ export function spreadUnitSuggestions(units: RtdUnit[], input: RtdInput): { unit
   });
 }
 
-/** Counts for the overview: a pair is one station. */
+/** Counts for the overview: a pair is one station; the total is OPEN stations only (closed ones are not counted). */
 export function unitCounts(input: RtdInput, now: number, dismissed: Set<string>): { free: number; total: number } {
-  return { free: freeUnitsNow(input, now, dismissed).units.length, total: dayUnits(input).length };
+  return { free: freeUnitsNow(input, now, dismissed).units.length, total: dayUnits(input).filter((u) => unitStations(u).every(isRoutable)).length };
 }
 
 

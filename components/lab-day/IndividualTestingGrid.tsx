@@ -42,6 +42,8 @@ interface GridStation {
   proctorName?: string | null;
   room?: string | null;
   coordinatorStatus?: 'open' | 'closed' | 'break';
+  /** Copied closed extra nobody made or used: left out of the grid on NREMT days. */
+  notMade?: boolean;
   isRetakeStation?: boolean;
   stationSuffix?: string | null;
 }
@@ -178,7 +180,9 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
 
       if (data.success) {
         const nextStudents = data.students || [];
-        const nextStations = data.stations || [];
+        const allStations: GridStation[] = data.stations || [];
+        const hidden = new Set<string>(isNremtTesting ? allStations.filter((s) => s.notMade).map((s) => s.id) : []);
+        const nextStations = allStations.filter((s) => !hidden.has(s.id));
         const looksEmpty = nextStudents.length === 0 || nextStations.length === 0;
 
         if (isBackground && hasLoadedDataRef.current && looksEmpty) {
@@ -188,7 +192,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
           setStudents(nextStudents);
           setStations(nextStations);
           setCells(data.cells || {});
-          setSkillColumns(data.skillColumns || []);
+          setSkillColumns(((data.skillColumns || []) as SkillColumn[]).map((c) => (hidden.size ? { ...c, stationIds: c.stationIds.filter((id) => !hidden.has(id)) } : c)));
           setSkillCells(data.skillCells || {});
         }
       }
@@ -200,7 +204,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
         setRefreshing(false);
       }
     }
-  }, [labDayId]);
+  }, [labDayId, isNremtTesting]);
 
   // Refetch at once when the hub's Run the day cards change something (never waits for a poll).
   const lastSignalRef = useRef(refreshSignal);

@@ -298,7 +298,7 @@ export default function GradeStationPage() {
       fetchLabGroups(station.lab_day.cohort.id);
       // Also fetch all students for skills station dropdown
       if (station.station_type === 'skills') {
-        fetchAllStudents(station.lab_day.cohort.id);
+        fetchAllStudents(station.lab_day.cohort.id, !!station.lab_day.is_nremt_testing);
       }
     }
   }, [station]);
@@ -662,9 +662,11 @@ export default function GradeStationPage() {
     }
   };
 
-  const fetchAllStudents = async (cohortId: string) => {
+  // NREMT testing days list active students only, so the list and its "N students evaluated" total match
+  // the hub (withdrawn students stay out). Regular lab days keep asking for every status, as before.
+  const fetchAllStudents = async (cohortId: string, activeOnly = false) => {
     try {
-      const res = await fetch(`/api/lab-management/students?cohortId=${cohortId}`);
+      const res = await fetch(`/api/lab-management/students?cohortId=${cohortId}${activeOnly ? '&status=active' : ''}`);
       const data = await res.json();
       if (data.success && data.students) {
         setAllStudents(data.students.map((s: any) => ({
@@ -1528,7 +1530,7 @@ export default function GradeStationPage() {
 
           {/* NREMT side-by-side: scenario is its own grid cell, scrolls independently */}
           {scenarioSplitActive && nremtScenario && (
-            <div className="xl:col-start-2 xl:row-start-1 xl:row-span-2 xl:sticky xl:top-0 xl:self-start xl:max-h-[calc(100vh-var(--bottom-banner-h,0px))] xl:overflow-y-auto min-w-0">
+            <div className="xl:col-start-2 xl:row-start-1 xl:row-span-2 xl:sticky xl:top-[var(--grade-header-h,0px)] xl:self-start xl:max-h-[calc(100vh-var(--grade-header-h,0px)-var(--bottom-banner-h,0px))] xl:overflow-y-auto min-w-0">
               <ScenarioReferencePanel
                 scenario={nremtScenario}
                 collapsed={scenarioCollapsed}

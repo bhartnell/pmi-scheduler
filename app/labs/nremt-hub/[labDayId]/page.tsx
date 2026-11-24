@@ -10,7 +10,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { formatHubDate, formatHubTime, localCalendarDate } from '@/lib/nremt-hub-format';
-import { nextStationNumber, isClosed, patchTilesIn, proctorChoices, withAssistant, sameStationPerson, whoIsWhere, placementLine } from '@/lib/nremt-hub-stations';
+import { nextStationNumber, isClosed, patchTilesIn, proctorChoices, withAssistant, sameStationPerson, whoIsWhere, placementLine, cleanReopenBody } from '@/lib/nremt-hub-stations';
 import { buildStationPairs, nextExtraStationName, pairCodeFor, pickReopenStation, pickReopenPair, PAIR_TITLE, type PairItem } from '@/lib/nremt-pairs';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
 import ProctorsPanel, { PersonSearch, type PickedPerson } from '@/components/nremt/ProctorsPanel';
@@ -66,6 +66,8 @@ interface HubData {
     station_count: number;
   };
   my_stations: Tile[];
+  /** Copied closed extras nobody made or used; left out of every list and count, reused by Open another. */
+  spares?: Tile[];
   groups: Group[];
   locations: { standard: string[]; nremtOnly: string[] };
   scenarios_by_code: Record<string, { id: string; title: string }[]>;
@@ -990,7 +992,7 @@ export default function NremtHubDayPage() {
       .then((r) => r.json())
       .then((d) => {
         if (!d.success) return;
-        setStats(computeDayStats(d.students || [], d.stations || [], d.cells || {}, d.skillColumns || [], d.skillCells || {}));
+        setStats(computeDayStats(d.students || [], (d.stations || []).filter((st: { notMade?: boolean }) => !st.notMade), d.cells || {}, d.skillColumns || [], d.skillCells || {}));
       })
       .catch(() => {});
   }, [labDayId]);
@@ -1074,17 +1076,49 @@ export default function NremtHubDayPage() {
   // holds closed extras); only when the skill has none does it open the create panel for a new one.
   const [reopenNote, setReopenNote] = useState<string | null>(null);
   const stationLabel = (t: Tile) => t.own_name || t.skill_label || `Station ${t.station_number}`;
+  // A not-made row (data.spares) reused by "Open another" starts clean: open, no proctor, no assistant,
+  // no room, named after the skill's made stations. A made closed station is simply reopened as it was.
+  const spareIds = new Set((data?.spares || []).map((t) => t.id));
+  const reopenTile = async (tile: Tile): Promise<string | null> => {
+    if (!spareIds.has(tile.id)) {
+      const err = await patchStation(tile.id, { coordinator_status: 'open' });
+      return err;
+    }
+    const made = (data?.groups || []).find((g) => g.key === tile.skill_sheet_id)?.stations || [];
+    const name = nextExtraStationName(
+      made.map((m) => ({ station_number: m.station_number, name: m.own_name || m.skill_label })),
+      tile.skill_label || 'Station'
+    );
+    return patchStation(tile.id, cleanReopenBody(name));
+  };
+  const sparesOf = (sheetIds: Array<string | null>) => (data?.spares || []).filter((t) => t.skill_sheet_id && sheetIds.includes(t.skill_sheet_id));
   const reopenOrCreate = async (candidates: Tile[], create: PanelState) => {
-    const pick = pickReopenStation(candidates.map((t) => ({ station_number: t.station_number, closed: isClosed(t.coordinator_status), tile: t })));
+    const pool = [...candidates, ...sparesOf([create.skillSheetId]).filter((t) => !candidates.some((c) => c.id === t.id) && (!candidates[0] || tileCode(t) === tileCode(candidates[0])))];
+    const pick = pickReopenStation(pool.map((t) => ({ station_number: t.station_number, closed: isClosed(t.coordinator_status), tile: t })));
     if (!pick) return setPanel(create);
-    await setStationStatus(pick.tile, 'open');
-    setReopenNote(`Reopened ${stationLabel(pick.tile)}`);
+    setSavingId(pick.tile.id);
+    const err = await reopenTile(pick.tile);
+    setSavingId(null);
+    if (err) alert('Could not change the station: ' + err);
+    else setReopenNote(`Reopened ${spareIds.has(pick.tile.id) ? 'a new station' : stationLabel(pick.tile)}`);
+    load();
+    loadStats();
   };
   const reopenOrCreatePair = async (all: Tile[], create: PanelState) => {
-    const pair = pickReopenPair(buildStationPairs(all.map((t) => ({ ...tileItem(t), closed: isClosed(t.coordinator_status) }))));
+    const pool = [...all, ...(data?.spares || []).filter((t) => tileCode(t) === 'E203' || tileCode(t) === 'E204')];
+    const pair = pickReopenPair(buildStationPairs(pool.map((t) => ({ ...tileItem(t), closed: isClosed(t.coordinator_status) }))));
     if (!pair) return setPanel(create);
-    await setRowsStatus([pair.o2.tile, pair.bvm.tile], 'open');
-    setReopenNote(`Reopened ${PAIR_TITLE} (${stationLabel(pair.o2.tile)} and ${stationLabel(pair.bvm.tile)})`);
+    setSavingId(pair.o2.tile.id);
+    let err: string | null = null;
+    for (const row of [pair.o2.tile, pair.bvm.tile]) {
+      err = await reopenTile(row);
+      if (err) break;
+    }
+    setSavingId(null);
+    if (err) alert('Could not change the station: ' + err);
+    else setReopenNote(`Reopened ${PAIR_TITLE}`);
+    load();
+    loadStats();
   };
 
   if (status === 'loading' || (!data && !error)) return <PageLoader />;
@@ -1131,9 +1165,9 @@ export default function NremtHubDayPage() {
               const unitTotal = singles.length + dayPairs.length;
               const openCount = singles.filter((t) => !isClosed(t.coordinator_status)).length + dayPairs.filter((p) => !isClosed(p.o2.coordinator_status) && !isClosed(p.bvm.coordinator_status)).length;
               const pct = stats.skillsPossible > 0 ? Math.round((stats.skillsCompleted / stats.skillsPossible) * 100) : 0;
-              const items: { label: string; value: string }[] = [
+              const items: { label: string; value: string; note?: string }[] = [
                 { label: 'Students', value: String(stats.students) },
-                { label: 'Stations open', value: `${openCount} of ${unitTotal}` },
+                { label: 'Stations open', value: String(openCount), note: unitTotal > openCount ? `${unitTotal - openCount} closed` : undefined },
                 { label: 'Testing now', value: String(stats.testing) },
                 { label: 'Waiting', value: String(stats.waiting) },
                 { label: 'Complete', value: String(stats.complete) },
@@ -1145,7 +1179,10 @@ export default function NremtHubDayPage() {
                   {items.map((it) => (
                     <div key={it.label} className="rounded-lg bg-white dark:bg-gray-800 shadow px-4 py-3 border border-gray-200 dark:border-gray-700">
                       <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{it.label}</div>
-                      <div className="text-xl font-bold text-gray-900 dark:text-white tabular-nums">{it.value}</div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white tabular-nums">
+                        {it.value}
+                        {it.note && <span className="ml-2 text-xs font-normal text-gray-500 dark:text-gray-400">{it.note}</span>}
+                      </div>
                     </div>
                   ))}
                 </section>
@@ -1218,7 +1255,6 @@ export default function NremtHubDayPage() {
 
             {(() => {
               const allTiles = data.groups.flatMap((g) => g.stations);
-              const closedCount = allTiles.filter((t) => isClosed(t.coordinator_status)).length;
               const visible = (t: Tile) => showClosed || !isClosed(t.coordinator_status);
               const isPartGroup = (g: Group) => g.stations.some((t) => tileCode(t) === 'E203' || tileCode(t) === 'E204');
               const partGroups = data.groups.filter(isPartGroup);
@@ -1226,6 +1262,8 @@ export default function NremtHubDayPage() {
               const partTiles = partGroups.flatMap((g) => g.stations);
               const pairs = tilePairs(partTiles);
               const pairedIds = new Set(pairs.flatMap((p) => [p.o2.id, p.bvm.id]));
+              // A BVM + O2 pair is one station in the count: closed when both parts are closed.
+              const closedCount = allTiles.filter((t) => !pairedIds.has(t.id) && isClosed(t.coordinator_status)).length + pairs.filter((p) => isClosed(p.o2.coordinator_status) && isClosed(p.bvm.coordinator_status)).length;
               const pairsShown = pairs.filter((p) => showClosed || !(isClosed(p.o2.coordinator_status) && isClosed(p.bvm.coordinator_status)));
               const looseShown = partTiles.filter((t) => !pairedIds.has(t.id) && visible(t));
               const o2Group = partGroups.find((g) => g.stations.some((t) => tileCode(t) === 'E204'));
@@ -1387,7 +1425,7 @@ export default function NremtHubDayPage() {
                 labDayId={labDayId}
                 instructors={pickerPeople}
                 groupStations={data.groups.flatMap((g) => g.stations.filter((st) => st.skill_sheet_id === panel.skillSheetId).map((st) => ({ station_number: st.station_number, name: st.own_name })))}
-                allNumbers={data.groups.flatMap((g) => g.stations.map((st) => st.station_number))}
+                allNumbers={[...data.groups.flatMap((g) => g.stations), ...(data.spares || [])].map((st) => st.station_number)}
                 onClose={() => setPanel(null)}
                 onSaved={() => {
                   setPanel(null);
