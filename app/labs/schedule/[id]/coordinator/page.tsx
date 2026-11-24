@@ -1186,7 +1186,7 @@ export default function CoordinatorViewPage() {
       const testingStation = isStudentCurrentlyTesting(student, stations, cells);
 
       // classifyStudent is the shared rule (lib/nremt-day-stats) the NREMT hub overview also uses.
-      const state = classifyStudent(student, stations, cells);
+      const state = classifyStudent(student, stations, cells, skillColumns, skillCells);
       if (state === 'complete') {
         complete.push({ student, completedCount });
       } else if (state === 'testing' && testingStation) {
@@ -1201,7 +1201,7 @@ export default function CoordinatorViewPage() {
     waiting.sort((a, b) => a.completedCount - b.completedCount);
 
     return { testing, waiting, complete };
-  }, [students, stations, cells, totalStations]);
+  }, [students, stations, cells, skillColumns, skillCells, totalStations]);
 
   // ─── Eligible students for a station dropdown ────────────────────────────
 

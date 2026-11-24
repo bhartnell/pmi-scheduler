@@ -126,7 +126,7 @@ export async function GET(request: NextRequest) {
     // 5. Get queue entries for this lab day
     const { data: queueEntries } = await supabase
       .from('lab_day_student_queue')
-      .select('id, student_id, station_id, status, result, evaluation_id, started_at, completed_at')
+      .select('id, student_id, station_id, status, result, evaluation_id, started_at, completed_at, queued_at')
       .eq('lab_day_id', labDayId);
 
     // 6. Get evaluations for this lab day (with step counts + retake info).
@@ -282,6 +282,8 @@ export async function GET(request: NextRequest) {
       teamRole: string | null;
       hasRetake: boolean;
       bestResult: string | null;
+      /** When the queue row was created; en route (status 'queued') shows minutes since. */
+      queuedAt?: string | null;
     }> = {};
 
     // First populate from queue entries
@@ -296,6 +298,7 @@ export async function GET(request: NextRequest) {
         teamRole: null,
         hasRetake: false,
         bestResult: entry.result,
+        queuedAt: (entry as { queued_at?: string | null }).queued_at || null,
       };
     }
 
@@ -706,14 +709,15 @@ export async function POST(request: NextRequest) {
 
     const supabase = getSupabaseAdmin();
 
-    // Check if an entry already exists and is in_progress
+    // Check if an entry already exists and is in the requested state (en route = 'queued',
+    // saved so every screen sees it; in_progress is the original Send behaviour).
     const { data: existing } = await supabase
       .from('lab_day_student_queue')
       .select('id, status')
       .eq('lab_day_id', lab_day_id)
       .eq('student_id', student_id)
       .eq('station_id', station_id)
-      .eq('status', 'in_progress')
+      .eq('status', targetStatus === 'queued' ? 'queued' : 'in_progress')
       .maybeSingle();
 
     if (existing) {
@@ -728,7 +732,8 @@ export async function POST(request: NextRequest) {
         student_id,
         station_id,
         status: targetStatus,
-        started_at: new Date().toISOString(),
+        // en route has not started yet: queued_at (default now()) is its clock
+        started_at: targetStatus === 'queued' ? null : new Date().toISOString(),
       })
       .select()
       .single();
