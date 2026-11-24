@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Undo2, Unlock } from 'lucide-react';
 import IndividualTestingGrid, { type HubCellMenu } from '@/components/lab-day/IndividualTestingGrid';
 import { shortSkillLabel } from '@/lib/nremt-skill-labels';
+import { withAssistant } from '@/lib/nremt-hub-stations';
 import {
   dayUnits,
   enRouteList,
@@ -268,7 +269,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
                   <div className="text-sm text-gray-700 dark:text-gray-300">Going to {e.station.id === eu.o2.id ? 'O2 by NRB' : 'BVM'} first</div>
                 )}
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {e.station.instructorName || 'Proctor not set'} - {e.station.room || 'Location not set'}
+                  {withAssistant(e.station.instructorName, e.station.assistantName) || 'Proctor not set'} - {e.station.room || 'Location not set'}
                 </div>
                 <div className="text-lg font-semibold text-gray-900 dark:text-white">{studentName(e.student)}</div>
                 <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -327,7 +328,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
                   </span>
                 )}
                 <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {st.instructorName || 'Proctor not set'} - {st.room || 'Location not set'}
+                  {withAssistant(st.instructorName, st.assistantName) || 'Proctor not set'} - {st.room || 'Location not set'}
                 </div>
                 {unit.kind === 'pair' && <div className="text-xs text-gray-500 dark:text-gray-400">O2 by NRB first, then BVM</div>}
                 {top ? (

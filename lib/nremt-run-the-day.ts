@@ -9,6 +9,7 @@
 // Input shapes are the student-queue API response.
 
 import { shortSkillLabel } from './nremt-skill-labels.ts';
+import { withAssistant } from './nremt-hub-stations.ts';
 import { buildStationPairs, pairCodeFor, pairNeed, firstPart, needsLabel, inPairGap, PAIR_TITLE, type PairNeed } from './nremt-pairs.ts';
 
 export interface RtdStudent {
@@ -25,6 +26,8 @@ export interface RtdStation {
   instructorName?: string | null;
   /** Proctor for the hub: station_instructors name, else the station's own text (API proctorName). */
   proctorName?: string | null;
+  /** Optional assistant on the station (hub-only, display only; the retake check ignores it). */
+  assistantName?: string | null;
   /** Free-text room on the station (lab_stations.room). */
   room?: string | null;
   stationSuffix?: string | null;
@@ -463,6 +466,8 @@ export function cellMenuFor(student: RtdStudent, skillName: string, input: RtdIn
     return u ? unitTitle(u, nameOfStation) : nameOfStation(st);
   };
   const proctorOf = (st: RtdStation) => st.proctorName ?? st.instructorName ?? null;
+  // Display form with the assistant; the retake "same proctor" check keeps comparing the proctor alone.
+  const proctorShown = (st: RtdStation) => withAssistant(proctorOf(st), st.assistantName);
 
   let state: CellMenuState = 'not_started';
   if (cell?.status === 'queued') state = 'en_route';
@@ -480,7 +485,7 @@ export function cellMenuFor(student: RtdStudent, skillName: string, input: RtdIn
         at = {
           stationId: st.id,
           title: titleOf(st),
-          proctor: proctorOf(st),
+          proctor: proctorShown(st),
           minutes: minutesSince(want === 'queued' ? sc.queuedAt : sc.startedAt, now),
         };
         break;
@@ -529,7 +534,7 @@ export function cellMenuFor(student: RtdStudent, skillName: string, input: RtdIn
       options.push({
         stationId: target.id,
         title: unitTitle(u, nameOfStation),
-        proctor: proctorOf(target),
+        proctor: proctorShown(target),
         room: target.room ?? null,
         busyWith: busy,
         sameProctorAsFirstAttempt: state === 'fail' && sameName(firstAttemptBy, proctorOf(target)),

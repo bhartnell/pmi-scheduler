@@ -80,3 +80,50 @@ export function proctorChoices(today: ProctorChoice[], staff: ProctorChoice[]): 
   const seen = new Set(today.map((p) => p.email.toLowerCase()));
   return { today, staff: staff.filter((p) => !seen.has(p.email.toLowerCase())) };
 }
+
+// ---- Second proctor (assistant) on a station (card 4225cd1c) ----
+
+/** "Casey Townsley + Gavin Grogg (assisting)". One person set = exactly as before; assistant alone = "Gavin Grogg (assisting)". */
+export function withAssistant(proctor: string | null | undefined, assistant: string | null | undefined): string | null {
+  const p = (proctor || '').trim();
+  const a = (assistant || '').trim();
+  if (!a) return p || null;
+  return p ? `${p} + ${a} (assisting)` : `${a} (assisting)`;
+}
+
+/** The same person cannot be proctor and assistant on one station (case-insensitive email). */
+export function sameStationPerson(a: string | null | undefined, b: string | null | undefined): boolean {
+  const x = (a || '').trim().toLowerCase();
+  return !!x && x === (b || '').trim().toLowerCase();
+}
+
+export interface PlacementTile {
+  station_number: number;
+  title: string;
+  instructor_email: string | null;
+  instructor_name: string | null;
+  assistant_email: string | null;
+  assistant_name: string | null;
+}
+
+/**
+ * Who is where: for each of today's proctors, the stations they are on ("Name - Station" and
+ * "Name - Station (assisting)"), or "not placed yet". A person on two stations lists both.
+ * Matching is by email, case-insensitive. `today` keeps its own order.
+ */
+export function whoIsWhere(today: { name: string; email: string }[], tiles: PlacementTile[]): { email: string; name: string; places: string[] }[] {
+  const sorted = [...tiles].sort((a, b) => a.station_number - b.station_number);
+  return today.map((p) => {
+    const places: string[] = [];
+    for (const t of sorted) {
+      if (sameStationPerson(t.instructor_email, p.email)) places.push(t.title);
+      else if (sameStationPerson(t.assistant_email, p.email)) places.push(`${t.title} (assisting)`);
+    }
+    return { email: p.email, name: p.name, places };
+  });
+}
+
+/** One display line for a person: "Casey - Spinal; Spinal 2", or "Casey - not placed yet". */
+export function placementLine(name: string, places: string[]): string {
+  return `${name} - ${places.length ? places.join('; ') : 'not placed yet'}`;
+}

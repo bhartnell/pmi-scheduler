@@ -193,7 +193,9 @@ export async function PATCH(
     }
 
     // Metadata merges (read-modify-write once): coordinator status and the skill mirror.
-    if (body.coordinator_status !== undefined || wantsSkillChange) {
+    // NREMT hub assistant (hub-only fact, metadata.nremt_assistant = { name, email }; null clears it).
+    const wantsAssistant = body.nremt_assistant !== undefined;
+    if (body.coordinator_status !== undefined || wantsSkillChange || wantsAssistant) {
       if (body.coordinator_status !== undefined) {
         const validStatuses = ['open', 'closed', 'break'];
         if (!validStatuses.includes(body.coordinator_status)) {
@@ -205,10 +207,32 @@ export async function PATCH(
       }
       const { data: currentMeta } = await supabase
         .from('lab_stations')
-        .select('metadata')
+        .select('metadata, instructor_email')
         .eq('id', id)
         .single();
       const meta = { ...((currentMeta?.metadata as Record<string, unknown> | null) || {}) };
+      if (wantsAssistant) {
+        const a = body.nremt_assistant as { name?: string; email?: string } | null;
+        const email = a && typeof a.email === 'string' ? a.email.trim() : '';
+        if (a && !email) {
+          return NextResponse.json({ success: false, error: 'Assistant needs an email' }, { status: 400 });
+        }
+        if (email) {
+          const proctorEmail = String(body.instructor_email !== undefined ? body.instructor_email : currentMeta?.instructor_email || '').toLowerCase();
+          if (proctorEmail && proctorEmail === email.toLowerCase()) {
+            return NextResponse.json({ success: false, error: 'The same person cannot be proctor and assistant on one station' }, { status: 400 });
+          }
+          meta.nremt_assistant = { name: (a?.name || '').trim() || email, email };
+        } else {
+          delete meta.nremt_assistant;
+        }
+      } else if (body.instructor_email) {
+        // A proctor change onto the person who is already the assistant is refused too.
+        const asst = meta.nremt_assistant as { email?: string } | undefined;
+        if (asst?.email && asst.email.toLowerCase() === String(body.instructor_email).toLowerCase()) {
+          return NextResponse.json({ success: false, error: 'That person is already the assistant on this station' }, { status: 400 });
+        }
+      }
       if (body.coordinator_status !== undefined) meta.coordinator_status = body.coordinator_status;
       if (wantsSkillChange) {
         if (body.skill_sheet_id) meta.skill_sheet_id = body.skill_sheet_id;

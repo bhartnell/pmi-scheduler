@@ -10,7 +10,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { formatHubDate, formatHubTime } from '@/lib/nremt-hub-format';
-import { nextStationNumber, isClosed, patchTilesIn, proctorChoices } from '@/lib/nremt-hub-stations';
+import { nextStationNumber, isClosed, patchTilesIn, proctorChoices, withAssistant, sameStationPerson, whoIsWhere, placementLine } from '@/lib/nremt-hub-stations';
 import { buildStationPairs, nextExtraStationName, pairCodeFor, pickReopenStation, pickReopenPair, PAIR_TITLE, type PairItem } from '@/lib/nremt-pairs';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
 import ProctorsPanel, { PersonSearch, type PickedPerson } from '@/components/nremt/ProctorsPanel';
@@ -42,6 +42,11 @@ interface Tile {
   scenario_title: string | null;
   instructor_name: string | null;
   instructor_email: string | null;
+  /** Optional second proctor (hub-only, station metadata.nremt_assistant). */
+  assistant_name?: string | null;
+  assistant_email?: string | null;
+  /** True when the signed-in person is this station's assistant (shows under their own station). */
+  assisting?: boolean;
   coordinator_status: 'open' | 'closed' | 'break';
   eval_count: number | null;
 }
@@ -87,6 +92,7 @@ interface DropsApi {
   staff: InstructorOption[];
   rooms: { standard: string[]; nremtOnly: string[] };
   setProctor: (rows: Tile[], who: { name: string; email: string } | null) => Promise<boolean>;
+  setAssistant: (rows: Tile[], who: { name: string; email: string } | null) => Promise<boolean>;
   setRoom: (rows: Tile[], room: string | null) => Promise<boolean>;
   addAndSet: (rows: Tile[], person: PickedPerson) => Promise<boolean>;
 }
@@ -96,6 +102,8 @@ const MIXED = '__mixed__';
 
 function StationDrops({ rows, drops }: { rows: Tile[]; drops: DropsApi }) {
   const [adding, setAdding] = useState(false);
+  const [addingAssistant, setAddingAssistant] = useState(false);
+  const [showAssistant, setShowAssistant] = useState(false);
   const [newRoom, setNewRoom] = useState<string | null>(null);
   const [state, setState] = useState<'idle' | 'saving' | 'saved' | 'failed'>('idle');
   const run = async (fn: () => Promise<boolean>) => {
@@ -108,6 +116,10 @@ function StationDrops({ rows, drops }: { rows: Tile[]; drops: DropsApi }) {
   const emails = rows.map((r) => (r.instructor_email || '').toLowerCase());
   const mixedProctor = new Set(emails).size > 1;
   const proctorValue = mixedProctor ? MIXED : emails[0] || '';
+  const asstEmails = rows.map((r) => (r.assistant_email || '').toLowerCase());
+  const mixedAsst = new Set(asstEmails).size > 1;
+  const asstValue = mixedAsst ? MIXED : asstEmails[0] || '';
+  const assistantShown = showAssistant || !!asstValue;
   const rooms = rows.map((r) => r.room || '');
   const mixedRoom = new Set(rooms).size > 1;
   const roomValue = mixedRoom ? MIXED : rooms[0];
@@ -145,16 +157,72 @@ function StationDrops({ rows, drops }: { rows: Tile[]; drops: DropsApi }) {
         )}
         {drops.today.length > 0 && (
           <optgroup label="Today's proctors">
-            {drops.today.map((p) => <option key={p.email} value={p.email.toLowerCase()}>{p.name}</option>)}
+            {drops.today.map((p) => <option key={p.email} value={p.email.toLowerCase()} disabled={asstEmails.some((e) => sameStationPerson(e, p.email))}>{p.name}</option>)}
           </optgroup>
         )}
         {staff.length > 0 && (
           <optgroup label="Staff">
-            {staff.map((p) => <option key={p.email} value={p.email.toLowerCase()}>{p.name}</option>)}
+            {staff.map((p) => <option key={p.email} value={p.email.toLowerCase()} disabled={asstEmails.some((e) => sameStationPerson(e, p.email))}>{p.name}</option>)}
           </optgroup>
         )}
         <option value={ADD_PERSON}>Add someone...</option>
       </select>
+      {!assistantShown && (
+        <button type="button" onClick={() => setShowAssistant(true)} className="min-h-[44px] px-1 text-sm text-blue-700 dark:text-blue-300 hover:underline">+ Add assistant</button>
+      )}
+      {assistantShown && (
+        <>
+          <select
+            aria-label="Assistant"
+            className={sel}
+            value={asstValue}
+            disabled={state === 'saving'}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (v === ADD_PERSON) return setAddingAssistant(true);
+              if (v === MIXED) return;
+              if (v === '') return void run(() => drops.setAssistant(rows, null));
+              const who = [...drops.today, ...drops.staff].find((p) => p.email.toLowerCase() === v);
+              if (who) void run(() => drops.setAssistant(rows, { name: who.name, email: who.email }));
+            }}
+          >
+            {mixedAsst && <option value={MIXED}>Different on each part</option>}
+            <option value="">No assistant</option>
+            {asstValue && asstValue !== MIXED && ![...drops.today, ...drops.staff].some((p) => p.email.toLowerCase() === asstValue) && (
+              <option value={asstValue}>{rows[0].assistant_name || asstValue}</option>
+            )}
+            {drops.today.length > 0 && (
+              <optgroup label="Today's proctors">
+                {drops.today.map((p) => <option key={p.email} value={p.email.toLowerCase()} disabled={emails.some((e) => sameStationPerson(e, p.email))}>{p.name}</option>)}
+              </optgroup>
+            )}
+            {staff.length > 0 && (
+              <optgroup label="Staff">
+                {staff.map((p) => <option key={p.email} value={p.email.toLowerCase()} disabled={emails.some((e) => sameStationPerson(e, p.email))}>{p.name}</option>)}
+              </optgroup>
+            )}
+            <option value={ADD_PERSON}>Add someone...</option>
+          </select>
+          {addingAssistant && (
+            <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 space-y-2">
+              <PersonSearch
+                autoFocus
+                busy={state === 'saving'}
+                onPick={(p) => {
+                  setAddingAssistant(false);
+                  if (emails.some((e) => sameStationPerson(e, p.email))) return void alert('That person is already the proctor on this station.');
+                  void run(async () => {
+                    const name = p.name || p.email;
+                    if (!(await drops.addAndSet([], p))) return false;
+                    return drops.setAssistant(rows, { name, email: p.email });
+                  });
+                }}
+              />
+              <button type="button" onClick={() => setAddingAssistant(false)} className="min-h-[44px] px-3 text-sm text-gray-600 dark:text-gray-300 hover:underline">Cancel</button>
+            </div>
+          )}
+        </>
+      )}
       {adding && (
         <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-2 space-y-2">
           <PersonSearch
@@ -268,12 +336,18 @@ function StationTile({
         {tile.nremt_code && SCENARIO_CODES.includes(tile.nremt_code) && (
           <div className="text-sm text-gray-700 dark:text-gray-300">Scenario: {tile.scenario_title || 'not picked'}</div>
         )}
+        {tile.assisting && (
+          <div className="text-sm font-medium text-blue-800 dark:text-blue-200">Assisting {tile.proctors.length > 0 ? tile.proctors.join(', ') : 'this station'}</div>
+        )}
+        {!tile.assisting && tile.assistant_name && (
+          <div className="text-sm text-gray-700 dark:text-gray-300">with {tile.assistant_name} assisting</div>
+        )}
         {canManage && drops ? (
           <StationDrops rows={[tile]} drops={drops} />
         ) : (
           <>
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              Proctor: {tile.proctors.length > 0 ? tile.proctors.join(', ') : 'not set'}
+              Proctor: {withAssistant(tile.proctors.length > 0 ? tile.proctors.join(', ') : null, tile.assistant_name) || 'not set'}
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">{tile.room ? `Location: ${tile.room}` : 'Location: not set'}</div>
           </>
@@ -338,7 +412,7 @@ function PairTile({
 }) {
   const { o2, bvm } = pair;
   const closed = isClosed(o2.coordinator_status) && isClosed(bvm.coordinator_status);
-  const proctor = (t: Tile) => (t.proctors.length > 0 ? t.proctors.join(', ') : 'not set');
+  const proctor = (t: Tile) => withAssistant(t.proctors.length > 0 ? t.proctors.join(', ') : null, t.assistant_name) || 'not set';
   const sameProctor = proctor(o2) === proctor(bvm);
   const sameRoom = (o2.room || '') === (bvm.room || '');
   return (
@@ -820,6 +894,25 @@ export default function NremtHubDayPage() {
     patchTilesLocal(done, who ? { instructor_name: who.name, instructor_email: who.email, proctors: [who.name], is_mine: who.email.toLowerCase() === sessionEmail } : { instructor_name: null, instructor_email: null, proctors: [], is_mine: false });
     return true;
   };
+  const setAssistantRows = async (rows: Tile[], who: { name: string; email: string } | null): Promise<boolean> => {
+    const patchFor = (w: typeof who): Partial<Tile> => (w
+      ? { assistant_name: w.name, assistant_email: w.email, assisting: w.email.toLowerCase() === sessionEmail }
+      : { assistant_name: null, assistant_email: null, assisting: false });
+    const done: string[] = [];
+    for (const row of rows) {
+      const err = await patchStation(row.id, { nremt_assistant: who ? { name: who.name, email: who.email } : null });
+      if (err) {
+        alert('Could not change the assistant: ' + err);
+        if (done.length) patchTilesLocal(done, patchFor(who));
+        return false;
+      }
+      done.push(row.id);
+    }
+    patchTilesLocal(done, patchFor(who));
+    // The assistant's own "Your station" list comes from the server; fetch it when it could change for me.
+    if ((who && who.email.toLowerCase() === sessionEmail) || rows.some((r) => r.assisting)) void load();
+    return true;
+  };
   const setRoomRows = async (rows: Tile[], room: string | null): Promise<boolean> => {
     const done: string[] = [];
     for (const row of rows) {
@@ -859,15 +952,17 @@ export default function NremtHubDayPage() {
     return setProctorRows(rows, { name, email: p.email });
   };
   const clearAllProctors = async () => {
-    const tiles = (data?.groups || []).flatMap((g) => g.stations).filter((t) => t.instructor_email || t.instructor_name || t.proctors.length > 0);
-    if (tiles.length === 0) return setClearNote('No station has a proctor.');
-    if (!window.confirm(`Remove the proctor from ${tiles.length} station${tiles.length === 1 ? '' : 's'}? Locations and scenarios stay.`)) return;
+    const tiles = (data?.groups || []).flatMap((g) => g.stations).filter((t) => t.instructor_email || t.instructor_name || t.proctors.length > 0 || t.assistant_email);
+    if (tiles.length === 0) return setClearNote('No station has a proctor or assistant.');
+    if (!window.confirm(`Remove the proctor and assistant from ${tiles.length} station${tiles.length === 1 ? '' : 's'}? Locations and scenarios stay.`)) return;
     let cleared = 0;
     for (const t of tiles) {
-      if (await setProctorRows([t], null)) cleared++;
+      const okProctor = await setProctorRows([t], null);
+      const okAsst = t.assistant_email ? await setAssistantRows([t], null) : true;
+      if (okProctor && okAsst) cleared++;
       else break;
     }
-    setClearNote(`Cleared the proctor on ${cleared} of ${tiles.length} stations.`);
+    setClearNote(`Cleared the proctor and assistant on ${cleared} of ${tiles.length} stations.`);
   };
   const drops: DropsApi | undefined = canManage && data
     ? {
@@ -875,6 +970,7 @@ export default function NremtHubDayPage() {
         staff: instructors,
         rooms: data.locations,
         setProctor: setProctorRows,
+        setAssistant: setAssistantRows,
         setRoom: setRoomRows,
         addAndSet: addAndSetProctor,
       }
@@ -1071,6 +1167,17 @@ export default function NremtHubDayPage() {
             {(!canManage || tab === 'stations') && (<>
             {canManage && (
               <ProctorsPanel
+                placements={whoIsWhere(
+                  (data.proctor_options || []).map((o) => ({ name: o.name, email: o.email })),
+                  data.groups.flatMap((g) => g.stations).map((t) => ({
+                    station_number: t.station_number,
+                    title: t.own_name || t.skill_label || `Station ${t.station_number}`,
+                    instructor_email: t.instructor_email,
+                    instructor_name: t.instructor_name,
+                    assistant_email: t.assistant_email ?? null,
+                    assistant_name: t.assistant_name ?? null,
+                  }))
+                ).map((w) => placementLine(w.name, w.places))}
                 key={proctorsVersion}
                 labDayId={labDayId}
                 onChanged={load}

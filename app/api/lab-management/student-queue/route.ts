@@ -685,6 +685,11 @@ export async function GET(request: NextRequest) {
             stationInstructorMap[s.id]?.name ||
             (s.instructor_name || '').trim() ||
             null,
+          // Additive (NREMT hub): optional assistant name, display only. proctorName stays the proctor alone.
+          assistantName:
+            (meta.nremt_assistant && typeof (meta.nremt_assistant as { name?: unknown }).name === 'string'
+              ? ((meta.nremt_assistant as { name: string }).name || '').trim()
+              : '') || null,
           addedDuringExam: stationAddedDuringExamMap[s.id] || false,
           stationSuffix: stationSuffixMap[s.id] || null,
           coordinatorStatus,
