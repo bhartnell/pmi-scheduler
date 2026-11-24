@@ -12093,3 +12093,7 @@ Unofficial ACLS learning-station tracker. Not a certification record.
 
 ### deleted_records_archive (migration `20261104_clear_test_cohort.sql`, NOT YET APPLIED to production as of 2026-11-04)
 Restore copy of rows removed by "Clear test data" (test cohorts) and "Delete this attempt" (PALS). `batch_id`, `table_name`, `row_data` jsonb (the full row), `reason`, `deleted_by`, `source`, `deleted_at`. RLS on, no policies (service role only). Functions `clear_test_cohort(cohort_id, by, dry)` and `_purge_rows(...)`: downward FK walk, archive then delete in one transaction, is_test cohorts only, refuses if any non-test student. Last updated: 2026-11-04.
+
+
+### nremt_day_proctors (migration `20261124_nremt_day_proctors.sql`, NOT YET APPLIED as of 2026-11-24)
+Per-day NREMT proctor list. `lab_day_id` (FK lab_days), `lab_user_id` (FK lab_users, null if never signed in), `email`, `name`, `added_by`, `added_at`, `removed` (flag, rows never deleted), `removed_at`, `removed_by`. Unique live row per (lab_day_id, lower(email)). Access window: day before through the lab day, Pacific. RLS on, no policies (service role only). Last updated: 2026-11-24.

@@ -3,6 +3,7 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { hasMinRole } from '@/lib/permissions';
 import { isNotWithdrawn } from '@/lib/live-students';
+import { proctorAuthFallback, proctorLabDayIds } from '@/lib/nremt-proctor';
 import { buildLocationLists, sortGroupStations } from '@/lib/nremt-hub-stations';
 
 // NREMT hub. READ-ONLY API: a front door to the existing grading page, Coordinator
@@ -26,11 +27,20 @@ async function studentCount(supabase: ReturnType<typeof getSupabaseAdmin>, cohor
 }
 
 export async function GET(request: NextRequest) {
-  const auth = await requireAuth('volunteer_instructor');
-  if (auth instanceof NextResponse) return auth;
-  const { user } = auth;
-
   const labDayId = new URL(request.url).searchParams.get('labDayId');
+
+  let auth = await requireAuth('volunteer_instructor');
+  let isProctor = false;
+  if (auth instanceof NextResponse) {
+    // Second step, only after the instructor check refused: a person on this day's
+    // proctor list (valid the day before through the lab day, Pacific) gets a
+    // stations-only view of THAT day.
+    const proctor = await proctorAuthFallback(auth, labDayId ? { labDayId } : { any: true });
+    if (!proctor) return auth;
+    auth = proctor;
+    isProctor = true;
+  }
+  const { user } = auth;
 
   try {
     const supabase = getSupabaseAdmin();
@@ -44,8 +54,10 @@ export async function GET(request: NextRequest) {
         .order('date', { ascending: false });
       if (error) throw error;
 
+      // A proctor sees only the days they are live on.
+      const allowed = isProctor ? new Set(await proctorLabDayIds(user.email)) : null;
       const days = await Promise.all(
-        (data || []).map(async (d: any) => {
+        (data || []).filter((d: any) => !allowed || allowed.has(d.id)).map(async (d: any) => {
           const cohort = first<Cohort>(d.cohort);
           const program = first(cohort?.program as any) as { name: string; abbreviation: string } | null;
           return {
@@ -203,7 +215,50 @@ export async function GET(request: NextRequest) {
     const cohort = first<Cohort>(day.cohort as any);
     const program = first(cohort?.program as any) as { name: string; abbreviation: string } | null;
 
+    const dayOut = {
+      id: day.id,
+      date: day.date,
+      start_time: day.start_time,
+      end_time: day.end_time,
+      cohort_label: cohort ? `${program?.abbreviation || program?.name || ''} ${cohort.cohort_number}`.trim() : null,
+      student_count: await studentCount(supabase, day.cohort_id ?? null),
+      station_count: tiles.length,
+    };
+
+    // Stations-only shape for a listed proctor: no emails, no counts of past evaluations,
+    // no set-up lists, no manage rights.
+    if (isProctor) {
+      const strip = (t: (typeof tiles)[number]) => ({ ...t, instructor_email: null, eval_count: null });
+      return NextResponse.json({
+        success: true,
+        is_proctor: true,
+        can_manage: false,
+        locations: { standard: [], nremtOnly: [] },
+        scenarios_by_code: {},
+        skill_options: [],
+        proctor_options: [],
+        day: dayOut,
+        my_stations: tiles.filter((t) => t.is_mine).map(strip),
+        groups: groups.map((g) => ({ ...g, stations: g.stations.map(strip) })),
+      });
+    }
+
+    // People who can be placed on a station: the day's live proctor list (instructors come
+    // from /api/lab-management/instructors). A missing table = no proctors, never an error.
+    let proctorOptions: { id: string | null; name: string; email: string }[] = [];
+    try {
+      const { data: pr, error: prErr } = await supabase
+        .from('nremt_day_proctors')
+        .select('lab_user_id, name, email')
+        .eq('lab_day_id', labDayId)
+        .eq('removed', false);
+      if (!prErr) proctorOptions = (pr || []).map((r: any) => ({ id: r.lab_user_id ?? null, name: r.name || r.email, email: r.email }));
+    } catch {
+      proctorOptions = [];
+    }
+
     return NextResponse.json({
+      proctor_options: proctorOptions,
       success: true,
       locations,
       scenarios_by_code: scenariosByCode,

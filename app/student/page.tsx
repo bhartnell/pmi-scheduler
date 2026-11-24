@@ -12,6 +12,7 @@ import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import { AlertCircle } from 'lucide-react';
 import SelfAssessmentTodo from '@/components/student/SelfAssessmentTodo';
+import NremtProctorCard from '@/components/NremtProctorCard';
 import type { CourseStatus, StudentHome } from '@/lib/student-home';
 
 interface HomeResponse {
@@ -103,6 +104,8 @@ export default function StudentHomePage() {
           <p className="text-sm text-amber-800 dark:text-amber-200">{data?.message ?? data?.error ?? 'Your progress is not available right now.'}</p>
         </div>
       )}
+
+      <NremtProctorCard />
 
       <div className="grid grid-cols-[1.2fr_1fr] max-lg:grid-cols-1 gap-3 items-start">
         <div className="space-y-3">

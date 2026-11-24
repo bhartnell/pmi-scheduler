@@ -1,12 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuthOrVolunteerToken } from '@/lib/api-auth';
+import { proctorAuthFallback } from '@/lib/nremt-proctor';
 
 export async function GET(request: NextRequest) {
   try {
-    const auth = await requireAuthOrVolunteerToken(request, 'instructor');
-
-    if (auth instanceof NextResponse) return auth;
+    let auth = await requireAuthOrVolunteerToken(request, 'instructor');
+    if (auth instanceof NextResponse) {
+      // Second step, only after the instructor check refused: live NREMT-day proctors.
+      const proctor = await proctorAuthFallback(auth, { any: true });
+      if (!proctor) return auth;
+      auth = proctor;
+    }
 
     const searchParams = request.nextUrl.searchParams;
     const name = searchParams.get('name');

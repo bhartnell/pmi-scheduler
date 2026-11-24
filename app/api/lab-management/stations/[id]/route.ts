@@ -4,14 +4,19 @@ import { resolveRoomId } from '@/lib/lab-rooms';
 import { replanForLabDay } from '@/lib/lab-day-event-replan';
 import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import type { VolunteerTokenResult } from '@/lib/api-auth';
+import { proctorAuthFallback } from '@/lib/nremt-proctor';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuthOrVolunteerToken(request, 'instructor');
-
-  if (auth instanceof NextResponse) return auth;
+  let auth = await requireAuthOrVolunteerToken(request, 'instructor');
+  if (auth instanceof NextResponse) {
+    // Second step, only after the instructor check refused: live NREMT-day proctors.
+    const proctor = await proctorAuthFallback(auth, { stationId: (await params).id });
+    if (!proctor) return auth;
+    auth = proctor;
+  }
 
   const { id } = await params;
 

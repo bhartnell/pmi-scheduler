@@ -1,14 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuthOrVolunteerToken } from '@/lib/api-auth';
+import { proctorAuthFallback } from '@/lib/nremt-proctor';
 
 // POST - Bulk lookup skill sheet IDs by multiple skill names
 // Returns a map of { skillName: sheetId } for the first matching sheet per name
 // Supports volunteer lab tokens for read-only access
 export async function POST(request: NextRequest) {
   try {
-    const auth = await requireAuthOrVolunteerToken(request, 'instructor');
-    if (auth instanceof NextResponse) return auth;
+    let auth = await requireAuthOrVolunteerToken(request, 'instructor');
+    if (auth instanceof NextResponse) {
+      // Second step, only after the instructor check refused: live NREMT-day proctors.
+      const proctor = await proctorAuthFallback(auth, { any: true });
+      if (!proctor) return auth;
+      auth = proctor;
+    }
 
     const body = await request.json();
     const { names, program } = body;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import type { VolunteerTokenResult } from '@/lib/api-auth';
+import { proctorAuthFallback } from '@/lib/nremt-proctor';
 
 /**
  * GET /api/lab-management/lab-days/[id]/station-by-nremt-code?code=E203
@@ -15,8 +16,13 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const auth = await requireAuthOrVolunteerToken(request, 'instructor');
-  if (auth instanceof NextResponse) return auth;
+  let auth = await requireAuthOrVolunteerToken(request, 'instructor');
+  if (auth instanceof NextResponse) {
+    // Second step, only after the instructor check refused: live NREMT-day proctors.
+    const proctor = await proctorAuthFallback(auth, { labDayId: (await params).id });
+    if (!proctor) return auth;
+    auth = proctor;
+  }
 
   const { id: labDayId } = await params;
   const code = request.nextUrl.searchParams.get('code');
