@@ -20,6 +20,9 @@ export const WALK_BRIEF_MIN = 5;
 export const BREAK_MIN = 30;
 /** Finished attempts today needed before today's own average replaces the typical figure. */
 export const MIN_SAMPLE = 3;
+/** Durations outside this range (minutes) are ignored when working out today's pace. */
+export const PACE_MIN_VALID = 1;
+export const PACE_MAX_VALID = 45;
 /** Display rounding. */
 export const ROUND_MIN = 5;
 /** Typical minutes AT the station per visit (no walk time). medians from the 2026-04-15 and 2026-08-05 NREMT days; replace with a live query of past NREMT days after Nov 25 */
@@ -122,6 +125,12 @@ function failed(student: RtdStudent, skillName: string, input: RtdInput): boolea
   return c?.status === 'completed' && c.result === 'fail';
 }
 
+function median(xs: number[]): number {
+  const a = [...xs].sort((x, y) => x - y);
+  const m = Math.floor(a.length / 2);
+  return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+}
+
 /** Minutes at the station for one part: today's average, else typical, else limit + prep. null = unknown. */
 function partMinutes(part: Part, input: RtdInput): { min: number; source: EstimateSource } | null {
   const durations: number[] = [];
@@ -130,11 +139,12 @@ function partMinutes(part: Part, input: RtdInput): { min: number; source: Estima
       const c = input.cells[`${s.id}_${sid}`];
       if (c?.status !== 'completed' || !c.startedAt || !c.completedAt) continue;
       const d = (Date.parse(c.completedAt) - Date.parse(c.startedAt)) / 60000;
-      if (Number.isFinite(d) && d > 0) durations.push(d);
+      // One grade left open over lunch must not throw the pace: ignore under 1 or over 45 minutes.
+      if (Number.isFinite(d) && d >= PACE_MIN_VALID && d <= PACE_MAX_VALID) durations.push(d);
     }
   }
   if (durations.length >= MIN_SAMPLE) {
-    return { min: durations.reduce((a, b) => a + b, 0) / durations.length, source: 'pace' };
+    return { min: median(durations), source: 'pace' };
   }
   const code = (part.code || '').trim().toUpperCase();
   if (code && TYPICAL_MIN[code] !== undefined) return { min: TYPICAL_MIN[code], source: 'past' };

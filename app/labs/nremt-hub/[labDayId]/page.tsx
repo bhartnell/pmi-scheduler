@@ -1185,6 +1185,7 @@ export default function NremtHubDayPage() {
                     instructor_name: t.instructor_name,
                     assistant_email: t.assistant_email ?? null,
                     assistant_name: t.assistant_name ?? null,
+                    coordinator_status: t.coordinator_status,
                   }))
                 ).map((w) => placementLine(w.name, w.places))}
                 key={proctorsVersion}

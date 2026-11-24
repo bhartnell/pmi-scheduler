@@ -164,3 +164,27 @@ test('credit for students in progress lowers the finish clock, not testing left'
   assert.equal(b.finishMs! - a.finishMs!, 10 * 60000);
   assert.equal(lineForStation(a, 'st-E201')!.left, 16);
 });
+
+test('pace uses the median and ignores a 90 minute row', () => {
+  const d = day();
+  const t0 = '2026-11-25T09:00:00-08:00';
+  const ends = ['09:10', '09:10', '09:10', '10:30'];
+  ends.forEach((e, i) => {
+    d.cells[`s${i}_st-E201`] = { status: 'completed', result: 'pass', startedAt: t0, completedAt: `2026-11-25T${e}:00-08:00` } as RtdCell;
+    d.skillCells[`s${i}_Patient Assessment - Trauma`] = { status: 'completed', result: 'pass' };
+  });
+  const t = estimateDay(d, { now: at('2026-11-25T11:00:00-08:00'), startMs: START, includeBreak: false }).lines.find((l) => l.title.includes('Trauma'))!;
+  assert.equal(t.perVisit, 15); // median 10 + 5 walk
+  assert.equal(t.source, 'pace');
+});
+
+test('outlier durations do not count toward the 3-sample rule', () => {
+  const d = day();
+  const ends = ['09:10', '09:10', '10:30'];
+  ends.forEach((e, i) => {
+    d.cells[`s${i}_st-E201`] = { status: 'completed', result: 'pass', startedAt: '2026-11-25T09:00:00-08:00', completedAt: `2026-11-25T${e}:00-08:00` } as RtdCell;
+    d.skillCells[`s${i}_Patient Assessment - Trauma`] = { status: 'completed', result: 'pass' };
+  });
+  const t = estimateDay(d, { now: START, startMs: START, includeBreak: false }).lines.find((l) => l.title.includes('Trauma'))!;
+  assert.equal(t.source, 'past');
+});
