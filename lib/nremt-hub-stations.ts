@@ -5,23 +5,22 @@ export type CoordinatorStatus = 'open' | 'closed' | 'break';
 
 export const isClosed = (status: string | null | undefined): boolean => status === 'closed';
 
+/** Plain-hyphen, trimmed, single-spaced form of a name (skill sheet names contain long dashes). */
+const plain = (v: string | null | undefined): string =>
+  (v || '').replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-').replace(/\s+/g, ' ').trim();
+
 /**
  * Next default own name for another station covering the same skill:
- * "Patient Assessment - Medical" -> "Patient Assessment - Medical 2", then 3.
- * Looks at the names already used in the group (custom titles / skill labels).
+ * number = stations already in the group + 1, raised until that name is not already used
+ * in the group. Always a plain hyphen, never an em or en dash. Existing names are never changed.
+ * `existingNames` = the names of the stations already in the group.
  */
 export function nextStationName(skillLabel: string, existingNames: Array<string | null | undefined>): string {
-  const base = skillLabel.trim() || 'Station';
-  const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const re = new RegExp(`^${escaped}(?:\\s+(\\d+))?$`, 'i');
-  let max = 0;
-  for (const n of existingNames) {
-    const m = (n || '').trim().match(re);
-    if (!m) continue;
-    max = Math.max(max, m[1] ? parseInt(m[1], 10) : 1);
-  }
-  // The skill's own plain name counts as number 1, so the first extra station is "2".
-  return `${base} ${Math.max(max, 1) + 1}`;
+  const base = plain(skillLabel) || 'Station';
+  const used = new Set(existingNames.map((n) => plain(n).toLowerCase()).filter(Boolean));
+  let n = existingNames.length + 1;
+  while (used.has(`${base} ${n}`.toLowerCase())) n += 1;
+  return `${base} ${n}`;
 }
 
 /** Closed stations stay visible but sort after open ones; otherwise keep station order. */
