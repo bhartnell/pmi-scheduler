@@ -135,6 +135,30 @@ export default function GradeStationPage() {
   } | null>(null);
 
   // Dual-skill station state (O2/NRB + BVM tabbed interface)
+  // NREMT scenario beside the grading sheet (xl+ only); choice remembered per browser.
+  const [scenarioSideBySide, setScenarioSideBySide] = useState(true);
+  const [scenarioCollapsed, setScenarioCollapsed] = useState(false);
+  const [isXlScreen, setIsXlScreen] = useState(false);
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('nremtScenarioLayout') === 'stacked') setScenarioSideBySide(false);
+    } catch {
+      /* storage unavailable: keep default */
+    }
+    const mq = window.matchMedia('(min-width: 1280px)');
+    const sync = () => setIsXlScreen(mq.matches);
+    sync();
+    mq.addEventListener('change', sync);
+    return () => mq.removeEventListener('change', sync);
+  }, []);
+  const handleScenarioLayoutChange = (sideBySide: boolean) => {
+    setScenarioSideBySide(sideBySide);
+    try {
+      localStorage.setItem('nremtScenarioLayout', sideBySide ? 'side' : 'stacked');
+    } catch {
+      /* ignore */
+    }
+  };
   const [dualSkillActiveTab, setDualSkillActiveTab] = useState<number>(0);
   const [dualSkillTab2Unlocked, setDualSkillTab2Unlocked] = useState(false);
   const [dualSkillToast, setDualSkillToast] = useState<string | null>(null);
@@ -234,6 +258,10 @@ export default function GradeStationPage() {
   const isDualSkillStation = isSkillsStation && skillSheetEntries.length >= 2 &&
     isDualStation(station?.custom_title || station?.skill_name || '');
   const dualSkillSheets = isDualSkillStation ? skillSheetEntries.slice(0, 2) : [];
+  // Side-by-side only for NREMT scenario stations, wide screens, single skill sheet, scenario expanded.
+  const scenarioCanSplit =
+    !!station?.lab_day?.is_nremt_testing && !!nremtScenario && !isDualSkillStation && isXlScreen;
+  const scenarioSplitActive = scenarioCanSplit && scenarioSideBySide && !scenarioCollapsed;
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -1462,7 +1490,8 @@ export default function GradeStationPage() {
           className={
             station?.lab_day?.is_nremt_testing
               ? // NREMT: mobile stacked (<lg) becomes 3-col grid at lg+
-                'w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4 pb-24 flex flex-col gap-4 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)_20rem] lg:gap-4 lg:items-start'
+                'w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4 pb-24 flex flex-col gap-4 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)_20rem] lg:gap-4 lg:items-start' +
+                (scenarioSplitActive ? ' xl:grid-cols-[18rem_minmax(0,1fr)_minmax(0,1fr)]' : '')
               : 'flex gap-6 w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4 pb-4'
           }
         >
@@ -1470,7 +1499,9 @@ export default function GradeStationPage() {
           <div
             className={
               station?.lab_day?.is_nremt_testing
-                ? 'lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto pt-2 space-y-3'
+                ? scenarioSplitActive
+                  ? 'xl:col-start-1 xl:row-start-1 xl:self-start pt-2 space-y-3'
+                  : 'lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto pt-2 space-y-3'
                 : 'w-80 shrink-0 sticky top-0 max-h-screen overflow-y-auto pt-2 space-y-4'
             }
           >
@@ -1495,17 +1526,34 @@ export default function GradeStationPage() {
             />
           </div>
 
+          {/* NREMT side-by-side: scenario is its own grid cell, scrolls independently */}
+          {scenarioSplitActive && nremtScenario && (
+            <div className="xl:col-start-2 xl:row-start-1 xl:row-span-2 xl:sticky xl:top-0 xl:self-start xl:max-h-[calc(100vh-var(--bottom-banner-h,0px))] xl:overflow-y-auto min-w-0">
+              <ScenarioReferencePanel
+                scenario={nremtScenario}
+                collapsed={scenarioCollapsed}
+                onCollapsedChange={setScenarioCollapsed}
+                layoutSwitch={{ sideBySide: scenarioSideBySide, onChange: handleScenarioLayoutChange }}
+              />
+            </div>
+          )}
+
           {/* Center: Skill sheet(s) — tabbed if dual-skill station */}
           <div
             className={
               station?.lab_day?.is_nremt_testing
-                ? 'min-h-[60vh] min-w-0'
+                ? 'min-h-[60vh] min-w-0' + (scenarioSplitActive ? ' xl:col-start-3 xl:row-start-1 xl:row-span-2' : '')
                 : 'flex-1 min-h-[60vh]'
             }
           >
             {/* NREMT scenario reference (E201/E202) — shown above skill sheet */}
-            {nremtScenario && (
-              <ScenarioReferencePanel scenario={nremtScenario} />
+            {nremtScenario && !scenarioSplitActive && (
+              <ScenarioReferencePanel
+                scenario={nremtScenario}
+                collapsed={scenarioCollapsed}
+                onCollapsedChange={setScenarioCollapsed}
+                layoutSwitch={scenarioCanSplit ? { sideBySide: scenarioSideBySide, onChange: handleScenarioLayoutChange } : undefined}
+              />
             )}
             {isDualSkillStation && dualSkillSheets.length === 2 ? (
               <>
@@ -1603,7 +1651,7 @@ export default function GradeStationPage() {
           {station?.lab_day?.is_nremt_testing && (
             <>
               {/* Desktop (lg+): inline column in 3-col grid */}
-              <div className="hidden lg:block lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto pt-2">
+              <div className={'hidden lg:block lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto pt-2' + (scenarioSplitActive ? ' xl:col-start-1 xl:row-start-2 xl:self-start' : '')}>
                 <NremtStickyNotesPanel
                   mode="desktop-inline"
                   notes={examinerNotes}
