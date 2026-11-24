@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-24
+
+4c1257d | NREMT HUB 1 of 3: new `/labs/nremt-hub` + `/labs/nremt-hub/[labDayId]` (stations by skill, Open grading, Your station, Change proctor via existing station PATCH) + `GET /api/lab-management/nremt-hub`; "Open NREMT hub" button on the NREMT lab day page; nav links. Read-only, no schema change. Revert: git revert.
+
 ## 2026-11-23
 
 PENDING | [preview] Skill sheet submit: failed/unconfirmed final saves now show a blocking "NOT SAVED" dialog (was a 3s toast); team saves flag partial saves (components/SkillSheetPanel.tsx). No server/scoring change. Revert: git revert.

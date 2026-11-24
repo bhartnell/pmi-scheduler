@@ -86,6 +86,7 @@ export const HOME_SECTIONS: HomeSection[] = [
       { label: 'ACLS board', href: '/labs/acls-hub/board' },
       { label: 'PALS hub', href: '/labs/pals-hub' },
       { label: 'OSCE', href: '/admin/osce-events' },
+      { label: 'NREMT hub', href: '/labs/nremt-hub' },
       { label: 'NREMT', href: '/admin/skill-sheets/import' },
     ],
     visible: instructorUp,
