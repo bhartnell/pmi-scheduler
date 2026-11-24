@@ -96,11 +96,13 @@ interface IndividualTestingGridProps {
   hubMenu?: HubCellMenu;
   /** Background refresh interval; default 5000 everywhere except the hub (15000). */
   refreshMs?: number;
+  /** Hub only: when this number changes the grid refetches at once (RunTheDay bumps it after its own writes). */
+  refreshSignal?: number;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
-export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTesting = false, hubMenu, refreshMs = 5000 }: IndividualTestingGridProps) {
+export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTesting = false, hubMenu, refreshMs = 5000, refreshSignal }: IndividualTestingGridProps) {
   const [students, setStudents] = useState<Student[]>([]);
   const [stations, setStations] = useState<GridStation[]>([]);
   const [cells, setCells] = useState<Record<string, CellData>>({});
@@ -110,8 +112,23 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
   const [refreshing, setRefreshing] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [popoverCell, setPopoverCell] = useState<string | null>(null);
+  // Hub menu is drawn fixed to the viewport from the clicked cell's rectangle, so the table's
+  // overflow wrapper can never clip it (bottom rows, first and last columns).
+  const [menuAnchor, setMenuAnchor] = useState<{ top: number; bottom: number; left: number; right: number } | null>(null);
   const [confirmResetKey, setConfirmResetKey] = useState<string | null>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  // A fixed hub menu would drift from its cell if the page moved, so scrolling or resizing closes it.
+  useEffect(() => {
+    if (!popoverCell) return;
+    const close = () => setPopoverCell(null);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [popoverCell]);
 
   // Close popover on outside click
   useEffect(() => {
@@ -180,6 +197,14 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
     }
   }, [labDayId]);
 
+  // Refetch at once when the hub's Run the day cards change something (never waits for a poll).
+  const lastSignalRef = useRef(refreshSignal);
+  useEffect(() => {
+    if (refreshSignal === undefined || refreshSignal === lastSignalRef.current) return;
+    lastSignalRef.current = refreshSignal;
+    fetchGrid(true);
+  }, [refreshSignal, fetchGrid]);
+
   // Initial fetch + polling (refreshMs, default 5 seconds; stops on 401 to avoid wasting invocations)
   useEffect(() => {
     fetchGrid();
@@ -207,8 +232,12 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
   /** Pick the first station that runs a given skill (for queue actions) */
   // ─── Actions ────────────────────────────────────────────────────────────
 
-  const handleSkillCellClick = (studentId: string, skillName: string) => {
+  const handleSkillCellClick = (studentId: string, skillName: string, el?: HTMLElement | null) => {
     const key = `${studentId}_${skillName}`;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      setMenuAnchor({ top: r.top, bottom: r.bottom, left: r.left, right: r.right });
+    }
     // Toggle popover for any cell — never auto-create records
     setPopoverCell(popoverCell === key ? null : key);
   };
@@ -358,7 +387,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
     if (!cell || !cell.status) {
       return (
         <button
-          onClick={() => handleSkillCellClick(studentId, skillName)}
+          onClick={(e) => handleSkillCellClick(studentId, skillName, e.currentTarget)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-300 border border-transparent dark:border-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
           title="Click to send to station"
         >
@@ -371,7 +400,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
     if (cell.status === 'queued') {
       return (
         <button
-          onClick={() => handleSkillCellClick(studentId, skillName)}
+          onClick={(e) => handleSkillCellClick(studentId, skillName, e.currentTarget)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-50 dark:bg-blue-900/50 text-blue-700 dark:text-blue-200 border border-blue-200 dark:border-blue-700 cursor-pointer"
           title="En route"
         >
@@ -384,7 +413,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
     if (cell.status === 'in_progress') {
       return (
         <button
-          onClick={() => handleSkillCellClick(studentId, skillName)}
+          onClick={(e) => handleSkillCellClick(studentId, skillName, e.currentTarget)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-amber-50 dark:bg-amber-900/50 text-amber-700 dark:text-amber-200 border border-amber-200 dark:border-amber-700 cursor-pointer"
           title="In Progress"
         >
@@ -404,7 +433,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
       if (cell.result === 'pass') {
         return (
           <button
-            onClick={() => handleSkillCellClick(studentId, skillName)}
+            onClick={(e) => handleSkillCellClick(studentId, skillName, e.currentTarget)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 dark:bg-green-900/50 text-green-700 dark:text-green-200 border border-green-200 dark:border-green-700 cursor-pointer"
             title={cell.teamRole ? `Pass (Team ${cell.teamRole})` : 'Pass'}
           >
@@ -417,7 +446,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
       if (cell.result === 'fail') {
         return (
           <button
-            onClick={() => handleSkillCellClick(studentId, skillName)}
+            onClick={(e) => handleSkillCellClick(studentId, skillName, e.currentTarget)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-200 border border-red-200 dark:border-red-700 cursor-pointer"
             title={cell.teamRole ? `Fail (Team ${cell.teamRole})` : 'Fail'}
           >
@@ -430,7 +459,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
       // Completed but no pass/fail
       return (
         <button
-          onClick={() => handleSkillCellClick(studentId, skillName)}
+          onClick={(e) => handleSkillCellClick(studentId, skillName, e.currentTarget)}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-200 cursor-pointer"
           title="Completed"
         >
@@ -469,7 +498,17 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
     };
     const menu: CellMenu = cellMenuFor(student, skillName, input, Date.now());
     const cell = skillCells[key];
-    const shell = 'absolute z-50 mt-1 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 min-w-[260px] max-w-[320px] text-left';
+    const shell = 'fixed z-50 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-200 dark:border-gray-700 p-3 min-w-[260px] max-w-[320px] text-left';
+    // Open upward when the cell sits in the lower part of the screen; clamp to the viewport sides.
+    const MENU_W = 300;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const a = menuAnchor || { top: 0, bottom: 0, left: 0, right: 0 };
+    const left = Math.max(8, Math.min(vw - MENU_W - 8, (a.left + a.right) / 2 - MENU_W / 2));
+    const openUp = vh - a.bottom < 380 && a.top > vh - a.bottom;
+    const menuStyle: import('react').CSSProperties = openUp
+      ? { left, bottom: vh - a.top + 4, maxHeight: Math.max(160, a.top - 12), overflowY: 'auto' }
+      : { left, top: a.bottom + 4, maxHeight: Math.max(160, vh - a.bottom - 12), overflowY: 'auto' };
     const item = 'w-full text-left min-h-[44px] px-3 py-2 rounded-lg text-sm hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60';
     const sub = 'text-xs text-gray-600 dark:text-gray-400';
 
@@ -534,7 +573,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
       <div
         ref={popoverRef}
         className={shell}
-        style={{ top: '100%', left: '50%', transform: 'translateX(-50%)' }}
+        style={menuStyle}
       >
         <div className="pb-2 border-b border-gray-100 dark:border-gray-700 space-y-0.5">
           <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">{menu.studentName}</div>

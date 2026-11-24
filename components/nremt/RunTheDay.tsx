@@ -61,6 +61,8 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
   // "Station is free" on the BVM + O2 gap card: clears the gap for THIS screen only.
   const [dismissedGaps, setDismissedGaps] = useState<Set<string>>(() => new Set());
   const lastGood = useRef<RtdInput | null>(null);
+  // Bumped after every write made from this screen so the completion table refetches at once.
+  const [refreshSignal, setRefreshSignal] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -107,6 +109,11 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
     };
   }, [load]);
 
+  const afterWrite = async () => {
+    await load();
+    setRefreshSignal((n) => n + 1);
+  };
+
   const send = async (stationId: string, studentId: string) => {
     setBusyKey(stationId);
     try {
@@ -122,7 +129,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
     }
     setOpenPick(null);
     setBusyKey(null);
-    await load();
+    await afterWrite();
     setNow(Date.now());
   };
 
@@ -144,7 +151,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
       alert('Could not undo');
     }
     setBusyKey(null);
-    await load();
+    await afterWrite();
   };
 
   // Table cell menu: "Already there - mark In progress". Same student-queue POST the proctor's Start uses
@@ -161,7 +168,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
     } catch {
       alert('Could not mark In progress');
     }
-    await load();
+    await afterWrite();
     setNow(Date.now());
   };
 
@@ -173,14 +180,17 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
       const r = await fetch('/api/lab-management/student-queue', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: queueId }),
+        body: JSON.stringify({ id: queueId, only_if_status: 'in_progress' }),
       });
       const d = await r.json();
-      if (!d.success) alert('Could not move back to Not started: ' + (d.error || 'unknown error'));
+      if (!d.success) {
+        if (d.alreadyStarted || r.status === 409) alert('This one has been graded since - refreshing');
+        else alert('Could not move back to Not started: ' + (d.error || 'unknown error'));
+      }
     } catch {
       alert('Could not move back to Not started');
     }
-    await load();
+    await afterWrite();
   };
 
   const reopen = async (stationId: string) => {
@@ -197,7 +207,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
       alert('Could not reopen the station');
     }
     setBusyKey(null);
-    await load();
+    await afterWrite();
     onChanged?.();
   };
 
@@ -451,6 +461,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
           labDayId={labDayId}
           isNremtTesting
           refreshMs={TRACKER_POLL_MS}
+          refreshSignal={refreshSignal}
           hubMenu={{ canManage, send, markInProgress, undo, backToNotStarted } satisfies HubCellMenu}
         />
       </section>
