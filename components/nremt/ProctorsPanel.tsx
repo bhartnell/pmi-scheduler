@@ -10,27 +10,15 @@ import { UserPlus, X } from 'lucide-react';
 interface Proctor { id: string; email: string; name: string | null; lab_user_id: string | null }
 interface Person { lab_user_id: string | null; name: string; email: string; kind: string }
 
-export default function ProctorsPanel({ labDayId, onChanged }: { labDayId: string; onChanged: () => void }) {
-  const [proctors, setProctors] = useState<Proctor[]>([]);
-  const [tableReady, setTableReady] = useState(true);
+export interface PickedPerson { email: string; name?: string; labUserId?: string | null }
+
+/**
+ * The one small people search (existing accounts and students, or a typed email for someone who has
+ * never signed in). Used by the Proctors panel and by "Add someone..." on each station tile.
+ */
+export function PersonSearch({ onPick, busy, autoFocus }: { onPick: (p: PickedPerson) => void; busy?: boolean; autoFocus?: boolean }) {
   const [q, setQ] = useState('');
   const [people, setPeople] = useState<Person[]>([]);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  const load = useCallback(() => {
-    fetch(`/api/lab-management/nremt-hub/proctors?labDayId=${labDayId}`)
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.success) {
-          setProctors(d.proctors || []);
-          setTableReady(d.table_ready !== false);
-        }
-      })
-      .catch(() => {});
-  }, [labDayId]);
-
-  useEffect(load, [load]);
 
   useEffect(() => {
     const term = q.trim();
@@ -47,6 +35,61 @@ export default function ProctorsPanel({ labDayId, onChanged }: { labDayId: strin
     return () => clearTimeout(h);
   }, [q]);
 
+  const pick = (p: PickedPerson) => {
+    setQ('');
+    setPeople([]);
+    onPick(p);
+  };
+  const typedEmail = /^\S+@\S+\.\S+$/.test(q.trim()) ? q.trim() : null;
+
+  return (
+    <div className="space-y-2">
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        autoFocus={autoFocus}
+        placeholder="Search by name or email, or type a full email to add someone new"
+        className="w-full min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 text-gray-900 dark:text-white"
+      />
+      {people.map((p) => (
+        <button key={p.email} type="button" disabled={busy} onClick={() => pick({ email: p.email, name: p.name, labUserId: p.lab_user_id })} className="w-full flex items-center justify-between gap-2 min-h-[44px] px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white">
+          <span>{p.name} <span className="text-xs text-gray-500 dark:text-gray-400">{p.email} · {p.kind}</span></span>
+          <UserPlus className="w-4 h-4 shrink-0" />
+        </button>
+      ))}
+      {typedEmail && (
+        <button type="button" disabled={busy} onClick={() => pick({ email: typedEmail })} className="w-full flex items-center justify-between gap-2 min-h-[44px] px-3 rounded-lg border border-blue-300 dark:border-blue-700 text-left text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-gray-700">
+          <span>Add {typedEmail}</span>
+          <UserPlus className="w-4 h-4 shrink-0" />
+        </button>
+      )}
+    </div>
+  );
+}
+
+export default function ProctorsPanel({ labDayId, onChanged, extra }: { labDayId: string; onChanged: () => void; extra?: React.ReactNode }) {
+  const [proctors, setProctors] = useState<Proctor[]>([]);
+  const [tableReady, setTableReady] = useState(true);
+  // Open while the list is empty (add today's people first); one line once it has people.
+  const [open, setOpen] = useState<boolean | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const load = useCallback(() => {
+    fetch(`/api/lab-management/nremt-hub/proctors?labDayId=${labDayId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          setProctors(d.proctors || []);
+          setTableReady(d.table_ready !== false);
+          setOpen((o) => (o === null ? (d.proctors || []).length === 0 : o));
+        }
+      })
+      .catch(() => {});
+  }, [labDayId]);
+
+  useEffect(load, [load]);
+
   const add = async (p: { email: string; name?: string; labUserId?: string | null }) => {
     setBusy(true);
     setMsg(null);
@@ -59,8 +102,6 @@ export default function ProctorsPanel({ labDayId, onChanged }: { labDayId: strin
       const d = await res.json();
       if (!d.success) setMsg(d.error || 'Could not add that person');
       else {
-        setQ('');
-        setPeople([]);
         load();
         onChanged();
       }
@@ -87,12 +128,10 @@ export default function ProctorsPanel({ labDayId, onChanged }: { labDayId: strin
     setBusy(false);
   };
 
-  const typedEmail = /^\S+@\S+\.\S+$/.test(q.trim()) ? q.trim() : null;
-
   return (
-    <details className="rounded-lg bg-white dark:bg-gray-800 shadow" open>
+    <details className="rounded-lg bg-white dark:bg-gray-800 shadow" open={open ?? true} onToggle={(e) => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
       <summary className="cursor-pointer min-h-[44px] flex items-center px-4 font-semibold text-gray-900 dark:text-white">
-        Proctors ({proctors.length})
+        Proctors ({proctors.length}) - add or remove
       </summary>
       <div className="border-t border-gray-200 dark:border-gray-700 p-4 space-y-3">
         {!tableReady && <p className="text-sm text-amber-700 dark:text-amber-300">The proctor list is not switched on yet.</p>}
@@ -111,26 +150,10 @@ export default function ProctorsPanel({ labDayId, onChanged }: { labDayId: strin
           ))}
         </div>
         <div className="max-w-xl space-y-2">
-          <input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by name or email, or type a full email to add someone new"
-            className="w-full min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 text-gray-900 dark:text-white"
-          />
-          {people.map((p) => (
-            <button key={p.email} type="button" disabled={busy} onClick={() => add({ email: p.email, name: p.name, labUserId: p.lab_user_id })} className="w-full flex items-center justify-between gap-2 min-h-[44px] px-3 rounded-lg border border-gray-200 dark:border-gray-700 text-left hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white">
-              <span>{p.name} <span className="text-xs text-gray-500 dark:text-gray-400">{p.email} · {p.kind}</span></span>
-              <UserPlus className="w-4 h-4 shrink-0" />
-            </button>
-          ))}
-          {typedEmail && (
-            <button type="button" disabled={busy} onClick={() => add({ email: typedEmail })} className="w-full flex items-center justify-between gap-2 min-h-[44px] px-3 rounded-lg border border-blue-300 dark:border-blue-700 text-left text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-gray-700">
-              <span>Add {typedEmail}</span>
-              <UserPlus className="w-4 h-4 shrink-0" />
-            </button>
-          )}
+          <PersonSearch busy={busy} onPick={(p) => add(p)} />
           {msg && <p className="text-sm text-red-600 dark:text-red-400">{msg}</p>}
         </div>
+        {extra}
       </div>
     </details>
   );

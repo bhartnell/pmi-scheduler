@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Undo2, Unlock } from 'lucide-react';
-import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
+import IndividualTestingGrid, { type HubCellMenu } from '@/components/lab-day/IndividualTestingGrid';
 import { shortSkillLabel } from '@/lib/nremt-skill-labels';
 import {
   dayUnits,
@@ -39,6 +39,7 @@ import {
 // Refresh polls every 10s (the coordinator waits on it to see a station free up) and keeps the last good data on a failure.
 
 const POLL_MS = 10000;
+const TRACKER_POLL_MS = 15000;
 const SLOW_MIN = 10;
 
 function skillChip(st: RtdStation, input: RtdInput): string | null {
@@ -51,7 +52,7 @@ function stationName(s: RtdStation): string {
   return s.custom_title || s.skill_name || `Station ${s.station_number}`;
 }
 
-export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount }: { labDayId: string; canManage: boolean; onChanged?: () => void; onFreeCount?: (free: number, total: number) => void }) {
+export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount, onData }: { labDayId: string; canManage: boolean; onChanged?: () => void; onFreeCount?: (free: number, total: number) => void; onData?: (input: RtdInput) => void }) {
   const [input, setInput] = useState<RtdInput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -60,6 +61,8 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
   // "Station is free" on the BVM + O2 gap card: clears the gap for THIS screen only.
   const [dismissedGaps, setDismissedGaps] = useState<Set<string>>(() => new Set());
   const lastGood = useRef<RtdInput | null>(null);
+  // Bumped after every write made from this screen so the completion table refetches at once.
+  const [refreshSignal, setRefreshSignal] = useState(0);
 
   const load = useCallback(async () => {
     try {
@@ -78,12 +81,13 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
       if (next.students.length === 0 && (lastGood.current?.students.length || 0) > 0) throw new Error('empty refresh');
       lastGood.current = next;
       setInput(next);
+      onData?.(next);
       setError(null);
     } catch {
       // keep the last good data on screen
       setError(lastGood.current ? 'Could not refresh. Showing the last good data.' : 'Could not load this day.');
     }
-  }, [labDayId]);
+  }, [labDayId, onData]);
 
   useEffect(() => {
     load();
@@ -91,8 +95,24 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
       if (!document.hidden) load();
       setNow(Date.now());
     }, POLL_MS);
-    return () => clearInterval(t);
+    // A hidden tab skips its polls; it refreshes once when it becomes visible again.
+    const onVisible = () => {
+      if (!document.hidden) {
+        load();
+        setNow(Date.now());
+      }
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [load]);
+
+  const afterWrite = async () => {
+    await load();
+    setRefreshSignal((n) => n + 1);
+  };
 
   const send = async (stationId: string, studentId: string) => {
     setBusyKey(stationId);
@@ -109,7 +129,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
     }
     setOpenPick(null);
     setBusyKey(null);
-    await load();
+    await afterWrite();
     setNow(Date.now());
   };
 
@@ -131,7 +151,46 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
       alert('Could not undo');
     }
     setBusyKey(null);
-    await load();
+    await afterWrite();
+  };
+
+  // Table cell menu: "Already there - mark In progress". Same student-queue POST the proctor's Start uses
+  // (it promotes the en-route row, or creates one). No evaluation is written.
+  const markInProgress = async (stationId: string, studentId: string) => {
+    try {
+      const r = await fetch('/api/lab-management/student-queue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lab_day_id: labDayId, student_id: studentId, station_id: stationId, status: 'in_progress' }),
+      });
+      const d = await r.json();
+      if (!d.success) alert('Could not mark In progress: ' + (d.error || 'unknown error'));
+    } catch {
+      alert('Could not mark In progress');
+    }
+    await afterWrite();
+    setNow(Date.now());
+  };
+
+  // Table cell menu: In progress -> Not started. Offered only when no evaluation is saved; removes the
+  // queue row only, never an evaluation.
+  const backToNotStarted = async (_stationId: string, queueId: string | null) => {
+    if (!queueId) return;
+    try {
+      const r = await fetch('/api/lab-management/student-queue', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: queueId, only_if_status: 'in_progress' }),
+      });
+      const d = await r.json();
+      if (!d.success) {
+        if (d.alreadyStarted || r.status === 409) alert('This one has been graded since - refreshing');
+        else alert('Could not move back to Not started: ' + (d.error || 'unknown error'));
+      }
+    } catch {
+      alert('Could not move back to Not started');
+    }
+    await afterWrite();
   };
 
   const reopen = async (stationId: string) => {
@@ -148,7 +207,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
       alert('Could not reopen the station');
     }
     setBusyKey(null);
-    await load();
+    await afterWrite();
     onChanged?.();
   };
 
@@ -398,7 +457,13 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount 
 
       <section aria-label="Completion table" className="rounded-xl bg-white dark:bg-gray-800 shadow overflow-hidden min-w-0">
         <h2 className="px-4 pt-4 text-lg font-semibold text-gray-900 dark:text-white">Completion</h2>
-        <IndividualTestingGrid labDayId={labDayId} isNremtTesting />
+        <IndividualTestingGrid
+          labDayId={labDayId}
+          isNremtTesting
+          refreshMs={TRACKER_POLL_MS}
+          refreshSignal={refreshSignal}
+          hubMenu={{ canManage, send, markInProgress, undo, backToNotStarted } satisfies HubCellMenu}
+        />
       </section>
     </div>
   );

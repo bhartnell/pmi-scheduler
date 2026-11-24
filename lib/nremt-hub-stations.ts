@@ -58,3 +58,25 @@ export function buildLocationLists(standardNames: string[], nremtDayRooms: Array
 export function nextStationNumber(existing: number[]): number {
   return existing.length ? Math.max(...existing) + 1 : 1;
 }
+
+// ---- In-place station edits and proctor choices (card 4225cd1c) ----
+
+/** Copy of the hub data with `patch` applied to the tiles in `ids` (my stations and every group); nothing else changes. */
+export function patchTilesIn<T extends { id: string }, D extends { my_stations: T[]; groups: { stations: T[] }[] }>(d: D, ids: string[], patch: Partial<T>): D {
+  const hit = (t: T) => (ids.includes(t.id) ? { ...t, ...patch } : t);
+  return { ...d, my_stations: d.my_stations.map(hit), groups: d.groups.map((g) => ({ ...g, stations: g.stations.map(hit) })) };
+}
+
+export interface ProctorChoice {
+  name: string;
+  email: string;
+}
+
+/**
+ * Proctor drop-down order: "Today's proctors" (the day's list) first, then "Staff" (instructor accounts
+ * that are not already in today's list). Matching is by email, case-insensitive.
+ */
+export function proctorChoices(today: ProctorChoice[], staff: ProctorChoice[]): { today: ProctorChoice[]; staff: ProctorChoice[] } {
+  const seen = new Set(today.map((p) => p.email.toLowerCase()));
+  return { today, staff: staff.filter((p) => !seen.has(p.email.toLowerCase())) };
+}
