@@ -30,6 +30,8 @@ export interface RtdCell {
   result?: string | null;
   /** When the queue row was created (en route = status 'queued'). ISO string. */
   queuedAt?: string | null;
+  /** When the proctor first started grading (queue row started_at). */
+  startedAt?: string | null;
   evalSummary?: { evaluatorName: string | null } | null;
 }
 export interface RtdSkillColumn {
@@ -84,6 +86,8 @@ export function enRouteList(input: RtdInput): EnRoute[] {
   const out: EnRoute[] = [];
   for (const st of input.stations) {
     for (const s of input.students) {
+      // In progress at ANY station: no longer en route anywhere (they walked to another station).
+      if (input.stations.some((o) => input.cells[`${s.id}_${o.id}`]?.status === 'in_progress')) continue;
       const cell = input.cells[`${s.id}_${st.id}`];
       if (cell?.status === 'queued') {
         out.push({ student: s, station: st, queueId: cell.queueId || null, sentAt: cell.queuedAt || null });
@@ -106,7 +110,7 @@ export function testingNow(input: RtdInput): { station: RtdStation; student: Rtd
   const out: { station: RtdStation; student: RtdStudent; startedAt: string | null }[] = [];
   for (const st of input.stations) {
     const s = studentAtStation(st, input);
-    if (s) out.push({ station: st, student: s, startedAt: null });
+    if (s) out.push({ station: st, student: s, startedAt: input.cells[`${s.id}_${st.id}`]?.startedAt || null });
   }
   return out;
 }

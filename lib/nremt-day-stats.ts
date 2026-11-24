@@ -50,8 +50,9 @@ export function isStudentCurrentlyTesting<S extends DayStatsStation>(
  * Complete beats testing (in progress somewhere) beats waiting.
  *
  * Complete is counted BY SKILL when the day has skill columns: a day can run several stations
- * for one skill (Nov 25: 14 stations, 7 skills), so "every station done" is never reached.
- * A student is complete when every skill column has a completed skill cell for them. The old
+ * for one skill (Nov 25: 14 stations, 7 skills). The student-queue GET already copies a finished
+ * skill onto every station of that skill, so the old every-station rule also reached Complete
+ * (no live fault); counting by skill states the same answer more plainly. A student is complete when every skill column has a completed skill cell for them. The old
  * every-station rule stays as the fallback for a day with no skill columns.
  */
 export function classifyStudent(

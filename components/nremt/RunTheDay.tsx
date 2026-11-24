@@ -29,9 +29,9 @@ import {
 //   evaluation is touched).
 // - Reopen: PATCH /api/lab-management/stations/[id] { coordinator_status: 'open' }, the same
 //   mark the Coordinator View and the Stations tab use.
-// Refresh polls every 30s like the Coordinator View and keeps the last good data on a failure.
+// Refresh polls every 10s (the coordinator waits on it to see a station free up) and keeps the last good data on a failure.
 
-const POLL_MS = 30000;
+const POLL_MS = 10000;
 const SLOW_MIN = 10;
 
 function stationName(s: RtdStation): string {
@@ -104,10 +104,13 @@ export default function RunTheDay({ labDayId, canManage, onChanged }: { labDayId
       const r = await fetch('/api/lab-management/student-queue', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: queueId }),
+        body: JSON.stringify({ id: queueId, only_if_status: 'queued' }),
       });
       const d = await r.json();
-      if (!d.success) alert('Could not undo: ' + (d.error || 'unknown error'));
+      if (!d.success) {
+        if (d.alreadyStarted || r.status === 409) alert('That student has already started at this station, so Undo was not applied.');
+        else alert('Could not undo: ' + (d.error || 'unknown error'));
+      }
     } catch {
       alert('Could not undo');
     }
@@ -154,6 +157,10 @@ export default function RunTheDay({ labDayId, canManage, onChanged }: { labDayId
   return (
     <div className="space-y-6">
       {error && <p className="text-sm text-amber-700 dark:text-amber-300">{error}</p>}
+
+      <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
+        Stations free {view.free.length} of {input.stations.length}
+      </div>
 
       <section aria-label="Free stations" className="space-y-3">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Free stations</h2>
@@ -278,7 +285,10 @@ export default function RunTheDay({ labDayId, canManage, onChanged }: { labDayId
               {view.testing.map((t) => (
                 <li key={t.station.id} className="py-2 flex items-center justify-between gap-3 text-sm min-h-[44px]">
                   <span className="font-medium text-gray-900 dark:text-white">{stationName(t.station)}</span>
-                  <span className="text-gray-700 dark:text-gray-300">{studentName(t.student)}</span>
+                  <span className="text-gray-700 dark:text-gray-300">
+                    {studentName(t.student)}
+                    {minutesSince(t.startedAt, now) !== null && ` - ${minutesSince(t.startedAt, now)} min`}
+                  </span>
                 </li>
               ))}
             </ul>

@@ -101,3 +101,12 @@ test('classifyStudent: no skill columns keeps the station rule', () => {
   assert.equal(classifyStudent({ id: 'u' }, two, { u_a: { status: 'completed' }, u_b: { status: 'completed' } }, [], {}), 'complete');
   assert.equal(classifyStudent({ id: 'u' }, two, { u_a: { status: 'completed' } }, [], {}), 'waiting');
 });
+
+test('a student in progress at any station is not en route anywhere, and the sent station is free again', () => {
+  const input = {
+    ...base,
+    cells: { a_m1: { status: 'queued', queueId: 'q1' }, a_m2: { status: 'in_progress' } },
+  };
+  assert.deepEqual(enRouteList(input), []);
+  assert.ok(freeStations(input).some((s) => s.id === 'm1'));
+});

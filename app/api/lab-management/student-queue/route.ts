@@ -127,7 +127,9 @@ export async function GET(request: NextRequest) {
     const { data: queueEntries } = await supabase
       .from('lab_day_student_queue')
       .select('id, student_id, station_id, status, result, evaluation_id, started_at, completed_at, queued_at')
-      .eq('lab_day_id', labDayId);
+      .eq('lab_day_id', labDayId)
+      // oldest first, so the newest row for a student+station key is the one the cell keeps
+      .order('created_at', { ascending: true });
 
     // 6. Get evaluations for this lab day (with step counts + retake info).
     // `status` added 2026-04-19: in-progress evals need to surface as
@@ -284,6 +286,8 @@ export async function GET(request: NextRequest) {
       bestResult: string | null;
       /** When the queue row was created; en route (status 'queued') shows minutes since. */
       queuedAt?: string | null;
+      /** When the proctor first started grading (queue row started_at); null when unknown. */
+      startedAt?: string | null;
     }> = {};
 
     // First populate from queue entries
@@ -299,6 +303,7 @@ export async function GET(request: NextRequest) {
         hasRetake: false,
         bestResult: entry.result,
         queuedAt: (entry as { queued_at?: string | null }).queued_at || null,
+        startedAt: (entry as { started_at?: string | null }).started_at || null,
       };
     }
 
@@ -359,6 +364,7 @@ export async function GET(request: NextRequest) {
                   | null) || null,
               hasRetake: isRetakeAttempt,
               bestResult: existing?.bestResult ?? null,
+              startedAt: existing?.startedAt ?? null,
             };
             continue;
           }
@@ -720,6 +726,32 @@ export async function POST(request: NextRequest) {
       .eq('status', targetStatus === 'queued' ? 'queued' : 'in_progress')
       .maybeSingle();
 
+    // One row per send: when grading starts for a student who was sent here ('queued'), turn that
+    // same row into in_progress instead of inserting a second row.
+    if (targetStatus === 'in_progress' && !existing) {
+      const { data: queuedRow } = await supabase
+        .from('lab_day_student_queue')
+        .select('id')
+        .eq('lab_day_id', lab_day_id)
+        .eq('student_id', student_id)
+        .eq('station_id', station_id)
+        .eq('status', 'queued')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (queuedRow) {
+        const { data: promoted, error: promoteErr } = await supabase
+          .from('lab_day_student_queue')
+          .update({ status: 'in_progress', started_at: new Date().toISOString() })
+          .eq('id', queuedRow.id)
+          .eq('status', 'queued')
+          .select()
+          .single();
+        if (promoteErr) throw promoteErr;
+        return NextResponse.json({ success: true, entry: promoted });
+      }
+    }
+
     if (existing) {
       // Already in_progress — return existing entry
       return NextResponse.json({ success: true, entry: existing, message: 'Already in progress' });
@@ -851,11 +883,23 @@ export async function DELETE(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id, lab_day_id, student_id, station_id } = body;
+    const { id, lab_day_id, student_id, station_id, only_if_status } = body;
 
     const supabase = getSupabaseAdmin();
 
-    if (id) {
+    if (id && only_if_status) {
+      // Guarded delete (Run the day Undo): remove the row only while it still has this status.
+      const { data: removed, error } = await supabase
+        .from('lab_day_student_queue')
+        .delete()
+        .eq('id', id)
+        .eq('status', only_if_status)
+        .select('id');
+      if (error) throw error;
+      if (!removed || removed.length === 0) {
+        return NextResponse.json({ success: false, alreadyStarted: true, error: 'Already started' }, { status: 409 });
+      }
+    } else if (id) {
       const { error } = await supabase
         .from('lab_day_student_queue')
         .delete()
