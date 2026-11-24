@@ -3,9 +3,11 @@ import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
 import { hasMinRole } from '@/lib/permissions';
 import { isNotWithdrawn } from '@/lib/live-students';
+import { buildLocationLists, sortGroupStations } from '@/lib/nremt-hub-stations';
 
-// NREMT hub (slice 1 of 3). READ-ONLY: a front door to the existing grading
-// page, Coordinator View and Skill Results. No writes, no schema change.
+// NREMT hub. READ-ONLY API: a front door to the existing grading page, Coordinator
+// View and Skill Results. All writes the hub makes go through the existing station
+// routes (PATCH/POST /api/lab-management/stations, .../scenario). No schema change.
 //
 //   GET /api/lab-management/nremt-hub            -> list of NREMT testing days
 //   GET /api/lab-management/nremt-hub?labDayId=X -> one day, stations grouped by skill sheet
@@ -73,7 +75,7 @@ export async function GET(request: NextRequest) {
 
     const { data: stations, error: stErr } = await supabase
       .from('lab_stations')
-      .select('id, station_number, room, skill_name, custom_title, skill_sheet_id, instructor_name, instructor_email, metadata, station_instructors(user_name, user_email, is_primary)')
+      .select('id, station_number, room, skill_name, custom_title, skill_sheet_id, instructor_name, instructor_email, is_retake_station, metadata, station_instructors(user_name, user_email, is_primary)')
       .eq('lab_day_id', labDayId)
       .order('station_number', { ascending: true });
     if (stErr) throw stErr;
@@ -85,6 +87,42 @@ export async function GET(request: NextRequest) {
     if (sheetIds.length > 0) {
       const { data: sheets } = await supabase.from('skill_sheets').select('id, skill_name').in('id', sheetIds);
       for (const sh of sheets || []) if ((sh as any).skill_name) sheetNames[(sh as any).id] = (sh as any).skill_name;
+    }
+
+    // Evaluations already recorded per station (for the change-skill warning). A failed
+    // count query returns null = unknown, and the UI warns as if there were some.
+    const stationIds = (stations || []).map((s: any) => s.id as string);
+    const evalCounts: Record<string, number> = {};
+    let evalCountsKnown = true;
+    if (stationIds.length > 0) {
+      const { data: evs, error: evErr } = await supabase
+        .from('student_skill_evaluations')
+        .select('lab_station_id')
+        .in('lab_station_id', stationIds);
+      if (evErr) evalCountsKnown = false;
+      for (const e of evs || []) {
+        const k = (e as any).lab_station_id as string;
+        evalCounts[k] = (evalCounts[k] || 0) + 1;
+      }
+    }
+
+    // NREMT codes for the skills on this day + scenario banks (E201 trauma / E202 medical).
+    const sheetMeta: Record<string, { nremt_code: string | null }> = {};
+    if (sheetIds.length > 0) {
+      const { data: sheets } = await supabase.from('skill_sheets').select('id, nremt_code').in('id', sheetIds);
+      for (const sh of sheets || []) sheetMeta[(sh as any).id] = { nremt_code: (sh as any).nremt_code ?? null };
+    }
+    const { data: scenarioRows } = await supabase
+      .from('nremt_scenarios')
+      .select('id, skill_code, title')
+      .eq('is_active', true)
+      .order('title', { ascending: true });
+    const scenariosByCode: Record<string, { id: string; title: string }[]> = {};
+    const scenarioTitle: Record<string, string> = {};
+    for (const r of scenarioRows || []) {
+      const row = r as { id: string; skill_code: string; title: string };
+      (scenariosByCode[row.skill_code] ||= []).push({ id: row.id, title: row.title });
+      scenarioTitle[row.id] = row.title;
     }
 
     const me = (user.email || '').toLowerCase();
@@ -110,6 +148,15 @@ export async function GET(request: NextRequest) {
         is_mine: !!me && emails.includes(me),
         skill_sheet_id: sheetId,
         skill_label: (sheetId && sheetNames[sheetId]) || s.skill_name || s.custom_title || null,
+        own_name: (s.custom_title as string | null) || null,
+        nremt_code: (sheetId && sheetMeta[sheetId]?.nremt_code) || null,
+        scenario_id: (s.metadata && typeof s.metadata.selected_scenario_id === 'string' ? s.metadata.selected_scenario_id : null) as string | null,
+        scenario_title: (s.metadata && typeof s.metadata.selected_scenario_id === 'string' ? scenarioTitle[s.metadata.selected_scenario_id] || null : null) as string | null,
+        instructor_name: (s.instructor_name as string | null) || null,
+        instructor_email: (s.instructor_email as string | null) || null,
+        coordinator_status: ((s.metadata && s.metadata.coordinator_status) || 'open') as 'open' | 'closed' | 'break',
+        is_retake_station: s.is_retake_station === true,
+        eval_count: evalCountsKnown ? evalCounts[s.id] || 0 : null,
       };
     });
 
@@ -121,17 +168,46 @@ export async function GET(request: NextRequest) {
       }
       groupMap.get(key)!.stations.push(t);
     }
+    for (const g of groupMap.values()) g.stations = sortGroupStations(g.stations);
     const groups = Array.from(groupMap.values()).sort((a, b) => {
       if (a.key === 'other') return 1;
       if (b.key === 'other') return -1;
       return a.stations[0].station_number - b.stations[0].station_number;
     });
 
+    // Locations: standard lab locations first, then free-text rooms already used on NREMT
+    // testing days (these are NREMT-only by construction: nothing is written to the
+    // standard room list). Skill options for "change the skill": NREMT skill sheets.
+    const { data: stdRooms } = await supabase
+      .from('pmi_rooms')
+      .select('name')
+      .eq('is_lab_location', true)
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+    const { data: nremtDayStations } = await supabase
+      .from('lab_stations')
+      .select('room, lab_day:lab_days!inner(is_nremt_testing)')
+      .eq('lab_day.is_nremt_testing', true)
+      .not('room', 'is', null);
+    const locations = buildLocationLists(
+      (stdRooms || []).map((r: any) => r.name as string),
+      (nremtDayStations || []).map((r: any) => r.room as string)
+    );
+    const { data: nremtSheets } = await supabase
+      .from('skill_sheets')
+      .select('id, skill_name, nremt_code')
+      .eq('is_nremt', true)
+      .eq('is_active', true)
+      .order('skill_name', { ascending: true });
+
     const cohort = first<Cohort>(day.cohort as any);
     const program = first(cohort?.program as any) as { name: string; abbreviation: string } | null;
 
     return NextResponse.json({
       success: true,
+      locations,
+      scenarios_by_code: scenariosByCode,
+      skill_options: (nremtSheets || []).map((r: any) => ({ id: r.id as string, skill_name: r.skill_name as string, nremt_code: (r.nremt_code as string | null) ?? null })),
       day: {
         id: day.id,
         date: day.date,

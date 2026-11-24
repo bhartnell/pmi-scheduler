@@ -178,22 +178,38 @@ export async function PATCH(
     // same-skill non-retake stations. Added 2026-04-19.
     if (body.is_retake_station !== undefined) updateData.is_retake_station = !!body.is_retake_station;
 
-    // Coordinator status: merge into metadata (read-modify-write)
-    if (body.coordinator_status !== undefined) {
-      const validStatuses = ['open', 'closed', 'break'];
-      if (!validStatuses.includes(body.coordinator_status)) {
-        return NextResponse.json(
-          { success: false, error: 'Invalid coordinator_status value' },
-          { status: 400 }
-        );
+    // Skill change (NREMT hub, 2026-11-24): the typed column is what the tracker roll-up and
+    // grading read first; metadata.skill_sheet_id is kept in step so the metadata fallback
+    // never points at the old skill. Evaluations already recorded stay as they are.
+    const wantsSkillChange = body.skill_sheet_id !== undefined;
+    if (wantsSkillChange) {
+      updateData.skill_sheet_id = body.skill_sheet_id || null;
+      if (body.skill_name !== undefined) updateData.skill_name = body.skill_name || null;
+    }
+
+    // Metadata merges (read-modify-write once): coordinator status and the skill mirror.
+    if (body.coordinator_status !== undefined || wantsSkillChange) {
+      if (body.coordinator_status !== undefined) {
+        const validStatuses = ['open', 'closed', 'break'];
+        if (!validStatuses.includes(body.coordinator_status)) {
+          return NextResponse.json(
+            { success: false, error: 'Invalid coordinator_status value' },
+            { status: 400 }
+          );
+        }
       }
       const { data: currentMeta } = await supabase
         .from('lab_stations')
         .select('metadata')
         .eq('id', id)
         .single();
-      const meta = (currentMeta?.metadata as Record<string, unknown> | null) || {};
-      updateData.metadata = { ...meta, coordinator_status: body.coordinator_status };
+      const meta = { ...((currentMeta?.metadata as Record<string, unknown> | null) || {}) };
+      if (body.coordinator_status !== undefined) meta.coordinator_status = body.coordinator_status;
+      if (wantsSkillChange) {
+        if (body.skill_sheet_id) meta.skill_sheet_id = body.skill_sheet_id;
+        else delete meta.skill_sheet_id;
+      }
+      updateData.metadata = meta;
     }
 
     // Check if this is a new instructor assignment (for notification)
