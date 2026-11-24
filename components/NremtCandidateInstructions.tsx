@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronDown, ChevronUp, ClipboardList, CheckCircle2, Timer, Play, BookOpen, X } from 'lucide-react';
 import {
-  findInstructionEntry,
+  resolveInstructionEntry,
   isMultiPart,
   PROCTOR_GENERAL_RESPONSIBILITIES,
   type SkillInstructionEntry,
@@ -165,14 +165,20 @@ function PrepTimer({
 
 interface NremtCandidateInstructionsProps {
   stationName: string;
+  /** NREMT code of the station's skill sheet (E201..E217). Wins over the name. */
+  nremtCode?: string | null;
+  /** True while the skill sheet is still loading: show nothing rather than a name-based guess. */
+  codePending?: boolean;
   onInstructionsRead: (read: boolean) => void;
 }
 
 export default function NremtCandidateInstructions({
   stationName,
+  nremtCode = null,
+  codePending = false,
   onInstructionsRead,
 }: NremtCandidateInstructionsProps) {
-  const entry = findInstructionEntry(stationName);
+  const entry = codePending ? null : resolveInstructionEntry(stationName, nremtCode);
   const [expanded, setExpanded] = useState(true);
   const [read, setRead] = useState(false);
   const [showProctorModal, setShowProctorModal] = useState(false);
@@ -203,7 +209,14 @@ export default function NremtCandidateInstructions({
     setPhase('part2');
   }, []);
 
-  if (!entry) return null;
+  if (codePending) return null;
+  if (!entry) {
+    return (
+      <div className="rounded-lg border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+        No candidate instructions found for this station - use the printed sheet.
+      </div>
+    );
+  }
 
   const instr = entry.candidateInstruction;
   const isMulti = isMultiPart(instr);
