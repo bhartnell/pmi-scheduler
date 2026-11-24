@@ -154,13 +154,21 @@ export async function GET(request: NextRequest) {
       if (s.instructor_email) emails.push(String(s.instructor_email).toLowerCase());
       for (const si of activeSi) if (si.user_email) emails.push(String(si.user_email).toLowerCase());
       const sheetId = sheetIdOf(s);
+      // Optional assistant (hub-only, metadata.nremt_assistant). Seen under their own My stations.
+      const asst = (s.metadata && s.metadata.nremt_assistant) as { name?: string; email?: string } | undefined;
+      const assistantEmail = asst && typeof asst.email === 'string' && asst.email ? asst.email : null;
+      const assistantName = assistantEmail ? (asst?.name || assistantEmail) : null;
+      const assisting = !!me && !!assistantEmail && assistantEmail.toLowerCase() === me;
       return {
         id: s.id as string,
         station_number: s.station_number as number,
         suffix: (s.metadata && s.metadata.station_suffix) || null,
         room: (s.room as string | null) || null,
         proctors: names,
-        is_mine: !!me && emails.includes(me),
+        is_mine: (!!me && emails.includes(me)) || assisting,
+        assistant_name: assistantName,
+        assistant_email: assistantEmail,
+        assisting,
         skill_sheet_id: sheetId,
         skill_label: (sheetId && sheetNames[sheetId]) || s.skill_name || s.custom_title || null,
         own_name: (s.custom_title as string | null) || null,
@@ -231,7 +239,7 @@ export async function GET(request: NextRequest) {
     // Stations-only shape for a listed proctor: no emails, no counts of past evaluations,
     // no set-up lists, no manage rights.
     if (isProctor) {
-      const strip = (t: (typeof tiles)[number]) => ({ ...t, instructor_email: null, eval_count: null });
+      const strip = (t: (typeof tiles)[number]) => ({ ...t, instructor_email: null, assistant_email: null, eval_count: null });
       return NextResponse.json({
         success: true,
         is_proctor: true,

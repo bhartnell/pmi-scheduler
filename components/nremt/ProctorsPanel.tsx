@@ -67,7 +67,7 @@ export function PersonSearch({ onPick, busy, autoFocus }: { onPick: (p: PickedPe
   );
 }
 
-export default function ProctorsPanel({ labDayId, onChanged, extra }: { labDayId: string; onChanged: () => void; extra?: React.ReactNode }) {
+export default function ProctorsPanel({ labDayId, onChanged, extra, placements }: { labDayId: string; onChanged: () => void; extra?: React.ReactNode; placements?: string[] }) {
   const [proctors, setProctors] = useState<Proctor[]>([]);
   const [tableReady, setTableReady] = useState(true);
   // Open while the list is empty (add today's people first); one line once it has people.
@@ -149,6 +149,14 @@ export default function ProctorsPanel({ labDayId, onChanged, extra }: { labDayId
             </span>
           ))}
         </div>
+        {placements && placements.length > 0 && (
+          <div className="space-y-1">
+            <div className="text-xs font-medium text-gray-500 dark:text-gray-400">Who is where</div>
+            <ul className="text-sm text-gray-800 dark:text-gray-200 space-y-0.5">
+              {placements.map((line) => <li key={line}>{line}</li>)}
+            </ul>
+          </div>
+        )}
         <div className="max-w-xl space-y-2">
           <PersonSearch busy={busy} onPick={(p) => add(p)} />
           {msg && <p className="text-sm text-red-600 dark:text-red-400">{msg}</p>}
