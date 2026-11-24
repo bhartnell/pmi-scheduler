@@ -39,3 +39,22 @@ test('Stations free total counts open stations only', () => {
   const input = { students: [], stations: [st('a', 1, 'open'), st('b', 2, 'open'), st('c', 3, 'closed')], cells: {}, skillColumns: [], skillCells: {} } as unknown as RtdInput;
   assert.equal(unitCounts(input, Date.now(), new Set()).total, 2);
 });
+
+import { cleanReopenBody } from '../lib/nremt-hub-stations.ts';
+import { nextExtraStationName } from '../lib/nremt-pairs.ts';
+
+test('Open another on a not-made row: clean body, no proctor, no assistant, no room', () => {
+  const b = cleanReopenBody('Patient Assessment - Trauma 2');
+  assert.equal(b.coordinator_status, 'open');
+  assert.equal(b.instructor_name, null);
+  assert.equal(b.instructor_email, '');
+  assert.equal(b.nremt_assistant, null);
+  assert.equal(b.room, null);
+  assert.equal(b.custom_title, 'Patient Assessment - Trauma 2');
+});
+test('the first extra is always "2", even when the reused row was titled "... Trauma 3"', () => {
+  const made = [{ station_number: 2, name: 'Patient Assessment — Trauma' }];
+  assert.equal(nextExtraStationName(made, 'Patient Assessment - Trauma'), 'Patient Assessment - Trauma 2');
+  const made2 = [...made, { station_number: 13, name: 'Patient Assessment - Trauma 2' }];
+  assert.equal(nextExtraStationName(made2, 'x'), 'Patient Assessment - Trauma 3');
+});

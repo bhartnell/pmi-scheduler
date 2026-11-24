@@ -10,7 +10,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { formatHubDate, formatHubTime, localCalendarDate } from '@/lib/nremt-hub-format';
-import { nextStationNumber, isClosed, patchTilesIn, proctorChoices, withAssistant, sameStationPerson, whoIsWhere, placementLine } from '@/lib/nremt-hub-stations';
+import { nextStationNumber, isClosed, patchTilesIn, proctorChoices, withAssistant, sameStationPerson, whoIsWhere, placementLine, cleanReopenBody } from '@/lib/nremt-hub-stations';
 import { buildStationPairs, nextExtraStationName, pairCodeFor, pickReopenStation, pickReopenPair, PAIR_TITLE, type PairItem } from '@/lib/nremt-pairs';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
 import ProctorsPanel, { PersonSearch, type PickedPerson } from '@/components/nremt/ProctorsPanel';
@@ -1076,17 +1076,49 @@ export default function NremtHubDayPage() {
   // holds closed extras); only when the skill has none does it open the create panel for a new one.
   const [reopenNote, setReopenNote] = useState<string | null>(null);
   const stationLabel = (t: Tile) => t.own_name || t.skill_label || `Station ${t.station_number}`;
+  // A not-made row (data.spares) reused by "Open another" starts clean: open, no proctor, no assistant,
+  // no room, named after the skill's made stations. A made closed station is simply reopened as it was.
+  const spareIds = new Set((data?.spares || []).map((t) => t.id));
+  const reopenTile = async (tile: Tile): Promise<string | null> => {
+    if (!spareIds.has(tile.id)) {
+      const err = await patchStation(tile.id, { coordinator_status: 'open' });
+      return err;
+    }
+    const made = (data?.groups || []).find((g) => g.key === tile.skill_sheet_id)?.stations || [];
+    const name = nextExtraStationName(
+      made.map((m) => ({ station_number: m.station_number, name: m.own_name || m.skill_label })),
+      tile.skill_label || 'Station'
+    );
+    return patchStation(tile.id, cleanReopenBody(name));
+  };
+  const sparesOf = (sheetIds: Array<string | null>) => (data?.spares || []).filter((t) => t.skill_sheet_id && sheetIds.includes(t.skill_sheet_id));
   const reopenOrCreate = async (candidates: Tile[], create: PanelState) => {
-    const pick = pickReopenStation(candidates.map((t) => ({ station_number: t.station_number, closed: isClosed(t.coordinator_status), tile: t })));
+    const pool = [...candidates, ...sparesOf([create.skillSheetId]).filter((t) => !candidates.some((c) => c.id === t.id) && (!candidates[0] || tileCode(t) === tileCode(candidates[0])))];
+    const pick = pickReopenStation(pool.map((t) => ({ station_number: t.station_number, closed: isClosed(t.coordinator_status), tile: t })));
     if (!pick) return setPanel(create);
-    await setStationStatus(pick.tile, 'open');
-    setReopenNote(`Reopened ${stationLabel(pick.tile)}`);
+    setSavingId(pick.tile.id);
+    const err = await reopenTile(pick.tile);
+    setSavingId(null);
+    if (err) alert('Could not change the station: ' + err);
+    else setReopenNote(`Reopened ${spareIds.has(pick.tile.id) ? 'a new station' : stationLabel(pick.tile)}`);
+    load();
+    loadStats();
   };
   const reopenOrCreatePair = async (all: Tile[], create: PanelState) => {
-    const pair = pickReopenPair(buildStationPairs(all.map((t) => ({ ...tileItem(t), closed: isClosed(t.coordinator_status) }))));
+    const pool = [...all, ...(data?.spares || []).filter((t) => tileCode(t) === 'E203' || tileCode(t) === 'E204')];
+    const pair = pickReopenPair(buildStationPairs(pool.map((t) => ({ ...tileItem(t), closed: isClosed(t.coordinator_status) }))));
     if (!pair) return setPanel(create);
-    await setRowsStatus([pair.o2.tile, pair.bvm.tile], 'open');
-    setReopenNote(`Reopened ${PAIR_TITLE} (${stationLabel(pair.o2.tile)} and ${stationLabel(pair.bvm.tile)})`);
+    setSavingId(pair.o2.tile.id);
+    let err: string | null = null;
+    for (const row of [pair.o2.tile, pair.bvm.tile]) {
+      err = await reopenTile(row);
+      if (err) break;
+    }
+    setSavingId(null);
+    if (err) alert('Could not change the station: ' + err);
+    else setReopenNote(`Reopened ${PAIR_TITLE}`);
+    load();
+    loadStats();
   };
 
   if (status === 'loading' || (!data && !error)) return <PageLoader />;

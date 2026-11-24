@@ -163,3 +163,12 @@ export function notMadeStationIds(rows: MadeCheckRow[]): Set<string> {
   }
   return out;
 }
+
+/**
+ * Body for the existing station PATCH when "Open another" reuses a not-made row: open it, with no proctor
+ * (instructor_email '' also un-flags station_instructors), no assistant, no room, and the next name.
+ * The scenario on the row is left as it is.
+ */
+export function cleanReopenBody(name: string): Record<string, unknown> {
+  return { coordinator_status: 'open', instructor_name: null, instructor_email: '', nremt_assistant: null, room: null, custom_title: name };
+}
