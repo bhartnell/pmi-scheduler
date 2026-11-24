@@ -1,5 +1,6 @@
 'use client';
 
+import { shortSkillLabel, hasShortLabel } from '@/lib/nremt-skill-labels';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Check,
@@ -42,6 +43,7 @@ interface SkillColumn {
   skillName: string;
   stationIds: string[];
   skillSheetId: string | null;
+  nremtCode?: string | null;
 }
 
 interface EvalSummary {
@@ -638,7 +640,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
 
       {/* Grid */}
       <div className="overflow-x-auto max-w-full">
-        <table className="w-full" style={{ minWidth: `${180 + skillColumns.length * 140 + 80}px` }}>
+        <table className="w-full" style={{ minWidth: `${180 + skillColumns.length * (isNremtTesting ? 110 : 140) + 80}px` }}>
           {/* Column headers: skill names */}
           <thead>
             <tr className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/70">
@@ -646,19 +648,21 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
                 Student
               </th>
               {skillColumns.map(col => {
-                const abbreviated = abbreviateSkill(col.skillName);
-                const isLong = abbreviated.length > 15;
-                return (
+                const nremtCode = col.nremtCode;
+                const short = hasShortLabel(nremtCode);
+                const abbreviated = short ? shortSkillLabel(col.skillName, nremtCode) : abbreviateSkill(col.skillName);
+                // Known NREMT skills use the short label; any other skill wraps to two lines instead of being cut.
+                                return (
                   <th
                     key={col.skillName}
-                    className="text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 min-w-[140px]"
+                    className={`text-center px-3 py-3 font-medium text-gray-600 dark:text-gray-400 ${isNremtTesting ? 'min-w-[110px]' : 'min-w-[140px]'}`}
                   >
                     <div className="space-y-0.5">
                       <div
-                        className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate max-w-[140px] mx-auto"
+                        className="text-xs font-semibold text-gray-800 dark:text-gray-200 max-w-[140px] mx-auto break-words leading-tight"
                         title={col.skillName}
                       >
-                        {isLong ? `${abbreviated.slice(0, 15)}…` : abbreviated}
+                        {abbreviated}
                       </div>
                       {col.stationIds.length > 1 && (
                         <div className="text-[11px] font-normal text-blue-500 dark:text-blue-400">

@@ -3,11 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Undo2, Unlock } from 'lucide-react';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
+import { shortSkillLabel } from '@/lib/nremt-skill-labels';
 import {
-  candidatesForStation,
   enRouteList,
   freeStations,
   minutesSince,
+  skillForStation,
+  spreadSuggestions,
   studentName,
   testingNow,
   whyLine,
@@ -34,11 +36,17 @@ import {
 const POLL_MS = 10000;
 const SLOW_MIN = 10;
 
+function skillChip(st: RtdStation, input: RtdInput): string | null {
+  if (!st.skill_name) return null;
+  const col = skillForStation(st.id, input.skillColumns);
+  return shortSkillLabel(st.skill_name, col?.nremtCode);
+}
+
 function stationName(s: RtdStation): string {
   return s.custom_title || s.skill_name || `Station ${s.station_number}`;
 }
 
-export default function RunTheDay({ labDayId, canManage, onChanged }: { labDayId: string; canManage: boolean; onChanged?: () => void }) {
+export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount }: { labDayId: string; canManage: boolean; onChanged?: () => void; onFreeCount?: (free: number, total: number) => void }) {
   const [input, setInput] = useState<RtdInput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -53,7 +61,8 @@ export default function RunTheDay({ labDayId, canManage, onChanged }: { labDayId
       if (!d.success) throw new Error(d.error || 'refresh failed');
       const next: RtdInput = {
         students: d.students || [],
-        stations: d.stations || [],
+        // The hub shows the proctor with the station's own text as fallback (API proctorName).
+        stations: (d.stations || []).map((st: RtdStation) => ({ ...st, instructorName: st.proctorName ?? st.instructorName })),
         cells: d.cells || {},
         skillColumns: d.skillColumns || [],
         skillCells: d.skillCells || {},
@@ -144,9 +153,16 @@ export default function RunTheDay({ labDayId, canManage, onChanged }: { labDayId
       enRoute,
       free,
       testing: testingNow(input),
+      suggestions: spreadSuggestions(free, input),
       closed: input.stations.filter((s) => (s.coordinatorStatus || 'open') !== 'open'),
     };
   }, [input]);
+
+  const freeNow = view ? view.free.length : null;
+  const totalNow = input ? input.stations.length : null;
+  useEffect(() => {
+    if (freeNow !== null && totalNow !== null) onFreeCount?.(freeNow, totalNow);
+  }, [freeNow, totalNow, onFreeCount]);
 
   if (!input || !view) {
     return <p className="text-sm text-gray-600 dark:text-gray-400">{error || 'Loading...'}</p>;
@@ -158,9 +174,6 @@ export default function RunTheDay({ labDayId, canManage, onChanged }: { labDayId
     <div className="space-y-6">
       {error && <p className="text-sm text-amber-700 dark:text-amber-300">{error}</p>}
 
-      <div className="text-sm font-medium text-gray-700 dark:text-gray-200">
-        Stations free {view.free.length} of {input.stations.length}
-      </div>
 
       <section aria-label="Free stations" className="space-y-3">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Free stations</h2>
@@ -196,22 +209,22 @@ export default function RunTheDay({ labDayId, canManage, onChanged }: { labDayId
             );
           })}
 
-          {view.free.map((st) => {
-            const list: Candidate[] = candidatesForStation(st, input);
-            const top = list[0];
-            const others = list.slice(1);
+          {view.suggestions.map(({ station: st, list, top }) => {
+            const others: Candidate[] = list.filter((c) => c.student.id !== top?.student.id);
             return (
               <div key={st.id} className="rounded-xl bg-white dark:bg-gray-800 shadow border border-green-500 p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="text-xl font-bold text-gray-900 dark:text-white">{stationName(st)}</div>
                   <span className="shrink-0 rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-semibold text-green-800 dark:text-green-200">Free</span>
                 </div>
-                {st.skill_name && (
-                  <span className="inline-block rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-200">
-                    {st.skill_name}
+                {skillChip(st, input) && (
+                  <span className="inline-block rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-200" title={st.skill_name || undefined}>
+                    {skillChip(st, input)}
                   </span>
                 )}
-                <div className="text-xs text-gray-500 dark:text-gray-400">Proctor: {st.instructorName || 'not set'}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  {st.instructorName || 'Proctor not set'} - {st.room || 'Location not set'}
+                </div>
                 {top ? (
                   <>
                     <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Suggested next</div>
@@ -243,31 +256,44 @@ export default function RunTheDay({ labDayId, canManage, onChanged }: { labDayId
                         )}
                       </div>
                     )}
-                    {openPick === st.id && (
-                      <ul className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 max-h-64 overflow-y-auto">
-                        {others.map((c) => (
-                          <li key={c.student.id}>
-                            <button
-                              type="button"
-                              disabled={busyKey === st.id}
-                              onClick={() => send(st.id, c.student.id)}
-                              className="w-full text-left min-h-[44px] px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700"
-                            >
-                              <div className="font-medium text-gray-900 dark:text-white">{studentName(c.student)}</div>
-                              <div className="text-xs text-gray-600 dark:text-gray-400">{whyLine(c)}</div>
-                              {c.sameProctorAsFirstAttempt && (
-                                <div className="text-xs font-medium text-amber-700 dark:text-amber-300">
-                                  Warning: this proctor graded the first attempt
-                                </div>
-                              )}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
                   </>
                 ) : (
-                  <div className="text-sm text-gray-600 dark:text-gray-400">Nobody is waiting for this station right now.</div>
+                  <>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">Nobody waiting for this skill</div>
+                    {canManage && others.length > 0 && (
+                      <div className="pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setOpenPick(openPick === st.id ? null : st.id)}
+                          className={`${btn} border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100`}
+                        >
+                          Someone else
+                        </button>
+                      </div>
+                    )}
+                  </>
+                )}
+                {openPick === st.id && (
+                  <ul className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 max-h-64 overflow-y-auto">
+                    {others.map((c) => (
+                      <li key={c.student.id}>
+                        <button
+                          type="button"
+                          disabled={busyKey === st.id}
+                          onClick={() => send(st.id, c.student.id)}
+                          className="w-full text-left min-h-[44px] px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        >
+                          <div className="font-medium text-gray-900 dark:text-white">{studentName(c.student)}</div>
+                          <div className="text-xs text-gray-600 dark:text-gray-400">{whyLine(c)}</div>
+                          {c.sameProctorAsFirstAttempt && (
+                            <div className="text-xs font-medium text-amber-700 dark:text-amber-300">
+                              Warning: this proctor graded the first attempt
+                            </div>
+                          )}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
               </div>
             );
@@ -275,52 +301,50 @@ export default function RunTheDay({ labDayId, canManage, onChanged }: { labDayId
         </div>
       </section>
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(320px,1fr))] gap-6 items-start">
-        <section aria-label="Testing now" className="rounded-xl bg-white dark:bg-gray-800 shadow p-4 space-y-2 lg:max-w-xl">
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Testing now</h2>
-          {view.testing.length === 0 ? (
-            <p className="text-sm text-gray-600 dark:text-gray-400">Nobody is being graded right now.</p>
-          ) : (
-            <ul className="divide-y divide-gray-200 dark:divide-gray-700">
-              {view.testing.map((t) => (
-                <li key={t.station.id} className="py-2 flex items-center justify-between gap-3 text-sm min-h-[44px]">
-                  <span className="font-medium text-gray-900 dark:text-white">{stationName(t.station)}</span>
-                  <span className="text-gray-700 dark:text-gray-300">
-                    {studentName(t.student)}
-                    {minutesSince(t.startedAt, now) !== null && ` - ${minutesSince(t.startedAt, now)} min`}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {view.closed.length > 0 && (
-            <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-1">
-              {view.closed.map((s) => (
-                <div key={s.id} className="flex items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-400 min-h-[44px]">
-                  <span>
-                    {stationName(s)} - {s.coordinatorStatus === 'break' ? 'on break' : 'closed'}
-                  </span>
-                  {canManage && (
-                    <button
-                      type="button"
-                      disabled={busyKey === s.id}
-                      onClick={() => reopen(s.id)}
-                      className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 disabled:opacity-60"
-                    >
-                      <Unlock className="w-4 h-4" /> Reopen
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
+      <section aria-label="Testing now" className="rounded-xl bg-white dark:bg-gray-800 shadow p-4 space-y-2">
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Testing now</h2>
+        {view.testing.length === 0 ? (
+          <p className="text-sm text-gray-600 dark:text-gray-400">Nobody is being graded right now.</p>
+        ) : (
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-x-6 gap-y-1">
+            {view.testing.map((t) => (
+              <li key={t.station.id} className="flex items-center justify-between gap-3 text-sm min-h-[44px] border-b border-gray-100 dark:border-gray-700/60">
+                <span className="font-medium text-gray-900 dark:text-white">{stationName(t.station)}</span>
+                <span className="text-gray-700 dark:text-gray-300">
+                  {studentName(t.student)}
+                  {minutesSince(t.startedAt, now) !== null && ` - ${minutesSince(t.startedAt, now)} min`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {view.closed.length > 0 && (
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-x-6 gap-y-1 pt-2 border-t border-gray-200 dark:border-gray-700">
+            {view.closed.map((s) => (
+              <li key={s.id} className="flex items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-400 min-h-[44px]">
+                <span>
+                  {stationName(s)} - {s.coordinatorStatus === 'break' ? 'on break' : 'closed'}
+                </span>
+                {canManage && (
+                  <button
+                    type="button"
+                    disabled={busyKey === s.id}
+                    onClick={() => reopen(s.id)}
+                    className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 disabled:opacity-60"
+                  >
+                    <Unlock className="w-4 h-4" /> Reopen
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
-        <section aria-label="Completion table" className="rounded-xl bg-white dark:bg-gray-800 shadow overflow-hidden min-w-0">
-          <h2 className="px-4 pt-4 text-lg font-semibold text-gray-900 dark:text-white">Completion</h2>
-          <IndividualTestingGrid labDayId={labDayId} isNremtTesting />
-        </section>
-      </div>
+      <section aria-label="Completion table" className="rounded-xl bg-white dark:bg-gray-800 shadow overflow-hidden min-w-0">
+        <h2 className="px-4 pt-4 text-lg font-semibold text-gray-900 dark:text-white">Completion</h2>
+        <IndividualTestingGrid labDayId={labDayId} isNremtTesting />
+      </section>
     </div>
   );
 }

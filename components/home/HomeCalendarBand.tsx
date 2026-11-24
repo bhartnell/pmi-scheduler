@@ -530,7 +530,7 @@ function EventPopover({
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {href && !editing && (
             <Link href={href} className="inline-flex min-h-[44px] items-center text-sm text-blue-600 dark:text-blue-400 hover:underline">
-              {isLabDay || e.event_type === 'lab' ? 'Open lab day' : 'Open page'}
+              {e.metadata?.nremt_testing === true ? 'Open NREMT hub' : isLabDay || e.event_type === 'lab' ? 'Open lab day' : 'Open page'}
             </Link>
           )}
           <span className="ml-auto flex gap-2">

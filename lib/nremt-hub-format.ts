@@ -43,3 +43,13 @@ export function nremtHubCrumbs(labDayId: string, date: string | null | undefined
     } as Record<string, string>,
   };
 }
+
+/**
+ * Date-only string (YYYY-MM-DD, or an ISO string starting with one) as a LOCAL calendar date.
+ * new Date('2026-11-25') reads as UTC midnight and prints as the 24th in Pacific time.
+ */
+export function localCalendarDate(date: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
+  if (!m) return new Date(date);
+  return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+}
