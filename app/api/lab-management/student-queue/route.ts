@@ -746,9 +746,27 @@ export async function POST(request: NextRequest) {
           .eq('id', queuedRow.id)
           .eq('status', 'queued')
           .select()
-          .single();
+          .maybeSingle();
         if (promoteErr) throw promoteErr;
-        return NextResponse.json({ success: true, entry: promoted });
+        if (promoted) {
+          return NextResponse.json({ success: true, entry: promoted });
+        }
+        // Zero rows updated: the queued row changed in the same instant (a second POST promoted
+        // it, or an Undo removed it). Re-check for an in_progress row and return it if present;
+        // otherwise fall through to the insert below.
+        const { data: nowInProgress } = await supabase
+          .from('lab_day_student_queue')
+          .select('id, status')
+          .eq('lab_day_id', lab_day_id)
+          .eq('student_id', student_id)
+          .eq('station_id', station_id)
+          .eq('status', 'in_progress')
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (nowInProgress) {
+          return NextResponse.json({ success: true, entry: nowInProgress, message: 'Already in progress' });
+        }
       }
     }
 
