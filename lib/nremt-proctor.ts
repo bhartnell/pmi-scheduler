@@ -107,3 +107,46 @@ export async function proctorEvaluateFallback(request: Request): Promise<AuthRes
     return null;
   }
 }
+
+/**
+ * Student-queue variant (POST and PUT): the body must carry lab_day_id + station_id + student_id,
+ * the station must belong to that lab day, the proctor must be live for that day, and the student
+ * must belong to that day's cohort. PUT by bare entry id is NOT allowed for a proctor (the triple
+ * is what the grading panel always sends). DELETE stays instructor-only.
+ */
+export async function proctorQueueFallback(request: Request): Promise<AuthResult | null> {
+  try {
+    const body = await request.clone().json();
+    const labDayId = typeof body?.lab_day_id === 'string' ? body.lab_day_id : null;
+    const stationId = typeof body?.station_id === 'string' ? body.station_id : null;
+    const studentId = typeof body?.student_id === 'string' ? body.student_id : null;
+    if (!labDayId || !stationId || !studentId) return null;
+    const supabase = getSupabaseAdmin();
+    const { data: station } = await supabase.from('lab_stations').select('lab_day_id').eq('id', stationId).maybeSingle();
+    if (!station?.lab_day_id || station.lab_day_id !== labDayId) return null;
+    const { data: day } = await supabase.from('lab_days').select('cohort_id').eq('id', labDayId).maybeSingle();
+    if (!day?.cohort_id) return null;
+    const { data: student } = await supabase.from('students').select('cohort_id').eq('id', studentId).maybeSingle();
+    if (!student || student.cohort_id !== day.cohort_id) return null;
+    return await proctorAuthFallback(NextResponse.json({}, { status: 403 }), { stationId });
+  } catch (err) {
+    console.error('nremt proctor queue fallback failed (refusing):', err);
+    return null;
+  }
+}
+
+/**
+ * Evaluations GET variant: the student (query param) must belong to the cohort of a lab day the
+ * proctor is live on. Read-only; PATCH and DELETE on that route stay instructor-only.
+ */
+export async function proctorStudentReadFallback(studentId: string | null | undefined): Promise<AuthResult | null> {
+  try {
+    if (!studentId) return null;
+    const { data: student } = await getSupabaseAdmin().from('students').select('cohort_id').eq('id', studentId).maybeSingle();
+    if (!student?.cohort_id) return null;
+    return await proctorAuthFallback(NextResponse.json({}, { status: 403 }), { cohortId: student.cohort_id });
+  } catch (err) {
+    console.error('nremt proctor student read fallback failed (refusing):', err);
+    return null;
+  }
+}

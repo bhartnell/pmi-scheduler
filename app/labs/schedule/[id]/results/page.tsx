@@ -3,7 +3,9 @@
 import { useSession } from 'next-auth/react';
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback } from 'react';
+import Link from 'next/link';
 import BreadcrumbNames from '@/components/layout/BreadcrumbNames';
+import { nremtHubCrumbs } from '@/lib/nremt-hub-format';
 import { PageLoader } from '@/components/ui';
 import { exportToExcel } from '@/lib/export-utils';
 import {
@@ -410,9 +412,19 @@ export default function SkillResultsPage() {
       <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Breadcrumbs */}
         <BreadcrumbNames
-          entityTitle={labDay?.title || 'Lab Day'}
-          customSegments={{ results: 'Results' }}
+          {...(labDay?.is_nremt_testing
+            ? nremtHubCrumbs(labDay.id, labDay.date, 'results', 'Skill Results')
+            : { entityTitle: labDay?.title || 'Lab Day', customSegments: { results: 'Results' } })}
         />
+
+        {labDay?.is_nremt_testing && (
+          <Link
+            href={`/labs/nremt-hub/${labDay.id}`}
+            className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:underline min-h-[44px]"
+          >
+            &larr; Back to NREMT hub
+          </Link>
+        )}
 
         {/* Title */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">

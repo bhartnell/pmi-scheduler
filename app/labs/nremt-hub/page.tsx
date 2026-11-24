@@ -76,7 +76,7 @@ export default function NremtHubListPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
               <ClipboardCheck className="w-6 h-6 text-red-600 dark:text-red-400" />
@@ -89,7 +89,7 @@ export default function NremtHubListPage() {
           <ThemeToggle />
         </div>
       </div>
-      <main className="max-w-screen-xl mx-auto px-4 py-6 space-y-6">
+      <main className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-6 space-y-6">
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         {days && days.length === 0 && (
           <p className="text-sm text-gray-500 dark:text-gray-400">

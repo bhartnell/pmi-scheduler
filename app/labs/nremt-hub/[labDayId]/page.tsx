@@ -13,6 +13,7 @@ import { formatHubDate, formatHubTime } from '@/lib/nremt-hub-format';
 import { nextStationName, nextStationNumber, isClosed } from '@/lib/nremt-hub-stations';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
 import ProctorsPanel from '@/components/nremt/ProctorsPanel';
+import { computeDayStats, type DayStats } from '@/lib/nremt-day-stats';
 
 // NREMT hub: the day hub. Stations grouped by skill sheet, one big "Open grading"
 // button per station, plus (instructor+) station controls: edit a station, open another
@@ -471,6 +472,25 @@ export default function NremtHubDayPage() {
 
   const [panel, setPanel] = useState<PanelState | null>(null);
 
+  // Overview row: the same student-queue data and the same rules (lib/nremt-day-stats) the
+  // Coordinator View status bar uses. Instructor+ only (the API's own gate); refreshes every 30s.
+  const [stats, setStats] = useState<DayStats | null>(null);
+  const loadStats = useCallback(() => {
+    fetch(`/api/lab-management/student-queue?lab_day_id=${labDayId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (!d.success) return;
+        setStats(computeDayStats(d.students || [], d.stations || [], d.cells || {}, (d.skillColumns || []).length, d.skillCells || {}));
+      })
+      .catch(() => {});
+  }, [labDayId]);
+  useEffect(() => {
+    if (!canManage || !labDayId) return;
+    loadStats();
+    const t = setInterval(loadStats, 30000);
+    return () => clearInterval(t);
+  }, [canManage, labDayId, loadStats]);
+
   // Close / reopen: the existing coordinator_status mark on the station (the same one the
   // Coordinator View sets). Nothing is deleted; evaluations stay counted.
   const setStationStatus = async (tile: Tile, next: 'open' | 'closed') => {
@@ -488,6 +508,7 @@ export default function NremtHubDayPage() {
     }
     setSavingId(null);
     load();
+    loadStats();
   };
 
   if (status === 'loading' || (!data && !error)) return <PageLoader />;
@@ -496,7 +517,7 @@ export default function NremtHubDayPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       <div className="bg-white dark:bg-gray-800 shadow-sm">
-        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
+        <div className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
               <ClipboardCheck className="w-6 h-6 text-red-600 dark:text-red-400" />
@@ -516,7 +537,7 @@ export default function NremtHubDayPage() {
         </div>
       </div>
 
-      <main className="max-w-screen-2xl mx-auto px-4 py-6 space-y-6">
+      <main className="w-full max-w-[3000px] mx-auto px-4 md:px-6 2xl:px-8 py-6 space-y-6">
         <Link href="/labs/nremt-hub" className="inline-flex items-center gap-1 text-sm text-blue-600 dark:text-blue-400 hover:underline min-h-[44px]">
           <ArrowLeft className="w-4 h-4" /> All NREMT days
         </Link>
@@ -525,24 +546,34 @@ export default function NremtHubDayPage() {
 
         {data && (
           <>
-            {canManage && (
-              <div className="flex flex-wrap gap-3">
-                <Link href={`/labs/schedule/${labDayId}/coordinator`} className="inline-flex items-center min-h-[44px] px-4 rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400 font-medium hover:underline">
-                  Coordinator View
-                </Link>
-                <Link href={`/labs/schedule/${labDayId}/results`} className="inline-flex items-center min-h-[44px] px-4 rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400 font-medium hover:underline">
-                  Skill Results
-                </Link>
-                <Link href={`/labs/schedule/${labDayId}`} className="inline-flex items-center min-h-[44px] px-4 rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400 font-medium hover:underline">
-                  Set-up (lab day page)
-                </Link>
-              </div>
-            )}
+            {canManage && stats && (() => {
+              const allTiles = data.groups.flatMap((g) => g.stations);
+              const openCount = allTiles.filter((t) => !isClosed(t.coordinator_status)).length;
+              const pct = stats.skillsPossible > 0 ? Math.round((stats.skillsCompleted / stats.skillsPossible) * 100) : 0;
+              const items: { label: string; value: string }[] = [
+                { label: 'Students', value: String(stats.students) },
+                { label: 'Stations open', value: `${openCount} of ${allTiles.length}` },
+                { label: 'Testing now', value: String(stats.testing) },
+                { label: 'Waiting', value: String(stats.waiting) },
+                { label: 'Complete', value: String(stats.complete) },
+                { label: 'Overall', value: `${stats.skillsCompleted} of ${stats.skillsPossible} (${pct}%)` },
+              ];
+              return (
+                <section aria-label="Day overview" className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
+                  {items.map((it) => (
+                    <div key={it.label} className="rounded-lg bg-white dark:bg-gray-800 shadow px-4 py-3 border border-gray-200 dark:border-gray-700">
+                      <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">{it.label}</div>
+                      <div className="text-xl font-bold text-gray-900 dark:text-white tabular-nums">{it.value}</div>
+                    </div>
+                  ))}
+                </section>
+              );
+            })()}
 
             {data.my_stations.length > 0 && (
               <section className="space-y-3">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Your station</h2>
-                <div className="grid grid-cols-3 max-lg:grid-cols-2 max-sm:grid-cols-1 gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
                   {data.my_stations.map((t) => (
                     <StationTile key={t.id} tile={t} large canManage={canManage} saving={savingId === t.id} onEdit={(x) => setPanel({ mode: 'edit', tile: x, skillSheetId: x.skill_sheet_id, skillLabel: x.skill_label || '' })} onSetStatus={setStationStatus} />
                   ))}
@@ -570,7 +601,7 @@ export default function NremtHubDayPage() {
                     </button>
                   )}
                 </div>
-                <div className="grid grid-cols-4 max-xl:grid-cols-3 max-lg:grid-cols-2 max-sm:grid-cols-1 gap-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-4">
                   {g.stations.map((t) => (
                     <StationTile key={t.id} tile={t} canManage={canManage} saving={savingId === t.id} onEdit={(x) => setPanel({ mode: 'edit', tile: x, skillSheetId: x.skill_sheet_id, skillLabel: x.skill_label || '' })} onSetStatus={setStationStatus} />
                   ))}
@@ -587,6 +618,20 @@ export default function NremtHubDayPage() {
                   <IndividualTestingGrid labDayId={labDayId} isNremtTesting />
                 </div>
               </details>
+            )}
+
+            {canManage && (
+              <div className="flex flex-wrap gap-3">
+                <Link href={`/labs/schedule/${labDayId}/coordinator`} className="inline-flex items-center min-h-[44px] px-4 rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400 font-medium hover:underline">
+                  Coordinator View
+                </Link>
+                <Link href={`/labs/schedule/${labDayId}/results`} className="inline-flex items-center min-h-[44px] px-4 rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400 font-medium hover:underline">
+                  Skill Results
+                </Link>
+                <Link href={`/labs/schedule/${labDayId}`} className="inline-flex items-center min-h-[44px] px-4 rounded-lg bg-white dark:bg-gray-800 shadow text-blue-600 dark:text-blue-400 font-medium hover:underline">
+                  Set-up (lab day page)
+                </Link>
+              </div>
             )}
 
             {panel && (
