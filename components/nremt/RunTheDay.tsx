@@ -5,6 +5,7 @@ import { Undo2, Unlock } from 'lucide-react';
 import IndividualTestingGrid, { type HubCellMenu } from '@/components/lab-day/IndividualTestingGrid';
 import { shortSkillLabel } from '@/lib/nremt-skill-labels';
 import { withAssistant } from '@/lib/nremt-hub-stations';
+import { cardLine, estimateDay, formatAbout, formatClock, lineForStation, sourceLabel } from '@/lib/nremt-day-estimate';
 import {
   dayUnits,
   enRouteList,
@@ -53,7 +54,7 @@ function stationName(s: RtdStation): string {
   return s.custom_title || s.skill_name || `Station ${s.station_number}`;
 }
 
-export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount, onData }: { labDayId: string; canManage: boolean; onChanged?: () => void; onFreeCount?: (free: number, total: number) => void; onData?: (input: RtdInput) => void }) {
+export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount, onData, startMs }: { labDayId: string; canManage: boolean; onChanged?: () => void; onFreeCount?: (free: number, total: number) => void; onData?: (input: RtdInput) => void; startMs?: number | null }) {
   const [input, setInput] = useState<RtdInput | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -61,6 +62,8 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
   const [now, setNow] = useState(() => Date.now());
   // "Station is free" on the BVM + O2 gap card: clears the gap for THIS screen only.
   const [dismissedGaps, setDismissedGaps] = useState<Set<string>>(() => new Set());
+  // Estimate box: kept on this screen only (component state), so it can be turned off after lunch.
+  const [includeBreak, setIncludeBreak] = useState(true);
   const lastGood = useRef<RtdInput | null>(null);
   // Bumped after every write made from this screen so the completion table refetches at once.
   const [refreshSignal, setRefreshSignal] = useState(0);
@@ -230,6 +233,16 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
     };
   }, [input, now, dismissedGaps]);
 
+  // Estimated finish: pure calculation from the data already held here. No fetch, no writes.
+  const estimate = useMemo(
+    () => (input ? estimateDay(input, { now, startMs: startMs ?? null, includeBreak }) : null),
+    [input, now, startMs, includeBreak]
+  );
+  const lineText = (stationId: string): string | null => {
+    const l = estimate ? lineForStation(estimate, stationId) : null;
+    return l ? cardLine(l) : null;
+  };
+
   // A BVM + O2 pair counts as one station in "Stations free".
   const counts = input ? unitCounts(input, now, dismissedGaps) : null;
   const freeNow = counts ? counts.free : null;
@@ -247,6 +260,42 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
   return (
     <div className="space-y-6">
       {error && <p className="text-sm text-amber-700 dark:text-amber-300">{error}</p>}
+
+      {estimate && (
+        <section aria-label="Estimated finish" className="rounded-lg bg-white dark:bg-gray-800 shadow border border-gray-200 dark:border-gray-700 px-4 py-2 space-y-1">
+          <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 min-h-[44px]">
+            <div className="text-sm text-gray-900 dark:text-white">
+              {estimate.allDone ? (
+                <span className="font-semibold">All stations done</span>
+              ) : estimate.finishMs === null || estimate.testingLeftMin === null ? (
+                <span className="font-semibold">Estimated finish: no open station for the skills still owed</span>
+              ) : (
+                <>
+                  <span className="font-semibold">
+                    Estimated finish {formatClock(estimate.finishMs)}
+                    {estimate.fromStart ? ' (if started at ' + (startMs ? formatClock(startMs) : '') + ')' : ''}
+                  </span>
+                  {' - '}
+                  {formatAbout(estimate.testingLeftMin)} of testing left
+                  {estimate.settingBy ? ` - ${estimate.settingBy}` : ''}
+                  {estimate.secondStationHint ? ` - ${estimate.secondStationHint}` : ''}
+                  {sourceLabel(estimate.source) && <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">{sourceLabel(estimate.source)}</span>}
+                </>
+              )}
+            </div>
+            <label className="inline-flex items-center gap-2 min-h-[44px] text-sm text-gray-700 dark:text-gray-300">
+              <input type="checkbox" className="h-4 w-4" checked={includeBreak} onChange={(e) => setIncludeBreak(e.target.checked)} />
+              Include a 30 minute break per station
+            </label>
+          </div>
+          {estimate.noOpenLines.length > 0 && !estimate.allDone && (
+            <div className="text-sm text-amber-700 dark:text-amber-300">No open station for: {estimate.noOpenLines.join(', ')}</div>
+          )}
+          {estimate.doneHints.map((h) => (
+            <div key={h} className="text-sm text-blue-800 dark:text-blue-200">{h}</div>
+          ))}
+        </section>
+      )}
 
 
       <section aria-label="Free stations" className="space-y-3">
@@ -272,6 +321,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
                   {withAssistant(e.station.instructorName, e.station.assistantName) || 'Proctor not set'} - {e.station.room || 'Location not set'}
                 </div>
                 <div className="text-lg font-semibold text-gray-900 dark:text-white">{studentName(e.student)}</div>
+                {lineText(e.station.id) && <div className="text-xs text-gray-500 dark:text-gray-400">{lineText(e.station.id)}</div>}
                 <div className="text-sm text-gray-600 dark:text-gray-400">
                   {mins === null ? 'Sent' : `Sent ${mins} min ago`} - waiting for the proctor to start
                 </div>
@@ -331,6 +381,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
                   {withAssistant(st.instructorName, st.assistantName) || 'Proctor not set'} - {st.room || 'Location not set'}
                 </div>
                 {unit.kind === 'pair' && <div className="text-xs text-gray-500 dark:text-gray-400">O2 by NRB first, then BVM</div>}
+                {lineText(st.id) && <div className="text-xs text-gray-500 dark:text-gray-400">{lineText(st.id)}</div>}
                 {top ? (
                   <>
                     <div className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">Suggested next</div>
@@ -422,6 +473,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
                   <span className="text-gray-700 dark:text-gray-300">
                     {studentName(t.student)}
                     {minutesSince(t.startedAt, now) !== null && ` - ${minutesSince(t.startedAt, now)} min`}
+                    {lineText(t.station.id) && <span className="block text-xs text-gray-500 dark:text-gray-400">{lineText(t.station.id)}</span>}
                   </span>
                 </li>
               );
