@@ -23,9 +23,16 @@ export function formatHubTime(t: string | null | undefined): string {
  * trail reads Labs > NREMT Hub > the day > page and every crumb goes through the hub. Fed to
  * BreadcrumbNames. The URLs of those pages are unchanged; only the crumbs' labels and links.
  */
-export function nremtHubCrumbs(labDayId: string, dayTitle: string, pageSegment: string, pageLabel: string) {
+export function nremtHubDayLabel(date: string | null | undefined): string {
+  if (!date) return 'NREMT Testing Day';
+  const [y, m, d] = date.split('-').map(Number);
+  const short = new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `NREMT Testing Day, ${short}`;
+}
+
+export function nremtHubCrumbs(labDayId: string, date: string | null | undefined, pageSegment: string, pageLabel: string) {
   return {
-    entityTitle: dayTitle,
+    entityTitle: nremtHubDayLabel(date),
     customSegments: {
       'labs/schedule': 'NREMT Hub',
       [`labs/schedule/${labDayId}/${pageSegment}`]: pageLabel,

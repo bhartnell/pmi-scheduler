@@ -413,7 +413,7 @@ export default function SkillResultsPage() {
         {/* Breadcrumbs */}
         <BreadcrumbNames
           {...(labDay?.is_nremt_testing
-            ? nremtHubCrumbs(labDay.id, labDay.title || 'NREMT day', 'results', 'Skill Results')
+            ? nremtHubCrumbs(labDay.id, labDay.date, 'results', 'Skill Results')
             : { entityTitle: labDay?.title || 'Lab Day', customSegments: { results: 'Results' } })}
         />
 
