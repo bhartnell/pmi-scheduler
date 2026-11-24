@@ -35,6 +35,10 @@ interface LabDay {
   priority_flag: string | null;
   cert_course?: string | null;
   is_adv_cert_testing?: boolean;
+  is_nremt_testing?: boolean;
+  start_time?: string | null;
+  end_time?: string | null;
+  station_count?: number;
   cohort_id?: string | null;
   course_day?: number | null;
   course_days_total?: number | null;
@@ -155,7 +159,44 @@ export default function TodayBand() {
     }
   }
   // Busy plain days (more than two lab sections in total) collapse too.
-  const plainCount = groups.filter(g => !g.course).length;
+  const plainCount = groups.filter(g => !g.course && !g.days[0].is_nremt_testing).length;
+
+  // An NREMT testing day is ONE entry that opens the hub: no station rows and
+  // no per-station assign here (proctors are placed on the hub).
+  const renderNremtDay = (day: LabDay) => {
+    const fmt = (t?: string | null) => (t ? t.slice(0, 5) : null);
+    const time = fmt(day.start_time) ? `${fmt(day.start_time)}${fmt(day.end_time) ? `-${fmt(day.end_time)}` : ''}` : null;
+    const cohort = day.program && day.cohort_number != null ? `${day.program} Group ${day.cohort_number}` : 'Cohort';
+    const n = day.station_count ?? day.stations.length;
+    return (
+      <div
+        key={day.id}
+        className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 dark:border-gray-700 p-2 max-md:flex-col max-md:items-stretch"
+      >
+        <div className="min-w-0">
+          <h3 className="text-[13px] font-semibold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
+            NREMT Testing Day
+            {day.priority_flag && day.priority_flag !== 'normal' && (
+              <span className="px-2 py-0.5 text-[11px] font-bold uppercase rounded bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                {day.priority_flag === 'critical' ? 'Critical' : 'High priority'}
+              </span>
+            )}
+          </h3>
+          <p className="text-[12px] text-gray-600 dark:text-gray-400">
+            {cohort}
+            {time ? ` - ${time}` : ''}
+            {` - ${n} station${n === 1 ? '' : 's'}`}
+          </p>
+        </div>
+        <Link
+          href={`/labs/nremt-hub/${day.id}`}
+          className="h-9 inline-flex items-center px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[13px] font-medium shrink-0"
+        >
+          Open NREMT hub
+        </Link>
+      </div>
+    );
+  };
 
   const renderSection = (day: LabDay, collapsible: boolean, first: boolean, inCourseCard: boolean) => {
     const open = day.open_stations;
@@ -166,7 +207,7 @@ export default function TodayBand() {
       day.program && day.cohort_number != null ? `${day.program} Group ${day.cohort_number}` : 'Lab day';
     const mins = day.rotation_duration;
     const isCollapsible = collapsible || (!inCourseCard && plainCount > COLLAPSE_OVER);
-    const isFirst = inCourseCard ? first : groups.filter(g => !g.course)[0]?.days[0].id === day.id;
+    const isFirst = inCourseCard ? first : groups.filter(g => !g.course && !g.days[0].is_nremt_testing)[0]?.days[0].id === day.id;
     const isExpanded = !isCollapsible || (expanded[day.id] ?? isFirst);
     const stationsId = `stations-${day.id}`;
     return (
@@ -357,7 +398,9 @@ export default function TodayBand() {
                 {g.days.map((day, i) => renderSection(day, g.days.length > COLLAPSE_OVER, i === 0, true))}
               </div>
             ) : (
-              <div key={g.key}>{renderSection(g.days[0], false, true, false)}</div>
+              <div key={g.key}>
+                {g.days[0].is_nremt_testing ? renderNremtDay(g.days[0]) : renderSection(g.days[0], false, true, false)}
+              </div>
             ),
           )}
         </div>

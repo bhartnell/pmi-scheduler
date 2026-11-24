@@ -8,6 +8,7 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 ## 2026-11-24
+PENDING | NREMT HUB one entry (card 4225cd1c): home Today band and site/home calendar show an NREMT testing day as ONE entry that opens the hub, no station rows; display only, no schema or calendar-sync change
 
 branch claude/nremt-run-the-day (draft PR) | NREMT HUB Run the day (card 4225cd1c): hub tabs (Run the day / Stations and proctors), free-station cards with by-skill suggestion + Send/Someone else/Undo, en route saved as a queue row (status 'queued', no schema change), Testing now list, Reopen, completion table; classifyStudent now counts complete BY SKILL (same answer as the old rule in the normal case, stated more plainly; no live fault); lib/nremt-run-the-day.ts + tests. Revert: git revert the squash. Round 2: one queue row per send (POST promotes queued to in_progress, GET orders oldest first), stale en route skipped when in progress anywhere, guarded Undo (only_if_status), tracker En route pill, minutes on Testing now, 10s refresh, Stations free X of Y (Retakes waiting left out: needs a shared helper with the Coordinator View).
 
