@@ -77,6 +77,23 @@ export function isRoutable(station: RtdStation): boolean {
   return st === 'open';
 }
 
+/** Open or on a temporary break: the station is part of the day's line (a break station is coming back). */
+export function isCountedOpen(station: RtdStation): boolean {
+  const st = station.coordinatorStatus || 'open';
+  return st === 'open' || st === 'break';
+}
+
+/**
+ * State of one unit (single station or BVM + O2 pair) for the Break / Closed lists.
+ * 'closed' if any part is closed; else 'break' if any part is on break; else 'open'.
+ */
+export function unitBreakState(stations: RtdStation[]): 'open' | 'break' | 'closed' {
+  const sts = stations.map((s) => s.coordinatorStatus || 'open');
+  if (sts.includes('closed')) return 'closed';
+  if (sts.includes('break')) return 'break';
+  return 'open';
+}
+
 /** Student currently graded (in progress) at this station, or null. */
 export function studentAtStation(station: RtdStation, input: RtdInput): RtdStudent | null {
   for (const s of input.students) {
@@ -594,6 +611,8 @@ export interface SendOption {
   busyWith: string | null;
   /** Retake only: the first attempt's proctor is this station's proctor. */
   sameProctorAsFirstAttempt: boolean;
+  /** Station (or pair) is on a temporary break: listed greyed, not selectable. Closed stations are not listed. */
+  onBreak: boolean;
 }
 
 export interface CellMenu {
@@ -610,7 +629,7 @@ export interface CellMenu {
   busyElsewhere: { title: string; kind: 'en_route' | 'in_progress' } | null;
   /** Fail only: first attempt's evaluator, for the retake line. */
   firstAttemptBy: string | null;
-  /** Open stations for this skill (closed and on-break are left out). Pair appears once. */
+  /** Open stations for this skill, plus any on break (greyed, onBreak true); closed ones are left out. Pair appears once. */
   options: SendOption[];
 }
 
@@ -685,7 +704,9 @@ export function cellMenuFor(student: RtdStudent, skillName: string, input: RtdIn
       if (!u || seen.has(u.key)) continue;
       seen.add(u.key);
       const parts = unitStations(u);
-      if (!parts.every(isRoutable)) continue; // closed or on break: not listed
+      const unitState = unitBreakState(parts);
+      if (unitState === 'closed') continue; // closed: not listed
+      const onBreak = unitState === 'break'; // on break: listed greyed, not selectable
       let target: RtdStation;
       if (u.kind === 'pair') {
         const part = firstPart(needOf(student, u, input));
@@ -702,6 +723,7 @@ export function cellMenuFor(student: RtdStudent, skillName: string, input: RtdIn
         room: target.room ?? null,
         busyWith: busy,
         sameProctorAsFirstAttempt: state === 'fail' && sameName(firstAttemptBy, proctorOf(target)),
+        onBreak,
       });
     }
     options.sort((a, b) => {
