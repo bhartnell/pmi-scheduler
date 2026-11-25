@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth } from '@/lib/api-auth';
+import { outsideProctorDecision, OUTSIDE_REFUSED_MESSAGE, isPmiAddress } from '@/lib/nremt-outside-proctor';
 
 // Per-day NREMT proctor list (card 4225cd1c). Instructor level and above only (proctors
 // themselves cannot see or edit the list). Additive: removal sets removed = true, rows are
@@ -51,7 +52,8 @@ export async function GET(request: NextRequest) {
       .order('added_at', { ascending: true });
     // Missing table = no proctors yet, never an error on the hub.
     if (error) return NextResponse.json({ success: true, proctors: [], table_ready: false });
-    return NextResponse.json({ success: true, proctors: data || [], table_ready: true });
+    const proctors = (data || []).map((p) => ({ ...p, outside_email: !isPmiAddress(String(p.email || '')) }));
+    return NextResponse.json({ success: true, proctors, table_ready: true });
   } catch (error) {
     console.error('NREMT proctors GET error:', error);
     return NextResponse.json({ success: false, error: 'Failed to load proctors' }, { status: 500 });
@@ -95,11 +97,42 @@ export async function POST(request: NextRequest) {
     // Link to an account when one exists with this email.
     let resolvedUserId = labUserId;
     let resolvedName = name;
+    let accountCreated = false;
     if (!resolvedUserId) {
       const { data: u } = await supabase.from('lab_users').select('id, name').ilike('email', email).maybeSingle();
       if (u) {
         resolvedUserId = u.id;
         resolvedName = resolvedName || u.name || null;
+      } else {
+        // No account. A PMI address signs in on its own; an outside address needs an account
+        // first, which only an admin may create (student level, same shape as POST /api/admin/users).
+        const decision = outsideProctorDecision(email, false, user.role);
+        if (decision === 'refuse') {
+          return NextResponse.json({ success: false, error: OUTSIDE_REFUSED_MESSAGE }, { status: 403 });
+        }
+        if (decision === 'create_account') {
+          const { data: created, error: createErr } = await supabase
+            .from('lab_users')
+            .insert({
+              name: resolvedName || email.split('@')[0],
+              email: email.toLowerCase(),
+              role: 'student',
+              is_active: true,
+              approved_at: new Date().toISOString(),
+              approved_by: user.id,
+            })
+            .select('id, name')
+            .single();
+          if (createErr || !created) {
+            // A parallel add may have created it; re-read before giving up. Nothing is overwritten.
+            const { data: again } = await supabase.from('lab_users').select('id, name').ilike('email', email).maybeSingle();
+            if (!again) throw createErr || new Error('account create failed');
+            resolvedUserId = again.id;
+          } else {
+            resolvedUserId = created.id;
+            accountCreated = true;
+          }
+        }
       }
     }
 
@@ -109,7 +142,7 @@ export async function POST(request: NextRequest) {
       .select('id')
       .single();
     if (error) throw error;
-    return NextResponse.json({ success: true, id: data.id });
+    return NextResponse.json({ success: true, id: data.id, account_created: accountCreated, outside_email: !isPmiAddress(email) });
   } catch (error) {
     console.error('NREMT proctors POST error:', error);
     return NextResponse.json({ success: false, error: 'Failed to add proctor' }, { status: 500 });
