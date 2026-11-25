@@ -10,7 +10,7 @@
 
 import { shortSkillLabel } from './nremt-skill-labels.ts';
 import { withAssistant } from './nremt-hub-stations.ts';
-import { buildStationPairs, pairCodeFor, pairNeed, firstPart, needsLabel, inPairGap, PAIR_TITLE, type PairNeed } from './nremt-pairs.ts';
+import { buildStationPairs, pairCodeFor, pairNeed, firstPart, needsLabel, PAIR_TITLE, type PairNeed } from './nremt-pairs.ts';
 
 export interface RtdStudent {
   id: string;
@@ -452,24 +452,48 @@ export interface PairGap {
   student: RtdStudent;
   finished: 'o2' | 'bvm';
   stationId: string;
+  /** When the first part was finished (ISO), for the minutes-since line. */
+  finishedAt: string;
+}
+
+/** Minutes between parts after which the hub flags the second part as not started (amber). */
+export const PAIR_GAP_FLAG_MIN = 10;
+
+/** The student has a completed cell (Pass or Fail) for this station today. */
+function attemptedAt(student: RtdStudent, st: RtdStation, input: RtdInput): boolean {
+  const col = skillForStation(st.id, input.skillColumns);
+  const c = col ? input.skillCells[`${student.id}_${col.skillName}`] : input.cells[`${student.id}_${st.id}`];
+  if (c?.status === 'completed') return true;
+  return input.cells[`${student.id}_${st.id}`]?.status === 'completed';
 }
 
 /**
- * Between finishing one part and starting the other the proctor reads the next instructions: for
- * 5 minutes after a student completes one part at this pair while still needing the other, the card
- * reads "finished X, Y next" instead of offering Send. No hard lock (the screen can clear it).
+ * Between finishing one part and starting the other the proctor reads the next instructions. While
+ * a student has finished one part at this pair and has NOT attempted the other (no completed cell,
+ * Pass or Fail), the pair is held: listed under Testing now, never under Free stations. No clock.
+ * The hold ends when the other part starts or finishes (busy / attempted), or the screen clears it.
+ * A student who only owed one part (other part already attempted) holds nothing.
  */
-export function pairGap(pair: { o2: RtdStation; bvm: RtdStation }, input: RtdInput, now: number): PairGap | null {
+export function pairGap(pair: { o2: RtdStation; bvm: RtdStation }, input: RtdInput, _now?: number): PairGap | null {
+  let best: PairGap | null = null;
   for (const s of input.students) {
     if (busyAnywhere(s, input)) continue;
     for (const [which, st, other] of [['o2', pair.o2, pair.bvm], ['bvm', pair.bvm, pair.o2]] as const) {
       const c = input.cells[`${s.id}_${st.id}`];
-      if (c?.status === 'completed' && inPairGap(c.completedAt, now) && !passedAt(s, other, input)) {
-        return { student: s, finished: which, stationId: st.id };
+      if (c?.status !== 'completed' || !c.completedAt || Number.isNaN(Date.parse(c.completedAt))) continue;
+      if (attemptedAt(s, other, input)) continue;
+      if (!best || Date.parse(c.completedAt) > Date.parse(best.finishedAt)) {
+        best = { student: s, finished: which, stationId: st.id, finishedAt: c.completedAt };
       }
     }
   }
-  return null;
+  return best;
+}
+
+/** True once the second part has not started after PAIR_GAP_FLAG_MIN minutes. */
+export function pairGapStale(g: PairGap, now: number): boolean {
+  const m = minutesSince(g.finishedAt, now);
+  return m !== null && m >= PAIR_GAP_FLAG_MIN;
 }
 
 export const gapKey = (g: PairGap, pairKey: string) => `${pairKey}:${g.student.id}:${g.finished}`;
@@ -482,7 +506,7 @@ export function freeUnits(input: RtdInput): RtdUnit[] {
   );
 }
 
-/** Free units with the pair gap applied (a unit in its gap is not free unless dismissed on this screen). */
+/** Free units with the pair hold applied (a unit between parts is not free unless cleared on this screen). */
 export function freeUnitsNow(input: RtdInput, now: number, dismissed: Set<string>): { units: RtdUnit[]; gaps: Map<string, PairGap> } {
   const gaps = new Map<string, PairGap>();
   const units = freeUnits(input).filter((u) => {

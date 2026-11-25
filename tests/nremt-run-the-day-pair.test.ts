@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { retestWaitingForPair, dayUnits, freeUnitsNow, pairCandidates, spreadUnitSuggestions, unitCounts, pairGap, gapKey, type RtdInput } from '../lib/nremt-run-the-day.ts';
+import { retestWaitingForPair, dayUnits, freeUnitsNow, pairCandidates, spreadUnitSuggestions, unitCounts, pairGap, pairGapStale, gapKey, type RtdInput } from '../lib/nremt-run-the-day.ts';
 
 const mk = (id: string) => ({ id, first_name: id.toUpperCase(), last_name: 'X' });
 const stations = [
@@ -59,21 +59,43 @@ test('a closed part closes the unit', () => {
   assert.deepEqual(freeUnitsNow(input, NOW, new Set()).units.map((u) => u.key), ['med']);
 });
 
-test('five minute gap after finishing one part while still needing the other', () => {
+const o2Done = (completedAt = '2026-11-25T10:07:00Z') => base({
+  cells: { a_o6: { status: 'completed', result: 'pass', completedAt } },
+  skillCells: { 'a_O2 by NRB': { status: 'completed', result: 'pass' } },
+});
+
+test('between parts: held at 1, 6 and 30 minutes, listed as between parts, never free', () => {
+  const input = o2Done('2026-11-25T10:09:00Z');
+  for (const plus of [0, 5, 29]) {
+    const r = freeUnitsNow(input, NOW + plus * 60000, new Set());
+    assert.deepEqual(r.units.map((u) => u.key), ['med']);
+    const g = r.gaps.values().next().value!;
+    assert.equal(g.student.id, 'a');
+    assert.equal(g.finished, 'o2');
+  }
+  assert.deepEqual(unitCounts(input, NOW + 29 * 60000, new Set()), { free: 1, total: 2 });
+});
+
+test('dismissed on this screen: station free', () => {
+  const input = o2Done();
+  const g = freeUnitsNow(input, NOW, new Set()).gaps.values().next().value!;
+  assert.equal(freeUnitsNow(input, NOW, new Set([gapKey(g, 'pair-o6')])).units.length, 2);
+});
+
+test('student who only owed one part: station free as soon as it is finished', () => {
+  // BVM already attempted (failed), now finished O2: nothing owed, no hold
   const input = base({
-    cells: { a_o6: { status: 'completed', result: 'pass', completedAt: '2026-11-25T10:07:00Z' } },
-    skillCells: { 'a_O2 by NRB': { status: 'completed', result: 'pass' } },
+    cells: { a_o6: { status: 'completed', result: 'pass', completedAt: '2026-11-25T10:09:00Z' } },
+    skillCells: { 'a_O2 by NRB': { status: 'completed', result: 'pass' }, a_BVM: { status: 'completed', result: 'fail' } },
   });
-  const r = freeUnitsNow(input, NOW, new Set());
-  assert.deepEqual(r.units.map((u) => u.key), ['med']);
-  const g = r.gaps.values().next().value!;
-  assert.equal(g.student.id, 'a');
-  assert.equal(g.finished, 'o2');
-  // dismissed on this screen: free again
-  const key = gapKey(g, 'pair-o6');
-  assert.equal(freeUnitsNow(input, NOW, new Set([key])).units.length, 2);
-  // after 5 minutes: normal rules
-  assert.equal(freeUnitsNow(input, NOW + 4 * 60000, new Set()).units.length, 2);
+  assert.equal(pairGap(dayUnits(input)[1] as never, input, NOW), null);
+  assert.equal(freeUnitsNow(input, NOW, new Set()).units.length, 2);
+});
+
+test('10 minute flag: false at 9, true at 10', () => {
+  const g = pairGap(dayUnits(o2Done('2026-11-25T10:00:00Z'))[1] as never, o2Done('2026-11-25T10:00:00Z'), NOW)!;
+  assert.equal(pairGapStale(g, Date.parse('2026-11-25T10:09:00Z')), false);
+  assert.equal(pairGapStale(g, Date.parse('2026-11-25T10:10:00Z')), true);
 });
 
 test('no gap once the second part started, or when the other part is already passed', () => {

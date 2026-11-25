@@ -11,6 +11,8 @@ import {
   enRouteList,
   freeUnitsNow,
   gapKey,
+  pairGapStale,
+  PAIR_GAP_FLAG_MIN,
   minutesSince,
   skillForStation,
   spreadUnitSuggestions,
@@ -360,28 +362,6 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
             );
           })}
 
-          {Array.from(view.gaps.entries()).map(([key, g]) => {
-            const u = view.unitOf.get(g.stationId);
-            return (
-              <div key={`gap-${key}`} className="rounded-xl bg-white dark:bg-gray-800 shadow border border-amber-400 p-4 space-y-2">
-                <div className="text-xl font-bold text-gray-900 dark:text-white">{u ? unitTitle(u, stationName) : 'BVM + O2 by NRB'}</div>
-                <div className="text-lg font-semibold text-gray-900 dark:text-white">
-                  {studentName(g.student)} - finished {g.finished === 'o2' ? 'O2 by NRB' : 'BVM'}, {g.finished === 'o2' ? 'BVM' : 'O2 by NRB'} next
-                </div>
-                <div className="text-sm text-gray-600 dark:text-gray-400">The proctor is reading the next instructions.</div>
-                {canManage && (
-                  <button
-                    type="button"
-                    onClick={() => setDismissedGaps((p) => new Set(p).add(gapKey(g, key)))}
-                    className="min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-100"
-                  >
-                    Station is free
-                  </button>
-                )}
-              </div>
-            );
-          })}
-
           {view.suggestions.map(({ unit, list, top }) => {
             const st = unit.kind === 'single' ? unit.station : unit.o2;
             const cardKey = unit.key;
@@ -485,10 +465,35 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
 
       <section aria-label="Testing now" className="rounded-xl bg-white dark:bg-gray-800 shadow p-4 space-y-2">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Testing now</h2>
-        {view.testing.length === 0 ? (
+        {view.testing.length === 0 && view.gaps.size === 0 ? (
           <p className="text-sm text-gray-600 dark:text-gray-400">Nobody is being graded right now.</p>
         ) : (
           <ul className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-x-6 gap-y-1">
+            {Array.from(view.gaps.entries()).map(([key, g]) => {
+              const u = view.unitOf.get(g.stationId);
+              const mins = minutesSince(g.finishedAt, now);
+              const stale = pairGapStale(g, now);
+              const next = g.finished === 'o2' ? 'BVM' : 'O2 by NRB';
+              return (
+                <li key={`gap-${key}`} className="flex items-center justify-between gap-3 text-sm min-h-[44px] border-b border-gray-100 dark:border-gray-700/60">
+                  <span className="font-medium text-gray-900 dark:text-white">{u ? unitTitle(u, stationName) : 'BVM + O2 by NRB'}</span>
+                  <span className="text-gray-700 dark:text-gray-300 text-right">
+                    {studentName(g.student)} - finished {g.finished === 'o2' ? 'O2 by NRB' : 'BVM'}, {next} next
+                    {mins !== null && ` - ${mins} min`}
+                    {stale && <span className="block text-xs font-medium text-amber-700 dark:text-amber-300">{next} not started after {PAIR_GAP_FLAG_MIN} min</span>}
+                    {canManage && (
+                      <button
+                        type="button"
+                        onClick={() => setDismissedGaps((p) => new Set(p).add(gapKey(g, key)))}
+                        className="mt-1 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-100"
+                      >
+                        Student left - free the station
+                      </button>
+                    )}
+                  </span>
+                </li>
+              );
+            })}
             {view.testing.map((t) => {
               const tu = view.unitOf.get(t.station.id);
               const part = tu?.kind === 'pair' ? (t.station.id === tu.o2.id ? ' (O2 by NRB)' : ' (BVM)') : '';
