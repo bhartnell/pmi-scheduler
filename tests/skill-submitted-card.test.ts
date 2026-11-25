@@ -32,3 +32,8 @@ test('visible only until a student is picked', () => {
   assert.equal(submittedCardVisible(true, 'stu1'), false);
   assert.equal(submittedCardVisible(false, ''), false);
 });
+test('remediation is labelled REMEDIATION, not FAIL; unknown values are upper-cased', () => {
+  assert.equal(buildSubmittedCard({ result: 'remediation', savedAt: at }).resultLabel, 'REMEDIATION');
+  assert.equal(buildSubmittedCard({ result: 'Remediation', savedAt: at }).detail, 'Student - Skill - REMEDIATION');
+  assert.equal(buildSubmittedCard({ result: 'incomplete', savedAt: at }).resultLabel, 'INCOMPLETE');
+});

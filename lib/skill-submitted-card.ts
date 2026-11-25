@@ -21,7 +21,9 @@ export interface SubmittedCardText {
 
 export function buildSubmittedCard(i: SubmittedCardInput): SubmittedCardText {
   const isPass = i.result === 'pass';
-  let resultLabel = isPass ? 'PASS' : 'FAIL';
+  const raw = String(i.result ?? '').trim().toLowerCase();
+  let resultLabel =
+    raw === 'pass' ? 'PASS' : raw === 'fail' ? 'FAIL' : raw === 'remediation' ? 'REMEDIATION' : raw.toUpperCase();
   if (isPass && i.belowMinReason && i.belowMinReason.trim()) {
     resultLabel = 'PASS - Pass below minimum - sent for review';
   }
