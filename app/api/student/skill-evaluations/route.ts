@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase';
+import { canViewAllScoreSheets } from '@/lib/permissions';
 import { resolveViewAsStudentId } from '@/lib/view-as-student';
 
 /**
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
     let studentId: string | null = null;
     const queryStudentId = request.nextUrl.searchParams.get('student_id');
     const queryEvaluationId = request.nextUrl.searchParams.get('evaluation_id');
-    const isInstructor = ['instructor', 'admin', 'superadmin'].includes(labUser.role);
+    const isInstructor = canViewAllScoreSheets(labUser.role);
 
     // View as a student (admin+, read-only) takes the student-perspective
     // branch below — filtered the same as a real student, never the
