@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { downloadStudentPDF } from '@/lib/nremtExport';
 import { findMinimumPoints } from '@/lib/nremt-instructions';
+import { retestCellLabel } from '@/lib/nremt-retest';
 import { cellMenuFor, type CellMenu, type RtdInput } from '@/lib/nremt-run-the-day';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -433,6 +434,8 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
     }
 
     if (cell.status === 'completed') {
+      // Hub only: retest / attempt wording. First attempts keep today's labels.
+      const retestLabel = isNremtTesting ? retestCellLabel(cell) : null;
       const teamIcon = cell.teamRole ? (
         <span title={`Team: ${cell.teamRole}`}>
           <Users className="w-3 h-3 text-indigo-500 dark:text-indigo-400 flex-shrink-0" />
@@ -444,11 +447,11 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
           <button
             onClick={(e) => handleSkillCellClick(studentId, skillName, e.currentTarget)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 dark:bg-green-900/50 text-green-700 dark:text-green-200 border border-green-200 dark:border-green-700 cursor-pointer"
-            title={cell.teamRole ? `Pass (Team ${cell.teamRole})` : 'Pass'}
+            title={retestLabel || (cell.teamRole ? `Pass (Team ${cell.teamRole})` : 'Pass')}
           >
             <Check className="w-4 h-4 stroke-[3]" />
             {teamIcon}
-            <span className="hidden sm:inline">Pass</span>
+            <span className="hidden sm:inline">{retestLabel || 'Pass'}</span>
           </button>
         );
       }
@@ -457,11 +460,11 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
           <button
             onClick={(e) => handleSkillCellClick(studentId, skillName, e.currentTarget)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-200 border border-red-200 dark:border-red-700 cursor-pointer"
-            title={cell.teamRole ? `Fail (Team ${cell.teamRole})` : 'Fail'}
+            title={retestLabel || (cell.teamRole ? `Fail (Team ${cell.teamRole})` : 'Fail')}
           >
             <X className="w-4 h-4 stroke-[3]" />
             {teamIcon}
-            <span className="hidden sm:inline">Fail</span>
+            <span className="hidden sm:inline">{retestLabel || 'Fail'}</span>
           </button>
         );
       }
@@ -525,9 +528,9 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
       menu.state === 'not_started'
         ? 'Not started'
         : menu.state === 'en_route'
-        ? `En route${menu.at ? ` to ${menu.at.title}` : ''}${menu.at?.minutes != null ? `, sent ${menu.at.minutes} min ago` : ''}`
+        ? `${menu.retest ? 'Retest en route' : 'En route'}${menu.at ? ` to ${menu.at.title}` : ''}${menu.at?.minutes != null ? `, sent ${menu.at.minutes} min ago` : ''}`
         : menu.state === 'in_progress'
-        ? `In progress${menu.at ? ` at ${menu.at.title}` : ''}${menu.at?.proctor ? ` with ${menu.at.proctor}` : ''}${menu.at?.minutes != null ? `, ${menu.at.minutes} min` : ''}`
+        ? `${menu.retest ? 'Retest in progress' : 'In progress'}${menu.at ? ` at ${menu.at.title}` : ''}${menu.at?.proctor ? ` with ${menu.at.proctor}` : ''}${menu.at?.minutes != null ? `, ${menu.at.minutes} min` : ''}`
         : menu.state === 'pass'
         ? 'Pass'
         : menu.state === 'fail'
@@ -608,7 +611,7 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
 
         {menu.state === 'in_progress' && (
           <div className="pt-2 space-y-1">
-            {hubMenu.canManage && !cell?.result && !menu.evaluationId && menu.queueId && (
+            {hubMenu.canManage && (!cell?.result || menu.retest) && !menu.evaluationId && menu.queueId && (
               <button type="button" onClick={() => hubRun(key, () => hubMenu.backToNotStarted(menu.at?.stationId || '', menu.queueId))} className={`${item} text-gray-700 dark:text-gray-200`}>
                 Back to Not started
               </button>
