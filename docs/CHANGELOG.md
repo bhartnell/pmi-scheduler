@@ -7,6 +7,10 @@ here. Group multi-commit days under a single date heading. Use
 
 Format: `commit-hash | brief description`
 
+## 2026-11-25
+
+PENDING | NREMT hub retest visibility (DRAFT, not merged): a live retest wins the station cell; skill cell gains attemptCount/retest/passedOnAttempt; hub table shows retest en route/in progress, Pass - 2nd attempt, Fail x2 (lib/nremt-retest.ts, student-queue route, IndividualTestingGrid). Read-only, no DB writes. Revert: git revert.
+
 ## 2026-11-23
 
 PENDING | [preview] Skill sheet submit: failed/unconfirmed final saves now show a blocking "NOT SAVED" dialog (was a 3s toast); team saves flag partial saves (components/SkillSheetPanel.tsx). No server/scoring change. Revert: git revert.

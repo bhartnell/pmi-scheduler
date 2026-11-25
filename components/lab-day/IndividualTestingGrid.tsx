@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { downloadStudentPDF } from '@/lib/nremtExport';
 import { findMinimumPoints } from '@/lib/nremt-instructions';
+import { retestCellLabel } from '@/lib/nremt-retest';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -59,6 +60,9 @@ interface CellData {
   evaluationId: string | null;
   evalSummary: EvalSummary | null;
   teamRole: string | null;
+  attemptCount?: number;
+  retest?: null | 'en_route' | 'in_progress';
+  passedOnAttempt?: number | null;
 }
 
 interface IndividualTestingGridProps {
@@ -342,6 +346,8 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
     }
 
     if (cell.status === 'completed') {
+      // Hub only: retest / attempt wording. First attempts keep today's labels.
+      const retestLabel = isNremtTesting ? retestCellLabel(cell) : null;
       const teamIcon = cell.teamRole ? (
         <span title={`Team: ${cell.teamRole}`}>
           <Users className="w-3 h-3 text-indigo-500 dark:text-indigo-400 flex-shrink-0" />
@@ -353,11 +359,11 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
           <button
             onClick={() => handleSkillCellClick(studentId, skillName)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-green-50 dark:bg-green-900/50 text-green-700 dark:text-green-200 border border-green-200 dark:border-green-700 cursor-pointer"
-            title={cell.teamRole ? `Pass (Team ${cell.teamRole})` : 'Pass'}
+            title={retestLabel || (cell.teamRole ? `Pass (Team ${cell.teamRole})` : 'Pass')}
           >
             <Check className="w-4 h-4 stroke-[3]" />
             {teamIcon}
-            <span className="hidden sm:inline">Pass</span>
+            <span className="hidden sm:inline">{retestLabel || 'Pass'}</span>
           </button>
         );
       }
@@ -366,11 +372,11 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
           <button
             onClick={() => handleSkillCellClick(studentId, skillName)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-red-50 dark:bg-red-900/50 text-red-600 dark:text-red-200 border border-red-200 dark:border-red-700 cursor-pointer"
-            title={cell.teamRole ? `Fail (Team ${cell.teamRole})` : 'Fail'}
+            title={retestLabel || (cell.teamRole ? `Fail (Team ${cell.teamRole})` : 'Fail')}
           >
             <X className="w-4 h-4 stroke-[3]" />
             {teamIcon}
-            <span className="hidden sm:inline">Fail</span>
+            <span className="hidden sm:inline">{retestLabel || 'Fail'}</span>
           </button>
         );
       }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseAdmin } from '@/lib/supabase';
 import { requireAuth, requireAuthOrVolunteerToken } from '@/lib/api-auth';
 import type { VolunteerTokenResult } from '@/lib/api-auth';
+import { computeRetestState } from '@/lib/nremt-retest';
 
 // ---------------------------------------------------------------------------
 // GET /api/lab-management/student-queue?lab_day_id=UUID
@@ -125,7 +126,7 @@ export async function GET(request: NextRequest) {
     // 5. Get queue entries for this lab day
     const { data: queueEntries } = await supabase
       .from('lab_day_student_queue')
-      .select('id, student_id, station_id, status, result, evaluation_id, started_at, completed_at')
+      .select('id, student_id, station_id, status, result, evaluation_id, started_at, completed_at, created_at')
       .eq('lab_day_id', labDayId);
 
     // 6. Get evaluations for this lab day (with step counts + retake info).
@@ -385,6 +386,36 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Retest visibility: a LIVE retest (newest queue row, queued/in_progress, open
+    // station, created after the student's latest completed non-pass result)
+    // wins the station cell over the completed evaluation, so the hub sees the
+    // student en route / in progress instead of the old Fail. Every other case
+    // (stale rows, closed stations, skill already passed) is left as above.
+    const stationStatusMap: Record<string, string> = {};
+    for (const s of (stations || []) as Array<{ id: string; metadata?: Record<string, unknown> | null }>) {
+      stationStatusMap[s.id] = ((s.metadata?.coordinator_status as string | undefined) || 'open');
+    }
+    const retestState = computeRetestState({
+      queueEntries: (queueEntries || []) as Array<{ id: string; student_id: string; station_id: string; status: string; created_at?: string | null }>,
+      evaluations: (evaluations || []) as Array<{ id: string; student_id: string; skill_sheet_id: string | null; result: string | null; status: string; created_at?: string | null; attempt_number?: number | null }>,
+      stationSkillMap,
+      stationStatus: stationStatusMap,
+    });
+    for (const [key, f] of Object.entries(retestState.inFlight)) {
+      const existing = cells[key];
+      if (existing && existing.status !== 'completed') continue;
+      cells[key] = {
+        queueId: f.queueId,
+        status: f.status,
+        result: null,
+        evaluationId: null,
+        evalSummary: null,
+        teamRole: existing?.teamRole ?? null,
+        hasRetake: true,
+        bestResult: f.priorBest,
+      };
+    }
+
     // ─── Build skill-based columns and cells ───────────────────────────
     // Dynamic skill-based grouping: columns are derived from the UNION of
     // (stations on this lab day) ∪ (any evaluations recorded for this lab day
@@ -515,6 +546,10 @@ export async function GET(request: NextRequest) {
       teamRole: string | null;
       hasRetake: boolean;
       bestResult: string | null;
+      // Additive retest fields (hub only reads them)
+      attemptCount?: number;
+      retest?: null | 'en_route' | 'in_progress';
+      passedOnAttempt?: number | null;
     }> = {};
 
     // Group evaluations by student + skill_sheet_id → best evaluation cell.
@@ -625,6 +660,12 @@ export async function GET(request: NextRequest) {
 
         if (bestCell) {
           if (anyRetake) bestCell.hasRetake = true;
+          const info = sheetId ? retestState.skillInfo[`${student.id}__${sheetId}`] : undefined;
+          if (info) {
+            bestCell.attemptCount = info.attemptCount;
+            bestCell.retest = info.retest;
+            bestCell.passedOnAttempt = info.passedOnAttempt;
+          }
           skillCells[skillKey] = bestCell;
         }
       }
