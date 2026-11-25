@@ -78,6 +78,11 @@ function StudentsPageContent() {
   };
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm), 250);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
   const [selectedCohort, setSelectedCohort] = useState(getInitialCohort);
   const [selectedStatus, setSelectedStatus] = useState('active');
 
@@ -109,6 +114,10 @@ function StudentsPageContent() {
   const { data: students = [], isLoading: loading } = useStudents({
     cohortId: selectedCohort || undefined,
     status: selectedStatus || undefined,
+    // Search runs on the server across every student; the API default of 50 rows used to hide
+    // anyone past the first 50 by last name (feedback 074abe36).
+    search: debouncedSearch.trim() || undefined,
+    limit: 100,
     enabled: !!session,
   });
 
