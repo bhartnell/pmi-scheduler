@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildStationPairs, pairCodeFor, pairNeed, needsLabel, firstPart, inPairGap, nextExtraStationName } from '../lib/nremt-pairs.ts';
+import { buildStationPairs, pairCodeFor, pairNeed, needsLabel, firstPart, nextExtraStationName } from '../lib/nremt-pairs.ts';
 
 const it = (id: string, n: number, code: 'E203' | 'E204', proctor: string | null, room: string | null) => ({ id, station_number: n, code, proctor, room });
 
@@ -39,12 +39,6 @@ test('what-they-need labels and first part', () => {
   assert.equal(firstPart('o2'), 'o2');
   assert.equal(firstPart('bvm'), 'bvm');
   assert.equal(firstPart(null), null);
-});
-test('five minute gap', () => {
-  const now = Date.parse('2026-11-25T10:10:00Z');
-  assert.equal(inPairGap('2026-11-25T10:06:00Z', now), true);
-  assert.equal(inPairGap('2026-11-25T10:04:59Z', now), false);
-  assert.equal(inPairGap(null, now), false);
 });
 test('extra station names follow the base station name plus the next number', () => {
   assert.equal(nextExtraStationName([{ station_number: 2, name: 'Patient Assessment - Medical' }], 'x'), 'Patient Assessment - Medical 2');

@@ -59,8 +59,6 @@ export function buildStationPairs<T extends PairItem>(items: T[]): StationPair<T
 }
 
 export const PAIR_TITLE = 'BVM + O2 by NRB';
-/** Minutes after finishing one part during which the pair card shows "next part" instead of Send. */
-export const PAIR_GAP_MIN = 5;
 
 export type PairNeed = 'both' | 'o2' | 'bvm' | null;
 
@@ -83,15 +81,6 @@ export function firstPart(n: PairNeed): 'o2' | 'bvm' | null {
   if (n === 'both' || n === 'o2') return 'o2';
   if (n === 'bvm') return 'bvm';
   return null;
-}
-
-/** True while the "finished one part, next part follows" gap is showing. */
-export function inPairGap(completedAtIso: string | null | undefined, now: number): boolean {
-  if (!completedAtIso) return false;
-  const t = Date.parse(completedAtIso);
-  if (Number.isNaN(t)) return false;
-  const mins = (now - t) / 60000;
-  return mins >= 0 && mins < PAIR_GAP_MIN;
 }
 
 /**
