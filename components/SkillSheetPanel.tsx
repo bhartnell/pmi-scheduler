@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { findMinimumPoints } from '@/lib/nremt-instructions';
+import { unmarkedSteps } from '@/lib/nremt-unmarked';
 import { canEditScoreSheets } from '@/lib/permissions';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -537,6 +538,7 @@ export default function SkillSheetPanel({
   // stays untouched.)
   const [showCriticalFailBlock, setShowCriticalFailBlock] = useState(false);
   const [showMissingExaminerNotesBlock, setShowMissingExaminerNotesBlock] = useState(false);
+  const [unmarkedConfirm, setUnmarkedConfirm] = useState<{ emailPref: EmailPreference; saveStatus: 'complete' | 'in_progress' } | null>(null);
   // Blocking save-failure notice. A failed FINAL submit must never be a 3s
   // toast (Aug 5 2026: evaluations silently failed to save). Stays up until
   // acknowledged; entered marks stay on screen so the proctor can retry.
@@ -1318,7 +1320,7 @@ export default function SkillSheetPanel({
       // notes panel is in a collapsed drawer on mobile, so the examiner
       // had no idea what the failure meant. The modal is loud and stays
       // up until acknowledged.
-      if (result === 'fail' && !examinerNotes?.trim()) {
+      if (result !== 'pass' && !examinerNotes?.trim()) {
         setShowMissingExaminerNotesBlock(true);
         return;
       }
@@ -1334,6 +1336,12 @@ export default function SkillSheetPanel({
           setShowBelowMinReason(true);
           return;
         }
+      }
+
+      // Unmarked items: confirm once, last, after the checks above. Individual grading only.
+      if (gradeMode !== 'team' && sheet && unmarkedSteps(sheet.steps, stepMarks, subItemMarks).length > 0) {
+        setUnmarkedConfirm({ emailPref, saveStatus });
+        return;
       }
     }
 
@@ -1901,6 +1909,51 @@ export default function SkillSheetPanel({
         </div>
       )}
 
+      {unmarkedConfirm && sheet && (() => {
+        const um = unmarkedSteps(sheet.steps, stepMarks, subItemMarks);
+        const earned = getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks);
+        const possible = getTotalPossiblePoints(sheet.steps);
+        const minPts = findMinimumPoints(sheet.skill_name);
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50" role="alertdialog">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-6 h-6 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Unmarked items</h3>
+                  <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                    {um.length} {um.length === 1 ? 'item' : 'items'} on this sheet {um.length === 1 ? 'is' : 'are'} unmarked. Unmarked items are scored as not performed (0 points). Score: {earned} of {possible}. Minimum to pass: {minPts ?? 'not set'}.
+                  </p>
+                  <ul className="mt-2 text-sm text-gray-700 dark:text-gray-200 list-disc pl-5 space-y-1">
+                    {um.slice(0, 5).map(st => <li key={st.step_number}>{st.instruction}</li>)}
+                  </ul>
+                  {um.length > 5 && <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">and {um.length - 5} more</p>}
+                </div>
+              </div>
+              <div className="flex justify-end gap-2">
+                <button
+                  autoFocus
+                  onClick={() => setUnmarkedConfirm(null)}
+                  className="px-4 py-2 min-h-[44px] text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg"
+                >
+                  Return to sheet
+                </button>
+                <button
+                  onClick={() => {
+                    const pending = unmarkedConfirm;
+                    setUnmarkedConfirm(null);
+                    doSave(pending.emailPref, pending.saveStatus);
+                  }}
+                  className="px-4 py-2 min-h-[44px] text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700"
+                >
+                  Submit as scored
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {showMissingExaminerNotesBlock && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-2xl max-w-md w-full mx-4 p-6 space-y-4">
@@ -1908,17 +1961,10 @@ export default function SkillSheetPanel({
               <XCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" />
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  Examiner Notes Required
+                  Examiner comment required
                 </h3>
                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                  A <strong>Fail</strong> result on an NREMT testing day needs a
-                  written reason before it can be saved.
-                </p>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                  Open the <strong>Examiner Notes</strong> panel (right column
-                  on desktop, floating drawer tab on mobile) and type a short
-                  explanation of why the student failed - e.g. which critical
-                  criteria were missed. Then press Save again.
+                  A Fail on an NREMT testing day needs a written reason before it can be saved. Type it in Examiner Comments (Examiner Panel), for example: did not reach the minimum points, or which critical criterion was missed, or what was unsafe or disorganized. Then press Save again.
                 </p>
               </div>
             </div>
@@ -2536,7 +2582,7 @@ export default function SkillSheetPanel({
                         { key: 'pass' as const, label: 'Pass', color: 'bg-green-600' },
                         { key: 'fail' as const, label: 'Fail', color: 'bg-red-600' },
                         { key: 'remediation' as const, label: 'Remediation', color: 'bg-amber-600' },
-                      ]).map(({ key, label, color }) => (
+                      ]).filter(({ key }) => !(isNremtTesting && key === 'remediation')).map(({ key, label, color }) => (
                         <button
                           key={key}
                           onClick={() => setResult(key)}
