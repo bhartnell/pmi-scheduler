@@ -467,11 +467,42 @@ function attemptedAt(student: RtdStudent, st: RtdStation, input: RtdInput): bool
   return input.cells[`${student.id}_${st.id}`]?.status === 'completed';
 }
 
+/** Latest queuedAt / startedAt / completedAt of a cell, in ms (NaN-safe; -Infinity when none). */
+function cellLatest(c: RtdCell | undefined): number {
+  if (!c) return -Infinity;
+  let m = -Infinity;
+  for (const v of [c.queuedAt, c.startedAt, c.completedAt]) {
+    const n = v ? Date.parse(v) : NaN;
+    if (!Number.isNaN(n) && n > m) m = n;
+  }
+  return m;
+}
+
+/**
+ * The hold applies only while this finish is still the latest thing that happened: no cell at either
+ * station of the pair (any student) and no cell for this student at any other station is later.
+ */
+function finishIsLatest(student: RtdStudent, pair: { o2: RtdStation; bvm: RtdStation }, finishedMs: number, input: RtdInput): boolean {
+  for (const s of input.students) {
+    for (const st of [pair.o2, pair.bvm]) {
+      if (cellLatest(input.cells[`${s.id}_${st.id}`]) > finishedMs) return false;
+    }
+  }
+  for (const st of input.stations) {
+    if (st.id === pair.o2.id || st.id === pair.bvm.id) continue;
+    if (cellLatest(input.cells[`${student.id}_${st.id}`]) > finishedMs) return false;
+    const col = skillForStation(st.id, input.skillColumns);
+    if (col && cellLatest(input.skillCells[`${student.id}_${col.skillName}`]) > finishedMs) return false;
+  }
+  return true;
+}
+
 /**
  * Between finishing one part and starting the other the proctor reads the next instructions. While
  * a student has finished one part at this pair and has NOT attempted the other (no completed cell,
  * Pass or Fail), the pair is held: listed under Testing now, never under Free stations. No clock.
- * The hold ends when the other part starts or finishes (busy / attempted), or the screen clears it.
+ * The hold ends when the other part starts or finishes (busy / attempted), when anything later
+ * happened at the pair or to that student (they moved on), or when the screen clears it.
  * A student who only owed one part (other part already attempted) holds nothing.
  */
 export function pairGap(pair: { o2: RtdStation; bvm: RtdStation }, input: RtdInput, _now?: number): PairGap | null {
@@ -482,6 +513,7 @@ export function pairGap(pair: { o2: RtdStation; bvm: RtdStation }, input: RtdInp
       const c = input.cells[`${s.id}_${st.id}`];
       if (c?.status !== 'completed' || !c.completedAt || Number.isNaN(Date.parse(c.completedAt))) continue;
       if (attemptedAt(s, other, input)) continue;
+      if (!finishIsLatest(s, pair, Date.parse(c.completedAt), input)) continue;
       if (!best || Date.parse(c.completedAt) > Date.parse(best.finishedAt)) {
         best = { student: s, finished: which, stationId: st.id, finishedAt: c.completedAt };
       }

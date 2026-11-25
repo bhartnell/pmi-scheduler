@@ -144,3 +144,40 @@ test('pair: retests off leaves out a failed part, a never-attempted part is stil
   assert.equal(on.length, 3);
   assert.equal(on.find((c) => c.student.id === 'a')!.stationId, 'o6'); // retests on: owes O2 again first
 });
+
+// ---- Hold ends by itself once anything later happened (card 4235cd1c, 2026-11-25 review) ----
+test('finished O2 then completed another station later and is idle: pair free', () => {
+  const input = base({
+    cells: {
+      a_o6: { status: 'completed', result: 'pass', completedAt: '2026-11-25T10:00:00Z' },
+      a_med: { status: 'completed', result: 'pass', completedAt: '2026-11-25T10:05:00Z' },
+    },
+    skillCells: { 'a_O2 by NRB': { status: 'completed', result: 'pass' } },
+  });
+  assert.equal(pairGap(dayUnits(input)[1] as never, input, NOW), null);
+  assert.equal(freeUnitsNow(input, NOW, new Set()).units.length, 2);
+});
+
+test('student A held, cleared, student B then completes both parts: no hold for A, empty dismissed set', () => {
+  const input = base({
+    cells: {
+      a_o6: { status: 'completed', result: 'pass', completedAt: '2026-11-25T10:00:00Z' },
+      b_o6: { status: 'completed', result: 'pass', completedAt: '2026-11-25T10:03:00Z' },
+      b_b5: { status: 'completed', result: 'pass', completedAt: '2026-11-25T10:06:00Z' },
+    },
+    skillCells: {
+      'a_O2 by NRB': { status: 'completed', result: 'pass' },
+      'b_O2 by NRB': { status: 'completed', result: 'pass' },
+      b_BVM: { status: 'completed', result: 'pass' },
+    },
+  });
+  assert.equal(pairGap(dayUnits(input)[1] as never, input, NOW), null);
+  assert.equal(freeUnitsNow(input, NOW, new Set()).units.length, 2);
+});
+
+test('plain case: the finish is the latest event, still held at 30 minutes', () => {
+  const input = o2Done('2026-11-25T10:00:00Z');
+  const r = freeUnitsNow(input, Date.parse('2026-11-25T10:30:00Z'), new Set());
+  assert.deepEqual(r.units.map((u) => u.key), ['med']);
+  assert.equal(r.gaps.size, 1);
+});
