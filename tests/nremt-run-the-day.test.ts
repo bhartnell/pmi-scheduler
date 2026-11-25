@@ -258,3 +258,40 @@ test('proctor drop-down: today first, staff after, no one listed twice', () => {
   assert.deepEqual(c.today.map((p) => p.name), ['Ann']);
   assert.deepEqual(c.staff.map((p) => p.name), ['Bo']);
 });
+
+// --- Retest in flight (hub): the table cell menu behaves like a first attempt en route / in progress ---
+test('cell menu, retest en route: no second Send, Undo targets the retest queue row, no old sheet', () => {
+  const input = {
+    ...base,
+    cells: { a_m2: { status: 'queued', queueId: 'q7', queuedAt: '2026-11-25T09:55:00Z', hasRetake: true } },
+    skillCells: { a_Medical: { status: 'completed', result: 'fail', retest: 'en_route' as const, evaluationId: 'oldfail' } },
+  };
+  const m = cellMenuFor(students[0], 'Medical', input as never, NOW);
+  assert.equal(m.state, 'en_route');
+  assert.equal(m.retest, true);
+  assert.equal(m.at?.stationId, 'm2');
+  assert.equal(m.queueId, 'q7');
+  assert.equal(m.evaluationId, null);
+  assert.deepEqual(m.options, []);
+});
+
+test('cell menu, retest in progress: in_progress state, no send list, open retest sheet only', () => {
+  const input = {
+    ...base,
+    cells: { a_m2: { status: 'in_progress', queueId: 'q7', startedAt: '2026-11-25T09:50:00Z', evaluationId: 'newsheet', hasRetake: true } },
+    skillCells: { a_Medical: { status: 'completed', result: 'fail', retest: 'in_progress' as const, evaluationId: 'oldfail' } },
+  };
+  const m = cellMenuFor(students[0], 'Medical', input as never, NOW);
+  assert.equal(m.state, 'in_progress');
+  assert.equal(m.retest, true);
+  assert.equal(m.evaluationId, 'newsheet');
+  assert.deepEqual(m.options, []);
+});
+
+test('cell menu, plain Fail with no retest in flight: unchanged, retake send list offered', () => {
+  const input = { ...base, skillCells: { a_Medical: { status: 'completed', result: 'fail', retest: null } } };
+  const m = cellMenuFor(students[0], 'Medical', input as never, NOW);
+  assert.equal(m.state, 'fail');
+  assert.equal(m.retest, false);
+  assert.ok(m.options.length > 0);
+});

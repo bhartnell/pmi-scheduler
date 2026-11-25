@@ -47,6 +47,10 @@ export interface RtdCell {
   /** When the proctor finished (queue row completed_at); null when unknown. */
   completedAt?: string | null;
   evalSummary?: { evaluatorName: string | null } | null;
+  /** A retest (second or later attempt) is what this cell shows. */
+  hasRetake?: boolean;
+  /** Skill cell only: a retest is in flight for this skill (the cell itself stays completed / fail). */
+  retest?: null | 'en_route' | 'in_progress';
 }
 export interface RtdSkillColumn {
   skillName: string;
@@ -444,6 +448,8 @@ export interface CellMenu {
   at: { stationId: string; title: string; proctor: string | null; minutes: number | null } | null;
   queueId: string | null;
   evaluationId: string | null;
+  /** The en route / in progress state is a retest visit (the cell's own result is still the old Fail). */
+  retest: boolean;
   /** The student is already en route or being graded somewhere else, so nothing is offered to send. */
   busyElsewhere: { title: string; kind: 'en_route' | 'in_progress' } | null;
   /** Fail only: first attempt's evaluator, for the retake line. */
@@ -475,6 +481,10 @@ export function cellMenuFor(student: RtdStudent, skillName: string, input: RtdIn
   if (cell?.status === 'queued') state = 'en_route';
   else if (cell?.status === 'in_progress') state = 'in_progress';
   else if (cell?.status === 'completed') state = cell.result === 'pass' ? 'pass' : cell.result === 'fail' ? 'fail' : 'done';
+  // A retest in flight (skill cell stays completed / fail): the menu behaves as for a first attempt
+  // that is en route / in progress, so there is no second Send for the retest visit.
+  const retestInFlight = state === 'fail' && (cell?.retest === 'en_route' || cell?.retest === 'in_progress');
+  if (retestInFlight) state = cell?.retest === 'in_progress' ? 'in_progress' : 'en_route';
 
   // Where this cell's queue row sits: a station of this skill with the matching state.
   let at: CellMenu['at'] = null;
@@ -556,7 +566,11 @@ export function cellMenuFor(student: RtdStudent, skillName: string, input: RtdIn
     progress: { done: doneSkillCount(student, input), total: input.skillColumns.length },
     at,
     queueId: (at ? input.cells[`${student.id}_${at.stationId}`]?.queueId : null) ?? cell?.queueId ?? null,
-    evaluationId: (cell as (RtdCell & { evaluationId?: string | null }) | null)?.evaluationId ?? null,
+    // For a retest in flight the skill cell's sheet is the old Fail; only an open retest sheet counts.
+    evaluationId: retestInFlight
+      ? (at ? (input.cells[`${student.id}_${at.stationId}`] as (RtdCell & { evaluationId?: string | null }) | undefined)?.evaluationId ?? null : null)
+      : (cell as (RtdCell & { evaluationId?: string | null }) | null)?.evaluationId ?? null,
+    retest: retestInFlight,
     busyElsewhere,
     firstAttemptBy,
     options,

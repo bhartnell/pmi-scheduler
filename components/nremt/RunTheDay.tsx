@@ -325,7 +325,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
               <div key={`er-${e.station.id}-${e.student.id}`} className="rounded-xl bg-white dark:bg-gray-800 shadow border border-amber-400 p-4 space-y-2">
                 <div className="flex items-start justify-between gap-2">
                   <div className="text-xl font-bold text-gray-900 dark:text-white">{eu ? unitTitle(eu, stationName) : stationName(e.station)}</div>
-                  <span className="shrink-0 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-900">En route</span>
+                  <span className="shrink-0 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-900">{input?.cells[`${e.student.id}_${e.station.id}`]?.hasRetake ? 'En route - Retest' : 'En route'}</span>
                 </div>
                 {eu?.kind === 'pair' && (
                   <div className="text-sm text-gray-700 dark:text-gray-300">Going to {e.station.id === eu.o2.id ? 'O2 by NRB' : 'BVM'} first</div>
@@ -485,6 +485,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
                   <span className="font-medium text-gray-900 dark:text-white">{(tu ? unitTitle(tu, stationName) : stationName(t.station)) + part}</span>
                   <span className="text-gray-700 dark:text-gray-300">
                     {studentName(t.student)}
+                    {input?.cells[`${t.student.id}_${t.station.id}`]?.hasRetake && ' - Retest'}
                     {minutesSince(t.startedAt, now) !== null && ` - ${minutesSince(t.startedAt, now)} min`}
                     {lineText(t.station.id) && <span className="block text-xs text-gray-500 dark:text-gray-400">{lineText(t.station.id)}</span>}
                   </span>
