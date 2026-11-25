@@ -8,6 +8,7 @@ here. Group multi-commit days under a single date heading. Use
 Format: `commit-hash | brief description`
 
 ## 2026-11-25
+PENDING | STAGED (draft PR, not merged, deploy hold): station grading page shows a persistent "Submitted" card (student - skill - result, points, time) and "Select the next student" start view after a final submit; single-sheet mount now clears the selected student on submit. components/SkillSheetPanel.tsx + app/labs/grade/station/[id]/page.tsx + lib/skill-submitted-card.ts + test. No server or schema change. Revert: git revert the squash commit.
 PENDING | NREMT grading sheet (final mode, testing days): 'Unmarked items' confirmation at submit (Return to sheet / Submit as scored), Remediation button hidden, Examiner Comments required for any non-Pass, block wording fixed. components/SkillSheetPanel.tsx + lib/nremt-unmarked.ts + test. No server or schema change. Revert: git revert the squash commit.
 PENDING | Students page search (feedback 074abe36): search now runs on the server across all students (agency added to the server match) and the list asks for 100 rows; before, the roster API's default of 50 rows (ordered by last name) was filtered in the browser, so any of 196 real students past row 50 could not be found with no cohort selected. Code only, no data touched. Revert: git revert the squash commit.
 

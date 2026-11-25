@@ -36,6 +36,7 @@ import {
 import { useSession } from 'next-auth/react';
 import { findMinimumPoints } from '@/lib/nremt-instructions';
 import { unmarkedSteps } from '@/lib/nremt-unmarked';
+import { buildSubmittedCard, shouldShowSubmittedCard, submittedCardVisible, type SubmittedCardText } from '@/lib/skill-submitted-card';
 import { canEditScoreSheets } from '@/lib/permissions';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
@@ -478,6 +479,12 @@ export default function SkillSheetPanel({
   // Post-save state
   const [lastSavedEvalId, setLastSavedEvalId] = useState<string | null>(null);
   const [justSavedStudentName, setJustSavedStudentName] = useState<string | null>(null);
+  // Persistent "Submitted" confirmation (embedded station grading). Shown only
+  // while no student is selected; picking a student clears it.
+  const [submittedCard, setSubmittedCard] = useState<SubmittedCardText | null>(null);
+  useEffect(() => {
+    if (studentId) setSubmittedCard(null);
+  }, [studentId]);
   const [showCompletionScreen, setShowCompletionScreen] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [batchEmailProgress, setBatchEmailProgress] = useState<{ sent: number; total: number } | null>(null);
@@ -820,6 +827,17 @@ export default function SkillSheetPanel({
         const evalId = data.evaluation?.id;
         setLastSavedEvalId(evalId || null);
         setJustSavedStudentName(studentName || null);
+        if (shouldShowSubmittedCard({ saveStatus, success: true, evaluationId: evalId })) {
+          setSubmittedCard(buildSubmittedCard({
+            studentName,
+            skillName: sheet?.skill_name,
+            result: evaluationResult,
+            belowMinReason: evaluationResult === 'pass' ? belowMinReasonRef.current : null,
+            pointsEarned: sheet && hasMultiPointScoring(sheet.steps) ? getTotalEarnedPoints(sheet.steps, stepMarks, subItemMarks) : null,
+            pointsPossible: sheet && hasMultiPointScoring(sheet.steps) ? getTotalPossiblePoints(sheet.steps) : null,
+            savedAt: new Date(),
+          }));
+        }
 
         // Notify parent
         if (onEvaluationSaved && studentId && evalId) {
@@ -2034,6 +2052,24 @@ export default function SkillSheetPanel({
       return (
         <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-lg shadow-lg overflow-hidden">
           {teamCompletionScreen}
+        </div>
+      );
+    }
+
+    // Submitted confirmation + next-student start view (stays until a student is picked)
+    if (submittedCard && submittedCardVisible(true, studentId)) {
+      return (
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 text-center" role="status" aria-live="polite">
+          <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-3" />
+          <h2 className="text-4xl font-bold text-green-700 dark:text-green-400 mb-3">&#10003; {submittedCard.title}</h2>
+          <p className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">{submittedCard.detail}</p>
+          {submittedCard.pointsLine && (
+            <p className="text-xl text-gray-700 dark:text-gray-300">{submittedCard.pointsLine}</p>
+          )}
+          <p className="text-lg text-gray-500 dark:text-gray-400 mb-6">{submittedCard.timeLine}</p>
+          <p className="text-xl font-medium text-gray-800 dark:text-gray-200 border-t border-gray-200 dark:border-gray-700 pt-5">
+            Select the next student
+          </p>
         </div>
       );
     }

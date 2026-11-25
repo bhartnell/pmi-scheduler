@@ -1635,6 +1635,13 @@ export default function GradeStationPage() {
                 stationPoolId={stationId}
                 studentQueue={studentQueue}
                 onEvaluationSaved={handleEvaluationSaved}
+                onAfterSubmit={() => {
+                  // Single-sheet station: clear the selection so the proctor sees the
+                  // Submitted card + "Select the next student" instead of a blank sheet.
+                  // No handoff prompt here (unchanged: only the dual mount offers it).
+                  resetParentEvaluationState();
+                  return false;
+                }}
                 embedded={true}
                 nremtMode={!!station?.lab_day?.is_nremt_testing}
                 defaultMode={station?.lab_day?.is_nremt_testing ? 'final' : undefined}
