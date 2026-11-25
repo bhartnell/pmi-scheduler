@@ -172,16 +172,22 @@ export function finishedSkillCount(student: RtdStudent, input: RtdInput): number
   return n;
 }
 
-/** Latest finish time (ms) over the student's completed skill cells; null when none or no time is known. */
+/**
+ * Latest finish time (ms) over the student's completed visits; null when none or no time is known.
+ * The live student-queue route gives finished SKILL cells no completedAt (they are built from the
+ * evaluation), but STATION cells carry it from the queue row, so station cells are read first
+ * (every station of the day, completed only) and a skill cell's own completedAt is the fallback.
+ */
 export function lastFinishedMs(student: RtdStudent, input: RtdInput): number | null {
   let best: number | null = null;
-  for (const col of input.skillColumns) {
-    const c = input.skillCells[`${student.id}_${col.skillName}`];
-    if (c?.status !== 'completed' || !c.completedAt) continue;
+  const take = (c: RtdCell | undefined) => {
+    if (c?.status !== 'completed' || !c.completedAt) return;
     const t = Date.parse(c.completedAt);
-    if (Number.isNaN(t)) continue;
+    if (Number.isNaN(t)) return;
     if (best === null || t > best) best = t;
-  }
+  };
+  for (const st of input.stations) take(input.cells[`${student.id}_${st.id}`]);
+  for (const col of input.skillColumns) take(input.skillCells[`${student.id}_${col.skillName}`]);
   return best;
 }
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { candidatesForStation, retestWaitingForStation, freeStations, enRouteList, whyLine, minutesSince, spreadSuggestions, type RtdInput, type RtdStation } from '../lib/nremt-run-the-day.ts';
+import { candidatesForStation, retestWaitingForStation, freeStations, enRouteList, lastFinishedMs, whyLine, minutesSince, spreadSuggestions, type RtdInput, type RtdStation } from '../lib/nremt-run-the-day.ts';
 import { shortSkillLabel, hasShortLabel } from '../lib/nremt-skill-labels.ts';
 import { localCalendarDate } from '../lib/nremt-hub-format.ts';
 import { classifyStudent } from '../lib/nremt-day-stats.ts';
@@ -325,4 +325,28 @@ test('two free cards never suggest the same student under the fair order', () =>
   const r = spreadSuggestions(spreadStations, input);
   const tops = r.map((x) => x.top?.student.id);
   assert.equal(new Set(tops).size, tops.length);
+});
+
+// Real student-queue shape: finished SKILL cells carry NO completedAt (built from the evaluation);
+// the STATION cells carry it from the queue row. The wait tie-break must read the station cells.
+test('wait tie-break works on the live response shape: skill cells have no time, station cells do', () => {
+  const skillDone = { status: 'completed', result: 'pass', queueId: null, completedAt: null };
+  const stDone = (min: number) => ({ status: 'completed', result: 'pass', queueId: 'q', completedAt: T(min) });
+  const input = {
+    ...base,
+    skillCells: { a_Trauma: skillDone, b_Trauma: skillDone, c_Trauma: skillDone },
+    cells: { a_t1: stDone(30), b_t1: stDone(10), c_t1: stDone(20) },
+  } as never;
+  // alphabet would give a, b, c; the wait gives b (10), c (20), a (30)
+  assert.deepEqual(ids(candidatesForStation(stations[0], input)), ['b', 'c', 'a']);
+  assert.equal(lastFinishedMs(students[1], input), Date.parse(T(10)));
+});
+
+test('wait tie-break: never tested first, skill-cell time is the fallback when a station cell has none', () => {
+  const input = {
+    ...base,
+    skillCells: { a_Trauma: done('pass', 5), b_Trauma: { status: 'completed', result: 'pass', completedAt: null } },
+    cells: { b_t1: { status: 'completed', result: 'pass', completedAt: T(1) } },
+  } as never;
+  assert.deepEqual(ids(candidatesForStation(stations[0], input)), ['c', 'b', 'a']);
 });
