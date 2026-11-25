@@ -87,6 +87,17 @@ export function hasMinRole(userRole: Role | string, requiredRole: Role): boolean
   return getRoleLevel(userRole) >= ROLE_LEVELS[requiredRole];
 }
 
+/**
+ * Who gets the staff (unfiltered) branch when reading skill evaluations /
+ * full score sheets: any instructor-level role or above (lead_instructor,
+ * instructor, volunteer_instructor, agency_liaison, admin, superadmin).
+ * Same rule as the score-sheet print route. Students, guests, pending,
+ * program_director and agency_observer are excluded.
+ */
+export function canViewAllScoreSheets(role: Role | string | null | undefined): boolean {
+  return !!role && hasMinRole(role, 'instructor');
+}
+
 export function canAccessAdmin(role: Role | string): boolean {
   return getRoleLevel(role) >= ROLE_LEVELS.admin;
 }

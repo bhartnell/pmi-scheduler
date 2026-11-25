@@ -122,7 +122,11 @@ export default function EvaluationDetailPage() {
           setError('Evaluation not found');
         }
       } else {
-        setError(data.error || 'Evaluation not found');
+        setError(
+          res.status === 403
+            ? 'You do not have access to this score sheet'
+            : data.error || 'Evaluation not found'
+        );
       }
     } catch {
       setError('Failed to load evaluation');
