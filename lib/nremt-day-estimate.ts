@@ -12,7 +12,7 @@
 import { findInstructionEntryByCode } from './nremt-instructions.ts';
 import { PAIR_TITLE, pairCodeFor } from './nremt-pairs.ts';
 import { shortSkillLabel } from './nremt-skill-labels.ts';
-import { isRoutable, minutesSince, skillForStation, type RtdInput, type RtdStation, type RtdStudent } from './nremt-run-the-day.ts';
+import { isCountedOpen, isRoutable, minutesSince, skillForStation, type RtdInput, type RtdStation, type RtdStudent } from './nremt-run-the-day.ts';
 
 /** Walk from the classroom, brief, questions and set-up, per visit. */
 export const WALK_BRIEF_MIN = 5;
@@ -242,11 +242,11 @@ export function estimateDay(input: RtdInput, opts: EstimateOptions): DayEstimate
     if (d.isPair) {
       const o2 = d.parts.find((p) => p.code === 'E204');
       const bvm = d.parts.find((p) => p.code === 'E203');
-      const o2Open = (o2?.stationIds || []).map((id) => stationById.get(id)).filter((s): s is RtdStation => !!s && isRoutable(s)).length;
-      const bvmOpen = (bvm?.stationIds || []).map((id) => stationById.get(id)).filter((s): s is RtdStation => !!s && isRoutable(s)).length;
+      const o2Open = (o2?.stationIds || []).map((id) => stationById.get(id)).filter((s): s is RtdStation => !!s && isCountedOpen(s)).length;
+      const bvmOpen = (bvm?.stationIds || []).map((id) => stationById.get(id)).filter((s): s is RtdStation => !!s && isCountedOpen(s)).length;
       open = Math.min(o2Open, bvmOpen);
     } else {
-      open = d.stationIds.map((id) => stationById.get(id)).filter((s): s is RtdStation => !!s && isRoutable(s)).length;
+      open = d.stationIds.map((id) => stationById.get(id)).filter((s): s is RtdStation => !!s && isCountedOpen(s)).length;
     }
     const perVisit = left > 0 ? totalMin / left : null;
     const known = !noTime && left > 0 && open > 0;

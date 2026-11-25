@@ -5,6 +5,9 @@ export type CoordinatorStatus = 'open' | 'closed' | 'break';
 
 export const isClosed = (status: string | null | undefined): boolean => status === 'closed';
 
+/** A station put on a temporary break (lunch etc.): coming back, so it still counts as open. */
+export const isOnBreak = (status: string | null | undefined): boolean => status === 'break';
+
 /** Plain-hyphen, trimmed, single-spaced form of a name (skill sheet names contain long dashes). */
 const plain = (v: string | null | undefined): string =>
   (v || '').replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-').replace(/\s+/g, ' ').trim();

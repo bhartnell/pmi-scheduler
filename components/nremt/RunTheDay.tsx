@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Undo2, Unlock } from 'lucide-react';
+import { Coffee, Undo2, Unlock } from 'lucide-react';
 import IndividualTestingGrid, { type HubCellMenu } from '@/components/lab-day/IndividualTestingGrid';
 import { shortSkillLabel } from '@/lib/nremt-skill-labels';
 import { withAssistant } from '@/lib/nremt-hub-stations';
@@ -19,6 +19,7 @@ import {
   retestWaitingForUnit,
   studentName,
   testingNow,
+  unitBreakState,
   unitCounts,
   unitStations,
   unitTitle,
@@ -202,28 +203,31 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
     await afterWrite();
   };
 
-  const reopen = async (key: string, stationIds: string[]) => {
+  // Status-only change (open / break). The PATCH body carries only the status, so proctor,
+  // assistant, location and name stay exactly as they are.
+  const setUnitStatus = async (key: string, stationIds: string[], status: 'open' | 'break') => {
     setBusyKey(key);
     try {
       for (const stationId of stationIds) {
         const r = await fetch(`/api/lab-management/stations/${stationId}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ coordinator_status: 'open' }),
+          body: JSON.stringify({ coordinator_status: status }),
         });
         const d = await r.json();
         if (!d.success) {
-          alert('Could not reopen the station: ' + (d.error || 'unknown error'));
+          alert('Could not change the station: ' + (d.error || 'unknown error'));
           break;
         }
       }
     } catch {
-      alert('Could not reopen the station');
+      alert('Could not change the station');
     }
     setBusyKey(null);
     await afterWrite();
     onChanged?.();
   };
+  const reopen = (key: string, stationIds: string[]) => setUnitStatus(key, stationIds, 'open');
 
   const view = useMemo(() => {
     if (!input) return null;
@@ -241,13 +245,25 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
       suggestions: spreadUnitSuggestions(free, input, { includeRetests }),
       // A BVM + O2 pair is one station: one entry, reopened as a pair.
       closed: units
-        .filter((u) => unitStations(u).some((st) => (st.coordinatorStatus || 'open') !== 'open'))
+        .filter((u) => unitBreakState(unitStations(u)) === 'closed')
         .map((u) => ({
           key: u.key,
           ids: unitStations(u).map((st) => st.id),
           title: unitTitle(u, stationName),
-          onBreak: unitStations(u).every((st) => (st.coordinatorStatus || 'open') === 'break'),
         })),
+      // Stations on a temporary break: their own strip, with proctor and location kept.
+      onBreak: units
+        .filter((u) => unitBreakState(unitStations(u)) === 'break')
+        .map((u) => {
+          const st = u.kind === 'single' ? u.station : u.o2;
+          return {
+            key: u.key,
+            ids: unitStations(u).map((x) => x.id),
+            title: unitTitle(u, stationName),
+            proctor: withAssistant(st.instructorName, st.assistantName),
+            room: st.room || null,
+          };
+        }),
     };
   }, [input, now, dismissedGaps, includeRetests]);
 
@@ -435,6 +451,18 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
                     )}
                   </>
                 )}
+                {canManage && (
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      disabled={unitStations(unit).some((x) => x.id === busyKey) || busyKey === cardKey}
+                      onClick={() => setUnitStatus(cardKey, unitStations(unit).map((x) => x.id), 'break')}
+                      className={`${btn} inline-flex items-center gap-1 border border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-100 disabled:opacity-60`}
+                    >
+                      <Coffee className="w-4 h-4" /> Break
+                    </button>
+                  </div>
+                )}
                 {openPick === cardKey && (
                   <ul className="rounded-lg border border-gray-200 dark:border-gray-700 divide-y divide-gray-200 dark:divide-gray-700 max-h-64 overflow-y-auto">
                     {others.map((c) => (
@@ -462,6 +490,34 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
           })}
         </div>
       </section>
+
+      {view.onBreak.length > 0 && (
+        <section aria-label="On break" className="rounded-xl bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700 p-4 space-y-2">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">On break</h2>
+          <ul className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-x-6 gap-y-2">
+            {view.onBreak.map((b) => (
+              <li key={b.key} className="flex items-center justify-between gap-3 text-sm min-h-[44px]">
+                <span className="text-gray-900 dark:text-white">
+                  <span className="font-medium">{b.title}</span>
+                  <span className="block text-xs text-gray-600 dark:text-gray-400">
+                    {b.proctor || 'Proctor not set'} - {b.room || 'Location not set'}
+                  </span>
+                </span>
+                {canManage && (
+                  <button
+                    type="button"
+                    disabled={busyKey === b.key}
+                    onClick={() => setUnitStatus(b.key, b.ids, 'open')}
+                    className="inline-flex items-center gap-1 min-h-[44px] px-3 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold disabled:opacity-60"
+                  >
+                    <Unlock className="w-4 h-4" /> Back from break
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section aria-label="Testing now" className="rounded-xl bg-white dark:bg-gray-800 shadow p-4 space-y-2">
         <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Testing now</h2>
@@ -519,7 +575,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
               {view.closed.map((s) => (
                 <li key={s.key} className="flex items-center justify-between gap-3 text-sm text-gray-500 dark:text-gray-400 min-h-[44px]">
                   <span>
-                    {s.title} - {s.onBreak ? 'on break' : 'closed'}
+                    {s.title} - closed
                   </span>
                   {canManage && (
                     <button

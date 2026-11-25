@@ -77,6 +77,23 @@ export function isRoutable(station: RtdStation): boolean {
   return st === 'open';
 }
 
+/** Open or on a temporary break: the station is part of the day's line (a break station is coming back). */
+export function isCountedOpen(station: RtdStation): boolean {
+  const st = station.coordinatorStatus || 'open';
+  return st === 'open' || st === 'break';
+}
+
+/**
+ * State of one unit (single station or BVM + O2 pair) for the Break / Closed lists.
+ * 'closed' if any part is closed; else 'break' if any part is on break; else 'open'.
+ */
+export function unitBreakState(stations: RtdStation[]): 'open' | 'break' | 'closed' {
+  const sts = stations.map((s) => s.coordinatorStatus || 'open');
+  if (sts.includes('closed')) return 'closed';
+  if (sts.includes('break')) return 'break';
+  return 'open';
+}
+
 /** Student currently graded (in progress) at this station, or null. */
 export function studentAtStation(station: RtdStation, input: RtdInput): RtdStudent | null {
   for (const s of input.students) {

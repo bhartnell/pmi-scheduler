@@ -4,13 +4,13 @@ import { useSession } from 'next-auth/react';
 import { useRouter, useParams } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ClipboardCheck, ArrowLeft, Pencil, Plus, Lock, Unlock, X, Check } from 'lucide-react';
+import { ClipboardCheck, ArrowLeft, Pencil, Plus, Lock, Coffee, Unlock, X, Check } from 'lucide-react';
 import { PageLoader } from '@/components/ui';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { hasMinRole } from '@/lib/permissions';
 import { useEffectiveRole } from '@/hooks/useEffectiveRole';
 import { formatHubDate, formatHubTime, localCalendarDate } from '@/lib/nremt-hub-format';
-import { nextStationNumber, isClosed, patchTilesIn, proctorChoices, withAssistant, sameStationPerson, whoIsWhere, placementLine, cleanReopenBody } from '@/lib/nremt-hub-stations';
+import { nextStationNumber, isClosed, isOnBreak, patchTilesIn, proctorChoices, withAssistant, sameStationPerson, whoIsWhere, placementLine, cleanReopenBody } from '@/lib/nremt-hub-stations';
 import { buildStationPairs, nextExtraStationName, pairCodeFor, pickReopenStation, pickReopenPair, PAIR_TITLE, type PairItem } from '@/lib/nremt-pairs';
 import IndividualTestingGrid from '@/components/lab-day/IndividualTestingGrid';
 import ProctorsPanel, { PersonSearch, type PickedPerson } from '@/components/nremt/ProctorsPanel';
@@ -305,7 +305,7 @@ function StationTile({
   canManage: boolean;
   saving: boolean;
   onEdit: (t: Tile) => void;
-  onSetStatus: (t: Tile, status: 'open' | 'closed') => void;
+  onSetStatus: (t: Tile, status: 'open' | 'closed' | 'break') => void;
   drops?: DropsApi;
 }) {
   const closed = isClosed(tile.coordinator_status);
@@ -355,14 +355,14 @@ function StationTile({
           </>
         )}
       </div>
-      {closed && canManage ? (
+      {(closed || isOnBreak(tile.coordinator_status)) && canManage ? (
         <button
           type="button"
           disabled={saving}
           onClick={() => onSetStatus(tile, 'open')}
           className="flex items-center justify-center gap-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold min-h-[52px] disabled:opacity-60"
         >
-          <Unlock className="w-4 h-4" /> {saving ? 'Saving...' : 'Reopen'}
+          <Unlock className="w-4 h-4" /> {saving ? 'Saving...' : closed ? 'Reopen' : 'Back from break'}
         </button>
       ) : (
         <Link
@@ -381,6 +381,16 @@ function StationTile({
           >
             <Pencil className="w-4 h-4" /> Edit station
           </button>
+          {!closed && !isOnBreak(tile.coordinator_status) && (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => onSetStatus(tile, 'break')}
+              className="inline-flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60"
+            >
+              <Coffee className="w-4 h-4" /> Break
+            </button>
+          )}
           {!closed && (
             <button
               type="button"
@@ -409,11 +419,12 @@ function PairTile({
   canManage: boolean;
   saving: boolean;
   onEdit: (p: { o2: Tile; bvm: Tile }) => void;
-  onSetStatus: (rows: Tile[], status: 'open' | 'closed') => void;
+  onSetStatus: (rows: Tile[], status: 'open' | 'closed' | 'break') => void;
   drops?: DropsApi;
 }) {
   const { o2, bvm } = pair;
   const closed = isClosed(o2.coordinator_status) && isClosed(bvm.coordinator_status);
+  const onBreak = !closed && (isOnBreak(o2.coordinator_status) || isOnBreak(bvm.coordinator_status));
   const proctor = (t: Tile) => withAssistant(t.proctors.length > 0 ? t.proctors.join(', ') : null, t.assistant_name) || 'not set';
   const sameProctor = proctor(o2) === proctor(bvm);
   const sameRoom = (o2.room || '') === (bvm.room || '');
@@ -423,6 +434,7 @@ function PairTile({
         <div className="flex items-start justify-between gap-2">
           <div className="font-bold text-lg text-gray-900 dark:text-white">{PAIR_TITLE}</div>
           {closed && <span className="shrink-0 rounded-full bg-gray-300 dark:bg-gray-700 px-2 py-0.5 text-xs font-semibold text-gray-800 dark:text-gray-200">Closed</span>}
+          {onBreak && <span className="shrink-0 rounded-full bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-900">On break</span>}
         </div>
         <div className="text-sm text-gray-700 dark:text-gray-300">
           1. O2 by NRB - station {o2.station_number}
@@ -444,9 +456,9 @@ function PairTile({
           </>
         )}
       </div>
-      {closed && canManage ? (
+      {(closed || onBreak) && canManage ? (
         <button type="button" disabled={saving} onClick={() => onSetStatus([o2, bvm], 'open')} className="flex items-center justify-center gap-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold min-h-[52px] disabled:opacity-60">
-          <Unlock className="w-4 h-4" /> {saving ? 'Saving...' : 'Reopen'}
+          <Unlock className="w-4 h-4" /> {saving ? 'Saving...' : closed ? 'Reopen' : 'Back from break'}
         </button>
       ) : (
         <>
@@ -463,6 +475,11 @@ function PairTile({
           <button type="button" onClick={() => onEdit(pair)} className="flex-1 inline-flex items-center justify-center gap-1 min-h-[44px] rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700">
             <Pencil className="w-4 h-4" /> Edit station
           </button>
+          {!closed && !onBreak && (
+            <button type="button" disabled={saving} onClick={() => onSetStatus([o2, bvm], 'break')} className="inline-flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60">
+              <Coffee className="w-4 h-4" /> Break
+            </button>
+          )}
           {!closed && (
             <button type="button" disabled={saving} onClick={() => onSetStatus([o2, bvm], 'closed')} className="inline-flex items-center justify-center gap-1 min-h-[44px] px-3 rounded-lg border border-gray-300 dark:border-gray-600 text-sm text-gray-800 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-60">
               <Lock className="w-4 h-4" /> Close
@@ -1030,7 +1047,7 @@ export default function NremtHubDayPage() {
 
   // Close / reopen: the existing coordinator_status mark on the station (the same one the
   // Coordinator View sets). Nothing is deleted; evaluations stay counted.
-  const setStationStatus = async (tile: Tile, next: 'open' | 'closed') => {
+  const setStationStatus = async (tile: Tile, next: 'open' | 'closed' | 'break') => {
     setSavingId(tile.id);
     try {
       const res = await fetch(`/api/lab-management/stations/${tile.id}`, {
@@ -1049,7 +1066,7 @@ export default function NremtHubDayPage() {
   };
 
   // Close / reopen both rows of the two-part station (two calls to the same station PATCH).
-  const setRowsStatus = async (rows: Tile[], next: 'open' | 'closed') => {
+  const setRowsStatus = async (rows: Tile[], next: 'open' | 'closed' | 'break') => {
     setSavingId(rows[0].id);
     try {
       for (const row of rows) {
@@ -1164,10 +1181,12 @@ export default function NremtHubDayPage() {
               const singles = allTiles.filter((t) => !pairedIds.has(t.id));
               const unitTotal = singles.length + dayPairs.length;
               const openCount = singles.filter((t) => !isClosed(t.coordinator_status)).length + dayPairs.filter((p) => !isClosed(p.o2.coordinator_status) && !isClosed(p.bvm.coordinator_status)).length;
+              // A station on break counts as open (it is coming back); the note says how many.
+              const breakCount = singles.filter((t) => isOnBreak(t.coordinator_status)).length + dayPairs.filter((p) => !isClosed(p.o2.coordinator_status) && !isClosed(p.bvm.coordinator_status) && (isOnBreak(p.o2.coordinator_status) || isOnBreak(p.bvm.coordinator_status))).length;
               const pct = stats.skillsPossible > 0 ? Math.round((stats.skillsCompleted / stats.skillsPossible) * 100) : 0;
               const items: { label: string; value: string; note?: string }[] = [
                 { label: 'Students', value: String(stats.students) },
-                { label: 'Stations open', value: String(openCount), note: unitTotal > openCount ? `${unitTotal - openCount} closed` : undefined },
+                { label: 'Stations open', value: String(openCount), note: [unitTotal > openCount ? `${unitTotal - openCount} closed` : '', breakCount > 0 ? `${breakCount} on break` : ''].filter(Boolean).join(', ') || undefined },
                 { label: 'Testing now', value: String(stats.testing) },
                 { label: 'Waiting', value: String(stats.waiting) },
                 { label: 'Complete', value: String(stats.complete) },
