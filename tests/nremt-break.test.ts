@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dayUnits, freeUnitsNow, isRoutable, isCountedOpen, unitBreakState, unitCounts, unitStations, type RtdInput, type RtdStation } from '../lib/nremt-run-the-day.ts';
+import { cellMenuFor, dayUnits, freeUnitsNow, isRoutable, isCountedOpen, unitBreakState, unitCounts, unitStations, type RtdInput, type RtdStation } from '../lib/nremt-run-the-day.ts';
 import { estimateDay } from '../lib/nremt-day-estimate.ts';
 import { isOnBreak } from '../lib/nremt-hub-stations.ts';
 
@@ -63,4 +63,19 @@ test('estimate: a closed-only line still warns', () => {
 test('estimate: pair with both parts on break still counts as one station', () => {
   const e = estimateDay(input('open', 'break', 'break'), { now: NOW, startMs: START, includeBreak: true });
   assert.equal(e.lines.find((l) => l.isPair)!.open, 1);
+});
+
+test('cell menu: station on break is listed greyed (onBreak), closed is absent, open is selectable', () => {
+  const opt = (inp: RtdInput) => cellMenuFor(inp.students[0], 'Medical', inp, NOW).options;
+  const br = opt(input('break'));
+  assert.equal(br.length, 1);
+  assert.equal(br[0].onBreak, true);
+  assert.equal(opt(input('closed')).length, 0);
+  const op = opt(input('open'));
+  assert.equal(op.length, 1);
+  assert.equal(op[0].onBreak, false);
+  // pair: one part on break lists the pair once, greyed
+  const pr = cellMenuFor(input('open', 'break', 'open').students[0], 'BVM', input('open', 'break', 'open'), NOW).options;
+  assert.equal(pr.length, 1);
+  assert.equal(pr[0].onBreak, true);
 });

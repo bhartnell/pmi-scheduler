@@ -611,6 +611,8 @@ export interface SendOption {
   busyWith: string | null;
   /** Retake only: the first attempt's proctor is this station's proctor. */
   sameProctorAsFirstAttempt: boolean;
+  /** Station (or pair) is on a temporary break: listed greyed, not selectable. Closed stations are not listed. */
+  onBreak: boolean;
 }
 
 export interface CellMenu {
@@ -627,7 +629,7 @@ export interface CellMenu {
   busyElsewhere: { title: string; kind: 'en_route' | 'in_progress' } | null;
   /** Fail only: first attempt's evaluator, for the retake line. */
   firstAttemptBy: string | null;
-  /** Open stations for this skill (closed and on-break are left out). Pair appears once. */
+  /** Open stations for this skill, plus any on break (greyed, onBreak true); closed ones are left out. Pair appears once. */
   options: SendOption[];
 }
 
@@ -702,7 +704,9 @@ export function cellMenuFor(student: RtdStudent, skillName: string, input: RtdIn
       if (!u || seen.has(u.key)) continue;
       seen.add(u.key);
       const parts = unitStations(u);
-      if (!parts.every(isRoutable)) continue; // closed or on break: not listed
+      const unitState = unitBreakState(parts);
+      if (unitState === 'closed') continue; // closed: not listed
+      const onBreak = unitState === 'break'; // on break: listed greyed, not selectable
       let target: RtdStation;
       if (u.kind === 'pair') {
         const part = firstPart(needOf(student, u, input));
@@ -719,6 +723,7 @@ export function cellMenuFor(student: RtdStudent, skillName: string, input: RtdIn
         room: target.room ?? null,
         busyWith: busy,
         sameProctorAsFirstAttempt: state === 'fail' && sameName(firstAttemptBy, proctorOf(target)),
+        onBreak,
       });
     }
     options.sort((a, b) => {

@@ -554,16 +554,17 @@ export default function IndividualTestingGrid({ labDayId, labDayDate, isNremtTes
             <div key={o.stationId} className="space-y-0.5">
               <button
                 type="button"
-                disabled={!!o.busyWith}
+                disabled={!!o.busyWith || o.onBreak}
                 onClick={() => hubRun(key, () => hubMenu.send(o.stationId, studentId))}
-                className={`${item} border border-gray-200 dark:border-gray-600 ${o.busyWith ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}
+                className={`${item} border border-gray-200 dark:border-gray-600 ${o.busyWith || o.onBreak ? 'text-gray-400 dark:text-gray-500' : 'text-gray-900 dark:text-gray-100'}`}
               >
                 <span className="font-medium">{o.title}</span>
                 <span className={sub}> - {o.proctor || 'Proctor not set'} - {o.room || 'Location not set'}</span>
+                {o.onBreak && <span className="block text-xs">On break</span>}
                 {o.busyWith && <span className="block text-xs">{o.busyWith} is there</span>}
                 {o.sameProctorAsFirstAttempt && <span className="block text-xs text-amber-700 dark:text-amber-300">This proctor graded the first attempt</span>}
               </button>
-              {menu.state === 'not_started' && !o.busyWith && (
+              {menu.state === 'not_started' && !o.busyWith && !o.onBreak && (
                 <button
                   type="button"
                   onClick={() => hubRun(key, () => hubMenu.markInProgress(o.stationId, studentId))}
