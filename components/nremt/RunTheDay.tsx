@@ -14,6 +14,7 @@ import {
   minutesSince,
   skillForStation,
   spreadUnitSuggestions,
+  retestWaitingForUnit,
   studentName,
   testingNow,
   unitCounts,
@@ -64,6 +65,8 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
   const [dismissedGaps, setDismissedGaps] = useState<Set<string>>(() => new Set());
   // Estimate box: kept on this screen only (component state), so it can be turned off after lunch.
   const [includeBreak, setIncludeBreak] = useState(true);
+  // Suggestions are first attempts only until the coordinator turns retests on (this screen only).
+  const [includeRetests, setIncludeRetests] = useState(false);
   const lastGood = useRef<RtdInput | null>(null);
   // Bumped after every write made from this screen so the completion table refetches at once.
   const [refreshSignal, setRefreshSignal] = useState(0);
@@ -233,7 +236,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
       gaps,
       unitOf,
       testing: testingNow(input),
-      suggestions: spreadUnitSuggestions(free, input),
+      suggestions: spreadUnitSuggestions(free, input, { includeRetests }),
       // A BVM + O2 pair is one station: one entry, reopened as a pair.
       closed: units
         .filter((u) => unitStations(u).some((st) => (st.coordinatorStatus || 'open') !== 'open'))
@@ -244,7 +247,7 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
           onBreak: unitStations(u).every((st) => (st.coordinatorStatus || 'open') === 'break'),
         })),
     };
-  }, [input, now, dismissedGaps]);
+  }, [input, now, dismissedGaps, includeRetests]);
 
   // Estimated finish: pure calculation from the data already held here. No fetch, no writes.
   const estimate = useMemo(
@@ -299,6 +302,10 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
             <label className="inline-flex items-center gap-2 min-h-[44px] text-sm text-gray-700 dark:text-gray-300">
               <input type="checkbox" className="h-4 w-4" checked={includeBreak} onChange={(e) => setIncludeBreak(e.target.checked)} />
               Include a 30 minute break per station
+            </label>
+            <label className="inline-flex items-center gap-2 min-h-[44px] text-sm text-gray-700 dark:text-gray-300">
+              <input type="checkbox" className="h-4 w-4" checked={includeRetests} onChange={(e) => setIncludeRetests(e.target.checked)} />
+              Include retests in suggestions
             </label>
           </div>
           {estimate.noOpenLines.length > 0 && !estimate.allDone && (
@@ -429,7 +436,12 @@ export default function RunTheDay({ labDayId, canManage, onChanged, onFreeCount,
                   </>
                 ) : (
                   <>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">Nobody waiting for this skill</div>
+                    <div className="text-sm text-gray-600 dark:text-gray-400">
+                      {(() => {
+                        const w = !includeRetests && input ? retestWaitingForUnit(unit, input) : 0;
+                        return w > 0 ? `Nobody left for a first attempt - ${w} waiting for a retest` : 'Nobody waiting for this skill';
+                      })()}
+                    </div>
                     {canManage && others.length > 0 && (
                       <div className="pt-1">
                         <button

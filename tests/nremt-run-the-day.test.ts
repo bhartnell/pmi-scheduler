@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { candidatesForStation, freeStations, enRouteList, whyLine, minutesSince, spreadSuggestions, type RtdInput, type RtdStation } from '../lib/nremt-run-the-day.ts';
+import { candidatesForStation, retestWaitingForStation, freeStations, enRouteList, lastFinishedMs, whyLine, minutesSince, spreadSuggestions, type RtdInput, type RtdStation } from '../lib/nremt-run-the-day.ts';
 import { shortSkillLabel, hasShortLabel } from '../lib/nremt-skill-labels.ts';
 import { localCalendarDate } from '../lib/nremt-hub-format.ts';
 import { classifyStudent } from '../lib/nremt-day-stats.ts';
@@ -42,7 +42,7 @@ test('a failed skill is offered again and marked retake with the first proctor',
     ...base,
     skillCells: { a_Medical: { status: 'completed', result: 'fail', evalSummary: { evaluatorName: 'Pat' } } },
   };
-  const c = candidatesForStation(stations[1], input).find((x) => x.student.id === 'a')!;
+  const c = candidatesForStation(stations[1], input, { includeRetests: true }).find((x) => x.student.id === 'a')!;
   assert.equal(c.isRetake, true);
   assert.equal(whyLine(c), 'Retake - first attempt graded by Pat');
   assert.equal(c.sameProctorAsFirstAttempt, false); // m2 proctor is Sam
@@ -53,7 +53,7 @@ test('same proctor as first attempt goes last, but is not blocked', () => {
     ...base,
     skillCells: { a_Medical: { status: 'completed', result: 'fail', evalSummary: { evaluatorName: 'pat' } } },
   };
-  const list = candidatesForStation(stations[0], input); // m1 proctor Pat
+  const list = candidatesForStation(stations[0], input, { includeRetests: true }); // m1 proctor Pat
   assert.equal(list[list.length - 1].student.id, 'a');
   assert.equal(list[list.length - 1].sameProctorAsFirstAttempt, true);
   assert.equal(list.length, 3);
@@ -257,4 +257,96 @@ test('proctor drop-down: today first, staff after, no one listed twice', () => {
   const c = proctorChoices(today, staff);
   assert.deepEqual(c.today.map((p) => p.name), ['Ann']);
   assert.deepEqual(c.staff.map((p) => p.name), ['Bo']);
+});
+
+
+// ---- Fair order: fewest finished (attempts), longest wait, name last; retests off by default (card 4235cd1c) ----
+const T = (min: number) => `2026-11-25T17:${String(min).padStart(2, '0')}:00Z`;
+const done = (result: string, min?: number) => ({ status: 'completed', result, completedAt: min === undefined ? null : T(min) });
+const ids = (l: { student: { id: string } }[]) => l.map((c) => c.student.id);
+
+test('fewer finished beats more finished even when the one with more has fewer passes', () => {
+  const input = {
+    ...base,
+    skillCells: { a_Trauma: done('fail', 1), b_Trauma: done('pass', 2) }, // a: 1 finished 0 passes; b: 1 finished 1 pass
+  } as never;
+  // c never tested goes first; a and b both finished 1 (not passes) -> tie, earlier finish (a) first
+  assert.deepEqual(ids(candidatesForStation(stations[0], input)), ['c', 'a', 'b']);
+});
+
+test('a failed visit counts as finished, so the failed student ranks after an untested one', () => {
+  const input = { ...base, skillCells: { a_Trauma: done('fail', 1) } } as never;
+  assert.deepEqual(ids(candidatesForStation(stations[0], input)), ['b', 'c', 'a']);
+});
+
+test('same finished count: earlier last finish first, then name', () => {
+  const input = {
+    ...base,
+    skillCells: { a_Trauma: done('pass', 30), b_Trauma: done('pass', 10), c_Trauma: done('pass', 20) },
+  } as never;
+  assert.deepEqual(ids(candidatesForStation(stations[0], input)), ['b', 'c', 'a']);
+  const tie = { ...base, skillCells: { a_Trauma: done('pass', 10), b_Trauma: done('pass', 10), c_Trauma: done('pass', 10) } } as never;
+  assert.deepEqual(ids(candidatesForStation(stations[0], tie)), ['a', 'b', 'c']);
+});
+
+test('a finish with no known time goes after known finish times at the same count', () => {
+  const input = { ...base, skillCells: { a_Trauma: done('pass'), b_Trauma: done('pass', 10) } } as never;
+  assert.deepEqual(ids(candidatesForStation(stations[0], input)).slice(0, 1), ['c']);
+  assert.deepEqual(ids(candidatesForStation(stations[0], input)).slice(1), ['b', 'a']);
+});
+
+test('retests off (default): a student who failed this skill is not listed; one who never attempted it is', () => {
+  const input = { ...base, skillCells: { a_Medical: done('fail', 5) } } as never;
+  assert.deepEqual(ids(candidatesForStation(stations[0], input)), ['b', 'c']);
+  assert.equal(retestWaitingForStation(stations[0], input), 1);
+});
+
+test('retests on: failed student listed, same-proctor retake last, retake station prefers retakes', () => {
+  const input = { ...base, skillCells: { a_Medical: { ...done('fail', 5), evalSummary: { evaluatorName: 'Pat' } } } } as never;
+  const on = { includeRetests: true };
+  assert.deepEqual(ids(candidatesForStation(stations[0], input, on)), ['b', 'c', 'a']); // m1 proctor Pat graded first attempt
+  assert.equal(candidatesForStation(stations[1], input, on)[0].student.id, 'b'); // other proctor: fewer finished first
+  const retakeStation = { ...stations[1], isRetakeStation: true };
+  assert.equal(candidatesForStation(retakeStation, input, on)[0].student.id, 'a');
+});
+
+test('retests off, nobody left for a first attempt, two failed: the count reports 2', () => {
+  const input = {
+    ...base,
+    students: [students[0], students[1]],
+    skillCells: { a_Medical: done('fail', 5), b_Medical: done('fail', 6) },
+  } as never;
+  assert.deepEqual(candidatesForStation(stations[0], input), []);
+  assert.equal(retestWaitingForStation(stations[0], input), 2);
+});
+
+test('two free cards never suggest the same student under the fair order', () => {
+  const input = { ...mkSpread(['Zed', 'Amy', 'Bo']), skillCells: { st1_x: done('pass', 1) } } as never;
+  const r = spreadSuggestions(spreadStations, input);
+  const tops = r.map((x) => x.top?.student.id);
+  assert.equal(new Set(tops).size, tops.length);
+});
+
+// Real student-queue shape: finished SKILL cells carry NO completedAt (built from the evaluation);
+// the STATION cells carry it from the queue row. The wait tie-break must read the station cells.
+test('wait tie-break works on the live response shape: skill cells have no time, station cells do', () => {
+  const skillDone = { status: 'completed', result: 'pass', queueId: null, completedAt: null };
+  const stDone = (min: number) => ({ status: 'completed', result: 'pass', queueId: 'q', completedAt: T(min) });
+  const input = {
+    ...base,
+    skillCells: { a_Trauma: skillDone, b_Trauma: skillDone, c_Trauma: skillDone },
+    cells: { a_t1: stDone(30), b_t1: stDone(10), c_t1: stDone(20) },
+  } as never;
+  // alphabet would give a, b, c; the wait gives b (10), c (20), a (30)
+  assert.deepEqual(ids(candidatesForStation(stations[0], input)), ['b', 'c', 'a']);
+  assert.equal(lastFinishedMs(students[1], input), Date.parse(T(10)));
+});
+
+test('wait tie-break: never tested first, skill-cell time is the fallback when a station cell has none', () => {
+  const input = {
+    ...base,
+    skillCells: { a_Trauma: done('pass', 5), b_Trauma: { status: 'completed', result: 'pass', completedAt: null } },
+    cells: { b_t1: { status: 'completed', result: 'pass', completedAt: T(1) } },
+  } as never;
+  assert.deepEqual(ids(candidatesForStation(stations[0], input)), ['c', 'b', 'a']);
 });

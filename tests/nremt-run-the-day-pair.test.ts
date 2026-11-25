@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { dayUnits, freeUnitsNow, pairCandidates, spreadUnitSuggestions, unitCounts, pairGap, gapKey, type RtdInput } from '../lib/nremt-run-the-day.ts';
+import { retestWaitingForPair, dayUnits, freeUnitsNow, pairCandidates, spreadUnitSuggestions, unitCounts, pairGap, gapKey, type RtdInput } from '../lib/nremt-run-the-day.ts';
 
 const mk = (id: string) => ({ id, first_name: id.toUpperCase(), last_name: 'X' });
 const stations = [
@@ -94,4 +94,31 @@ test('spread treats the pair as one station', () => {
   const sp = spreadUnitSuggestions(freeUnitsNow(base(), NOW, new Set()).units, base());
   assert.equal(sp.length, 2);
   assert.notEqual(sp[0].top?.student.id, sp[1].top?.student.id);
+});
+
+
+// ---- Fair order for the pair (card 4235cd1c) ----
+test('pair: fewest finished first, longest wait next, name last; Send still routes to the first part owed', () => {
+  const input = base({
+    skillCells: {
+      a_Medical: { status: 'completed', result: 'pass', completedAt: '2026-11-25T17:30:00Z' },
+      b_Medical: { status: 'completed', result: 'fail', completedAt: '2026-11-25T17:10:00Z' },
+    } as never,
+  });
+  const pair = dayUnits(input)[1] as never;
+  const list = pairCandidates(pair, input);
+  assert.deepEqual(list.map((c) => c.student.id), ['c', 'b', 'a']); // c none; b earlier finish than a
+  assert.equal(list[0].stationId, 'o6'); // owes both: O2 first
+});
+
+test('pair: retests off leaves out a failed part, a never-attempted part is still owed', () => {
+  const input = base({ skillCells: { 'a_O2 by NRB': { status: 'completed', result: 'fail' }, b_BVM: { status: 'completed', result: 'fail' }, 'b_O2 by NRB': { status: 'completed', result: 'fail' } } as never });
+  const pair = dayUnits(input)[1] as never;
+  const off = pairCandidates(pair, input);
+  assert.deepEqual(off.map((c) => c.student.id).sort(), ['a', 'c']);
+  assert.equal(off.find((c) => c.student.id === 'a')!.stationId, 'b5'); // O2 failed, BVM never attempted -> BVM
+  assert.equal(retestWaitingForPair(pair, input), 1); // b failed both
+  const on = pairCandidates(pair, input, { includeRetests: true });
+  assert.equal(on.length, 3);
+  assert.equal(on.find((c) => c.student.id === 'a')!.stationId, 'o6'); // retests on: owes O2 again first
 });

@@ -158,16 +158,70 @@ function doneSkillCount(student: RtdStudent, input: RtdInput): number {
   return n;
 }
 
+/** Options for the suggestion order. Retests are OFF unless the coordinator turns them on (hub screen only). */
+export interface SuggestOpts {
+  includeRetests?: boolean;
+}
+
+/** Skills this student has FINISHED today, Pass or Fail (a completed skill cell). Ranking only; the "N of M done" line keeps counting passes. */
+export function finishedSkillCount(student: RtdStudent, input: RtdInput): number {
+  let n = 0;
+  for (const col of input.skillColumns) {
+    if (input.skillCells[`${student.id}_${col.skillName}`]?.status === 'completed') n++;
+  }
+  return n;
+}
+
+/**
+ * Latest finish time (ms) over the student's completed visits; null when none or no time is known.
+ * The live student-queue route gives finished SKILL cells no completedAt (they are built from the
+ * evaluation), but STATION cells carry it from the queue row, so station cells are read first
+ * (every station of the day, completed only) and a skill cell's own completedAt is the fallback.
+ */
+export function lastFinishedMs(student: RtdStudent, input: RtdInput): number | null {
+  let best: number | null = null;
+  const take = (c: RtdCell | undefined) => {
+    if (c?.status !== 'completed' || !c.completedAt) return;
+    const t = Date.parse(c.completedAt);
+    if (Number.isNaN(t)) return;
+    if (best === null || t > best) best = t;
+  };
+  for (const st of input.stations) take(input.cells[`${student.id}_${st.id}`]);
+  for (const col of input.skillColumns) take(input.skillCells[`${student.id}_${col.skillName}`]);
+  return best;
+}
+
+/**
+ * Fairness order: fewest stations FINISHED first (attempts, not passes), then the longest wait
+ * (never tested first, then earliest last finish; a finish with no known time goes after known
+ * ones), then name A to Z as the very last tie-break.
+ */
+function fairnessCompare(a: RtdStudent, b: RtdStudent, input: RtdInput): number {
+  const fa = finishedSkillCount(a, input);
+  const fb = finishedSkillCount(b, input);
+  if (fa !== fb) return fa - fb;
+  const la = lastFinishedMs(a, input);
+  const lb = lastFinishedMs(b, input);
+  if (la !== lb) {
+    if (la === null) return fa === 0 ? -1 : 1;
+    if (lb === null) return fb === 0 ? 1 : -1;
+    return la - lb;
+  }
+  return studentName(a).localeCompare(studentName(b));
+}
+
 /**
  * Students who can be sent to this station, in suggestion order. BY SKILL:
  * - not testing at any station and not en route anywhere;
- * - has not passed this station's skill (a failed skill stays eligible: retake);
+ * - has not passed this station's skill; a failed skill is eligible only when opts.includeRetests
+ *   is on (default off: first attempts only, until the coordinator says retests start);
  * - not testing or en route for this skill at ANY station of the skill.
- * Order: a retake station prefers retake students, then fewest skills done first (the
- * Coordinator View's order), then name. A retake whose first-attempt proctor is this
- * station's proctor goes last while another eligible student exists (a warning, not a block).
+ * Order: a retake station prefers retake students (retests on only), then fewest stations
+ * finished (fairnessCompare). A retake whose first-attempt proctor is this station's proctor
+ * goes last while another eligible student exists (a warning, not a block).
  */
-export function candidatesForStation(station: RtdStation, input: RtdInput): Candidate[] {
+export function candidatesForStation(station: RtdStation, input: RtdInput, opts: SuggestOpts = {}): Candidate[] {
+  const includeRetests = !!opts.includeRetests;
   const col = skillForStation(station.id, input.skillColumns);
   const enRoute = enRouteList(input);
   const out: Candidate[] = [];
@@ -184,6 +238,7 @@ export function candidatesForStation(station: RtdStation, input: RtdInput): Cand
       const sc = input.skillCells[`${s.id}_${col.skillName}`];
       if (sc?.status === 'completed' && sc.result === 'pass') continue; // passed this skill
       if (sc?.status === 'completed' && sc.result === 'fail') {
+        if (!includeRetests) continue; // first attempts only while retests are off
         isRetake = true;
         firstAttemptBy = sc.evalSummary?.evaluatorName || null;
       }
@@ -191,7 +246,10 @@ export function candidatesForStation(station: RtdStation, input: RtdInput): Cand
       // No skill column for this station: fall back to the station's own cell.
       const c = input.cells[`${s.id}_${station.id}`];
       if (c?.status === 'completed' && c.result !== 'fail') continue;
-      if (c?.status === 'completed' && c.result === 'fail') isRetake = true;
+      if (c?.status === 'completed' && c.result === 'fail') {
+        if (!includeRetests) continue;
+        isRetake = true;
+      }
     }
     out.push({
       student: s,
@@ -207,10 +265,27 @@ export function candidatesForStation(station: RtdStation, input: RtdInput): Cand
   out.sort((a, b) => {
     if (a.sameProctorAsFirstAttempt !== b.sameProctorAsFirstAttempt) return a.sameProctorAsFirstAttempt ? 1 : -1;
     if (station.isRetakeStation && a.isRetake !== b.isRetake) return a.isRetake ? -1 : 1;
-    if (a.doneCount !== b.doneCount) return a.doneCount - b.doneCount;
-    return studentName(a.student).localeCompare(studentName(b.student));
+    return fairnessCompare(a.student, b.student, input);
   });
   return out;
+}
+
+/**
+ * Retests off: students who could take this station's skill but have already attempted and failed
+ * it, so the card can say "Nobody left for a first attempt - N waiting for a retest". Same
+ * not-busy / not-passed rules as candidatesForStation.
+ */
+export function retestWaitingForStation(station: RtdStation, input: RtdInput): number {
+  const enRoute = enRouteList(input);
+  const col = skillForStation(station.id, input.skillColumns);
+  let n = 0;
+  for (const s of input.students) {
+    if (input.stations.some((st) => input.cells[`${s.id}_${st.id}`]?.status === 'in_progress')) continue;
+    if (enRoute.some((e) => e.student.id === s.id)) continue;
+    const c = col ? input.skillCells[`${s.id}_${col.skillName}`] : input.cells[`${s.id}_${station.id}`];
+    if (c?.status === 'completed' && c.result === 'fail') n++;
+  }
+  return n;
 }
 
 /** One plain line of why this student is suggested. */
@@ -240,11 +315,12 @@ export function minutesSince(iso: string | null | undefined, now: number): numbe
  */
 export function spreadSuggestions(
   free: RtdStation[],
-  input: RtdInput
+  input: RtdInput,
+  opts: SuggestOpts = {}
 ): { station: RtdStation; list: Candidate[]; top: Candidate | null }[] {
   const taken = new Set<string>();
   return free.map((station) => {
-    const list = candidatesForStation(station, input);
+    const list = candidatesForStation(station, input, opts);
     const top = list.find((c) => !taken.has(c.student.id)) || null;
     if (top) taken.add(top.student.id);
     return { station, list, top };
@@ -304,8 +380,22 @@ function passedAt(student: RtdStudent, st: RtdStation, input: RtdInput): boolean
   return c?.status === 'completed' && c.result === 'pass';
 }
 
+function failedAt(student: RtdStudent, st: RtdStation, input: RtdInput): boolean {
+  const col = skillForStation(st.id, input.skillColumns);
+  const c = col ? input.skillCells[`${student.id}_${col.skillName}`] : input.cells[`${student.id}_${st.id}`];
+  return c?.status === 'completed' && c.result === 'fail';
+}
+
 export function needOf(student: RtdStudent, pair: { o2: RtdStation; bvm: RtdStation }, input: RtdInput): PairNeed {
   return pairNeed(passedAt(student, pair.o2, input), passedAt(student, pair.bvm, input));
+}
+
+/** Parts still owed for a FIRST attempt: passed and failed parts are both left out (retests off). */
+export function firstAttemptNeedOf(student: RtdStudent, pair: { o2: RtdStation; bvm: RtdStation }, input: RtdInput): PairNeed {
+  return pairNeed(
+    passedAt(student, pair.o2, input) || failedAt(student, pair.o2, input),
+    passedAt(student, pair.bvm, input) || failedAt(student, pair.bvm, input)
+  );
 }
 
 function busyAnywhere(student: RtdStudent, input: RtdInput): boolean {
@@ -324,8 +414,8 @@ export interface UnitCandidate {
 }
 
 /** For a single station: the existing eligibility, shaped for the unit card. */
-function singleCandidates(station: RtdStation, input: RtdInput): UnitCandidate[] {
-  return candidatesForStation(station, input).map((c) => ({
+function singleCandidates(station: RtdStation, input: RtdInput, opts: SuggestOpts = {}): UnitCandidate[] {
+  return candidatesForStation(station, input, opts).map((c) => ({
     student: c.student,
     stationId: station.id,
     why: whyLine(c),
@@ -334,17 +424,28 @@ function singleCandidates(station: RtdStation, input: RtdInput): UnitCandidate[]
 }
 
 /** For a pair: anyone not testing or en route who has not passed O2 by NRB, or has not passed BVM. */
-export function pairCandidates(pair: { o2: RtdStation; bvm: RtdStation }, input: RtdInput): UnitCandidate[] {
-  const out: (UnitCandidate & { done: number })[] = [];
+export function pairCandidates(pair: { o2: RtdStation; bvm: RtdStation }, input: RtdInput, opts: SuggestOpts = {}): UnitCandidate[] {
+  const out: (UnitCandidate & { student: RtdStudent })[] = [];
   for (const s of input.students) {
     if (busyAnywhere(s, input)) continue;
-    const need = needOf(s, pair, input);
+    // Retests off: a part the student has failed is not owed for suggestions; a never-attempted part still is.
+    const need = opts.includeRetests ? needOf(s, pair, input) : firstAttemptNeedOf(s, pair, input);
     const part = firstPart(need);
     if (!part) continue;
-    out.push({ student: s, stationId: part === 'o2' ? pair.o2.id : pair.bvm.id, why: needsLabel(need), warn: null, done: doneSkillCount(s, input) });
+    out.push({ student: s, stationId: part === 'o2' ? pair.o2.id : pair.bvm.id, why: needsLabel(need), warn: null });
   }
-  out.sort((a, b) => a.done - b.done || studentName(a.student).localeCompare(studentName(b.student)));
+  out.sort((a, b) => fairnessCompare(a.student, b.student, input));
   return out.map((c) => ({ student: c.student, stationId: c.stationId, why: c.why, warn: c.warn }));
+}
+
+/** Retests off, pair: students not busy who owe a part by passes but have no never-attempted part left. */
+export function retestWaitingForPair(pair: { o2: RtdStation; bvm: RtdStation }, input: RtdInput): number {
+  let n = 0;
+  for (const s of input.students) {
+    if (busyAnywhere(s, input)) continue;
+    if (firstPart(needOf(s, pair, input)) && !firstPart(firstAttemptNeedOf(s, pair, input))) n++;
+  }
+  return n;
 }
 
 export interface PairGap {
@@ -397,14 +498,19 @@ export function freeUnitsNow(input: RtdInput, now: number, dismissed: Set<string
 }
 
 /** Spread suggestions over units: each gets its best candidate not already suggested on an earlier card. */
-export function spreadUnitSuggestions(units: RtdUnit[], input: RtdInput): { unit: RtdUnit; list: UnitCandidate[]; top: UnitCandidate | null }[] {
+export function spreadUnitSuggestions(units: RtdUnit[], input: RtdInput, opts: SuggestOpts = {}): { unit: RtdUnit; list: UnitCandidate[]; top: UnitCandidate | null }[] {
   const taken = new Set<string>();
   return units.map((unit) => {
-    const list = unit.kind === 'pair' ? pairCandidates(unit, input) : singleCandidates(unit.station, input);
+    const list = unit.kind === 'pair' ? pairCandidates(unit, input, opts) : singleCandidates(unit.station, input, opts);
     const top = list.find((c) => !taken.has(c.student.id)) || null;
     if (top) taken.add(top.student.id);
     return { unit, list, top };
   });
+}
+
+/** Retests off: how many students are waiting for a retest at this unit (for the "Nobody left for a first attempt" line). */
+export function retestWaitingForUnit(unit: RtdUnit, input: RtdInput): number {
+  return unit.kind === 'pair' ? retestWaitingForPair(unit, input) : retestWaitingForStation(unit.station, input);
 }
 
 /** Counts for the overview: a pair is one station; the total is OPEN stations only (closed ones are not counted). */
