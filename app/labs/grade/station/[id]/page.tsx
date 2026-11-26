@@ -1354,7 +1354,7 @@ export default function GradeStationPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Crumbs: Labs > lab day (links to it) > Station n. /labs/grade and /labs/grade/station are not pages. */}
+      {/* Crumbs: Labs > lab day (links to it; NREMT days link to the NREMT hub) > Station n. /labs/grade and /labs/grade/station are not pages. */}
       {station?.lab_day?.id && (
         <BreadcrumbNames
           entityTitle={`Station ${station.station_number}`}
@@ -1362,7 +1362,12 @@ export default function GradeStationPage() {
             'labs/grade': station.lab_day.title || `Lab day ${station.lab_day.date}`,
             'labs/grade/station': '',
           }}
-          customHrefs={{ 'labs/grade': `/labs/schedule/${station.lab_day.id}` }}
+          customHrefs={{
+            // NREMT testing days are run from the NREMT hub (proctors and stations), not the lab day page.
+            'labs/grade': station.lab_day.is_nremt_testing
+              ? `/labs/nremt-hub/${station.lab_day.id}`
+              : `/labs/schedule/${station.lab_day.id}`,
+          }}
         />
       )}
 
